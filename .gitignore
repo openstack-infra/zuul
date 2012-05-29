@@ -4,3 +4,4 @@ zuul.egg-info
 MANIFEST
 .tox
 
+*.pyc
