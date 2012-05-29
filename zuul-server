@@ -1,0 +1,53 @@
+import argparse
+import ConfigParser
+import os
+
+import zuul.scheduler
+import zuul.launcher.jenkins
+import zuul.trigger.gerrit
+
+import logging.config
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Project gating system.')
+    parser.add_argument('-c', dest='config',
+                        help='specify the config file')
+    return parser.parse_args()
+
+def read_config(args):
+    config=ConfigParser.ConfigParser()
+    if args.config:
+        locations = [args.config]
+    else:
+        locations = ['/etc/zuul/zuul.conf',
+                     '~/zuul.conf']
+    for fp in locations:
+        if os.path.exists(os.path.expanduser(fp)):
+            config.read(fp)
+            return config
+    raise Exception("Unable to locate config file in %s" % locations)
+
+def setup_logging(config):
+    if config.has_option('zuul', 'log_config'):
+        fp = os.path.expanduser(config.get('zuul', 'log_config'))
+        if not os.path.exists(fp):
+            raise Exception("Unable to read logging config file at %s" % fp)
+        logging.config.fileConfig(fp)
+    else:
+        logging.basicConfig(level=logging.DEBUG)
+
+def main(config):
+    sched = zuul.scheduler.Scheduler(config)
+
+    jenkins = zuul.launcher.jenkins.Jenkins(config, sched)
+    gerrit = zuul.trigger.gerrit.Gerrit(config, sched)
+
+    sched.setLauncher(jenkins)
+    sched.setTrigger(gerrit)
+    sched.run()
+
+if __name__ == '__main__':
+    args = parse_arguments()
+    config = read_config(args)
+    setup_logging(config)
+    main(config)
