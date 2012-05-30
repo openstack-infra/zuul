@@ -25,8 +25,13 @@ import json
 import urllib2  # for extending jenkins lib
 import logging
 import pprint
+import time
 
 from zuul.model import Build
+
+# The amount of time we tolerate a change in build status without
+# receiving a notification
+JENKINS_GRACE_TIME = 60
 
 
 class JenkinsCallback(threading.Thread):
@@ -66,6 +71,24 @@ class JenkinsCallback(threading.Thread):
                                                       number)
                     if (phase and phase == 'STARTED'):
                         self.jenkins.onBuildStarted(uuid, url, number)
+
+
+class JenkinsCleanup(threading.Thread):
+    """ A thread that checks to see if outstanding builds have
+    completed without reporting back. """
+    log = logging.getLogger("zuul.JenkinsCleanup")
+
+    def __init__(self, jenkins):
+        threading.Thread.__init__(self)
+        self.jenkins = jenkins
+
+    def run(self):
+        while True:
+            time.sleep(180)
+            try:
+                self.jenkins.lookForLostBuilds()
+            except:
+                self.log.exception("Exception checking builds:")
 
 
 STOP_BUILD = 'job/%(name)s/%(number)s/stop'
@@ -137,6 +160,8 @@ class Jenkins(object):
         self.jenkins = ExtendedJenkins(server, user, apikey)
         self.callback_thread = JenkinsCallback(self)
         self.callback_thread.start()
+        self.cleanup_thread = JenkinsCleanup(self)
+        self.cleanup_thread.start()
 
     def launch(self, job, change, dependent_changes=[]):
         self.log.info("Launch job %s for change %s with dependent changes %s" %
@@ -166,6 +191,20 @@ class Jenkins(object):
             raise
         return build
 
+    def findBuildInQueue(self, build):
+        for item in self.jenkins.get_queue_info():
+            if 'actions' not in item:
+                continue
+            for action in item['actions']:
+                if 'parameters' not in action:
+                    continue
+                parameters = action['parameters']
+                for param in parameters:
+                    if (param['name'] == 'UUID' and
+                        build.uuid == param['value']):
+                        return item
+        return False
+
     def cancel(self, build):
         self.log.info("Cancel build %s for job %s" % (build, build.job))
         if build.number:
@@ -177,27 +216,20 @@ class Jenkins(object):
             self.log.debug("Build %s has not started yet" % build)
 
         self.log.debug("Looking for build %s in queue" % build)
-        for item in self.jenkins.get_queue_info():
-            if 'actions' not in item:
-                continue
-            for action in item['actions']:
-                if 'parameters' not in action:
-                    continue
-                parameters = action['parameters']
-                for param in parameters:
-                    if (param['name'] == 'UUID' and
-                        build.uuid == param['value']):
-                        self.log.debug("Found queue item %s for build %s" % (
-                                item['id'], build))
-                        try:
-                            self.jenkins.cancel_queue(item['id'])
-                            self.log.debug(
-                                "Canceled queue item %s for build %s" % (
-                                    item['id'], build))
-                            return
-                        except:
-                            self.log.exception("Exception canceling queue \
-item %s for build %s" % (item['id'], build))
+        item = self.findBuildInQueue(build)
+        if item:
+            self.log.debug("Found queue item %s for build %s" % (
+                    item['id'], build))
+            try:
+                self.jenkins.cancel_queue(item['id'])
+                self.log.debug(
+                    "Canceled queue item %s for build %s" % (
+                        item['id'], build))
+                return
+            except:
+                self.log.exception("Exception canceling queue item %s \
+for build %s" % (item['id'], build))
+
         self.log.debug("Still unable to find build %s to cancel" % build)
         if build.number:
             self.log.debug("Build %s has just started" % build)
@@ -231,3 +263,57 @@ item %s for build %s" % (item['id'], build))
             build.number = number
         else:
             self.log.error("Unable to find build %s" % uuid)
+
+    def lookForLostBuilds(self):
+        self.log.debug("Looking for lost builds")
+        lostbuilds = []
+        for build in self.builds.values():
+            if build.result:
+                # The build has finished, it will be removed
+                continue
+            if build.number:
+                # The build has started; see if it has finished
+                info = self.jenkins.get_build_info(build.job.name,
+                                                   build.number)
+                if not info:
+                    self.log.debug("Lost build %s because it started but \
+info can not be retreived" % build)
+                    lostbuilds.append(build)
+                    continue
+                if not info['result']:
+                    # It hasn't finished, continue
+                    continue
+                finish_time = (info['timestamp'] + info['duration']) / 1000
+                if time.time() - finish_time > JENKINS_GRACE_TIME:
+                    self.log.debug("Lost build %s because it finished \
+more than 5 minutes ago" % build)
+                    lostbuilds.append(build)
+                    continue
+                # Give it more time
+            else:
+                # The build has not started
+                if time.time() - build.launch_time < JENKINS_GRACE_TIME:
+                    # It just started, give it a bit
+                    continue
+                info = self.findBuildInQueue(build)
+                if info:
+                    # It's in the queue.  All good.
+                    continue
+                if build.number:
+                    # We just got notified it started
+                    continue
+                # It may have just started.  If we keep ending up here,
+                # assume the worst.
+                if hasattr(build, '_jenkins_missing_from_queue'):
+                    missing_time = build._jenkins_missing_from_queue
+                    if time.time() - missing_time > JENKINS_GRACE_TIME:
+                        self.log.debug("Lost build %s because it has not \
+started and is not in the queue" % build)
+                        lostbuilds.append(build)
+                        continue
+                else:
+                    build._jenkins_missing_from_queue = time.time()
+
+        for build in lostbuilds:
+            self.log.error("Declaring %s lost" % build)
+            self.onBuildCompleted(build.uuid, 'LOST', None, None)

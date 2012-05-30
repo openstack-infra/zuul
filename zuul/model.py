@@ -13,6 +13,7 @@
 # under the License.
 
 import re
+import time
 
 
 class ChangeQueue(object):
@@ -74,6 +75,8 @@ class Build(object):
         self.status = None
         self.url = None
         self.number = None
+        self.result = None
+        self.launch_time = time.time()
 
     def __repr__(self):
         return '<Build %s of %s>' % (self.uuid, self.job.name)
@@ -197,7 +200,8 @@ class Change(object):
     def setResult(self, build):
         self.running_builds.remove(build)
         self.jobs[build.job.name] = build.result
-        self.job_urls[build.job.name] = build.url
+        if build.url:
+            self.job_urls[build.job.name] = build.url
         if build.result != 'SUCCESS':
             # Get a JobTree from a Job so we can find only its dependent jobs
             root = self.project.getJobTreeForQueue(self.queue_name)
