@@ -160,8 +160,9 @@ class Scheduler(object):
                 self.log.debug("Event %s ignored by %s" % (event, manager))
                 continue
             if event.change_number:
-                change = Change(manager.name, project,
-                                event.change_number, event.patch_number)
+                change = Change(manager.name, project, event.branch,
+                                event.change_number, event.patch_number,
+                                event.refspec)
                 self.log.info("Adding %s, %s to to %s" % (
                         project, change, manager))
                 manager.addChange(change)

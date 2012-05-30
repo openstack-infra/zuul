@@ -136,11 +136,13 @@ class Project(object):
         return tree.getJobs()
 
 class Change(object):
-    def __init__(self, queue_name, project, number, patchset):
+    def __init__(self, queue_name, project, branch, number, patchset, refspec):
         self.queue_name = queue_name
         self.project = project
+        self.branch = branch
         self.number = number
         self.patchset = patchset
+        self.refspec = refspec
         self.jobs = {}
         self.job_urls = {}
         self.change_ahead = None
@@ -241,6 +243,7 @@ class TriggerEvent(object):
         self.project_name = None
         self.change_number = None
         self.patch_number = None
+        self.refspec = None
         self.approvals = []
         self.branch = None
         self.ref = None

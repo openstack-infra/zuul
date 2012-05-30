@@ -40,6 +40,7 @@ class GerritEventConnector(threading.Thread):
             patchset = data.get('patchSet')
             if patchset:
                 event.patch_number = patchset.get('number')
+                event.refspec = patchset.get('ref')
             event.approvals = data.get('approvals')
         self.sched.addEvent(event)
 
