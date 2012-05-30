@@ -123,7 +123,7 @@ class Gerrit(object):
         cmd = 'gerrit review --project %s --message "%s"' % (
             project, message)
         for k,v in action.items():
-            if v == True:
+            if v is True:
                 cmd += ' --%s' % k
             else:
                 cmd += ' --%s %s' % (k, v)
