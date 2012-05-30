@@ -23,14 +23,16 @@ import zuul.trigger.gerrit
 
 import logging.config
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Project gating system.')
     parser.add_argument('-c', dest='config',
                         help='specify the config file')
     return parser.parse_args()
 
+
 def read_config(args):
-    config=ConfigParser.ConfigParser()
+    config = ConfigParser.ConfigParser()
     if args.config:
         locations = [args.config]
     else:
@@ -42,6 +44,7 @@ def read_config(args):
             return config
     raise Exception("Unable to locate config file in %s" % locations)
 
+
 def setup_logging(config):
     if config.has_option('zuul', 'log_config'):
         fp = os.path.expanduser(config.get('zuul', 'log_config'))
@@ -50,6 +53,7 @@ def setup_logging(config):
         logging.config.fileConfig(fp)
     else:
         logging.basicConfig(level=logging.DEBUG)
+
 
 def main(config):
     sched = zuul.scheduler.Scheduler(config)

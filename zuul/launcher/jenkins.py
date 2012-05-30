@@ -28,6 +28,7 @@ import pprint
 
 from zuul.model import Build
 
+
 class JenkinsCallback(threading.Thread):
     log = logging.getLogger("zuul.JenkinsCallback")
 
@@ -61,7 +62,8 @@ class JenkinsCallback(threading.Thread):
                     uuid = params.get('UUID')
                     if (status and url and uuid and phase
                         and phase == 'COMPLETED'):
-                        self.jenkins.onBuildCompleted(uuid, status, url, number)
+                        self.jenkins.onBuildCompleted(uuid, status, url,
+                                                      number)
                     if (phase and phase == 'STARTED'):
                         self.jenkins.onBuildStarted(uuid, url, number)
 
@@ -70,10 +72,11 @@ STOP_BUILD = 'job/%(name)s/%(number)s/stop'
 CANCEL_QUEUE = 'queue/item/%(number)s/cancelQueue'
 BUILD_INFO = 'job/%(name)s/%(number)s/api/json?depth=0'
 
+
 class ExtendedJenkins(jenkins.Jenkins):
     def jenkins_open(self, req):
         '''
-        Utility routine for opening an HTTP request to a Jenkins server. 
+        Utility routine for opening an HTTP request to a Jenkins server.
         '''
         try:
             if self.auth:
@@ -93,7 +96,7 @@ class ExtendedJenkins(jenkins.Jenkins):
         @param number: Jenkins build number for the job
         @type  number: int
         '''
-        self.jenkins_open(urllib2.Request(self.server + STOP_BUILD%locals()))
+        self.jenkins_open(urllib2.Request(self.server + STOP_BUILD % locals()))
 
     def cancel_queue(self, number):
         '''
@@ -104,9 +107,9 @@ class ExtendedJenkins(jenkins.Jenkins):
         '''
         # Jenkins returns a 302 from this URL, unless Referer is not set,
         # then you get a 404.
-        self.jenkins_open(urllib2.Request(self.server + CANCEL_QUEUE%locals(),
+        self.jenkins_open(urllib2.Request(self.server +
+                                          CANCEL_QUEUE % locals(),
                                           headers={'Referer': self.server}))
-
 
     def get_build_info(self, name, number):
         '''
@@ -118,7 +121,9 @@ class ExtendedJenkins(jenkins.Jenkins):
         @type  number: int
         @return: dictionary
         '''
-        return json.loads(self.jenkins_open(urllib2.Request(self.server + BUILD_INFO%locals())))
+        return json.loads(self.jenkins_open(urllib2.Request(
+                    self.server + BUILD_INFO % locals())))
+
 
 class Jenkins(object):
     log = logging.getLogger("zuul.Jenkins")
@@ -132,27 +137,29 @@ class Jenkins(object):
         self.jenkins = ExtendedJenkins(server, user, apikey)
         self.callback_thread = JenkinsCallback(self)
         self.callback_thread.start()
-    
-    def launch(self, job, change, dependent_changes = []):
-        self.log.info("Launch job %s for change %s with dependent changes %s" % (
-                job, change, dependent_changes))
+
+    def launch(self, job, change, dependent_changes=[]):
+        self.log.info("Launch job %s for change %s with dependent changes %s" %
+                      (job, change, dependent_changes))
         uuid = str(uuid1())
         changes_str = '^'.join(
-            ['%s:%s:%s' % (c.project.name, c.branch, c.refspec) 
-             for c in dependent_changes+[change]])
+            ['%s:%s:%s' % (c.project.name, c.branch, c.refspec)
+             for c in dependent_changes + [change]])
         params = dict(UUID=uuid,
                       GERRIT_PROJECT=change.project.name,
                       GERRIT_BRANCH=change.branch,
                       GERRIT_CHANGES=changes_str)
         build = Build(job, uuid)
         self.builds[uuid] = build
-        # We can get the started notification on another thread before this is done
-        # so we add the build even before we trigger the job on Jenkins.  We should
-        # be careful to clean it up if it doesn't actually kick off.
+        # We can get the started notification on another thread before
+        # this is done so we add the build even before we trigger the
+        # job on Jenkins.  We should be careful to clean it up if it
+        # doesn't actually kick off.
         try:
             self.jenkins.build_job(job.name, parameters=params)
         except:
-            self.log.exception("Exception launching build %s for job %s for change %s:" % (
+            self.log.exception(
+                "Exception launching build %s for job %s for change %s:" % (
                     build, job, change))
             # Whoops.  Remove that build we added.
             del self.builds[uuid]
@@ -171,33 +178,36 @@ class Jenkins(object):
 
         self.log.debug("Looking for build %s in queue" % build)
         for item in self.jenkins.get_queue_info():
-            if not item.has_key('actions'):
+            if 'actions' not in item:
                 continue
             for action in item['actions']:
-                if not action.has_key('parameters'):
+                if 'parameters' not in action:
                     continue
                 parameters = action['parameters']
                 for param in parameters:
-                    if (param['name'] == 'UUID' and build.uuid == param['value']):
+                    if (param['name'] == 'UUID' and
+                        build.uuid == param['value']):
                         self.log.debug("Found queue item %s for build %s" % (
                                 item['id'], build))
                         try:
                             self.jenkins.cancel_queue(item['id'])
-                            self.log.debug("Canceled queue item %s for build %s" % (
+                            self.log.debug(
+                                "Canceled queue item %s for build %s" % (
                                     item['id'], build))
                             return
                         except:
-                            self.log.exception("Exception canceling queue item %s for build %s" % (
-                                    item['id'], build))
-
+                            self.log.exception("Exception canceling queue \
+item %s for build %s" % (item['id'], build))
         self.log.debug("Still unable to find build %s to cancel" % build)
         if build.number:
             self.log.debug("Build %s has just started" % build)
             self.jenkins.stop_build(build.job.name, build.number)
             self.log.debug("Canceled just running build %s" % build)
         else:
-            self.log.error("Build %s has not started but was not found in queue" % build)
-    
+            self.log.error(
+                "Build %s has not started but was not found in queue" %
+                build)
+
     def onBuildCompleted(self, uuid, status, url, number):
         self.log.info("Build %s #%s complete, status %s" % (
                 uuid, number, status))

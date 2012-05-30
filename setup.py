@@ -14,9 +14,7 @@
 # under the License.
 
 from setuptools import find_packages
-from setuptools.command.sdist import sdist
 from setuptools import setup
-import subprocess
 
 setup(name='zuul',
       version='1.0',

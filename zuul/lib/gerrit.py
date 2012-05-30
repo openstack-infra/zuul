@@ -1,3 +1,4 @@
+# Copyright 2011 OpenStack, LLC.
 # Copyright 2012 Hewlett-Packard Development Company, L.P.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -24,6 +25,7 @@ import pprint
 
 # TODO: switch this to paramiko?
 
+
 class GerritWatcher(threading.Thread):
     log = logging.getLogger("gerrit.GerritWatcher")
 
@@ -45,7 +47,7 @@ class GerritWatcher(threading.Thread):
         cmd += ['-l', self.username, self.server,
                 'gerrit', 'stream-events']
         self.proc = subprocess.Popen(cmd,
-                                     bufsize=1, 
+                                     bufsize=1,
                                      stdin=None,
                                      stdout=subprocess.PIPE,
                                      stderr=None,
@@ -67,7 +69,8 @@ class GerritWatcher(threading.Thread):
     def _read(self):
         l = self.proc.stdout.readline()
         data = json.loads(l)
-        self.log.debug("Received data from Gerrit event stream: \n%s" % pprint.pformat(data))
+        self.log.debug("Received data from Gerrit event stream: \n%s" %
+                       pprint.pformat(data))
         self.gerrit.addEvent(data)
 
     def _listen(self):
@@ -79,7 +82,7 @@ class GerritWatcher(threading.Thread):
                         self._read()
                     else:
                         raise Exception("event on ssh connection")
-        
+
     def _run(self):
         try:
             if not self.proc:
@@ -93,6 +96,7 @@ class GerritWatcher(threading.Thread):
     def run(self):
         while True:
             self._run()
+
 
 class Gerrit(object):
     log = logging.getLogger("gerrit.Gerrit")
@@ -122,7 +126,7 @@ class Gerrit(object):
     def review(self, project, change, message, action={}):
         cmd = 'gerrit review --project %s --message "%s"' % (
             project, message)
-        for k,v in action.items():
+        for k, v in action.items():
             if v is True:
                 cmd += ' --%s' % k
             else:
@@ -151,7 +155,7 @@ class Gerrit(object):
         client = paramiko.SSHClient()
         client.load_system_host_keys()
         client.set_missing_host_key_policy(paramiko.WarningPolicy())
-        client.connect(self.hostname, 
+        client.connect(self.hostname,
                        username=self.username,
                        port=29418)
 

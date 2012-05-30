@@ -17,6 +17,7 @@ import logging
 from zuul.lib import gerrit
 from zuul.model import TriggerEvent
 
+
 class GerritEventConnector(threading.Thread):
     """Move events from Gerrit to the scheduler."""
 
@@ -26,7 +27,6 @@ class GerritEventConnector(threading.Thread):
         super(GerritEventConnector, self).__init__()
         self.gerrit = gerrit
         self.sched = sched
-
 
     def _handleEvent(self):
         data = self.gerrit.getEvent()
@@ -43,7 +43,6 @@ class GerritEventConnector(threading.Thread):
                 event.refspec = patchset.get('ref')
             event.approvals = data.get('approvals')
         self.sched.addEvent(event)
-
 
     def run(self):
         while True:
@@ -70,14 +69,12 @@ class Gerrit(object):
             self.gerrit, sched)
         self.gerrit_connector.start()
 
-        
     def report(self, change, message, action):
         self.log.debug("Report change %s, action %s, message: %s" %
                        (change, action, message))
         changeid = '%s,%s' % (change.number, change.patchset)
         return self.gerrit.review(change.project.name, changeid,
                                   message, action)
-
 
     def isMerged(self, change):
         self.log.debug("Checking if change %s is merged", change)
@@ -90,4 +87,3 @@ class Gerrit(object):
         self.log.debug("Change %s status: %s" % (change, status))
         if status == 'MERGED' or status == 'SUBMITTED':
             return True
-

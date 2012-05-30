@@ -14,6 +14,7 @@
 
 import re
 
+
 class ChangeQueue(object):
     def __init__(self, queue_name):
         self.name = ''
@@ -51,6 +52,7 @@ class ChangeQueue(object):
         for project in other.projects:
             self.addProject(project)
 
+
 class Job(object):
     def __init__(self, name):
         self.name = name
@@ -64,6 +66,7 @@ class Job(object):
     def __repr__(self):
         return '<Job %s>' % (self.name)
 
+
 class Build(object):
     def __init__(self, job, uuid):
         self.job = job
@@ -74,6 +77,7 @@ class Build(object):
 
     def __repr__(self):
         return '<Build %s of %s>' % (self.uuid, self.job.name)
+
 
 class JobTree(object):
     """ A JobTree represents an instance of one Job, and holds JobTrees
@@ -106,6 +110,7 @@ class JobTree(object):
                 return ret
         return None
 
+
 class Project(object):
     def __init__(self, name):
         self.name = name
@@ -122,7 +127,7 @@ class Project(object):
         return self.job_trees[name]
 
     def hasQueue(self, name):
-        if self.job_trees.has_key(name):
+        if name in self.job_trees:
             return True
         return False
 
@@ -134,6 +139,7 @@ class Project(object):
         if not tree:
             return []
         return tree.getJobs()
+
 
 class Change(object):
     def __init__(self, queue_name, project, branch, number, patchset, refspec):
@@ -153,18 +159,18 @@ class Change(object):
         return '<Change 0x%x %s,%s>' % (id(self), self.number, self.patchset)
 
     def formatStatus(self, indent=0):
-        indent_str = ' '*indent
+        indent_str = ' ' * indent
         ret = ''
         ret += '%sProject %s change %s,%s\n' % (indent_str,
                                               self.project.name,
-                                              self.number, 
+                                              self.number,
                                               self.patchset)
         for job in self.project.getJobs(self.queue_name):
             result = self.jobs.get(job.name)
             ret += '%s  %s: %s\n' % (indent_str, job.name, result)
         if self.change_ahead:
             ret += '%sWaiting on:\n' % (indent_str)
-            ret += self.change_ahead.formatStatus(indent+2)
+            ret += self.change_ahead.formatStatus(indent + 2)
         return ret
 
     def formatReport(self):
@@ -173,7 +179,7 @@ class Change(object):
             ret += 'Build successful\n\n'
         else:
             ret += 'Build failed\n\n'
-        
+
         for job in self.project.getJobs(self.queue_name):
             result = self.jobs.get(job.name)
             url = self.job_urls.get(job.name, job.name)
@@ -222,7 +228,7 @@ class Change(object):
     def areAllJobsComplete(self):
         tree = self.project.getJobTreeForQueue(self.queue_name)
         for job in tree.getJobs():
-            if not self.jobs.has_key(job.name):
+            if not job.name in self.jobs:
                 return False
         return True
 
@@ -235,6 +241,7 @@ class Change(object):
     def delete(self):
         if self.change_behind:
             self.change_behind.change_ahead = None
+
 
 class TriggerEvent(object):
     def __init__(self):
@@ -250,16 +257,18 @@ class TriggerEvent(object):
 
     def __str__(self):
         ret = '<TriggerEvent %s %s' % (self.type, self.project_name)
-        
+
         if self.branch:
             ret += " %s" % self.branch
         if self.change_number:
             ret += " %s,%s" % (self.change_number, self.patch_number)
         if self.approvals:
-            ret += ' '+', '.join(['%s:%s' % (a['type'], a['value']) for a in self.approvals])
+            ret += ' ' + ', '.join(
+                ['%s:%s' % (a['type'], a['value']) for a in self.approvals])
         ret += '>'
 
         return ret
+
 
 class EventFilter(object):
     def __init__(self, types=[], branches=[], refs=[], approvals=[]):
@@ -273,7 +282,7 @@ class EventFilter(object):
 
     def __str__(self):
         ret = '<EventFilter'
-        
+
         if self._types:
             ret += ' types: %s' % ', '.join(self._types)
         if self._branches:
@@ -281,7 +290,8 @@ class EventFilter(object):
         if self._refs:
             ret += ' refs: %s' % ', '.join(self._refs)
         if self.approvals:
-            ret += ' approvals: %s' % ', '.join(['%s:%s' % a for a in self.approvals.items()])
+            ret += ' approvals: %s' % ', '.join(
+                ['%s:%s' % a for a in self.approvals.items()])
         ret += '>'
 
         return ret
@@ -322,5 +332,6 @@ class EventFilter(object):
                 if (normalizeCategory(eapproval['description']) == category and
                     int(eapproval['value']) == int(value)):
                     matches_approval = True
-            if not matches_approval: return False
+            if not matches_approval:
+                return False
         return True

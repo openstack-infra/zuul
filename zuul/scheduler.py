@@ -18,8 +18,8 @@ import threading
 import logging
 import yaml
 
-
 from model import Job, Change, Project, ChangeQueue, EventFilter
+
 
 class Scheduler(object):
     log = logging.getLogger("zuul.Scheduler")
@@ -39,7 +39,8 @@ class Scheduler(object):
 
     def _parseConfig(self, fp):
         def toList(item):
-            if not item: return []
+            if not item:
+                return []
             if type(item) == type([]):
                 return item
             return [item]
@@ -50,11 +51,10 @@ class Scheduler(object):
                 raise Exception("Unable to read layout config file at %s" % fp)
         fp = open(fp)
         data = yaml.load(fp)
-        import pprint
-        pprint.pprint(data)
-        
+
         for config_queue in data['queue']:
-            manager = globals()[config_queue['manager']](self, config_queue['name'])
+            manager = globals()[config_queue['manager']](self,
+                                                         config_queue['name'])
             self.queue_managers[config_queue['name']] = manager
             manager.success_action = config_queue.get('success')
             manager.failure_action = config_queue.get('failure')
@@ -62,7 +62,7 @@ class Scheduler(object):
                 approvals = {}
                 for approval_dict in toList(trigger.get('approval')):
                     for k, v in approval_dict.items():
-                        approvals[k]=v
+                        approvals[k] = v
                 f = EventFilter(types=toList(trigger['event']),
                                 branches=toList(trigger.get('branch')),
                                 refs=toList(trigger.get('ref')),
@@ -97,12 +97,10 @@ class Scheduler(object):
             project = Project(config_project['name'])
             self.projects[config_project['name']] = project
             for qname in self.queue_managers.keys():
-                if config_project.has_key(qname):
-                    print project, qname
+                if qname in config_project:
                     job_tree = project.addQueue(qname)
                     config_jobs = config_project[qname]
                     add_jobs(job_tree, config_jobs)
-            
 
         # TODO(jeblair): check that we don't end up with jobs like
         # "foo - bar" because a ':' is missing in the yaml for a dependent job
@@ -110,7 +108,7 @@ class Scheduler(object):
             manager._postConfig()
 
     def getJob(self, name):
-        if self.jobs.has_key(name):
+        if name in self.jobs:
             return self.jobs[name]
         job = Job(name)
         self.jobs[name] = job
@@ -166,7 +164,7 @@ class Scheduler(object):
                 self.log.info("Adding %s, %s to to %s" % (
                         project, change, manager))
                 manager.addChange(change)
-            
+
     def process_result_queue(self):
         self.log.debug("Fetching result event")
         build = self.result_event_queue.get()
@@ -174,6 +172,7 @@ class Scheduler(object):
         for manager in self.queue_managers.values():
             if manager.onBuildCompleted(build):
                 return
+
 
 class BaseQueueManager(object):
     log = logging.getLogger("zuul.BaseQueueManager")
@@ -195,17 +194,19 @@ class BaseQueueManager(object):
         for e in self.event_filters:
             self.log.info("    %s" % e)
         self.log.info("  Projects:")
+
         def log_jobs(tree, indent=0):
-            istr = '    '+' '*indent
+            istr = '    ' + ' ' * indent
             if tree.job:
                 efilters = ''
                 for e in tree.job.event_filters:
                     efilters += str(e)
                 if efilters:
-                    efilters = ' '+efilters
+                    efilters = ' ' + efilters
                 self.log.info("%s%s%s" % (istr, repr(tree.job), efilters))
             for x in tree.job_trees:
-                log_jobs(x, indent+2)
+                log_jobs(x, indent + 2)
+
         for p in self.sched.projects.values():
             if p.hasQueue(self.name):
                 self.log.info("    %s" % p)
@@ -217,14 +218,11 @@ class BaseQueueManager(object):
             self.log.info("  On failure:")
             self.log.info("    %s" % self.failure_action)
 
-
     def eventMatches(self, event):
         for ef in self.event_filters:
-            print ef
             if ef.matches(event):
                 return True
         return False
-
 
     def addChange(self, change):
         self.log.debug("Adding change %s" % change)
@@ -241,12 +239,12 @@ class BaseQueueManager(object):
                         build, job, change))
                 change.addBuild(build)
             except:
-                self.log.exception("Exception while launching job %s for change %s:" % (
-                        job, change))
+                self.log.exception("Exception while launching job %s \
+for change %s:" % (job, change))
 
     def onBuildCompleted(self, build):
         self.log.debug("Build %s completed" % build)
-        if not self.building_jobs.has_key(build):
+        if build not in self.building_jobs:
             self.log.warning("Build %s not found (may have been canceled)" % (
                     build))
             # Or triggered externally, or triggered before zuul started,
@@ -291,14 +289,15 @@ class BaseQueueManager(object):
             if ret:
                 self.log.error("Reporting change %s received: %s" % (
                         change, ret))
-                print ret
         except:
             self.log.exception("Exception while reporting:")
         return ret
 
+
 class IndependentQueueManager(BaseQueueManager):
     log = logging.getLogger("zuul.IndependentQueueManager")
     pass
+
 
 class DependentQueueManager(BaseQueueManager):
     log = logging.getLogger("zuul.DependentQueueManager")
@@ -335,7 +334,7 @@ class DependentQueueManager(BaseQueueManager):
             if not merged_a:
                 self.log.debug("Keeping queue %s" % (a))
                 new_change_queues.append(a)
-        
+
         self.change_queues = new_change_queues
         self.log.info("  Shared change queues:")
         for x in self.change_queues:
@@ -346,7 +345,7 @@ class DependentQueueManager(BaseQueueManager):
             if project in queue.projects:
                 return queue
         self.log.error("Unable to find change queue for project %s" % project)
-            
+
     def addChange(self, change):
         self.log.debug("Adding change %s" % change)
         change_queue = self.getQueue(change.project)
@@ -368,15 +367,15 @@ class DependentQueueManager(BaseQueueManager):
         for job in change.findJobsToRun():
             self.log.debug("Found job %s for change %s" % (job, change))
             try:
-                build = self.sched.launcher.launch(job, change, 
+                build = self.sched.launcher.launch(job, change,
                                                    dependent_changes)
                 self.building_jobs[build] = change
                 self.log.debug("Adding build %s of job %s to change %s" % (
                         build, job, change))
                 change.addBuild(build)
             except:
-                self.log.exception("Exception while launching job %s for change %s:" % (
-                        job, change))
+                self.log.exception("Exception while launching job %s \
+for change %s:" % (job, change))
         if change.change_behind:
             self.log.debug("Launching jobs for change %s, behind change %s" % (
                     change.change_behind, change))
@@ -393,22 +392,22 @@ class DependentQueueManager(BaseQueueManager):
                 try:
                     self.sched.launcher.cancel(build)
                 except:
-                    self.log.exception("Exception while canceling build %s for change %s" % (
-                            build, change))
+                    self.log.exception("Exception while canceling build %s \
+for change %s" % (build, change))
                 to_remove.append(build)
         for build in to_remove:
             self.log.debug("Removing build %s from running builds" % build)
             del self.building_jobs[build]
         if change.change_behind:
-            self.log.debug("Canceling jobs for change %s, behind change %s" % (
-                    change.change_behind, change))
+            self.log.debug("Canceling jobs for change %s, \
+behind change %s" % (change.change_behind, change))
             self.cancelJobs(change.change_behind)
 
     def possiblyReportChange(self, change):
         self.log.debug("Possibly reporting change %s" % change)
         if not change.change_ahead:
-            self.log.debug("Change %s is at the front of the queue, reporting" % (
-                    change))
+            self.log.debug("Change %s is at the front of the queue, \
+reporting" % (change))
             ret = self.reportChange(change)
             self.log.debug("Removing reported change %s from queue" % change)
             change.delete()
@@ -417,21 +416,22 @@ class DependentQueueManager(BaseQueueManager):
             if merged:
                 merged = self.sched.trigger.isMerged(change)
             succeeded = change.didAllJobsSucceed()
-            self.log.info("Reported change %s status: all-succeeded: %s, merged: %s" % (
-                    change, succeeded, merged))
-                    
+            self.log.info("Reported change %s status: all-succeeded: %s, \
+merged: %s" % (change, succeeded, merged))
+
             if not (succeeded and merged):
-                self.log.debug("Reported change %s failed tests or failed to merge" % (
-                        change))
+                self.log.debug("Reported change %s failed tests or failed \
+to merge" % (change))
                 # The merge or test failed, re-run all jobs behind this one
                 if change.change_behind:
-                    self.log.info("Canceling/relaunching jobs for change %s behind failed change %s" % (
+                    self.log.info("Canceling/relaunching jobs for change %s \
+behind failed change %s" % (
                             change.change_behind, change))
                     self.cancelJobs(change.change_behind)
                     self.launchJobs(change.change_behind)
         # If the change behind this is ready, notify
-        if (change.change_behind and 
+        if (change.change_behind and
             change.change_behind.areAllJobsComplete()):
-            self.log.info("Change %s behind change %s is ready, possibly reporting" % (
-                    change.change_behind, change))
+            self.log.info("Change %s behind change %s is ready, \
+possibly reporting" % (change.change_behind, change))
             self.possiblyReportChange(change.change_behind)
