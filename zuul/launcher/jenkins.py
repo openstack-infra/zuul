@@ -36,7 +36,7 @@ class JenkinsCallback(threading.Thread):
         self.jenkins = jenkins
 
     def run(self):
-        httpserver.serve(self.app, host='0.0.0.0', port='8090')
+        httpserver.serve(self.app, host='0.0.0.0', port='8001')
 
     def app(self, environ, start_response):
         request = Request(environ)
