@@ -214,6 +214,7 @@ class Scheduler(threading.Thread):
         for manager in self.queue_managers.values():
             if manager.onBuildCompleted(build):
                 return
+        self.log.warning("Build %s not found by any queue manager" % (build))
 
 
 class BaseQueueManager(object):
@@ -287,8 +288,7 @@ for change %s:" % (job, change))
     def onBuildCompleted(self, build):
         self.log.debug("Build %s completed" % build)
         if build not in self.building_jobs:
-            self.log.warning("Build %s not found (may have been canceled)" % (
-                    build))
+            self.log.debug("Build %s not found" % (build))
             # Or triggered externally, or triggered before zuul started,
             # or restarted
             return False
