@@ -21,21 +21,24 @@ import yaml
 from model import Job, Change, Project, ChangeQueue, EventFilter
 
 
-class Scheduler(object):
+class Scheduler(threading.Thread):
     log = logging.getLogger("zuul.Scheduler")
 
-    def __init__(self, config):
+    def __init__(self):
+        threading.Thread.__init__(self)
         self.wake_event = threading.Event()
-        self.queue_managers = {}
-        self.jobs = {}
-        self.projects = {}
+        self.reconfigure_complete_event = threading.Event()
         self.launcher = None
         self.trigger = None
 
         self.trigger_event_queue = Queue.Queue()
         self.result_event_queue = Queue.Queue()
+        self._init()
 
-        self._parseConfig(config.get('zuul', 'layout_config'))
+    def _init(self):
+        self.queue_managers = {}
+        self.jobs = {}
+        self.projects = {}
 
     def _parseConfig(self, fp):
         def toList(item):
@@ -130,6 +133,36 @@ class Scheduler(object):
         self.result_event_queue.put(build)
         self.wake_event.set()
 
+    def reconfigure(self, config):
+        self.log.debug("Reconfigure")
+        self.config = config
+        self._reconfigure_flag = True
+        self.wake_event.set()
+        self.log.debug("Waiting for reconfiguration")
+        self.reconfigure_complete_event.wait()
+        self.reconfigure_complete_event.clear()
+        self.log.debug("Reconfiguration complete")
+
+    def _doReconfigure(self):
+        self.log.debug("Performing reconfiguration")
+        self._init()
+        self._parseConfig(self.config.get('zuul', 'layout_config'))
+        self._reconfigure_flag = False
+        self.reconfigure_complete_event.set()
+
+    def _areAllBuildsComplete(self):
+        self.log.debug("Checking if all builds are complete")
+        waiting = False
+        for manager in self.queue_managers.values():
+            for build in manager.building_jobs.values():
+                self.log.debug("%s waiting on %s" % (manager, build))
+                waiting = True
+        if not waiting:
+            self.log.debug("All builds are complete")
+            return True
+        self.log.debug("All builds are not complete")
+        return False
+
     def run(self):
         while True:
             self.log.debug("Run handler sleeping")
@@ -137,10 +170,19 @@ class Scheduler(object):
             self.wake_event.clear()
             self.log.debug("Run handler awake")
             try:
-                if not self.trigger_event_queue.empty():
-                    self.process_event_queue()
+                if not self._reconfigure_flag:
+                    if not self.trigger_event_queue.empty():
+                        self.process_event_queue()
+
                 if not self.result_event_queue.empty():
                     self.process_result_queue()
+
+                if self._reconfigure_flag and self._areAllBuildsComplete():
+                    self._doReconfigure()
+
+                if not (self.trigger_event_queue.empty() and
+                        self.result_event_queue.empty()):
+                    self.wake_event.set()
             except:
                 self.log.exception("Exception in run handler:")
 

@@ -15,58 +15,78 @@
 
 import argparse
 import ConfigParser
+import logging.config
 import os
+import signal
 
 import zuul.scheduler
 import zuul.launcher.jenkins
 import zuul.trigger.gerrit
 
-import logging.config
 
+class Server(object):
+    def __init__(self):
+        self.args = None
+        self.config = None
 
-def parse_arguments():
-    parser = argparse.ArgumentParser(description='Project gating system.')
-    parser.add_argument('-c', dest='config',
-                        help='specify the config file')
-    return parser.parse_args()
+    def parse_arguments(self):
+        parser = argparse.ArgumentParser(description='Project gating system.')
+        parser.add_argument('-c', dest='config',
+                            help='specify the config file')
+        self.args = parser.parse_args()
 
+    def read_config(self):
+        self.config = ConfigParser.ConfigParser()
+        if self.args.config:
+            locations = [self.args.config]
+        else:
+            locations = ['/etc/zuul/zuul.conf',
+                         '~/zuul.conf']
+        for fp in locations:
+            if os.path.exists(os.path.expanduser(fp)):
+                self.config.read(os.path.expanduser(fp))
+                return
+        raise Exception("Unable to locate config file in %s" % locations)
 
-def read_config(args):
-    config = ConfigParser.ConfigParser()
-    if args.config:
-        locations = [args.config]
-    else:
-        locations = ['/etc/zuul/zuul.conf',
-                     '~/zuul.conf']
-    for fp in locations:
-        if os.path.exists(os.path.expanduser(fp)):
-            config.read(fp)
-            return config
-    raise Exception("Unable to locate config file in %s" % locations)
+    def setup_logging(self):
+        if self.config.has_option('zuul', 'log_config'):
+            fp = os.path.expanduser(self.config.get('zuul', 'log_config'))
+            if not os.path.exists(fp):
+                raise Exception("Unable to read logging config file at %s" %
+                                fp)
+            logging.config.fileConfig(fp)
+        else:
+            logging.basicConfig(level=logging.DEBUG)
 
+    def reconfigure_handler(self, signum, frame):
+        signal.signal(signal.SIGHUP, signal.SIG_IGN)
+        self.read_config()
+        self.setup_logging()
+        self.sched.reconfigure(self.config)
+        signal.signal(signal.SIGHUP, self.reconfigure_handler)
 
-def setup_logging(config):
-    if config.has_option('zuul', 'log_config'):
-        fp = os.path.expanduser(config.get('zuul', 'log_config'))
-        if not os.path.exists(fp):
-            raise Exception("Unable to read logging config file at %s" % fp)
-        logging.config.fileConfig(fp)
-    else:
-        logging.basicConfig(level=logging.DEBUG)
+    def main(self):
+        self.sched = zuul.scheduler.Scheduler()
 
+        jenkins = zuul.launcher.jenkins.Jenkins(self.config, self.sched)
+        gerrit = zuul.trigger.gerrit.Gerrit(self.config, self.sched)
 
-def main(config):
-    sched = zuul.scheduler.Scheduler(config)
+        self.sched.setLauncher(jenkins)
+        self.sched.setTrigger(gerrit)
 
-    jenkins = zuul.launcher.jenkins.Jenkins(config, sched)
-    gerrit = zuul.trigger.gerrit.Gerrit(config, sched)
+        self.sched.start()
+        self.sched.reconfigure(self.config)
+        signal.signal(signal.SIGHUP, self.reconfigure_handler)
+        while True:
+            signal.pause()
 
-    sched.setLauncher(jenkins)
-    sched.setTrigger(gerrit)
-    sched.run()
+    def start(self):
+        self.parse_arguments()
+        self.read_config()
+        self.setup_logging()
+        self.main()
+
 
 if __name__ == '__main__':
-    args = parse_arguments()
-    config = read_config(args)
-    setup_logging(config)
-    main(config)
+    server = Server()
+    server.start()
