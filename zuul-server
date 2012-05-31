@@ -89,7 +89,6 @@ if __name__ == '__main__':
     server = Server()
     server.parse_arguments()
     server.read_config()
-    server.setup_logging()
 
     if server.config.has_option('zuul', 'pidfile'):
         pid_fn = os.path.expanduser(server.config.get('zuul', 'pidfile'))
@@ -98,7 +97,9 @@ if __name__ == '__main__':
     pid = daemon.pidlockfile.TimeoutPIDLockFile(pid_fn, 10)
 
     if server.args.nodaemon:
+        server.setup_logging()
         server.main()
     else:
         with daemon.DaemonContext(pidfile=pid):
+            server.setup_logging()
             server.main()
