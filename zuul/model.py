@@ -67,6 +67,11 @@ class Job(object):
     def __repr__(self):
         return '<Job %s>' % (self.name)
 
+    def copy(self, other):
+        self.failure_message = other.failure_message
+        self.success_message = other.failure_message
+        self.event_filters = other.event_filters[:]
+
 
 class Build(object):
     def __init__(self, job, uuid):

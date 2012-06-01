@@ -16,6 +16,7 @@ import os
 import Queue
 import threading
 import logging
+import re
 import yaml
 
 from model import Job, Change, Project, ChangeQueue, EventFilter
@@ -39,6 +40,7 @@ class Scheduler(threading.Thread):
         self.queue_managers = {}
         self.jobs = {}
         self.projects = {}
+        self.metajobs = {}
 
     def _parseConfig(self, fp):
         def toList(item):
@@ -74,15 +76,18 @@ class Scheduler(threading.Thread):
 
         for config_job in data['jobs']:
             job = self.getJob(config_job['name'])
-            job.failure_message = config_job.get('failure-message', None)
-            job.success_message = config_job.get('success-message', None)
-            silent = config_job.get('silent', None)
-            if silent:
-                job.silent = True
+            # Be careful to only set attributes explicitly present on
+            # this job, to avoid squashing attributes set by a meta-job.
+            m = config_job.get('failure-message', None)
+            if m:
+                job.failure_message = m
+            m = config_job.get('success-message', None)
+            if m:
+                job.success_message = m
             branches = toList(config_job.get('branch'))
             if branches:
                 f = EventFilter(branches=branches)
-                job.event_filters.append(f)
+                job.event_filters = [f]
 
         def add_jobs(job_tree, config_jobs):
             for job in config_jobs:
@@ -105,6 +110,10 @@ class Scheduler(threading.Thread):
                     config_jobs = config_project[qname]
                     add_jobs(job_tree, config_jobs)
 
+        # All jobs should be defined at this point, get rid of
+        # metajobs so that getJob isn't doing anything weird.
+        self.metajobs = {}
+
         # TODO(jeblair): check that we don't end up with jobs like
         # "foo - bar" because a ':' is missing in the yaml for a dependent job
         for manager in self.queue_managers.values():
@@ -114,7 +123,16 @@ class Scheduler(threading.Thread):
         if name in self.jobs:
             return self.jobs[name]
         job = Job(name)
-        self.jobs[name] = job
+        if name.startswith('^'):
+            # This is a meta-job
+            regex = re.compile(name)
+            self.metajobs[regex] = job
+        else:
+            # Apply attributes from matching meta-jobs
+            for regex, metajob in self.metajobs.items():
+                if regex.match(name):
+                    job.copy(metajob)
+            self.jobs[name] = job
         return job
 
     def setLauncher(self, launcher):
