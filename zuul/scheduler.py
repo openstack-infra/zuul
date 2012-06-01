@@ -57,7 +57,7 @@ class Scheduler(threading.Thread):
         fp = open(fp)
         data = yaml.load(fp)
 
-        for config_queue in data['queue']:
+        for config_queue in data['queues']:
             manager = globals()[config_queue['manager']](self,
                                                          config_queue['name'])
             self.queue_managers[config_queue['name']] = manager
