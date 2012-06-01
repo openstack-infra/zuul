@@ -145,29 +145,47 @@ class Project(object):
 
 
 class Change(object):
-    def __init__(self, queue_name, project, branch, number, patchset, refspec):
+    def __init__(self, queue_name, project, event):
         self.queue_name = queue_name
         self.project = project
-        self.branch = branch
-        self.number = number
-        self.patchset = patchset
-        self.refspec = refspec
+        self.branch = None
+        self.number = None
+        self.patchset = None
+        self.refspec = None
+        self.ref = None
+        self.oldrev = None
+        self.newrev = None
+
+        if event.change_number:
+            self.branch = event.branch
+            self.number = event.change_number
+            self.patchset = event.patch_number
+            self.refspec = event.refspec
+        if event.ref:
+            self.ref = event.ref
+            self.oldrev = event.oldrev
+            self.newrev = event.newrev
+
         self.jobs = {}
         self.job_urls = {}
         self.change_ahead = None
         self.change_behind = None
         self.running_builds = []
 
+    def _id(self):
+        if self.number:
+            return '%s,%s' % (self.number, self.patchset)
+        return self.newrev
+
     def __str__(self):
-        return '<Change 0x%x %s,%s>' % (id(self), self.number, self.patchset)
+        return '<Change 0x%x %s>' % (id(self), self._id())
 
     def formatStatus(self, indent=0):
         indent_str = ' ' * indent
         ret = ''
-        ret += '%sProject %s change %s,%s\n' % (indent_str,
-                                              self.project.name,
-                                              self.number,
-                                              self.patchset)
+        ret += '%sProject %s change %s\n' % (indent_str,
+                                             self.project.name,
+                                             self._id())
         for job in self.project.getJobs(self.queue_name):
             result = self.jobs.get(job.name)
             ret += '%s  %s: %s\n' % (indent_str, job.name, result)
@@ -250,14 +268,19 @@ class Change(object):
 class TriggerEvent(object):
     def __init__(self):
         self.data = None
+        # common
         self.type = None
         self.project_name = None
+        # patchset-created, comment-added, etc.
         self.change_number = None
         self.patch_number = None
         self.refspec = None
         self.approvals = []
         self.branch = None
+        # ref-updated
         self.ref = None
+        self.oldrev = None
+        self.newrew = None
 
     def __str__(self):
         ret = '<TriggerEvent %s %s' % (self.type, self.project_name)

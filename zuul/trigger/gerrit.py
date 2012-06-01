@@ -42,6 +42,12 @@ class GerritEventConnector(threading.Thread):
                 event.patch_number = patchset.get('number')
                 event.refspec = patchset.get('ref')
             event.approvals = data.get('approvals')
+        refupdate = data.get('refUpdate')
+        if refupdate:
+            event.project_name = refupdate.get('project')
+            event.ref = refupdate.get('refName')
+            event.oldrev = refupdate.get('oldRev')
+            event.newrev = refupdate.get('newRev')
         self.sched.addEvent(event)
 
     def run(self):
@@ -72,12 +78,20 @@ class Gerrit(object):
     def report(self, change, message, action):
         self.log.debug("Report change %s, action %s, message: %s" %
                        (change, action, message))
+        if not change.number:
+            self.log.debug("Change has no number; not reporting")
+            return
         changeid = '%s,%s' % (change.number, change.patchset)
         return self.gerrit.review(change.project.name, changeid,
                                   message, action)
 
     def isMerged(self, change):
         self.log.debug("Checking if change %s is merged", change)
+        if not change.number:
+            self.log.debug("Change has no number; considering it merged")
+            # Good question.  It's probably ref-updated, which, ah,
+            # means it's merged.
+            return True
         data = self.gerrit.query(change.number)
         if not data:
             return False

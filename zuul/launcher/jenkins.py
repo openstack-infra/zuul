@@ -167,13 +167,18 @@ class Jenkins(object):
         self.log.info("Launch job %s for change %s with dependent changes %s" %
                       (job, change, dependent_changes))
         uuid = str(uuid1())
-        changes_str = '^'.join(
-            ['%s:%s:%s' % (c.project.name, c.branch, c.refspec)
-             for c in dependent_changes + [change]])
         params = dict(UUID=uuid,
-                      GERRIT_PROJECT=change.project.name,
-                      GERRIT_BRANCH=change.branch,
-                      GERRIT_CHANGES=changes_str)
+                      GERRIT_PROJECT=change.project.name)
+        if change.refspec:
+            changes_str = '^'.join(
+                ['%s:%s:%s' % (c.project.name, c.branch, c.refspec)
+                 for c in dependent_changes + [change]])
+            params['GERRIT_BRANCH'] = change.branch
+            params['GERRIT_CHANGES'] = changes_str
+        if change.ref:
+            params['GERRIT_REFNAME'] = change.ref
+            params['GERRIT_OLDREV'] = change.oldrev
+            params['GERRIT_NEWREV'] = change.newrev
         build = Build(job, uuid)
         self.builds[uuid] = build
         # We can get the started notification on another thread before

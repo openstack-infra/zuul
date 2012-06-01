@@ -44,7 +44,7 @@ class Scheduler(threading.Thread):
         def toList(item):
             if not item:
                 return []
-            if type(item) == type([]):
+            if isinstance(item, list):
                 return item
             return [item]
 
@@ -199,13 +199,10 @@ class Scheduler(threading.Thread):
             if not manager.eventMatches(event):
                 self.log.debug("Event %s ignored by %s" % (event, manager))
                 continue
-            if event.change_number:
-                change = Change(manager.name, project, event.branch,
-                                event.change_number, event.patch_number,
-                                event.refspec)
-                self.log.info("Adding %s, %s to to %s" % (
-                        project, change, manager))
-                manager.addChange(change)
+            change = Change(manager.name, project, event)
+            self.log.info("Adding %s, %s to to %s" % (
+                    project, change, manager))
+            manager.addChange(change)
 
     def process_result_queue(self):
         self.log.debug("Fetching result event")

@@ -21,9 +21,9 @@ import logging.config
 import os
 import signal
 
-import zuul.scheduler
-import zuul.launcher.jenkins
-import zuul.trigger.gerrit
+# No zuul imports here because they pull in paramiko which must not be
+# imported until after the daemonization.
+# https://github.com/paramiko/paramiko/issues/59
 
 
 class Server(object):
@@ -70,6 +70,11 @@ class Server(object):
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
 
     def main(self):
+        # See comment at top of file about zuul imports
+        import zuul.scheduler
+        import zuul.launcher.jenkins
+        import zuul.trigger.gerrit
+
         self.sched = zuul.scheduler.Scheduler()
 
         jenkins = zuul.launcher.jenkins.Jenkins(self.config, self.sched)
