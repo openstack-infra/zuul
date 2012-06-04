@@ -406,9 +406,11 @@ class DependentQueueManager(BaseQueueManager):
     def addChange(self, change):
         self.log.debug("Adding change %s" % change)
         change_queue = self.getQueue(change.project)
-        self.log.debug("Adding change %s to queue %s" % (change, change_queue))
-        change_queue.enqueueChange(change)
-        super(DependentQueueManager, self).addChange(change)
+        if change_queue:
+            self.log.debug("Adding change %s to queue %s" % (
+                    change, change_queue))
+            change_queue.enqueueChange(change)
+            super(DependentQueueManager, self).addChange(change)
 
     def _getDependentChanges(self, change):
         changes = []

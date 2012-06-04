@@ -250,6 +250,8 @@ class Change(object):
 
     def findJobsToRun(self):
         tree = self.project.getJobTreeForQueue(self.queue_name)
+        if not tree:
+            return []
         return self._findJobsToRun(tree.job_trees)
 
     def areAllJobsComplete(self):
