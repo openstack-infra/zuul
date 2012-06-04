@@ -285,8 +285,8 @@ for build %s" % (item['id'], build))
 info can not be retreived" % build)
                     lostbuilds.append(build)
                     continue
-                if not info['result']:
-                    # It hasn't finished, continue
+                if info['building']:
+                    # It has not finished.
                     continue
                 finish_time = (info['timestamp'] + info['duration']) / 1000
                 if time.time() - finish_time > JENKINS_GRACE_TIME:
