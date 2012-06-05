@@ -81,6 +81,9 @@ class Gerrit(object):
         if not change.number:
             self.log.debug("Change has no number; not reporting")
             return
+        if not action:
+            self.log.debug("No action specified; not reporting")
+            return
         changeid = '%s,%s' % (change.number, change.patchset)
         return self.gerrit.review(change.project.name, changeid,
                                   message, action)
