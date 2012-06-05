@@ -1,0 +1,42 @@
+queues:
+  - name: check
+    manager: IndependentQueueManager
+    trigger:
+      - event: patchset-uploaded
+    success:
+      verified: 1
+    failure:
+      verified: -1
+
+  - name: post
+    manager: IndependentQueueManager
+    trigger:
+      - event: ref-updated
+        ref: ^(?!refs/).*$
+
+  - name: gate
+    manager: DependentQueueManager
+    trigger:
+      - event: comment-added
+        approval:
+          - approved: 1
+    success:
+      verified: 2
+      submit: true
+    failure:
+      verified: -2
+
+jobs:
+  - name: ^.*-merge$
+    failure-message: Unable to merge change, please rebase and try again.
+
+projects:
+  - name: example/project
+    check:
+      - project-merge:
+        - project-test
+    gate:
+      - project-merge:
+        - project-test
+    post:
+      - project-publish

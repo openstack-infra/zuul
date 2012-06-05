@@ -1,0 +1,14 @@
+[jenkins]
+server=https://jenkins.example.com
+user=jenkins
+apikey=1234567890abcdef1234567890abcdef
+
+[gerrit]
+server=review.example.com
+user=jenkins
+sshkey=/home/jenkins/.ssh/id_rsa
+
+[zuul]
+layout_config=/etc/zuul/layout.yaml
+log_config=/etc/zuul/logging.yaml
+pidfile=/var/run/zuul/zuul.pid
