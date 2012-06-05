@@ -69,7 +69,11 @@ class Gerrit(object):
             sshkey = config.get('gerrit', 'sshkey')
         else:
             sshkey = None
-        self.gerrit = gerrit.Gerrit(server, user, sshkey)
+        if config.has_option('gerrit', 'port'):
+            port = config.get('gerrit', 'port')
+        else:
+            port = 29418
+        self.gerrit = gerrit.Gerrit(server, user, port, sshkey)
         self.gerrit.startWatching()
         self.gerrit_connector = GerritEventConnector(
             self.gerrit, sched)
