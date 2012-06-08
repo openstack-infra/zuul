@@ -198,9 +198,13 @@ class Scheduler(threading.Thread):
                 if self._reconfigure_flag and self._areAllBuildsComplete():
                     self._doReconfigure()
 
-                if not (self.trigger_event_queue.empty() and
-                        self.result_event_queue.empty()):
-                    self.wake_event.set()
+                if not self._reconfigure_flag:
+                    if not (self.trigger_event_queue.empty() and
+                            self.result_event_queue.empty()):
+                        self.wake_event.set()
+                else:
+                    if not self.result_event_queue.empty():
+                        self.wake_event.set()
             except:
                 self.log.exception("Exception in run handler:")
 
