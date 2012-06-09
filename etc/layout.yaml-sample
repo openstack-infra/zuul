@@ -2,7 +2,7 @@ queues:
   - name: check
     manager: IndependentQueueManager
     trigger:
-      - event: patchset-uploaded
+      - event: patchset-created
     success:
       verified: 1
     failure:

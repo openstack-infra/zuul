@@ -4,3 +4,6 @@ zuul.egg-info
 MANIFEST
 .tox
 *.pyc
+doc/build
+doc/source/sourcecode
+*~
