@@ -180,20 +180,36 @@ class Jenkins(object):
             params['GERRIT_OLDREV'] = change.oldrev
             params['GERRIT_NEWREV'] = change.newrev
         build = Build(job, uuid)
-        self.builds[uuid] = build
         # We can get the started notification on another thread before
         # this is done so we add the build even before we trigger the
-        # job on Jenkins.  We should be careful to clean it up if it
-        # doesn't actually kick off.
-        try:
-            self.jenkins.build_job(job.name, parameters=params)
-        except:
-            self.log.exception(
-                "Exception launching build %s for job %s for change %s:" % (
-                    build, job, change))
-            # Whoops.  Remove that build we added.
-            del self.builds[uuid]
-            raise
+        # job on Jenkins.
+        self.builds[uuid] = build
+        # Sometimes Jenkins may erroneously respond with a 404.  Handle
+        # that by retrying for 30 seconds.
+        launched = False
+        errored = False
+        for count in range(6):
+            try:
+                self.jenkins.build_job(job.name, parameters=params)
+                launched = True
+                break
+            except:
+                errored = True
+                self.log.exception(
+                    "Exception launching build %s for job %s for change %s\
+(will retry):" % (build, job, change))
+                time.sleep(5)
+
+        if errored:
+            if launched:
+                self.log.error("Finally able to launch %s" % build)
+            else:
+                self.log.error("Unable to launch %s, even after retrying,\
+declaring lost" % build)
+                # To keep the queue moving, declare this as a lost build
+                # so that the change will get dropped.
+                self.onBuildCompleted(build.uuid, 'LOST', None, None)
+
         return build
 
     def findBuildInQueue(self, build):
