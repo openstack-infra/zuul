@@ -417,11 +417,13 @@ class DependentQueueManager(BaseQueueManager):
             super(DependentQueueManager, self).addChange(change)
 
     def _getDependentChanges(self, change):
+        orig_change = change
         changes = []
         while change.change_ahead:
             changes.append(change.change_ahead)
             change = change.change_ahead
-        self.log.info("Change %s depends on changes %s" % (change, changes))
+        self.log.info("Change %s depends on changes %s" % (orig_change,
+                                                           changes))
         return changes
 
     def launchJobs(self, change):

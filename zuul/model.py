@@ -24,7 +24,7 @@ class ChangeQueue(object):
         self._jobs = set()
         self.queue = []
 
-    def __str__(self):
+    def __repr__(self):
         return '<ChangeQueue %s: %s>' % (self.queue_name, self.name)
 
     def getJobs(self):
@@ -182,7 +182,7 @@ class Change(object):
             return '%s,%s' % (self.number, self.patchset)
         return self.newrev
 
-    def __str__(self):
+    def __repr__(self):
         return '<Change 0x%x %s>' % (id(self), self._id())
 
     def formatStatus(self, indent=0):
@@ -289,7 +289,7 @@ class TriggerEvent(object):
         self.oldrev = None
         self.newrew = None
 
-    def __str__(self):
+    def __repr__(self):
         ret = '<TriggerEvent %s %s' % (self.type, self.project_name)
 
         if self.branch:
@@ -314,7 +314,7 @@ class EventFilter(object):
         self.refs = [re.compile(x) for x in refs]
         self.approvals = approvals
 
-    def __str__(self):
+    def __repr__(self):
         ret = '<EventFilter'
 
         if self._types:
