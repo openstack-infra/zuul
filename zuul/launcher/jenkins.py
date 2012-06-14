@@ -46,10 +46,15 @@ class JenkinsCallback(threading.Thread):
 
     def app(self, environ, start_response):
         request = Request(environ)
+        start_response('200 OK', [('content-type', 'text/html')])
         if request.path == '/jenkins_endpoint':
             self.jenkins_endpoint(request)
-        start_response('200 OK', [('content-type', 'text/html')])
-        return ['Zuul good.']
+            return ['Zuul good.']
+        elif request.path == '/status':
+            ret = self.jenkins.sched.formatStatusHTML()
+            return [ret]
+        else:
+            return ['Zuul good.']
 
     def jenkins_endpoint(self, request):
         data = json.loads(request.body)
