@@ -299,8 +299,25 @@ for build %s" % (item['id'], build))
                 continue
             if build.number:
                 # The build has started; see if it has finished
-                info = self.jenkins.get_build_info(build.job.name,
-                                                   build.number)
+                try:
+                    info = self.jenkins.get_build_info(build.job.name,
+                                                       build.number)
+                    if hasattr(build, '_jenkins_missing_build_info'):
+                        del build._jenkins_missing_build_info
+                except:
+                    self.log.exception("Exception getting info for %s" % build)
+                    # We can't look it up in jenkins.  That could be transient.
+                    # If it keeps up, assume it's permanent.
+                    if hasattr(build, '_jenkins_missing_build_info'):
+                        missing_time = build._jenkins_missing_build_info
+                        if time.time() - missing_time > JENKINS_GRACE_TIME:
+                            self.log.debug("Lost build %s because it has \
+started but the build URL is not working" % build)
+                            lostbuilds.append(build)
+                    else:
+                        build._jenkins_missing_build_info = time.time()
+                    continue
+
                 if not info:
                     self.log.debug("Lost build %s because it started but \
 info can not be retreived" % build)
