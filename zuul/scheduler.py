@@ -235,6 +235,20 @@ class Scheduler(threading.Thread):
                 return
         self.log.warning("Build %s not found by any queue manager" % (build))
 
+    def formatStatusHTML(self):
+        ret = '<html><pre>'
+        keys = self.queue_managers.keys()
+        keys.sort()
+        for key in keys:
+            manager = self.queue_managers[key]
+            s = 'Queue: %s' % manager.name
+            ret += s + '\n'
+            ret += '-' * len(s) + '\n'
+            ret += manager.formatStatusHTML()
+            ret += '\n'
+        ret += '</pre></html>'
+        return ret
+
 
 class BaseQueueManager(object):
     log = logging.getLogger("zuul.BaseQueueManager")
@@ -352,6 +366,16 @@ for change %s:" % (job, change))
                         change, ret))
         except:
             self.log.exception("Exception while reporting:")
+        return ret
+
+    def formatStatusHTML(self):
+        changes = []
+        for build, change in self.building_jobs.items():
+            if change not in changes:
+                changes.append(change)
+        ret = ''
+        for change in changes:
+            ret += change.formatStatus()
         return ret
 
 
@@ -500,3 +524,14 @@ behind failed change %s" % (
             self.log.info("Change %s behind change %s is ready, \
 possibly reporting" % (change.change_behind, change))
             self.possiblyReportChange(change.change_behind)
+
+    def formatStatusHTML(self):
+        ret = ''
+        ret += '\n'
+        for queue in self.change_queues:
+            s = 'Shared queue: %s' % queue.name
+            ret += s + '\n'
+            ret += '-' * len(s) + '\n'
+            if queue.queue:
+                ret += queue.queue[-1].formatStatus()
+        return ret
