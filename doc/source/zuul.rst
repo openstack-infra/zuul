@@ -163,6 +163,11 @@ explanation of each of the parameters::
 **failure** 
   Uses the same syntax as **success**, but describes what Zuul should
   do if at least one job fails.
+
+**start** 
+  Uses the same syntax as **success**, but describes what Zuul should
+  do when a change is added to the queue manager.  This can be used,
+  for example, to reset the value of the Verified review category.
   
 Some example queue configurations are included in the sample layout
 file.  The first is called a *check* queue::

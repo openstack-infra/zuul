@@ -63,6 +63,7 @@ class Scheduler(threading.Thread):
             self.queue_managers[config_queue['name']] = manager
             manager.success_action = config_queue.get('success')
             manager.failure_action = config_queue.get('failure')
+            manager.start_action = config_queue.get('start')
             for trigger in toList(config_queue['trigger']):
                 approvals = {}
                 for approval_dict in toList(trigger.get('approval')):
@@ -246,6 +247,7 @@ class BaseQueueManager(object):
         self.event_filters = []
         self.success_action = {}
         self.failure_action = {}
+        self.start_action = {}
 
     def __str__(self):
         return "<%s %s>" % (self.__class__.__name__, self.name)
@@ -273,6 +275,9 @@ class BaseQueueManager(object):
             if p.hasQueue(self.name):
                 self.log.info("    %s" % p)
                 log_jobs(p.getJobTreeForQueue(self.name))
+        if self.start_action:
+            self.log.info("  On start:")
+            self.log.info("    %s" % self.start_action)
         if self.success_action:
             self.log.info("  On success:")
             self.log.info("    %s" % self.success_action)
@@ -288,6 +293,17 @@ class BaseQueueManager(object):
 
     def addChange(self, change):
         self.log.debug("Adding change %s" % change)
+        if self.start_action:
+            try:
+                self.log.info("Reporting start, action %s change %s" % (
+                        self.start_action, change))
+                msg = "Starting %s jobs." % self.name
+                ret = self.sched.trigger.report(change, msg, self.start_action)
+                if ret:
+                    self.log.error("Reporting change start %s received: %s" % (
+                            change, ret))
+            except:
+                self.log.exception("Exception while reporting start:")
         self.launchJobs(change)
 
     def launchJobs(self, change):

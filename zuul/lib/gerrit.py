@@ -108,8 +108,9 @@ class Gerrit(object):
         return self.event_queue.get()
 
     def review(self, project, change, message, action={}):
-        cmd = 'gerrit review --project %s --message "%s"' % (
-            project, message)
+        cmd = 'gerrit review --project %s' % project
+        if message:
+            cmd += ' --message "%s"' % message
         for k, v in action.items():
             if v is True:
                 cmd += ' --%s' % k
