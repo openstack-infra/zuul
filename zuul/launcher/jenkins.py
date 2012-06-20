@@ -23,6 +23,7 @@ from uuid import uuid1
 import jenkins
 import json
 import urllib2  # for extending jenkins lib
+import urlparse
 import logging
 import pprint
 import time
@@ -266,6 +267,21 @@ for build %s" % (item['id'], build))
                 "Build %s has not started but was not found in queue" %
                 build)
 
+    def getBestBuildURL(self, url):
+        try:
+            test_url = urlparse.urljoin(url, 'testReport')
+            self.jenkins.jenkins_open(urllib2.Request(test_url))
+            return test_url
+        except:
+            pass
+        try:
+            console_url = urlparse.urljoin(url, 'consoleFull')
+            self.jenkins.jenkins_open(urllib2.Request(console_url))
+            return console_url
+        except:
+            pass
+        return url
+
     def onBuildCompleted(self, uuid, status, url, number):
         self.log.info("Build %s #%s complete, status %s" % (
                 uuid, number, status))
@@ -273,6 +289,8 @@ for build %s" % (item['id'], build))
         if build:
             self.log.debug("Found build %s" % build)
             del self.builds[uuid]
+            if url:
+                url = self.getBestBuildURL(url)
             build.result = status
             build.url = url
             build.number = number
