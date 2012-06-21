@@ -391,7 +391,7 @@ for change %s:" % (job, change))
                 changes.append(change)
         ret = ''
         for change in changes:
-            ret += change.formatStatus()
+            ret += change.formatStatus(html=True)
         return ret
 
 
@@ -549,5 +549,5 @@ possibly reporting" % (change.change_behind, change))
             ret += s + '\n'
             ret += '-' * len(s) + '\n'
             if queue.queue:
-                ret += queue.queue[-1].formatStatus()
+                ret += queue.queue[-1].formatStatus(html=True)
         return ret
