@@ -155,6 +155,7 @@ class Change(object):
         self.project = project
         self.branch = None
         self.number = None
+        self.url = None
         self.patchset = None
         self.refspec = None
         self.ref = None
@@ -164,6 +165,7 @@ class Change(object):
         if event.change_number:
             self.branch = event.branch
             self.number = event.change_number
+            self.url = event.change_url
             self.patchset = event.patch_number
             self.refspec = event.refspec
         if event.ref:
@@ -196,9 +198,15 @@ class Change(object):
     def formatStatus(self, indent=0, html=False):
         indent_str = ' ' * indent
         ret = ''
-        ret += '%sProject %s change %s\n' % (indent_str,
-                                             self.project.name,
-                                             self._id())
+        if html and self.url is not None:
+            ret += '%sProject %s change <a href="%s">%s</a>\n' % (indent_str,
+                                                            self.project.name,
+                                                            self.url,
+                                                            self._id())
+        else:
+            ret += '%sProject %s change %s\n' % (indent_str,
+                                                 self.project.name,
+                                                 self._id())
         for job in self.project.getJobs(self.queue_name):
             result = self.jobs.get(job.name)
             job_name = job.name
@@ -298,6 +306,7 @@ class TriggerEvent(object):
         self.project_name = None
         # patchset-created, comment-added, etc.
         self.change_number = None
+        self.change_url = None
         self.patch_number = None
         self.refspec = None
         self.approvals = []

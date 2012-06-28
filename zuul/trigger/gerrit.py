@@ -37,6 +37,7 @@ class GerritEventConnector(threading.Thread):
             event.project_name = change.get('project')
             event.branch = change.get('branch')
             event.change_number = change.get('number')
+            event.change_url = change.get('url')
             patchset = data.get('patchSet')
             if patchset:
                 event.patch_number = patchset.get('number')
