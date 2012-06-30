@@ -72,7 +72,9 @@ class Scheduler(threading.Thread):
                 f = EventFilter(types=toList(trigger['event']),
                                 branches=toList(trigger.get('branch')),
                                 refs=toList(trigger.get('ref')),
-                                approvals=approvals)
+                                approvals=approvals,
+                                comment_filters=toList(
+                                        trigger.get('comment_filter')))
                 manager.event_filters.append(f)
 
         for config_job in data['jobs']:

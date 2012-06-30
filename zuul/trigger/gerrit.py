@@ -43,6 +43,7 @@ class GerritEventConnector(threading.Thread):
                 event.patch_number = patchset.get('number')
                 event.refspec = patchset.get('ref')
             event.approvals = data.get('approvals', [])
+            event.comment = data.get('comment')
         refupdate = data.get('refUpdate')
         if refupdate:
             event.project_name = refupdate.get('project')

@@ -148,6 +148,14 @@ explanation of each of the parameters::
   ``code-review: 2`` matches a ``+2`` vote on the code review category.
   Multiple approvals may be listed.
 
+  *comment_filter*
+  This is only used for ``comment-added`` events.  It accepts a list of
+  regexes that are searched for in the comment string. If any of these
+  regexes matches a portion of the comment string the trigger is
+  matched. ``comment_filter: retrigger`` will match when comments
+  containing 'retrigger' somewhere in the comment text are added to a
+  change.
+
 **success**
   Describes what Zuul should do if all the jobs complete successfully.
   This section is optional; if it is omitted, Zuul will run jobs and
