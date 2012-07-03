@@ -175,7 +175,7 @@ class Scheduler(threading.Thread):
         self.log.debug("Checking if all builds are complete")
         waiting = False
         for manager in self.queue_managers.values():
-            for build in manager.building_jobs.values():
+            for build in manager.building_jobs.keys():
                 self.log.debug("%s waiting on %s" % (manager, build))
                 waiting = True
         if not waiting:
