@@ -77,10 +77,10 @@ class Build(object):
     def __init__(self, job, uuid):
         self.job = job
         self.uuid = uuid
-        self.status = None
         self.url = None
         self.number = None
         self.result = None
+        self.build_set = None
         self.launch_time = time.time()
 
     def __repr__(self):
@@ -149,6 +149,18 @@ class Project(object):
         return tree.getJobs()
 
 
+class BuildSet(object):
+    def __init__(self):
+        self.builds = {}
+
+    def addBuild(self, build):
+        self.builds[build.job.name] = build
+        build.build_set = self
+
+    def getBuild(self, job_name):
+        return self.builds.get(job_name)
+
+
 class Change(object):
     def __init__(self, queue_name, project, event):
         self.queue_name = queue_name
@@ -173,11 +185,11 @@ class Change(object):
             self.oldrev = event.oldrev
             self.newrev = event.newrev
 
-        self.jobs = {}
-        self.job_urls = {}
+        self.build_sets = []
+        self.current_build_set = BuildSet()
+        self.build_sets.append(self.current_build_set)
         self.change_ahead = None
         self.change_behind = None
-        self.running_builds = []
 
     def _id(self):
         if self.number:
@@ -186,14 +198,6 @@ class Change(object):
 
     def __repr__(self):
         return '<Change 0x%x %s>' % (id(self), self._id())
-
-    def _getBuild(self, job):
-        # We don't gurantee that we'll keep track of builds, but
-        # we might happen to have one running; useful for status.
-        for build in self.running_builds:
-            if build.job == job:
-                return build
-        return None
 
     def formatStatus(self, indent=0, html=False):
         indent_str = ' ' * indent
@@ -208,14 +212,17 @@ class Change(object):
                                                  self.project.name,
                                                  self._id())
         for job in self.project.getJobs(self.queue_name):
-            result = self.jobs.get(job.name)
+            build = self.current_build_set.getBuild(job.name)
+            if build:
+                result = build.result
+            else:
+                result = None
             job_name = job.name
             if html:
-                build = self._getBuild(job)
                 if build:
                     url = build.url
                 else:
-                    url = self.job_urls.get(job.name, None)
+                    url = None
                 if url is not None:
                     job_name = '<a href="%s">%s</a>' % (url, job_name)
             ret += '%s  %s: %s' % (indent_str, job_name, result)
@@ -233,44 +240,47 @@ class Change(object):
             ret += 'Build failed\n\n'
 
         for job in self.project.getJobs(self.queue_name):
-            result = self.jobs.get(job.name)
-            url = self.job_urls.get(job.name, job.name)
+            build = self.current_build_set.getBuild(job.name)
+            result = build.result
+            url = build.url
+            if not url:
+                url = job.name
             ret += '- %s : %s\n' % (url, result)
         return ret
 
     def resetAllBuilds(self):
-        self.jobs = {}
-        self.job_urls = {}
-        self.running_builds = []
+        self.current_build_set = BuildSet()
+        self.build_sets.append(self.current_build_set)
 
     def addBuild(self, build):
-        self.running_builds.append(build)
+        self.current_build_set.addBuild(build)
 
     def setResult(self, build):
-        self.running_builds.remove(build)
-        self.jobs[build.job.name] = build.result
-        if build.url:
-            self.job_urls[build.job.name] = build.url
         if build.result != 'SUCCESS':
             # Get a JobTree from a Job so we can find only its dependent jobs
             root = self.project.getJobTreeForQueue(self.queue_name)
             tree = root.getJobTreeForJob(build.job)
             for job in tree.getJobs():
-                self.jobs[job.name] = 'SKIPPED'
+                fakebuild = Build(job, None)
+                fakebuild.result = 'SKIPPED'
+                self.addBuild(fakebuild)
 
     def _findJobsToRun(self, job_trees):
         torun = []
         for tree in job_trees:
             job = tree.job
+            result = None
             if job:
-                result = self.jobs.get(job.name, None)
-            else:
-                # This is a null job tree, run all of its jobs
-                result = 'SUCCESS'
-            if not result:
-                if job not in [b.job for b in self.running_builds]:
+                build = self.current_build_set.getBuild(job.name)
+                if build:
+                    result = build.result
+                else:
+                    # There is no build for the root of this job tree,
+                    # so we should run it.
                     torun.append(job)
-            elif result == 'SUCCESS':
+            # If there is no job, this is a null job tree, and we should
+            # run all of its jobs.
+            if result == 'SUCCESS' or not job:
                 torun.extend(self._findJobsToRun(tree.job_trees))
         return torun
 
@@ -283,13 +293,18 @@ class Change(object):
     def areAllJobsComplete(self):
         tree = self.project.getJobTreeForQueue(self.queue_name)
         for job in tree.getJobs():
-            if not job.name in self.jobs:
+            build = self.current_build_set.getBuild(job.name)
+            if not build or not build.result:
                 return False
         return True
 
     def didAllJobsSucceed(self):
-        for result in self.jobs.values():
-            if result != 'SUCCESS':
+        tree = self.project.getJobTreeForQueue(self.queue_name)
+        for job in tree.getJobs():
+            build = self.current_build_set.getBuild(job.name)
+            if not build:
+                return False
+            if build.result != 'SUCCESS':
                 return False
         return True
 

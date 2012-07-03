@@ -22,6 +22,7 @@ from paste import httpserver
 from uuid import uuid1
 import jenkins
 import json
+import urllib   # for extending jenkins lib
 import urllib2  # for extending jenkins lib
 import urlparse
 import logging
@@ -100,6 +101,7 @@ class JenkinsCleanup(threading.Thread):
 STOP_BUILD = 'job/%(name)s/%(number)s/stop'
 CANCEL_QUEUE = 'queue/item/%(number)s/cancelQueue'
 BUILD_INFO = 'job/%(name)s/%(number)s/api/json?depth=0'
+BUILD_DESCRIPTION = 'job/%(name)s/%(number)s/submitDescription'
 
 
 class ExtendedJenkins(jenkins.Jenkins):
@@ -152,6 +154,22 @@ class ExtendedJenkins(jenkins.Jenkins):
         '''
         return json.loads(self.jenkins_open(urllib2.Request(
                     self.server + BUILD_INFO % locals())))
+
+    def set_build_description(self, name, number, description):
+        '''
+        Get information for a build.
+
+        @param name: Name of Jenkins job
+        @type  name: str
+        @param number: Jenkins build number for the job
+        @type  number: int
+        @param description: Bulid description to set
+        @type  description: str
+        '''
+        params = urllib.urlencode({'description': description})
+        self.jenkins_open(urllib2.Request(self.server +
+                                          BUILD_DESCRIPTION % locals(),
+                                          params))
 
 
 class Jenkins(object):
