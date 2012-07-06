@@ -18,6 +18,7 @@ import threading
 import logging
 import re
 import yaml
+import pickle
 
 from model import Job, Change, Project, ChangeQueue, EventFilter
 
@@ -29,6 +30,9 @@ class Scheduler(threading.Thread):
         threading.Thread.__init__(self)
         self.wake_event = threading.Event()
         self.reconfigure_complete_event = threading.Event()
+        self._pause = False
+        self._reconfigure = False
+        self._exit = False
         self.launcher = None
         self.trigger = None
 
@@ -160,21 +164,77 @@ class Scheduler(threading.Thread):
         self.wake_event.set()
 
     def reconfigure(self, config):
-        self.log.debug("Reconfigure")
+        self.log.debug("Prepare to reconfigure")
         self.config = config
-        self._reconfigure_flag = True
+        self._pause = True
+        self._reconfigure = True
         self.wake_event.set()
         self.log.debug("Waiting for reconfiguration")
         self.reconfigure_complete_event.wait()
         self.reconfigure_complete_event.clear()
         self.log.debug("Reconfiguration complete")
 
-    def _doReconfigure(self):
-        self.log.debug("Performing reconfiguration")
-        self._init()
-        self._parseConfig(self.config.get('zuul', 'layout_config'))
-        self._reconfigure_flag = False
-        self.reconfigure_complete_event.set()
+    def exit(self):
+        self.log.debug("Prepare to exit")
+        self._pause = True
+        self._exit = True
+        self.wake_event.set()
+        self.log.debug("Waiting for exit")
+
+    def _get_queue_pickle_file(self):
+        state_dir = os.path.expanduser(self.config.get('zuul', 'state_dir'))
+        return os.path.join(state_dir, 'queue.pickle')
+
+    def _save_queue(self):
+        pickle_file = self._get_queue_pickle_file()
+        events = []
+        while not self.trigger_event_queue.empty():
+            events.append(self.trigger_event_queue.get())
+        self.log.debug("Queue length is %s" % len(events))
+        if events:
+            self.log.debug("Saving queue")
+            pickle.dump(events, open(pickle_file, 'wb'))
+
+    def _load_queue(self):
+        pickle_file = self._get_queue_pickle_file()
+        if os.path.exists(pickle_file):
+            self.log.debug("Loading queue")
+            events = pickle.load(open(pickle_file, 'rb'))
+            self.log.debug("Queue length is %s" % len(events))
+            for event in events:
+                self.trigger_event_queue.put(event)
+        else:
+            self.log.debug("No queue file found")
+
+    def _delete_queue(self):
+        pickle_file = self._get_queue_pickle_file()
+        if os.path.exists(pickle_file):
+            self.log.debug("Deleting saved queue")
+            os.unlink(pickle_file)
+
+    def resume(self):
+        try:
+            self._load_queue()
+        except:
+            self.log.exception("Unable to load queue")
+        try:
+            self._delete_queue()
+        except:
+            self.log.exception("Unable to delete saved queue")
+        self.log.debug("Resuming queue processing")
+        self.wake_event.set()
+
+    def _doPauseEvent(self):
+        if self._exit:
+            self.log.debug("Exiting")
+            self._save_queue()
+            os._exit(0)
+        if self._reconfigure:
+            self.log.debug("Performing reconfiguration")
+            self._init()
+            self._parseConfig(self.config.get('zuul', 'layout_config'))
+            self._pause = False
+            self.reconfigure_complete_event.set()
 
     def _areAllBuildsComplete(self):
         self.log.debug("Checking if all builds are complete")
@@ -196,17 +256,17 @@ class Scheduler(threading.Thread):
             self.wake_event.clear()
             self.log.debug("Run handler awake")
             try:
-                if not self._reconfigure_flag:
+                if not self._pause:
                     if not self.trigger_event_queue.empty():
                         self.process_event_queue()
 
                 if not self.result_event_queue.empty():
                     self.process_result_queue()
 
-                if self._reconfigure_flag and self._areAllBuildsComplete():
-                    self._doReconfigure()
+                if self._pause and self._areAllBuildsComplete():
+                    self._doPauseEvent()
 
-                if not self._reconfigure_flag:
+                if not self._pause:
                     if not (self.trigger_event_queue.empty() and
                             self.result_event_queue.empty()):
                         self.wake_event.set()
