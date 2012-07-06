@@ -77,6 +77,7 @@ class Build(object):
     def __init__(self, job, uuid):
         self.job = job
         self.uuid = uuid
+        self.base_url = None
         self.url = None
         self.number = None
         self.result = None
@@ -85,6 +86,104 @@ class Build(object):
 
     def __repr__(self):
         return '<Build %s of %s>' % (self.uuid, self.job.name)
+
+    def formatDescription(self):
+        concurrent_changes = ''
+        concurrent_builds = ''
+        other_builds = ''
+
+        for change in self.build_set.other_changes:
+            concurrent_changes += '<li><a href="{change.url}">\
+              {change.number},{change.patchset}</a></li>'.format(
+                change=change)
+
+        change = self.build_set.change
+
+        for build in self.build_set.getBuilds():
+            if build.base_url:
+                concurrent_builds += """\
+<li>
+  <a href="{build.base_url}">
+  {build.job.name} #{build.number}</a>: {build.result}
+</li>
+""".format(build=build)
+            else:
+                concurrent_builds += """\
+<li>
+  {build.job.name}: {build.result}
+</li>""".format(build=build)
+
+        if self.build_set.previous_build_set:
+            build = self.build_set.previous_build_set.getBuild(self.job.name)
+            if build:
+                other_builds += """\
+<li>
+  Preceded by: <a href="{build.base_url}">
+  {build.job.name} #{build.number}</a>
+</li>
+""".format(build=build)
+
+        if self.build_set.next_build_set:
+            build = self.build_set.next_build_set.getBuild(self.job.name)
+            if build:
+                other_builds += """\
+<li>
+  Succeeded by: <a href="{build.base_url}">
+  {build.job.name} #{build.number}</a>
+</li>
+""".format(build=build)
+
+        result = self.build_set.result
+
+        if change.number:
+            ret = """\
+<p>
+  Triggered by change:
+    <a href="{change.url}">{change.number},{change.patchset}</a><br/>
+  Branch: <b>{change.branch}</b><br/>
+  Pipeline: <b>{change.queue_name}</b>
+</p>"""
+        else:
+            ret = """\
+<p>
+  Triggered by reference:
+    {change.ref}</a><br/>
+  Old revision: <b>{change.oldrev}</b><br/>
+  New revision: <b>{change.newrev}</b><br/>
+  Pipeline: <b>{change.queue_name}</b>
+</p>"""
+
+        if concurrent_changes:
+            ret += """\
+<p>
+  Other changes tested concurrently with this change:
+  <ul>{concurrent_changes}</ul>
+</p>
+"""
+        if concurrent_builds:
+            ret += """\
+<p>
+  All builds for this change set:
+  <ul>{concurrent_builds}</ul>
+</p>
+"""
+
+        if other_builds:
+            ret += """\
+<p>
+  Other build sets for this change:
+  <ul>{other_builds}</ul>
+</p>
+"""
+        if result:
+            ret += """\
+<p>
+  Reported result: <b>{result}</b>
+</p>
+"""
+
+        ret = ret.format(**locals())
+        return ret
 
 
 class JobTree(object):
@@ -150,15 +249,34 @@ class Project(object):
 
 
 class BuildSet(object):
-    def __init__(self):
+    def __init__(self, change):
+        self.change = change
+        self.other_changes = []
         self.builds = {}
+        self.result = None
+        self.next_build_set = None
+        self.previous_build_set = None
 
     def addBuild(self, build):
         self.builds[build.job.name] = build
         build.build_set = self
 
+        # The change isn't enqueued until after it's created
+        # so we don't know what the other changes ahead will be
+        # until jobs start.
+        if not self.other_changes:
+            next_change = self.change.change_ahead
+            while next_change:
+                self.other_changes.append(next_change)
+                next_change = next_change.change_ahead
+
     def getBuild(self, job_name):
         return self.builds.get(job_name)
+
+    def getBuilds(self):
+        keys = self.builds.keys()
+        keys.sort()
+        return [self.builds.get(x) for x in keys]
 
 
 class Change(object):
@@ -186,10 +304,10 @@ class Change(object):
             self.newrev = event.newrev
 
         self.build_sets = []
-        self.current_build_set = BuildSet()
-        self.build_sets.append(self.current_build_set)
         self.change_ahead = None
         self.change_behind = None
+        self.current_build_set = BuildSet(self)
+        self.build_sets.append(self.current_build_set)
 
     def _id(self):
         if self.number:
@@ -248,8 +366,15 @@ class Change(object):
             ret += '- %s : %s\n' % (url, result)
         return ret
 
+    def setReportedResult(self, result):
+        self.current_build_set.result = result
+
     def resetAllBuilds(self):
-        self.current_build_set = BuildSet()
+        old = self.current_build_set
+        self.current_build_set.result = 'CANCELED'
+        self.current_build_set = BuildSet(self)
+        old.next_build_set = self.current_build_set
+        self.current_build_set.previous_build_set = old
         self.build_sets.append(self.current_build_set)
 
     def addBuild(self, build):

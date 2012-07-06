@@ -149,9 +149,14 @@ class Scheduler(threading.Thread):
         self.trigger_event_queue.put(event)
         self.wake_event.set()
 
+    def onBuildStarted(self, build):
+        self.log.debug("Adding start event for build: %s" % build)
+        self.result_event_queue.put(('started', build))
+        self.wake_event.set()
+
     def onBuildCompleted(self, build):
-        self.log.debug("Adding result event for build: %s" % build)
-        self.result_event_queue.put(build)
+        self.log.debug("Adding complete event for build: %s" % build)
+        self.result_event_queue.put(('completed', build))
         self.wake_event.set()
 
     def reconfigure(self, config):
@@ -231,11 +236,15 @@ class Scheduler(threading.Thread):
 
     def process_result_queue(self):
         self.log.debug("Fetching result event")
-        build = self.result_event_queue.get()
+        event_type, build = self.result_event_queue.get()
         self.log.debug("Processing result event %s" % build)
         for manager in self.queue_managers.values():
-            if manager.onBuildCompleted(build):
-                return
+            if event_type == 'started':
+                if manager.onBuildStarted(build):
+                    return
+            elif event_type == 'completed':
+                if manager.onBuildCompleted(build):
+                    return
         self.log.warning("Build %s not found by any queue manager" % (build))
 
     def formatStatusHTML(self):
@@ -336,6 +345,27 @@ class BaseQueueManager(object):
                 self.log.exception("Exception while launching job %s \
 for change %s:" % (job, change))
 
+    def updateBuildDescriptions(self, build_set):
+        for build in build_set.getBuilds():
+            desc = build.formatDescription()
+            self.sched.launcher.setBuildDescription(build, desc)
+
+        if build_set.previous_build_set:
+            for build in build_set.previous_build_set.getBuilds():
+                desc = build.formatDescription()
+                self.sched.launcher.setBuildDescription(build, desc)
+
+    def onBuildStarted(self, build):
+        self.log.debug("Build %s started" % build)
+        if build not in self.building_jobs:
+            self.log.debug("Build %s not found" % (build))
+            # Or triggered externally, or triggered before zuul started,
+            # or restarted
+            return False
+
+        self.updateBuildDescriptions(build.build_set)
+        return True
+
     def onBuildCompleted(self, build):
         self.log.debug("Build %s completed" % build)
         if build not in self.building_jobs:
@@ -361,6 +391,8 @@ for change %s:" % (job, change))
             self.log.debug("All jobs for change %s are not yet complete" % (
                     change))
             self.launchJobs(change)
+
+        self.updateBuildDescriptions(build.build_set)
         return True
 
     def possiblyReportChange(self, change):
@@ -372,8 +404,10 @@ for change %s:" % (job, change))
         ret = None
         if change.didAllJobsSucceed():
             action = self.success_action
+            change.setReportedResult('SUCCESS')
         else:
             action = self.failure_action
+            change.setReportedResult('FAILURE')
         try:
             self.log.info("Reporting change %s, action: %s" % (
                     change, action))
@@ -384,6 +418,8 @@ for change %s:" % (job, change))
                         change, ret))
         except:
             self.log.exception("Exception while reporting:")
+            change.setReportedResult('ERROR')
+        self.updateBuildDescriptions(change.current_build_set)
         return ret
 
     def formatStatusHTML(self):
@@ -504,6 +540,7 @@ for change %s" % (build, change))
                 to_remove.append(build)
         for build in to_remove:
             self.log.debug("Removing build %s from running builds" % build)
+            build.result = 'CANCELED'
             del self.building_jobs[build]
         if change.change_behind:
             self.log.debug("Canceling jobs for change %s, \

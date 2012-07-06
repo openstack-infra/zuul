@@ -300,6 +300,16 @@ for build %s" % (item['id'], build))
             pass
         return url
 
+    def setBuildDescription(self, build, description):
+        if not build.number:
+            return
+        try:
+            self.jenkins.set_build_description(build.job.name, build.number,
+                                               description)
+        except:
+            self.log.exception("Exception setting build description for %s" %
+                               build)
+
     def onBuildCompleted(self, uuid, status, url, number):
         self.log.info("Build %s #%s complete, status %s" % (
                 uuid, number, status))
@@ -308,9 +318,10 @@ for build %s" % (item['id'], build))
             self.log.debug("Found build %s" % build)
             del self.builds[uuid]
             if url:
+                build.base_url = url
                 url = self.getBestBuildURL(url)
+                build.url = url
             build.result = status
-            build.url = url
             build.number = number
             self.sched.onBuildCompleted(build)
         else:
@@ -323,6 +334,7 @@ for build %s" % (item['id'], build))
             self.log.debug("Found build %s" % build)
             build.url = url
             build.number = number
+            self.sched.onBuildStarted(build)
         else:
             self.log.error("Unable to find build %s" % uuid)
 
