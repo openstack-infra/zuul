@@ -182,7 +182,11 @@ class Scheduler(threading.Thread):
         self.log.debug("Waiting for exit")
 
     def _get_queue_pickle_file(self):
-        state_dir = os.path.expanduser(self.config.get('zuul', 'state_dir'))
+        if self.config.has_option('zuul', 'state_dir'):
+            state_dir = os.path.expanduser(self.config.get('zuul',
+                                                           'state_dir'))
+        else:
+            state_dir = '/var/lib/zuul'
         return os.path.join(state_dir, 'queue.pickle')
 
     def _save_queue(self):
