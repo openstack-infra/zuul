@@ -46,7 +46,7 @@ class Scheduler(threading.Thread):
         self.projects = {}
         self.metajobs = {}
 
-    def _parseConfig(self, fp):
+    def _parseConfig(self, config_path):
         def toList(item):
             if not item:
                 return []
@@ -54,12 +54,23 @@ class Scheduler(threading.Thread):
                 return item
             return [item]
 
-        if fp:
-            fp = os.path.expanduser(fp)
-            if not os.path.exists(fp):
-                raise Exception("Unable to read layout config file at %s" % fp)
-        fp = open(fp)
-        data = yaml.load(fp)
+        if config_path:
+            config_path = os.path.expanduser(config_path)
+            if not os.path.exists(config_path):
+                raise Exception("Unable to read layout config file at %s" %
+                                config_path)
+        config_file = open(config_path)
+        data = yaml.load(config_file)
+
+        self._config_env = {}
+        for include in data.get('includes', []):
+            if 'python-file' in include:
+                fn = include['python-file']
+                if not os.path.isabs(fn):
+                    base = os.path.dirname(config_path)
+                    fn = os.path.join(base, fn)
+                fn = os.path.expanduser(fn)
+                execfile(fn, self._config_env)
 
         for config_queue in data['queues']:
             manager = globals()[config_queue['manager']](self,
@@ -91,6 +102,12 @@ class Scheduler(threading.Thread):
             m = config_job.get('success-message', None)
             if m:
                 job.success_message = m
+            fname = config_job.get('parameter-function', None)
+            if fname:
+                func = self._config_env.get(fname, None)
+                if not func:
+                    raise Exception("Unable to find function %s" % fname)
+                job.parameter_function = func
             branches = toList(config_job.get('branch'))
             if branches:
                 f = EventFilter(branches=branches)

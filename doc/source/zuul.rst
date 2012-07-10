@@ -38,6 +38,24 @@ and projects are defined, what tests should be run, and what actions
 Zuul should perform.  There are three sections: queues, jobs, and
 projects.
 
+.. _includes:
+
+Includes
+""""""""
+
+Custom functions to be used in Zuul's configuration may be provided
+using the ``includes`` directive.  It accepts a list of files to
+include, and currently supports one type of inclusion, a python file::
+
+  includes:
+    - python-file: local_functions.py
+
+**python-file**
+  The path to a python file.  The file will be loaded and objects that
+  it defines will be placed in a special environment which can be
+  referenced in the Zuul configuration.  Currently only the
+  parameter-function attribute of a Job uses this feature.
+
 Queues
 """"""
 
@@ -244,18 +262,34 @@ each job as it builds a list from the project specification.
   The name of the job.  This field is treated as a regular expression
   and will be applied to each job that matches.
 
-**failure-message**
-  The message that should be reported to Gerrit if the job fails
-  (optional).
+**failure-message (optional)**
+  The message that should be reported to Gerrit if the job fails.
 
-**success-message**
-  The message that should be reported to Gerrit if the job fails
-  (optional).
+**success-message (optional)**
+  The message that should be reported to Gerrit if the job fails.
 
-**branch**
+**branch (optional)**
   This job should only be run on matching branches.  This field is
   treated as a regular expression and multiple branches may be
   listed.
+
+**parameter-function (optional)**
+  Specifies a function that should be applied to the parameters before
+  the job is launched.  The function should be defined in a python file
+  included with the :ref:`includes` directive.  The function
+  should have the following signature:
+
+  .. function:: parameters(change, parameters)
+
+     Manipulate the parameters passed to a job before a build is
+     launched.  The ``parameters`` dictionary will already contain the
+     standard Zuul job parameters, and is expected to be modified
+     in-place.
+
+     :param change: the current change
+     :type change: zuul.model.Change
+     :param parameters: parameters to be passed to the job
+     :type parameters: dict
 
 Here is an example of setting the failure message for jobs that check
 whether a change merges cleanly::

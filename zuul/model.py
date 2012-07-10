@@ -59,6 +59,7 @@ class Job(object):
         self.name = name
         self.failure_message = None
         self.success_message = None
+        self.parameter_function = None
         self.event_filters = []
 
     def __str__(self):
@@ -71,6 +72,14 @@ class Job(object):
         self.failure_message = other.failure_message
         self.success_message = other.failure_message
         self.event_filters = other.event_filters[:]
+
+    def eventMatches(self, event):
+        if not self.event_filters:
+            return True
+        for ef in self.event_filters:
+            if ef.matches(event):
+                return True
+        return False
 
 
 class Build(object):
@@ -291,6 +300,7 @@ class Change(object):
         self.ref = None
         self.oldrev = None
         self.newrev = None
+        self.event = event
 
         if event.change_number:
             self.branch = event.branch
@@ -317,6 +327,9 @@ class Change(object):
     def __repr__(self):
         return '<Change 0x%x %s>' % (id(self), self._id())
 
+    def _filterJobs(self, jobs):
+        return filter(lambda job: job.eventMatches(self.event), jobs)
+
     def formatStatus(self, indent=0, html=False):
         indent_str = ' ' * indent
         ret = ''
@@ -329,7 +342,7 @@ class Change(object):
             ret += '%sProject %s change %s\n' % (indent_str,
                                                  self.project.name,
                                                  self._id())
-        for job in self.project.getJobs(self.queue_name):
+        for job in self._filterJobs(self.project.getJobs(self.queue_name)):
             build = self.current_build_set.getBuild(job.name)
             if build:
                 result = build.result
@@ -357,7 +370,7 @@ class Change(object):
         else:
             ret += 'Build failed\n\n'
 
-        for job in self.project.getJobs(self.queue_name):
+        for job in self._filterJobs(self.project.getJobs(self.queue_name)):
             build = self.current_build_set.getBuild(job.name)
             result = build.result
             url = build.url
@@ -394,6 +407,8 @@ class Change(object):
         torun = []
         for tree in job_trees:
             job = tree.job
+            if not job.eventMatches(self.event):
+                continue
             result = None
             if job:
                 build = self.current_build_set.getBuild(job.name)
@@ -417,7 +432,7 @@ class Change(object):
 
     def areAllJobsComplete(self):
         tree = self.project.getJobTreeForQueue(self.queue_name)
-        for job in tree.getJobs():
+        for job in self._filterJobs(tree.getJobs()):
             build = self.current_build_set.getBuild(job.name)
             if not build or not build.result:
                 return False
@@ -425,7 +440,7 @@ class Change(object):
 
     def didAllJobsSucceed(self):
         tree = self.project.getJobTreeForQueue(self.queue_name)
-        for job in tree.getJobs():
+        for job in self._filterJobs(tree.getJobs()):
             build = self.current_build_set.getBuild(job.name)
             if not build:
                 return False
@@ -473,7 +488,7 @@ class TriggerEvent(object):
 
 
 class EventFilter(object):
-    def __init__(self, types=[], branches=[], refs=[], approvals=[],
+    def __init__(self, types=[], branches=[], refs=[], approvals={},
                                                 comment_filters=[]):
         self._types = types
         self._branches = branches

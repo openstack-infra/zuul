@@ -203,6 +203,12 @@ class Jenkins(object):
             params['GERRIT_REFNAME'] = change.ref
             params['GERRIT_OLDREV'] = change.oldrev
             params['GERRIT_NEWREV'] = change.newrev
+
+        if callable(job.parameter_function):
+            job.parameter_function(change, params)
+            self.log.debug("Custom parameter function used for job %s,"
+                           "change: %s, params: %s" % (job, change, params))
+
         build = Build(job, uuid)
         # We can get the started notification on another thread before
         # this is done so we add the build even before we trigger the
