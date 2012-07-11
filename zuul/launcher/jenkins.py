@@ -383,7 +383,7 @@ info can not be retreived" % build)
                 finish_time = (info['timestamp'] + info['duration']) / 1000
                 if time.time() - finish_time > JENKINS_GRACE_TIME:
                     self.log.debug("Lost build %s because it finished \
-more than 5 minutes ago" % build)
+more than 5 minutes ago.  Build info %s:" % (build, info))
                     lostbuilds.append(build)
                     continue
                 # Give it more time
