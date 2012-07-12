@@ -482,6 +482,8 @@ for change %s:" % (job, change))
 
     def reportChange(self, change):
         self.log.debug("Reporting change %s" % change)
+        if change.reported:
+            return True
         ret = None
         if change.didAllJobsSucceed():
             action = self.success_action
@@ -497,6 +499,8 @@ for change %s:" % (job, change))
             if ret:
                 self.log.error("Reporting change %s received: %s" % (
                         change, ret))
+            else:
+                change.reported = True
         except:
             self.log.exception("Exception while reporting:")
             change.setReportedResult('ERROR')

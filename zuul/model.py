@@ -301,6 +301,7 @@ class Change(object):
         self.oldrev = None
         self.newrev = None
         self.event = event
+        self.reported = False
 
         if event.change_number:
             self.branch = event.branch
