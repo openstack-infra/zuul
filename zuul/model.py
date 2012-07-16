@@ -328,6 +328,19 @@ class Change(object):
     def __repr__(self):
         return '<Change 0x%x %s>' % (id(self), self._id())
 
+    def equals(self, other):
+        if self.number:
+            if (self.number == other.number and
+                self.patchset == other.patchset):
+                return True
+            return False
+        if self.ref:
+            if (self.ref == other.ref and
+                self.newrew == other.newrev):
+                return True
+            return False
+        return False
+
     def _filterJobs(self, jobs):
         return filter(lambda job: job.eventMatches(self.event), jobs)
 

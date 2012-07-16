@@ -397,7 +397,16 @@ class BaseQueueManager(object):
                 return True
         return False
 
+    def isChangeAlreadyInQueue(self, change):
+        for c in self.getChangesInQueue():
+            if change.equals(c):
+                return True
+        return False
+
     def addChange(self, change):
+        if self.isChangeAlreadyInQueue(change):
+            self.log.debug("Change %s is already in queue, ignoring" % change)
+            return
         self.log.debug("Adding change %s" % change)
         if self.start_action:
             try:
@@ -507,11 +516,15 @@ for change %s:" % (job, change))
         self.updateBuildDescriptions(change.current_build_set)
         return ret
 
-    def formatStatusHTML(self):
+    def getChangesInQueue(self):
         changes = []
         for build, change in self.building_jobs.items():
             if change not in changes:
                 changes.append(change)
+        return changes
+
+    def formatStatusHTML(self):
+        changes = self.getChangesInQueue()
         ret = ''
         for change in changes:
             ret += change.formatStatus(html=True)
@@ -571,6 +584,9 @@ class DependentQueueManager(BaseQueueManager):
         self.log.error("Unable to find change queue for project %s" % project)
 
     def addChange(self, change):
+        if self.isChangeAlreadyInQueue(change):
+            self.log.debug("Change %s is already in queue, ignoring" % change)
+            return
         self.log.debug("Adding change %s" % change)
         change_queue = self.getQueue(change.project)
         if change_queue:
@@ -664,6 +680,12 @@ behind failed change %s" % (
             self.log.info("Change %s behind change %s is ready, \
 possibly reporting" % (change.change_behind, change))
             self.possiblyReportChange(change.change_behind)
+
+    def getChangesInQueue(self):
+        changes = []
+        for shared_queue in self.change_queues:
+            changes.extend(shared_queue.queue)
+        return changes
 
     def formatStatusHTML(self):
         ret = ''
