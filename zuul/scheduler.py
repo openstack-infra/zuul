@@ -415,6 +415,9 @@ class BaseQueueManager(object):
             self.log.debug("Change %s is already in queue, ignoring" % change)
             return
         self.log.debug("Adding change %s" % change)
+        self._addChange(change)
+
+    def _addChange(self, change):
         if self.start_action:
             try:
                 self.log.info("Reporting start, action %s change %s" % (
@@ -600,7 +603,7 @@ class DependentQueueManager(BaseQueueManager):
             self.log.debug("Adding change %s to queue %s" % (
                     change, change_queue))
             change_queue.enqueueChange(change)
-            super(DependentQueueManager, self).addChange(change)
+            self._addChange(change)
 
     def _getDependentChanges(self, change):
         orig_change = change
