@@ -30,9 +30,11 @@ class Scheduler(threading.Thread):
         threading.Thread.__init__(self)
         self.wake_event = threading.Event()
         self.reconfigure_complete_event = threading.Event()
+        self.queue_lock = threading.Lock()
         self._pause = False
         self._reconfigure = False
         self._exit = False
+        self._stopped = False
         self.launcher = None
         self.trigger = None
 
@@ -45,6 +47,10 @@ class Scheduler(threading.Thread):
         self.jobs = {}
         self.projects = {}
         self.metajobs = {}
+
+    def stop(self):
+        self._stopped = True
+        self.wake_event.set()
 
     def _parseConfig(self, config_path):
         def toList(item):
@@ -170,17 +176,23 @@ class Scheduler(threading.Thread):
 
     def addEvent(self, event):
         self.log.debug("Adding trigger event: %s" % event)
+        self.queue_lock.acquire()
         self.trigger_event_queue.put(event)
+        self.queue_lock.release()
         self.wake_event.set()
 
     def onBuildStarted(self, build):
         self.log.debug("Adding start event for build: %s" % build)
+        self.queue_lock.acquire()
         self.result_event_queue.put(('started', build))
+        self.queue_lock.release()
         self.wake_event.set()
 
     def onBuildCompleted(self, build):
         self.log.debug("Adding complete event for build: %s" % build)
+        self.queue_lock.acquire()
         self.result_event_queue.put(('completed', build))
+        self.queue_lock.release()
         self.wake_event.set()
 
     def reconfigure(self, config):
@@ -278,7 +290,10 @@ class Scheduler(threading.Thread):
             self.log.debug("Run handler sleeping")
             self.wake_event.wait()
             self.wake_event.clear()
+            if self._stopped:
+                return
             self.log.debug("Run handler awake")
+            self.queue_lock.acquire()
             try:
                 if not self._pause:
                     if not self.trigger_event_queue.empty():
@@ -299,6 +314,7 @@ class Scheduler(threading.Thread):
                         self.wake_event.set()
             except:
                 self.log.exception("Exception in run handler:")
+            self.queue_lock.release()
 
     def process_event_queue(self):
         self.log.debug("Fetching trigger event")
@@ -511,7 +527,7 @@ class BaseQueueManager(object):
     def reportChange(self, change):
         self.log.debug("Reporting change %s" % change)
         if change.reported:
-            return True
+            return 0
         ret = None
         if change.didAllJobsSucceed():
             action = self.success_action

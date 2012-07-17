@@ -108,6 +108,9 @@ class Gerrit(object):
     def getEvent(self):
         return self.event_queue.get()
 
+    def eventDone(self):
+        self.event_queue.task_done()
+
     def review(self, project, change, message, action={}):
         cmd = 'gerrit review --project %s' % project
         if message:

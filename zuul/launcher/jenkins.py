@@ -91,10 +91,18 @@ class JenkinsCleanup(threading.Thread):
     def __init__(self, jenkins):
         threading.Thread.__init__(self)
         self.jenkins = jenkins
+        self.wake_event = threading.Event()
+        self._stopped = False
+
+    def stop(self):
+        self._stopped = True
+        self.wake_event.set()
 
     def run(self):
         while True:
-            time.sleep(180)
+            self.wake_event.wait(180)
+            if self._stopped:
+                return
             try:
                 self.jenkins.lookForLostBuilds()
             except:
@@ -191,9 +199,15 @@ class Jenkins(object):
         self.cleanup_thread = JenkinsCleanup(self)
         self.cleanup_thread.start()
 
+    def stop(self):
+        self.cleanup_thread.stop()
+        self.cleanup_thread.join()
+
     def launch(self, job, change, dependent_changes=[]):
         self.log.info("Launch job %s for change %s with dependent changes %s" %
                       (job, change, dependent_changes))
+        dependent_changes = dependent_changes[:]
+        dependent_changes.reverse()
         uuid = str(uuid1())
         params = dict(UUID=uuid,
                       GERRIT_PROJECT=change.project.name)

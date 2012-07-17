@@ -27,9 +27,16 @@ class GerritEventConnector(threading.Thread):
         super(GerritEventConnector, self).__init__()
         self.gerrit = gerrit
         self.sched = sched
+        self._stopped = False
+
+    def stop(self):
+        self._stopped = True
+        self.gerrit.addEvent(None)
 
     def _handleEvent(self):
         data = self.gerrit.getEvent()
+        if self._stopped:
+            return
         event = TriggerEvent()
         event.type = data.get('type')
         change = data.get('change')
@@ -51,9 +58,12 @@ class GerritEventConnector(threading.Thread):
             event.oldrev = refupdate.get('oldRev')
             event.newrev = refupdate.get('newRev')
         self.sched.addEvent(event)
+        self.gerrit.eventDone()
 
     def run(self):
         while True:
+            if self._stopped:
+                return
             try:
                 self._handleEvent()
             except:
@@ -80,6 +90,10 @@ class Gerrit(object):
         self.gerrit_connector = GerritEventConnector(
             self.gerrit, sched)
         self.gerrit_connector.start()
+
+    def stop(self):
+        self.gerrit_connector.stop()
+        self.gerrit_connector.join()
 
     def report(self, change, message, action):
         self.log.debug("Report change %s, action %s, message: %s" %
