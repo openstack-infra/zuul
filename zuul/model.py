@@ -56,10 +56,12 @@ class ChangeQueue(object):
 
 class Job(object):
     def __init__(self, name):
+        # If you add attributes here, be sure to add them to the copy method.
         self.name = name
         self.failure_message = None
         self.success_message = None
         self.parameter_function = None
+        self.hold_following_changes = False
         self.event_filters = []
 
     def __str__(self):
@@ -71,6 +73,8 @@ class Job(object):
     def copy(self, other):
         self.failure_message = other.failure_message
         self.success_message = other.failure_message
+        self.parameter_function = other.parameter_function
+        self.hold_following_changes = other.hold_following_changes
         self.event_filters = other.event_filters[:]
 
     def eventMatches(self, event):
@@ -387,6 +391,10 @@ class Change(object):
         for job in self._filterJobs(self.project.getJobs(self.queue_name)):
             build = self.current_build_set.getBuild(job.name)
             result = build.result
+            if result == 'SUCCESS' and job.success_message:
+                result = job.success_message
+            elif result == 'FAILURE' and job.failure_message:
+                result = job.failure_message
             url = build.url
             if not url:
                 url = job.name
@@ -417,8 +425,27 @@ class Change(object):
                 fakebuild.result = 'SKIPPED'
                 self.addBuild(fakebuild)
 
+    def isHoldingFollowingChanges(self):
+        tree = self.project.getJobTreeForQueue(self.queue_name)
+        for job in self._filterJobs(tree.getJobs()):
+            if not job.hold_following_changes:
+                continue
+            build = self.current_build_set.getBuild(job.name)
+            if not build:
+                return True
+            if build.result != 'SUCCESS':
+                return True
+        if not self.change_ahead:
+            return False
+        return self.change_ahead.isHoldingFollowingChanges()
+
     def _findJobsToRun(self, job_trees):
         torun = []
+        if self.change_ahead:
+            # Only run our jobs if any 'hold' jobs on the change ahead
+            # have completed successfully.
+            if self.change_ahead.isHoldingFollowingChanges():
+                return []
         for tree in job_trees:
             job = tree.job
             if not job.eventMatches(self.event):

@@ -268,6 +268,18 @@ each job as it builds a list from the project specification.
 **success-message (optional)**
   The message that should be reported to Gerrit if the job fails.
 
+**hold-following-changes (optional)**
+  This is a boolean that indicates that changes that follow this
+  change in a dependent change queue should wait until this job
+  succeeds before launching.  If this is applied to a very short job
+  that can predict whether longer jobs will fail early, this can be
+  used to reduce the number of jobs that Zuul will launch and
+  ultimately have to cancel.  In that case, a small amount of
+  paralellization of jobs is traded for more efficient use of testing
+  resources.  On the other hand, to apply this to a long running job
+  would largely defeat the parallelization of dependent change testing
+  that is the main feature of Zuul.  The default is False.
+
 **branch (optional)**
   This job should only be run on matching branches.  This field is
   treated as a regular expression and multiple branches may be

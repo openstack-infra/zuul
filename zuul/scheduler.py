@@ -102,6 +102,9 @@ class Scheduler(threading.Thread):
             m = config_job.get('success-message', None)
             if m:
                 job.success_message = m
+            m = config_job.get('hold-following-changes', False)
+            if m:
+                job.hold_following_changes = True
             fname = config_job.get('parameter-function', None)
             if fname:
                 func = self._config_env.get(fname, None)
@@ -373,7 +376,11 @@ class BaseQueueManager(object):
                     efilters += str(e)
                 if efilters:
                     efilters = ' ' + efilters
-                self.log.info("%s%s%s" % (istr, repr(tree.job), efilters))
+                hold = ''
+                if tree.job.hold_following_changes:
+                    hold = ' [hold]'
+                self.log.info("%s%s%s%s" % (istr, repr(tree.job),
+                                            efilters, hold))
             for x in tree.job_trees:
                 log_jobs(x, indent + 2)
 
