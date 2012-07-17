@@ -500,6 +500,8 @@ class Change(object):
     def delete(self):
         if self.change_behind:
             self.change_behind.change_ahead = None
+            self.change_behind = None
+        self.queue.dequeueChange(self)
 
 
 class TriggerEvent(object):

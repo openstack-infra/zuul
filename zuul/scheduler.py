@@ -663,7 +663,7 @@ behind change %s" % (change.change_behind, change))
         change = self.building_jobs.get(build)
         if not super(DependentQueueManager, self).onBuildCompleted(build):
             return False
-        if change and change.didAnyJobFail():
+        if change and change.change_behind and change.didAnyJobFail():
             # This or some other build failed. All changes behind this change
             # will need to be retested. To free up resources cancel the builds
             # behind this one as they will be rerun anyways.
@@ -674,13 +674,13 @@ behind change %s" % (change.change_behind, change))
 
     def possiblyReportChange(self, change):
         self.log.debug("Possibly reporting change %s" % change)
+        change_behind = change.change_behind
         if not change.change_ahead:
             self.log.debug("Change %s is at the front of the queue, \
 reporting" % (change))
             ret = self.reportChange(change)
             self.log.debug("Removing reported change %s from queue" % change)
             change.delete()
-            change.queue.dequeueChange(change)
             merged = (not ret)
             if merged:
                 merged = self.sched.trigger.isMerged(change)
@@ -692,18 +692,18 @@ merged: %s" % (change, succeeded, merged))
                 self.log.debug("Reported change %s failed tests or failed \
 to merge" % (change))
                 # The merge or test failed, re-run all jobs behind this one
-                if change.change_behind:
+                if change_behind:
                     self.log.info("Canceling/relaunching jobs for change %s \
 behind failed change %s" % (
-                            change.change_behind, change))
-                    self.cancelJobs(change.change_behind)
-                    self.launchJobs(change.change_behind)
+                            change_behind, change))
+                    self.cancelJobs(change_behind)
+                    self.launchJobs(change_behind)
         # If the change behind this is ready, notify
-        if (change.change_behind and
-            change.change_behind.areAllJobsComplete()):
+        if (change_behind and
+            change_behind.areAllJobsComplete()):
             self.log.info("Change %s behind change %s is ready, \
-possibly reporting" % (change.change_behind, change))
-            self.possiblyReportChange(change.change_behind)
+possibly reporting" % (change_behind, change))
+            self.possiblyReportChange(change_behind)
 
     def getChangesInQueue(self):
         changes = []
