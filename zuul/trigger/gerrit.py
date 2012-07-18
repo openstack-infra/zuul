@@ -79,6 +79,7 @@ class Gerrit(object):
 
     def __init__(self, config, sched):
         self.sched = sched
+        self.config = config
         self.server = config.get('gerrit', 'server')
         user = config.get('gerrit', 'user')
         if config.has_option('gerrit', 'sshkey'):
@@ -270,3 +271,13 @@ class Gerrit(object):
                     change.needed_by_changes.append(dep)
 
         return change
+
+    def getGitUrl(self, project):
+        server = self.config.get('gerrit', 'server')
+        user = self.config.get('gerrit', 'user')
+        if self.config.has_option('gerrit', 'port'):
+            port = self.config.get('gerrit', 'port')
+        else:
+            port = 29418
+        url = 'ssh://%s@%s:%s/%s' % (user, server, port, project.name)
+        return url

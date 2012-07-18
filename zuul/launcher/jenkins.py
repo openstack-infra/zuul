@@ -24,7 +24,7 @@ import time
 import urllib   # for extending jenkins lib
 import urllib2  # for extending jenkins lib
 import urlparse
-from uuid import uuid1
+from uuid import uuid4
 
 import jenkins
 from paste import httpserver
@@ -207,24 +207,32 @@ class Jenkins(object):
         self.cleanup_thread.stop()
         self.cleanup_thread.join()
 
+    #TODO: remove dependent_changes
     def launch(self, job, change, dependent_changes=[]):
         self.log.info("Launch job %s for change %s with dependent changes %s" %
                       (job, change, dependent_changes))
         dependent_changes = dependent_changes[:]
         dependent_changes.reverse()
-        uuid = str(uuid1())
+        uuid = str(uuid4().hex)
         params = dict(UUID=uuid,
-                      GERRIT_PROJECT=change.project.name)
+                      GERRIT_PROJECT=change.project.name,
+                      ZUUL_PROJECT=change.project.name)
         if hasattr(change, 'refspec'):
             changes_str = '^'.join(
                 ['%s:%s:%s' % (c.project.name, c.branch, c.refspec)
                  for c in dependent_changes + [change]])
             params['GERRIT_BRANCH'] = change.branch
+            params['ZUUL_BRANCH'] = change.branch
             params['GERRIT_CHANGES'] = changes_str
+            params['ZUUL_REF'] = 'refs/zuul/%s/%s' % (change.branch,
+                change.current_build_set.ref)
         if hasattr(change, 'ref'):
             params['GERRIT_REFNAME'] = change.ref
+            params['ZUUL_REFNAME'] = change.ref
             params['GERRIT_OLDREV'] = change.oldrev
+            params['ZUUL_OLDREV'] = change.oldrev
             params['GERRIT_NEWREV'] = change.newrev
+            params['ZUUL_NEWREV'] = change.newrev
 
         if callable(job.parameter_function):
             job.parameter_function(change, params)

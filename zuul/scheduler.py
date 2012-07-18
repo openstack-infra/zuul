@@ -20,7 +20,9 @@ import re
 import threading
 import yaml
 
+import model
 from model import Pipeline, Job, Project, ChangeQueue, EventFilter
+import merger
 
 
 class Scheduler(threading.Thread):
@@ -139,6 +141,9 @@ class Scheduler(threading.Thread):
         for config_project in data['projects']:
             project = Project(config_project['name'])
             self.projects[config_project['name']] = project
+            mode = config_project.get('merge-mode')
+            if mode and mode == 'cherry-pick':
+                project.merge_mode = model.CHERRY_PICK
             for pipeline in self.pipelines.values():
                 if pipeline.name in config_project:
                     job_tree = pipeline.addProject(project)
@@ -153,6 +158,15 @@ class Scheduler(threading.Thread):
         # "foo - bar" because a ':' is missing in the yaml for a dependent job
         for pipeline in self.pipelines.values():
             pipeline.manager._postConfig()
+
+        if self.config.has_option('zuul', 'git_dir'):
+            merge_root = self.config.get('zuul', 'git_dir')
+        else:
+            merge_root = '/var/lib/zuul/git'
+        self.merger = merger.Merger(merge_root)
+        for project in self.projects.values():
+            url = self.trigger.getGitUrl(project)
+            self.merger.addProject(project, url)
 
     def getJob(self, name):
         if name in self.jobs:
@@ -464,6 +478,13 @@ class BasePipelineManager(object):
 
     def launchJobs(self, change):
         self.log.debug("Launching jobs for change %s" % change)
+        ref = change.current_build_set.getRef()
+        if not ref:
+            change.current_build_set.setConfiguration()
+            ref = change.current_build_set.getRef()
+            self.sched.merger.mergeChanges([change], ref,
+                                           mode=model.MERGE_IF_NECESSARY)
+
         for job in self.pipeline.findJobsToRun(change):
             self.log.debug("Found job %s for change %s" % (job, change))
             try:
@@ -720,12 +741,21 @@ class DependentPipelineManager(BasePipelineManager):
 
     def launchJobs(self, change):
         self.log.debug("Launching jobs for change %s" % change)
+        ref = change.current_build_set.getRef()
+        if not ref:
+            change.current_build_set.setConfiguration()
+            ref = change.current_build_set.getRef()
+            dependent_changes = self._getDependentChanges(change)
+            dependent_changes.reverse()
+            self.sched.merger.mergeChanges(dependent_changes + [change], ref)
+
+        #TODO: remove this line after GERRIT_CHANGES is gone
         dependent_changes = self._getDependentChanges(change)
         for job in self.pipeline.findJobsToRun(change):
             self.log.debug("Found job %s for change %s" % (job, change))
             try:
-                build = self.sched.launcher.launch(job,
-                                                   change,
+                #TODO: remove dependent_changes after GERRIT_CHANGES is gone
+                build = self.sched.launcher.launch(job, change,
                                                    dependent_changes)
                 self.building_jobs[build] = change
                 self.log.debug("Adding build %s of job %s to change %s" %

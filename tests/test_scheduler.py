@@ -28,6 +28,8 @@ import pprint
 import re
 import urllib2
 import urlparse
+import shutil
+import git
 
 import zuul
 import zuul.scheduler
@@ -47,6 +49,75 @@ logging.basicConfig(level=logging.DEBUG)
 
 def random_sha1():
     return hashlib.sha1(str(random.random())).hexdigest()
+
+
+class ChangeReference(git.Reference):
+    _common_path_default = "refs/changes"
+    _points_to_commits_only = True
+
+
+def init_repo(project):
+    parts = project.split('/')
+    path = os.path.join("/tmp/zuul-test/upstream", *parts[:-1])
+    if not os.path.exists(path):
+        os.makedirs(path)
+    path = os.path.join("/tmp/zuul-test/upstream", project)
+    repo = git.Repo.init(path)
+
+    fn = os.path.join(path, 'README')
+    f = open(fn, 'w')
+    f.write("test\n")
+    f.close()
+    repo.index.add([fn])
+    repo.index.commit('initial commit')
+    repo.create_head('master')
+    repo.create_tag('init')
+
+
+def add_fake_change_to_repo(project, branch, change_num, patchset, msg):
+    path = os.path.join("/tmp/zuul-test/upstream", project)
+    repo = git.Repo(path)
+    ref = ChangeReference.create(repo, '1/%s/%s' % (change_num,
+                                                    patchset),
+                                 'refs/tags/init')
+    repo.head.reference = ref
+    repo.head.reset(index=True, working_tree=True)
+    repo.git.clean('-x', '-f', '-d')
+
+    path = os.path.join("/tmp/zuul-test/upstream", project)
+    fn = os.path.join(path, '%s-%s' % (branch, change_num))
+    f = open(fn, 'w')
+    f.write("test\n")
+    f.close()
+    repo.index.add([fn])
+    repo.index.commit(msg)
+
+
+def ref_has_change(ref, change):
+    path = os.path.join("/tmp/zuul-test/git", change.project)
+    repo = git.Repo(path)
+    for commit in repo.iter_commits(ref):
+        if commit.message.strip() == ('%s-1' % change.subject):
+            return True
+    return False
+
+
+def job_has_changes(*args):
+    job = args[0]
+    commits = args[1:]
+    project = job.parameters['ZUUL_PROJECT']
+    path = os.path.join("/tmp/zuul-test/git", project)
+    repo = git.Repo(path)
+    ref = job.parameters['ZUUL_REF']
+    repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
+    commit_messages = ['%s-1' % commit.subject for commit in commits]
+    print 'checking that job %s has changes:' % ref
+    print '  commit messages:', commit_messages
+    print '  repo messages  :', repo_messages
+    for msg in commit_messages:
+        if msg not in repo_messages:
+            return False
+    return True
 
 
 class FakeChange(object):
@@ -106,6 +177,9 @@ class FakeChange(object):
         self.data['currentPatchSet'] = d
         self.patchsets.append(d)
         self.data['submitRecords'] = self.getSubmitRecords()
+        add_fake_change_to_repo(self.project, self.branch,
+                                self.number, self.latest_patchset,
+                                self.subject + '-' + str(self.latest_patchset))
 
     def addApproval(self, category, value):
         approval = {'description': self.categories[category][0],
@@ -321,7 +395,7 @@ class FakeJenkinsJob(threading.Thread):
         result = 'SUCCESS'
         if self.jenkins.fakeShouldFailTest(
             self.name,
-            self.parameters['GERRIT_CHANGES']):
+            self.parameters['ZUUL_REF']):
             result = 'FAILURE'
         if self.aborted:
             result = 'ABORTED'
@@ -386,10 +460,10 @@ class FakeJenkins(object):
         l.append(change)
         self.fail_tests[name] = l
 
-    def fakeShouldFailTest(self, name, changes):
+    def fakeShouldFailTest(self, name, ref):
         l = self.fail_tests.get(name, [])
         for change in l:
-            if change in changes:
+            if ref_has_change(ref, change):
                 return True
         return False
 
@@ -476,10 +550,25 @@ class FakeURLOpener(object):
         return ret
 
 
+class FakeGerritTrigger(zuul.trigger.gerrit.Gerrit):
+    def getGitUrl(self, project):
+        return "/tmp/zuul-test/upstream/%s" % project
+
+
 class testScheduler(unittest.TestCase):
     log = logging.getLogger("zuul.test")
 
     def setUp(self):
+        if os.path.exists("/tmp/zuul-test"):
+            shutil.rmtree("/tmp/zuul-test")
+        os.makedirs("/tmp/zuul-test")
+        os.makedirs("/tmp/zuul-test/upstream")
+        os.makedirs("/tmp/zuul-test/git")
+
+        # For each project in config:
+        init_repo("org/project")
+        init_repo("org/project1")
+        init_repo("org/project2")
         self.config = CONFIG
         self.sched = zuul.scheduler.Scheduler()
 
@@ -503,7 +592,7 @@ class testScheduler(unittest.TestCase):
 
         zuul.lib.gerrit.Gerrit = FakeGerrit
 
-        self.gerrit = zuul.trigger.gerrit.Gerrit(self.config, self.sched)
+        self.gerrit = FakeGerritTrigger(self.config, self.sched)
         self.gerrit.replication_timeout = 1.5
         self.gerrit.replication_retry_interval = 0.5
         self.fake_gerrit = self.gerrit.gerrit
@@ -520,6 +609,7 @@ class testScheduler(unittest.TestCase):
         self.gerrit.stop()
         self.sched.stop()
         self.sched.join()
+        #shutil.rmtree("/tmp/zuul-test")
 
     def waitUntilSettled(self):
         self.log.debug("Waiting until settled...")
@@ -582,77 +672,51 @@ class testScheduler(unittest.TestCase):
         jobs = self.fake_jenkins.all_jobs
         assert len(jobs) == 1
         assert jobs[0].name == 'project-merge'
-        assert (jobs[0].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1')
+        assert job_has_changes(jobs[0], A)
 
         self.fake_jenkins.fakeRelease('.*-merge')
         self.waitUntilSettled()
         assert len(jobs) == 3
         assert jobs[0].name == 'project-test1'
-        assert (jobs[0].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1')
+        assert job_has_changes(jobs[0], A)
         assert jobs[1].name == 'project-test2'
-        assert (jobs[1].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1')
+        assert job_has_changes(jobs[1], A)
         assert jobs[2].name == 'project-merge'
-        assert (jobs[2].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1^'
-                'org/project:master:refs/changes/1/2/1')
+        assert job_has_changes(jobs[2], A, B)
 
         self.fake_jenkins.fakeRelease('.*-merge')
         self.waitUntilSettled()
         assert len(jobs) == 5
         assert jobs[0].name == 'project-test1'
-        assert (jobs[0].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1')
+        assert job_has_changes(jobs[0], A)
         assert jobs[1].name == 'project-test2'
-        assert (jobs[1].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1')
+        assert job_has_changes(jobs[1], A)
 
         assert jobs[2].name == 'project-test1'
-        assert (jobs[2].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1^'
-                'org/project:master:refs/changes/1/2/1')
+        assert job_has_changes(jobs[2], A, B)
         assert jobs[3].name == 'project-test2'
-        assert (jobs[3].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1^'
-                'org/project:master:refs/changes/1/2/1')
+        assert job_has_changes(jobs[3], A, B)
 
         assert jobs[4].name == 'project-merge'
-        assert (jobs[4].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1^'
-                'org/project:master:refs/changes/1/2/1^'
-                'org/project:master:refs/changes/1/3/1')
+        assert job_has_changes(jobs[4], A, B, C)
 
         self.fake_jenkins.fakeRelease('.*-merge')
         self.waitUntilSettled()
         assert len(jobs) == 6
         assert jobs[0].name == 'project-test1'
-        assert (jobs[0].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1')
+        assert job_has_changes(jobs[0], A)
         assert jobs[1].name == 'project-test2'
-        assert (jobs[1].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1')
+        assert job_has_changes(jobs[1], A)
 
         assert jobs[2].name == 'project-test1'
-        assert (jobs[2].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1^'
-                'org/project:master:refs/changes/1/2/1')
+        assert job_has_changes(jobs[2], A, B)
         assert jobs[3].name == 'project-test2'
-        assert (jobs[3].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1^'
-                'org/project:master:refs/changes/1/2/1')
+        assert job_has_changes(jobs[3], A, B)
 
         assert jobs[4].name == 'project-test1'
-        assert (jobs[4].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1^'
-                'org/project:master:refs/changes/1/2/1^'
-                'org/project:master:refs/changes/1/3/1')
+        assert job_has_changes(jobs[4], A, B, C)
         assert jobs[5].name == 'project-test2'
-        assert (jobs[5].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1^'
-                'org/project:master:refs/changes/1/2/1^'
-                'org/project:master:refs/changes/1/3/1')
+        assert job_has_changes(jobs[5], A, B, C)
 
         self.fake_jenkins.hold_jobs_in_build = False
         self.fake_jenkins.fakeRelease()
@@ -678,9 +742,7 @@ class testScheduler(unittest.TestCase):
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
 
-        self.fake_jenkins.fakeAddFailTest(
-            'project-test1',
-            'org/project:master:refs/changes/1/1/1')
+        self.fake_jenkins.fakeAddFailTest('project-test1', A)
 
         self.waitUntilSettled()
         jobs = self.fake_jenkins.job_history
@@ -710,11 +772,9 @@ class testScheduler(unittest.TestCase):
         # There should be one merge job at the head of each queue running
         assert len(jobs) == 2
         assert jobs[0].name == 'project-merge'
-        assert (jobs[0].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1')
+        assert job_has_changes(jobs[0], A)
         assert jobs[1].name == 'project1-merge'
-        assert (jobs[1].parameters['GERRIT_CHANGES'] ==
-                'org/project1:master:refs/changes/1/2/1')
+        assert job_has_changes(jobs[1], B)
 
         # Release the current merge jobs
         self.fake_jenkins.fakeRelease('.*-merge')
@@ -751,9 +811,7 @@ class testScheduler(unittest.TestCase):
         B.addApproval('CRVW', 2)
         C.addApproval('CRVW', 2)
 
-        self.fake_jenkins.fakeAddFailTest(
-            'project-test1',
-            'org/project:master:refs/changes/1/1/1')
+        self.fake_jenkins.fakeAddFailTest('project-test1', A)
 
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
@@ -765,8 +823,7 @@ class testScheduler(unittest.TestCase):
 
         assert len(jobs) == 1
         assert jobs[0].name == 'project-merge'
-        assert (jobs[0].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1')
+        assert job_has_changes(jobs[0], A)
 
         self.fake_jenkins.fakeRelease('.*-merge')
         self.waitUntilSettled()
@@ -813,9 +870,7 @@ class testScheduler(unittest.TestCase):
         B.addApproval('CRVW', 2)
         C.addApproval('CRVW', 2)
 
-        self.fake_jenkins.fakeAddFailTest(
-            'project-test1',
-            'org/project:master:refs/changes/1/1/1')
+        self.fake_jenkins.fakeAddFailTest('project-test1', A)
 
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
@@ -829,8 +884,7 @@ class testScheduler(unittest.TestCase):
         assert len(jobs) == 1
         assert len(queue) == 1
         assert jobs[0].name == 'project-merge'
-        assert (jobs[0].parameters['GERRIT_CHANGES'] ==
-                'org/project:master:refs/changes/1/1/1')
+        assert job_has_changes(jobs[0], A)
 
         self.fake_jenkins.fakeRelease('.*-merge')
         self.waitUntilSettled()
@@ -913,7 +967,7 @@ class testScheduler(unittest.TestCase):
         assert C.reported == 2
 
     def test_can_merge(self):
-        "Test that whether a change is ready to merge"
+        "Test whether a change is ready to merge"
         # TODO: move to test_gerrit (this is a unit test!)
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         a = self.sched.trigger.getChange(1, 2)
@@ -929,3 +983,37 @@ class testScheduler(unittest.TestCase):
         assert self.sched.trigger.canMerge(a, mgr.getSubmitAllowNeeds())
 
         return True
+
+    def test_build_configuration(self):
+        "Test that zuul merges the right commits for testing"
+        self.fake_jenkins.hold_jobs_in_queue = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        jobs = self.fake_jenkins.all_jobs
+
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        ref = jobs[-1].parameters['ZUUL_REF']
+        self.fake_jenkins.hold_jobs_in_queue = False
+        self.fake_jenkins.fakeRelease()
+
+        path = os.path.join("/tmp/zuul-test/git/org/project")
+        repo = git.Repo(path)
+        repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
+        repo_messages.reverse()
+        print '  repo messages  :', repo_messages
+        correct_messages = ['initial commit', 'A-1', 'B-1', 'C-1']
+        assert repo_messages == correct_messages

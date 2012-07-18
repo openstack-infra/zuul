@@ -14,6 +14,13 @@
 
 import re
 import time
+from uuid import uuid4
+
+
+FAST_FORWARD_ONLY = 1
+MERGE_ALWAYS = 2
+MERGE_IF_NECESSARY = 3
+CHERRY_PICK = 4
 
 
 class Pipeline(object):
@@ -327,6 +334,7 @@ class ChangeQueue(object):
 class Project(object):
     def __init__(self, name):
         self.name = name
+        self.merge_mode = MERGE_IF_NECESSARY
 
     def __str__(self):
         return self.name
@@ -424,11 +432,9 @@ class BuildSet(object):
         self.result = None
         self.next_build_set = None
         self.previous_build_set = None
+        self.ref = None
 
-    def addBuild(self, build):
-        self.builds[build.job.name] = build
-        build.build_set = self
-
+    def setConfiguration(self):
         # The change isn't enqueued until after it's created
         # so we don't know what the other changes ahead will be
         # until jobs start.
@@ -437,6 +443,15 @@ class BuildSet(object):
             while next_change:
                 self.other_changes.append(next_change)
                 next_change = next_change.change_ahead
+        if not self.ref:
+            self.ref = 'Z' + uuid4().hex
+
+    def getRef(self):
+        return self.ref
+
+    def addBuild(self, build):
+        self.builds[build.job.name] = build
+        build.build_set = self
 
     def getBuild(self, job_name):
         return self.builds.get(job_name)
