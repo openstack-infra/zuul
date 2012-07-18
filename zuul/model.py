@@ -340,7 +340,7 @@ class Change(object):
             return False
         if self.ref:
             if (self.ref == other.ref and
-                self.newrew == other.newrev):
+                self.newrev == other.newrev):
                 return True
             return False
         return False
@@ -521,7 +521,7 @@ class TriggerEvent(object):
         # ref-updated
         self.ref = None
         self.oldrev = None
-        self.newrew = None
+        self.newrev = None
 
     def __repr__(self):
         ret = '<TriggerEvent %s %s' % (self.type, self.project_name)
