@@ -72,7 +72,7 @@ class Job(object):
 
     def copy(self, other):
         self.failure_message = other.failure_message
-        self.success_message = other.failure_message
+        self.success_message = other.success_message
         self.parameter_function = other.parameter_function
         self.hold_following_changes = other.hold_following_changes
         self.event_filters = other.event_filters[:]
