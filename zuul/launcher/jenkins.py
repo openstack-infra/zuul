@@ -16,18 +16,19 @@
 # system module
 from __future__ import absolute_import
 
-import threading
-from webob import Request
-from paste import httpserver
-from uuid import uuid1
-import jenkins
 import json
+import logging
+import pprint
+import threading
+import time
 import urllib   # for extending jenkins lib
 import urllib2  # for extending jenkins lib
 import urlparse
-import logging
-import pprint
-import time
+from uuid import uuid1
+
+import jenkins
+from paste import httpserver
+from webob import Request
 
 from zuul.model import Build
 
@@ -61,8 +62,8 @@ class JenkinsCallback(threading.Thread):
     def jenkins_endpoint(self, request):
         data = json.loads(request.body)
         if data:
-            self.log.debug("Received data from Jenkins: \n%s" % (
-                    pprint.pformat(data)))
+            self.log.debug("Received data from Jenkins: \n%s" %
+                           (pprint.pformat(data)))
             build = data.get('build')
             if build:
                 phase = build.get('phase')
@@ -72,9 +73,11 @@ class JenkinsCallback(threading.Thread):
                 params = build.get('parameters')
                 if params:
                     uuid = params.get('UUID')
-                    if (status and url and uuid and phase
-                        and phase == 'COMPLETED'):
-                        self.jenkins.onBuildCompleted(uuid, status, url,
+                    if (status and url and uuid and phase and
+                        phase == 'COMPLETED'):
+                        self.jenkins.onBuildCompleted(uuid,
+                                                      status,
+                                                      url,
                                                       number)
                     if (phase and phase == 'STARTED'):
                         self.jenkins.onBuildStarted(uuid, url, number)
@@ -127,7 +130,8 @@ class ExtendedJenkins(jenkins.Jenkins):
         @param number: Jenkins build number for the job
         @type  number: int
         '''
-        self.jenkins_open(urllib2.Request(self.server + STOP_BUILD % locals()))
+        request = urllib2.Request(self.server + STOP_BUILD % locals())
+        self.jenkins_open(request)
 
     def cancel_queue(self, number):
         '''
@@ -138,9 +142,9 @@ class ExtendedJenkins(jenkins.Jenkins):
         '''
         # Jenkins returns a 302 from this URL, unless Referer is not set,
         # then you get a 404.
-        self.jenkins_open(urllib2.Request(self.server +
-                                          CANCEL_QUEUE % locals(),
-                                          headers={'Referer': self.server}))
+        request = urllib2.Request(self.server + CANCEL_QUEUE % locals(),
+                                      headers={'Referer': self.server})
+        self.jenkins_open(request)
 
     def get_build_info(self, name, number):
         '''
@@ -152,8 +156,8 @@ class ExtendedJenkins(jenkins.Jenkins):
         @type  number: int
         @return: dictionary
         '''
-        return json.loads(self.jenkins_open(urllib2.Request(
-                    self.server + BUILD_INFO % locals())))
+        request = urllib2.Request(self.server + BUILD_INFO % locals())
+        return json.loads(self.jenkins_open(request))
 
     def set_build_description(self, name, number, description):
         '''
@@ -167,9 +171,9 @@ class ExtendedJenkins(jenkins.Jenkins):
         @type  description: str
         '''
         params = urllib.urlencode({'description': description})
-        self.jenkins_open(urllib2.Request(self.server +
-                                          BUILD_DESCRIPTION % locals(),
-                                          params))
+        request = urllib2.Request(self.server + BUILD_DESCRIPTION % locals(),
+                                  params)
+        self.jenkins_open(request)
 
 
 class Jenkins(object):
@@ -206,7 +210,7 @@ class Jenkins(object):
 
         if callable(job.parameter_function):
             job.parameter_function(change, params)
-            self.log.debug("Custom parameter function used for job %s,"
+            self.log.debug("Custom parameter function used for job %s, "
                            "change: %s, params: %s" % (job, change, params))
 
         build = Build(job, uuid)
@@ -225,17 +229,17 @@ class Jenkins(object):
                 break
             except:
                 errored = True
-                self.log.exception(
-                    "Exception launching build %s for job %s for change %s\
-(will retry):" % (build, job, change))
+                self.log.exception("Exception launching build %s for "
+                                   "job %s for change %s (will retry):" %
+                                   (build, job, change))
                 time.sleep(5)
 
         if errored:
             if launched:
                 self.log.error("Finally able to launch %s" % build)
             else:
-                self.log.error("Unable to launch %s, even after retrying,\
-declaring lost" % build)
+                self.log.error("Unable to launch %s, even after retrying, "
+                               "declaring lost" % build)
                 # To keep the queue moving, declare this as a lost build
                 # so that the change will get dropped.
                 self.onBuildCompleted(build.uuid, 'LOST', None, None)
@@ -269,17 +273,16 @@ declaring lost" % build)
         self.log.debug("Looking for build %s in queue" % build)
         item = self.findBuildInQueue(build)
         if item:
-            self.log.debug("Found queue item %s for build %s" % (
-                    item['id'], build))
+            self.log.debug("Found queue item %s for build %s" %
+                           (item['id'], build))
             try:
                 self.jenkins.cancel_queue(item['id'])
-                self.log.debug(
-                    "Canceled queue item %s for build %s" % (
-                        item['id'], build))
+                self.log.debug("Canceled queue item %s for build %s" %
+                               (item['id'], build))
                 return
             except:
-                self.log.exception("Exception canceling queue item %s \
-for build %s" % (item['id'], build))
+                self.log.exception("Exception canceling queue item %s "
+                                   "for build %s" % (item['id'], build))
 
         self.log.debug("Still unable to find build %s to cancel" % build)
         if build.number:
@@ -287,9 +290,8 @@ for build %s" % (item['id'], build))
             self.jenkins.stop_build(build.job.name, build.number)
             self.log.debug("Canceled just running build %s" % build)
         else:
-            self.log.error(
-                "Build %s has not started but was not found in queue" %
-                build)
+            self.log.error("Build %s has not started but "
+                           "was not found in queue" % build)
 
     def getBestBuildURL(self, url):
         try:
@@ -310,15 +312,16 @@ for build %s" % (item['id'], build))
         if not build.number:
             return
         try:
-            self.jenkins.set_build_description(build.job.name, build.number,
+            self.jenkins.set_build_description(build.job.name,
+                                               build.number,
                                                description)
         except:
             self.log.exception("Exception setting build description for %s" %
                                build)
 
     def onBuildCompleted(self, uuid, status, url, number):
-        self.log.info("Build %s #%s complete, status %s" % (
-                uuid, number, status))
+        self.log.info("Build %s #%s complete, status %s" %
+                      (uuid, number, status))
         build = self.builds.get(uuid)
         if build:
             self.log.debug("Found build %s" % build)
@@ -365,16 +368,19 @@ for build %s" % (item['id'], build))
                     if hasattr(build, '_jenkins_missing_build_info'):
                         missing_time = build._jenkins_missing_build_info
                         if time.time() - missing_time > JENKINS_GRACE_TIME:
-                            self.log.debug("Lost build %s because it has \
-started but the build URL is not working" % build)
+                            self.log.debug("Lost build %s because "
+                                           "it has started but "
+                                           "the build URL is not working" %
+                                           build)
                             lostbuilds.append(build)
                     else:
                         build._jenkins_missing_build_info = time.time()
                     continue
 
                 if not info:
-                    self.log.debug("Lost build %s because it started but \
-info can not be retreived" % build)
+                    self.log.debug("Lost build %s because "
+                                   "it started but "
+                                   "info can not be retreived" % build)
                     lostbuilds.append(build)
                     continue
                 if info['building']:
@@ -382,8 +388,9 @@ info can not be retreived" % build)
                     continue
                 finish_time = (info['timestamp'] + info['duration']) / 1000
                 if time.time() - finish_time > JENKINS_GRACE_TIME:
-                    self.log.debug("Lost build %s because it finished \
-more than 5 minutes ago.  Build info %s:" % (build, info))
+                    self.log.debug("Lost build %s because "
+                                   "it finished more than 5 minutes ago.  "
+                                   "Build info %s:" % (build, info))
                     lostbuilds.append(build)
                     continue
                 # Give it more time
@@ -404,8 +411,9 @@ more than 5 minutes ago.  Build info %s:" % (build, info))
                 if hasattr(build, '_jenkins_missing_from_queue'):
                     missing_time = build._jenkins_missing_from_queue
                     if time.time() - missing_time > JENKINS_GRACE_TIME:
-                        self.log.debug("Lost build %s because it has not \
-started and is not in the queue" % build)
+                        self.log.debug("Lost build %s because "
+                                       "it has not started and "
+                                       "is not in the queue" % build)
                         lostbuilds.append(build)
                         continue
                 else:
