@@ -20,7 +20,7 @@ import re
 import threading
 import yaml
 
-from model import Job, Change, Project, ChangeQueue, EventFilter
+from model import Job, Project, ChangeQueue, EventFilter
 
 
 class Scheduler(threading.Thread):
@@ -113,8 +113,8 @@ class Scheduler(threading.Thread):
                 job.parameter_function = func
             branches = toList(config_job.get('branch'))
             if branches:
-                f = EventFilter(branches=branches)
-                job.event_filters = [f]
+                job._branches = branches
+                job.branches = [re.compile(x) for x in branches]
 
         def add_jobs(job_tree, config_jobs):
             for job in config_jobs:
@@ -313,8 +313,8 @@ class Scheduler(threading.Thread):
             if not manager.eventMatches(event):
                 self.log.debug("Event %s ignored by %s" % (event, manager))
                 continue
-            change = Change(manager.name, project, event)
-            self.log.info("Adding %s, %s to to %s" %
+            change = event.getChange(manager.name, project, self.trigger)
+            self.log.info("Adding %s, %s to %s" %
                           (project, change, manager))
             manager.addChange(change)
 
@@ -372,8 +372,8 @@ class BaseQueueManager(object):
             istr = '    ' + ' ' * indent
             if tree.job:
                 efilters = ''
-                for e in tree.job.event_filters:
-                    efilters += str(e)
+                for b in tree.job._branches:
+                    efilters += str(b)
                 if efilters:
                     efilters = ' ' + efilters
                 hold = ''
@@ -399,6 +399,13 @@ class BaseQueueManager(object):
         if self.failure_action:
             self.log.info("  On failure:")
             self.log.info("    %s" % self.failure_action)
+
+    def getSubmitAllowNeeds(self):
+        # Get a list of code review labels that are allowed to be
+        # "needed" in the submit records for a change, with respect
+        # to this queue.  In other words, the list of review labels
+        # this queue itself is likely to set before submitting.
+        return self.success_action.keys()
 
     def eventMatches(self, event):
         for ef in self.event_filters:
@@ -595,10 +602,66 @@ class DependentQueueManager(BaseQueueManager):
                 return queue
         self.log.error("Unable to find change queue for project %s" % project)
 
+    def _checkForChangesNeededBy(self, change):
+        self.log.debug("Checking for changes needed by %s:" % change)
+        # Return true if okay to proceed enqueing this change,
+        # false if the change should not be enqueued.
+        if not change.needs_change:
+            self.log.debug("  No changes needed")
+            return True
+        if change.needs_change.is_merged:
+            self.log.debug("  Needed change is merged")
+            return True
+        if not change.needs_change.is_current_patchset:
+            self.log.debug("  Needed change is not the current patchset")
+            return False
+        change_queue = self.getQueue(change.project)
+        if change.needs_change in change_queue.queue:
+            self.log.debug("  Needed change is already ahead in the queue")
+            return True
+        if change.needs_change.can_merge:
+            # It can merge, so attempt to enqueue it _ahead_ of this change.
+            # If that works we can enqueue this change, otherwise, we can't.
+            self.log.debug("  Change %s must be merged ahead of %s" %
+                           (change.needs_change, change))
+            return self.addChange(change.needs_change)
+        # The needed change can't be merged.
+        self.log.debug("  Change %s is needed but can not be merged" %
+                       change.needs_change)
+        return False
+
+    def _checkForChangesNeeding(self, change):
+        to_enqueue = []
+        self.log.debug("Checking for changes needing %s:" % change)
+        for needs in change.needed_by_changes:
+            if needs.can_merge:
+                self.log.debug("  Change %s needs %s and is ready to merge" %
+                               (needs, change))
+                to_enqueue.append(needs)
+        return to_enqueue
+
     def addChange(self, change):
+        # Returns true if added (or not needed), false if failed to add
         if self.isChangeAlreadyInQueue(change):
             self.log.debug("Change %s is already in queue, ignoring" % change)
-            return
+            return True
+
+        if not change.can_merge:
+            self.log.debug("Change %s can not merge, ignoring" % change)
+            return False
+
+        if not self._checkForChangesNeededBy(change):
+            return False
+
+        to_enqueue = self._checkForChangesNeeding(change)
+        # TODO(jeblair): Consider re-ordering this so that the dependent
+        # changes aren't checked until closer when they are needed.
+
+        if self.isChangeAlreadyInQueue(change):
+            self.log.debug("Change %s has been added to queue, ignoring" %
+                           change)
+            return True
+
         self.log.debug("Adding change %s" % change)
         change_queue = self.getQueue(change.project)
         if change_queue:
@@ -606,6 +669,10 @@ class DependentQueueManager(BaseQueueManager):
                            (change, change_queue))
             change_queue.enqueueChange(change)
             self._addChange(change)
+            for needs in to_enqueue:
+                self.addChange(needs)
+            return True
+        return False
 
     def _getDependentChanges(self, change):
         orig_change = change

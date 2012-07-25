@@ -62,7 +62,8 @@ class Job(object):
         self.success_message = None
         self.parameter_function = None
         self.hold_following_changes = False
-        self.event_filters = []
+        self.branches = []
+        self._branches = []
 
     def __str__(self):
         return self.name
@@ -75,13 +76,14 @@ class Job(object):
         self.success_message = other.success_message
         self.parameter_function = other.parameter_function
         self.hold_following_changes = other.hold_following_changes
-        self.event_filters = other.event_filters[:]
+        self.branches = other.branches[:]
+        self._branches = other._branches[:]
 
-    def eventMatches(self, event):
-        if not self.event_filters:
+    def changeMatches(self, change):
+        if not self.branches:
             return True
-        for ef in self.event_filters:
-            if ef.matches(event):
+        for branch in self.branches:
+            if branch.match(change.branch):
                 return True
         return False
 
@@ -293,7 +295,7 @@ class BuildSet(object):
 
 
 class Change(object):
-    def __init__(self, queue_name, project, event):
+    def __init__(self, queue_name, project):
         self.queue_name = queue_name
         self.project = project
         self.branch = None
@@ -304,19 +306,12 @@ class Change(object):
         self.ref = None
         self.oldrev = None
         self.newrev = None
-        self.event = event
         self.reported = False
-
-        if event.change_number:
-            self.branch = event.branch
-            self.number = event.change_number
-            self.url = event.change_url
-            self.patchset = event.patch_number
-            self.refspec = event.refspec
-        if event.ref:
-            self.ref = event.ref
-            self.oldrev = event.oldrev
-            self.newrev = event.newrev
+        self.needs_change = None
+        self.needed_by_changes = []
+        self.is_current_patchset = True
+        self.can_merge = False
+        self.is_merged = False
 
         self.build_sets = []
         self.change_ahead = None
@@ -346,7 +341,7 @@ class Change(object):
         return False
 
     def _filterJobs(self, jobs):
-        return filter(lambda job: job.eventMatches(self.event), jobs)
+        return filter(lambda job: job.changeMatches(self), jobs)
 
     def formatStatus(self, indent=0, html=False):
         indent_str = ' ' * indent
@@ -448,7 +443,7 @@ class Change(object):
                 return []
         for tree in job_trees:
             job = tree.job
-            if not job.eventMatches(self.event):
+            if not job.changeMatches(self):
                 continue
             result = None
             if job:
@@ -536,6 +531,22 @@ class TriggerEvent(object):
         ret += '>'
 
         return ret
+
+    def getChange(self, manager_name, project, trigger):
+        # TODO: make the scheduler deal with events (which may have
+        # changes) rather than changes so that we don't have to create
+        # "fake" changes for events that aren't associated with changes.
+
+        if self.change_number:
+            change = trigger.getChange(self.change_number, self.patch_number,
+                                       manager_name)
+        if self.ref:
+            change = Change(manager_name, project)
+            change.ref = self.ref
+            change.oldrev = self.oldrev
+            change.newrev = self.newrev
+
+        return change
 
 
 class EventFilter(object):

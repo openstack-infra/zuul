@@ -91,6 +91,7 @@ class Gerrit(object):
         self.keyfile = keyfile
         self.watcher_thread = None
         self.event_queue = None
+        self.client = None
 
     def startWatching(self):
         self.event_queue = Queue.Queue()
@@ -120,9 +121,12 @@ class Gerrit(object):
         out, err = self._ssh(cmd)
         return err
 
-    def query(self, change):
-        cmd = 'gerrit query --format json %s"' % (
-            change)
+    def query(self, query):
+        args = '--all-approvals --comments --commit-message'
+        args += ' --current-patch-set --dependencies --files'
+        args += ' --patch-sets --submit-records'
+        cmd = 'gerrit query --format json %s %s' % (
+            args, query)
         out, err = self._ssh(cmd)
         if not out:
             return False
@@ -136,7 +140,7 @@ class Gerrit(object):
                 pprint.pformat(data)))
         return data
 
-    def _ssh(self, command):
+    def _open(self):
         client = paramiko.SSHClient()
         client.load_system_host_keys()
         client.set_missing_host_key_policy(paramiko.WarningPolicy())
@@ -144,9 +148,18 @@ class Gerrit(object):
                        username=self.username,
                        port=self.port,
                        key_filename=self.keyfile)
+        self.client = client
 
-        self.log.debug("SSH command:\n%s" % command)
-        stdin, stdout, stderr = client.exec_command(command)
+    def _ssh(self, command):
+        if not self.client:
+            self._open()
+
+        try:
+            self.log.debug("SSH command:\n%s" % command)
+            stdin, stdout, stderr = self.client.exec_command(command)
+        except:
+            self._open()
+            stdin, stdout, stderr = self.client.exec_command(command)
 
         out = stdout.read()
         self.log.debug("SSH received stdout:\n%s" % out)
