@@ -16,16 +16,283 @@ import re
 import time
 
 
+class Pipeline(object):
+    """A top-level pipeline such as check, gate, post, etc."""
+    def __init__(self, name):
+        self.name = name
+        self.job_trees = {}  # project -> JobTree
+        self.manager = None
+
+    def setManager(self, manager):
+        self.manager = manager
+
+    def addProject(self, project):
+        job_tree = JobTree(None)  # Null job == job tree root
+        self.job_trees[project] = job_tree
+        return job_tree
+
+    def getProjects(self):
+        return self.job_trees.keys()
+
+    def getJobTree(self, project):
+        tree = self.job_trees.get(project)
+        return tree
+
+    def getJobs(self, changeish):
+        tree = self.job_trees[changeish.project]
+        if not tree:
+            return []
+        return changeish.filterJobs(tree.getJobs())
+
+    def _findJobsToRun(self, job_trees, changeish):
+        torun = []
+        if changeish.change_ahead:
+            # Only run jobs if any 'hold' jobs on the change ahead
+            # have completed successfully.
+            if self.isHoldingFollowingChanges(changeish.change_ahead):
+                return []
+        for tree in job_trees:
+            job = tree.job
+            result = None
+            if job:
+                if not job.changeMatches(changeish):
+                    continue
+                build = changeish.current_build_set.getBuild(job.name)
+                if build:
+                    result = build.result
+                else:
+                    # There is no build for the root of this job tree,
+                    # so we should run it.
+                    torun.append(job)
+            # If there is no job, this is a null job tree, and we should
+            # run all of its jobs.
+            if result == 'SUCCESS' or not job:
+                torun.extend(self._findJobsToRun(tree.job_trees, changeish))
+        return torun
+
+    def findJobsToRun(self, changeish):
+        tree = self.job_trees[changeish.project]
+        if not tree:
+            return []
+        return self._findJobsToRun(tree.job_trees, changeish)
+
+    def areAllJobsComplete(self, changeish):
+        for job in self.getJobs(changeish):
+            build = changeish.current_build_set.getBuild(job.name)
+            if not build or not build.result:
+                return False
+        return True
+
+    def didAllJobsSucceed(self, changeish):
+        for job in self.getJobs(changeish):
+            build = changeish.current_build_set.getBuild(job.name)
+            if not build:
+                return False
+            if build.result != 'SUCCESS':
+                return False
+        return True
+
+    def didAnyJobFail(self, changeish):
+        for job in self.getJobs(changeish):
+            build = changeish.current_build_set.getBuild(job.name)
+            if build and build.result == 'FAILURE':
+                return True
+        return False
+
+    def isHoldingFollowingChanges(self, changeish):
+        for job in self.getJobs(changeish):
+            if not job.hold_following_changes:
+                continue
+            build = changeish.current_build_set.getBuild(job.name)
+            if not build:
+                return True
+            if build.result != 'SUCCESS':
+                return True
+        if not changeish.change_ahead:
+            return False
+        return self.isHoldingFollowingChanges(changeish.change_ahead)
+
+    def formatStatus(self, changeish, indent=0, html=False):
+        indent_str = ' ' * indent
+        ret = ''
+        if html and changeish.url is not None:
+            ret += '%sProject %s change <a href="%s">%s</a>\n' % (
+                indent_str,
+                changeish.project.name,
+                changeish.url,
+                changeish._id())
+        else:
+            ret += '%sProject %s change %s\n' % (indent_str,
+                                                 changeish.project.name,
+                                                 changeish._id())
+        for job in self.getJobs(changeish):
+            build = changeish.current_build_set.getBuild(job.name)
+            if build:
+                result = build.result
+            else:
+                result = None
+            job_name = job.name
+            if html:
+                if build:
+                    url = build.url
+                else:
+                    url = None
+                if url is not None:
+                    job_name = '<a href="%s">%s</a>' % (url, job_name)
+            ret += '%s  %s: %s' % (indent_str, job_name, result)
+            ret += '\n'
+        if changeish.change_ahead:
+            ret += '%sWaiting on:\n' % (indent_str)
+            ret += self.formatStatus(changeish.change_ahead,
+                                     indent + 2, html)
+        return ret
+
+    def formatReport(self, changeish):
+        ret = ''
+        if self.didAllJobsSucceed(changeish):
+            ret += 'Build successful\n\n'
+        else:
+            ret += 'Build failed\n\n'
+
+        for job in self.getJobs(changeish):
+            build = changeish.current_build_set.getBuild(job.name)
+            result = build.result
+            if result == 'SUCCESS' and job.success_message:
+                result = job.success_message
+            elif result == 'FAILURE' and job.failure_message:
+                result = job.failure_message
+            url = build.url
+            if not url:
+                url = job.name
+            ret += '- %s : %s\n' % (url, result)
+        return ret
+
+    def formatDescription(self, build):
+        concurrent_changes = ''
+        concurrent_builds = ''
+        other_builds = ''
+
+        for change in build.build_set.other_changes:
+            concurrent_changes += '<li><a href="{change.url}">\
+              {change.number},{change.patchset}</a></li>'.format(
+                change=change)
+
+        change = build.build_set.change
+
+        for build in build.build_set.getBuilds():
+            if build.base_url:
+                concurrent_builds += """\
+<li>
+  <a href="{build.base_url}">
+  {build.job.name} #{build.number}</a>: {build.result}
+</li>
+""".format(build=build)
+            else:
+                concurrent_builds += """\
+<li>
+  {build.job.name}: {build.result}
+</li>""".format(build=build)
+
+        if build.build_set.previous_build_set:
+            other_build = build.build_set.previous_build_set.getBuild(
+                build.job.name)
+            if other_build:
+                other_builds += """\
+<li>
+  Preceded by: <a href="{build.base_url}">
+  {build.job.name} #{build.number}</a>
+</li>
+""".format(build=other_build)
+
+        if build.build_set.next_build_set:
+            other_build = build.build_set.next_build_set.getBuild(
+                build.job.name)
+            if other_build:
+                other_builds += """\
+<li>
+  Succeeded by: <a href="{build.base_url}">
+  {build.job.name} #{build.number}</a>
+</li>
+""".format(build=other_build)
+
+        result = build.build_set.result
+
+        if change.number:
+            ret = """\
+<p>
+  Triggered by change:
+    <a href="{change.url}">{change.number},{change.patchset}</a><br/>
+  Branch: <b>{change.branch}</b><br/>
+  Pipeline: <b>{self.name}</b>
+</p>"""
+        else:
+            ret = """\
+<p>
+  Triggered by reference:
+    {change.ref}</a><br/>
+  Old revision: <b>{change.oldrev}</b><br/>
+  New revision: <b>{change.newrev}</b><br/>
+  Pipeline: <b>{self.name}</b>
+</p>"""
+
+        if concurrent_changes:
+            ret += """\
+<p>
+  Other changes tested concurrently with this change:
+  <ul>{concurrent_changes}</ul>
+</p>
+"""
+        if concurrent_builds:
+            ret += """\
+<p>
+  All builds for this change set:
+  <ul>{concurrent_builds}</ul>
+</p>
+"""
+
+        if other_builds:
+            ret += """\
+<p>
+  Other build sets for this change:
+  <ul>{other_builds}</ul>
+</p>
+"""
+        if result:
+            ret += """\
+<p>
+  Reported result: <b>{result}</b>
+</p>
+"""
+
+        ret = ret.format(**locals())
+        return ret
+
+    def setResult(self, changeish, build):
+        if build.result != 'SUCCESS':
+            # Get a JobTree from a Job so we can find only its dependent jobs
+            root = self.getJobTree(changeish.project)
+            tree = root.getJobTreeForJob(build.job)
+            for job in tree.getJobs():
+                fakebuild = Build(job, None)
+                fakebuild.result = 'SKIPPED'
+                changeish.addBuild(fakebuild)
+
+
 class ChangeQueue(object):
-    def __init__(self, queue_name):
+    """DependentPipelines have multiple parallel queues shared by
+    different projects; this is one of them.  For instance, there may
+    a queue shared by interrelated projects foo and bar, and a second
+    queue for independent project baz.  Pipelines have one or more
+    PipelineQueues."""
+    def __init__(self, pipeline):
+        self.pipeline = pipeline
         self.name = ''
-        self.queue_name = queue_name
         self.projects = []
         self._jobs = set()
         self.queue = []
 
     def __repr__(self):
-        return '<ChangeQueue %s: %s>' % (self.queue_name, self.name)
+        return '<ChangeQueue %s: %s>' % (self.pipeline.name, self.name)
 
     def getJobs(self):
         return self._jobs
@@ -36,7 +303,7 @@ class ChangeQueue(object):
             names = [x.name for x in self.projects]
             names.sort()
             self.name = ', '.join(names)
-            self._jobs |= set(project.getJobs(self.queue_name))
+            self._jobs |= set(self.pipeline.getJobTree(project).getJobs())
 
     def enqueueChange(self, change):
         if self.queue:
@@ -52,6 +319,17 @@ class ChangeQueue(object):
     def mergeChangeQueue(self, other):
         for project in other.projects:
             self.addProject(project)
+
+
+class Project(object):
+    def __init__(self, name):
+        self.name = name
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return '<Project %s>' % (self.name)
 
 
 class Job(object):
@@ -88,119 +366,6 @@ class Job(object):
         return False
 
 
-class Build(object):
-    def __init__(self, job, uuid):
-        self.job = job
-        self.uuid = uuid
-        self.base_url = None
-        self.url = None
-        self.number = None
-        self.result = None
-        self.build_set = None
-        self.launch_time = time.time()
-
-    def __repr__(self):
-        return '<Build %s of %s>' % (self.uuid, self.job.name)
-
-    def formatDescription(self):
-        concurrent_changes = ''
-        concurrent_builds = ''
-        other_builds = ''
-
-        for change in self.build_set.other_changes:
-            concurrent_changes += '<li><a href="{change.url}">\
-              {change.number},{change.patchset}</a></li>'.format(
-                change=change)
-
-        change = self.build_set.change
-
-        for build in self.build_set.getBuilds():
-            if build.base_url:
-                concurrent_builds += """\
-<li>
-  <a href="{build.base_url}">
-  {build.job.name} #{build.number}</a>: {build.result}
-</li>
-""".format(build=build)
-            else:
-                concurrent_builds += """\
-<li>
-  {build.job.name}: {build.result}
-</li>""".format(build=build)
-
-        if self.build_set.previous_build_set:
-            build = self.build_set.previous_build_set.getBuild(self.job.name)
-            if build:
-                other_builds += """\
-<li>
-  Preceded by: <a href="{build.base_url}">
-  {build.job.name} #{build.number}</a>
-</li>
-""".format(build=build)
-
-        if self.build_set.next_build_set:
-            build = self.build_set.next_build_set.getBuild(self.job.name)
-            if build:
-                other_builds += """\
-<li>
-  Succeeded by: <a href="{build.base_url}">
-  {build.job.name} #{build.number}</a>
-</li>
-""".format(build=build)
-
-        result = self.build_set.result
-
-        if change.number:
-            ret = """\
-<p>
-  Triggered by change:
-    <a href="{change.url}">{change.number},{change.patchset}</a><br/>
-  Branch: <b>{change.branch}</b><br/>
-  Pipeline: <b>{change.queue_name}</b>
-</p>"""
-        else:
-            ret = """\
-<p>
-  Triggered by reference:
-    {change.ref}</a><br/>
-  Old revision: <b>{change.oldrev}</b><br/>
-  New revision: <b>{change.newrev}</b><br/>
-  Pipeline: <b>{change.queue_name}</b>
-</p>"""
-
-        if concurrent_changes:
-            ret += """\
-<p>
-  Other changes tested concurrently with this change:
-  <ul>{concurrent_changes}</ul>
-</p>
-"""
-        if concurrent_builds:
-            ret += """\
-<p>
-  All builds for this change set:
-  <ul>{concurrent_builds}</ul>
-</p>
-"""
-
-        if other_builds:
-            ret += """\
-<p>
-  Other build sets for this change:
-  <ul>{other_builds}</ul>
-</p>
-"""
-        if result:
-            ret += """\
-<p>
-  Reported result: <b>{result}</b>
-</p>
-"""
-
-        ret = ret.format(**locals())
-        return ret
-
-
 class JobTree(object):
     """ A JobTree represents an instance of one Job, and holds JobTrees
     whose jobs should be run if that Job succeeds.  A root node of a
@@ -233,34 +398,19 @@ class JobTree(object):
         return None
 
 
-class Project(object):
-    def __init__(self, name):
-        self.name = name
-        self.job_trees = {}  # Queue -> JobTree
-
-    def __str__(self):
-        return self.name
+class Build(object):
+    def __init__(self, job, uuid):
+        self.job = job
+        self.uuid = uuid
+        self.base_url = None
+        self.url = None
+        self.number = None
+        self.result = None
+        self.build_set = None
+        self.launch_time = time.time()
 
     def __repr__(self):
-        return '<Project %s>' % (self.name)
-
-    def addQueue(self, name):
-        self.job_trees[name] = JobTree(None)
-        return self.job_trees[name]
-
-    def hasQueue(self, name):
-        if name in self.job_trees:
-            return True
-        return False
-
-    def getJobTreeForQueue(self, name):
-        return self.job_trees.get(name, None)
-
-    def getJobs(self, queue_name):
-        tree = self.getJobTreeForQueue(queue_name)
-        if not tree:
-            return []
-        return tree.getJobs()
+        return '<Build %s of %s>' % (self.uuid, self.job.name)
 
 
 class BuildSet(object):
@@ -294,110 +444,23 @@ class BuildSet(object):
         return [self.builds.get(x) for x in keys]
 
 
-class Change(object):
-    def __init__(self, queue_name, project):
-        self.queue_name = queue_name
-        self.project = project
-        self.branch = None
-        self.number = None
-        self.url = None
-        self.patchset = None
-        self.refspec = None
-        self.ref = None
-        self.oldrev = None
-        self.newrev = None
-        self.reported = False
-        self.needs_change = None
-        self.needed_by_changes = []
-        self.is_current_patchset = True
-        self.can_merge = False
-        self.is_merged = False
+class Changeish(object):
+    """Something like a change; either a change or a ref"""
+    is_reportable = False
 
+    def __init__(self, project):
+        self.project = project
         self.build_sets = []
         self.change_ahead = None
         self.change_behind = None
         self.current_build_set = BuildSet(self)
         self.build_sets.append(self.current_build_set)
 
-    def _id(self):
-        if self.number:
-            return '%s,%s' % (self.number, self.patchset)
-        return self.newrev
-
-    def __repr__(self):
-        return '<Change 0x%x %s>' % (id(self), self._id())
-
     def equals(self, other):
-        if self.number:
-            if (self.number == other.number and
-                self.patchset == other.patchset):
-                return True
-            return False
-        if self.ref:
-            if (self.ref == other.ref and
-                self.newrev == other.newrev):
-                return True
-            return False
-        return False
+        raise NotImplementedError()
 
-    def _filterJobs(self, jobs):
+    def filterJobs(self, jobs):
         return filter(lambda job: job.changeMatches(self), jobs)
-
-    def formatStatus(self, indent=0, html=False):
-        indent_str = ' ' * indent
-        ret = ''
-        if html and self.url is not None:
-            ret += '%sProject %s change <a href="%s">%s</a>\n' % (indent_str,
-                                                            self.project.name,
-                                                            self.url,
-                                                            self._id())
-        else:
-            ret += '%sProject %s change %s\n' % (indent_str,
-                                                 self.project.name,
-                                                 self._id())
-        for job in self._filterJobs(self.project.getJobs(self.queue_name)):
-            build = self.current_build_set.getBuild(job.name)
-            if build:
-                result = build.result
-            else:
-                result = None
-            job_name = job.name
-            if html:
-                if build:
-                    url = build.url
-                else:
-                    url = None
-                if url is not None:
-                    job_name = '<a href="%s">%s</a>' % (url, job_name)
-            ret += '%s  %s: %s' % (indent_str, job_name, result)
-            ret += '\n'
-        if self.change_ahead:
-            ret += '%sWaiting on:\n' % (indent_str)
-            ret += self.change_ahead.formatStatus(indent + 2, html)
-        return ret
-
-    def formatReport(self):
-        ret = ''
-        if self.didAllJobsSucceed():
-            ret += 'Build successful\n\n'
-        else:
-            ret += 'Build failed\n\n'
-
-        for job in self._filterJobs(self.project.getJobs(self.queue_name)):
-            build = self.current_build_set.getBuild(job.name)
-            result = build.result
-            if result == 'SUCCESS' and job.success_message:
-                result = job.success_message
-            elif result == 'FAILURE' and job.failure_message:
-                result = job.failure_message
-            url = build.url
-            if not url:
-                url = job.name
-            ret += '- %s : %s\n' % (url, result)
-        return ret
-
-    def setReportedResult(self, result):
-        self.current_build_set.result = result
 
     def resetAllBuilds(self):
         old = self.current_build_set
@@ -410,93 +473,63 @@ class Change(object):
     def addBuild(self, build):
         self.current_build_set.addBuild(build)
 
-    def setResult(self, build):
-        if build.result != 'SUCCESS':
-            # Get a JobTree from a Job so we can find only its dependent jobs
-            root = self.project.getJobTreeForQueue(self.queue_name)
-            tree = root.getJobTreeForJob(build.job)
-            for job in tree.getJobs():
-                fakebuild = Build(job, None)
-                fakebuild.result = 'SKIPPED'
-                self.addBuild(fakebuild)
-
-    def isHoldingFollowingChanges(self):
-        tree = self.project.getJobTreeForQueue(self.queue_name)
-        for job in self._filterJobs(tree.getJobs()):
-            if not job.hold_following_changes:
-                continue
-            build = self.current_build_set.getBuild(job.name)
-            if not build:
-                return True
-            if build.result != 'SUCCESS':
-                return True
-        if not self.change_ahead:
-            return False
-        return self.change_ahead.isHoldingFollowingChanges()
-
-    def _findJobsToRun(self, job_trees):
-        torun = []
-        if self.change_ahead:
-            # Only run our jobs if any 'hold' jobs on the change ahead
-            # have completed successfully.
-            if self.change_ahead.isHoldingFollowingChanges():
-                return []
-        for tree in job_trees:
-            job = tree.job
-            if not job.changeMatches(self):
-                continue
-            result = None
-            if job:
-                build = self.current_build_set.getBuild(job.name)
-                if build:
-                    result = build.result
-                else:
-                    # There is no build for the root of this job tree,
-                    # so we should run it.
-                    torun.append(job)
-            # If there is no job, this is a null job tree, and we should
-            # run all of its jobs.
-            if result == 'SUCCESS' or not job:
-                torun.extend(self._findJobsToRun(tree.job_trees))
-        return torun
-
-    def findJobsToRun(self):
-        tree = self.project.getJobTreeForQueue(self.queue_name)
-        if not tree:
-            return []
-        return self._findJobsToRun(tree.job_trees)
-
-    def areAllJobsComplete(self):
-        tree = self.project.getJobTreeForQueue(self.queue_name)
-        for job in self._filterJobs(tree.getJobs()):
-            build = self.current_build_set.getBuild(job.name)
-            if not build or not build.result:
-                return False
-        return True
-
-    def didAllJobsSucceed(self):
-        tree = self.project.getJobTreeForQueue(self.queue_name)
-        for job in self._filterJobs(tree.getJobs()):
-            build = self.current_build_set.getBuild(job.name)
-            if not build:
-                return False
-            if build.result != 'SUCCESS':
-                return False
-        return True
-
-    def didAnyJobFail(self):
-        tree = self.project.getJobTreeForQueue(self.queue_name)
-        for job in self._filterJobs(tree.getJobs()):
-            build = self.current_build_set.getBuild(job.name)
-            if build and build.result == 'FAILURE':
-                return True
-        return False
-
     def delete(self):
         if self.change_behind:
             self.change_behind.change_ahead = None
             self.change_behind = None
         self.queue.dequeueChange(self)
+
+
+class Change(Changeish):
+    is_reportable = True
+
+    def __init__(self, project):
+        super(Change, self).__init__(project)
+        self.branch = None
+        self.number = None
+        self.url = None
+        self.patchset = None
+        self.refspec = None
+
+        self.reported = False
+        self.needs_change = None
+        self.needed_by_changes = []
+        self.is_current_patchset = True
+        self.can_merge = False
+        self.is_merged = False
+
+    def _id(self):
+        if self.number:
+            return '%s,%s' % (self.number, self.patchset)
+        return self.newrev
+
+    def __repr__(self):
+        return '<Change 0x%x %s>' % (id(self), self._id())
+
+    def equals(self, other):
+        if (self.number == other.number and
+            self.patchset == other.patchset):
+            return True
+        return False
+
+    def setReportedResult(self, result):
+        self.current_build_set.result = result
+
+
+class Ref(Changeish):
+    is_reportable = False
+
+    def __init__(self, project):
+        super(Change, self).__init__(project)
+        self.ref = None
+        self.oldrev = None
+        self.newrev = None
+
+    def equals(self, other):
+        if (self.ref == other.ref and
+            self.newrev == other.newrev):
+            return True
+        return False
 
 
 class TriggerEvent(object):
@@ -532,16 +565,15 @@ class TriggerEvent(object):
 
         return ret
 
-    def getChange(self, manager_name, project, trigger):
+    def getChange(self, project, trigger):
         # TODO: make the scheduler deal with events (which may have
         # changes) rather than changes so that we don't have to create
         # "fake" changes for events that aren't associated with changes.
 
         if self.change_number:
-            change = trigger.getChange(self.change_number, self.patch_number,
-                                       manager_name)
+            change = trigger.getChange(self.change_number, self.patch_number)
         if self.ref:
-            change = Change(manager_name, project)
+            change = Ref(project)
             change.ref = self.ref
             change.oldrev = self.oldrev
             change.newrev = self.newrev

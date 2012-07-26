@@ -170,7 +170,7 @@ class Gerrit(object):
         if status == 'MERGED' or status == 'SUBMITTED':
             return True
 
-    def _canMerge(self, change, allow_needs):
+    def canMerge(self, change, allow_needs):
         if not change.number:
             self.log.debug("Change has no number; considering it merged")
             # Good question.  It's probably ref-updated, which, ah,
@@ -206,15 +206,13 @@ class Gerrit(object):
             return False
         return True
 
-    def getChange(self, number, patchset, queue_name, changes=None):
-        # TODO: queue_name is screwing up the data model, refactor
-        # the queue context so it isn't necessary.
+    def getChange(self, number, patchset, changes=None):
         self.log.info("Getting information for %s,%s" % (number, patchset))
         if changes is None:
             changes = {}
         data = self.gerrit.query(number)
         project = self.sched.projects[data['project']]
-        change = Change(queue_name, project)
+        change = Change(project)
         change._data = data
 
         change.number = number
@@ -233,9 +231,6 @@ class Gerrit(object):
         else:
             change.is_current_patchset = False
 
-        manager = self.sched.queue_managers[queue_name]
-        change.can_merge = self._canMerge(change,
-                                          manager.getSubmitAllowNeeds())
         change.is_merged = self._isMerged(change)
         if change.is_merged:
             # This change is merged, so we don't need to look any further
@@ -249,7 +244,7 @@ class Gerrit(object):
             key = '%s,%s' % (num, ps)
             if key in changes:
                 return changes.get(key)
-            c = self.getChange(num, ps, queue_name, changes)
+            c = self.getChange(num, ps, changes)
             return c
 
         if 'dependsOn' in data:

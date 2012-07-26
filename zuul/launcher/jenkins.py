@@ -211,13 +211,13 @@ class Jenkins(object):
         uuid = str(uuid1())
         params = dict(UUID=uuid,
                       GERRIT_PROJECT=change.project.name)
-        if change.refspec:
+        if hasattr(change, 'refspec'):
             changes_str = '^'.join(
                 ['%s:%s:%s' % (c.project.name, c.branch, c.refspec)
                  for c in dependent_changes + [change]])
             params['GERRIT_BRANCH'] = change.branch
             params['GERRIT_CHANGES'] = changes_str
-        if change.ref:
+        if hasattr(change, 'ref'):
             params['GERRIT_REFNAME'] = change.ref
             params['GERRIT_OLDREV'] = change.oldrev
             params['GERRIT_NEWREV'] = change.newrev

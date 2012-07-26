@@ -916,15 +916,16 @@ class testScheduler(unittest.TestCase):
         "Test that whether a change is ready to merge"
         # TODO: move to test_gerrit (this is a unit test!)
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        a = self.sched.trigger.getChange(1, 2, 'gate')
-        assert not a.can_merge
+        a = self.sched.trigger.getChange(1, 2)
+        mgr = self.sched.pipelines['gate'].manager
+        assert not self.sched.trigger.canMerge(a, mgr.getSubmitAllowNeeds())
 
         A.addApproval('CRVW', 2)
-        a = self.sched.trigger.getChange(1, 2, 'gate')
-        assert not a.can_merge
+        a = self.sched.trigger.getChange(1, 2)
+        assert not self.sched.trigger.canMerge(a, mgr.getSubmitAllowNeeds())
 
         A.addApproval('APRV', 1)
-        a = self.sched.trigger.getChange(1, 2, 'gate')
-        assert a.can_merge
+        a = self.sched.trigger.getChange(1, 2)
+        assert self.sched.trigger.canMerge(a, mgr.getSubmitAllowNeeds())
 
         return True

@@ -1,6 +1,6 @@
-queues:
+pipelines:
   - name: check
-    manager: IndependentQueueManager
+    manager: IndependentPipelineManager
     trigger:
       - event: patchset-uploaded
     success:
@@ -9,13 +9,13 @@ queues:
       verified: -1
 
   - name: post
-    manager: IndependentQueueManager
+    manager: IndependentPipelineManager
     trigger:
       - event: ref-updated
         ref: ^(?!refs/).*$
 
   - name: gate
-    manager: DependentQueueManager
+    manager: DependentPipelineManager
     trigger:
       - event: comment-added
         approval: 

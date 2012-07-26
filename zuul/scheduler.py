@@ -20,7 +20,7 @@ import re
 import threading
 import yaml
 
-from model import Job, Project, ChangeQueue, EventFilter
+from model import Pipeline, Job, Project, ChangeQueue, EventFilter
 
 
 class Scheduler(threading.Thread):
@@ -43,7 +43,7 @@ class Scheduler(threading.Thread):
         self._init()
 
     def _init(self):
-        self.queue_managers = {}
+        self.pipelines = {}
         self.jobs = {}
         self.projects = {}
         self.metajobs = {}
@@ -78,14 +78,16 @@ class Scheduler(threading.Thread):
                 fn = os.path.expanduser(fn)
                 execfile(fn, self._config_env)
 
-        for config_queue in data['queues']:
-            manager = globals()[config_queue['manager']](self,
-                                                         config_queue['name'])
-            self.queue_managers[config_queue['name']] = manager
-            manager.success_action = config_queue.get('success')
-            manager.failure_action = config_queue.get('failure')
-            manager.start_action = config_queue.get('start')
-            for trigger in toList(config_queue['trigger']):
+        for conf_pipeline in data.get('pipelines', []):
+            pipeline = Pipeline(conf_pipeline['name'])
+            manager = globals()[conf_pipeline['manager']](self, pipeline)
+            pipeline.setManager(manager)
+
+            self.pipelines[conf_pipeline['name']] = pipeline
+            manager.success_action = conf_pipeline.get('success')
+            manager.failure_action = conf_pipeline.get('failure')
+            manager.start_action = conf_pipeline.get('start')
+            for trigger in toList(conf_pipeline['trigger']):
                 approvals = {}
                 for approval_dict in toList(trigger.get('approval')):
                     for k, v in approval_dict.items():
@@ -95,7 +97,7 @@ class Scheduler(threading.Thread):
                                 refs=toList(trigger.get('ref')),
                                 approvals=approvals,
                                 comment_filters=toList(
-                                        trigger.get('comment_filter')))
+                        trigger.get('comment_filter')))
                 manager.event_filters.append(f)
 
         for config_job in data['jobs']:
@@ -137,10 +139,10 @@ class Scheduler(threading.Thread):
         for config_project in data['projects']:
             project = Project(config_project['name'])
             self.projects[config_project['name']] = project
-            for qname in self.queue_managers.keys():
-                if qname in config_project:
-                    job_tree = project.addQueue(qname)
-                    config_jobs = config_project[qname]
+            for pipeline in self.pipelines.values():
+                if pipeline.name in config_project:
+                    job_tree = pipeline.addProject(project)
+                    config_jobs = config_project[pipeline.name]
                     add_jobs(job_tree, config_jobs)
 
         # All jobs should be defined at this point, get rid of
@@ -149,8 +151,8 @@ class Scheduler(threading.Thread):
 
         # TODO(jeblair): check that we don't end up with jobs like
         # "foo - bar" because a ':' is missing in the yaml for a dependent job
-        for manager in self.queue_managers.values():
-            manager._postConfig()
+        for pipeline in self.pipelines.values():
+            pipeline.manager._postConfig()
 
     def getJob(self, name):
         if name in self.jobs:
@@ -275,9 +277,9 @@ class Scheduler(threading.Thread):
     def _areAllBuildsComplete(self):
         self.log.debug("Checking if all builds are complete")
         waiting = False
-        for manager in self.queue_managers.values():
-            for build in manager.building_jobs.keys():
-                self.log.debug("%s waiting on %s" % (manager, build))
+        for pipeline in self.pipelines.values():
+            for build in pipeline.manager.building_jobs.keys():
+                self.log.debug("%s waiting on %s" % (pipeline.manager, build))
                 waiting = True
         if not waiting:
             self.log.debug("All builds are complete")
@@ -325,49 +327,49 @@ class Scheduler(threading.Thread):
             self.log.warning("Project %s not found" % event.project_name)
             return
 
-        for manager in self.queue_managers.values():
-            if not manager.eventMatches(event):
-                self.log.debug("Event %s ignored by %s" % (event, manager))
+        for pipeline in self.pipelines.values():
+            if not pipeline.manager.eventMatches(event):
+                self.log.debug("Event %s ignored by %s" % (event, pipeline))
                 continue
-            change = event.getChange(manager.name, project, self.trigger)
+            change = event.getChange(project, self.trigger)
             self.log.info("Adding %s, %s to %s" %
-                          (project, change, manager))
-            manager.addChange(change)
+                          (project, change, pipeline))
+            pipeline.manager.addChange(change)
 
     def process_result_queue(self):
         self.log.debug("Fetching result event")
         event_type, build = self.result_event_queue.get()
         self.log.debug("Processing result event %s" % build)
-        for manager in self.queue_managers.values():
+        for pipeline in self.pipelines.values():
             if event_type == 'started':
-                if manager.onBuildStarted(build):
+                if pipeline.manager.onBuildStarted(build):
                     return
             elif event_type == 'completed':
-                if manager.onBuildCompleted(build):
+                if pipeline.manager.onBuildCompleted(build):
                     return
         self.log.warning("Build %s not found by any queue manager" % (build))
 
     def formatStatusHTML(self):
         ret = '<html><pre>'
-        keys = self.queue_managers.keys()
+        keys = self.pipelines.keys()
         keys.sort()
         for key in keys:
-            manager = self.queue_managers[key]
-            s = 'Queue: %s' % manager.name
+            pipeline = self.pipelines[key]
+            s = 'Pipeline: %s' % pipeline.name
             ret += s + '\n'
             ret += '-' * len(s) + '\n'
-            ret += manager.formatStatusHTML()
+            ret += pipeline.formatStatusHTML()
             ret += '\n'
         ret += '</pre></html>'
         return ret
 
 
-class BaseQueueManager(object):
-    log = logging.getLogger("zuul.BaseQueueManager")
+class BasePipelineManager(object):
+    log = logging.getLogger("zuul.BasePipelineManager")
 
-    def __init__(self, sched, name):
+    def __init__(self, sched, pipeline):
         self.sched = sched
-        self.name = name
+        self.pipeline = pipeline
         self.building_jobs = {}
         self.event_filters = []
         self.success_action = {}
@@ -378,7 +380,7 @@ class BaseQueueManager(object):
         return "<%s %s>" % (self.__class__.__name__, self.name)
 
     def _postConfig(self):
-        self.log.info("Configured Queue Manager %s" % self.name)
+        self.log.info("Configured Pipeline Manager %s" % self.pipeline.name)
         self.log.info("  Events:")
         for e in self.event_filters:
             self.log.info("    %s" % e)
@@ -403,9 +405,10 @@ class BaseQueueManager(object):
                 log_jobs(x, indent + 2)
 
         for p in self.sched.projects.values():
-            if p.hasQueue(self.name):
+            tree = self.pipeline.getJobTree(p)
+            if tree:
                 self.log.info("    %s" % p)
-                log_jobs(p.getJobTreeForQueue(self.name))
+                log_jobs(tree)
         if self.start_action:
             self.log.info("  On start:")
             self.log.info("    %s" % self.start_action)
@@ -421,7 +424,10 @@ class BaseQueueManager(object):
         # "needed" in the submit records for a change, with respect
         # to this queue.  In other words, the list of review labels
         # this queue itself is likely to set before submitting.
-        return self.success_action.keys()
+        if self.success_action:
+            return self.success_action.keys()
+        else:
+            return {}
 
     def eventMatches(self, event):
         for ef in self.event_filters:
@@ -447,7 +453,7 @@ class BaseQueueManager(object):
             try:
                 self.log.info("Reporting start, action %s change %s" %
                               (self.start_action, change))
-                msg = "Starting %s jobs." % self.name
+                msg = "Starting %s jobs." % self.pipeline.name
                 ret = self.sched.trigger.report(change, msg, self.start_action)
                 if ret:
                     self.log.error("Reporting change start %s received: %s" %
@@ -458,7 +464,7 @@ class BaseQueueManager(object):
 
     def launchJobs(self, change):
         self.log.debug("Launching jobs for change %s" % change)
-        for job in change.findJobsToRun():
+        for job in self.pipeline.findJobsToRun(change):
             self.log.debug("Found job %s for change %s" % (job, change))
             try:
                 build = self.sched.launcher.launch(job, change)
@@ -472,12 +478,12 @@ class BaseQueueManager(object):
 
     def updateBuildDescriptions(self, build_set):
         for build in build_set.getBuilds():
-            desc = build.formatDescription()
+            desc = self.pipeline.formatDescription(build)
             self.sched.launcher.setBuildDescription(build, desc)
 
         if build_set.previous_build_set:
             for build in build_set.previous_build_set.getBuilds():
-                desc = build.formatDescription()
+                desc = self.pipeline.formatDescription(build)
                 self.sched.launcher.setBuildDescription(build, desc)
 
     def onBuildStarted(self, build):
@@ -504,11 +510,11 @@ class BaseQueueManager(object):
 
         del self.building_jobs[build]
 
-        change.setResult(build)
+        self.pipeline.setResult(change, build)
         self.log.info("Change %s status is now:\n %s" %
-                      (change, change.formatStatus()))
+                      (change, self.pipeline.formatStatus(change)))
 
-        if change.areAllJobsComplete():
+        if self.pipeline.areAllJobsComplete(change):
             self.log.debug("All jobs for change %s are complete" % change)
             self.possiblyReportChange(change)
         else:
@@ -525,11 +531,13 @@ class BaseQueueManager(object):
         self.reportChange(change)
 
     def reportChange(self, change):
-        self.log.debug("Reporting change %s" % change)
+        if not change.is_reportable:
+            return False
         if change.reported:
             return 0
+        self.log.debug("Reporting change %s" % change)
         ret = None
-        if change.didAllJobsSucceed():
+        if self.pipeline.didAllJobsSucceed(change):
             action = self.success_action
             change.setReportedResult('SUCCESS')
         else:
@@ -539,7 +547,7 @@ class BaseQueueManager(object):
             self.log.info("Reporting change %s, action: %s" %
                           (change, action))
             ret = self.sched.trigger.report(change,
-                                            change.formatReport(),
+                                            self.pipeline.formatReport(change),
                                             action)
             if ret:
                 self.log.error("Reporting change %s received: %s" %
@@ -563,35 +571,34 @@ class BaseQueueManager(object):
         changes = self.getChangesInQueue()
         ret = ''
         for change in changes:
-            ret += change.formatStatus(html=True)
+            ret += self.pipeline.formatStatus(change, html=True)
         return ret
 
 
-class IndependentQueueManager(BaseQueueManager):
-    log = logging.getLogger("zuul.IndependentQueueManager")
+class IndependentPipelineManager(BasePipelineManager):
+    log = logging.getLogger("zuul.IndependentPipelineManager")
 
 
-class DependentQueueManager(BaseQueueManager):
-    log = logging.getLogger("zuul.DependentQueueManager")
+class DependentPipelineManager(BasePipelineManager):
+    log = logging.getLogger("zuul.DependentPipelineManager")
 
     def __init__(self, *args, **kwargs):
-        super(DependentQueueManager, self).__init__(*args, **kwargs)
+        super(DependentPipelineManager, self).__init__(*args, **kwargs)
         self.change_queues = []
 
     def _postConfig(self):
-        super(DependentQueueManager, self)._postConfig()
+        super(DependentPipelineManager, self)._postConfig()
         self.buildChangeQueues()
 
     def buildChangeQueues(self):
         self.log.debug("Building shared change queues")
         change_queues = []
 
-        for project in self.sched.projects.values():
-            if project.hasQueue(self.name):
-                change_queue = ChangeQueue(self.name)
-                change_queue.addProject(project)
-                change_queues.append(change_queue)
-                self.log.debug("Created queue: %s" % change_queue)
+        for project in self.pipeline.getProjects():
+            change_queue = ChangeQueue(self.pipeline)
+            change_queue.addProject(project)
+            change_queues.append(change_queue)
+            self.log.debug("Created queue: %s" % change_queue)
 
         self.log.debug("Combining shared queues")
         new_change_queues = []
@@ -622,6 +629,9 @@ class DependentQueueManager(BaseQueueManager):
         self.log.debug("Checking for changes needed by %s:" % change)
         # Return true if okay to proceed enqueing this change,
         # false if the change should not be enqueued.
+        if not hasattr(change, 'needs_change'):
+            self.log.debug("  Changeish does not support dependencies")
+            return True
         if not change.needs_change:
             self.log.debug("  No changes needed")
             return True
@@ -635,7 +645,8 @@ class DependentQueueManager(BaseQueueManager):
         if change.needs_change in change_queue.queue:
             self.log.debug("  Needed change is already ahead in the queue")
             return True
-        if change.needs_change.can_merge:
+        if self.sched.trigger.canMerge(change.needs_change,
+                                       self.getSubmitAllowNeeds()):
             # It can merge, so attempt to enqueue it _ahead_ of this change.
             # If that works we can enqueue this change, otherwise, we can't.
             self.log.debug("  Change %s must be merged ahead of %s" %
@@ -649,8 +660,12 @@ class DependentQueueManager(BaseQueueManager):
     def _checkForChangesNeeding(self, change):
         to_enqueue = []
         self.log.debug("Checking for changes needing %s:" % change)
+        if not hasattr(change, 'needed_by_changes'):
+            self.log.debug("  Changeish does not support dependencies")
+            return to_enqueue
         for needs in change.needed_by_changes:
-            if needs.can_merge:
+            if self.sched.trigger.canMerge(needs,
+                                           self.getSubmitAllowNeeds()):
                 self.log.debug("  Change %s needs %s and is ready to merge" %
                                (needs, change))
                 to_enqueue.append(needs)
@@ -664,7 +679,8 @@ class DependentQueueManager(BaseQueueManager):
             self.log.debug("Change %s is already in queue, ignoring" % change)
             return True
 
-        if not change.can_merge:
+        if not self.sched.trigger.canMerge(change,
+                                           self.getSubmitAllowNeeds()):
             self.log.debug("Change %s can not merge, ignoring" % change)
             return False
 
@@ -705,7 +721,7 @@ class DependentQueueManager(BaseQueueManager):
     def launchJobs(self, change):
         self.log.debug("Launching jobs for change %s" % change)
         dependent_changes = self._getDependentChanges(change)
-        for job in change.findJobsToRun():
+        for job in self.pipeline.findJobsToRun(change):
             self.log.debug("Found job %s for change %s" % (job, change))
             try:
                 build = self.sched.launcher.launch(job,
@@ -749,9 +765,10 @@ class DependentQueueManager(BaseQueueManager):
 
     def onBuildCompleted(self, build):
         change = self.building_jobs.get(build)
-        if not super(DependentQueueManager, self).onBuildCompleted(build):
+        if not super(DependentPipelineManager, self).onBuildCompleted(build):
             return False
-        if change and change.change_behind and change.didAnyJobFail():
+        if (change and change.change_behind and
+            self.pipeline.didAnyJobFail(change)):
             # This or some other build failed. All changes behind this change
             # will need to be retested. To free up resources cancel the builds
             # behind this one as they will be rerun anyways.
@@ -775,7 +792,7 @@ class DependentQueueManager(BaseQueueManager):
             merged = (not ret)
             if merged:
                 merged = self.sched.trigger.isMerged(change, change.branch)
-            succeeded = change.didAllJobsSucceed()
+            succeeded = self.pipeline.didAllJobsSucceed(change)
             self.log.info("Reported change %s status: all-succeeded: %s, "
                           "merged: %s" % (change, succeeded, merged))
 
@@ -790,7 +807,7 @@ class DependentQueueManager(BaseQueueManager):
                     self.cancelJobs(change_behind)
                     self.launchJobs(change_behind)
         # If the change behind this is ready, notify
-        if change_behind and change_behind.areAllJobsComplete():
+        if change_behind and self.pipeline.areAllJobsComplete(change_behind):
             self.log.info("Change %s behind change %s is ready, "
                           "possibly reporting" % (change_behind, change))
             self.possiblyReportChange(change_behind)
