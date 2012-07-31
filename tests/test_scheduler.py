@@ -47,6 +47,7 @@ class FakeChange(object):
                   'VRFY': 'Verified'}
 
     def __init__(self, number, project, branch, subject, status='NEW'):
+        self.reported = 0
         self.patchsets = []
         self.submit_records = []
         self.number = number
@@ -123,6 +124,9 @@ class FakeChange(object):
         self.data['status'] = 'MERGED'
         self.open = False
 
+    def setReported(self):
+        self.reported += 1
+
 
 class FakeGerrit(object):
     def __init__(self, *args, **kw):
@@ -147,10 +151,12 @@ class FakeGerrit(object):
         self.event_queue.task_done()
 
     def review(self, project, changeid, message, action):
+        number, ps = changeid.split(',')
+        change = self.changes[int(number)]
         if 'submit' in action:
-            number, ps = changeid.split(',')
-            change = self.changes[int(number)]
             change.setMerged()
+        if message:
+            change.setReported()
 
     def query(self, number):
         change = self.changes[int(number)]
@@ -187,6 +193,9 @@ class FakeJenkinsJob(threading.Thread):
         self.parameters = parameters
         self.wait_condition = threading.Condition()
         self.waiting = False
+        self.aborted = False
+        self.canceled = False
+        self.created = time.time()
 
     def release(self):
         self.wait_condition.acquire()
@@ -216,6 +225,9 @@ class FakeJenkinsJob(threading.Thread):
         if self.jenkins.hold_jobs_in_queue:
             self._wait()
         self.jenkins.fakeDequeue(self)
+        if self.canceled:
+            self.jenkins.all_jobs.remove(self)
+            return
         self.callback.jenkins_endpoint(FakeJenkinsEvent(
                 self.name, self.number, self.parameters,
                 'STARTED'))
@@ -228,6 +240,8 @@ class FakeJenkinsJob(threading.Thread):
             self.name,
             self.parameters['GERRIT_CHANGES']):
             result = 'FAILURE'
+        if self.aborted:
+            result = 'ABORTED'
 
         self.jenkins.fakeAddHistory(name=self.name, number=self.number,
                                     result=result)
@@ -247,6 +261,7 @@ class FakeJenkins(object):
         self.queue = []
         self.all_jobs = []
         self.job_counter = {}
+        self.queue_counter = 0
         self.job_history = []
         self.hold_jobs_in_queue = False
         self.hold_jobs_in_build = False
@@ -299,9 +314,56 @@ class FakeJenkins(object):
         count = self.job_counter.get(name, 0)
         count += 1
         self.job_counter[name] = count
+
+        queue_count = self.queue_counter
+        self.queue_counter += 1
         job = FakeJenkinsJob(self, self.callback, name, count, parameters)
+        job.queue_id = queue_count
+
         self.all_jobs.append(job)
         job.start()
+
+    def stop_build(self, name, number):
+        for job in self.all_jobs:
+            if job.name == name and job.number == number:
+                job.aborted = True
+                job.release()
+                return
+
+    def cancel_queue(self, id):
+        for job in self.queue:
+            if job.queue_id == id:
+                job.canceled = True
+                job.release()
+                return
+
+    def get_queue_info(self):
+        items = []
+        for job in self.queue:
+            paramstr = ''
+            paramlst = []
+            d = {'actions': [{'parameters': paramlst},
+                             {'causes': [{'shortDescription':
+                                          'Started by user Jenkins',
+                                          'userId': 'jenkins',
+                                          'userName': 'Jenkins'}]}],
+                 'blocked': False,
+                 'buildable': True,
+                 'buildableStartMilliseconds': (job.created * 1000) + 5,
+                 'id': job.queue_id,
+                 'inQueueSince': (job.created * 1000),
+                 'params': paramstr,
+                 'stuck': False,
+                 'task': {'color': 'blue',
+                          'name': job.name,
+                          'url': 'https://server/job/%s/' % job.name},
+                 'why': 'Waiting for next available executor'}
+            for k, v in job.parameters.items():
+                paramstr += "\n(StringParameterValue) %s='%s'" % (k, v)
+                pd = {'name': k, 'value': v}
+                paramlst.append(pd)
+            items.append(d)
+        return items
 
     def set_build_description(self, *args, **kw):
         pass
@@ -372,6 +434,10 @@ class testScheduler(unittest.TestCase):
             self.sched.queue_lock.release()
             self.sched.wake_event.wait(0.1)
 
+    def countJobResults(self, jobs, result):
+        jobs = filter(lambda x: x['result'] == result, jobs)
+        return len(jobs)
+
     def test_jobs_launched(self):
         "Test that jobs are launched and a change is merged"
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -386,6 +452,7 @@ class testScheduler(unittest.TestCase):
         assert jobs[1]['result'] == 'SUCCESS'
         assert jobs[2]['result'] == 'SUCCESS'
         assert A.data['status'] == 'MERGED'
+        assert A.reported == 2
 
     def test_parallel_changes(self):
         "Test that changes are tested in parallel and merged in series"
@@ -484,6 +551,9 @@ class testScheduler(unittest.TestCase):
         assert A.data['status'] == 'MERGED'
         assert B.data['status'] == 'MERGED'
         assert C.data['status'] == 'MERGED'
+        assert A.reported == 2
+        assert B.reported == 2
+        assert C.reported == 2
 
     def test_failed_changes(self):
         "Test that a change behind a failed change is retested"
@@ -502,6 +572,8 @@ class testScheduler(unittest.TestCase):
         assert len(jobs) > 6
         assert A.data['status'] == 'NEW'
         assert B.data['status'] == 'MERGED'
+        assert A.reported == 2
+        assert B.reported == 2
 
     def test_independent_queues(self):
         "Test that changes end up in the right queues"
@@ -546,3 +618,128 @@ class testScheduler(unittest.TestCase):
         assert A.data['status'] == 'MERGED'
         assert B.data['status'] == 'MERGED'
         assert C.data['status'] == 'MERGED'
+        assert A.reported == 2
+        assert B.reported == 2
+        assert C.reported == 2
+
+    def test_failed_change_at_head(self):
+        "Test that if a change at the head fails, jobs behind it are canceled"
+        self.fake_jenkins.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+
+        self.fake_jenkins.fakeAddFailTest(
+            'project-test1',
+            'org/project:master:refs/changes/1/1/1')
+
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+
+        self.waitUntilSettled()
+        jobs = self.fake_jenkins.all_jobs
+        finished_jobs = self.fake_jenkins.job_history
+
+        assert len(jobs) == 1
+        assert jobs[0].name == 'project-merge'
+        assert (jobs[0].parameters['GERRIT_CHANGES'] ==
+                'org/project:master:refs/changes/1/1/1')
+
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+
+        assert len(jobs) == 6
+        assert jobs[0].name == 'project-test1'
+        assert jobs[1].name == 'project-test2'
+        assert jobs[2].name == 'project-test1'
+        assert jobs[3].name == 'project-test2'
+        assert jobs[4].name == 'project-test1'
+        assert jobs[5].name == 'project-test2'
+
+        jobs[0].release()
+        self.waitUntilSettled()
+
+        assert len(jobs) == 1  # project-test2
+        assert self.countJobResults(finished_jobs, 'ABORTED') == 4
+
+        self.fake_jenkins.hold_jobs_in_build = False
+        self.fake_jenkins.fakeRelease()
+        self.waitUntilSettled()
+
+        assert len(jobs) == 0
+        assert len(finished_jobs) == 15
+        assert A.data['status'] == 'NEW'
+        assert B.data['status'] == 'MERGED'
+        assert C.data['status'] == 'MERGED'
+        assert A.reported == 2
+        assert B.reported == 2
+        assert C.reported == 2
+
+    def test_failed_change_at_head_with_queue(self):
+        "Test that if a change at the head fails, queued jobs are canceled"
+        self.fake_jenkins.hold_jobs_in_queue = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+
+        self.fake_jenkins.fakeAddFailTest(
+            'project-test1',
+            'org/project:master:refs/changes/1/1/1')
+
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+
+        self.waitUntilSettled()
+        jobs = self.fake_jenkins.all_jobs
+        finished_jobs = self.fake_jenkins.job_history
+        queue = self.fake_jenkins.queue
+
+        assert len(jobs) == 1
+        assert len(queue) == 1
+        assert jobs[0].name == 'project-merge'
+        assert (jobs[0].parameters['GERRIT_CHANGES'] ==
+                'org/project:master:refs/changes/1/1/1')
+
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+
+        assert len(jobs) == 6
+        assert len(queue) == 6
+        assert jobs[0].name == 'project-test1'
+        assert jobs[1].name == 'project-test2'
+        assert jobs[2].name == 'project-test1'
+        assert jobs[3].name == 'project-test2'
+        assert jobs[4].name == 'project-test1'
+        assert jobs[5].name == 'project-test2'
+
+        jobs[0].release()
+        self.waitUntilSettled()
+
+        assert len(jobs) == 1  # project-test2
+        assert len(queue) == 1
+        assert self.countJobResults(finished_jobs, 'ABORTED') == 0
+
+        self.fake_jenkins.hold_jobs_in_queue = False
+        self.fake_jenkins.fakeRelease()
+        self.waitUntilSettled()
+
+        assert len(jobs) == 0
+        assert len(finished_jobs) == 11
+        assert A.data['status'] == 'NEW'
+        assert B.data['status'] == 'MERGED'
+        assert C.data['status'] == 'MERGED'
+        assert A.reported == 2
+        assert B.reported == 2
+        assert C.reported == 2
