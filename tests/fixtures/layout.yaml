@@ -45,3 +45,31 @@ projects:
         - project-test2
     post:
       - project-post
+
+  - name: org/project1
+    check:
+      - project1-merge:
+        - project1-test1
+        - project1-test2
+        - project1-project2-integration
+    gate:
+      - project1-merge:
+        - project1-test1
+        - project1-test2
+        - project1-project2-integration
+    post:
+      - project1-post
+
+  - name: org/project2
+    check:
+      - project2-merge:
+        - project2-test1
+        - project2-test2
+        - project1-project2-integration
+    gate:
+      - project2-merge:
+        - project2-test1
+        - project2-test2
+        - project1-project2-integration
+    post:
+      - project2-post

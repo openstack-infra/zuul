@@ -222,14 +222,21 @@ class FakeJenkinsJob(threading.Thread):
         if self.jenkins.hold_jobs_in_build:
             self._wait()
         self.log.debug("Job %s continuing" % (self.parameters['UUID']))
+
+        result = 'SUCCESS'
+        if self.jenkins.fakeShouldFailTest(
+            self.name,
+            self.parameters['GERRIT_CHANGES']):
+            result = 'FAILURE'
+
         self.jenkins.fakeAddHistory(name=self.name, number=self.number,
-                                    result='SUCCESS')
+                                    result=result)
         self.callback.jenkins_endpoint(FakeJenkinsEvent(
                 self.name, self.number, self.parameters,
-                'COMPLETED', 'SUCCESS'))
+                'COMPLETED', result))
         self.callback.jenkins_endpoint(FakeJenkinsEvent(
                 self.name, self.number, self.parameters,
-                'FINISHED', 'SUCCESS'))
+                'FINISHED', result))
         self.jenkins.all_jobs.remove(self)
 
 
@@ -243,6 +250,7 @@ class FakeJenkins(object):
         self.job_history = []
         self.hold_jobs_in_queue = False
         self.hold_jobs_in_build = False
+        self.fail_tests = {}
 
     def fakeEnqueue(self, job):
         self.queue.append(job)
@@ -274,6 +282,18 @@ class FakeJenkins(object):
             if not job.isWaiting():
                 return False
         return True
+
+    def fakeAddFailTest(self, name, change):
+        l = self.fail_tests.get(name, [])
+        l.append(change)
+        self.fail_tests[name] = l
+
+    def fakeShouldFailTest(self, name, changes):
+        l = self.fail_tests.get(name, [])
+        for change in l:
+            if change in changes:
+                return True
+        return False
 
     def build_job(self, name, parameters):
         count = self.job_counter.get(name, 0)
@@ -461,6 +481,68 @@ class testScheduler(unittest.TestCase):
 
         jobs = self.fake_jenkins.job_history
         assert len(jobs) == 9
+        assert A.data['status'] == 'MERGED'
+        assert B.data['status'] == 'MERGED'
+        assert C.data['status'] == 'MERGED'
+
+    def test_failed_changes(self):
+        "Test that a change behind a failed change is retested"
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+
+        self.fake_jenkins.fakeAddFailTest(
+            'project-test1',
+            'org/project:master:refs/changes/1/1/1')
+
+        self.waitUntilSettled()
+        jobs = self.fake_jenkins.job_history
+        assert len(jobs) > 6
+        assert A.data['status'] == 'NEW'
+        assert B.data['status'] == 'MERGED'
+
+    def test_independent_queues(self):
+        "Test that changes end up in the right queues"
+        self.fake_jenkins.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project',  'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
+
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+
+        jobs = self.fake_jenkins.all_jobs
+        self.waitUntilSettled()
+
+        # There should be one merge job at the head of each queue running
+        assert len(jobs) == 2
+        assert jobs[0].name == 'project-merge'
+        assert (jobs[0].parameters['GERRIT_CHANGES'] ==
+                'org/project:master:refs/changes/1/1/1')
+        assert jobs[1].name == 'project1-merge'
+        assert (jobs[1].parameters['GERRIT_CHANGES'] ==
+                'org/project1:master:refs/changes/1/2/1')
+
+        # Release the current merge jobs
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        # Release the merge job for project2 which is behind project1
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+
+        # All the test jobs should be running:
+        # project1 (3) + project2 (3) + project (2) = 8
+        assert len(jobs) == 8
+
+        self.fake_jenkins.fakeRelease()
+        self.waitUntilSettled()
+        assert len(jobs) == 0
+
+        jobs = self.fake_jenkins.job_history
+        assert len(jobs) == 11
         assert A.data['status'] == 'MERGED'
         assert B.data['status'] == 'MERGED'
         assert C.data['status'] == 'MERGED'
