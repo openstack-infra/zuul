@@ -654,6 +654,8 @@ class DependentQueueManager(BaseQueueManager):
                 self.log.debug("  Change %s needs %s and is ready to merge" %
                                (needs, change))
                 to_enqueue.append(needs)
+        if not to_enqueue:
+            self.log.debug("  No changes need %s" % change)
         return to_enqueue
 
     def addChange(self, change):

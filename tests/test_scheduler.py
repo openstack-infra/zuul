@@ -42,19 +42,21 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 class FakeChange(object):
-    categories = {'APRV': 'Approved',
-                  'CRVW': 'Code-Review',
-                  'VRFY': 'Verified'}
+    categories = {'APRV': ('Approved', -1, 1),
+                  'CRVW': ('Code-Review', -2, 2),
+                  'VRFY': ('Verified', -2, 2)}
 
     def __init__(self, number, project, branch, subject, status='NEW'):
         self.reported = 0
+        self.queried = 0
         self.patchsets = []
-        self.submit_records = []
         self.number = number
         self.project = project
         self.branch = branch
         self.subject = subject
         self.latest_patchset = 0
+        self.depends_on_change = None
+        self.needed_by_changes = []
         self.data = {
             'branch': branch,
             'comments': [],
@@ -71,10 +73,11 @@ class FakeChange(object):
             'project': project,
             'status': status,
             'subject': subject,
-            'submitRecords': self.submit_records,
+            'submitRecords': [],
             'url': 'https://hostname/%s' % number}
 
         self.addPatchset()
+        self.data['submitRecords'] = self.getSubmitRecords()
 
     def addPatchset(self, files=None):
         self.latest_patchset += 1
@@ -84,7 +87,7 @@ class FakeChange(object):
                         'type': 'ADDED'},
                        {'file': 'README',
                         'type': 'MODIFIED'}],
-             'number': self.latest_patchset,
+             'number': str(self.latest_patchset),
              'ref': 'refs/changes/1/%s/%s' % (self.number,
                                               self.latest_patchset),
              'revision':
@@ -94,11 +97,14 @@ class FakeChange(object):
                           'username': 'user'}}
         self.data['currentPatchSet'] = d
         self.patchsets.append(d)
+        self.data['submitRecords'] = self.getSubmitRecords()
 
     def addApproval(self, category, value):
-        event = {'approvals': [{'description': self.categories[category],
-                                'type': category,
-                                'value': str(value)}],
+        approval = {'description': self.categories[category][0],
+                    'type': category,
+                    'value': str(value)}
+        self.patchsets[-1]['approvals'].append(approval)
+        event = {'approvals': [approval],
                  'author': {'email': 'user@example.com',
                             'name': 'User Name',
                             'username': 'username'},
@@ -115,9 +121,70 @@ class FakeChange(object):
                  'comment': '',
                  'patchSet': self.patchsets[-1],
                  'type': 'comment-added'}
+        self.data['submitRecords'] = self.getSubmitRecords()
         return json.loads(json.dumps(event))
 
+    def getSubmitRecords(self):
+        status = {}
+        for cat in self.categories.keys():
+            status[cat] = 0
+
+        for a in self.patchsets[-1]['approvals']:
+            cur = status[a['type']]
+            cat_min, cat_max = self.categories[a['type']][1:]
+            new = int(a['value'])
+            if new == cat_min:
+                cur = new
+            elif abs(new) > abs(cur):
+                cur = new
+            status[a['type']] = cur
+
+        labels = []
+        ok = True
+        for typ, cat in self.categories.items():
+            cur = status[typ]
+            cat_min, cat_max = cat[1:]
+            if cur == cat_min:
+                value = 'REJECT'
+                ok = False
+            elif cur == cat_max:
+                value = 'OK'
+            else:
+                value = 'NEED'
+                ok = False
+            labels.append({'label': cat[0], 'status': value})
+        if ok:
+            return [{'status': 'OK'}]
+        return [{'status': 'NOT_READY',
+                 'labels': labels}]
+
+    def setDependsOn(self, other, patchset):
+        self.depends_on_change = other
+        d = {'id': other.data['id'],
+             'number': other.data['number'],
+             'ref': other.patchsets[patchset - 1]['ref']
+             }
+        self.data['dependsOn'] = [d]
+
+        other.needed_by_changes.append(self)
+        needed = other.data.get('neededBy', [])
+        d = {'id': self.data['id'],
+             'number': self.data['number'],
+             'ref': self.patchsets[patchset - 1]['ref'],
+             'revision': self.patchsets[patchset - 1]['revision']
+             }
+        needed.append(d)
+        other.data['neededBy'] = needed
+
     def query(self):
+        self.queried += 1
+        d = self.data.get('dependsOn')
+        if d:
+            d = d[0]
+            if (self.depends_on_change.patchsets[-1]['ref'] == d['ref']):
+                d['isCurrentPatchSet'] = True
+            else:
+                d['isCurrentPatchSet'] = False
         return json.loads(json.dumps(self.data))
 
     def setMerged(self):
@@ -441,6 +508,7 @@ class testScheduler(unittest.TestCase):
     def test_jobs_launched(self):
         "Test that jobs are launched and a change is merged"
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
         jobs = self.fake_jenkins.job_history
@@ -460,6 +528,9 @@ class testScheduler(unittest.TestCase):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
 
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
@@ -559,6 +630,8 @@ class testScheduler(unittest.TestCase):
         "Test that a change behind a failed change is retested"
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
 
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
@@ -581,6 +654,9 @@ class testScheduler(unittest.TestCase):
         A = self.fake_gerrit.addFakeChange('org/project',  'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
 
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
@@ -629,6 +705,9 @@ class testScheduler(unittest.TestCase):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
 
         self.fake_jenkins.fakeAddFailTest(
             'project-test1',
@@ -688,6 +767,9 @@ class testScheduler(unittest.TestCase):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
 
         self.fake_jenkins.fakeAddFailTest(
             'project-test1',
@@ -743,3 +825,64 @@ class testScheduler(unittest.TestCase):
         assert A.reported == 2
         assert B.reported == 2
         assert C.reported == 2
+
+    def test_patch_order(self):
+        "Test that dependent patches are tested in the right order"
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+
+        M2 = self.fake_gerrit.addFakeChange('org/project', 'master', 'M2')
+        M1 = self.fake_gerrit.addFakeChange('org/project', 'master', 'M1')
+        M2.setMerged()
+        M1.setMerged()
+
+        # C -> B -> A -> M1 -> M2
+        # M2 is here to make sure it is never queried.  If it is, it
+        # means zuul is walking down the entire history of merged
+        # changes.
+
+        C.setDependsOn(B, 1)
+        B.setDependsOn(A, 1)
+        A.setDependsOn(M1, 1)
+        M1.setDependsOn(M2, 1)
+
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+
+        self.waitUntilSettled()
+
+        assert A.data['status'] == 'NEW'
+        assert B.data['status'] == 'NEW'
+        assert C.data['status'] == 'NEW'
+
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+
+        self.waitUntilSettled()
+        assert M2.queried == 0
+        assert A.data['status'] == 'MERGED'
+        assert B.data['status'] == 'MERGED'
+        assert C.data['status'] == 'MERGED'
+        assert A.reported == 2
+        assert B.reported == 2
+        assert C.reported == 2
+
+    def test_can_merge(self):
+        "Test that whether a change is ready to merge"
+        # TODO: move to test_gerrit (this is a unit test!)
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        a = self.sched.trigger.getChange(1, 2, 'gate')
+        assert not a.can_merge
+
+        A.addApproval('CRVW', 2)
+        a = self.sched.trigger.getChange(1, 2, 'gate')
+        assert not a.can_merge
+
+        A.addApproval('APRV', 1)
+        a = self.sched.trigger.getChange(1, 2, 'gate')
+        assert a.can_merge
+
+        return True
