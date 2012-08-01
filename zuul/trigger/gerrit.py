@@ -12,8 +12,10 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import threading
 import logging
+import threading
+import time
+import urllib2
 from zuul.lib import gerrit
 from zuul.model import TriggerEvent, Change
 
@@ -72,10 +74,12 @@ class GerritEventConnector(threading.Thread):
 
 class Gerrit(object):
     log = logging.getLogger("zuul.Gerrit")
+    replication_timeout = 60
+    replication_retry_interval = 5
 
     def __init__(self, config, sched):
         self.sched = sched
-        server = config.get('gerrit', 'server')
+        self.server = config.get('gerrit', 'server')
         user = config.get('gerrit', 'user')
         if config.has_option('gerrit', 'sshkey'):
             sshkey = config.get('gerrit', 'sshkey')
@@ -85,7 +89,7 @@ class Gerrit(object):
             port = config.get('gerrit', 'port')
         else:
             port = 29418
-        self.gerrit = gerrit.Gerrit(server, user, port, sshkey)
+        self.gerrit = gerrit.Gerrit(self.server, user, port, sshkey)
         self.gerrit.startWatching()
         self.gerrit_connector = GerritEventConnector(
             self.gerrit, sched)
@@ -108,7 +112,18 @@ class Gerrit(object):
         return self.gerrit.review(change.project.name, changeid,
                                   message, action)
 
-    def isMerged(self, change):
+    def _getInfoRefs(self, project):
+        url = "https://%s/p/%s/info/refs" % (self.server, project)
+        data = urllib2.urlopen(url).read()
+        ret = {}
+        for line in data.split('\n'):
+            if not line:
+                continue
+            revision, ref = line.split()
+            ret[ref] = revision
+        return ret
+
+    def isMerged(self, change, head=None):
         self.log.debug("Checking if change %s is merged" % change)
         if not change.number:
             self.log.debug("Change has no number; considering it merged")
@@ -119,7 +134,30 @@ class Gerrit(object):
         data = self.gerrit.query(change.number)
         change._data = data
         change.is_merged = self._isMerged(change)
-        return change.is_merged
+        if not head:
+            return change.is_merged
+        if not change.is_merged:
+            return False
+        # Wait for the ref to show up in the repo
+        head = 'refs/heads/' + head
+        self.log.debug("Waiting for %s to appear in git repo" % (change))
+        start = time.time()
+        while time.time() - start < self.replication_timeout:
+            refs = {}
+            try:
+                refs = self._getInfoRefs(change.project.name)
+            except:
+                self.log.exception("Exception looking for ref in head %s" %
+                                   head)
+            ref = refs.get(head, '')
+            if change._data['currentPatchSet']['revision'] == ref:
+                self.log.debug("Change %s is in the git repo" %
+                               (change))
+                return True
+            time.sleep(self.replication_retry_interval)
+        self.log.debug("Change %s did not appear in the git repo" %
+                       (change))
+        return False
 
     def _isMerged(self, change):
         data = change._data

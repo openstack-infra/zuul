@@ -18,12 +18,16 @@ import unittest
 import ConfigParser
 import os
 import Queue
+import hashlib
 import logging
+import random
 import json
 import threading
 import time
 import pprint
 import re
+import urllib2
+import urlparse
 
 import zuul
 import zuul.scheduler
@@ -41,12 +45,17 @@ CONFIG.set('zuul', 'layout_config',
 logging.basicConfig(level=logging.DEBUG)
 
 
+def random_sha1():
+    return hashlib.sha1(str(random.random())).hexdigest()
+
+
 class FakeChange(object):
     categories = {'APRV': ('Approved', -1, 1),
                   'CRVW': ('Code-Review', -2, 2),
                   'VRFY': ('Verified', -2, 2)}
 
-    def __init__(self, number, project, branch, subject, status='NEW'):
+    def __init__(self, gerrit, number, project, branch, subject, status='NEW'):
+        self.gerrit = gerrit
         self.reported = 0
         self.queried = 0
         self.patchsets = []
@@ -62,7 +71,7 @@ class FakeChange(object):
             'comments': [],
             'commitMessage': subject,
             'createdOn': time.time(),
-            'id': 'Iaa69c46accf97d0598111724a38250ae76a22c87',
+            'id': 'I' + random_sha1(),
             'lastUpdated': time.time(),
             'number': str(number),
             'open': True,
@@ -90,8 +99,7 @@ class FakeChange(object):
              'number': str(self.latest_patchset),
              'ref': 'refs/changes/1/%s/%s' % (self.number,
                                               self.latest_patchset),
-             'revision':
-                 'aa69c46accf97d0598111724a38250ae76a22c87',
+             'revision': random_sha1(),
              'uploader': {'email': 'user@example.com',
                           'name': 'User name',
                           'username': 'user'}}
@@ -190,6 +198,8 @@ class FakeChange(object):
     def setMerged(self):
         self.data['status'] = 'MERGED'
         self.open = False
+        branch_heads = self.gerrit.heads[self.project]
+        branch_heads[self.branch] = self.patchsets[-1]['revision']
 
     def setReported(self):
         self.reported += 1
@@ -201,10 +211,16 @@ class FakeGerrit(object):
         self.fixture_dir = os.path.join(FIXTURE_DIR, 'gerrit')
         self.change_number = 0
         self.changes = {}
+        self.heads = {}
 
     def addFakeChange(self, project, branch, subject):
+        branch_heads = self.heads.get(project, {})
+        if branch not in branch_heads:
+            branch_heads[branch] = random_sha1()
+        self.heads[project] = branch_heads
+
         self.change_number += 1
-        c = FakeChange(self.change_number, project, branch, subject)
+        c = FakeChange(self, self.change_number, project, branch, subject)
         self.changes[self.change_number] = c
         return c
 
@@ -441,6 +457,25 @@ class FakeJenkinsCallback(zuul.launcher.jenkins.JenkinsCallback):
         pass
 
 
+class FakeURLOpener(object):
+    def __init__(self, fake_gerrit, url):
+        self.fake_gerrit = fake_gerrit
+        self.url = url
+
+    def read(self):
+        res = urlparse.urlparse(self.url)
+        path = res.path
+        project = '/'.join(path.split('/')[2:-2])
+        heads = self.fake_gerrit.heads[project]
+        ret = ''
+        for change in self.fake_gerrit.changes.values():
+            for ps in change.patchsets:
+                ret += ps['revision'] + '\t' + ps['ref'] + '\n'
+        for head, ref in heads.items():
+            ret += ref + '\trefs/heads/' + head + '\n'
+        return ret
+
+
 class testScheduler(unittest.TestCase):
     log = logging.getLogger("zuul.test")
 
@@ -456,14 +491,21 @@ class testScheduler(unittest.TestCase):
             self.fake_jenkins_callback = FakeJenkinsCallback(*args, **kw)
             return self.fake_jenkins_callback
 
+        def URLOpenerFactory(*args, **kw):
+            args = [self.fake_gerrit] + list(args)
+            return FakeURLOpener(*args, **kw)
+
         zuul.launcher.jenkins.ExtendedJenkins = jenkinsFactory
         zuul.launcher.jenkins.JenkinsCallback = jenkinsCallbackFactory
+        urllib2.urlopen = URLOpenerFactory
         self.jenkins = zuul.launcher.jenkins.Jenkins(self.config, self.sched)
         self.fake_jenkins.callback = self.fake_jenkins_callback
 
         zuul.lib.gerrit.Gerrit = FakeGerrit
 
         self.gerrit = zuul.trigger.gerrit.Gerrit(self.config, self.sched)
+        self.gerrit.replication_timeout = 1.5
+        self.gerrit.replication_retry_interval = 0.5
         self.fake_gerrit = self.gerrit.gerrit
 
         self.sched.setLauncher(self.jenkins)

@@ -762,6 +762,9 @@ class DependentQueueManager(BaseQueueManager):
 
     def possiblyReportChange(self, change):
         self.log.debug("Possibly reporting change %s" % change)
+        if change.reported:
+            self.log.debug("Change %s already reported" % change)
+            return
         change_behind = change.change_behind
         if not change.change_ahead:
             self.log.debug("Change %s is at the front of the queue, "
@@ -771,7 +774,7 @@ class DependentQueueManager(BaseQueueManager):
             change.delete()
             merged = (not ret)
             if merged:
-                merged = self.sched.trigger.isMerged(change)
+                merged = self.sched.trigger.isMerged(change, change.branch)
             succeeded = change.didAllJobsSucceed()
             self.log.info("Reported change %s status: all-succeeded: %s, "
                           "merged: %s" % (change, succeeded, merged))
