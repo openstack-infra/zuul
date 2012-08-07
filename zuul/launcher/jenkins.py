@@ -54,7 +54,11 @@ class JenkinsCallback(threading.Thread):
             self.jenkins_endpoint(request)
             return ['Zuul good.']
         elif request.path == '/status':
-            ret = self.jenkins.sched.formatStatusHTML()
+            try:
+                ret = self.jenkins.sched.formatStatusHTML()
+            except:
+                self.log.exception("Exception formatting status:")
+                raise
             return [ret]
         else:
             return ['Zuul good.']
