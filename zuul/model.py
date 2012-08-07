@@ -118,7 +118,7 @@ class Pipeline(object):
     def formatStatus(self, changeish, indent=0, html=False):
         indent_str = ' ' * indent
         ret = ''
-        if html and changeish.url is not None:
+        if html and hasattr(changeish, 'url') and changeish.url is not None:
             ret += '%sProject %s change <a href="%s">%s</a>\n' % (
                 indent_str,
                 changeish.project.name,
