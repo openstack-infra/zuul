@@ -377,7 +377,7 @@ class BasePipelineManager(object):
         self.start_action = {}
 
     def __str__(self):
-        return "<%s %s>" % (self.__class__.__name__, self.name)
+        return "<%s %s>" % (self.__class__.__name__, self.pipeline.name)
 
     def _postConfig(self):
         self.log.info("Configured Pipeline Manager %s" % self.pipeline.name)
