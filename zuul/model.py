@@ -220,7 +220,7 @@ class Pipeline(object):
 
         result = build.build_set.result
 
-        if change.number:
+        if hasattr(change, 'number'):
             ret = """\
 <p>
   Triggered by change:
@@ -502,9 +502,7 @@ class Change(Changeish):
         self.is_merged = False
 
     def _id(self):
-        if self.number:
-            return '%s,%s' % (self.number, self.patchset)
-        return self.newrev
+        return '%s,%s' % (self.number, self.patchset)
 
     def __repr__(self):
         return '<Change 0x%x %s>' % (id(self), self._id())
@@ -523,10 +521,13 @@ class Ref(Changeish):
     is_reportable = False
 
     def __init__(self, project):
-        super(Change, self).__init__(project)
+        super(Ref, self).__init__(project)
         self.ref = None
         self.oldrev = None
         self.newrev = None
+
+    def _id(self):
+        return self.newrev
 
     def equals(self, other):
         if (self.ref == other.ref and
