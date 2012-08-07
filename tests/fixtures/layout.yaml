@@ -28,6 +28,13 @@ pipelines:
     start:
       verified: 0
 
+  - name: unused
+    manager: IndependentPipelineManager
+    trigger:
+      - event: comment-added
+        approval: 
+          - approved: 1
+
 jobs:
   - name: ^.*-merge$
     failure-message: Unable to merge change

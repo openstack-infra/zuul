@@ -23,6 +23,9 @@ class Pipeline(object):
         self.job_trees = {}  # project -> JobTree
         self.manager = None
 
+    def __repr__(self):
+        return '<Pipeline %s>' % self.name
+
     def setManager(self, manager):
         self.manager = manager
 
@@ -39,7 +42,7 @@ class Pipeline(object):
         return tree
 
     def getJobs(self, changeish):
-        tree = self.job_trees[changeish.project]
+        tree = self.getJobTree(changeish.project)
         if not tree:
             return []
         return changeish.filterJobs(tree.getJobs())
@@ -71,7 +74,7 @@ class Pipeline(object):
         return torun
 
     def findJobsToRun(self, changeish):
-        tree = self.job_trees[changeish.project]
+        tree = self.getJobTree(changeish.project)
         if not tree:
             return []
         return self._findJobsToRun(tree.job_trees, changeish)
