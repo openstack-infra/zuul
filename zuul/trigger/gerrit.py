@@ -109,6 +109,9 @@ class Gerrit(object):
             self.log.debug("No action specified; not reporting")
             return
         changeid = '%s,%s' % (change.number, change.patchset)
+        ref = 'refs/heads/' + change.branch
+        change._ref_sha = self.getRefSha(change.project.name,
+                                         ref)
         return self.gerrit.review(change.project.name, changeid,
                                   message, action)
 
@@ -122,6 +125,16 @@ class Gerrit(object):
             revision, ref = line.split()
             ret[ref] = revision
         return ret
+
+    def getRefSha(self, project, ref):
+        refs = {}
+        try:
+            refs = self._getInfoRefs(project)
+        except:
+            self.log.exception("Exception looking for ref %s" %
+                               ref)
+        sha = refs.get(ref, '')
+        return sha
 
     def isMerged(self, change, head=None):
         self.log.debug("Checking if change %s is merged" % change)
@@ -139,18 +152,12 @@ class Gerrit(object):
         if not change.is_merged:
             return False
         # Wait for the ref to show up in the repo
-        head = 'refs/heads/' + head
+        ref = 'refs/heads/' + change.branch
         self.log.debug("Waiting for %s to appear in git repo" % (change))
         start = time.time()
         while time.time() - start < self.replication_timeout:
-            refs = {}
-            try:
-                refs = self._getInfoRefs(change.project.name)
-            except:
-                self.log.exception("Exception looking for ref in head %s" %
-                                   head)
-            ref = refs.get(head, '')
-            if change._data['currentPatchSet']['revision'] == ref:
+            sha = self.getRefSha(change.project.name, ref)
+            if change._ref_sha != sha:
                 self.log.debug("Change %s is in the git repo" %
                                (change))
                 return True
