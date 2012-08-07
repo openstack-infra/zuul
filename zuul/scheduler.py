@@ -826,5 +826,5 @@ class DependentPipelineManager(BasePipelineManager):
             ret += s + '\n'
             ret += '-' * len(s) + '\n'
             if queue.queue:
-                ret += queue.queue[-1].formatStatus(html=True)
+                ret += self.pipeline.formatStatus(queue.queue[-1], html=True)
         return ret
