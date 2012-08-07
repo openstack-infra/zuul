@@ -358,7 +358,7 @@ class Scheduler(threading.Thread):
             s = 'Pipeline: %s' % pipeline.name
             ret += s + '\n'
             ret += '-' * len(s) + '\n'
-            ret += pipeline.formatStatusHTML()
+            ret += pipeline.manager.formatStatusHTML()
             ret += '\n'
         ret += '</pre></html>'
         return ret
