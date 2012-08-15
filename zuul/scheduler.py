@@ -482,8 +482,13 @@ class BasePipelineManager(object):
         if not ref:
             change.current_build_set.setConfiguration()
             ref = change.current_build_set.getRef()
-            self.sched.merger.mergeChanges([change], ref,
-                                           mode=model.MERGE_IF_NECESSARY)
+            merged = self.sched.merger.mergeChanges([change], ref,
+                         mode=model.MERGE_IF_NECESSARY)
+            if not merged:
+                self.log.info("Unable to merge change %s" % change)
+                self.pipeline.setUnableToMerge(change)
+                self.possiblyReportChange(change)
+                return
 
         for job in self.pipeline.findJobsToRun(change):
             self.log.debug("Found job %s for change %s" % (job, change))
@@ -747,7 +752,13 @@ class DependentPipelineManager(BasePipelineManager):
             ref = change.current_build_set.getRef()
             dependent_changes = self._getDependentChanges(change)
             dependent_changes.reverse()
-            self.sched.merger.mergeChanges(dependent_changes + [change], ref)
+            all_changes = dependent_changes + [change]
+            merged = self.sched.merger.mergeChanges(all_changes, ref)
+            if not merged:
+                self.log.info("Unable to merge changes %s" % all_changes)
+                self.pipeline.setUnableToMerge(change)
+                self.possiblyReportChange(change)
+                return
 
         #TODO: remove this line after GERRIT_CHANGES is gone
         dependent_changes = self._getDependentChanges(change)

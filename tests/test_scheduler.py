@@ -74,7 +74,7 @@ def init_repo(project):
     repo.create_tag('init')
 
 
-def add_fake_change_to_repo(project, branch, change_num, patchset, msg):
+def add_fake_change_to_repo(project, branch, change_num, patchset, msg, fn):
     path = os.path.join("/tmp/zuul-test/upstream", project)
     repo = git.Repo(path)
     ref = ChangeReference.create(repo, '1/%s/%s' % (change_num,
@@ -85,9 +85,9 @@ def add_fake_change_to_repo(project, branch, change_num, patchset, msg):
     repo.git.clean('-x', '-f', '-d')
 
     path = os.path.join("/tmp/zuul-test/upstream", project)
-    fn = os.path.join(path, '%s-%s' % (branch, change_num))
+    fn = os.path.join(path, fn)
     f = open(fn, 'w')
-    f.write("test\n")
+    f.write("test %s %s %s\n" % (branch, change_num, patchset))
     f.close()
     repo.index.add([fn])
     repo.index.commit(msg)
@@ -177,9 +177,14 @@ class FakeChange(object):
         self.data['currentPatchSet'] = d
         self.patchsets.append(d)
         self.data['submitRecords'] = self.getSubmitRecords()
+        if files:
+            fn = files[0]
+        else:
+            fn = '%s-%s' % (self.branch, self.number)
         add_fake_change_to_repo(self.project, self.branch,
                                 self.number, self.latest_patchset,
-                                self.subject + '-' + str(self.latest_patchset))
+                                self.subject + '-' + str(self.latest_patchset),
+                                fn)
 
     def addApproval(self, category, value):
         approval = {'description': self.categories[category][0],
@@ -1009,6 +1014,7 @@ class testScheduler(unittest.TestCase):
         ref = jobs[-1].parameters['ZUUL_REF']
         self.fake_jenkins.hold_jobs_in_queue = False
         self.fake_jenkins.fakeRelease()
+        self.waitUntilSettled()
 
         path = os.path.join("/tmp/zuul-test/git/org/project")
         repo = git.Repo(path)
@@ -1017,3 +1023,39 @@ class testScheduler(unittest.TestCase):
         print '  repo messages  :', repo_messages
         correct_messages = ['initial commit', 'A-1', 'B-1', 'C-1']
         assert repo_messages == correct_messages
+
+    def test_build_configuration_conflict(self):
+        "Test that merge conflicts are handled"
+        self.fake_jenkins.hold_jobs_in_queue = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addPatchset(['conflict'])
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        B.addPatchset(['conflict'])
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        jobs = self.fake_jenkins.all_jobs
+
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        ref = jobs[-1].parameters['ZUUL_REF']
+        self.fake_jenkins.hold_jobs_in_queue = False
+        self.fake_jenkins.fakeRelease()
+        self.waitUntilSettled()
+
+        assert A.data['status'] == 'MERGED'
+        assert B.data['status'] == 'NEW'
+        assert C.data['status'] == 'MERGED'
+        assert A.reported == 2
+        assert B.reported == 2
+        assert C.reported == 2

@@ -120,7 +120,7 @@ class Merger(object):
                     repo.cherryPick(change.refspec)
                 repo.setZuulRef(change.branch + '/' + target_ref, 'HEAD')
             except:
-                self.log.exception("Unable to merge %s" % change)
+                self.log.info("Unable to merge %s" % change)
                 return False
 
         return True

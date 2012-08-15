@@ -164,17 +164,22 @@ class Pipeline(object):
         else:
             ret += 'Build failed\n\n'
 
-        for job in self.getJobs(changeish):
-            build = changeish.current_build_set.getBuild(job.name)
-            result = build.result
-            if result == 'SUCCESS' and job.success_message:
-                result = job.success_message
-            elif result == 'FAILURE' and job.failure_message:
-                result = job.failure_message
-            url = build.url
-            if not url:
-                url = job.name
-            ret += '- %s : %s\n' % (url, result)
+        if changeish.current_build_set.unable_to_merge:
+            ret += "This change was unable to be automatically merged "\
+                   "with the current state of the repository. Please "\
+                   "rebase your change and upload a new patchset."
+        else:
+            for job in self.getJobs(changeish):
+                build = changeish.current_build_set.getBuild(job.name)
+                result = build.result
+                if result == 'SUCCESS' and job.success_message:
+                    result = job.success_message
+                elif result == 'FAILURE' and job.failure_message:
+                    result = job.failure_message
+                url = build.url
+                if not url:
+                    url = job.name
+                ret += '- %s : %s\n' % (url, result)
         return ret
 
     def formatDescription(self, build):
@@ -286,6 +291,14 @@ class Pipeline(object):
                 fakebuild = Build(job, None)
                 fakebuild.result = 'SKIPPED'
                 changeish.addBuild(fakebuild)
+
+    def setUnableToMerge(self, changeish):
+        changeish.current_build_set.unable_to_merge = True
+        root = self.getJobTree(changeish.project)
+        for job in root.getJobs():
+            fakebuild = Build(job, None)
+            fakebuild.result = 'SKIPPED'
+            changeish.addBuild(fakebuild)
 
 
 class ChangeQueue(object):
@@ -433,6 +446,7 @@ class BuildSet(object):
         self.next_build_set = None
         self.previous_build_set = None
         self.ref = None
+        self.unable_to_merge = False
 
     def setConfiguration(self):
         # The change isn't enqueued until after it's created
