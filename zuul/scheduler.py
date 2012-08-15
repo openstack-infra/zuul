@@ -163,7 +163,7 @@ class Scheduler(threading.Thread):
             merge_root = self.config.get('zuul', 'git_dir')
         else:
             merge_root = '/var/lib/zuul/git'
-        self.merger = merger.Merger(merge_root)
+        self.merger = merger.Merger(self.trigger, merge_root)
         for project in self.projects.values():
             url = self.trigger.getGitUrl(project)
             self.merger.addProject(project, url)
@@ -476,10 +476,10 @@ class BasePipelineManager(object):
                 self.log.exception("Exception while reporting start:")
         self.launchJobs(change)
 
-    def launchJobs(self, change):
+    def _launchJobs(self, change, jobs):
         self.log.debug("Launching jobs for change %s" % change)
         ref = change.current_build_set.getRef()
-        if not ref:
+        if hasattr(change, 'refspec') and not ref:
             change.current_build_set.setConfiguration()
             ref = change.current_build_set.getRef()
             merged = self.sched.merger.mergeChanges([change], ref,
@@ -501,6 +501,11 @@ class BasePipelineManager(object):
             except:
                 self.log.exception("Exception while launching job %s "
                                    "for change %s:" % (job, change))
+
+    def launchJobs(self, change):
+        jobs = self.pipeline.findJobsToRun(change)
+        if jobs:
+            self._launchJobs(change, jobs)
 
     def updateBuildDescriptions(self, build_set):
         for build in build_set.getBuilds():
@@ -744,10 +749,10 @@ class DependentPipelineManager(BasePipelineManager):
                                                            changes))
         return changes
 
-    def launchJobs(self, change):
+    def _launchJobs(self, change, jobs):
         self.log.debug("Launching jobs for change %s" % change)
         ref = change.current_build_set.getRef()
-        if not ref:
+        if hasattr(change, 'refspec') and not ref:
             change.current_build_set.setConfiguration()
             ref = change.current_build_set.getRef()
             dependent_changes = self._getDependentChanges(change)
@@ -762,7 +767,7 @@ class DependentPipelineManager(BasePipelineManager):
 
         #TODO: remove this line after GERRIT_CHANGES is gone
         dependent_changes = self._getDependentChanges(change)
-        for job in self.pipeline.findJobsToRun(change):
+        for job in jobs:
             self.log.debug("Found job %s for change %s" % (job, change))
             try:
                 #TODO: remove dependent_changes after GERRIT_CHANGES is gone
@@ -775,6 +780,11 @@ class DependentPipelineManager(BasePipelineManager):
             except:
                 self.log.exception("Exception while launching job %s "
                                    "for change %s:" % (job, change))
+
+    def launchJobs(self, change):
+        jobs = self.pipeline.findJobsToRun(change)
+        if jobs:
+            self._launchJobs(change, jobs)
         if change.change_behind:
             self.log.debug("Launching jobs for change %s, behind change %s" %
                            (change.change_behind, change))

@@ -90,7 +90,7 @@ def add_fake_change_to_repo(project, branch, change_num, patchset, msg, fn):
     f.write("test %s %s %s\n" % (branch, change_num, patchset))
     f.close()
     repo.index.add([fn])
-    repo.index.commit(msg)
+    return repo.index.commit(msg)
 
 
 def ref_has_change(ref, change):
@@ -161,6 +161,14 @@ class FakeChange(object):
 
     def addPatchset(self, files=None):
         self.latest_patchset += 1
+        if files:
+            fn = files[0]
+        else:
+            fn = '%s-%s' % (self.branch, self.number)
+        msg = self.subject + '-' + str(self.latest_patchset)
+        c = add_fake_change_to_repo(self.project, self.branch,
+                                    self.number, self.latest_patchset,
+                                    msg, fn)
         d = {'approvals': [],
              'createdOn': time.time(),
              'files': [{'file': '/COMMIT_MSG',
@@ -170,21 +178,13 @@ class FakeChange(object):
              'number': str(self.latest_patchset),
              'ref': 'refs/changes/1/%s/%s' % (self.number,
                                               self.latest_patchset),
-             'revision': random_sha1(),
+             'revision': c.hexsha,
              'uploader': {'email': 'user@example.com',
                           'name': 'User name',
                           'username': 'user'}}
         self.data['currentPatchSet'] = d
         self.patchsets.append(d)
         self.data['submitRecords'] = self.getSubmitRecords()
-        if files:
-            fn = files[0]
-        else:
-            fn = '%s-%s' % (self.branch, self.number)
-        add_fake_change_to_repo(self.project, self.branch,
-                                self.number, self.latest_patchset,
-                                self.subject + '-' + str(self.latest_patchset),
-                                fn)
 
     def addApproval(self, category, value):
         approval = {'description': self.categories[category][0],
@@ -277,8 +277,11 @@ class FakeChange(object):
     def setMerged(self):
         self.data['status'] = 'MERGED'
         self.open = False
-        branch_heads = self.gerrit.heads[self.project]
-        branch_heads[self.branch] = self.patchsets[-1]['revision']
+
+        path = os.path.join("/tmp/zuul-test/upstream", self.project)
+        repo = git.Repo(path)
+        repo.heads[self.branch].commit = \
+            repo.commit(self.patchsets[-1]['revision'])
 
     def setReported(self):
         self.reported += 1
@@ -290,14 +293,8 @@ class FakeGerrit(object):
         self.fixture_dir = os.path.join(FIXTURE_DIR, 'gerrit')
         self.change_number = 0
         self.changes = {}
-        self.heads = {}
 
     def addFakeChange(self, project, branch, subject):
-        branch_heads = self.heads.get(project, {})
-        if branch not in branch_heads:
-            branch_heads[branch] = random_sha1()
-        self.heads[project] = branch_heads
-
         self.change_number += 1
         c = FakeChange(self, self.change_number, project, branch, subject)
         self.changes[self.change_number] = c
@@ -398,7 +395,7 @@ class FakeJenkinsJob(threading.Thread):
         self.log.debug("Job %s continuing" % (self.parameters['UUID']))
 
         result = 'SUCCESS'
-        if self.jenkins.fakeShouldFailTest(
+        if ('ZUUL_REF' in self.parameters) and self.jenkins.fakeShouldFailTest(
             self.name,
             self.parameters['ZUUL_REF']):
             result = 'FAILURE'
@@ -545,13 +542,11 @@ class FakeURLOpener(object):
         res = urlparse.urlparse(self.url)
         path = res.path
         project = '/'.join(path.split('/')[2:-2])
-        heads = self.fake_gerrit.heads[project]
         ret = ''
-        for change in self.fake_gerrit.changes.values():
-            for ps in change.patchsets:
-                ret += ps['revision'] + '\t' + ps['ref'] + '\n'
-        for head, ref in heads.items():
-            ret += ref + '\trefs/heads/' + head + '\n'
+        path = os.path.join("/tmp/zuul-test/upstream", project)
+        repo = git.Repo(path)
+        for ref in repo.refs:
+            ret += ref.object.hexsha + '\t' + ref.path + '\n'
         return ret
 
 
@@ -1059,3 +1054,20 @@ class testScheduler(unittest.TestCase):
         assert A.reported == 2
         assert B.reported == 2
         assert C.reported == 2
+
+    def test_post(self):
+        "Test that post jobs run"
+        e = {"type": "ref-updated",
+             "submitter": {"name": "User Name"},
+             "refUpdate": {"oldRev":
+                               "90f173846e3af9154517b88543ffbd1691f31366",
+                           "newRev":
+                               "d479a0bfcb34da57a31adb2a595c0cf687812543",
+                           "refName": "master", "project": "org/project"}}
+        self.fake_gerrit.addEvent(e)
+        self.waitUntilSettled()
+
+        jobs = self.fake_jenkins.job_history
+        job_names = [x['name'] for x in jobs]
+        assert len(jobs) == 1
+        assert 'project-post' in job_names
