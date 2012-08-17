@@ -84,12 +84,13 @@ class Repo(object):
 class Merger(object):
     log = logging.getLogger("zuul.Merger")
 
-    def __init__(self, trigger, working_root):
+    def __init__(self, trigger, working_root, push_refs):
         self.trigger = trigger
         self.repos = {}
         self.working_root = working_root
         if not os.path.exists(working_root):
             os.makedirs(working_root)
+        self.push_refs = push_refs
 
     def addProject(self, project, url):
         try:
@@ -145,19 +146,20 @@ class Merger(object):
                 self.log.info("Unable to merge %s" % change)
                 return False
 
-        # Push the results upstream to the zuul ref
-        for project, branches in projects.items():
-            repo = self.getRepo(project)
-            for branch in branches:
-                ref = 'refs/zuul/' + branch + '/' + target_ref
-                try:
-                    repo.push(ref, ref)
-                    complete = self.trigger.waitForRefSha(project, ref)
-                except:
-                    self.log.exception("Unable to push %s" % ref)
-                    return False
-                if not complete:
-                    self.log.error("Ref %s did not show up in repo" % ref)
-                    return False
+        if self.push_refs:
+            # Push the results upstream to the zuul ref
+            for project, branches in projects.items():
+                repo = self.getRepo(project)
+                for branch in branches:
+                    ref = 'refs/zuul/' + branch + '/' + target_ref
+                    try:
+                        repo.push(ref, ref)
+                        complete = self.trigger.waitForRefSha(project, ref)
+                    except:
+                        self.log.exception("Unable to push %s" % ref)
+                        return False
+                    if not complete:
+                        self.log.error("Ref %s did not show up in repo" % ref)
+                        return False
 
         return True

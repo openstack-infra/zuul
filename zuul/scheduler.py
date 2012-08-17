@@ -163,7 +163,11 @@ class Scheduler(threading.Thread):
             merge_root = self.config.get('zuul', 'git_dir')
         else:
             merge_root = '/var/lib/zuul/git'
-        self.merger = merger.Merger(self.trigger, merge_root)
+        if self.config.has_option('zuul', 'push_change_refs'):
+            push_refs = self.config.getboolean('zuul', 'push_change_refs')
+        else:
+            push_refs = False
+        self.merger = merger.Merger(self.trigger, merge_root, push_refs)
         for project in self.projects.values():
             url = self.trigger.getGitUrl(project)
             self.merger.addProject(project, url)
