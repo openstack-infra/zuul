@@ -70,8 +70,20 @@ def init_repo(project):
     f.close()
     repo.index.add([fn])
     repo.index.commit('initial commit')
-    repo.create_head('master')
+    master = repo.create_head('master')
     repo.create_tag('init')
+
+    mp = repo.create_head('mp')
+    repo.head.reference = mp
+    f = open(fn, 'a')
+    f.write("test mp\n")
+    f.close()
+    repo.index.add([fn])
+    repo.index.commit('mp commit')
+
+    repo.head.reference = master
+    repo.head.reset(index=True, working_tree=True)
+    repo.git.clean('-x', '-f', '-d')
 
 
 def add_fake_change_to_repo(project, branch, change_num, patchset, msg, fn):
@@ -1071,3 +1083,93 @@ class testScheduler(unittest.TestCase):
         job_names = [x['name'] for x in jobs]
         assert len(jobs) == 1
         assert 'project-post' in job_names
+
+    def test_build_configuration_branch(self):
+        "Test that the right commits are on alternate branches"
+        self.fake_jenkins.hold_jobs_in_queue = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'mp', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'mp', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'mp', 'C')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        jobs = self.fake_jenkins.all_jobs
+
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        ref = jobs[-1].parameters['ZUUL_REF']
+        self.fake_jenkins.hold_jobs_in_queue = False
+        self.fake_jenkins.fakeRelease()
+        self.waitUntilSettled()
+
+        path = os.path.join("/tmp/zuul-test/git/org/project")
+        repo = git.Repo(path)
+        repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
+        repo_messages.reverse()
+        print '  repo messages  :', repo_messages
+        correct_messages = ['initial commit', 'mp commit', 'A-1', 'B-1', 'C-1']
+        assert repo_messages == correct_messages
+
+    def test_build_configuration_branch_interaction(self):
+        "Test that switching between branches works"
+        self.test_build_configuration()
+        self.test_build_configuration_branch()
+        # C has been merged, undo that
+        path = os.path.join("/tmp/zuul-test/upstream", "org/project")
+        repo = git.Repo(path)
+        repo.heads.master.commit = repo.commit('init')
+        self.test_build_configuration()
+
+    def test_build_configuration_multi_branch(self):
+        "Test that dependent changes on multiple branches are merged"
+        self.fake_jenkins.hold_jobs_in_queue = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'mp', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        jobs = self.fake_jenkins.all_jobs
+
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        ref_mp = jobs[-1].parameters['ZUUL_REF']
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        ref_master = jobs[-1].parameters['ZUUL_REF']
+        self.fake_jenkins.hold_jobs_in_queue = False
+        self.fake_jenkins.fakeRelease()
+        self.waitUntilSettled()
+
+        path = os.path.join("/tmp/zuul-test/git/org/project")
+        repo = git.Repo(path)
+
+        repo_messages = [c.message.strip()
+                         for c in repo.iter_commits(ref_master)]
+        repo_messages.reverse()
+        print '  repo messages  :', repo_messages
+        correct_messages = ['initial commit', 'A-1', 'C-1']
+        assert repo_messages == correct_messages
+
+        repo_messages = [c.message.strip()
+                         for c in repo.iter_commits(ref_mp)]
+        repo_messages.reverse()
+        print '  repo messages  :', repo_messages
+        correct_messages = ['initial commit', 'mp commit', 'B-1']
+        assert repo_messages == correct_messages

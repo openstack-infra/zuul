@@ -42,9 +42,19 @@ class Repo(object):
         self.log.debug("Resetting repository %s" % self.local_path)
         origin = self.repo.remotes.origin
         origin.update()
-        self.repo.head.reference = origin.refs.master
+        for ref in origin.refs:
+            if ref.remote_head == 'HEAD':
+                continue
+            self.repo.create_head(ref.remote_head, ref, force=True)
+
+        self.repo.head.reference = self.repo.heads.master
         self.repo.head.reset(index=True, working_tree=True)
         self.repo.git.clean('-x', '-f', '-d')
+
+    def checkout(self, branch):
+        self.log.debug("Checking out %s" % branch)
+        self.repo.head.reference = self.repo.heads[branch]
+        self.repo.head.reset(index=True, working_tree=True)
 
     def cherryPick(self, ref):
         self.log.debug("Cherry-picking %s" % ref)
@@ -97,18 +107,19 @@ class Merger(object):
         # Reset all repos involved in the change set
         for change in changes:
             branches = projects.get(change.project, [])
-            if change.branch not in branches:
-                repo = self.getRepo(change.project)
-                if not repo:
-                    self.log.error("Unable to find repo for %s" %
-                                   change.project)
-                    return False
+            repo = self.getRepo(change.project)
+            if not repo:
+                self.log.error("Unable to find repo for %s" %
+                               change.project)
+                return False
+            if not branches:
+                # First time this repo has come up in this change list
                 try:
                     repo.reset()
                 except:
                     self.log.exception("Unable to reset repo %s" % repo)
                     return False
-
+            if change.branch not in branches:
                 if target_ref:
                     repo.createZuulRef(change.branch + '/' + target_ref)
                 branches.append(change.branch)
@@ -117,6 +128,11 @@ class Merger(object):
         # Merge all the changes
         for change in changes:
             repo = self.getRepo(change.project)
+            try:
+                repo.checkout(change.branch)
+            except:
+                self.log.exception("Unable to checkout %s" % change.branch)
+                return False
             try:
                 if not mode:
                     mode = change.project.merge_mode
