@@ -497,7 +497,7 @@ class BasePipelineManager(object):
         for job in self.pipeline.findJobsToRun(change):
             self.log.debug("Found job %s for change %s" % (job, change))
             try:
-                build = self.sched.launcher.launch(job, change)
+                build = self.sched.launcher.launch(job, change, self.pipeline)
                 self.building_jobs[build] = change
                 self.log.debug("Adding build %s of job %s to change %s" %
                                (build, job, change))
@@ -775,7 +775,7 @@ class DependentPipelineManager(BasePipelineManager):
             self.log.debug("Found job %s for change %s" % (job, change))
             try:
                 #TODO: remove dependent_changes after GERRIT_CHANGES is gone
-                build = self.sched.launcher.launch(job, change,
+                build = self.sched.launcher.launch(job, change, self.pipeline,
                                                    dependent_changes)
                 self.building_jobs[build] = change
                 self.log.debug("Adding build %s of job %s to change %s" %

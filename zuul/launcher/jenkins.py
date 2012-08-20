@@ -208,7 +208,7 @@ class Jenkins(object):
         self.cleanup_thread.join()
 
     #TODO: remove dependent_changes
-    def launch(self, job, change, dependent_changes=[]):
+    def launch(self, job, change, pipeline, dependent_changes=[]):
         self.log.info("Launch job %s for change %s with dependent changes %s" %
                       (job, change, dependent_changes))
         dependent_changes = dependent_changes[:]
@@ -217,6 +217,7 @@ class Jenkins(object):
         params = dict(UUID=uuid,
                       GERRIT_PROJECT=change.project.name,
                       ZUUL_PROJECT=change.project.name)
+        params['ZUUL_PIPELINE'] = pipeline.name
         if hasattr(change, 'refspec'):
             changes_str = '^'.join(
                 ['%s:%s:%s' % (c.project.name, c.branch, c.refspec)
@@ -224,8 +225,15 @@ class Jenkins(object):
             params['GERRIT_BRANCH'] = change.branch
             params['ZUUL_BRANCH'] = change.branch
             params['GERRIT_CHANGES'] = changes_str
+            params['ZUUL_CHANGES'] = changes_str
             params['ZUUL_REF'] = 'refs/zuul/%s/%s' % (change.branch,
                 change.current_build_set.ref)
+
+            zuul_changes = ' '.join(['%s,%s' % (c.number, c.patchset)
+                                     for c in dependent_changes + [change]])
+            params['ZUUL_CHANGE_IDS'] = zuul_changes
+            params['ZUUL_CHANGE'] = str(change.number)
+            params['ZUUL_PATCHSET'] = str(change.patchset)
         if hasattr(change, 'ref'):
             params['GERRIT_REFNAME'] = change.ref
             params['ZUUL_REFNAME'] = change.ref
@@ -233,6 +241,7 @@ class Jenkins(object):
             params['ZUUL_OLDREV'] = change.oldrev
             params['GERRIT_NEWREV'] = change.newrev
             params['ZUUL_NEWREV'] = change.newrev
+            params['ZUUL_SHORT_NEWREV'] = change.newrev[:7]
 
         if callable(job.parameter_function):
             job.parameter_function(change, params)
