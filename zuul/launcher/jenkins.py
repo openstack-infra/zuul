@@ -421,11 +421,19 @@ class Jenkins(object):
                 if info['building']:
                     # It has not finished.
                     continue
+                if info['duration'] == 0:
+                    # Possible jenkins bug -- not building, but no duration
+                    self.log.debug("Possible jenkins bug with build %s: "
+                                   "not building, but no duration is set "
+                                   "Build info %s:" % (build,
+                                                       pprint.pformat(info)))
+                    continue
                 finish_time = (info['timestamp'] + info['duration']) / 1000
                 if time.time() - finish_time > JENKINS_GRACE_TIME:
                     self.log.debug("Lost build %s because "
                                    "it finished more than 5 minutes ago.  "
-                                   "Build info %s:" % (build, info))
+                                   "Build info %s:" % (build,
+                                                       pprint.pformat(info)))
                     lostbuilds.append(build)
                     continue
                 # Give it more time
