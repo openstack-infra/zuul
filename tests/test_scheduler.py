@@ -581,6 +581,7 @@ class testScheduler(unittest.TestCase):
         init_repo("org/project")
         init_repo("org/project1")
         init_repo("org/project2")
+        init_repo("org/one-job-project")
         self.config = CONFIG
         self.sched = zuul.scheduler.Scheduler()
 
@@ -1173,3 +1174,25 @@ class testScheduler(unittest.TestCase):
         print '  repo messages  :', repo_messages
         correct_messages = ['initial commit', 'mp commit', 'B-1']
         assert repo_messages == correct_messages
+
+    def test_one_job_project(self):
+        "Test that queueing works with one job"
+        A = self.fake_gerrit.addFakeChange('org/one-job-project',
+                                           'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/one-job-project',
+                                           'master', 'B')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        jobs = self.fake_jenkins.all_jobs
+        finished_jobs = self.fake_jenkins.job_history
+        print jobs
+        print finished_jobs
+
+        assert A.data['status'] == 'MERGED'
+        assert A.reported == 2
+        assert B.data['status'] == 'MERGED'
+        assert B.reported == 2

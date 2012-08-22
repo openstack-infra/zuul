@@ -81,3 +81,11 @@ projects:
         - project1-project2-integration
     post:
       - project2-post
+
+  - name: org/one-job-project
+    check:
+      - one-job-project-merge
+    gate:
+      - one-job-project-merge
+    post:
+      - one-job-project-post
