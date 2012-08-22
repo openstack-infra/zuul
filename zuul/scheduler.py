@@ -827,9 +827,21 @@ class DependentPipelineManager(BasePipelineManager):
             # This or some other build failed. All changes behind this change
             # will need to be retested. To free up resources cancel the builds
             # behind this one as they will be rerun anyways.
-            self.cancelJobs(change.change_behind, prime=False)
-            self.log.debug("Canceling builds behind change: %s due to "
-                           "failure." % change)
+            if not change.change_ahead:
+                change_behind = change.change_behind
+                self.log.debug("Removing failed change %s from queue" % change)
+                change.delete()
+                self.log.info("Canceling/relaunching jobs for change %s "
+                              "behind failed change %s" %
+                              (change_behind, change))
+                self.cancelJobs(change_behind)
+                change_behind = self._dequeueDependentChanges(change_behind)
+                if change_behind:
+                    self.launchJobs(change_behind)
+            else:
+                self.cancelJobs(change.change_behind, prime=False)
+                self.log.debug("Canceling builds behind change: %s due to "
+                               "failure." % change)
         return True
 
     def possiblyReportChange(self, change):

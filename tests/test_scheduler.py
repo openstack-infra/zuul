@@ -123,9 +123,6 @@ def job_has_changes(*args):
     ref = job.parameters['ZUUL_REF']
     repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
     commit_messages = ['%s-1' % commit.subject for commit in commits]
-    print 'checking that job %s has changes:' % ref
-    print '  commit messages:', commit_messages
-    print '  repo messages  :', repo_messages
     for msg in commit_messages:
         if msg not in repo_messages:
             return False
@@ -859,7 +856,7 @@ class testScheduler(unittest.TestCase):
         jobs[0].release()
         self.waitUntilSettled()
 
-        assert len(jobs) == 1  # project-test2
+        assert len(jobs) == 2  # project-test2, project-merge for B
         assert self.countJobResults(finished_jobs, 'ABORTED') == 4
 
         self.fake_jenkins.hold_jobs_in_build = False
@@ -921,8 +918,8 @@ class testScheduler(unittest.TestCase):
         jobs[0].release()
         self.waitUntilSettled()
 
-        assert len(jobs) == 1  # project-test2
-        assert len(queue) == 1
+        assert len(jobs) == 2  # project-test2, project-merge for B
+        assert len(queue) == 2
         assert self.countJobResults(finished_jobs, 'ABORTED') == 0
 
         self.fake_jenkins.hold_jobs_in_queue = False
@@ -1031,7 +1028,6 @@ class testScheduler(unittest.TestCase):
         repo = git.Repo(path)
         repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
         repo_messages.reverse()
-        print '  repo messages  :', repo_messages
         correct_messages = ['initial commit', 'A-1', 'B-1', 'C-1']
         assert repo_messages == correct_messages
 
@@ -1119,7 +1115,6 @@ class testScheduler(unittest.TestCase):
         repo = git.Repo(path)
         repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
         repo_messages.reverse()
-        print '  repo messages  :', repo_messages
         correct_messages = ['initial commit', 'mp commit', 'A-1', 'B-1', 'C-1']
         assert repo_messages == correct_messages
 
@@ -1167,14 +1162,12 @@ class testScheduler(unittest.TestCase):
         repo_messages = [c.message.strip()
                          for c in repo.iter_commits(ref_master)]
         repo_messages.reverse()
-        print '  repo messages  :', repo_messages
         correct_messages = ['initial commit', 'A-1', 'C-1']
         assert repo_messages == correct_messages
 
         repo_messages = [c.message.strip()
                          for c in repo.iter_commits(ref_mp)]
         repo_messages.reverse()
-        print '  repo messages  :', repo_messages
         correct_messages = ['initial commit', 'mp commit', 'B-1']
         assert repo_messages == correct_messages
 
@@ -1192,8 +1185,6 @@ class testScheduler(unittest.TestCase):
 
         jobs = self.fake_jenkins.all_jobs
         finished_jobs = self.fake_jenkins.job_history
-        print jobs
-        print finished_jobs
 
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
@@ -1229,11 +1220,77 @@ class testScheduler(unittest.TestCase):
         jobs = self.fake_jenkins.all_jobs
         finished_jobs = self.fake_jenkins.job_history
 
-        pprint.pprint(jobs)
-        pprint.pprint(finished_jobs)
+        assert A.data['status'] == 'NEW'
+        assert A.reported == 2
+        assert B.data['status'] == 'NEW'
+        assert B.reported == 2
+        assert C.data['status'] == 'NEW'
+        assert C.reported == 2
+        assert len(finished_jobs) == 1
+
+    def test_head_is_dequeued_once(self):
+        "Test that if a change at the head fails it is dequeud only once"
+        # If it's dequeued more than once, we should see extra
+        # aborted jobs.
+        self.fake_jenkins.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project1', 'master', 'C')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+
+        self.fake_jenkins.fakeAddFailTest('project1-test1', A)
+        self.fake_jenkins.fakeAddFailTest('project1-test2', A)
+        self.fake_jenkins.fakeAddFailTest('project1-project2-integration', A)
+
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+
+        self.waitUntilSettled()
+        jobs = self.fake_jenkins.all_jobs
+        finished_jobs = self.fake_jenkins.job_history
+
+        assert len(jobs) == 1
+        assert jobs[0].name == 'project1-merge'
+        assert job_has_changes(jobs[0], A)
+
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+
+        assert len(jobs) == 9
+        assert jobs[0].name == 'project1-test1'
+        assert jobs[1].name == 'project1-test2'
+        assert jobs[2].name == 'project1-project2-integration'
+        assert jobs[3].name == 'project1-test1'
+        assert jobs[4].name == 'project1-test2'
+        assert jobs[5].name == 'project1-project2-integration'
+        assert jobs[6].name == 'project1-test1'
+        assert jobs[7].name == 'project1-test2'
+        assert jobs[8].name == 'project1-project2-integration'
+
+        jobs[0].release()
+        self.waitUntilSettled()
+
+        assert len(jobs) == 3  # test2, integration, merge for B
+        assert self.countJobResults(finished_jobs, 'ABORTED') == 6
+
+        self.fake_jenkins.hold_jobs_in_build = False
+        self.fake_jenkins.fakeRelease()
+        self.waitUntilSettled()
+
+        assert len(jobs) == 0
+        assert len(finished_jobs) == 20
 
         assert A.data['status'] == 'NEW'
-        assert B.data['status'] == 'NEW'
-        assert C.data['status'] == 'NEW'
-
-        assert len(finished_jobs) == 1
+        assert B.data['status'] == 'MERGED'
+        assert C.data['status'] == 'MERGED'
+        assert A.reported == 2
+        assert B.reported == 2
+        assert C.reported == 2
