@@ -866,6 +866,10 @@ class DependentPipelineManager(BasePipelineManager):
             self.log.info("Change %s behind change %s is ready, "
                           "possibly reporting" % (change_behind, change))
             self.possiblyReportChange(change_behind)
+        # There may be jobs behind that were dependent on all of these builds
+        # completing.
+        elif change_behind:
+            self.launchJobs(change_behind)
 
     def getChangesInQueue(self):
         changes = []
