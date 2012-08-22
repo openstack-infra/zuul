@@ -164,7 +164,9 @@ class Pipeline(object):
         else:
             ret += 'Build failed\n\n'
 
-        if changeish.current_build_set.unable_to_merge:
+        if changeish.dequeued_needing_change:
+            ret += "This change depends on a change that failed to merge."
+        elif changeish.current_build_set.unable_to_merge:
             ret += "This change was unable to be automatically merged "\
                    "with the current state of the repository. Please "\
                    "rebase your change and upload a new patchset."
@@ -294,6 +296,14 @@ class Pipeline(object):
 
     def setUnableToMerge(self, changeish):
         changeish.current_build_set.unable_to_merge = True
+        root = self.getJobTree(changeish.project)
+        for job in root.getJobs():
+            fakebuild = Build(job, None)
+            fakebuild.result = 'SKIPPED'
+            changeish.addBuild(fakebuild)
+
+    def setDequeuedNeedingChange(self, changeish):
+        changeish.dequeued_needing_change = True
         root = self.getJobTree(changeish.project)
         for job in root.getJobs():
             fakebuild = Build(job, None)
@@ -485,6 +495,7 @@ class Changeish(object):
         self.build_sets = []
         self.change_ahead = None
         self.change_behind = None
+        self.dequeued_needing_change = False
         self.current_build_set = BuildSet(self)
         self.build_sets.append(self.current_build_set)
 

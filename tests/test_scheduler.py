@@ -287,6 +287,9 @@ class FakeChange(object):
         return json.loads(json.dumps(self.data))
 
     def setMerged(self):
+        if (self.depends_on_change
+            and self.depends_on_change.data['status'] != 'MERGED'):
+            return
         self.data['status'] = 'MERGED'
         self.open = False
 
@@ -1196,3 +1199,41 @@ class testScheduler(unittest.TestCase):
         assert A.reported == 2
         assert B.data['status'] == 'MERGED'
         assert B.reported == 2
+
+    def test_dependent_changes_dequeue(self):
+        "Test that dependent patches are not needlessly tested"
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+
+        M1 = self.fake_gerrit.addFakeChange('org/project', 'master', 'M1')
+        M1.setMerged()
+
+        # C -> B -> A -> M1
+
+        C.setDependsOn(B, 1)
+        B.setDependsOn(A, 1)
+        A.setDependsOn(M1, 1)
+
+        self.fake_jenkins.fakeAddFailTest('project-merge', A)
+
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+
+        self.waitUntilSettled()
+
+        jobs = self.fake_jenkins.all_jobs
+        finished_jobs = self.fake_jenkins.job_history
+
+        pprint.pprint(jobs)
+        pprint.pprint(finished_jobs)
+
+        assert A.data['status'] == 'NEW'
+        assert B.data['status'] == 'NEW'
+        assert C.data['status'] == 'NEW'
+
+        assert len(finished_jobs) == 1
