@@ -517,12 +517,12 @@ class BasePipelineManager(object):
 
     def updateBuildDescriptions(self, build_set):
         for build in build_set.getBuilds():
-            desc = self.pipeline.formatDescription(build)
+            desc = self.formatDescription(build)
             self.sched.launcher.setBuildDescription(build, desc)
 
         if build_set.previous_build_set:
             for build in build_set.previous_build_set.getBuilds():
-                desc = self.pipeline.formatDescription(build)
+                desc = self.formatDescription(build)
                 self.sched.launcher.setBuildDescription(build, desc)
 
     def onBuildStarted(self, build):
@@ -551,7 +551,7 @@ class BasePipelineManager(object):
 
         self.pipeline.setResult(change, build)
         self.log.info("Change %s status is now:\n %s" %
-                      (change, self.pipeline.formatStatus(change)))
+                      (change, self.formatStatus(change)))
 
         if self.pipeline.areAllJobsComplete(change):
             self.log.debug("All jobs for change %s are complete" % change)
@@ -582,12 +582,11 @@ class BasePipelineManager(object):
         else:
             action = self.failure_action
             change.setReportedResult('FAILURE')
+        report = self.formatReport(change)
         try:
             self.log.info("Reporting change %s, action: %s" %
                           (change, action))
-            ret = self.sched.trigger.report(change,
-                                            self.pipeline.formatReport(change),
-                                            action)
+            ret = self.sched.trigger.report(change, report, action)
             if ret:
                 self.log.error("Reporting change %s received: %s" %
                                (change, ret))
@@ -610,7 +609,185 @@ class BasePipelineManager(object):
         changes = self.getChangesInQueue()
         ret = ''
         for change in changes:
-            ret += self.pipeline.formatStatus(change, html=True)
+            ret += self.formatStatus(change, html=True)
+        return ret
+
+    def formatStatus(self, changeish, indent=0, html=False):
+        indent_str = ' ' * indent
+        ret = ''
+        if html and hasattr(changeish, 'url') and changeish.url is not None:
+            ret += '%sProject %s change <a href="%s">%s</a>\n' % (
+                indent_str,
+                changeish.project.name,
+                changeish.url,
+                changeish._id())
+        else:
+            ret += '%sProject %s change %s\n' % (indent_str,
+                                                 changeish.project.name,
+                                                 changeish._id())
+        for job in self.pipeline.getJobs(changeish):
+            build = changeish.current_build_set.getBuild(job.name)
+            if build:
+                result = build.result
+            else:
+                result = None
+            job_name = job.name
+            if not job.voting:
+                voting = ' (non-voting)'
+            else:
+                voting = ''
+            if html:
+                if build:
+                    url = build.url
+                else:
+                    url = None
+                if url is not None:
+                    job_name = '<a href="%s">%s</a>' % (url, job_name)
+            ret += '%s  %s: %s%s' % (indent_str, job_name, result, voting)
+            ret += '\n'
+        if changeish.change_ahead:
+            ret += '%sWaiting on:\n' % (indent_str)
+            ret += self.formatStatus(changeish.change_ahead,
+                                     indent + 2, html)
+        return ret
+
+    def formatReport(self, changeish):
+        ret = ''
+        if self.pipeline.didAllJobsSucceed(changeish):
+            ret += 'Build successful\n\n'
+        else:
+            ret += 'Build failed\n\n'
+
+        if changeish.dequeued_needing_change:
+            ret += "This change depends on a change that failed to merge."
+        elif changeish.current_build_set.unable_to_merge:
+            ret += "This change was unable to be automatically merged "\
+                   "with the current state of the repository. Please "\
+                   "rebase your change and upload a new patchset."
+        else:
+            pattern = self.sched.config.get('zuul', 'url_pattern')
+            for job in self.pipeline.getJobs(changeish):
+                build = changeish.current_build_set.getBuild(job.name)
+                result = build.result
+                if result == 'SUCCESS' and job.success_message:
+                    result = job.success_message
+                elif result == 'FAILURE' and job.failure_message:
+                    result = job.failure_message
+                if build.url:
+                    if pattern:
+                        url = pattern.format(change=changeish,
+                                             pipeline=self.pipeline,
+                                             job=job,
+                                             build=build)
+                    else:
+                        url = build.url
+                if not url:
+                    url = job.name
+                if not job.voting:
+                    voting = ' (non-voting)'
+                else:
+                    voting = ''
+                ret += '- %s : %s%s\n' % (url, result, voting)
+        return ret
+
+    def formatDescription(self, build):
+        concurrent_changes = ''
+        concurrent_builds = ''
+        other_builds = ''
+
+        for change in build.build_set.other_changes:
+            concurrent_changes += '<li><a href="{change.url}">\
+              {change.number},{change.patchset}</a></li>'.format(
+                change=change)
+
+        change = build.build_set.change
+
+        for build in build.build_set.getBuilds():
+            if build.base_url:
+                concurrent_builds += """\
+<li>
+  <a href="{build.base_url}">
+  {build.job.name} #{build.number}</a>: {build.result}
+</li>
+""".format(build=build)
+            else:
+                concurrent_builds += """\
+<li>
+  {build.job.name}: {build.result}
+</li>""".format(build=build)
+
+        if build.build_set.previous_build_set:
+            other_build = build.build_set.previous_build_set.getBuild(
+                build.job.name)
+            if other_build:
+                other_builds += """\
+<li>
+  Preceded by: <a href="{build.base_url}">
+  {build.job.name} #{build.number}</a>
+</li>
+""".format(build=other_build)
+
+        if build.build_set.next_build_set:
+            other_build = build.build_set.next_build_set.getBuild(
+                build.job.name)
+            if other_build:
+                other_builds += """\
+<li>
+  Succeeded by: <a href="{build.base_url}">
+  {build.job.name} #{build.number}</a>
+</li>
+""".format(build=other_build)
+
+        result = build.build_set.result
+
+        if hasattr(change, 'number'):
+            ret = """\
+<p>
+  Triggered by change:
+    <a href="{change.url}">{change.number},{change.patchset}</a><br/>
+  Branch: <b>{change.branch}</b><br/>
+  Pipeline: <b>{self.pipeline.name}</b>
+</p>"""
+        else:
+            ret = """\
+<p>
+  Triggered by reference:
+    {change.ref}</a><br/>
+  Old revision: <b>{change.oldrev}</b><br/>
+  New revision: <b>{change.newrev}</b><br/>
+  Pipeline: <b>{self.pipeline.name}</b>
+</p>"""
+
+        if concurrent_changes:
+            ret += """\
+<p>
+  Other changes tested concurrently with this change:
+  <ul>{concurrent_changes}</ul>
+</p>
+"""
+        if concurrent_builds:
+            ret += """\
+<p>
+  All builds for this change set:
+  <ul>{concurrent_builds}</ul>
+</p>
+"""
+
+        if other_builds:
+            ret += """\
+<p>
+  Other build sets for this change:
+  <ul>{other_builds}</ul>
+</p>
+"""
+        if result:
+            ret += """\
+<p>
+  Reported result: <b>{result}</b>
+</p>
+"""
+
+        ret = ret.format(**locals())
         return ret
 
 
@@ -926,5 +1103,5 @@ class DependentPipelineManager(BasePipelineManager):
             ret += s + '\n'
             ret += '-' * len(s) + '\n'
             if queue.queue:
-                ret += self.pipeline.formatStatus(queue.queue[-1], html=True)
+                ret += self.formatStatus(queue.queue[-1], html=True)
         return ret
