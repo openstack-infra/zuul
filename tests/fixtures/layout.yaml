@@ -39,6 +39,8 @@ jobs:
   - name: ^.*-merge$
     failure-message: Unable to merge change
     hold-following-changes: true
+  - name: nonvoting-project-test2
+    voting: false
 
 projects:
   - name: org/project
@@ -89,3 +91,15 @@ projects:
       - one-job-project-merge
     post:
       - one-job-project-post
+
+  - name: org/nonvoting-project
+    check:
+      - nonvoting-project-merge:
+        - nonvoting-project-test1
+        - nonvoting-project-test2
+    gate:
+      - nonvoting-project-merge:
+        - nonvoting-project-test1
+        - nonvoting-project-test2
+    post:
+      - nonvoting-project-post

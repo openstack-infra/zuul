@@ -115,6 +115,9 @@ class Scheduler(threading.Thread):
             m = config_job.get('hold-following-changes', False)
             if m:
                 job.hold_following_changes = True
+            m = config_job.get('voting', None)
+            if m is not None:
+                job.voting = m
             fname = config_job.get('parameter-function', None)
             if fname:
                 func = self._config_env.get(fname, None)
@@ -415,10 +418,11 @@ class BasePipelineManager(object):
                 hold = ''
                 if tree.job.hold_following_changes:
                     hold = ' [hold]'
-                self.log.info("%s%s%s%s" % (istr,
-                                            repr(tree.job),
-                                            efilters,
-                                            hold))
+                voting = ''
+                if not tree.job.voting:
+                    voting = ' [nonvoting]'
+                self.log.info("%s%s%s%s%s" % (istr, repr(tree.job),
+                                              efilters, hold, voting))
             for x in tree.job_trees:
                 log_jobs(x, indent + 2)
 

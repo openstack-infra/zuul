@@ -589,6 +589,7 @@ class testScheduler(unittest.TestCase):
         init_repo("org/project1")
         init_repo("org/project2")
         init_repo("org/one-job-project")
+        init_repo("org/nonvoting-project")
         self.config = CONFIG
         self.sched = zuul.scheduler.Scheduler()
 
@@ -1027,8 +1028,6 @@ class testScheduler(unittest.TestCase):
         self.fake_jenkins.fakeRelease('.*-merge')
         self.waitUntilSettled()
 
-        pprint.pprint(jobs)
-
         ref = jobs[-1].parameters['ZUUL_REF']
         self.fake_jenkins.hold_jobs_in_queue = False
         self.fake_jenkins.fakeRelease()
@@ -1304,3 +1303,21 @@ class testScheduler(unittest.TestCase):
         assert A.reported == 2
         assert B.reported == 2
         assert C.reported == 2
+
+    def test_nonvoting_job(self):
+        "Test that non-voting jobs don't vote."
+        A = self.fake_gerrit.addFakeChange('org/nonvoting-project',
+                                           'master', 'A')
+        A.addApproval('CRVW', 2)
+        self.fake_jenkins.fakeAddFailTest('nonvoting-project-test2', A)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+
+        self.waitUntilSettled()
+        jobs = self.fake_jenkins.all_jobs
+        finished_jobs = self.fake_jenkins.job_history
+
+        assert A.data['status'] == 'MERGED'
+        assert A.reported == 2
+        assert finished_jobs[0]['result'] == 'SUCCESS'
+        assert finished_jobs[1]['result'] == 'SUCCESS'
+        assert finished_jobs[2]['result'] == 'FAILURE'
