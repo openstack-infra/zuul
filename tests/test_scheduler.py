@@ -44,6 +44,13 @@ CONFIG.read(os.path.join(FIXTURE_DIR, "zuul.conf"))
 CONFIG.set('zuul', 'layout_config',
            os.path.join(FIXTURE_DIR, "layout.yaml"))
 
+TMP_ROOT = os.environ.get("ZUUL_TEST_ROOT", "/tmp")
+TEST_ROOT = os.path.join(TMP_ROOT, "zuul-test")
+UPSTREAM_ROOT = os.path.join(TEST_ROOT, "upstream")
+GIT_ROOT = os.path.join(TEST_ROOT, "git")
+
+CONFIG.set('zuul', 'git_dir', GIT_ROOT)
+
 logging.basicConfig(level=logging.DEBUG)
 
 
@@ -58,10 +65,10 @@ class ChangeReference(git.Reference):
 
 def init_repo(project):
     parts = project.split('/')
-    path = os.path.join("/tmp/zuul-test/upstream", *parts[:-1])
+    path = os.path.join(UPSTREAM_ROOT, *parts[:-1])
     if not os.path.exists(path):
         os.makedirs(path)
-    path = os.path.join("/tmp/zuul-test/upstream", project)
+    path = os.path.join(UPSTREAM_ROOT, project)
     repo = git.Repo.init(path)
 
     fn = os.path.join(path, 'README')
@@ -87,7 +94,7 @@ def init_repo(project):
 
 
 def add_fake_change_to_repo(project, branch, change_num, patchset, msg, fn):
-    path = os.path.join("/tmp/zuul-test/upstream", project)
+    path = os.path.join(UPSTREAM_ROOT, project)
     repo = git.Repo(path)
     ref = ChangeReference.create(repo, '1/%s/%s' % (change_num,
                                                     patchset),
@@ -96,7 +103,7 @@ def add_fake_change_to_repo(project, branch, change_num, patchset, msg, fn):
     repo.head.reset(index=True, working_tree=True)
     repo.git.clean('-x', '-f', '-d')
 
-    path = os.path.join("/tmp/zuul-test/upstream", project)
+    path = os.path.join(UPSTREAM_ROOT, project)
     fn = os.path.join(path, fn)
     f = open(fn, 'w')
     f.write("test %s %s %s\n" % (branch, change_num, patchset))
@@ -106,7 +113,7 @@ def add_fake_change_to_repo(project, branch, change_num, patchset, msg, fn):
 
 
 def ref_has_change(ref, change):
-    path = os.path.join("/tmp/zuul-test/git", change.project)
+    path = os.path.join(GIT_ROOT, change.project)
     repo = git.Repo(path)
     for commit in repo.iter_commits(ref):
         if commit.message.strip() == ('%s-1' % change.subject):
@@ -118,7 +125,7 @@ def job_has_changes(*args):
     job = args[0]
     commits = args[1:]
     project = job.parameters['ZUUL_PROJECT']
-    path = os.path.join("/tmp/zuul-test/git", project)
+    path = os.path.join(GIT_ROOT, project)
     repo = git.Repo(path)
     ref = job.parameters['ZUUL_REF']
     repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
@@ -290,7 +297,7 @@ class FakeChange(object):
         self.data['status'] = 'MERGED'
         self.open = False
 
-        path = os.path.join("/tmp/zuul-test/upstream", self.project)
+        path = os.path.join(UPSTREAM_ROOT, self.project)
         repo = git.Repo(path)
         repo.heads[self.branch].commit = \
             repo.commit(self.patchsets[-1]['revision'])
@@ -555,7 +562,7 @@ class FakeURLOpener(object):
         path = res.path
         project = '/'.join(path.split('/')[2:-2])
         ret = ''
-        path = os.path.join("/tmp/zuul-test/upstream", project)
+        path = os.path.join(UPSTREAM_ROOT, project)
         repo = git.Repo(path)
         for ref in repo.refs:
             ret += ref.object.hexsha + '\t' + ref.path + '\n'
@@ -564,18 +571,18 @@ class FakeURLOpener(object):
 
 class FakeGerritTrigger(zuul.trigger.gerrit.Gerrit):
     def getGitUrl(self, project):
-        return "/tmp/zuul-test/upstream/%s" % project
+        return os.path.join(UPSTREAM_ROOT, project.name)
 
 
 class testScheduler(unittest.TestCase):
     log = logging.getLogger("zuul.test")
 
     def setUp(self):
-        if os.path.exists("/tmp/zuul-test"):
-            shutil.rmtree("/tmp/zuul-test")
-        os.makedirs("/tmp/zuul-test")
-        os.makedirs("/tmp/zuul-test/upstream")
-        os.makedirs("/tmp/zuul-test/git")
+        if os.path.exists(TEST_ROOT):
+            shutil.rmtree(TEST_ROOT)
+        os.makedirs(TEST_ROOT)
+        os.makedirs(UPSTREAM_ROOT)
+        os.makedirs(GIT_ROOT)
 
         # For each project in config:
         init_repo("org/project")
@@ -622,7 +629,7 @@ class testScheduler(unittest.TestCase):
         self.gerrit.stop()
         self.sched.stop()
         self.sched.join()
-        #shutil.rmtree("/tmp/zuul-test")
+        #shutil.rmtree(TEST_ROOT)
 
     def waitUntilSettled(self):
         self.log.debug("Waiting until settled...")
@@ -1019,12 +1026,15 @@ class testScheduler(unittest.TestCase):
         self.waitUntilSettled()
         self.fake_jenkins.fakeRelease('.*-merge')
         self.waitUntilSettled()
+
+        pprint.pprint(jobs)
+
         ref = jobs[-1].parameters['ZUUL_REF']
         self.fake_jenkins.hold_jobs_in_queue = False
         self.fake_jenkins.fakeRelease()
         self.waitUntilSettled()
 
-        path = os.path.join("/tmp/zuul-test/git/org/project")
+        path = os.path.join(GIT_ROOT, "org/project")
         repo = git.Repo(path)
         repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
         repo_messages.reverse()
@@ -1111,7 +1121,7 @@ class testScheduler(unittest.TestCase):
         self.fake_jenkins.fakeRelease()
         self.waitUntilSettled()
 
-        path = os.path.join("/tmp/zuul-test/git/org/project")
+        path = os.path.join(GIT_ROOT, "org/project")
         repo = git.Repo(path)
         repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
         repo_messages.reverse()
@@ -1123,7 +1133,7 @@ class testScheduler(unittest.TestCase):
         self.test_build_configuration()
         self.test_build_configuration_branch()
         # C has been merged, undo that
-        path = os.path.join("/tmp/zuul-test/upstream", "org/project")
+        path = os.path.join(UPSTREAM_ROOT, "org/project")
         repo = git.Repo(path)
         repo.heads.master.commit = repo.commit('init')
         self.test_build_configuration()
@@ -1156,7 +1166,7 @@ class testScheduler(unittest.TestCase):
         self.fake_jenkins.fakeRelease()
         self.waitUntilSettled()
 
-        path = os.path.join("/tmp/zuul-test/git/org/project")
+        path = os.path.join(GIT_ROOT, "org/project")
         repo = git.Repo(path)
 
         repo_messages = [c.message.strip()
