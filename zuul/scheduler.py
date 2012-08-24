@@ -665,7 +665,10 @@ class BasePipelineManager(object):
                    "with the current state of the repository. Please "\
                    "rebase your change and upload a new patchset."
         else:
-            pattern = self.sched.config.get('zuul', 'url_pattern')
+            if self.sched.config.has_option('zuul', 'url_pattern'):
+                pattern = self.sched.config.get('zuul', 'url_pattern')
+            else:
+                pattern = None
             for job in self.pipeline.getJobs(changeish):
                 build = changeish.current_build_set.getBuild(job.name)
                 result = build.result
