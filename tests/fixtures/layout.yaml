@@ -84,6 +84,20 @@ projects:
     post:
       - project2-post
 
+  - name: org/project3
+    check:
+      - project3-merge:
+        - project3-test1
+        - project3-test2
+        - project1-project2-integration
+    gate:
+      - project3-merge:
+        - project3-test1
+        - project3-test2
+        - project1-project2-integration
+    post:
+      - project3-post
+
   - name: org/one-job-project
     check:
       - one-job-project-merge

@@ -153,6 +153,7 @@ class FakeChange(object):
         self.latest_patchset = 0
         self.depends_on_change = None
         self.needed_by_changes = []
+        self.fail_merge = False
         self.data = {
             'branch': branch,
             'comments': [],
@@ -293,6 +294,8 @@ class FakeChange(object):
     def setMerged(self):
         if (self.depends_on_change
             and self.depends_on_change.data['status'] != 'MERGED'):
+            return
+        if self.fail_merge:
             return
         self.data['status'] = 'MERGED'
         self.open = False
@@ -588,6 +591,7 @@ class testScheduler(unittest.TestCase):
         init_repo("org/project")
         init_repo("org/project1")
         init_repo("org/project2")
+        init_repo("org/project3")
         init_repo("org/one-job-project")
         init_repo("org/nonvoting-project")
         self.config = CONFIG
@@ -1229,6 +1233,11 @@ class testScheduler(unittest.TestCase):
         jobs = self.fake_jenkins.all_jobs
         finished_jobs = self.fake_jenkins.job_history
 
+        for x in jobs:
+            print x
+        for x in finished_jobs:
+            print x
+
         assert A.data['status'] == 'NEW'
         assert A.reported == 2
         assert B.data['status'] == 'NEW'
@@ -1321,3 +1330,96 @@ class testScheduler(unittest.TestCase):
         assert finished_jobs[0]['result'] == 'SUCCESS'
         assert finished_jobs[1]['result'] == 'SUCCESS'
         assert finished_jobs[2]['result'] == 'FAILURE'
+
+    def test_dependent_behind_dequeue(self):
+        "test that dependent changes behind dequeued changes work"
+        # This complicated test is a reproduction of a real life bug
+        self.sched.reconfigure(self.config)
+        self.fake_jenkins.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
+        D = self.fake_gerrit.addFakeChange('org/project2', 'master', 'D')
+        E = self.fake_gerrit.addFakeChange('org/project2', 'master', 'E')
+        F = self.fake_gerrit.addFakeChange('org/project3', 'master', 'F')
+        D.setDependsOn(C, 1)
+        E.setDependsOn(D, 1)
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+        D.addApproval('CRVW', 2)
+        E.addApproval('CRVW', 2)
+        F.addApproval('CRVW', 2)
+
+        A.fail_merge = True
+        jobs = self.fake_jenkins.all_jobs
+        finished_jobs = self.fake_jenkins.job_history
+
+        # Change object re-use in the gerrit trigger is hidden if
+        # changes are added in quick succession; waiting makes it more
+        # like real life.
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        self.fake_gerrit.addEvent(D.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        self.fake_gerrit.addEvent(E.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        self.fake_gerrit.addEvent(F.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+
+        # all jobs running
+        jobs[0].release()
+        jobs[1].release()
+        jobs[2].release()
+        self.waitUntilSettled()
+
+        self.fake_jenkins.hold_jobs_in_build = False
+        self.fake_jenkins.fakeRelease()
+        self.waitUntilSettled()
+
+        for x in jobs:
+            print x
+        for x in finished_jobs:
+            print x
+        print self.sched.formatStatusHTML()
+
+        assert A.data['status'] == 'NEW'
+        assert B.data['status'] == 'MERGED'
+        assert C.data['status'] == 'MERGED'
+        assert D.data['status'] == 'MERGED'
+        assert E.data['status'] == 'MERGED'
+        assert F.data['status'] == 'MERGED'
+
+        assert A.reported == 2
+        assert B.reported == 2
+        assert C.reported == 2
+        assert D.reported == 2
+        assert E.reported == 2
+        assert F.reported == 2
+
+        # Make sure there are no orphaned jobs
+        for queue in self.sched.pipelines['gate'].manager.change_queues:
+            assert len(queue.queue) == 0
+
+        assert self.countJobResults(finished_jobs, 'ABORTED') == 15
+        assert len(finished_jobs) == 44

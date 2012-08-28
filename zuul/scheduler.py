@@ -860,8 +860,7 @@ class DependentPipelineManager(BasePipelineManager):
         if not change.needs_change.is_current_patchset:
             self.log.debug("  Needed change is not the current patchset")
             return False
-        change_queue = self.getQueue(change.project)
-        if change.needs_change in change_queue.queue:
+        if self.isChangeAlreadyInQueue(change.needs_change):
             self.log.debug("  Needed change is already ahead in the queue")
             return True
         if enqueue and self.sched.trigger.canMerge(change.needs_change,
