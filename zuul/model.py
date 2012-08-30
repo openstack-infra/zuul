@@ -29,6 +29,7 @@ class Pipeline(object):
         self.name = name
         self.job_trees = {}  # project -> JobTree
         self.manager = None
+        self.queues = []
 
     def __repr__(self):
         return '<Pipeline %s>' % self.name
@@ -43,6 +44,15 @@ class Pipeline(object):
 
     def getProjects(self):
         return self.job_trees.keys()
+
+    def addQueue(self, queue):
+        self.queues.append(queue)
+
+    def getQueue(self, project):
+        for queue in self.queues:
+            if project in queue.projects:
+                return queue
+        return None
 
     def getJobTree(self, project):
         tree = self.job_trees.get(project)
@@ -152,6 +162,68 @@ class Pipeline(object):
             fakebuild.result = 'SKIPPED'
             changeish.addBuild(fakebuild)
 
+    def getChangesInQueue(self):
+        changes = []
+        for shared_queue in self.queues:
+            changes.extend(shared_queue.queue)
+        return changes
+
+    def getAllChanges(self):
+        changes = []
+        for shared_queue in self.queues:
+            changes.extend(shared_queue.queue)
+            changes.extend(shared_queue.severed_heads)
+        return changes
+
+    def formatStatusHTML(self):
+        ret = ''
+        for queue in self.queues:
+            if len(self.queues) > 1:
+                s = 'Change queue: %s' % queue.name
+                ret += s + '\n'
+                ret += '-' * len(s) + '\n'
+            for head in queue.getHeads():
+                ret += self.formatStatus(head, html=True)
+        return ret
+
+    def formatStatus(self, changeish, indent=0, html=False):
+        indent_str = ' ' * indent
+        ret = ''
+        if html and hasattr(changeish, 'url') and changeish.url is not None:
+            ret += '%sProject %s change <a href="%s">%s</a>\n' % (
+                indent_str,
+                changeish.project.name,
+                changeish.url,
+                changeish._id())
+        else:
+            ret += '%sProject %s change %s\n' % (indent_str,
+                                                 changeish.project.name,
+                                                 changeish._id())
+        for job in self.getJobs(changeish):
+            build = changeish.current_build_set.getBuild(job.name)
+            if build:
+                result = build.result
+            else:
+                result = None
+            job_name = job.name
+            if not job.voting:
+                voting = ' (non-voting)'
+            else:
+                voting = ''
+            if html:
+                if build:
+                    url = build.url
+                else:
+                    url = None
+                if url is not None:
+                    job_name = '<a href="%s">%s</a>' % (url, job_name)
+            ret += '%s  %s: %s%s' % (indent_str, job_name, result, voting)
+            ret += '\n'
+        if changeish.change_behind:
+            ret += '%sFollowed by:\n' % (indent_str)
+            ret += self.formatStatus(changeish.change_behind, indent + 2, html)
+        return ret
+
 
 class ChangeQueue(object):
     """DependentPipelines have multiple parallel queues shared by
@@ -159,12 +231,14 @@ class ChangeQueue(object):
     a queue shared by interrelated projects foo and bar, and a second
     queue for independent project baz.  Pipelines have one or more
     PipelineQueues."""
-    def __init__(self, pipeline):
+    def __init__(self, pipeline, dependent=True):
         self.pipeline = pipeline
         self.name = ''
         self.projects = []
         self._jobs = set()
         self.queue = []
+        self.severed_heads = []
+        self.dependent = dependent
 
     def __repr__(self):
         return '<ChangeQueue %s: %s>' % (self.pipeline.name, self.name)
@@ -182,18 +256,44 @@ class ChangeQueue(object):
 
     def enqueueChange(self, change):
         if self.queue:
-            self.queue[-1].change_behind = change
             change.change_ahead = self.queue[-1]
+            change.change_ahead.change_behind = change
         self.queue.append(change)
-        change.queue = self
 
     def dequeueChange(self, change):
         if change in self.queue:
             self.queue.remove(change)
+        if change in self.severed_heads:
+            self.severed_heads.remove(change)
+        if change.change_ahead:
+            change.change_ahead.change_behind = change.change_behind
+        if change.change_behind:
+            change.change_behind.change_ahead = change.change_ahead
+        change.change_ahead = None
+        change.change_behind = None
+
+    def addSeveredHead(self, change):
+        self.severed_heads.append(change)
 
     def mergeChangeQueue(self, other):
         for project in other.projects:
             self.addProject(project)
+
+    def getHead(self):
+        if not self.queue:
+            return None
+        return self.queue[0]
+
+    def getHeads(self):
+        heads = []
+        if self.dependent:
+            h = self.getHead()
+            if h:
+                heads.append(h)
+        else:
+            heads.extend(self.queue)
+        heads.extend(self.severed_heads)
+        return heads
 
 
 class Project(object):
@@ -337,11 +437,11 @@ class Changeish(object):
     def __init__(self, project):
         self.project = project
         self.build_sets = []
-        self.change_ahead = None
-        self.change_behind = None
         self.dequeued_needing_change = False
         self.current_build_set = BuildSet(self)
         self.build_sets.append(self.current_build_set)
+        self.change_ahead = None
+        self.change_behind = None
 
     def equals(self, other):
         raise NotImplementedError()
@@ -359,12 +459,6 @@ class Changeish(object):
 
     def addBuild(self, build):
         self.current_build_set.addBuild(build)
-
-    def delete(self):
-        if self.change_behind:
-            self.change_behind.change_ahead = None
-            self.change_behind = None
-        self.queue.dequeueChange(self)
 
 
 class Change(Changeish):

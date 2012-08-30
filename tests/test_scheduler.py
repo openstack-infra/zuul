@@ -203,6 +203,19 @@ class FakeChange(object):
         self.patchsets.append(d)
         self.data['submitRecords'] = self.getSubmitRecords()
 
+    def getPatchsetCreatedEvent(self, patchset):
+        event = {"type": "patchset-created",
+                 "change": {"project": self.project,
+                           "branch": self.branch,
+                           "id": "I5459869c07352a31bfb1e7a8cac379cabfcb25af",
+                           "number": str(self.number),
+                           "subject": self.subject,
+                           "owner": {"name": "User Name"},
+                           "url": "https://hostname/3"},
+                 "patchSet": self.patchsets[patchset - 1],
+                 "uploader": {"name": "User Name"}}
+        return event
+
     def addApproval(self, category, value):
         approval = {'description': self.categories[category][0],
                     'type': category,
@@ -662,6 +675,17 @@ class testScheduler(unittest.TestCase):
         jobs = filter(lambda x: x['result'] == result, jobs)
         return len(jobs)
 
+    def assertEmptyQueues(self):
+        # Make sure there are no orphaned jobs
+        for pipeline in self.sched.pipelines.values():
+            for queue in pipeline.queues:
+                if len(queue.queue) != 0:
+                    print 'queue', queue.queue
+                assert len(queue.queue) == 0
+                if len(queue.severed_heads) != 0:
+                    print 'heads', queue.severed_heads
+                assert len(queue.severed_heads) == 0
+
     def test_jobs_launched(self):
         "Test that jobs are launched and a change is merged"
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -678,6 +702,7 @@ class testScheduler(unittest.TestCase):
         assert jobs[2]['result'] == 'SUCCESS'
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
+        self.assertEmptyQueues()
 
     def test_parallel_changes(self):
         "Test that changes are tested in parallel and merged in series"
@@ -756,6 +781,7 @@ class testScheduler(unittest.TestCase):
         assert A.reported == 2
         assert B.reported == 2
         assert C.reported == 2
+        self.assertEmptyQueues()
 
     def test_failed_changes(self):
         "Test that a change behind a failed change is retested"
@@ -776,6 +802,7 @@ class testScheduler(unittest.TestCase):
         assert B.data['status'] == 'MERGED'
         assert A.reported == 2
         assert B.reported == 2
+        self.assertEmptyQueues()
 
     def test_independent_queues(self):
         "Test that changes end up in the right queues"
@@ -824,6 +851,7 @@ class testScheduler(unittest.TestCase):
         assert A.reported == 2
         assert B.reported == 2
         assert C.reported == 2
+        self.assertEmptyQueues()
 
     def test_failed_change_at_head(self):
         "Test that if a change at the head fails, jobs behind it are canceled"
@@ -883,6 +911,7 @@ class testScheduler(unittest.TestCase):
         assert A.reported == 2
         assert B.reported == 2
         assert C.reported == 2
+        self.assertEmptyQueues()
 
     def test_failed_change_at_head_with_queue(self):
         "Test that if a change at the head fails, queued jobs are canceled"
@@ -946,6 +975,7 @@ class testScheduler(unittest.TestCase):
         assert A.reported == 2
         assert B.reported == 2
         assert C.reported == 2
+        self.assertEmptyQueues()
 
     def test_patch_order(self):
         "Test that dependent patches are tested in the right order"
@@ -990,6 +1020,7 @@ class testScheduler(unittest.TestCase):
         assert A.reported == 2
         assert B.reported == 2
         assert C.reported == 2
+        self.assertEmptyQueues()
 
     def test_can_merge(self):
         "Test whether a change is ready to merge"
@@ -1006,8 +1037,7 @@ class testScheduler(unittest.TestCase):
         A.addApproval('APRV', 1)
         a = self.sched.trigger.getChange(1, 2)
         assert self.sched.trigger.canMerge(a, mgr.getSubmitAllowNeeds())
-
-        return True
+        self.assertEmptyQueues()
 
     def test_build_configuration(self):
         "Test that zuul merges the right commits for testing"
@@ -1043,6 +1073,7 @@ class testScheduler(unittest.TestCase):
         repo_messages.reverse()
         correct_messages = ['initial commit', 'A-1', 'B-1', 'C-1']
         assert repo_messages == correct_messages
+        self.assertEmptyQueues()
 
     def test_build_configuration_conflict(self):
         "Test that merge conflicts are handled"
@@ -1079,6 +1110,7 @@ class testScheduler(unittest.TestCase):
         assert A.reported == 2
         assert B.reported == 2
         assert C.reported == 2
+        self.assertEmptyQueues()
 
     def test_post(self):
         "Test that post jobs run"
@@ -1096,6 +1128,7 @@ class testScheduler(unittest.TestCase):
         job_names = [x['name'] for x in jobs]
         assert len(jobs) == 1
         assert 'project-post' in job_names
+        self.assertEmptyQueues()
 
     def test_build_configuration_branch(self):
         "Test that the right commits are on alternate branches"
@@ -1130,6 +1163,7 @@ class testScheduler(unittest.TestCase):
         repo_messages.reverse()
         correct_messages = ['initial commit', 'mp commit', 'A-1', 'B-1', 'C-1']
         assert repo_messages == correct_messages
+        self.assertEmptyQueues()
 
     def test_build_configuration_branch_interaction(self):
         "Test that switching between branches works"
@@ -1140,6 +1174,7 @@ class testScheduler(unittest.TestCase):
         repo = git.Repo(path)
         repo.heads.master.commit = repo.commit('init')
         self.test_build_configuration()
+        self.assertEmptyQueues()
 
     def test_build_configuration_multi_branch(self):
         "Test that dependent changes on multiple branches are merged"
@@ -1183,6 +1218,7 @@ class testScheduler(unittest.TestCase):
         repo_messages.reverse()
         correct_messages = ['initial commit', 'mp commit', 'B-1']
         assert repo_messages == correct_messages
+        self.assertEmptyQueues()
 
     def test_one_job_project(self):
         "Test that queueing works with one job"
@@ -1203,6 +1239,7 @@ class testScheduler(unittest.TestCase):
         assert A.reported == 2
         assert B.data['status'] == 'MERGED'
         assert B.reported == 2
+        self.assertEmptyQueues()
 
     def test_dependent_changes_dequeue(self):
         "Test that dependent patches are not needlessly tested"
@@ -1245,6 +1282,7 @@ class testScheduler(unittest.TestCase):
         assert C.data['status'] == 'NEW'
         assert C.reported == 2
         assert len(finished_jobs) == 1
+        self.assertEmptyQueues()
 
     def test_head_is_dequeued_once(self):
         "Test that if a change at the head fails it is dequeud only once"
@@ -1312,6 +1350,7 @@ class testScheduler(unittest.TestCase):
         assert A.reported == 2
         assert B.reported == 2
         assert C.reported == 2
+        self.assertEmptyQueues()
 
     def test_nonvoting_job(self):
         "Test that non-voting jobs don't vote."
@@ -1330,6 +1369,40 @@ class testScheduler(unittest.TestCase):
         assert finished_jobs[0]['result'] == 'SUCCESS'
         assert finished_jobs[1]['result'] == 'SUCCESS'
         assert finished_jobs[2]['result'] == 'FAILURE'
+        self.assertEmptyQueues()
+
+    def test_check_queue_success(self):
+        "Test successful check queue jobs."
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+
+        self.waitUntilSettled()
+        jobs = self.fake_jenkins.all_jobs
+        finished_jobs = self.fake_jenkins.job_history
+
+        assert A.data['status'] == 'NEW'
+        assert A.reported == 1
+        assert finished_jobs[0]['result'] == 'SUCCESS'
+        assert finished_jobs[1]['result'] == 'SUCCESS'
+        assert finished_jobs[2]['result'] == 'SUCCESS'
+        self.assertEmptyQueues()
+
+    def test_check_queue_failure(self):
+        "Test failed check queue jobs."
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_jenkins.fakeAddFailTest('project-test2', A)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+
+        self.waitUntilSettled()
+        jobs = self.fake_jenkins.all_jobs
+        finished_jobs = self.fake_jenkins.job_history
+
+        assert A.data['status'] == 'NEW'
+        assert A.reported == 1
+        assert finished_jobs[0]['result'] == 'SUCCESS'
+        assert finished_jobs[1]['result'] == 'SUCCESS'
+        assert finished_jobs[2]['result'] == 'FAILURE'
+        self.assertEmptyQueues()
 
     def test_dependent_behind_dequeue(self):
         "test that dependent changes behind dequeued changes work"
@@ -1417,9 +1490,6 @@ class testScheduler(unittest.TestCase):
         assert E.reported == 2
         assert F.reported == 2
 
-        # Make sure there are no orphaned jobs
-        for queue in self.sched.pipelines['gate'].manager.change_queues:
-            assert len(queue.queue) == 0
-
         assert self.countJobResults(finished_jobs, 'ABORTED') == 15
         assert len(finished_jobs) == 44
+        self.assertEmptyQueues()
