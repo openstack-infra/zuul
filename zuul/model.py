@@ -255,7 +255,7 @@ class ChangeQueue(object):
             self._jobs |= set(self.pipeline.getJobTree(project).getJobs())
 
     def enqueueChange(self, change):
-        if self.queue:
+        if self.dependent and self.queue:
             change.change_ahead = self.queue[-1]
             change.change_ahead.change_behind = change
         self.queue.append(change)
