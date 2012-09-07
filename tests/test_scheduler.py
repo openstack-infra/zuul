@@ -1493,3 +1493,40 @@ class testScheduler(unittest.TestCase):
         assert self.countJobResults(finished_jobs, 'ABORTED') == 15
         assert len(finished_jobs) == 44
         self.assertEmptyQueues()
+
+    def test_merger_repack(self):
+        "Test that the merger works after a repack"
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        jobs = self.fake_jenkins.job_history
+        job_names = [x['name'] for x in jobs]
+        assert 'project-merge' in job_names
+        assert 'project-test1' in job_names
+        assert 'project-test2' in job_names
+        assert jobs[0]['result'] == 'SUCCESS'
+        assert jobs[1]['result'] == 'SUCCESS'
+        assert jobs[2]['result'] == 'SUCCESS'
+        assert A.data['status'] == 'MERGED'
+        assert A.reported == 2
+        self.assertEmptyQueues()
+
+        path = os.path.join(GIT_ROOT, "org/project")
+        os.system('git --git-dir=%s/.git repack -afd' % path)
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        jobs = self.fake_jenkins.job_history
+        job_names = [x['name'] for x in jobs]
+        assert 'project-merge' in job_names
+        assert 'project-test1' in job_names
+        assert 'project-test2' in job_names
+        assert jobs[0]['result'] == 'SUCCESS'
+        assert jobs[1]['result'] == 'SUCCESS'
+        assert jobs[2]['result'] == 'SUCCESS'
+        assert A.data['status'] == 'MERGED'
+        assert A.reported == 2
+        self.assertEmptyQueues()

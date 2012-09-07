@@ -42,6 +42,13 @@ class Repo(object):
         self.log.debug("Resetting repository %s" % self.local_path)
         origin = self.repo.remotes.origin
         origin.update()
+        # If the remote repository is repacked, the repo object's
+        # cache may be out of date.  Specifically, it caches whether
+        # to check the loose or packed DB for a given SHA.  Further,
+        # if there was no pack or lose directory to start with, the
+        # repo object may not even have a database for it.  Avoid
+        # these problems by recreating the repo object.
+        self.repo = git.Repo(self.local_path)
         for ref in origin.refs:
             if ref.remote_head == 'HEAD':
                 continue
