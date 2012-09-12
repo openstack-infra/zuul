@@ -190,6 +190,7 @@ class ExtendedJenkins(jenkins.Jenkins):
 
 class Jenkins(object):
     log = logging.getLogger("zuul.Jenkins")
+    launch_retry_timeout = 5
 
     def __init__(self, config, sched):
         self.sched = sched
@@ -267,7 +268,7 @@ class Jenkins(object):
                 self.log.exception("Exception launching build %s for "
                                    "job %s for change %s (will retry):" %
                                    (build, job, change))
-                time.sleep(5)
+                time.sleep(self.launch_retry_timeout)
 
         if errored:
             if launched:
@@ -277,9 +278,15 @@ class Jenkins(object):
                                "declaring lost" % build)
                 # To keep the queue moving, declare this as a lost build
                 # so that the change will get dropped.
-                self.onBuildCompleted(build.uuid, 'LOST', None, None)
-
+                t = threading.Thread(target=self.declareBuildLost,
+                                     args=(build,))
+                t.start()
         return build
+
+    def declareBuildLost(self, build):
+        # Call this from a new thread to invoke onBuildCompleted from
+        # a thread that has the queue lock.
+        self.onBuildCompleted(build.uuid, 'LOST', None, None)
 
     def findBuildInQueue(self, build):
         for item in self.jenkins.get_queue_info():

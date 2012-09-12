@@ -460,6 +460,7 @@ class FakeJenkins(object):
         self.hold_jobs_in_queue = False
         self.hold_jobs_in_build = False
         self.fail_tests = {}
+        self.nonexistent_jobs = []
 
     def fakeEnqueue(self, job):
         self.queue.append(job)
@@ -505,6 +506,8 @@ class FakeJenkins(object):
         return False
 
     def build_job(self, name, parameters):
+        if name in self.nonexistent_jobs:
+            raise Exception("Job does not exist")
         count = self.job_counter.get(name, 0)
         count += 1
         self.job_counter[name] = count
@@ -1515,6 +1518,42 @@ class testScheduler(unittest.TestCase):
         path = os.path.join(GIT_ROOT, "org/project")
         os.system('git --git-dir=%s/.git repack -afd' % path)
 
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        jobs = self.fake_jenkins.job_history
+        job_names = [x['name'] for x in jobs]
+        assert 'project-merge' in job_names
+        assert 'project-test1' in job_names
+        assert 'project-test2' in job_names
+        assert jobs[0]['result'] == 'SUCCESS'
+        assert jobs[1]['result'] == 'SUCCESS'
+        assert jobs[2]['result'] == 'SUCCESS'
+        assert A.data['status'] == 'MERGED'
+        assert A.reported == 2
+        self.assertEmptyQueues()
+
+    def test_nonexistent_job(self):
+        "Test launching a job that doesn't exist"
+        self.fake_jenkins.nonexistent_jobs.append('project-merge')
+        self.jenkins.launch_retry_timeout = 0.1
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        # There may be a thread about to report a lost change
+        while A.reported < 2:
+            self.waitUntilSettled()
+        jobs = self.fake_jenkins.job_history
+        job_names = [x['name'] for x in jobs]
+        assert not job_names
+        assert A.data['status'] == 'NEW'
+        assert A.reported == 2
+        self.assertEmptyQueues()
+
+        # Make sure things still work:
+        self.fake_jenkins.nonexistent_jobs = []
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))

@@ -707,6 +707,7 @@ class BasePipelineManager(object):
                     result = job.success_message
                 elif result == 'FAILURE' and job.failure_message:
                     result = job.failure_message
+                url = None
                 if build.url:
                     if pattern:
                         url = pattern.format(change=changeish,
