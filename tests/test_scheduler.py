@@ -580,11 +580,16 @@ class FakeURLOpener(object):
         res = urlparse.urlparse(self.url)
         path = res.path
         project = '/'.join(path.split('/')[2:-2])
-        ret = ''
+        ret = '001e# service=git-upload-pack\n'
+        ret += ('000000a31270149696713ba7e06f1beb760f20d359c4abed HEAD\x00'
+                'multi_ack thin-pack side-band side-band-64k ofs-delta '
+                'shallow no-progress include-tag multi_ack_detailed no-done\n')
         path = os.path.join(UPSTREAM_ROOT, project)
         repo = git.Repo(path)
         for ref in repo.refs:
-            ret += ref.object.hexsha + '\t' + ref.path + '\n'
+            r = ref.object.hexsha + ' ' + ref.path + '\n'
+            ret += '%04x%s' % (len(r) + 4, r)
+        ret += '0000'
         return ret
 
 
