@@ -11,7 +11,7 @@ Zuul has three configuration files:
 **zuul.conf**
   Credentials for Gerrit and Jenkins, locations of the other config files
 **layout.yaml**
-  Project and queue configuration -- what Zuul does
+  Project and pipeline configuration -- what Zuul does
 **logging.conf**
     Python logging config
 
@@ -33,9 +33,9 @@ specified in a third section.
 layout.yaml
 ~~~~~~~~~~~
 
-This is the main configuration file for Zuul, where all of the queues
+This is the main configuration file for Zuul, where all of the pipelines
 and projects are defined, what tests should be run, and what actions
-Zuul should perform.  There are three sections: queues, jobs, and
+Zuul should perform.  There are three sections: pipelines, jobs, and
 projects.
 
 .. _includes:
@@ -56,24 +56,24 @@ include, and currently supports one type of inclusion, a python file::
   referenced in the Zuul configuration.  Currently only the
   parameter-function attribute of a Job uses this feature.
 
-Queues
-""""""
+Pipelines
+"""""""""
 
-Zuul can have any number of independent queues.  Whenever a matching
-Gerrit event is found for a queue, that event is added to the queue,
-and the jobs specified for that queue are run.  When all jobs
-specified for the queue that were triggered by an event are completed,
-Zuul reports back to Gerrit the results.
+Zuul can have any number of independent pipelines.  Whenever a matching
+Gerrit event is found for a pipeline, that event is added to the
+pipeline, and the jobs specified for that pipeline are run.  When all
+jobs specified for the pipeline that were triggered by an event are
+completed, Zuul reports back to Gerrit the results.
 
-There are no pre-defined queues in Zuul, rather you can define
-whatever queues you need in the layout file.  This is a very flexible
-system that can accommodate many kinds of workflows.  
+There are no pre-defined pipelines in Zuul, rather you can define
+whatever pipelines you need in the layout file.  This is a very flexible
+system that can accommodate many kinds of workflows.
 
-Here is a quick example of a queue definition followed by an
+Here is a quick example of a pipeline definition followed by an
 explanation of each of the parameters::
 
   - name: check
-    manager: IndependentQueueManager
+    manager: IndependentPipelineManager
     trigger:
       - event: patchset-created
     success:
@@ -83,62 +83,63 @@ explanation of each of the parameters::
 
 **name**
   This is used later in the project definition to indicate what jobs
-  should be run for events in the queue.
+  should be run for events in the pipeline.
 
 **manager**
-  There are currently two schemes for managing queues:
+  There are currently two schemes for managing pipelines:
 
-  *IndependentQueueManager*
-    Every event in this queue should be treated as independent of
-    other events in the queue.  This is appropriate when the order of
-    events in the queue doesn't matter because the results of the
-    actions this queue performs can not affect other events in the
-    queue.  For example, when a change is first uploaded for review,
+  *IndependentPipelineManager*
+    Every event in this pipeline should be treated as independent of
+    other events in the pipeline.  This is appropriate when the order of
+    events in the pipeline doesn't matter because the results of the
+    actions this pipeline performs can not affect other events in the
+    pipeline.  For example, when a change is first uploaded for review,
     you may want to run tests on that change to provide early feedback
     to reviewers.  At the end of the tests, the change is not going to
     be merged, so it is safe to run these tests in parallel without
-    regard to any other changes in the queue.  They are independent.
+    regard to any other changes in the pipeline.  They are independent.
 
-    Another type of queue that is independent is a post-merge queue.
-    In that case, the changes have already merged, so the results can
-    not affect any other events in the queue.
+    Another type of pipeline that is independent is a post-merge
+    pipeline. In that case, the changes have already merged, so the
+    results can not affect any other events in the pipeline.
 
-  *DependentQueueManager*
-    The dependent queue manager is designed for gating.  It ensures
+  *DependentPipelineManager*
+    The dependent pipeline manager is designed for gating.  It ensures
     that every change is tested exactly as it is going to be merged
     into the repository.  An ideal gating system would test one change
     at a time, applied to the tip of the repository, and only if that
     change passed tests would it be merged.  Then the next change in
     line would be tested the same way.  In order to achieve parallel
-    testing of changes, the dependent queue manager performs
+    testing of changes, the dependent pipeline manager performs
     speculative execution on changes.  It orders changes based on
-    their entry into the queue.  It begins testing all changes in
-    parallel, assuming that each change ahead in the queue will pass
+    their entry into the pipeline.  It begins testing all changes in
+    parallel, assuming that each change ahead in the pipeline will pass
     its tests.  If they all succeed, all the changes can be tested and
-    merged in parallel.  If a change near the front of the queue fails
-    its tests, each change behind it ignores whatever tests have been
-    completed and are tested again without the change in front.  This
-    way gate tests may run in parallel but still be tested correctly,
-    exactly as they will appear in the repository when merged.
+    merged in parallel.  If a change near the front of the pipeline
+    fails its tests, each change behind it ignores whatever tests have
+    been completed and are tested again without the change in front.
+    This way gate tests may run in parallel but still be tested
+    correctly, exactly as they will appear in the repository when
+    merged.
 
-    One important characteristic of the DependentQueueManager is that
+    One important characteristic of the DependentPipelineManager is that
     it analyzes the jobs that are triggered by different projects, and
     if those projects have jobs in common, it treats those projects as
     related, and they share a single virtual queue of changes.  Thus,
     if there is a job that performs integration testing on two
     projects, those two projects will automatically share a virtual
     change queue.  If a third project does not invoke that job, it
-    will be part of a separate virtual change queue, and changes to it
-    will not depend on changes to the first two jobs.
+    will be part of a separate virtual change queue, and changes to
+    it will not depend on changes to the first two jobs.
 
     For more detail on the theory and operation of Zuul's
-    DependentQueueManager, see: :doc:`gating`.
+    DependentPipelineManager, see: :doc:`gating`.
 
 **trigger**
-  This describes what Gerrit events should be placed in the queue.
+  This describes what Gerrit events should be placed in the pipeline.
   Triggers are not exclusive -- matching events may be placed in
-  multiple queues, and they will behave independently in each of the
-  queues they match.  Multiple triggers may be listed.  Further
+  multiple pipelines, and they will behave independently in each of the
+  pipelines they match.  Multiple triggers may be listed.  Further
   parameters describe the kind of events that match:
 
   *event*
@@ -192,14 +193,14 @@ explanation of each of the parameters::
 
 **start** 
   Uses the same syntax as **success**, but describes what Zuul should
-  do when a change is added to the queue manager.  This can be used,
+  do when a change is added to the pipeline manager.  This can be used,
   for example, to reset the value of the Verified review category.
   
-Some example queue configurations are included in the sample layout
-file.  The first is called a *check* queue::
+Some example pipeline configurations are included in the sample layout
+file.  The first is called a *check* pipeline::
 
   - name: check
-    manager: IndependentQueueManager
+    manager: IndependentPipelineManager
     trigger:
       - event: patchset-created
     success:
@@ -212,7 +213,7 @@ uploaded to Gerrit, and report +/-1 values to Gerrit in the
 ``verified`` review category. ::
 
   - name: gate
-    manager: DependentQueueManager
+    manager: DependentPipelineManager
     trigger:
       - event: comment-added
         approval:
@@ -231,7 +232,7 @@ creating a virtual queue of dependent changes and performing
 speculative execution of jobs. ::
 
   - name: post
-    manager: IndependentQueueManager
+    manager: IndependentPipelineManager
     trigger:
       - event: ref-updated
         ref: ^(?!refs/).*$
@@ -241,7 +242,7 @@ This will trigger jobs whenever a change is merged to a named branch
 useful for side effects such as creating per-commit tarballs. ::
 
   - name: silent
-    manager: IndependentQueueManager
+    manager: IndependentPipelineManager
     trigger:
       - event: patchset-created
 
@@ -270,7 +271,7 @@ each job as it builds a list from the project specification.
 
 **hold-following-changes (optional)**
   This is a boolean that indicates that changes that follow this
-  change in a dependent change queue should wait until this job
+  change in a dependent change pipeline should wait until this job
   succeeds before launching.  If this is applied to a very short job
   that can predict whether longer jobs will fail early, this can be
   used to reduce the number of jobs that Zuul will launch and
@@ -314,7 +315,7 @@ whether a change merges cleanly::
 Projects
 """"""""
 
-The projects section indicates what jobs should be run in each queue
+The projects section indicates what jobs should be run in each pipeline
 for events associated with each project.  It contains a list of
 projects.  Here is an example::
 
@@ -322,22 +323,22 @@ projects.  Here is an example::
     check:
       - project-merge:
         - project-unittest
-	- project-pep8
-	- project-pyflakes
+        - project-pep8
+        - project-pyflakes
     gate:
       - project-merge:
         - project-unittest
-	- project-pep8
-	- project-pyflakes
+        - project-pep8
+        - project-pyflakes
     post:
       - project-publish
 
 **name**
   The name of the project (as known by Gerrit).
 
-This is followed by a section for each of the queues defined above.
-Queues may be omitted if no jobs should run for this project in a
-given queue.  Within the queue section, the jobs that should be
+This is followed by a section for each of the pipelines defined above.
+Pipelines may be omitted if no jobs should run for this project in a
+given pipeline.  Within the pipeline section, the jobs that should be
 executed are listed.  If a job is entered as a dictionary key, then
 jobs contained within that key are only executed if the key job
 succeeds.  In the above example, project-unittest, project-pep8, and

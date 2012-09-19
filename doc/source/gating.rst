@@ -39,7 +39,7 @@ projects, it may take hours to test changes, and it is easy for
 developers to create changes at a rate faster than they can be tested
 and merged.
 
-Zuul's DependentQueueManager allows for parallel execution of test
+Zuul's DependentPipelineManager allows for parallel execution of test
 jobs for gating while ensuring changes are tested correctly, exactly
 as if they had been tested one at a time.  It does this by performing
 speculative execution of test jobs; it assumes that all jobs will
