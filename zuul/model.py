@@ -565,7 +565,7 @@ class TriggerEvent(object):
 
 class EventFilter(object):
     def __init__(self, types=[], branches=[], refs=[], approvals={},
-                                                comment_filters=[]):
+                 comment_filters=[]):
         self._types = types
         self._branches = branches
         self._refs = refs
