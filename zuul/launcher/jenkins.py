@@ -155,7 +155,7 @@ class ExtendedJenkins(jenkins.Jenkins):
         # Jenkins returns a 302 from this URL, unless Referer is not set,
         # then you get a 404.
         request = urllib2.Request(self.server + CANCEL_QUEUE % locals(),
-                                      headers={'Referer': self.server})
+                                  headers={'Referer': self.server})
         self.jenkins_open(request)
 
     def get_build_info(self, name, number):
