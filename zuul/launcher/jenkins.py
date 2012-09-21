@@ -227,8 +227,9 @@ class Jenkins(object):
             params['ZUUL_BRANCH'] = change.branch
             params['GERRIT_CHANGES'] = changes_str
             params['ZUUL_CHANGES'] = changes_str
-            params['ZUUL_REF'] = 'refs/zuul/%s/%s' % (change.branch,
-                change.current_build_set.ref)
+            params['ZUUL_REF'] = ('refs/zuul/%s/%s' %
+                                  (change.branch,
+                                   change.current_build_set.ref))
 
             zuul_changes = ' '.join(['%s,%s' % (c.number, c.patchset)
                                      for c in dependent_changes + [change]])

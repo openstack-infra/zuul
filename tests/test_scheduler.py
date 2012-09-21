@@ -206,12 +206,12 @@ class FakeChange(object):
     def getPatchsetCreatedEvent(self, patchset):
         event = {"type": "patchset-created",
                  "change": {"project": self.project,
-                           "branch": self.branch,
-                           "id": "I5459869c07352a31bfb1e7a8cac379cabfcb25af",
-                           "number": str(self.number),
-                           "subject": self.subject,
-                           "owner": {"name": "User Name"},
-                           "url": "https://hostname/3"},
+                            "branch": self.branch,
+                            "id": "I5459869c07352a31bfb1e7a8cac379cabfcb25af",
+                            "number": str(self.number),
+                            "subject": self.subject,
+                            "owner": {"name": "User Name"},
+                            "url": "https://hostname/3"},
                  "patchSet": self.patchsets[patchset - 1],
                  "uploader": {"name": "User Name"}}
         return event
@@ -305,8 +305,8 @@ class FakeChange(object):
         return json.loads(json.dumps(self.data))
 
     def setMerged(self):
-        if (self.depends_on_change
-            and self.depends_on_change.data['status'] != 'MERGED'):
+        if (self.depends_on_change and
+            self.depends_on_change.data['status'] != 'MERGED'):
             return
         if self.fail_merge:
             return
@@ -425,29 +425,34 @@ class FakeJenkinsJob(threading.Thread):
         if self.canceled:
             self.jenkins.all_jobs.remove(self)
             return
-        self.callback.jenkins_endpoint(FakeJenkinsEvent(
-                self.name, self.number, self.parameters,
-                'STARTED'))
+        self.callback.jenkins_endpoint(FakeJenkinsEvent(self.name,
+                                                        self.number,
+                                                        self.parameters,
+                                                        'STARTED'))
         if self.jenkins.hold_jobs_in_build:
             self._wait()
         self.log.debug("Job %s continuing" % (self.parameters['UUID']))
 
         result = 'SUCCESS'
-        if ('ZUUL_REF' in self.parameters) and self.jenkins.fakeShouldFailTest(
-            self.name,
-            self.parameters['ZUUL_REF']):
+        if (('ZUUL_REF' in self.parameters) and
+            self.jenkins.fakeShouldFailTest(self.name,
+                                            self.parameters['ZUUL_REF'])):
             result = 'FAILURE'
         if self.aborted:
             result = 'ABORTED'
 
         self.jenkins.fakeAddHistory(name=self.name, number=self.number,
                                     result=result)
-        self.callback.jenkins_endpoint(FakeJenkinsEvent(
-                self.name, self.number, self.parameters,
-                'COMPLETED', result))
-        self.callback.jenkins_endpoint(FakeJenkinsEvent(
-                self.name, self.number, self.parameters,
-                'FINISHED', result))
+        self.callback.jenkins_endpoint(FakeJenkinsEvent(self.name,
+                                                        self.number,
+                                                        self.parameters,
+                                                        'COMPLETED',
+                                                        result))
+        self.callback.jenkins_endpoint(FakeJenkinsEvent(self.name,
+                                                        self.number,
+                                                        self.parameters,
+                                                        'FINISHED',
+                                                        result))
         self.jenkins.all_jobs.remove(self)
 
 
@@ -482,8 +487,8 @@ class FakeJenkins(object):
                 self.log.debug("releasing job %s" % (job.parameters['UUID']))
                 job.release()
             else:
-                self.log.debug("not releasing job %s" % (
-                        job.parameters['UUID']))
+                self.log.debug("not releasing job %s" %
+                               (job.parameters['UUID']))
         self.log.debug("done releasing jobs %s (%s)" % (regex,
                                                         len(self.all_jobs)))
 

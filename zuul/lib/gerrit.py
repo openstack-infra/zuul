@@ -139,8 +139,8 @@ class Gerrit(object):
         data = json.loads(lines[0])
         if not data:
             return False
-        self.log.debug("Received data from Gerrit query: \n%s" % (
-                pprint.pformat(data)))
+        self.log.debug("Received data from Gerrit query: \n%s" %
+                       (pprint.pformat(data)))
         return data
 
     def _open(self):

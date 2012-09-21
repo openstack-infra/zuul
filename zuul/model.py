@@ -486,8 +486,7 @@ class Change(Changeish):
         return '<Change 0x%x %s>' % (id(self), self._id())
 
     def equals(self, other):
-        if (self.number == other.number and
-            self.patchset == other.patchset):
+        if self.number == other.number and self.patchset == other.patchset:
             return True
         return False
 
@@ -508,8 +507,7 @@ class Ref(Changeish):
         return self.newrev
 
     def equals(self, other):
-        if (self.ref == other.ref and
-            self.newrev == other.newrev):
+        if self.ref == other.ref and self.newrev == other.newrev:
             return True
         return False
 
