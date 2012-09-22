@@ -86,7 +86,7 @@ And multiple changes are separated by a carat ("^").  E.g.::
 The OpenStack project uses the following script to update the
 repository in a workspace and merge appropriate changes:
 
-  https://github.com/openstack/openstack-ci-puppet/blob/master/modules/jenkins_slave/files/slave_scripts/gerrit-git-prep.sh
+  https://github.com/openstack/openstack-ci-puppet/blob/master/modules/jenkins/files/slave_scripts/gerrit-git-prep.sh
 
 Gerrit events that do not include a change (e.g., ref-updated events
 which are emitted after a git ref is updated (i.e., a commit is merged
