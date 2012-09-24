@@ -99,6 +99,7 @@ class Gerrit(object):
             self,
             self.username,
             self.hostname,
+            self.port,
             keyfile=self.keyfile)
         self.watcher_thread.start()
 

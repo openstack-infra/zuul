@@ -87,7 +87,7 @@ class Gerrit(object):
         else:
             sshkey = None
         if config.has_option('gerrit', 'port'):
-            port = config.get('gerrit', 'port')
+            port = int(config.get('gerrit', 'port'))
         else:
             port = 29418
         self.gerrit = gerrit.Gerrit(self.server, user, port, sshkey)
@@ -282,7 +282,7 @@ class Gerrit(object):
         server = self.config.get('gerrit', 'server')
         user = self.config.get('gerrit', 'user')
         if self.config.has_option('gerrit', 'port'):
-            port = self.config.get('gerrit', 'port')
+            port = int(self.config.get('gerrit', 'port'))
         else:
             port = 29418
         url = 'ssh://%s@%s:%s/%s' % (user, server, port, project.name)
