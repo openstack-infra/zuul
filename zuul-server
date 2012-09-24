@@ -101,8 +101,11 @@ class Server(object):
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
         signal.signal(signal.SIGUSR1, self.exit_handler)
         while True:
-            signal.pause()
-
+            try:
+                signal.pause()
+            except KeyboardInterrupt:
+                print "Ctrl + C: asking scheduler to exit nicely...\n"
+                self.exit_handler( signal.SIGINT, None )
 
 if __name__ == '__main__':
     server = Server()
