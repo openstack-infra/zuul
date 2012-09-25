@@ -362,17 +362,14 @@ class FakeGerrit(object):
 
 class FakeJenkinsEvent(object):
     def __init__(self, name, number, parameters, phase, status=None):
-        data = {
-            'build': {
-                'full_url': 'https://server/job/%s/%s/' % (name, number),
-                'number': number,
-                'parameters': parameters,
-                'phase': phase,
-                'url': 'job/%s/%s/' % (name, number),
-            },
-            'name': name,
-            'url': 'job/%s/' % name,
-        }
+        data = {'build':
+                     {'full_url': 'https://server/job/%s/%s/' % (name, number),
+                      'number': number,
+                      'parameters': parameters,
+                      'phase': phase,
+                      'url': 'job/%s/%s/' % (name, number)},
+                     'name': name,
+                     'url': 'job/%s/' % name}
         if status:
             data['build']['status'] = status
         self.body = json.dumps(data)
@@ -813,7 +810,7 @@ class testScheduler(unittest.TestCase):
     def test_independent_queues(self):
         "Test that changes end up in the right queues"
         self.fake_jenkins.hold_jobs_in_build = True
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A = self.fake_gerrit.addFakeChange('org/project',  'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
         A.addApproval('CRVW', 2)
@@ -1120,18 +1117,13 @@ class testScheduler(unittest.TestCase):
 
     def test_post(self):
         "Test that post jobs run"
-        e = {
-            "type": "ref-updated",
-            "submitter": {
-                "name": "User Name",
-            },
-            "refUpdate": {
-                "oldRev": "90f173846e3af9154517b88543ffbd1691f31366",
-                "newRev": "d479a0bfcb34da57a31adb2a595c0cf687812543",
-                "refName": "master",
-                "project": "org/project",
-            }
-        }
+        e = {"type": "ref-updated",
+             "submitter": {"name": "User Name"},
+             "refUpdate": {"oldRev":
+                               "90f173846e3af9154517b88543ffbd1691f31366",
+                           "newRev":
+                               "d479a0bfcb34da57a31adb2a595c0cf687812543",
+                           "refName": "master", "project": "org/project"}}
         self.fake_gerrit.addEvent(e)
         self.waitUntilSettled()
 
