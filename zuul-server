@@ -16,7 +16,15 @@
 import argparse
 import ConfigParser
 import daemon
-import daemon.pidlockfile
+
+try:
+    import daemon.pidlockfile as pid_file_module
+    pid_file_module # workaround for pyflakes issue #13
+except:
+    # as of python-daemon 1.6 it doesn't bundle pidlockfile anymore
+    # instead it depends on lockfile-0.9.1 which uses pidfile.
+    import daemon.pidfile as pid_file_module
+
 import logging.config
 import os
 import signal
@@ -93,8 +101,11 @@ class Server(object):
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
         signal.signal(signal.SIGUSR1, self.exit_handler)
         while True:
-            signal.pause()
-
+            try:
+                signal.pause()
+            except KeyboardInterrupt:
+                print "Ctrl + C: asking scheduler to exit nicely...\n"
+                self.exit_handler( signal.SIGINT, None )
 
 if __name__ == '__main__':
     server = Server()
@@ -120,7 +131,7 @@ if __name__ == '__main__':
         pid_fn = os.path.expanduser(server.config.get('zuul', 'pidfile'))
     else:
         pid_fn = '/var/run/zuul/zuul.pid'
-    pid = daemon.pidlockfile.TimeoutPIDLockFile(pid_fn, 10)
+    pid = pid_file_module.TimeoutPIDLockFile(pid_fn, 10)
 
     if server.args.nodaemon:
         server.setup_logging()

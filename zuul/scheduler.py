@@ -98,8 +98,8 @@ class Scheduler(threading.Thread):
                                 branches=toList(trigger.get('branch')),
                                 refs=toList(trigger.get('ref')),
                                 approvals=approvals,
-                                comment_filters=toList(
-                        trigger.get('comment_filter')))
+                                comment_filters=
+                                toList(trigger.get('comment_filter')))
                 manager.event_filters.append(f)
 
         for config_job in data['jobs']:
@@ -533,8 +533,8 @@ class BasePipelineManager(object):
         if hasattr(change, 'refspec') and not ref:
             change.current_build_set.setConfiguration()
             ref = change.current_build_set.getRef()
-            merged = self.sched.merger.mergeChanges([change], ref,
-                         mode=model.MERGE_IF_NECESSARY)
+            mode = model.MERGE_IF_NECESSARY
+            merged = self.sched.merger.mergeChanges([change], ref, mode=mode)
             if not merged:
                 self.log.info("Unable to merge change %s" % change)
                 self.pipeline.setUnableToMerge(change)

@@ -155,7 +155,7 @@ class ExtendedJenkins(jenkins.Jenkins):
         # Jenkins returns a 302 from this URL, unless Referer is not set,
         # then you get a 404.
         request = urllib2.Request(self.server + CANCEL_QUEUE % locals(),
-                                      headers={'Referer': self.server})
+                                  headers={'Referer': self.server})
         self.jenkins_open(request)
 
     def get_build_info(self, name, number):
@@ -227,8 +227,9 @@ class Jenkins(object):
             params['ZUUL_BRANCH'] = change.branch
             params['GERRIT_CHANGES'] = changes_str
             params['ZUUL_CHANGES'] = changes_str
-            params['ZUUL_REF'] = 'refs/zuul/%s/%s' % (change.branch,
-                change.current_build_set.ref)
+            params['ZUUL_REF'] = ('refs/zuul/%s/%s' %
+                                  (change.branch,
+                                   change.current_build_set.ref))
 
             zuul_changes = ' '.join(['%s,%s' % (c.number, c.patchset)
                                      for c in dependent_changes + [change]])

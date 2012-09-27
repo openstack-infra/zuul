@@ -206,12 +206,12 @@ class FakeChange(object):
     def getPatchsetCreatedEvent(self, patchset):
         event = {"type": "patchset-created",
                  "change": {"project": self.project,
-                           "branch": self.branch,
-                           "id": "I5459869c07352a31bfb1e7a8cac379cabfcb25af",
-                           "number": str(self.number),
-                           "subject": self.subject,
-                           "owner": {"name": "User Name"},
-                           "url": "https://hostname/3"},
+                            "branch": self.branch,
+                            "id": "I5459869c07352a31bfb1e7a8cac379cabfcb25af",
+                            "number": str(self.number),
+                            "subject": self.subject,
+                            "owner": {"name": "User Name"},
+                            "url": "https://hostname/3"},
                  "patchSet": self.patchsets[patchset - 1],
                  "uploader": {"name": "User Name"}}
         return event
@@ -305,8 +305,8 @@ class FakeChange(object):
         return json.loads(json.dumps(self.data))
 
     def setMerged(self):
-        if (self.depends_on_change
-            and self.depends_on_change.data['status'] != 'MERGED'):
+        if (self.depends_on_change and
+            self.depends_on_change.data['status'] != 'MERGED'):
             return
         if self.fail_merge:
             return
@@ -362,14 +362,17 @@ class FakeGerrit(object):
 
 class FakeJenkinsEvent(object):
     def __init__(self, name, number, parameters, phase, status=None):
-        data = {'build':
-                     {'full_url': 'https://server/job/%s/%s/' % (name, number),
-                      'number': number,
-                      'parameters': parameters,
-                      'phase': phase,
-                      'url': 'job/%s/%s/' % (name, number)},
-                     'name': name,
-                     'url': 'job/%s/' % name}
+        data = {
+            'build': {
+                'full_url': 'https://server/job/%s/%s/' % (name, number),
+                'number': number,
+                'parameters': parameters,
+                'phase': phase,
+                'url': 'job/%s/%s/' % (name, number),
+            },
+            'name': name,
+            'url': 'job/%s/' % name,
+        }
         if status:
             data['build']['status'] = status
         self.body = json.dumps(data)
@@ -422,29 +425,34 @@ class FakeJenkinsJob(threading.Thread):
         if self.canceled:
             self.jenkins.all_jobs.remove(self)
             return
-        self.callback.jenkins_endpoint(FakeJenkinsEvent(
-                self.name, self.number, self.parameters,
-                'STARTED'))
+        self.callback.jenkins_endpoint(FakeJenkinsEvent(self.name,
+                                                        self.number,
+                                                        self.parameters,
+                                                        'STARTED'))
         if self.jenkins.hold_jobs_in_build:
             self._wait()
         self.log.debug("Job %s continuing" % (self.parameters['UUID']))
 
         result = 'SUCCESS'
-        if ('ZUUL_REF' in self.parameters) and self.jenkins.fakeShouldFailTest(
-            self.name,
-            self.parameters['ZUUL_REF']):
+        if (('ZUUL_REF' in self.parameters) and
+            self.jenkins.fakeShouldFailTest(self.name,
+                                            self.parameters['ZUUL_REF'])):
             result = 'FAILURE'
         if self.aborted:
             result = 'ABORTED'
 
         self.jenkins.fakeAddHistory(name=self.name, number=self.number,
                                     result=result)
-        self.callback.jenkins_endpoint(FakeJenkinsEvent(
-                self.name, self.number, self.parameters,
-                'COMPLETED', result))
-        self.callback.jenkins_endpoint(FakeJenkinsEvent(
-                self.name, self.number, self.parameters,
-                'FINISHED', result))
+        self.callback.jenkins_endpoint(FakeJenkinsEvent(self.name,
+                                                        self.number,
+                                                        self.parameters,
+                                                        'COMPLETED',
+                                                        result))
+        self.callback.jenkins_endpoint(FakeJenkinsEvent(self.name,
+                                                        self.number,
+                                                        self.parameters,
+                                                        'FINISHED',
+                                                        result))
         self.jenkins.all_jobs.remove(self)
 
 
@@ -479,8 +487,8 @@ class FakeJenkins(object):
                 self.log.debug("releasing job %s" % (job.parameters['UUID']))
                 job.release()
             else:
-                self.log.debug("not releasing job %s" % (
-                        job.parameters['UUID']))
+                self.log.debug("not releasing job %s" %
+                               (job.parameters['UUID']))
         self.log.debug("done releasing jobs %s (%s)" % (regex,
                                                         len(self.all_jobs)))
 
@@ -580,11 +588,16 @@ class FakeURLOpener(object):
         res = urlparse.urlparse(self.url)
         path = res.path
         project = '/'.join(path.split('/')[2:-2])
-        ret = ''
+        ret = '001e# service=git-upload-pack\n'
+        ret += ('000000a31270149696713ba7e06f1beb760f20d359c4abed HEAD\x00'
+                'multi_ack thin-pack side-band side-band-64k ofs-delta '
+                'shallow no-progress include-tag multi_ack_detailed no-done\n')
         path = os.path.join(UPSTREAM_ROOT, project)
         repo = git.Repo(path)
         for ref in repo.refs:
-            ret += ref.object.hexsha + '\t' + ref.path + '\n'
+            r = ref.object.hexsha + ' ' + ref.path + '\n'
+            ret += '%04x%s' % (len(r) + 4, r)
+        ret += '0000'
         return ret
 
 
@@ -810,7 +823,7 @@ class testScheduler(unittest.TestCase):
     def test_independent_queues(self):
         "Test that changes end up in the right queues"
         self.fake_jenkins.hold_jobs_in_build = True
-        A = self.fake_gerrit.addFakeChange('org/project',  'master', 'A')
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
         A.addApproval('CRVW', 2)
@@ -1117,13 +1130,18 @@ class testScheduler(unittest.TestCase):
 
     def test_post(self):
         "Test that post jobs run"
-        e = {"type": "ref-updated",
-             "submitter": {"name": "User Name"},
-             "refUpdate": {"oldRev":
-                               "90f173846e3af9154517b88543ffbd1691f31366",
-                           "newRev":
-                               "d479a0bfcb34da57a31adb2a595c0cf687812543",
-                           "refName": "master", "project": "org/project"}}
+        e = {
+            "type": "ref-updated",
+            "submitter": {
+                "name": "User Name",
+            },
+            "refUpdate": {
+                "oldRev": "90f173846e3af9154517b88543ffbd1691f31366",
+                "newRev": "d479a0bfcb34da57a31adb2a595c0cf687812543",
+                "refName": "master",
+                "project": "org/project",
+            }
+        }
         self.fake_gerrit.addEvent(e)
         self.waitUntilSettled()
 

@@ -117,12 +117,41 @@ class Gerrit(object):
                                   message, action)
 
     def _getInfoRefs(self, project):
-        url = "https://%s/p/%s/info/refs" % (self.server, project)
+        url = "https://%s/p/%s/info/refs?service=git-upload-pack" % (
+            self.server, project)
         data = urllib2.urlopen(url).read()
         ret = {}
-        for line in data.split('\n'):
-            if not line:
+        read_headers = False
+        read_advertisement = False
+        if data[4] != '#':
+            raise Exception("Gerrit repository does not support "
+                            "git-upload-pack")
+        i = 0
+        while i < len(data):
+            if len(data) - i < 4:
+                raise Exception("Invalid length in info/refs")
+            plen = int(data[i:i + 4], 16)
+            i += 4
+            # It's the length of the packet, including the 4 bytes of the
+            # length itself, unless it's null, in which case the length is
+            # not included.
+            if plen > 0:
+                plen -= 4
+            if len(data) - i < plen:
+                raise Exception("Invalid data in info/refs")
+            line = data[i:i + plen]
+            i += plen
+            if not read_headers:
+                if plen == 0:
+                    read_headers = True
                 continue
+            if not read_advertisement:
+                read_advertisement = True
+                continue
+            if plen == 0:
+                # The terminating null
+                continue
+            line = line.strip()
             revision, ref = line.split()
             ret[ref] = revision
         return ret
