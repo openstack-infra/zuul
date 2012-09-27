@@ -64,7 +64,11 @@ class JenkinsCallback(threading.Thread):
             return ['Zuul good.']
 
     def jenkins_endpoint(self, request):
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body)
+        except:
+            self.log.exception("Exception handling Jenkins notification:")
+            raise  # let wsgi handler process the issue
         if data:
             self.log.debug("Received data from Jenkins: \n%s" %
                            (pprint.pformat(data)))
