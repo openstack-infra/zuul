@@ -30,6 +30,81 @@ zuul.conf.  The location of the other two configuration files (as well
 as the location of the PID file when running Zuul as a server) are
 specified in a third section.
 
+The three sections of this config and their options are documented below.
+You can also find an example zuul.conf file in the git
+`repository
+<https://github.com/openstack-ci/zuul/blob/master/etc/zuul.conf-sample>`_
+
+jenkins
+"""""""
+
+**server**
+  URL for the root of the Jenkins HTTP server.
+  ``server=https://jenkins.example.com``
+
+**user**
+  User to authenticate against Jenkins with.
+  ``user=jenkins``
+
+**apikey**
+  Jenkins API Key credentials for the above user.
+  ``apikey=1234567890abcdef1234567890abcdef``
+
+gerrit
+""""""
+
+**server**
+  FQDN of Gerrit server.
+  ``server=review.example.com``
+
+**user**
+  User name to use when logging into above server via ssh.
+  ``user=jenkins``
+
+**sshkey**
+  Path to SSH key to use when logging into above server.
+  ``sshkey=/home/jenkins/.ssh/id_rsa``
+
+zuul
+""""
+
+**layout_config**
+  Path to layout config file.
+  ``layout_config=/etc/zuul/layout.yaml``
+
+**log_config**
+  Path to log config file.
+  ``log_config=/etc/zuul/logging.yaml``
+
+**pidfile**
+  Path to PID lock file.
+  ``pidfile=/var/run/zuul/zuul.pid``
+
+**state_dir**
+  Path to directory that Zuul should save state to.
+  ``state_dir=/var/lib/zuul``
+
+**git_dir**
+  Directory that Zuul should clone local git repositories to.
+  ``git_dir=/var/lib/zuul/git``
+
+**push_change_refs**
+  Boolean value (``true`` or ``false``) that determines if Zuul should
+  push change refs to the git origin server for the git repositories in
+  git_dir.
+  ``push_change_refs=true``
+
+**status_url**
+  URL that will be posted in Zuul comments made to Gerrit changes when
+  beginning Jenkins jobs for a change.
+  ``status_url=https://jenkins.example.com/zuul/status``
+
+**url_pattern**
+  If you are storing build logs external to Jenkins and wish to link to
+  those logs when Zuul makes comments on Gerrit changes for completed
+  jobs this setting configures what the URLs for those links should be.
+  ``http://logs.example.com/{change.number}/{change.patchset}/{pipeline.name}/{job.name}/{build.number}``
+
 layout.yaml
 ~~~~~~~~~~~
 

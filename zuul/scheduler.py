@@ -478,6 +478,8 @@ class BasePipelineManager(object):
             self.log.info("Reporting start, action %s change %s" %
                           (self.start_action, change))
             msg = "Starting %s jobs." % self.pipeline.name
+            if self.sched.config.has_option('zuul', 'status_url'):
+                msg += "\n" + self.sched.config.get('zuul', 'status_url')
             ret = self.sched.trigger.report(change, msg, self.start_action)
             if ret:
                 self.log.error("Reporting change start %s received: %s" %
