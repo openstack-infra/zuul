@@ -507,7 +507,9 @@ class Ref(Changeish):
         return self.newrev
 
     def equals(self, other):
-        if self.ref == other.ref and self.newrev == other.newrev:
+        if (self.project == other.project
+            and self.ref == other.ref
+            and self.newrev == other.newrev):
             return True
         return False
 
