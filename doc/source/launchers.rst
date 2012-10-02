@@ -1,3 +1,4 @@
+.. _launchers:
 :title: Launchers
 
 Launchers
