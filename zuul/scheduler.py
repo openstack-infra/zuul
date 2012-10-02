@@ -531,18 +531,18 @@ class BasePipelineManager(object):
 
     def _launchJobs(self, change, jobs):
         self.log.debug("Launching jobs for change %s" % change)
-        ref = change.current_build_set.getRef()
+        ref = change.current_build_set.ref
         if hasattr(change, 'refspec') and not ref:
             change.current_build_set.setConfiguration()
-            ref = change.current_build_set.getRef()
+            ref = change.current_build_set.ref
             mode = model.MERGE_IF_NECESSARY
-            merged = self.sched.merger.mergeChanges([change], ref, mode=mode)
-            if not merged:
+            commit = self.sched.merger.mergeChanges([change], ref, mode=mode)
+            if not commit:
                 self.log.info("Unable to merge change %s" % change)
                 self.pipeline.setUnableToMerge(change)
                 self.possiblyReportChange(change)
                 return
-
+            change.current_build_set.commit = commit
         for job in self.pipeline.findJobsToRun(change):
             self.log.debug("Found job %s for change %s" % (job, change))
             try:
@@ -956,19 +956,20 @@ class DependentPipelineManager(BasePipelineManager):
 
     def _launchJobs(self, change, jobs):
         self.log.debug("Launching jobs for change %s" % change)
-        ref = change.current_build_set.getRef()
+        ref = change.current_build_set.ref
         if hasattr(change, 'refspec') and not ref:
             change.current_build_set.setConfiguration()
-            ref = change.current_build_set.getRef()
+            ref = change.current_build_set.ref
             dependent_changes = self._getDependentChanges(change)
             dependent_changes.reverse()
             all_changes = dependent_changes + [change]
-            merged = self.sched.merger.mergeChanges(all_changes, ref)
-            if not merged:
+            commit = self.sched.merger.mergeChanges(all_changes, ref)
+            if not commit:
                 self.log.info("Unable to merge changes %s" % all_changes)
                 self.pipeline.setUnableToMerge(change)
                 self.possiblyReportChange(change)
                 return
+            change.current_build_set.commit = commit
         #TODO: remove this line after GERRIT_CHANGES is gone
         dependent_changes = self._getDependentChanges(change)
         for job in jobs:

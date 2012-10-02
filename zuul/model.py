@@ -402,6 +402,7 @@ class BuildSet(object):
         self.next_build_set = None
         self.previous_build_set = None
         self.ref = None
+        self.commit = None
         self.unable_to_merge = False
 
     def setConfiguration(self):
@@ -415,9 +416,6 @@ class BuildSet(object):
                 next_change = next_change.change_ahead
         if not self.ref:
             self.ref = 'Z' + uuid4().hex
-
-    def getRef(self):
-        return self.ref
 
     def addBuild(self, build):
         self.builds[build.job.name] = build

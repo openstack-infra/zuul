@@ -63,44 +63,71 @@ Zuul will pass some parameters to Jenkins for every job it launches.
 Check **This build is parameterized**, and add the following fields
 with the type **String Parameter**:
 
-**UUID**
+**ZUUL_UUID**
   Zuul provided key to link builds with Gerrit events
-**GERRIT_PROJECT**
-  Zuul provided project name
-**GERRIT_BRANCH**
-  Zuul provided branch name
-**GERRIT_CHANGES**
-  Zuul provided list of dependent changes to merge
+**ZUUL_REF**
+  Zuul provided ref that includes commit(s) to build
+**ZUUL_COMMIT**
+  The commit SHA1 at the head of ZUUL_REF
 
-You may find it useful to use the ``GERRIT_*`` variables in your job.
-In particular, ``GERRIT_CHANGES`` indicates the change or changes that
-should be tested.  If Zuul has decided that more than one change
-should be merged and tested together, they will all be listed in
-``GERRIT_CHANGES``.  The format for the description of one change is::
+Those are the only required parameters.  The UUID is needed for Zuul
+to keep track of the build, and the REF and COMMIT parameters are for
+use in preparing the git repo for the build.  The following parameters
+will be sent for all builds, but are not required so you do not need
+to configure Jenkins to accept them if you do not plan on using them:
 
-  project:branch:refspec
+**ZUUL_PROJECT**
+  The project that triggered this build
+**ZUUL_PIPELINE**
+  The Zuul pipeline that is building this job
 
-And multiple changes are separated by a carat ("^").  E.g.::
+The following parameters are optional and will only be provided for
+builds associated with changes (i.e., in response to patchset-created
+or comment-added events):
 
-  testproject:master:refs/changes/20/420/1^testproject:master:refs/changes/21/421/1"
+**ZUUL_BRANCH**
+  The target branch for the change that triggered this build
+**ZUUL_CHANGE**
+  The Gerrit change ID for the change that triggered this build
+**ZUUL_CHANGE_IDS**
+  All of the Gerrit change IDs that are included in this build (useful
+  when the DependentPipelineManager combines changes for testing)
+**ZUUL_PATCHSET**
+  The Gerrit patchset number for the change that triggered this build
 
-The OpenStack project uses the following script to update the
-repository in a workspace and merge appropriate changes:
+The following parameters are optional and will only be provided for
+post-merge (ref-updated) builds:
 
-  https://github.com/openstack/openstack-ci-puppet/blob/master/modules/jenkins/files/slave_scripts/gerrit-git-prep.sh
+**ZUUL_OLDREV**
+  The SHA1 of the old revision at this ref (recall the ref name is
+  in ZUUL_REF)
+**ZUUL_NEWREV**
+  The SHA1 of the new revision at this ref (recall the ref name is
+  in ZUUL_REF)
+**ZUUL_SHORT_OLDREV**
+  The shortened (7 character) SHA1 of the old revision
+**ZUUL_SHORT_NEWREV**
+  The shortened (7 character) SHA1 of the new revision
 
-Gerrit events that do not include a change (e.g., ref-updated events
-which are emitted after a git ref is updated (i.e., a commit is merged
-to master)) require a slightly different set of parameters:
+In order to test the correct build, configure the Jenkins Git SCM
+plugin as follows::
 
-**UUID**
-  Zuul provided key to link builds with Gerrit events
-**GERRIT_PROJECT**
-  Zuul provided project name
-**GERRIT_REFNAME**
-  Zuul provided ref name
-**GERRIT_OLDREV**
-  Zuul provided old reference for ref-updated
-**GERRIT_NEWREV**
-    Zuul provided new reference for ref-updated
+  Source Code Management:
+    Git
+      Repositories:
+        Repository URL:  <your Gerrit or Zuul repository URL>
+          Advanced:
+            Refspec: ${ZUUL_REF}
+      Branches to build:
+        Branch Specifier: ${ZUUL_COMMIT}
+	  Advanced:
+	    Clean after checkout: True
 
+That should be sufficient for a job that only builds a single project.
+If you have multiple interrelated projects (i.e., they share a Zuul
+Change Queue) that are built together, you may be able to configure
+the Git plugin to prepare them, or you may chose to use a shell script
+instead.  The OpenStack project uses the following script to prepare
+the workspace for its integration testing:
+
+  https://github.com/openstack-ci/devstack-gate/blob/master/devstack-vm-gate-wrap.sh

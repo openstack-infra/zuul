@@ -219,21 +219,23 @@ class Jenkins(object):
         dependent_changes = dependent_changes[:]
         dependent_changes.reverse()
         uuid = str(uuid4().hex)
-        params = dict(UUID=uuid,
-                      GERRIT_PROJECT=change.project.name,
+        params = dict(UUID=uuid,  # deprecated
+                      ZUUL_UUID=uuid,
+                      GERRIT_PROJECT=change.project.name,  # deprecated
                       ZUUL_PROJECT=change.project.name)
         params['ZUUL_PIPELINE'] = pipeline.name
         if hasattr(change, 'refspec'):
             changes_str = '^'.join(
                 ['%s:%s:%s' % (c.project.name, c.branch, c.refspec)
                  for c in dependent_changes + [change]])
-            params['GERRIT_BRANCH'] = change.branch
+            params['GERRIT_BRANCH'] = change.branch  # deprecated
             params['ZUUL_BRANCH'] = change.branch
-            params['GERRIT_CHANGES'] = changes_str
+            params['GERRIT_CHANGES'] = changes_str   # deprecated
             params['ZUUL_CHANGES'] = changes_str
             params['ZUUL_REF'] = ('refs/zuul/%s/%s' %
                                   (change.branch,
                                    change.current_build_set.ref))
+            params['ZUUL_COMMIT'] = change.current_build_set.commit
 
             zuul_changes = ' '.join(['%s,%s' % (c.number, c.patchset)
                                      for c in dependent_changes + [change]])
@@ -241,13 +243,40 @@ class Jenkins(object):
             params['ZUUL_CHANGE'] = str(change.number)
             params['ZUUL_PATCHSET'] = str(change.patchset)
         if hasattr(change, 'ref'):
-            params['GERRIT_REFNAME'] = change.ref
+            params['GERRIT_REFNAME'] = change.ref   # deprecated
             params['ZUUL_REFNAME'] = change.ref
-            params['GERRIT_OLDREV'] = change.oldrev
+            params['GERRIT_OLDREV'] = change.oldrev   # deprecated
             params['ZUUL_OLDREV'] = change.oldrev
-            params['GERRIT_NEWREV'] = change.newrev
+            params['GERRIT_NEWREV'] = change.newrev   # deprecated
             params['ZUUL_NEWREV'] = change.newrev
+            params['ZUUL_SHORT_OLDREV'] = change.oldrev[:7]
             params['ZUUL_SHORT_NEWREV'] = change.newrev[:7]
+
+            params['ZUUL_REF'] = change.ref
+            params['ZUUL_COMMIT'] = change.newrev
+
+        # This is what we should be heading toward for parameters:
+
+        # required:
+        # ZUUL_UUID
+        # ZUUL_REF (/refs/zuul/..., /refs/tags/foo, master)
+        # ZUUL_COMMIT
+
+        # optional:
+        # ZUUL_PROJECT
+        # ZUUL_PIPELINE
+
+        # optional (changes only):
+        # ZUUL_BRANCH
+        # ZUUL_CHANGE
+        # ZUUL_CHANGE_IDS
+        # ZUUL_PATCHSET
+
+        # optional (ref updated only):
+        # ZUUL_OLDREV
+        # ZUUL_NEWREV
+        # ZUUL_SHORT_NEWREV
+        # ZUUL_SHORT_OLDREV
 
         if callable(job.parameter_function):
             job.parameter_function(change, params)

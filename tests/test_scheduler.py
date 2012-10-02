@@ -128,11 +128,15 @@ def job_has_changes(*args):
     path = os.path.join(GIT_ROOT, project)
     repo = git.Repo(path)
     ref = job.parameters['ZUUL_REF']
+    sha = job.parameters['ZUUL_COMMIT']
     repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
+    repo_shas = [c.hexsha for c in repo.iter_commits(ref)]
     commit_messages = ['%s-1' % commit.subject for commit in commits]
     for msg in commit_messages:
         if msg not in repo_messages:
             return False
+    if repo_shas[0] != sha:
+        return False
     return True
 
 

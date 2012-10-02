@@ -81,6 +81,7 @@ class Repo(object):
 
     def setZuulRef(self, ref, commit):
         self.repo.refs[ref].commit = commit
+        return self.repo.refs[ref].commit
 
     def push(self, local, remote):
         self.log.debug("Pushing %s:%s to %s " % (local, remote,
@@ -112,6 +113,7 @@ class Merger(object):
 
     def mergeChanges(self, changes, target_ref=None, mode=None):
         projects = {}
+        commit = None
         # Reset all repos involved in the change set
         for change in changes:
             branches = projects.get(change.project, [])
@@ -148,7 +150,11 @@ class Merger(object):
                     repo.merge(change.refspec)
                 elif mode == model.CHERRY_PICK:
                     repo.cherryPick(change.refspec)
-                repo.setZuulRef(change.branch + '/' + target_ref, 'HEAD')
+                # Keep track of the last commit, it's the commit that
+                # will be passed to jenkins because it's the commit
+                # for the triggering change
+                commit = repo.setZuulRef(change.branch + '/' + target_ref,
+                                         'HEAD').hexsha
             except:
                 self.log.info("Unable to merge %s" % change)
                 return False
@@ -169,4 +175,4 @@ class Merger(object):
                         self.log.error("Ref %s did not show up in repo" % ref)
                         return False
 
-        return True
+        return commit
