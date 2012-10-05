@@ -493,7 +493,7 @@ class FakeJenkins(object):
                                                         len(self.all_jobs)))
 
     def fakeAllWaiting(self, regex=None):
-        all_jobs = self.all_jobs[:]
+        all_jobs = self.all_jobs[:] + self.queue[:]
         for job in all_jobs:
             self.log.debug("job %s %s" % (job.parameters['UUID'],
                                           job.isWaiting()))
@@ -1481,6 +1481,8 @@ class testScheduler(unittest.TestCase):
         self.fake_jenkins.fakeRelease('.*-merge')
         self.waitUntilSettled()
 
+        for x in jobs:
+            print x
         # all jobs running
         jobs[0].release()
         jobs[1].release()
