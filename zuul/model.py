@@ -339,7 +339,9 @@ class Job(object):
         if not self.branches:
             return True
         for branch in self.branches:
-            if branch.match(change.branch):
+            if hasattr(change, 'branch') and branch.match(change.branch):
+                return True
+            if hasattr(change, 'ref') and branch.match(change.ref):
                 return True
         return False
 
