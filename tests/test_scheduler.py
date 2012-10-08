@@ -1488,9 +1488,14 @@ class testScheduler(unittest.TestCase):
         for x in jobs:
             print x
         # all jobs running
-        jobs[0].release()
-        jobs[1].release()
-        jobs[2].release()
+
+        # Grab pointers to the jobs we want to release before
+        # releasing any, because list indexes may change as
+        # the jobs complete.
+        a, b, c = jobs[:3]
+        a.release()
+        b.release()
+        c.release()
         self.waitUntilSettled()
 
         self.fake_jenkins.hold_jobs_in_build = False
