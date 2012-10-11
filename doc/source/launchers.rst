@@ -70,11 +70,17 @@ with the type **String Parameter**:
 **ZUUL_COMMIT**
   The commit SHA1 at the head of ZUUL_REF
 
-Those are the only required parameters.  The UUID is needed for Zuul
-to keep track of the build, and the REF and COMMIT parameters are for
-use in preparing the git repo for the build.  The following parameters
-will be sent for all builds, but are not required so you do not need
-to configure Jenkins to accept them if you do not plan on using them:
+Those are the only required parameters.  The ZUUL_UUID is needed for Zuul to
+keep track of the build, and the ZUUL_REF and ZUUL_COMMIT parameters are for
+use in preparing the git repo for the build.
+
+.. note::
+    The GERRIT_PROJECT and UUID parameters are deprecated respectively in
+    favor of ZUUL_PROJECT and ZUUL_UUID.
+
+The following parameters will be sent for all builds, but are not required so
+you do not need to configure Jenkins to accept them if you do not plan on using
+them:
 
 **ZUUL_PROJECT**
   The project that triggered this build

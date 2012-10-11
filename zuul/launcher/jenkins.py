@@ -80,7 +80,8 @@ class JenkinsCallback(threading.Thread):
                 number = build.get('number')
                 params = build.get('parameters')
                 if params:
-                    uuid = params.get('UUID')
+                    # UUID is deprecated in favor of ZUUL_UUID
+                    uuid = params.get('ZUUL_UUID') or params.get('UUID')
                     if (status and url and uuid and phase and
                         phase == 'COMPLETED'):
                         self.jenkins.onBuildCompleted(uuid,
@@ -331,8 +332,9 @@ class Jenkins(object):
                     continue
                 parameters = action['parameters']
                 for param in parameters:
-                    if (param['name'] == 'UUID' and
-                        build.uuid == param['value']):
+                    # UUID is deprecated in favor of ZUUL_UUID
+                    if ((param['name'] in ['ZUUL_UUID', 'UUID'])
+                        and build.uuid == param['value']):
                         return item
         return False
 
