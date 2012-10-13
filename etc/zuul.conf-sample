@@ -10,7 +10,7 @@ sshkey=/home/jenkins/.ssh/id_rsa
 
 [zuul]
 layout_config=/etc/zuul/layout.yaml
-log_config=/etc/zuul/logging.yaml
+log_config=/etc/zuul/logging.conf
 pidfile=/var/run/zuul/zuul.pid
 state_dir=/var/lib/zuul
 git_dir=/var/lib/zuul/git
