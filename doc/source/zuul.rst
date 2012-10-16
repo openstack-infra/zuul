@@ -323,7 +323,32 @@ useful for side effects such as creating per-commit tarballs. ::
 
 This also triggers jobs when changes are uploaded to Gerrit, but no
 results are reported to Gerrit.  This is useful for jobs that are in
-development and not yet ready to be presented to developers.
+development and not yet ready to be presented to developers. ::
+
+  pipelines:
+    - name: post-merge
+      manager: IndependentPipelineManager
+      trigger:
+        - event: change-merged
+      success:
+        force-message: True
+      failure:
+        force-message: True
+
+The ``change-merged`` events happen when a change has been merged in the git
+repository. The change is thus closed and Gerrit will not accept modifications
+to the review scoring such as ``code-review`` or ``verified``. By using the
+``force-message: True`` parameter, Zuul will pass ``--force-message`` to the
+``gerrit review`` command, thus making sure the message is actually
+sent back to Gerrit regardless of approval scores.
+That kind of pipeline is nice to run regression or performance tests.
+
+.. note::
+  The ``change-merged`` event does not include the commit sha1 which can be
+  hazardous, it would let you report back to Gerrit though.  If you were to
+  build a tarball for a specific commit, you should consider insteading using
+  the ``ref-updated`` event which does include the commit sha1 (but lack the
+  Gerrit change number).
 
 Jobs
 """"
