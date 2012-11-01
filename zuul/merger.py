@@ -65,15 +65,24 @@ class Repo(object):
 
     def cherryPick(self, ref):
         self.log.debug("Cherry-picking %s" % ref)
-        origin = self.repo.remotes.origin
-        origin.fetch(ref)
+        self.fetch(ref)
         self.repo.git.cherry_pick("FETCH_HEAD")
 
     def merge(self, ref):
         self.log.debug("Merging %s" % ref)
-        origin = self.repo.remotes.origin
-        origin.fetch(ref)
+        self.fetch(ref)
         self.repo.git.merge("FETCH_HEAD")
+
+    def fetch(self, ref):
+        # The git.remote.fetch method may read in git progress info and
+        # interpret it improperly causing an AssertionError. Because the
+        # data was fetched properly subsequent fetches don't seem to fail.
+        # So try again if an AssertionError is caught.
+        origin = self.repo.remotes.origin
+        try:
+            origin.fetch(ref)
+        except AssertionError:
+            origin.fetch(ref)
 
     def createZuulRef(self, ref):
         ref = ZuulReference.create(self.repo, ref, 'HEAD')
