@@ -152,6 +152,7 @@ class Merger(object):
             except:
                 self.log.exception("Unable to checkout %s" % change.branch)
                 return False
+
             try:
                 if not mode:
                     mode = change.project.merge_mode
@@ -159,13 +160,21 @@ class Merger(object):
                     repo.merge(change.refspec)
                 elif mode == model.CHERRY_PICK:
                     repo.cherryPick(change.refspec)
+            except:
+                # Log exceptions at debug level because they are
+                # usually benign merge conflicts
+                self.log.debug("Unable to merge %s" % change, exc_info=True)
+                return False
+
+            try:
                 # Keep track of the last commit, it's the commit that
                 # will be passed to jenkins because it's the commit
                 # for the triggering change
-                commit = repo.setZuulRef(change.branch + '/' + target_ref,
-                                         'HEAD').hexsha
+                zuul_ref = change.branch + '/' + target_ref
+                commit = repo.setZuulRef(zuul_ref, 'HEAD').hexsha
             except:
-                self.log.info("Unable to merge %s" % change)
+                self.log.exception("Unable to set zuul ref %s for change %s" %
+                                   (zuul_ref, change))
                 return False
 
         if self.push_refs:
