@@ -13,18 +13,36 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from setuptools import find_packages
-from setuptools import setup
+import setuptools
+from zuul.openstack.common import setup
+from zuul.version import version_info as version
 
-setup(name='zuul',
-      version='1.0',
-      description="Trunk gating system",
-      license='Apache License (2.0)',
-      author='Hewlett-Packard Development Company, L.P.',
-      author_email='openstack@lists.launchpad.net',
-      url='http://launchpad.net/zuul',
-      scripts=['zuul-server'],
-      include_package_data=True,
-      zip_safe=False,
-      packages=find_packages(),
-      )
+requires = setup.parse_requirements()
+test_requires = setup.parse_requirements(['tools/test-requires'])
+depend_links = setup.parse_dependency_links()
+
+
+setuptools.setup(
+    name='zuul',
+    version=version.canonical_version_string(always=True),
+    author='Hewlett-Packard Development Company, L.P.',
+    author_email='openstack@lists.launchpad.net',
+    description='Trunk gating system',
+    license='Apache License, Version 2.0',
+    url='http://launchpad.net/zuul',
+    packages=setuptools.find_packages(exclude=['tests', 'tests.*']),
+    include_package_data=True,
+    cmdclass=setup.get_cmdclass(),
+    install_requires=requires,
+    dependency_links=depend_links,
+    scripts=['zuul-server'],
+    zip_safe=False,
+    classifiers=[
+        'Environment :: Console',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Information Technology',
+        'License :: OSI Approved :: Apache Software License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python'
+    ]
+)
