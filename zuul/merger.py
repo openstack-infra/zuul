@@ -84,6 +84,13 @@ class Repo(object):
         except AssertionError:
             origin.fetch(ref)
 
+        # If the repository is packed, and we fetch a change that is
+        # also entirely packed, the cache may be out of date for the
+        # same reason as reset() above.  Avoid these problems by
+        # recreating the repo object.
+        # https://bugs.launchpad.net/zuul/+bug/1078946
+        self.repo = git.Repo(self.local_path)
+
     def createZuulRef(self, ref):
         ref = ZuulReference.create(self.repo, ref, 'HEAD')
         return ref

@@ -29,6 +29,7 @@ import re
 import urllib2
 import urlparse
 import shutil
+import string
 import git
 
 import zuul
@@ -93,7 +94,8 @@ def init_repo(project):
     repo.git.clean('-x', '-f', '-d')
 
 
-def add_fake_change_to_repo(project, branch, change_num, patchset, msg, fn):
+def add_fake_change_to_repo(project, branch, change_num, patchset, msg, fn,
+                            large):
     path = os.path.join(UPSTREAM_ROOT, project)
     repo = git.Repo(path)
     ref = ChangeReference.create(repo, '1/%s/%s' % (change_num,
@@ -104,11 +106,21 @@ def add_fake_change_to_repo(project, branch, change_num, patchset, msg, fn):
     repo.git.clean('-x', '-f', '-d')
 
     path = os.path.join(UPSTREAM_ROOT, project)
-    fn = os.path.join(path, fn)
-    f = open(fn, 'w')
-    f.write("test %s %s %s\n" % (branch, change_num, patchset))
-    f.close()
-    repo.index.add([fn])
+    if not large:
+        fn = os.path.join(path, fn)
+        f = open(fn, 'w')
+        f.write("test %s %s %s\n" % (branch, change_num, patchset))
+        f.close()
+        repo.index.add([fn])
+    else:
+        for fni in range(100):
+            fn = os.path.join(path, str(fni))
+            f = open(fn, 'w')
+            for ci in range(4096):
+                f.write(random.choice(string.printable))
+            f.close()
+            repo.index.add([fn])
+
     return repo.index.commit(msg)
 
 
@@ -180,7 +192,7 @@ class FakeChange(object):
         self.addPatchset()
         self.data['submitRecords'] = self.getSubmitRecords()
 
-    def addPatchset(self, files=None):
+    def addPatchset(self, files=None, large=False):
         self.latest_patchset += 1
         if files:
             fn = files[0]
@@ -189,7 +201,7 @@ class FakeChange(object):
         msg = self.subject + '-' + str(self.latest_patchset)
         c = add_fake_change_to_repo(self.project, self.branch,
                                     self.number, self.latest_patchset,
-                                    msg, fn)
+                                    msg, fn, large)
         d = {'approvals': [],
              'createdOn': time.time(),
              'files': [{'file': '/COMMIT_MSG',
@@ -1556,6 +1568,31 @@ class testScheduler(unittest.TestCase):
         assert 'project-merge' in job_names
         assert 'project-test1' in job_names
         assert 'project-test2' in job_names
+        assert jobs[0]['result'] == 'SUCCESS'
+        assert jobs[1]['result'] == 'SUCCESS'
+        assert jobs[2]['result'] == 'SUCCESS'
+        assert A.data['status'] == 'MERGED'
+        assert A.reported == 2
+        self.assertEmptyQueues()
+
+    def test_merger_repack_large_change(self):
+        "Test that the merger works with large changes after a repack"
+        # https://bugs.launchpad.net/zuul/+bug/1078946
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        A.addPatchset(large=True)
+        path = os.path.join(UPSTREAM_ROOT, "org/project1")
+        os.system('git --git-dir=%s/.git repack -afd' % path)
+        path = os.path.join(GIT_ROOT, "org/project1")
+        os.system('git --git-dir=%s/.git repack -afd' % path)
+
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        jobs = self.fake_jenkins.job_history
+        job_names = [x['name'] for x in jobs]
+        assert 'project1-merge' in job_names
+        assert 'project1-test1' in job_names
+        assert 'project1-test2' in job_names
         assert jobs[0]['result'] == 'SUCCESS'
         assert jobs[1]['result'] == 'SUCCESS'
         assert jobs[2]['result'] == 'SUCCESS'
