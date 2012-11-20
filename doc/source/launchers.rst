@@ -29,9 +29,13 @@ and then visit the configuration page for the user:
   https://jenkins.example.com/user/USERNAME/configure
 
 And click **Show API Token** to retrieve the API token for that user.
-You will need this later when configuring Zuul.  Make sure that this
-user has appropriate permission to build any jobs that you want Zuul
-to trigger.
+You will need this later when configuring Zuul.  Appropriate user
+permissions must be set under the Jenkins security matrix: under the
+``Global`` group of permissions, check ``Read``, then under the ``Job``
+group of permissions, check ``Read`` and  ``Build``. Finally, under
+``Run`` check ``Update``.  If using a per project matrix, make sure the
+user permissions are properly set for any jobs that you want Zuul to
+trigger.
 
 Make sure the notification plugin is installed.  Visit the plugin
 manager on your jenkins:
