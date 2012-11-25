@@ -35,7 +35,6 @@ setuptools.setup(
     cmdclass=setup.get_cmdclass(),
     install_requires=requires,
     dependency_links=depend_links,
-    scripts=['zuul-server'],
     zip_safe=False,
     classifiers=[
         'Environment :: Console',
@@ -44,5 +43,10 @@ setuptools.setup(
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
         'Programming Language :: Python'
-    ]
+    ],
+    entry_points={
+        'console_scripts': [
+            'zuul-server=zuul.cmd.server:main',
+        ],
+    }
 )

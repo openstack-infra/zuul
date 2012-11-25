@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright 2012 Hewlett-Packard Development Company, L.P.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,7 +18,7 @@ import daemon
 
 try:
     import daemon.pidlockfile as pid_file_module
-    pid_file_module # workaround for pyflakes issue #13
+    pid_file_module  # workaround for pyflakes issue #13
 except:
     # as of python-daemon 1.6 it doesn't bundle pidlockfile anymore
     # instead it depends on lockfile-0.9.1 which uses pidfile.
@@ -105,9 +104,10 @@ class Server(object):
                 signal.pause()
             except KeyboardInterrupt:
                 print "Ctrl + C: asking scheduler to exit nicely...\n"
-                self.exit_handler( signal.SIGINT, None )
+                self.exit_handler(signal.SIGINT, None)
 
-if __name__ == '__main__':
+
+def main():
     server = Server()
     server.parse_arguments()
     server.read_config()
