@@ -15,14 +15,11 @@
 import argparse
 import ConfigParser
 import daemon
+import extras
 
-try:
-    import daemon.pidlockfile as pid_file_module
-    pid_file_module  # workaround for pyflakes issue #13
-except:
-    # as of python-daemon 1.6 it doesn't bundle pidlockfile anymore
-    # instead it depends on lockfile-0.9.1 which uses pidfile.
-    import daemon.pidfile as pid_file_module
+# as of python-daemon 1.6 it doesn't bundle pidlockfile anymore
+# instead it depends on lockfile-0.9.1 which uses pidfile.
+pid_file_module = extras.try_import(['daemon.pidlockfile', 'daemon.pidfile'])
 
 import logging.config
 import os
