@@ -5,6 +5,7 @@ apikey=1234567890abcdef1234567890abcdef
 
 [gerrit]
 server=review.example.com
+;baseurl=https://review.example.com/r
 user=jenkins
 sshkey=/home/jenkins/.ssh/id_rsa
 

@@ -81,6 +81,10 @@ class Gerrit(object):
         self.sched = sched
         self.config = config
         self.server = config.get('gerrit', 'server')
+        if config.has_option('gerrit', 'baseurl'):
+            self.baseurl = config.get('gerrit', 'baseurl')
+        else:
+            self.baseurl = 'https://%s' % self.server
         user = config.get('gerrit', 'user')
         if config.has_option('gerrit', 'sshkey'):
             sshkey = config.get('gerrit', 'sshkey')
@@ -117,8 +121,8 @@ class Gerrit(object):
                                   message, action)
 
     def _getInfoRefs(self, project):
-        url = "https://%s/p/%s/info/refs?service=git-upload-pack" % (
-            self.server, project)
+        url = "%s/p/%s/info/refs?service=git-upload-pack" % (
+            self.baseurl, project)
         try:
             data = urllib2.urlopen(url).read()
         except:

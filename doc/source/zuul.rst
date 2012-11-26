@@ -57,6 +57,10 @@ gerrit
   FQDN of Gerrit server.
   ``server=review.example.com``
 
+**baseurl**
+  Optional: path to Gerrit web interface. Defaults to ``https://<value
+  of server>/``. ``baseurl=https://review.example.com/review_site/``
+
 **user**
   User name to use when logging into above server via ssh.
   ``user=jenkins``
