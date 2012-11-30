@@ -54,7 +54,8 @@ class Repo(object):
                 continue
             self.repo.create_head(ref.remote_head, ref, force=True)
 
-        self.repo.head.reference = self.repo.heads.master
+        # Reset to remote HEAD (usually origin/master)
+        self.repo.head.reference = origin.refs['HEAD']
         self.repo.head.reset(index=True, working_tree=True)
         self.repo.git.clean('-x', '-f', '-d')
 
