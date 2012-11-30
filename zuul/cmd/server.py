@@ -19,7 +19,7 @@ import extras
 
 # as of python-daemon 1.6 it doesn't bundle pidlockfile anymore
 # instead it depends on lockfile-0.9.1 which uses pidfile.
-pid_file_module = extras.try_import(['daemon.pidlockfile', 'daemon.pidfile'])
+pid_file_module = extras.try_imports(['daemon.pidlockfile', 'daemon.pidfile'])
 
 import logging.config
 import os
