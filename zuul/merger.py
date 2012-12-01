@@ -108,13 +108,24 @@ class Repo(object):
 class Merger(object):
     log = logging.getLogger("zuul.Merger")
 
-    def __init__(self, trigger, working_root, push_refs):
+    def __init__(self, trigger, working_root, push_refs, sshkey):
         self.trigger = trigger
         self.repos = {}
         self.working_root = working_root
         if not os.path.exists(working_root):
             os.makedirs(working_root)
         self.push_refs = push_refs
+        if sshkey:
+            self._makeSSHWrapper(sshkey)
+
+    def _makeSSHWrapper(self, key):
+        name = os.path.join(self.working_root, '.ssh_wrapper')
+        fd = open(name, 'w')
+        fd.write('#!/bin/bash\n')
+        fd.write('ssh -i %s $@\n' % key)
+        fd.close()
+        os.chmod(name, 0755)
+        os.environ['GIT_SSH'] = name
 
     def addProject(self, project, url):
         try:
