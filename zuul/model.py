@@ -520,6 +520,8 @@ class TriggerEvent(object):
         # common
         self.type = None
         self.project_name = None
+        # Representation of the user account that performed the event.
+        self.account = None
         # patchset-created, comment-added, etc.
         self.change_number = None
         self.change_url = None
@@ -565,7 +567,7 @@ class TriggerEvent(object):
 
 class EventFilter(object):
     def __init__(self, types=[], branches=[], refs=[], approvals={},
-                 comment_filters=[]):
+                 comment_filters=[], email_filters=[]):
         self._types = types
         self._branches = branches
         self._refs = refs
@@ -573,6 +575,7 @@ class EventFilter(object):
         self.branches = [re.compile(x) for x in branches]
         self.refs = [re.compile(x) for x in refs]
         self.comment_filters = [re.compile(x) for x in comment_filters]
+        self.email_filters = [re.compile(x) for x in email_filters]
         self.approvals = approvals
 
     def __repr__(self):
@@ -628,6 +631,19 @@ class EventFilter(object):
                 matches_comment_filter = True
         if self.comment_filters and not matches_comment_filter:
             return False
+
+        # We better have an account provided by Gerrit to do
+        # email filtering.
+        if event.account is not None:
+            # email_filters are ORed
+            matches_email_filter = False
+            for email_filter in self.email_filters:
+                account_email = event.account.get('email')
+                if (account_email is not None and
+                        email_filter.search(account_email)):
+                    matches_email_filter = True
+            if self.email_filters and not matches_email_filter:
+                return False
 
         # approvals are ANDed
         for category, value in self.approvals.items():

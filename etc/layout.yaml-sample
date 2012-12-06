@@ -8,6 +8,16 @@ pipelines:
     failure:
       verified: -1
 
+  - name: tests
+    manager: IndependentPipelineManager
+    trigger:
+     - event: patchset-created
+       email_filter: ^.*@example.org$
+    success:
+      verified: 1
+    failure:
+      verified: -1
+
   - name: post
     manager: IndependentPipelineManager
     trigger:
@@ -35,6 +45,8 @@ jobs:
 projects:
   - name: example/project
     check:
+      - project-merge
+    tests:
       - project-merge:
         - project-test
     gate:

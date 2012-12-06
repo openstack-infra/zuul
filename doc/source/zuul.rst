@@ -246,6 +246,10 @@ explanation of each of the parameters::
   ``code-review: 2`` matches a ``+2`` vote on the code review category.
   Multiple approvals may be listed.
 
+  *email_filter*
+  This is used for any event.  It takes a regex applied on the performer
+  email. Example: ``email_filter: .*@example.org$``.
+
   *comment_filter*
   This is only used for ``comment-added`` events.  It accepts a list of
   regexes that are searched for in the comment string. If any of these
