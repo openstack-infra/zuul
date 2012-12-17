@@ -114,6 +114,12 @@ class Scheduler(threading.Thread):
             m = config_job.get('success-message', None)
             if m:
                 job.success_message = m
+            m = config_job.get('failure-pattern', None)
+            if m:
+                job.failure_pattern = m
+            m = config_job.get('success-pattern', None)
+            if m:
+                job.success_pattern = m
             m = config_job.get('hold-following-changes', False)
             if m:
                 job.hold_following_changes = True
@@ -706,16 +712,23 @@ class BasePipelineManager(object):
                    "rebase your change and upload a new patchset."
         else:
             if self.sched.config.has_option('zuul', 'url_pattern'):
-                pattern = self.sched.config.get('zuul', 'url_pattern')
+                url_pattern = self.sched.config.get('zuul', 'url_pattern')
             else:
-                pattern = None
+                url_pattern = None
             for job in self.pipeline.getJobs(changeish):
                 build = changeish.current_build_set.getBuild(job.name)
                 result = build.result
-                if result == 'SUCCESS' and job.success_message:
-                    result = job.success_message
-                elif result == 'FAILURE' and job.failure_message:
-                    result = job.failure_message
+                pattern = url_pattern
+                if result == 'SUCCESS':
+                    if job.success_message:
+                        result = job.success_message
+                    if job.success_pattern:
+                        pattern = job.success_pattern
+                elif result == 'FAILURE':
+                    if job.failure_message:
+                        result = job.failure_message
+                    if job.failure_pattern:
+                        pattern = job.failure_pattern
                 url = None
                 if build.url:
                     if pattern:

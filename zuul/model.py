@@ -314,6 +314,8 @@ class Job(object):
         self.name = name
         self.failure_message = None
         self.success_message = None
+        self.failure_pattern = None
+        self.success_pattern = None
         self.parameter_function = None
         self.hold_following_changes = False
         self.voting = True
@@ -329,6 +331,8 @@ class Job(object):
     def copy(self, other):
         self.failure_message = other.failure_message
         self.success_message = other.success_message
+        self.failure_pattern = other.failure_pattern
+        self.success_pattern = other.success_pattern
         self.parameter_function = other.parameter_function
         self.hold_following_changes = other.hold_following_changes
         self.voting = other.voting

@@ -18,6 +18,8 @@ Zuul has three configuration files:
 Examples of each of the three files can be found in the etc/ directory
 of the source distribution.
 
+.. _zuulconf:
+
 zuul.conf
 ~~~~~~~~~
 
@@ -376,6 +378,18 @@ each job as it builds a list from the project specification.
 
 **success-message (optional)**
   The message that should be reported to Gerrit if the job fails.
+
+**failure-pattern (optional)**
+  The URL that should be reported to Gerrit if the job fails.
+  Defaults to the Jenkins build URL or the url_pattern configured in
+  zuul.conf.  May be supplied as a string pattern with substitutions
+  as described in url_pattern in :ref:`zuulconf`.
+
+**success-pattern (optional)**
+  The URL that should be reported to Gerrit if the job succeeds.
+  Defaults to the Jenkins build URL or the url_pattern configured in
+  zuul.conf.  May be supplied as a string pattern with substitutions
+  as described in url_pattern in :ref:`zuulconf`.
 
 **hold-following-changes (optional)**
   This is a boolean that indicates that changes that follow this
