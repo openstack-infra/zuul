@@ -254,7 +254,10 @@ explanation of each of the parameters::
 
   *email_filter*
   This is used for any event.  It takes a regex applied on the performer
-  email. Example: ``email_filter: .*@example.org$``.
+  email, i.e Gerrit account email address.  If you want to specify
+  several email filters, you must use a YAML list.  Make sure to use non
+  greedy matchers and to escapes dots!
+  Example: ``email_filter: ^.*?@example\.org$``.
 
   *comment_filter*
   This is only used for ``comment-added`` events.  It accepts a list of
