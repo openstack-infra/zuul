@@ -622,6 +622,8 @@ class EventFilter(object):
         self._types = types
         self._branches = branches
         self._refs = refs
+        self._comment_filters = comment_filters
+        self._email_filters = email_filters
         self.types = [re.compile(x) for x in types]
         self.branches = [re.compile(x) for x in branches]
         self.refs = [re.compile(x) for x in refs]
@@ -641,6 +643,10 @@ class EventFilter(object):
         if self.approvals:
             ret += ' approvals: %s' % ', '.join(
                 ['%s:%s' % a for a in self.approvals.items()])
+        if self._comment_filters:
+            ret += ' comment_filters: %s' % ', '.join(self._comment_filters)
+        if self._email_filters:
+            ret += ' email_filters: %s' % ', '.join(self._email_filters)
         ret += '>'
 
         return ret
@@ -678,7 +684,7 @@ class EventFilter(object):
         matches_comment_filter = False
         for comment_filter in self.comment_filters:
             if (event.comment is not None and
-                    comment_filter.search(event.comment)):
+                comment_filter.search(event.comment)):
                 matches_comment_filter = True
         if self.comment_filters and not matches_comment_filter:
             return False
@@ -686,12 +692,12 @@ class EventFilter(object):
         # We better have an account provided by Gerrit to do
         # email filtering.
         if event.account is not None:
+            account_email = event.account.get('email')
             # email_filters are ORed
             matches_email_filter = False
             for email_filter in self.email_filters:
-                account_email = event.account.get('email')
                 if (account_email is not None and
-                        email_filter.search(account_email)):
+                    email_filter.search(account_email)):
                     matches_email_filter = True
             if self.email_filters and not matches_email_filter:
                 return False
