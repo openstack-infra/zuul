@@ -27,6 +27,7 @@ class Pipeline(object):
     """A top-level pipeline such as check, gate, post, etc."""
     def __init__(self, name):
         self.name = name
+        self.description = None
         self.job_trees = {}  # project -> JobTree
         self.manager = None
         self.queues = []
@@ -186,6 +187,24 @@ class Pipeline(object):
                 ret += self.formatStatus(head, html=True)
         return ret
 
+    def formatStatusJSON(self):
+        j_pipeline = dict(name=self.name,
+                          description=self.description)
+        j_queues = []
+        j_pipeline['change_queues'] = j_queues
+        for queue in self.queues:
+            j_queue = dict(name=queue.name)
+            j_queues.append(j_queue)
+            j_queue['heads'] = []
+            for head in queue.getHeads():
+                j_changes = []
+                c = head
+                while c:
+                    j_changes.append(self.formatChangeJSON(c))
+                    c = c.change_behind
+                j_queue['heads'].append(j_changes)
+        return j_pipeline
+
     def formatStatus(self, changeish, indent=0, html=False):
         indent_str = ' ' * indent
         ret = ''
@@ -222,6 +241,29 @@ class Pipeline(object):
         if changeish.change_behind:
             ret += '%sFollowed by:\n' % (indent_str)
             ret += self.formatStatus(changeish.change_behind, indent + 2, html)
+        return ret
+
+    def formatChangeJSON(self, changeish):
+        ret = {}
+        if hasattr(changeish, 'url') and changeish.url is not None:
+            ret['url'] = changeish.url
+        ret['id'] = changeish._id()
+        ret['project'] = changeish.project.name
+        ret['jobs'] = []
+        for job in self.getJobs(changeish):
+            build = changeish.current_build_set.getBuild(job.name)
+            if build:
+                result = build.result
+                url = build.url
+            else:
+                result = None
+                url = None
+            ret['jobs'].append(
+                dict(
+                    name=job.name,
+                    url=url,
+                    result=result,
+                    voting=job.voting))
         return ret
 
 

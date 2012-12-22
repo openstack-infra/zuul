@@ -49,9 +49,9 @@ class JenkinsCallback(threading.Thread):
 
     def app(self, environ, start_response):
         request = Request(environ)
-        start_response('200 OK', [('content-type', 'text/html')])
         if request.path == '/jenkins_endpoint':
             self.jenkins_endpoint(request)
+            start_response('200 OK', [('content-type', 'text/html')])
             return ['Zuul good.']
         elif request.path == '/status':
             try:
@@ -59,8 +59,19 @@ class JenkinsCallback(threading.Thread):
             except:
                 self.log.exception("Exception formatting status:")
                 raise
+            start_response('200 OK', [('content-type', 'text/html')])
+            return [ret]
+        elif request.path == '/status.json':
+            try:
+                ret = self.jenkins.sched.formatStatusJSON()
+            except:
+                self.log.exception("Exception formatting status:")
+                raise
+            start_response('200 OK', [('content-type', 'application/json'),
+                                      ('Access-Control-Allow-Origin', '*')])
             return [ret]
         else:
+            start_response('200 OK', [('content-type', 'text/html')])
             return ['Zuul good.']
 
     def jenkins_endpoint(self, request):

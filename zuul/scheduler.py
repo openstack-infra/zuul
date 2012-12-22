@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import json
 import logging
 import os
 import pickle
@@ -82,6 +83,7 @@ class Scheduler(threading.Thread):
 
         for conf_pipeline in data.get('pipelines', []):
             pipeline = Pipeline(conf_pipeline['name'])
+            pipeline.description = conf_pipeline.get('description')
             manager = globals()[conf_pipeline['manager']](self, pipeline)
             pipeline.setManager(manager)
 
@@ -406,6 +408,27 @@ class Scheduler(threading.Thread):
             ret += '\n'
         ret += '</pre></html>'
         return ret
+
+    def formatStatusJSON(self):
+        data = {}
+        if self._pause:
+            ret = '<p><b>Queue only mode:</b> preparing to '
+            if self._reconfigure:
+                ret += 'reconfigure'
+            if self._exit:
+                ret += 'exit'
+            ret += ', queue length: %s' % self.trigger_event_queue.qsize()
+            ret += '</p>'
+            data['message'] = ret
+
+        pipelines = []
+        data['pipelines'] = pipelines
+        keys = self.pipelines.keys()
+        keys.sort()
+        for key in keys:
+            pipeline = self.pipelines[key]
+            pipelines.append(pipeline.formatStatusJSON())
+        return json.dumps(data)
 
 
 class BasePipelineManager(object):

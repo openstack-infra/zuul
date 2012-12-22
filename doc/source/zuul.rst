@@ -166,6 +166,10 @@ explanation of each of the parameters::
   This is used later in the project definition to indicate what jobs
   should be run for events in the pipeline.
 
+**description**
+  This is an optional field that may be used to provide a textual
+  description of the pipeline.
+
 **manager**
   There are currently two schemes for managing pipelines:
 
