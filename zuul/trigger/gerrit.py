@@ -342,3 +342,9 @@ class Gerrit(object):
             port = 29418
         url = 'ssh://%s@%s:%s/%s' % (user, server, port, project.name)
         return url
+
+    def getGitwebUrl(self, project, sha=None):
+        url = '%s/gitweb?p=%s.git' % (self.baseurl, project)
+        if sha:
+            url += ';a=commitdiff;h=' + sha
+        return url

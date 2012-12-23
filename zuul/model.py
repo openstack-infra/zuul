@@ -247,6 +247,8 @@ class Pipeline(object):
         ret = {}
         if hasattr(changeish, 'url') and changeish.url is not None:
             ret['url'] = changeish.url
+        else:
+            ret['url'] = None
         ret['id'] = changeish._id()
         ret['project'] = changeish.project.name
         ret['jobs'] = []
@@ -607,6 +609,7 @@ class TriggerEvent(object):
             change.ref = self.ref
             change.oldrev = self.oldrev
             change.newrev = self.newrev
+            change.url = trigger.getGitwebUrl(project, sha=self.newrev)
 
         return change
 
