@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import extras
 import json
 import logging
 import os
@@ -19,11 +20,14 @@ import pickle
 import Queue
 import re
 import threading
+import time
 import yaml
 
 import model
 from model import Pipeline, Job, Project, ChangeQueue, EventFilter
 import merger
+
+statsd = extras.try_import('statsd.statsd')
 
 
 class Scheduler(threading.Thread):
@@ -214,6 +218,8 @@ class Scheduler(threading.Thread):
 
     def addEvent(self, event):
         self.log.debug("Adding trigger event: %s" % event)
+        if statsd:
+            statsd.incr('gerrit.event.%s' % event.type)
         self.queue_lock.acquire()
         self.trigger_event_queue.put(event)
         self.queue_lock.release()
@@ -221,6 +227,7 @@ class Scheduler(threading.Thread):
 
     def onBuildStarted(self, build):
         self.log.debug("Adding start event for build: %s" % build)
+        build.start_time = time.time()
         self.queue_lock.acquire()
         self.result_event_queue.put(('started', build))
         self.queue_lock.release()
@@ -228,6 +235,13 @@ class Scheduler(threading.Thread):
 
     def onBuildCompleted(self, build):
         self.log.debug("Adding complete event for build: %s" % build)
+        build.end_time = time.time()
+        if statsd:
+            dt = int((build.end_time - build.start_time) * 1000)
+            key = 'zuul.job.%s' % build.job.name
+            if build.result in ['SUCCESS', 'FAILURE']:
+                statsd.timing(key, dt)
+            statsd.incr(key)
         self.queue_lock.acquire()
         self.result_event_queue.put(('completed', build))
         self.queue_lock.release()
@@ -325,6 +339,11 @@ class Scheduler(threading.Thread):
         return False
 
     def run(self):
+        if statsd:
+            self.log.debug("Statsd enabled")
+        else:
+            self.log.debug("Statsd disabled because python statsd "
+                           "package not found")
         while True:
             self.log.debug("Run handler sleeping")
             self.wake_event.wait()

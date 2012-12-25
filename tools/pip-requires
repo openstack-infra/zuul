@@ -7,3 +7,4 @@ GitPython>=0.3.2.RC1
 lockfile
 python-daemon
 extras
+statsd==1.0.0
