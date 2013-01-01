@@ -224,6 +224,7 @@ class Scheduler(threading.Thread):
         self.trigger_event_queue.put(event)
         self.queue_lock.release()
         self.wake_event.set()
+        self.log.debug("Done adding trigger event: %s" % event)
 
     def onBuildStarted(self, build):
         self.log.debug("Adding start event for build: %s" % build)
@@ -232,20 +233,22 @@ class Scheduler(threading.Thread):
         self.result_event_queue.put(('started', build))
         self.queue_lock.release()
         self.wake_event.set()
+        self.log.debug("Done adding start event for build: %s" % build)
 
     def onBuildCompleted(self, build):
         self.log.debug("Adding complete event for build: %s" % build)
         build.end_time = time.time()
         if statsd:
-            dt = int((build.end_time - build.start_time) * 1000)
             key = 'zuul.job.%s' % build.job.name
             if build.result in ['SUCCESS', 'FAILURE']:
+                dt = int((build.end_time - build.start_time) * 1000)
                 statsd.timing(key, dt)
             statsd.incr(key)
         self.queue_lock.acquire()
         self.result_event_queue.put(('completed', build))
         self.queue_lock.release()
         self.wake_event.set()
+        self.log.debug("Done adding complete event for build: %s" % build)
 
     def reconfigure(self, config):
         self.log.debug("Prepare to reconfigure")

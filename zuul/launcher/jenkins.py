@@ -219,6 +219,9 @@ class Jenkins(object):
         self.callback_thread.start()
         self.cleanup_thread = JenkinsCleanup(self)
         self.cleanup_thread.start()
+        # Keep track of threads that will report a lost build in the future,
+        # in aid of testing
+        self.lost_threads = []
 
     def stop(self):
         self.cleanup_thread.stop()
@@ -326,6 +329,7 @@ class Jenkins(object):
                 # so that the change will get dropped.
                 t = threading.Thread(target=self.declareBuildLost,
                                      args=(build,))
+                self.lost_threads.append(t)
                 t.start()
         return build
 
@@ -333,6 +337,7 @@ class Jenkins(object):
         # Call this from a new thread to invoke onBuildCompleted from
         # a thread that has the queue lock.
         self.onBuildCompleted(build.uuid, 'LOST', None, None)
+        self.lost_threads.remove(threading.currentThread())
 
     def findBuildInQueue(self, build):
         for item in self.jenkins.get_queue_info():

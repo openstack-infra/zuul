@@ -696,6 +696,7 @@ class testScheduler(unittest.TestCase):
             if (self.sched.trigger_event_queue.empty() and
                 self.sched.result_event_queue.empty() and
                 self.fake_gerrit.event_queue.empty() and
+                len(self.jenkins.lost_threads) == 0 and
                 self.fake_jenkins.fakeAllWaiting()):
                 self.sched.queue_lock.release()
                 self.log.debug("...settled.")
@@ -712,7 +713,8 @@ class testScheduler(unittest.TestCase):
         for pipeline in self.sched.pipelines.values():
             for queue in pipeline.queues:
                 if len(queue.queue) != 0:
-                    print 'queue', queue.queue
+                    print 'pipeline %s queue %s contents %s' % (
+                        pipeline.name, queue.name, queue.queue)
                 assert len(queue.queue) == 0
                 if len(queue.severed_heads) != 0:
                     print 'heads', queue.severed_heads
@@ -1634,4 +1636,28 @@ class testScheduler(unittest.TestCase):
         assert jobs[2]['result'] == 'SUCCESS'
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
+        self.assertEmptyQueues()
+
+    def test_single_nonexistent_post_job(self):
+        "Test launching a single post job that doesn't exist"
+        self.fake_jenkins.nonexistent_jobs.append('project-post')
+        self.jenkins.launch_retry_timeout = 0.1
+
+        e = {
+            "type": "ref-updated",
+            "submitter": {
+                "name": "User Name",
+            },
+            "refUpdate": {
+                "oldRev": "90f173846e3af9154517b88543ffbd1691f31366",
+                "newRev": "d479a0bfcb34da57a31adb2a595c0cf687812543",
+                "refName": "master",
+                "project": "org/project",
+            }
+        }
+        self.fake_gerrit.addEvent(e)
+        self.waitUntilSettled()
+
+        jobs = self.fake_jenkins.job_history
+        assert len(jobs) == 0
         self.assertEmptyQueues()
