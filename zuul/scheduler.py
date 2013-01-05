@@ -218,8 +218,11 @@ class Scheduler(threading.Thread):
 
     def addEvent(self, event):
         self.log.debug("Adding trigger event: %s" % event)
-        if statsd:
-            statsd.incr('gerrit.event.%s' % event.type)
+        try:
+            if statsd:
+                statsd.incr('gerrit.event.%s' % event.type)
+        except:
+            self.log.exception("Exception reporting event stats")
         self.queue_lock.acquire()
         self.trigger_event_queue.put(event)
         self.queue_lock.release()
@@ -238,12 +241,15 @@ class Scheduler(threading.Thread):
     def onBuildCompleted(self, build):
         self.log.debug("Adding complete event for build: %s" % build)
         build.end_time = time.time()
-        if statsd:
-            key = 'zuul.job.%s' % build.job.name
-            if build.result in ['SUCCESS', 'FAILURE']:
-                dt = int((build.end_time - build.start_time) * 1000)
-                statsd.timing(key, dt)
-            statsd.incr(key)
+        try:
+            if statsd:
+                key = 'zuul.job.%s' % build.job.name
+                if build.result in ['SUCCESS', 'FAILURE'] and build.start_time:
+                    dt = int((build.end_time - build.start_time) * 1000)
+                    statsd.timing(key, dt)
+                statsd.incr(key)
+        except:
+            self.log.exception("Exception reporting runtime stats")
         self.queue_lock.acquire()
         self.result_event_queue.put(('completed', build))
         self.queue_lock.release()
