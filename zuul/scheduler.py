@@ -37,7 +37,6 @@ class Scheduler(threading.Thread):
         threading.Thread.__init__(self)
         self.wake_event = threading.Event()
         self.reconfigure_complete_event = threading.Event()
-        self.queue_lock = threading.Lock()
         self._pause = False
         self._reconfigure = False
         self._exit = False
@@ -223,18 +222,14 @@ class Scheduler(threading.Thread):
                 statsd.incr('gerrit.event.%s' % event.type)
         except:
             self.log.exception("Exception reporting event stats")
-        self.queue_lock.acquire()
         self.trigger_event_queue.put(event)
-        self.queue_lock.release()
         self.wake_event.set()
         self.log.debug("Done adding trigger event: %s" % event)
 
     def onBuildStarted(self, build):
         self.log.debug("Adding start event for build: %s" % build)
         build.start_time = time.time()
-        self.queue_lock.acquire()
         self.result_event_queue.put(('started', build))
-        self.queue_lock.release()
         self.wake_event.set()
         self.log.debug("Done adding start event for build: %s" % build)
 
@@ -250,9 +245,7 @@ class Scheduler(threading.Thread):
                 statsd.incr(key)
         except:
             self.log.exception("Exception reporting runtime stats")
-        self.queue_lock.acquire()
         self.result_event_queue.put(('completed', build))
-        self.queue_lock.release()
         self.wake_event.set()
         self.log.debug("Done adding complete event for build: %s" % build)
 
@@ -360,7 +353,6 @@ class Scheduler(threading.Thread):
             if self._stopped:
                 return
             self.log.debug("Run handler awake")
-            self.queue_lock.acquire()
             try:
                 if not self._pause:
                     if not self.trigger_event_queue.empty():
@@ -381,7 +373,6 @@ class Scheduler(threading.Thread):
                         self.wake_event.set()
             except:
                 self.log.exception("Exception in run handler:")
-            self.queue_lock.release()
 
     def process_event_queue(self):
         self.log.debug("Fetching trigger event")
@@ -390,6 +381,7 @@ class Scheduler(threading.Thread):
         project = self.projects.get(event.project_name)
         if not project:
             self.log.warning("Project %s not found" % event.project_name)
+            self.trigger_event_queue.task_done()
             return
 
         for pipeline in self.pipelines.values():
@@ -400,6 +392,7 @@ class Scheduler(threading.Thread):
             self.log.info("Adding %s, %s to %s" %
                           (project, change, pipeline))
             pipeline.manager.addChange(change)
+        self.trigger_event_queue.task_done()
 
     def process_result_queue(self):
         self.log.debug("Fetching result event")
@@ -408,11 +401,14 @@ class Scheduler(threading.Thread):
         for pipeline in self.pipelines.values():
             if event_type == 'started':
                 if pipeline.manager.onBuildStarted(build):
+                    self.result_event_queue.task_done()
                     return
             elif event_type == 'completed':
                 if pipeline.manager.onBuildCompleted(build):
+                    self.result_event_queue.task_done()
                     return
         self.log.warning("Build %s not found by any queue manager" % (build))
+        self.result_event_queue.task_done()
 
     def formatStatusHTML(self):
         ret = '<html><pre>'

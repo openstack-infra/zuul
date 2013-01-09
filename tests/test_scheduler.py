@@ -459,6 +459,7 @@ class FakeJenkinsJob(threading.Thread):
 
         self.jenkins.fakeAddHistory(name=self.name, number=self.number,
                                     result=result)
+        self.jenkins.lock.acquire()
         self.callback.jenkins_endpoint(FakeJenkinsEvent(self.name,
                                                         self.number,
                                                         self.parameters,
@@ -470,6 +471,7 @@ class FakeJenkinsJob(threading.Thread):
                                                         'FINISHED',
                                                         result))
         self.jenkins.all_jobs.remove(self)
+        self.jenkins.lock.release()
 
 
 class FakeJenkins(object):
@@ -485,6 +487,7 @@ class FakeJenkins(object):
         self.hold_jobs_in_build = False
         self.fail_tests = {}
         self.nonexistent_jobs = []
+        self.lock = threading.Lock()
 
     def fakeEnqueue(self, job):
         self.queue.append(job)
@@ -691,17 +694,22 @@ class testScheduler(unittest.TestCase):
                 print self.sched.result_event_queue.empty(),
                 print self.fake_gerrit.event_queue.empty(),
                 raise Exception("Timeout waiting for Zuul to settle")
+            # Make sure our fake jenkins doesn't end any jobs
+            # (and therefore, emit events) while we're checking
+            self.fake_jenkins.lock.acquire()
+            # Join ensures that the queue is empty _and_ events have been
+            # processed
             self.fake_gerrit.event_queue.join()
-            self.sched.queue_lock.acquire()
+            self.sched.trigger_event_queue.join()
+            self.sched.result_event_queue.join()
             if (self.sched.trigger_event_queue.empty() and
                 self.sched.result_event_queue.empty() and
                 self.fake_gerrit.event_queue.empty() and
-                len(self.jenkins.lost_threads) == 0 and
                 self.fake_jenkins.fakeAllWaiting()):
-                self.sched.queue_lock.release()
+                self.fake_jenkins.lock.release()
                 self.log.debug("...settled.")
                 return
-            self.sched.queue_lock.release()
+            self.fake_jenkins.lock.release()
             self.sched.wake_event.wait(0.1)
 
     def countJobResults(self, jobs, result):
