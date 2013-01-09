@@ -120,7 +120,8 @@ class Pipeline(object):
             if not job.voting:
                 continue
             build = changeish.current_build_set.getBuild(job.name)
-            if build and build.result == 'FAILURE':
+            # Treat LOST jobs as failures
+            if build and (build.result == 'FAILURE' or build.result == 'LOST'):
                 return True
         return False
 
