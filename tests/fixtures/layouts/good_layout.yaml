@@ -1,0 +1,58 @@
+includes:
+  - python-file: openstack_functions.py
+
+pipelines:
+  - name: check
+    manager: IndependentPipelineManager
+    trigger:
+      - event: patchset-created
+    success:
+      verified: 1
+    failure:
+      verified: -1
+
+  - name: post
+    manager: IndependentPipelineManager
+    trigger:
+      - event: ref-updated
+        ref: ^(?!refs/).*$
+
+  - name: gate
+    manager: DependentPipelineManager
+    trigger:
+      - event: comment-added
+        approval:
+          - approved: 1
+    success:
+      verified: 2
+      code-review: 1
+      submit: true
+    failure:
+      verified: -2
+      workinprogress: true
+    start:
+      verified: 0
+
+jobs:
+  - name: ^.*-merge$
+    failure-message: Unable to merge change
+    hold-following-changes: true
+  - name: test-merge
+    parameter-function: devstack_params
+  - name: test-test
+  - name: test-merge2
+    success-pattern: http://logs.example.com/{change.number}/{change.patchset}/{pipeline.name}/{job.name}/{build.number}/success
+    failure-pattern: http://logs.example.com/{change.number}/{change.patchset}/{pipeline.name}/{job.name}/{build.number}/fail
+
+projects:
+  - name: test-org/test
+    merge-mode: cherry-pick
+    check:
+      - test-merge2:
+          - test-thing1:
+              - test-thing2
+              - test-thing3
+    gate:
+      - test-thing
+    post:
+      - test-post

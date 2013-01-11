@@ -1,0 +1,4 @@
+pipelines:
+
+projects:
+  - name: foo

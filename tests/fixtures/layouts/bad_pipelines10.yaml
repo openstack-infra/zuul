@@ -1,0 +1,7 @@
+pipelines:
+  - name: check
+    manager: IndependentPipelineManager
+
+projects:
+  - name: foo
+    merge-mode: foo

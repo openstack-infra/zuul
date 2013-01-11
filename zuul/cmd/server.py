@@ -1,4 +1,5 @@
 # Copyright 2012 Hewlett-Packard Development Company, L.P.
+# Copyright 2013 OpenStack Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -23,6 +24,7 @@ pid_file_module = extras.try_imports(['daemon.pidlockfile', 'daemon.pidfile'])
 
 import logging.config
 import os
+import sys
 import signal
 
 # No zuul imports here because they pull in paramiko which must not be
@@ -39,8 +41,12 @@ class Server(object):
         parser = argparse.ArgumentParser(description='Project gating system.')
         parser.add_argument('-c', dest='config',
                             help='specify the config file')
+        parser.add_argument('-l', dest='layout',
+                            help='specify the layout file')
         parser.add_argument('-d', dest='nodaemon', action='store_true',
                             help='do not run as a daemon')
+        parser.add_argument('-t', dest='validate', action='store_true',
+                            help='validate layout file syntax')
         self.args = parser.parse_args()
 
     def read_config(self):
@@ -77,6 +83,16 @@ class Server(object):
         signal.signal(signal.SIGUSR1, signal.SIG_IGN)
         self.sched.exit()
 
+    def test_config(self):
+        # See comment at top of file about zuul imports
+        import zuul.scheduler
+        import zuul.launcher.jenkins
+        import zuul.trigger.gerrit
+
+        logging.basicConfig(level=logging.DEBUG)
+        self.sched = zuul.scheduler.Scheduler()
+        self.sched.testConfig(self.config.get('zuul', 'layout_config'))
+
     def main(self):
         # See comment at top of file about zuul imports
         import zuul.scheduler
@@ -108,6 +124,13 @@ def main():
     server = Server()
     server.parse_arguments()
     server.read_config()
+
+    if server.args.layout:
+        server.config.set('zuul', 'layout_config', server.args.layout)
+
+    if server.args.validate:
+        server.test_config()
+        sys.exit(0)
 
     if server.config.has_option('zuul', 'state_dir'):
         state_dir = os.path.expanduser(server.config.get('zuul', 'state_dir'))

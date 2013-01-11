@@ -8,3 +8,4 @@ ChangeLog
 config
 doc/build/*
 zuul/versioninfo
+dist/

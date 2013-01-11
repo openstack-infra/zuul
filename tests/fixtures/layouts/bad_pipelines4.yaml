@@ -1,0 +1,8 @@
+pipelines:
+  - name: check
+    manager: IndependentPipelineManager
+    trigger:
+      - event: non-event
+
+projects:
+  - name: foo

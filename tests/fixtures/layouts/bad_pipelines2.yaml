@@ -1,0 +1,6 @@
+pipelines:
+  - noname: check
+    manager: IndependentPipelineManager
+
+projects:
+  - name: foo

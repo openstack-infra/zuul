@@ -1,4 +1,5 @@
 # Copyright 2012 Hewlett-Packard Development Company, L.P.
+# Copyright 2013 OpenStack Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -23,6 +24,7 @@ import threading
 import time
 import yaml
 
+import layoutvalidator
 import model
 from model import Pipeline, Job, Project, ChangeQueue, EventFilter
 import merger
@@ -58,6 +60,10 @@ class Scheduler(threading.Thread):
         self._stopped = True
         self.wake_event.set()
 
+    def testConfig(self, config_path):
+        self._init()
+        self._parseConfig(config_path)
+
     def _parseConfig(self, config_path):
         def toList(item):
             if not item:
@@ -73,6 +79,9 @@ class Scheduler(threading.Thread):
                                 config_path)
         config_file = open(config_path)
         data = yaml.load(config_file)
+
+        validator = layoutvalidator.LayoutValidator()
+        validator.validate(data)
 
         self._config_env = {}
         for include in data.get('includes', []):
@@ -109,7 +118,7 @@ class Scheduler(threading.Thread):
                                 toList(trigger.get('email_filter')))
                 manager.event_filters.append(f)
 
-        for config_job in data['jobs']:
+        for config_job in data.get('jobs', []):
             job = self.getJob(config_job['name'])
             # Be careful to only set attributes explicitly present on
             # this job, to avoid squashing attributes set by a meta-job.
@@ -154,7 +163,7 @@ class Scheduler(threading.Thread):
                 if isinstance(job, str):
                     job_tree.addJob(self.getJob(job))
 
-        for config_project in data['projects']:
+        for config_project in data.get('projects', []):
             project = Project(config_project['name'])
             self.projects[config_project['name']] = project
             mode = config_project.get('merge-mode')
@@ -170,23 +179,25 @@ class Scheduler(threading.Thread):
         # metajobs so that getJob isn't doing anything weird.
         self.metajobs = {}
 
-        # TODO(jeblair): check that we don't end up with jobs like
-        # "foo - bar" because a ':' is missing in the yaml for a dependent job
         for pipeline in self.pipelines.values():
             pipeline.manager._postConfig()
 
+    def _setupMerger(self):
         if self.config.has_option('zuul', 'git_dir'):
             merge_root = self.config.get('zuul', 'git_dir')
         else:
             merge_root = '/var/lib/zuul/git'
+
         if self.config.has_option('zuul', 'push_change_refs'):
             push_refs = self.config.getboolean('zuul', 'push_change_refs')
         else:
             push_refs = False
+
         if self.config.has_option('gerrit', 'sshkey'):
             sshkey = self.config.get('gerrit', 'sshkey')
         else:
             sshkey = None
+
         self.merger = merger.Merger(self.trigger, merge_root, push_refs,
                                     sshkey)
         for project in self.projects.values():
@@ -323,6 +334,7 @@ class Scheduler(threading.Thread):
             self.log.debug("Performing reconfiguration")
             self._init()
             self._parseConfig(self.config.get('zuul', 'layout_config'))
+            self._setupMerger()
             self._pause = False
             self._reconfigure = False
             self.reconfigure_complete_event.set()
