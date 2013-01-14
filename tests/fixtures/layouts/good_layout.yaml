@@ -19,6 +19,8 @@ pipelines:
 
   - name: gate
     manager: DependentPipelineManager
+    success-message: Your change is awesome.
+    failure-message: Build failed.  For information on how to proceed, see http://wiki.example.org/Test_Failures
     trigger:
       - event: comment-added
         approval:

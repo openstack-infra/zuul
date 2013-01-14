@@ -45,6 +45,8 @@ class LayoutSchema(object):
     pipeline = {v.required('name'): str,
                 v.required('manager'): manager,
                 'description': str,
+                'success-message': str,
+                'failure-message': str,
                 'trigger': toList(trigger),
                 'success': variable_dict,
                 'failure': variable_dict,

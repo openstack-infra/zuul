@@ -170,6 +170,16 @@ explanation of each of the parameters::
   This is an optional field that may be used to provide a textual
   description of the pipeline.
 
+**success-message**
+  An optional field that supplies the introductory text in message
+  reported back to Gerrit when all the voting builds are successful.
+  Defaults to "Build successful."
+
+**failure-message**
+  An optional field that supplies the introductory text in message
+  reported back to Gerrit when at least one voting build fails.
+  Defaults to "Build failed."
+
 **manager**
   There are currently two schemes for managing pipelines:
 

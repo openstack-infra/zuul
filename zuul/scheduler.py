@@ -96,6 +96,10 @@ class Scheduler(threading.Thread):
         for conf_pipeline in data.get('pipelines', []):
             pipeline = Pipeline(conf_pipeline['name'])
             pipeline.description = conf_pipeline.get('description')
+            pipeline.failure_message = conf_pipeline.get('failure-message',
+                                                         "Build failed.")
+            pipeline.success_message = conf_pipeline.get('success-message',
+                                                         "Build succeeded.")
             manager = globals()[conf_pipeline['manager']](self, pipeline)
             pipeline.setManager(manager)
 
@@ -759,9 +763,9 @@ class BasePipelineManager(object):
     def formatReport(self, changeish):
         ret = ''
         if self.pipeline.didAllJobsSucceed(changeish):
-            ret += 'Build successful\n\n'
+            ret += self.pipeline.success_message + '\n\n'
         else:
-            ret += 'Build failed\n\n'
+            ret += self.pipeline.failure_message + '\n\n'
 
         if changeish.dequeued_needing_change:
             ret += "This change depends on a change that failed to merge."

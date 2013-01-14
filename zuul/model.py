@@ -28,6 +28,8 @@ class Pipeline(object):
     def __init__(self, name):
         self.name = name
         self.description = None
+        self.failure_message = None
+        self.success_message = None
         self.job_trees = {}  # project -> JobTree
         self.manager = None
         self.queues = []
