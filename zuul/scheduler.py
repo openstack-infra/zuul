@@ -598,6 +598,7 @@ class BasePipelineManager(object):
             if self.start_action:
                 self.reportStart(change)
             change_queue.enqueueChange(change)
+            self.reportStats(change)
             self.enqueueChangesBehind(change)
         else:
             self.log.error("Unable to find change queue for project %s" %
@@ -730,6 +731,7 @@ class BasePipelineManager(object):
                            change)
             change_queue = self.pipeline.getQueue(change.project)
             change_queue.dequeueChange(change)
+            self.reportStats(change)
             return True
 
     def reportChange(self, change):
@@ -909,6 +911,37 @@ class BasePipelineManager(object):
 
         ret = ret.format(**locals())
         return ret
+
+    def reportStats(self, change):
+        if not statsd:
+            return
+        try:
+            # Update the guage on enqueue and dequeue, but timers only
+            # when dequeing.
+            if change.dequeue_time:
+                dt = int((change.dequeue_time - change.enqueue_time) * 1000)
+            else:
+                dt = None
+            changes = len(self.pipeline.getAllChanges())
+
+            # stats.timers.zuul.pipeline.NAME.resident_time
+            # stats_counts.zuul.pipeline.NAME.total_changes
+            # stats.gauges.zuul.pipeline.NAME.current_changes
+            key = 'zuul.pipeline.%s' % self.pipeline.name
+            statsd.gauge(key + '.current_changes', changes)
+            if dt:
+                statsd.timing(key + '.resident_time', dt)
+                statsd.incr(key + '.total_changes')
+
+            # stats.timers.zuul.pipeline.NAME.ORG.PROJECT.resident_time
+            # stats_counts.zuul.pipeline.NAME.ORG.PROJECT.total_changes
+            project_name = change.project.name.replace('/', '.')
+            key += '.%s' % project_name
+            if dt:
+                statsd.timing(key + '.resident_time', dt)
+                statsd.incr(key + '.total_changes')
+        except:
+            self.log.exception("Exception reporting pipeline stats")
 
 
 class IndependentPipelineManager(BasePipelineManager):

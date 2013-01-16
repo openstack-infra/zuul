@@ -306,6 +306,7 @@ class ChangeQueue(object):
             change.change_ahead = self.queue[-1]
             change.change_ahead.change_behind = change
         self.queue.append(change)
+        change.enqueue_time = time.time()
 
     def dequeueChange(self, change):
         if change in self.queue:
@@ -318,6 +319,7 @@ class ChangeQueue(object):
             change.change_behind.change_ahead = change.change_ahead
         change.change_ahead = None
         change.change_behind = None
+        change.dequeue_time = time.time()
 
     def addSeveredHead(self, change):
         self.severed_heads.append(change)
@@ -495,6 +497,8 @@ class Changeish(object):
         self.build_sets.append(self.current_build_set)
         self.change_ahead = None
         self.change_behind = None
+        self.enqueue_time = None
+        self.dequeue_time = None
 
     def equals(self, other):
         raise NotImplementedError()
