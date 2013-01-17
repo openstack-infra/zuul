@@ -563,6 +563,21 @@ class Ref(Changeish):
     def _id(self):
         return self.newrev
 
+    def __repr__(self):
+        rep = None
+        if self.newrev == '0000000000000000000000000000000000000000':
+            rep = '<Ref 0x%x deletes %s from %s' % (
+                  id(self), self.ref, self.oldrev)
+        elif self.oldrev == '0000000000000000000000000000000000000000':
+            rep = '<Ref 0x%x creates %s on %s>' % (
+                  id(self), self.ref, self.newrev)
+        else:
+            # Catch all
+            rep = '<Ref 0x%x %s updated %s..%s>' % (
+                  id(self), self.ref, self.oldrev, self.newrev)
+
+        return rep
+
     def equals(self, other):
         if (self.project == other.project
             and self.ref == other.ref
