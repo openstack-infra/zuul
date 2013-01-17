@@ -149,6 +149,14 @@ class Merger(object):
         r.recreateRepoObject()
         return r
 
+    def updateRepo(self, project):
+        repo = self.getRepo(project)
+        try:
+            self.log.info("Updating local repository %s", project)
+            repo.update()
+        except:
+            self.log.exception("Unable to update %s", project)
+
     def _mergeChange(self, change, ref, target_ref, mode):
         repo = self.getRepo(change.project)
         try:
