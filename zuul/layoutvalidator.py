@@ -47,6 +47,7 @@ class LayoutSchema(object):
                 'description': str,
                 'success-message': str,
                 'failure-message': str,
+                'dequeue-on-new-patchset': bool,
                 'trigger': toList(trigger),
                 'success': variable_dict,
                 'failure': variable_dict,

@@ -30,6 +30,7 @@ class Pipeline(object):
         self.description = None
         self.failure_message = None
         self.success_message = None
+        self.dequeue_on_new_patchset = True
         self.job_trees = {}  # project -> JobTree
         self.manager = None
         self.queues = []
@@ -503,6 +504,9 @@ class Changeish(object):
     def equals(self, other):
         raise NotImplementedError()
 
+    def isUpdateOf(self, other):
+        raise NotImplementedError()
+
     def filterJobs(self, jobs):
         return filter(lambda job: job.changeMatches(self), jobs)
 
@@ -547,6 +551,11 @@ class Change(Changeish):
             return True
         return False
 
+    def isUpdateOf(self, other):
+        if self.number == other.number and self.patchset > other.patchset:
+            return True
+        return False
+
     def setReportedResult(self, result):
         self.current_build_set.result = result
 
@@ -583,6 +592,9 @@ class Ref(Changeish):
             and self.ref == other.ref
             and self.newrev == other.newrev):
             return True
+        return False
+
+    def isUpdateOf(self, other):
         return False
 
 

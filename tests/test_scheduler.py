@@ -1332,7 +1332,7 @@ class testScheduler(unittest.TestCase):
         self.assertEmptyQueues()
 
     def test_head_is_dequeued_once(self):
-        "Test that if a change at the head fails it is dequeud only once"
+        "Test that if a change at the head fails it is dequeued only once"
         # If it's dequeued more than once, we should see extra
         # aborted jobs.
         self.fake_jenkins.hold_jobs_in_build = True
@@ -1668,4 +1668,190 @@ class testScheduler(unittest.TestCase):
 
         jobs = self.fake_jenkins.job_history
         assert len(jobs) == 0
+        self.assertEmptyQueues()
+
+    def test_new_patchset_dequeues_old(self):
+        "Test that a new patchset causes the old to be dequeued"
+        # D -> C (depends on B) -> B (depends on A) -> A -> M
+        self.fake_jenkins.hold_jobs_in_build = True
+
+        M = self.fake_gerrit.addFakeChange('org/project', 'master', 'M')
+        M.setMerged()
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        D = self.fake_gerrit.addFakeChange('org/project', 'master', 'D')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+        D.addApproval('CRVW', 2)
+
+        C.setDependsOn(B, 1)
+        B.setDependsOn(A, 1)
+        A.setDependsOn(M, 1)
+
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(D.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        B.addPatchset()
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(2))
+        self.waitUntilSettled()
+
+        self.fake_jenkins.hold_jobs_in_build = False
+        self.fake_jenkins.fakeRelease()
+        self.waitUntilSettled()
+
+        jobs = self.fake_jenkins.all_jobs
+        finished_jobs = self.fake_jenkins.job_history
+
+        for x in jobs:
+            print x
+        for x in finished_jobs:
+            print x
+
+        assert A.data['status'] == 'MERGED'
+        assert A.reported == 2
+        assert B.data['status'] == 'NEW'
+        assert B.reported == 2
+        assert C.data['status'] == 'NEW'
+        assert C.reported == 2
+        assert D.data['status'] == 'MERGED'
+        assert D.reported == 2
+        assert len(finished_jobs) == 9  # 3 each for A, B, D.
+        self.assertEmptyQueues()
+
+    def test_new_patchset_dequeues_old_on_head(self):
+        "Test that a new patchset causes the old to be dequeued (at head)"
+        # D -> C (depends on B) -> B (depends on A) -> A -> M
+        self.fake_jenkins.hold_jobs_in_build = True
+
+        M = self.fake_gerrit.addFakeChange('org/project', 'master', 'M')
+        M.setMerged()
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        D = self.fake_gerrit.addFakeChange('org/project', 'master', 'D')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+        D.addApproval('CRVW', 2)
+
+        C.setDependsOn(B, 1)
+        B.setDependsOn(A, 1)
+        A.setDependsOn(M, 1)
+
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(D.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        A.addPatchset()
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(2))
+        self.waitUntilSettled()
+
+        self.fake_jenkins.hold_jobs_in_build = False
+        self.fake_jenkins.fakeRelease()
+        self.waitUntilSettled()
+
+        jobs = self.fake_jenkins.all_jobs
+        finished_jobs = self.fake_jenkins.job_history
+
+        for x in jobs:
+            print x
+        for x in finished_jobs:
+            print x
+
+        assert A.data['status'] == 'NEW'
+        assert A.reported == 2
+        assert B.data['status'] == 'NEW'
+        assert B.reported == 2
+        assert C.data['status'] == 'NEW'
+        assert C.reported == 2
+        assert D.data['status'] == 'MERGED'
+        assert D.reported == 2
+        assert len(finished_jobs) == 7
+        self.assertEmptyQueues()
+
+    def test_new_patchset_dequeues_old_without_dependents(self):
+        "Test that a new patchset causes only the old to be dequeued"
+        self.fake_jenkins.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        B.addPatchset()
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(2))
+        self.waitUntilSettled()
+
+        self.fake_jenkins.hold_jobs_in_build = False
+        self.fake_jenkins.fakeRelease()
+        self.waitUntilSettled()
+
+        jobs = self.fake_jenkins.all_jobs
+        finished_jobs = self.fake_jenkins.job_history
+
+        for x in jobs:
+            print x
+        for x in finished_jobs:
+            print x
+
+        assert A.data['status'] == 'MERGED'
+        assert A.reported == 2
+        assert B.data['status'] == 'NEW'
+        assert B.reported == 2
+        assert C.data['status'] == 'MERGED'
+        assert C.reported == 2
+        assert len(finished_jobs) == 9
+        self.assertEmptyQueues()
+
+    def test_new_patchset_dequeues_old_independent_queue(self):
+        "Test that a new patchset causes the old to be dequeued (independent)"
+        self.fake_jenkins.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        B.addPatchset()
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(2))
+        self.waitUntilSettled()
+
+        self.fake_jenkins.hold_jobs_in_build = False
+        self.fake_jenkins.fakeRelease()
+        self.waitUntilSettled()
+
+        jobs = self.fake_jenkins.all_jobs
+        finished_jobs = self.fake_jenkins.job_history
+
+        for x in jobs:
+            print x
+        for x in finished_jobs:
+            print x
+
+        assert A.data['status'] == 'NEW'
+        assert A.reported == 1
+        assert B.data['status'] == 'NEW'
+        assert B.reported == 1
+        assert C.data['status'] == 'NEW'
+        assert C.reported == 1
+        assert len(finished_jobs) == 10
+        assert self.countJobResults(finished_jobs, 'ABORTED') == 1
         self.assertEmptyQueues()

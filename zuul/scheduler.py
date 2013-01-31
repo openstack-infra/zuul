@@ -100,6 +100,9 @@ class Scheduler(threading.Thread):
                                                          "Build failed.")
             pipeline.success_message = conf_pipeline.get('success-message',
                                                          "Build succeeded.")
+            pipeline.dequeue_on_new_patchset = conf_pipeline.get(
+                'dequeue-on-new-patchset',
+                True)
             manager = globals()[conf_pipeline['manager']](self, pipeline)
             pipeline.setManager(manager)
 
@@ -401,10 +404,12 @@ class Scheduler(threading.Thread):
             return
 
         for pipeline in self.pipelines.values():
+            change = event.getChange(project, self.trigger)
+            if event.type == 'patchset-created':
+                pipeline.manager.removeOldVersionsOfChange(change)
             if not pipeline.manager.eventMatches(event):
                 self.log.debug("Event %s ignored by %s" % (event, pipeline))
                 continue
-            change = event.getChange(project, self.trigger)
             self.log.info("Adding %s, %s to %s" %
                           (project, change, pipeline))
             pipeline.manager.addChange(change)
@@ -572,6 +577,22 @@ class BasePipelineManager(object):
     def enqueueChangesBehind(self, change):
         return True
 
+    def findOldVersionOfChangeAlreadyInQueue(self, change):
+        for c in self.pipeline.getChangesInQueue():
+            if change.isUpdateOf(c):
+                return c
+        return None
+
+    def removeOldVersionsOfChange(self, change):
+        if not self.pipeline.dequeue_on_new_patchset:
+            return
+        old_change = self.findOldVersionOfChangeAlreadyInQueue(change)
+        if old_change:
+            self.log.debug("Change %s is a new version of %s, removing %s" %
+                           (change, old_change, old_change))
+            self.removeChange(old_change)
+            self.launchJobs()
+
     def addChange(self, change):
         self.log.debug("Considering adding change %s" % change)
         if self.isChangeAlreadyInQueue(change):
@@ -605,6 +626,37 @@ class BasePipelineManager(object):
                            change.project)
             return False
         self.launchJobs()
+
+    def cancelJobs(self, change, prime=True):
+        self.log.debug("Cancel jobs for change %s" % change)
+        to_remove = []
+        for build, build_change in self.building_jobs.items():
+            if build_change == change:
+                self.log.debug("Found build %s for change %s to cancel" %
+                               (build, change))
+                try:
+                    self.sched.launcher.cancel(build)
+                except:
+                    self.log.exception("Exception while canceling build %s "
+                                       "for change %s" % (build, change))
+                to_remove.append(build)
+        for build in to_remove:
+            self.log.debug("Removing build %s from running builds" % build)
+            build.result = 'CANCELED'
+            del self.building_jobs[build]
+
+    def dequeueChange(self, change):
+        self.log.debug("Removing change %s from queue" % change)
+        change_queue = self.pipeline.getQueue(change.project)
+        change_queue.dequeueChange(change)
+
+    def removeChange(self, change):
+        # Remove a change from the queue, probably because it has been
+        # superceded by another change.
+        self.log.debug("Canceling builds behind change: %s because it is "
+                       "being removed." % change)
+        self.cancelJobs(change)
+        self.dequeueChange(change)
 
     def _launchJobs(self, change, jobs):
         self.log.debug("Launching jobs for change %s" % change)
@@ -1126,6 +1178,15 @@ class DependentPipelineManager(BasePipelineManager):
                            (change.change_behind, change))
             self.cancelJobs(change.change_behind, prime=prime)
 
+    def removeChange(self, change):
+        # Remove a change from the queue (even the middle), probably
+        # because it has been superceded by another change (or
+        # otherwise will not merge).
+        self.log.debug("Canceling builds behind change: %s because it is "
+                       "being removed." % change)
+        self.cancelJobs(change, prime=False)
+        self.dequeueChange(change, keep_severed_heads=False)
+
     def handleFailedChange(self, change):
         # A build failed. All changes behind this change will need to
         # be retested. To free up resources cancel the builds behind
@@ -1145,13 +1206,13 @@ class DependentPipelineManager(BasePipelineManager):
                            "failure." % change)
             self.cancelJobs(change_behind, prime=False)
 
-    def dequeueChange(self, change):
+    def dequeueChange(self, change, keep_severed_heads=True):
         self.log.debug("Removing change %s from queue" % change)
         change_ahead = change.change_ahead
         change_behind = change.change_behind
         change_queue = self.pipeline.getQueue(change.project)
         change_queue.dequeueChange(change)
-        if not change_ahead and not change.reported:
+        if keep_severed_heads and not change_ahead and not change.reported:
             self.log.debug("Adding %s as a severed head" % change)
             change_queue.addSeveredHead(change)
         self.dequeueDependentChanges(change_behind)

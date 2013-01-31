@@ -277,6 +277,13 @@ explanation of each of the parameters::
   containing 'retrigger' somewhere in the comment text are added to a
   change.
 
+**dequeue-on-new-patchset**
+  Normally, if a new patchset is uploaded to a change that is in a
+  pipeline, the existing entry in the pipeline will be removed (with
+  jobs canceled and any dependent changes that can no longer merge as
+  well.  To suppress this behavior (and allow jobs to continue
+  running), set this to ``false``.  Default: ``true``.
+
 **success**
   Describes what Zuul should do if all the jobs complete successfully.
   This section is optional; if it is omitted, Zuul will run jobs and
