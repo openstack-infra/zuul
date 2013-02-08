@@ -516,3 +516,9 @@ stop executing new jobs, wait until all executing jobs are finished,
 reload its configuration, and resume.  Any values in any of the
 configuration files may be changed, except the location of Zuul's PID
 file (a change to that will be ignored until Zuul is restarted).
+
+If you send a SIGUSR1 to the zuul-server process, Zuul will stop
+executing new jobs, wait until all executing jobs are finished,
+then exit. While waiting to exit Zuul will queue Gerrit events and
+save these events prior to exiting. When Zuul starts again it will
+read these saved events and act on them.
