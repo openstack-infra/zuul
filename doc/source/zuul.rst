@@ -484,7 +484,7 @@ succeeds.  In the above example, project-unittest, project-pep8, and
 project-pyflakes are only executed if project-merge succeeds.  This
 can help avoid running unnecessary jobs.
 
-.. seealso:: The OpenStack Zuul configuration for a comprehensive example: https://github.com/openstack/openstack-ci-puppet/blob/master/modules/openstack_project/files/zuul/layout.yaml
+.. seealso:: The OpenStack Zuul configuration for a comprehensive example: https://github.com/openstack-infra/config/blob/master/modules/openstack_project/files/zuul/layout.yaml
 
 
 logging.conf
