@@ -105,6 +105,9 @@ class Repo(object):
                                                  self.remote_url))
         self.repo.remotes.origin.push('%s:%s' % (local, remote))
 
+    def getHeadCommit(self):
+        return self.repo.head.commit.hexsha
+
 
 class Merger(object):
     log = logging.getLogger("zuul.Merger")
@@ -189,14 +192,16 @@ class Merger(object):
                 # Keep track of the last commit, it's the commit that
                 # will be passed to jenkins because it's the commit
                 # for the triggering change
-                zuul_ref = change.branch + '/' + target_ref
-                commit = repo.setZuulRef(zuul_ref, 'HEAD').hexsha
+                if target_ref:
+                    zuul_ref = change.branch + '/' + target_ref
+                    repo.setZuulRef(zuul_ref, 'HEAD')
+                commit = repo.getHeadCommit()
             except:
                 self.log.exception("Unable to set zuul ref %s for change %s" %
                                    (zuul_ref, change))
                 return False
 
-        if self.push_refs:
+        if self.push_refs and target_ref:
             # Push the results upstream to the zuul ref
             for project, branches in projects.items():
                 repo = self.getRepo(project)

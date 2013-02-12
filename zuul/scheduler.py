@@ -1122,7 +1122,26 @@ class DependentPipelineManager(BasePipelineManager):
                                                            changes))
         return changes
 
+    def _potentiallyMergable(self, dependent_changes, change):
+        merges = []
+        # Merge changes in order against their respective branches.
+        # Return the list of successful merges. Empty list indicates
+        # change cannot be merged given the current state of change's
+        # branch and the dependent changes ahead of it.
+        for x in xrange(len(dependent_changes)):
+            merges.append(self.sched.merger.mergeChanges(
+                dependent_changes[:x] + [change]))
+        merges.append(self.sched.merger.mergeChanges(
+            dependent_changes + [change]))
+        return filter(None, merges)
+
     def _launchJobs(self, change, jobs):
+        # It is possible that during the processing of changes in _launchJobs
+        # the change passed in here was removed from the pipelines queue. If
+        # that is the case ignore the change and move onto the next one.
+        change_queue = self.pipeline.getQueue(change.project)
+        if change not in change_queue.queue:
+            return
         self.log.debug("Launching jobs for change %s" % change)
         ref = change.current_build_set.ref
         if hasattr(change, 'refspec') and not ref:
@@ -1130,12 +1149,27 @@ class DependentPipelineManager(BasePipelineManager):
             ref = change.current_build_set.ref
             dependent_changes = self._getDependentChanges(change)
             dependent_changes.reverse()
+            # Check if this change can merge given the current state of the
+            # DependentPipeline. If it cannot merge, check if it has any chance
+            # of merging. If there is no chance at merging remove the change,
+            # otherwise keep it in hopes that it will merge.
             all_changes = dependent_changes + [change]
             commit = self.sched.merger.mergeChanges(all_changes, ref)
             if not commit:
                 self.log.info("Unable to merge changes %s" % all_changes)
                 self.pipeline.setUnableToMerge(change)
-                self.possiblyReportChange(change)
+                # Check if this change can potentially merge given the changes
+                # from the same project ahead in the queue.
+                conflictable_changes = filter(
+                    lambda x: x.project == change.project,
+                    dependent_changes)
+                if not self._potentiallyMergable(conflictable_changes, change):
+                    self.log.info("Change %s cannot be merged, removing from "
+                                  "queue." % change)
+                    self.removeChange(change)
+                    self.reportChange(change)
+                else:
+                    self.possiblyReportChange(change)
                 return
             change.current_build_set.commit = commit
         #TODO: remove this line after GERRIT_CHANGES is gone
