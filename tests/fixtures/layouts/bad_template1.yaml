@@ -1,0 +1,19 @@
+# Template is going to be called but missing a parameter
+
+pipelines:
+  - name: 'check'
+    manager: IndependentPipelineManager
+    trigger:
+     - event: patchset-created
+
+project-templates:
+  - name: template-generic
+    check:
+     # Template uses the 'project' parameter' which must
+     - '{project}-merge'
+
+projects:
+  - name: organization/project
+    template:
+      - name: template-generic
+      # Here we 'forgot' to pass 'project'

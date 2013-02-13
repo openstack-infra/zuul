@@ -689,6 +689,7 @@ class testScheduler(unittest.TestCase):
         init_repo("org/project3")
         init_repo("org/one-job-project")
         init_repo("org/nonvoting-project")
+        init_repo("org/templated-project")
         self.config = CONFIG
 
         self.statsd = FakeStatsd()
@@ -1375,6 +1376,20 @@ class testScheduler(unittest.TestCase):
         assert B.data['status'] == 'MERGED'
         assert B.reported == 2
         self.assertEmptyQueues()
+
+    def test_job_from_templates_launched(self):
+        "Test whether a job generated via a template can be launched"
+        A = self.fake_gerrit.addFakeChange(
+            'org/templated-project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        jobs = self.fake_jenkins.job_history
+        job_names = [x.name for x in jobs]
+
+        assert 'project-test1' in job_names
+        assert 'project-test2' in job_names
+        assert jobs[0].result == 'SUCCESS'
+        assert jobs[1].result == 'SUCCESS'
 
     def test_dependent_changes_dequeue(self):
         "Test that dependent patches are not needlessly tested"

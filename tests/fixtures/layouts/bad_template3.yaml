@@ -1,0 +1,13 @@
+# Template refers to an unexisting pipeline
+
+pipelines:
+  # We have no pipelines at all
+
+project-templates:
+  - name: template-generic
+    unexisting-pipeline:  # pipeline does not exist
+
+projects:
+  - name: organization/project
+    template:
+      - name: template-generic

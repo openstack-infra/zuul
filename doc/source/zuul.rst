@@ -504,6 +504,40 @@ can help avoid running unnecessary jobs.
 
 .. seealso:: The OpenStack Zuul configuration for a comprehensive example: https://github.com/openstack-infra/config/blob/master/modules/openstack_project/files/zuul/layout.yaml
 
+Project Templates
+"""""""""""""""""
+
+Whenever you have lot of similiar projects (such as plugins for a project) you
+will most probably want to use the same pipeline configurations.  The
+project templates let you define pipelines and job name templates to trigger.
+One can then just apply the template on its project which make it easier to
+update several similiar projects. As an example::
+
+  project-templates:
+    # Name of the template
+    - name: plugin-triggering
+      # Definition of pipelines just like for a `project`
+      check:
+       - '{jobprefix}-merge':
+         - '{jobprefix}-pep8'
+         - '{jobprefix}-pyflakes'
+      gate:
+       - '{jobprefix}-merge':
+         - '{jobprefix}-unittest'
+         - '{jobprefix}-pep8'
+         - '{jobprefix}-pyflakes'
+
+In your projects definition, you will then apply the template using the template
+key::
+
+  projects:
+   - name: plugin/foobar
+     template:
+      - name: plugin-triggering
+        jobprefix: plugin-foobar
+
+You can pass several parameters to a template. A ``parameter`` value will be
+used for expansion of ``{parameter}`` in the template strings.
 
 logging.conf
 ~~~~~~~~~~~~
