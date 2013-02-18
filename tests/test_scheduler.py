@@ -1139,13 +1139,6 @@ class testScheduler(unittest.TestCase):
         self.waitUntilSettled()
         self.fake_jenkins.fakeRelease('.*-merge')
         self.waitUntilSettled()
-
-        # B will conflict with A, but B can merge if A does not pass tests.
-        # Check that B has not been dequeued and reported at this point
-        # as it should remain in the queue.
-        assert B.data['status'] == 'NEW'
-        assert B.reported == 1
-
         self.fake_jenkins.fakeRelease('.*-merge')
         self.waitUntilSettled()
         ref = jobs[-1].parameters['ZUUL_REF']
@@ -1155,101 +1148,6 @@ class testScheduler(unittest.TestCase):
 
         assert A.data['status'] == 'MERGED'
         assert B.data['status'] == 'NEW'
-        assert C.data['status'] == 'MERGED'
-        assert A.reported == 2
-        assert B.reported == 2
-        assert C.reported == 2
-        self.assertEmptyQueues()
-
-    def test_merge_conflict_dequeing(self):
-        "Test that unmergable changes are dequeued ASAP"
-        # D -> C (depends B) -> B (conflict) -> A -> M (conflict)
-        M = self.fake_gerrit.addFakeChange('org/project', 'master', 'M')
-        M.addPatchset(['conflict'])
-        M.setMerged()
-        self.fake_jenkins.hold_jobs_in_queue = True
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
-        B.addPatchset(['conflict'])
-        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
-        C.addPatchset()
-        C.setDependsOn(B, 2)
-        D = self.fake_gerrit.addFakeChange('org/project', 'master', 'D')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
-        D.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(D.addApproval('APRV', 1))
-        self.waitUntilSettled()
-
-        self.fake_jenkins.fakeRelease('.*-merge')
-        self.waitUntilSettled()
-        self.fake_jenkins.fakeRelease('.*-merge')
-        self.waitUntilSettled()
-
-        # Conflict should be detected at this point in time resulting
-        # in change B being dequeued and reported.
-        assert B.data['status'] == 'NEW'
-        assert B.reported == 2
-
-        self.fake_jenkins.fakeRelease('.*-merge')
-        self.waitUntilSettled()
-        self.fake_jenkins.fakeRelease('.*-merge')
-        self.waitUntilSettled()
-        self.fake_jenkins.hold_jobs_in_queue = False
-        self.fake_jenkins.fakeRelease()
-        self.waitUntilSettled()
-
-        assert A.data['status'] == 'MERGED'
-        assert B.data['status'] == 'NEW'
-        assert C.data['status'] == 'NEW'
-        assert D.data['status'] == 'MERGED'
-        assert A.reported == 2
-        assert B.reported == 2
-        assert C.reported == 2
-        assert D.reported == 2
-        self.assertEmptyQueues()
-
-    def test_merge_conflict_at_head_dequeing(self):
-        "Test that unmergable change at head of queue is dequeued properly"
-        # C -> B -> A (conflict) -> M (conflict)
-        M = self.fake_gerrit.addFakeChange('org/project', 'master', 'M')
-        M.addPatchset(['conflict'])
-        M.setMerged()
-        self.fake_jenkins.hold_jobs_in_queue = True
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addPatchset(['conflict'])
-        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
-        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
-        self.waitUntilSettled()
-
-        self.fake_jenkins.fakeRelease('.*-merge')
-        self.waitUntilSettled()
-
-        # Conflict should be detected at this point in time resulting
-        # in change A being dequeued and reported.
-        assert A.data['status'] == 'NEW'
-        assert A.reported == 2
-
-        self.fake_jenkins.fakeRelease('.*-merge')
-        self.waitUntilSettled()
-        self.fake_jenkins.fakeRelease('.*-merge')
-        self.waitUntilSettled()
-        self.fake_jenkins.hold_jobs_in_queue = False
-        self.fake_jenkins.fakeRelease()
-        self.waitUntilSettled()
-
-        assert A.data['status'] == 'NEW'
-        assert B.data['status'] == 'MERGED'
         assert C.data['status'] == 'MERGED'
         assert A.reported == 2
         assert B.reported == 2
