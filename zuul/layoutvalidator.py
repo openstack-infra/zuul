@@ -18,18 +18,18 @@ import voluptuous as v
 # Several forms accept either a single item or a list, this makes
 # specifying that in the schema easy (and explicit).
 def toList(x):
-    return v.any([x], x)
+    return v.Any([x], x)
 
 
 class LayoutSchema(object):
     include = {'python-file': str}
     includes = [include]
 
-    manager = v.any('IndependentPipelineManager',
+    manager = v.Any('IndependentPipelineManager',
                     'DependentPipelineManager')
     variable_dict = v.Schema({}, extra=True)
 
-    trigger = {v.required('event'): toList(v.any('patchset-created',
+    trigger = {v.Required('event'): toList(v.Any('patchset-created',
                                                  'change-abandoned',
                                                  'change-restored',
                                                  'change-merged',
@@ -42,8 +42,8 @@ class LayoutSchema(object):
                'approval': toList(variable_dict),
                }
 
-    pipeline = {v.required('name'): str,
-                v.required('manager'): manager,
+    pipeline = {v.Required('name'): str,
+                v.Required('manager'): manager,
                 'description': str,
                 'success-message': str,
                 'failure-message': str,
@@ -55,7 +55,7 @@ class LayoutSchema(object):
                 }
     pipelines = [pipeline]
 
-    job = {v.required('name'): str,
+    job = {v.Required('name'): str,
            'failure-message': str,
            'success-message': str,
            'failure-pattern': str,
@@ -67,7 +67,7 @@ class LayoutSchema(object):
            }
     jobs = [job]
 
-    job_name = v.Schema(v.match("^\S+$"))
+    job_name = v.Schema(v.Match("^\S+$"))
 
     def validateJob(self, value, path=[]):
         if isinstance(value, list):
@@ -85,16 +85,16 @@ class LayoutSchema(object):
             pipelines = []
         pipelines = [p['name'] for p in pipelines if 'name' in p]
         project = {'name': str,
-                   'merge-mode': v.any('cherry-pick'),
+                   'merge-mode': v.Any('cherry-pick'),
                    }
         for p in pipelines:
             project[p] = self.validateJob
         projects = [project]
 
         schema = v.Schema({'includes': self.includes,
-                           v.required('pipelines'): self.pipelines,
+                           v.Required('pipelines'): self.pipelines,
                            'jobs': self.jobs,
-                           v.required('projects'): projects,
+                           v.Required('projects'): projects,
                            })
         return schema
 
