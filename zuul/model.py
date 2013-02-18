@@ -552,7 +552,8 @@ class Change(Changeish):
         return False
 
     def isUpdateOf(self, other):
-        if self.number == other.number and self.patchset > other.patchset:
+        if ((hasattr(other, 'number') and self.number == other.number) and
+            (hasattr(other, 'patchset') and self.patchset > other.patchset)):
             return True
         return False
 
