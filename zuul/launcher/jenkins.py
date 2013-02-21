@@ -133,6 +133,7 @@ STOP_BUILD = 'job/%(name)s/%(number)s/stop'
 CANCEL_QUEUE = 'queue/item/%(number)s/cancelQueue'
 BUILD_INFO = 'job/%(name)s/%(number)s/api/json?depth=0'
 BUILD_DESCRIPTION = 'job/%(name)s/%(number)s/submitDescription'
+DEBUG = False
 
 
 class ExtendedJenkins(jenkins.Jenkins):
@@ -145,8 +146,9 @@ class ExtendedJenkins(jenkins.Jenkins):
                 req.add_header('Authorization', self.auth)
             return urllib2.urlopen(req).read()
         except urllib2.HTTPError, e:
-            print e.msg
-            print e.fp.read()
+            if DEBUG:
+                print e.msg
+                print e.fp.read()
             raise
 
     def stop_build(self, name, number):
@@ -171,6 +173,7 @@ class ExtendedJenkins(jenkins.Jenkins):
         # Jenkins returns a 302 from this URL, unless Referer is not set,
         # then you get a 404.
         request = urllib2.Request(self.server + CANCEL_QUEUE % locals(),
+                                  urllib.urlencode({}),
                                   headers={'Referer': self.server})
         self.jenkins_open(request)
 
