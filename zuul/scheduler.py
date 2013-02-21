@@ -1122,6 +1122,11 @@ class DependentPipelineManager(BasePipelineManager):
                                                            changes))
         return changes
 
+    def _unableToMerge(self, change, all_changes):
+        self.log.info("Unable to merge changes %s" % all_changes)
+        self.pipeline.setUnableToMerge(change)
+        self.possiblyReportChange(change)
+
     def _launchJobs(self, change, jobs):
         self.log.debug("Launching jobs for change %s" % change)
         ref = change.current_build_set.ref
@@ -1131,13 +1136,15 @@ class DependentPipelineManager(BasePipelineManager):
             dependent_changes = self._getDependentChanges(change)
             dependent_changes.reverse()
             all_changes = dependent_changes + [change]
-            commit = self.sched.merger.mergeChanges(all_changes, ref)
-            if not commit:
-                self.log.info("Unable to merge changes %s" % all_changes)
-                self.pipeline.setUnableToMerge(change)
-                self.possiblyReportChange(change)
+            if (dependent_changes and
+                not dependent_changes[-1].current_build_set.commit):
+                self._unableToMerge(change, all_changes)
                 return
+            commit = self.sched.merger.mergeChanges(all_changes, ref)
             change.current_build_set.commit = commit
+            if not commit:
+                self._unableToMerge(change, all_changes)
+                return
         #TODO: remove this line after GERRIT_CHANGES is gone
         dependent_changes = self._getDependentChanges(change)
         for job in jobs:
