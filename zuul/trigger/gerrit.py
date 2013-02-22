@@ -64,16 +64,19 @@ class GerritEventConnector(threading.Thread):
         # in cmd-stream-events.html
         accountfield_from_type = {
             'patchset-created': 'uploader',
+            'draft-published': 'uploader',  # Gerrit 2.5/2.6
             'change-abandoned': 'abandoner',
             'change-restored': 'restorer',
             'change-merged': 'submitter',
+            'merge-failed': 'submitter',  # Gerrit 2.5/2.6
             'comment-added': 'author',
             'ref-updated': 'submitter',
+            'reviewer-added': 'reviewer',  # Gerrit 2.5/2.6
         }
         try:
             event.account = data.get(accountfield_from_type[event.type])
         except KeyError:
-            self.log.error("Received unrecongized event type '%s' from Gerrit.\
+            self.log.error("Received unrecognized event type '%s' from Gerrit.\
                     Can not get account information." % event.type)
             event.account = None
 
