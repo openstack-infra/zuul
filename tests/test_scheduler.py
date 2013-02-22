@@ -1855,3 +1855,95 @@ class testScheduler(unittest.TestCase):
         assert len(finished_jobs) == 10
         assert self.countJobResults(finished_jobs, 'ABORTED') == 1
         self.assertEmptyQueues()
+
+    def test_zuul_refs(self):
+        "Test that zuul refs exist and have the right changes"
+        self.fake_jenkins.hold_jobs_in_build = True
+
+        M1 = self.fake_gerrit.addFakeChange('org/project1', 'master', 'M1')
+        M1.setMerged()
+        M2 = self.fake_gerrit.addFakeChange('org/project2', 'master', 'M2')
+        M2.setMerged()
+
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
+        D = self.fake_gerrit.addFakeChange('org/project2', 'master', 'D')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+        D.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(D.addApproval('APRV', 1))
+
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+        self.fake_jenkins.fakeRelease('.*-merge')
+        self.waitUntilSettled()
+
+        jobs = self.fake_jenkins.all_jobs
+        finished_jobs = self.fake_jenkins.job_history
+
+        a_zref = b_zref = c_zref = d_zref = None
+        for x in jobs:
+            if x.parameters['ZUUL_CHANGE'] == '3':
+                a_zref = x.parameters['ZUUL_REF']
+            if x.parameters['ZUUL_CHANGE'] == '4':
+                b_zref = x.parameters['ZUUL_REF']
+            if x.parameters['ZUUL_CHANGE'] == '5':
+                c_zref = x.parameters['ZUUL_REF']
+            if x.parameters['ZUUL_CHANGE'] == '6':
+                d_zref = x.parameters['ZUUL_REF']
+
+        # There are... four... refs.
+        assert a_zref is not None
+        assert b_zref is not None
+        assert c_zref is not None
+        assert d_zref is not None
+
+        # And they should all be different
+        refs = set([a_zref, b_zref, c_zref, d_zref])
+        assert len(refs) == 4
+
+        # a ref should have a, not b, and should not be in project2
+        assert ref_has_change(a_zref, A)
+        assert not ref_has_change(a_zref, B)
+        assert not ref_has_change(a_zref, M2)
+
+        # b ref should have a and b, and should not be in project2
+        assert ref_has_change(b_zref, A)
+        assert ref_has_change(b_zref, B)
+        assert not ref_has_change(b_zref, M2)
+
+        # c ref should have a and b in 1, c in 2
+        assert ref_has_change(c_zref, A)
+        assert ref_has_change(c_zref, B)
+        assert ref_has_change(c_zref, C)
+        assert not ref_has_change(c_zref, D)
+
+        # d ref should have a and b in 1, c and d in 2
+        assert ref_has_change(d_zref, A)
+        assert ref_has_change(d_zref, B)
+        assert ref_has_change(d_zref, C)
+        assert ref_has_change(d_zref, D)
+
+        self.fake_jenkins.hold_jobs_in_build = False
+        self.fake_jenkins.fakeRelease()
+        self.waitUntilSettled()
+
+        assert A.data['status'] == 'MERGED'
+        assert A.reported == 2
+        assert B.data['status'] == 'MERGED'
+        assert B.reported == 2
+        assert C.data['status'] == 'MERGED'
+        assert C.reported == 2
+        assert D.data['status'] == 'MERGED'
+        assert D.reported == 2
+        self.assertEmptyQueues()
