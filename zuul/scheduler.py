@@ -1191,7 +1191,7 @@ class DependentPipelineManager(BasePipelineManager):
         # otherwise will not merge).
         self.log.debug("Canceling builds behind change: %s because it is "
                        "being removed." % change)
-        self.cancelJobs(change, prime=False)
+        self.cancelJobs(change)
         self.dequeueChange(change, keep_severed_heads=False)
 
     def handleFailedChange(self, change):
