@@ -142,4 +142,4 @@ the Git plugin to prepare them, or you may chose to use a shell script
 instead.  The OpenStack project uses the following script to prepare
 the workspace for its integration testing:
 
-  https://github.com/openstack-ci/devstack-gate/blob/master/devstack-vm-gate-wrap.sh
+  https://github.com/openstack-infra/devstack-gate/blob/master/devstack-vm-gate-wrap.sh

@@ -35,7 +35,7 @@ specified in a third section.
 The three sections of this config and their options are documented below.
 You can also find an example zuul.conf file in the git
 `repository
-<https://github.com/openstack-ci/zuul/blob/master/etc/zuul.conf-sample>`_
+<https://github.com/openstack-infra/zuul/blob/master/etc/zuul.conf-sample>`_
 
 jenkins
 """""""
