@@ -466,6 +466,13 @@ class Scheduler(threading.Thread):
             ret += '</p>'
             data['message'] = ret
 
+        data['trigger_event_queue'] = {}
+        data['trigger_event_queue']['length'] = \
+            self.trigger_event_queue.qsize()
+        data['result_event_queue'] = {}
+        data['result_event_queue']['length'] = \
+            self.result_event_queue.qsize()
+
         pipelines = []
         data['pipelines'] = pipelines
         keys = self.pipelines.keys()
