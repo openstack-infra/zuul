@@ -457,8 +457,12 @@ class FakeJenkinsJob(threading.Thread):
         if self.aborted:
             result = 'ABORTED'
 
+        changes = None
+        if 'ZUUL_CHANGE_IDS' in self.parameters:
+            changes = self.parameters['ZUUL_CHANGE_IDS']
+
         self.jenkins.fakeAddHistory(name=self.name, number=self.number,
-                                    result=result)
+                                    result=result, changes=changes)
         self.jenkins.lock.acquire()
         self.callback.jenkins_endpoint(FakeJenkinsEvent(self.name,
                                                         self.number,
@@ -495,8 +499,16 @@ class FakeJenkins(object):
     def fakeDequeue(self, job):
         self.queue.remove(job)
 
+    class FakeJobHistory(object):
+        def __init__(self, **kw):
+            self.__dict__.update(kw)
+
+        def __repr__(self):
+            return ("<Completed job, result: %s name: %s #%s changes: %s>" %
+                    (self.result, self.name, self.number, self.changes))
+
     def fakeAddHistory(self, **kw):
-        self.job_history.append(kw)
+        self.job_history.append(self.FakeJobHistory(**kw))
 
     def fakeRelease(self, regex=None):
         all_jobs = self.all_jobs[:]
@@ -713,7 +725,7 @@ class testScheduler(unittest.TestCase):
             self.sched.wake_event.wait(0.1)
 
     def countJobResults(self, jobs, result):
-        jobs = filter(lambda x: x['result'] == result, jobs)
+        jobs = filter(lambda x: x.result == result, jobs)
         return len(jobs)
 
     def assertEmptyQueues(self):
@@ -735,13 +747,13 @@ class testScheduler(unittest.TestCase):
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
         jobs = self.fake_jenkins.job_history
-        job_names = [x['name'] for x in jobs]
+        job_names = [x.name for x in jobs]
         assert 'project-merge' in job_names
         assert 'project-test1' in job_names
         assert 'project-test2' in job_names
-        assert jobs[0]['result'] == 'SUCCESS'
-        assert jobs[1]['result'] == 'SUCCESS'
-        assert jobs[2]['result'] == 'SUCCESS'
+        assert jobs[0].result == 'SUCCESS'
+        assert jobs[1].result == 'SUCCESS'
+        assert jobs[2].result == 'SUCCESS'
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
         self.assertEmptyQueues()
@@ -944,6 +956,11 @@ class testScheduler(unittest.TestCase):
         self.fake_jenkins.hold_jobs_in_build = False
         self.fake_jenkins.fakeRelease()
         self.waitUntilSettled()
+
+        for x in jobs:
+            print x
+        for x in finished_jobs:
+            print x
 
         assert len(jobs) == 0
         assert len(finished_jobs) == 15
@@ -1172,7 +1189,7 @@ class testScheduler(unittest.TestCase):
         self.waitUntilSettled()
 
         jobs = self.fake_jenkins.job_history
-        job_names = [x['name'] for x in jobs]
+        job_names = [x.name for x in jobs]
         assert len(jobs) == 1
         assert 'project-post' in job_names
         self.assertEmptyQueues()
@@ -1413,9 +1430,9 @@ class testScheduler(unittest.TestCase):
 
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
-        assert finished_jobs[0]['result'] == 'SUCCESS'
-        assert finished_jobs[1]['result'] == 'SUCCESS'
-        assert finished_jobs[2]['result'] == 'FAILURE'
+        assert finished_jobs[0].result == 'SUCCESS'
+        assert finished_jobs[1].result == 'SUCCESS'
+        assert finished_jobs[2].result == 'FAILURE'
         self.assertEmptyQueues()
 
     def test_check_queue_success(self):
@@ -1429,9 +1446,9 @@ class testScheduler(unittest.TestCase):
 
         assert A.data['status'] == 'NEW'
         assert A.reported == 1
-        assert finished_jobs[0]['result'] == 'SUCCESS'
-        assert finished_jobs[1]['result'] == 'SUCCESS'
-        assert finished_jobs[2]['result'] == 'SUCCESS'
+        assert finished_jobs[0].result == 'SUCCESS'
+        assert finished_jobs[1].result == 'SUCCESS'
+        assert finished_jobs[2].result == 'SUCCESS'
         self.assertEmptyQueues()
 
     def test_check_queue_failure(self):
@@ -1446,9 +1463,9 @@ class testScheduler(unittest.TestCase):
 
         assert A.data['status'] == 'NEW'
         assert A.reported == 1
-        assert finished_jobs[0]['result'] == 'SUCCESS'
-        assert finished_jobs[1]['result'] == 'SUCCESS'
-        assert finished_jobs[2]['result'] == 'FAILURE'
+        assert finished_jobs[0].result == 'SUCCESS'
+        assert finished_jobs[1].result == 'SUCCESS'
+        assert finished_jobs[2].result == 'FAILURE'
         self.assertEmptyQueues()
 
     def test_dependent_behind_dequeue(self):
@@ -1555,13 +1572,13 @@ class testScheduler(unittest.TestCase):
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
         jobs = self.fake_jenkins.job_history
-        job_names = [x['name'] for x in jobs]
+        job_names = [x.name for x in jobs]
         assert 'project-merge' in job_names
         assert 'project-test1' in job_names
         assert 'project-test2' in job_names
-        assert jobs[0]['result'] == 'SUCCESS'
-        assert jobs[1]['result'] == 'SUCCESS'
-        assert jobs[2]['result'] == 'SUCCESS'
+        assert jobs[0].result == 'SUCCESS'
+        assert jobs[1].result == 'SUCCESS'
+        assert jobs[2].result == 'SUCCESS'
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
         self.assertEmptyQueues()
@@ -1574,13 +1591,13 @@ class testScheduler(unittest.TestCase):
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
         jobs = self.fake_jenkins.job_history
-        job_names = [x['name'] for x in jobs]
+        job_names = [x.name for x in jobs]
         assert 'project-merge' in job_names
         assert 'project-test1' in job_names
         assert 'project-test2' in job_names
-        assert jobs[0]['result'] == 'SUCCESS'
-        assert jobs[1]['result'] == 'SUCCESS'
-        assert jobs[2]['result'] == 'SUCCESS'
+        assert jobs[0].result == 'SUCCESS'
+        assert jobs[1].result == 'SUCCESS'
+        assert jobs[2].result == 'SUCCESS'
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
         self.assertEmptyQueues()
@@ -1599,13 +1616,13 @@ class testScheduler(unittest.TestCase):
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
         jobs = self.fake_jenkins.job_history
-        job_names = [x['name'] for x in jobs]
+        job_names = [x.name for x in jobs]
         assert 'project1-merge' in job_names
         assert 'project1-test1' in job_names
         assert 'project1-test2' in job_names
-        assert jobs[0]['result'] == 'SUCCESS'
-        assert jobs[1]['result'] == 'SUCCESS'
-        assert jobs[2]['result'] == 'SUCCESS'
+        assert jobs[0].result == 'SUCCESS'
+        assert jobs[1].result == 'SUCCESS'
+        assert jobs[2].result == 'SUCCESS'
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
         self.assertEmptyQueues()
@@ -1622,7 +1639,7 @@ class testScheduler(unittest.TestCase):
         while A.reported < 2:
             self.waitUntilSettled()
         jobs = self.fake_jenkins.job_history
-        job_names = [x['name'] for x in jobs]
+        job_names = [x.name for x in jobs]
         assert not job_names
         assert A.data['status'] == 'NEW'
         assert A.reported == 2
@@ -1635,13 +1652,13 @@ class testScheduler(unittest.TestCase):
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
         jobs = self.fake_jenkins.job_history
-        job_names = [x['name'] for x in jobs]
+        job_names = [x.name for x in jobs]
         assert 'project-merge' in job_names
         assert 'project-test1' in job_names
         assert 'project-test2' in job_names
-        assert jobs[0]['result'] == 'SUCCESS'
-        assert jobs[1]['result'] == 'SUCCESS'
-        assert jobs[2]['result'] == 'SUCCESS'
+        assert jobs[0].result == 'SUCCESS'
+        assert jobs[1].result == 'SUCCESS'
+        assert jobs[2].result == 'SUCCESS'
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
         self.assertEmptyQueues()
