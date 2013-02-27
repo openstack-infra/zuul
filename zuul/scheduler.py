@@ -373,12 +373,13 @@ class Scheduler(threading.Thread):
                 return
             self.log.debug("Run handler awake")
             try:
-                if not self._pause:
-                    if not self.trigger_event_queue.empty():
-                        self.process_event_queue()
-
+                # Give result events priority -- they let us stop builds,
+                # whereas trigger evensts cause us to launch builds.
                 if not self.result_event_queue.empty():
                     self.process_result_queue()
+                elif not self._pause:
+                    if not self.trigger_event_queue.empty():
+                        self.process_event_queue()
 
                 if self._pause and self._areAllBuildsComplete():
                     self._doPauseEvent()
