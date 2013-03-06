@@ -432,6 +432,12 @@ each job as it builds a list from the project specification.
   treated as a regular expression and multiple branches may be
   listed.
 
+**files (optional)**
+  This job should only be run if at least one of the files involved in
+  the change (added, deleted, or modified) matches at least one of the
+  file patterns listed here.  This field is treated as a regular
+  expression and multiple expressions may be listed.
+
 **parameter-function (optional)**
   Specifies a function that should be applied to the parameters before
   the job is launched.  The function should be defined in a python file

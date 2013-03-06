@@ -45,6 +45,9 @@ jobs:
   - name: test-merge2
     success-pattern: http://logs.example.com/{change.number}/{change.patchset}/{pipeline.name}/{job.name}/{build.number}/success
     failure-pattern: http://logs.example.com/{change.number}/{change.patchset}/{pipeline.name}/{job.name}/{build.number}/fail
+  - name: project-testfile
+    files:
+      - 'tools/.*-requires'
 
 projects:
   - name: test-org/test

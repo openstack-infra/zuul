@@ -43,6 +43,9 @@ jobs:
     hold-following-changes: true
   - name: nonvoting-project-test2
     voting: false
+  - name: project-testfile
+    files:
+      - '.*-requires'
 
 projects:
   - name: org/project
@@ -51,10 +54,12 @@ projects:
       - project-merge:
         - project-test1
         - project-test2
+        - project-testfile
     gate:
       - project-merge:
         - project-test1
         - project-test2
+        - project-testfile
     post:
       - project-post
 

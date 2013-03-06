@@ -192,7 +192,7 @@ class FakeChange(object):
         self.addPatchset()
         self.data['submitRecords'] = self.getSubmitRecords()
 
-    def addPatchset(self, files=None, large=False):
+    def addPatchset(self, files=[], large=False):
         self.latest_patchset += 1
         if files:
             fn = files[0]
@@ -202,12 +202,15 @@ class FakeChange(object):
         c = add_fake_change_to_repo(self.project, self.branch,
                                     self.number, self.latest_patchset,
                                     msg, fn, large)
+        ps_files = [{'file': '/COMMIT_MSG',
+                     'type': 'ADDED'},
+                    {'file': 'README',
+                     'type': 'MODIFIED'}]
+        for f in files:
+            ps_files.append({'file': f, 'type': 'ADDED'})
         d = {'approvals': [],
              'createdOn': time.time(),
-             'files': [{'file': '/COMMIT_MSG',
-                        'type': 'ADDED'},
-                       {'file': 'README',
-                        'type': 'MODIFIED'}],
+             'files': ps_files,
              'number': str(self.latest_patchset),
              'ref': 'refs/changes/1/%s/%s' % (self.number,
                                               self.latest_patchset),
@@ -1965,4 +1968,29 @@ class testScheduler(unittest.TestCase):
         assert C.reported == 2
         assert D.data['status'] == 'MERGED'
         assert D.reported == 2
+        self.assertEmptyQueues()
+
+    def test_file_jobs(self):
+        "Test that file jobs run only when appropriate"
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addPatchset(['pip-requires'])
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        jobs = self.fake_jenkins.all_jobs
+        finished_jobs = self.fake_jenkins.job_history
+
+        testfile_jobs = [x for x in finished_jobs
+                         if x.name == 'project-testfile']
+
+        assert len(testfile_jobs) == 1
+        assert testfile_jobs[0].changes == '1,2'
+        assert A.data['status'] == 'MERGED'
+        assert A.reported == 2
+        assert B.data['status'] == 'MERGED'
+        assert B.reported == 2
         self.assertEmptyQueues()

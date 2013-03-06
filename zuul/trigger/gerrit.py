@@ -296,6 +296,8 @@ class Gerrit(object):
         for ps in data['patchSets']:
             if ps['number'] == patchset:
                 change.refspec = ps['ref']
+                for f in ps.get('files', []):
+                    change.files.append(f['file'])
             if int(ps['number']) > int(max_ps):
                 max_ps = ps['number']
         if max_ps == patchset:

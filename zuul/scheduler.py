@@ -157,6 +157,10 @@ class Scheduler(threading.Thread):
             if branches:
                 job._branches = branches
                 job.branches = [re.compile(x) for x in branches]
+            files = toList(config_job.get('files'))
+            if files:
+                job._files = files
+                job.files = [re.compile(x) for x in files]
 
         def add_jobs(job_tree, config_jobs):
             for job in config_jobs:
@@ -521,6 +525,8 @@ class BasePipelineManager(object):
                 efilters = ''
                 for b in tree.job._branches:
                     efilters += str(b)
+                for f in tree.job._files:
+                    efilters += str(f)
                 if efilters:
                     efilters = ' ' + efilters
                 hold = ''

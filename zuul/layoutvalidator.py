@@ -64,6 +64,7 @@ class LayoutSchema(object):
            'voting': bool,
            'parameter-function': str,
            'branch': toList(str),
+           'files': toList(str),
            }
     jobs = [job]
 

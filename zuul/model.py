@@ -370,6 +370,8 @@ class Job(object):
         self.voting = True
         self.branches = []
         self._branches = []
+        self.files = []
+        self._files = []
 
     def __str__(self):
         return self.name
@@ -387,16 +389,29 @@ class Job(object):
         self.voting = other.voting
         self.branches = other.branches[:]
         self._branches = other._branches[:]
+        self.files = other.files[:]
+        self._files = other._files[:]
 
     def changeMatches(self, change):
-        if not self.branches:
-            return True
+        matches_branch = False
         for branch in self.branches:
             if hasattr(change, 'branch') and branch.match(change.branch):
-                return True
+                matches_branch = True
             if hasattr(change, 'ref') and branch.match(change.ref):
-                return True
-        return False
+                matches_branch = True
+        if self.branches and not matches_branch:
+            return False
+
+        matches_file = False
+        for f in self.files:
+            if hasattr(change, 'files'):
+                for cf in change.files:
+                    if f.match(cf):
+                        matches_file = True
+        if self.files and not matches_file:
+            return False
+
+        return True
 
 
 class JobTree(object):
@@ -532,6 +547,7 @@ class Change(Changeish):
         self.patchset = None
         self.refspec = None
 
+        self.files = []
         self.reported = False
         self.needs_change = None
         self.needed_by_changes = []
