@@ -575,7 +575,9 @@ class FakeJenkins(object):
 
     def get_queue_info(self):
         items = []
-        for job in self.queue:
+        for job in self.queue[:]:
+            self.log.debug("Queue info: %s %s" % (job.name,
+                                                  job.parameters['UUID']))
             paramstr = ''
             paramlst = []
             d = {'actions': [{'parameters': paramlst},

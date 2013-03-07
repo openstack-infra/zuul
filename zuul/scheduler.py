@@ -622,7 +622,7 @@ class BasePipelineManager(object):
             return False
 
         if not self.enqueueChangesAhead(change):
-            self.log.debug("Failed to enqueue changes ahead of" % change)
+            self.log.debug("Failed to enqueue changes ahead of %s" % change)
             return False
 
         if self.isChangeAlreadyInQueue(change):
