@@ -529,3 +529,14 @@ executing new jobs, wait until all executing jobs are finished,
 then exit. While waiting to exit Zuul will queue Gerrit events and
 save these events prior to exiting. When Zuul starts again it will
 read these saved events and act on them.
+
+If you need to abort zuul and intend to manually requeue changes for
+jobs which were running in its pipelines, prior to terminating you can
+use the zuul-changes.py tool script to simplify the process. For
+example, this would give you a list of Gerrit commands to reverify or
+recheck changes for the gate and check pipelines respectively::
+
+  ./tools/zuul-changes.py --review-host=review.openstack.org \
+      http://zuul.openstack.org/ gate 'reverify no bug'
+  ./tools/zuul-changes.py --review-host=review.openstack.org \
+      http://zuul.openstack.org/ check 'recheck no bug'
