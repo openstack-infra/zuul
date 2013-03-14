@@ -8,4 +8,4 @@ lockfile
 python-daemon
 extras
 statsd==1.0.0
-voluptuous>=0.6
+voluptuous>=0.6,<0.7
