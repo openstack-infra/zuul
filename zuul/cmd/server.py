@@ -47,6 +47,8 @@ class Server(object):
                             help='do not run as a daemon')
         parser.add_argument('-t', dest='validate', action='store_true',
                             help='validate layout file syntax')
+        parser.add_argument('--version', dest='version', action='store_true',
+                            help='show zuul version')
         self.args = parser.parse_args()
 
     def read_config(self):
@@ -123,6 +125,12 @@ class Server(object):
 def main():
     server = Server()
     server.parse_arguments()
+
+    if server.args.version:
+        from zuul.version import version_info as zuul_version_info
+        print "Zuul version: %s" % zuul_version_info.version_string()
+        sys.exit(0)
+
     server.read_config()
 
     if server.args.layout:
