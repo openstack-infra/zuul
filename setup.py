@@ -15,16 +15,15 @@
 
 import setuptools
 from zuul.openstack.common import setup
-from zuul.version import version_info as version
 
 requires = setup.parse_requirements()
 test_requires = setup.parse_requirements(['tools/test-requires'])
 depend_links = setup.parse_dependency_links()
-
+project = 'zuul'
 
 setuptools.setup(
-    name='zuul',
-    version=version.canonical_version_string(always=True),
+    name=project,
+    version=setup.get_version(project),
     author='Hewlett-Packard Development Company, L.P.',
     author_email='openstack@lists.launchpad.net',
     description='Trunk gating system',
