@@ -1,0 +1,141 @@
+<!--
+Copyright 2013 OpenStack Foundation
+Copyright 2013 Timo Tijhof
+Copyright 2013 Wikimedia Foundation
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may
+not use this file except in compliance with the License. You may obtain
+a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+License for the specific language governing permissions and limitations
+under the License.
+-->
+<!DOCTYPE html>
+<html dir="ltr" lang="en">
+<head>
+    <title>Zuul Status</title>
+    <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="bootstrap/css/bootstrap-responsive.min.css">
+    <style>
+.zuul-container {
+    transition-property: opacity, background-color;
+    transition-duration: 1s;
+    transition-timing-function: ease-in-out;
+    clear: both;
+    opacity: 0;
+    cursor: progress;
+    min-height: 400px;
+    background-color: #f8ffaa;
+}
+
+.zuul-container-ready {
+    opacity: 1;
+    cursor: auto;
+    background-color: #fff;
+}
+
+.zuul-spinner,
+.zuul-spinner:hover {
+    opacity: 0;
+    transition: opacity 3s ease-out;
+    cursor: default;
+    pointer-events: none;
+}
+
+.zuul-spinner-on,
+.zuul-spinner-on:hover {
+    opacity: 1;
+    transition-duration: 0.4s;
+    cursor: progress;
+}
+
+.zuul-change-arrow {
+    text-align: center;
+    font-size: 16pt;
+    line-height: 1.0;
+}
+
+.zuul-change-id {
+    text-transform: none;
+}
+
+.zuul-change-job a {
+    overflow: auto;
+}
+
+.zuul-result {
+    text-shadow: none;
+    font-weight: normal;
+    background-color: #E9E9E9;
+    color: #555;
+}
+
+.zuul-result.label-success {
+    background-color: #CDF0CD;
+    color: #468847;
+}
+
+.zuul-result.label-important {
+    background-color: #F1DBDA;
+    color: #B94A48;
+}
+
+.zuul-result.label-warning {
+    background-color: #F3E6D4;
+    color: #F89406;
+}
+
+.zuul-msg-wrap {
+    max-height: 150px;
+    overflow: hidden;
+}
+
+.zuul-container-ready .zuul-msg-wrap {
+    transition: max-height 1s ease-in;
+}
+
+.zuul-msg-wrap-off {
+    max-height: 0;
+}
+
+.zuul-msg p {
+    margin: 0;
+}
+
+/**
+ * Styles for Bootstrap only
+ * (remove when not using Bootstrap)
+ */
+
+.zuul-change-id {
+    float: right;
+}
+
+.zuul-change-job-link {
+    overflow: auto;
+    display: block;
+}
+
+.zuul-result {
+    float: right;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Zuul Status</h1>
+        <p>Real-time status monitor of Zuul, the pipeline manager between Gerrit and Jenkins.</p>
+
+        <div class="zuul-container" id="zuul-container"></div>
+    </div>
+    <script src="jquery.min.js"></script>
+    <script src="jquery-visibility.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
