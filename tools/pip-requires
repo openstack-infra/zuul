@@ -1,7 +1,7 @@
 PyYAML
 python-jenkins
 Paste
-webob
+WebOb
 paramiko
 GitPython>=0.3.2.RC1
 lockfile
