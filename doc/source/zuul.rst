@@ -511,14 +511,17 @@ Starting Zuul
 
 To start Zuul, run **zuul-server**::
 
-  usage: zuul-server [-h] [-c CONFIG] [-d]
+  usage: zuul-server [-h] [-c CONFIG] [-l LAYOUT] [-d] [-t] [--version]
 
   Project gating system.
 
   optional arguments:
     -h, --help  show this help message and exit
     -c CONFIG   specify the config file
+    -l LAYOUT   specify the layout file
     -d          do not run as a daemon
+    -t          validate layout file syntax
+    --version   show zuul version
 
 You may want to use the ``-d`` argument while you are initially setting
 up Zuul so you can detect any configuration errors quickly.  Under
