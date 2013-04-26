@@ -1,73 +1,74 @@
 :title: Launchers
 
-.. _launchers:
+.. _Gearman: http://gearman.org/
 
+.. _`Gearman Plugin`:
+   https://wiki.jenkins-ci.org/display/JENKINS/Gearman+Plugin
+
+.. _launchers:
 
 Launchers
 =========
 
-Zuul has a modular architecture for launching jobs.  Currently only
-Jenkins is supported, but it should be fairly easy to add a module to
-support other systems.  Zuul makes very few assumptions about the
-interface to a launcher -- if it can trigger jobs, cancel them, and
-receive success or failure reports, it should be able to be used with
-Zuul.  Patches to this effect are welcome.
+Zuul has a modular architecture for launching jobs.  Currently, the
+only supported module interfaces with Gearman_.  This design allows
+any system to run jobs for Zuul simply by interfacing with a Gearman
+server.  The recommended way of integrating a new job-runner with Zuul
+is via this method.
 
-Jenkins
+If Gearman is unsuitable, Zuul may be extended with a new launcher
+module.  Zuul makes very few assumptions about the interface to a
+launcher -- if it can trigger jobs, cancel them, and receive success
+or failure reports, it should be able to be used with Zuul.  Patches
+to this effect are welcome.
+
+Gearman
 -------
 
-Zuul works with Jenkins using the Jenkins API and the notification
-module.  It uses the Jenkins API to trigger jobs, passing in
-parameters indicating what should be tested.  It recieves
-notifications on job completion via the notification API (so jobs must
-be conifigured to notify Zuul).
+Gearman_ is a general-purpose protocol for distributing jobs to any
+number of workers.  Zuul works with Gearman by sending specific
+information with job requests to Gearman, and expects certain
+information to be returned on completion.  This protocol is described
+in `Zuul-Gearman Protocol`_.
 
-Jenkins Configuration
-~~~~~~~~~~~~~~~~~~~~~
+The `Gearman Jenkins Plugin`_ makes it easy to use Jenkins with Zuul
+by providing an interface between Jenkins and Gearman.  In this
+configuration, Zuul asks Gearman to run jobs, and Gearman can then
+distribute those jobs to any number of Jenkins systems (including
+multiple Jenkins masters).
 
-Zuul will need access to a Jenkins user.  Create a user in Jenkins,
-and then visit the configuration page for the user:
+In order for Zuul to run any jobs, you will need a running Gearman
+server.  The latest version of gearmand from gearman.org is required
+in order to support canceling jobs while in the queue.  The server is
+easy to set up -- just make sure that it allows connections from Zuul
+and any workers (e.g., Jenkins masters) on port 4730, and nowhere else
+(as the Gearman protocol does not include any provision for
+authentication.
 
-  https://jenkins.example.com/user/USERNAME/configure
+Gearman Jenkins Plugin
+----------------------
 
-And click **Show API Token** to retrieve the API token for that user.
-You will need this later when configuring Zuul.  Appropriate user
-permissions must be set under the Jenkins security matrix: under the
-``Global`` group of permissions, check ``Read``, then under the ``Job``
-group of permissions, check ``Read`` and  ``Build``. Finally, under
-``Run`` check ``Update``.  If using a per project matrix, make sure the
-user permissions are properly set for any jobs that you want Zuul to
-trigger.
+The `Gearman Plugin`_ can be installed in Jenkins in order to
+facilitate Jenkins running jobs for Zuul.  Install the plugin and
+configure it with the hostname or IP address of your Gearman server
+and the port on which it is listening (4730 by default).  It will
+automatically register all known Jenkins jobs as functions that Zuul
+can invoke via Gearman.
 
-Make sure the notification plugin is installed.  Visit the plugin
-manager on your jenkins:
+Any number of masters can be configured in this way, and Gearman will
+distribute jobs to all of them as appropriate.
 
-  https://jenkins.example.com/pluginManager/
+No special Jenkins job configuration is needed to support triggering
+by Zuul.
 
-And install **Jenkins Notification plugin**.  The homepage for the
-plugin is at:
+Zuul Parameters
+---------------
 
-  https://wiki.jenkins-ci.org/display/JENKINS/Notification+Plugin
-
-Jenkins Job Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-For each job that you want Zuul to trigger, you will need to add a
-notification endpoint for the job on that job's configuration page.
-Click **Add Endpoint** and enter the following values:
-
-**Protocol**
-    ``HTTP``
-**URL**
-    ``http://127.0.0.1:8001/jenkins_endpoint``
-
-If you are running Zuul on a different server than Jenkins, enter the
-appropriate URL.  Note that Zuul itself has no access controls, so
-ensure that only Jenkins is permitted to access that URL.
-
-Zuul will pass some parameters to Jenkins for every job it launches.
-Check **This build is parameterized**, and add the following fields
-with the type **String Parameter**:
+Zuul will pass some parameters with every job it launches.  The
+Gearman Plugin will ensure these are supplied as Jenkins build
+parameters, so they will be available for use in the job configuration
+as well as to the running job as environment variables.  They are as
+follows:
 
 **ZUUL_UUID**
   Zuul provided key to link builds with Gerrit events
@@ -75,27 +76,14 @@ with the type **String Parameter**:
   Zuul provided ref that includes commit(s) to build
 **ZUUL_COMMIT**
   The commit SHA1 at the head of ZUUL_REF
-
-Those are the only required parameters.  The ZUUL_UUID is needed for Zuul to
-keep track of the build, and the ZUUL_REF and ZUUL_COMMIT parameters are for
-use in preparing the git repo for the build.
-
-.. note::
-    The GERRIT_PROJECT and UUID parameters are deprecated respectively in
-    favor of ZUUL_PROJECT and ZUUL_UUID.
-
-The following parameters will be sent for all builds, but are not required so
-you do not need to configure Jenkins to accept them if you do not plan on using
-them:
-
 **ZUUL_PROJECT**
   The project that triggered this build
 **ZUUL_PIPELINE**
   The Zuul pipeline that is building this job
 
-The following parameters are optional and will only be provided for
-builds associated with changes (i.e., in response to patchset-created
-or comment-added events):
+The following additional parameters will only be provided for builds
+associated with changes (i.e., in response to patchset-created or
+comment-added events):
 
 **ZUUL_BRANCH**
   The target branch for the change that triggered this build
@@ -107,7 +95,7 @@ or comment-added events):
 **ZUUL_PATCHSET**
   The Gerrit patchset number for the change that triggered this build
 
-The following parameters are optional and will only be provided for
+The following additional parameters will only be provided for
 post-merge (ref-updated) builds:
 
 **ZUUL_OLDREV**
@@ -139,7 +127,107 @@ That should be sufficient for a job that only builds a single project.
 If you have multiple interrelated projects (i.e., they share a Zuul
 Change Queue) that are built together, you may be able to configure
 the Git plugin to prepare them, or you may chose to use a shell script
-instead.  The OpenStack project uses the following script to prepare
-the workspace for its integration testing:
+instead.  As an example, the OpenStack project uses the following
+script to prepare the workspace for its integration testing:
 
   https://github.com/openstack-infra/devstack-gate/blob/master/devstack-vm-gate-wrap.sh
+
+
+Zuul-Gearman Protocol
+---------------------
+
+This section is only relevant if you intend to implement a new kind of
+worker that runs jobs for Zuul via Gearman.  If you just want to use
+Jenkins, see `Gearman Jenkins Plugin`_ instead.
+
+The Zuul protocol as used with Gearman is as follows:
+
+Starting Builds
+~~~~~~~~~~~~~~~
+
+To start a build, Zuul invokes a Gearman function with the following
+format:
+
+  build:FUNCTION_NAME
+
+where **FUNCTION_NAME** is the name of the job that should be run.  If
+the job should run on a specific node (or class of node), Zuul will
+instead invoke:
+
+  build:FUNCTION_NAME:NODE_NAME
+
+where **NODE_NAME** is the name or class of node on which the job
+should be run.  This can be specified by setting the ZUUL_NODE
+parameter in a paremeter-function (see :ref:`zuulconf`).
+
+Zuul sends the ZUUL_* parameters described in `Zuul Parameters`_
+encoded in JSON format as the argument included with the
+SUBMIT_JOB_UNIQ request to Gearman.  A unique ID (equal to the
+ZUUL_UUID parameter) is also supplied to Gearman, and is accessible as
+an added Gearman parameter with GRAB_JOB_UNIQ.
+
+When a Gearman worker starts running a job for Zuul, it should
+immediately send a WORK_DATA packet with the following information
+encoded in JSON format:
+
+**full_url**
+  The URL with the status or results of the build.  Will be used in
+  the status page and the final report.
+
+**number**
+  The build number (unique to this job).
+
+**master**
+  A unique identifier associated with the Gearman worker that can
+  abort this build.  See `Stopping Builds`_ for more information.
+
+It should then immediately send a WORK_STATUS packet with a value of 0
+percent complete.  It may then optionally send subsequent WORK_STATUS
+packets with updated completion values.
+
+When the build is complete, it should send a final WORK_DATA packet
+with the following in JSON format:
+
+**result**
+  Either the string 'SUCCESS' if the job succeeded, or any other value
+  that describes the result if the job failed.
+
+Finally, it should send either a WORK_FAIL or WORK_COMPLETE packet as
+appropriate.  A WORK_EXCEPTION packet will be interpreted as a
+WORK_FAIL, but the exception will be logged in Zuul's error log.
+
+Stopping Builds
+~~~~~~~~~~~~~~~
+
+If Zuul needs to abort a build already in progress, it will invoke the
+following function through Gearman:
+
+  stop:MASTER_NAME
+
+Where **MASTER_NAME** is the name of the master node supplied in the
+initial WORK_DATA packet when the job started.  This is used to direct
+the stop: function invocation to the correct Gearman worker that is
+capable of stopping that particular job.  The argument to the function
+will be the unique ID of the job that should be stopped.
+
+The original job is expected to complete with a WORK_DATA and
+WORK_FAIL packet as described in `Starting Builds`_.
+
+Build Descriptions
+~~~~~~~~~~~~~~~~~~
+
+In order to update the job running system with a description of the
+current state of all related builds, the job runner may optionally
+implement the following Gearman function:
+
+  set_description:MASTER_NAME
+
+Where **MASTER_NAME** is used as described in `Stopping Builds`_.  The
+argument to the function is the following encoded in JSON format:
+
+**unique_id**
+  The unique identifier of the build whose description should be
+  updated.
+
+**html_description**
+  The description of the build in HTML format.

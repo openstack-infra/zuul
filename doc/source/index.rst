@@ -10,8 +10,8 @@ Zuul is a program that is used to gate the source code repository of a
 project so that changes are only merged if they pass tests.
 
 The main component of Zuul is the scheduler.  It receives events
-related to proposed changes (currently from Gerrit), triggers tests
-based on those events (currently on Jenkins), and reports back.
+related to proposed changes, triggers tests based on those events, and
+reports back.
 
 Contents:
 

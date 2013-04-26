@@ -457,6 +457,7 @@ class Build(object):
         self.launch_time = time.time()
         self.start_time = None
         self.end_time = None
+        self.fraction_complete = None
 
     def __repr__(self):
         return '<Build %s of %s>' % (self.uuid, self.job.name)
