@@ -45,6 +45,7 @@ class Scheduler(threading.Thread):
         self._stopped = False
         self.launcher = None
         self.trigger = None
+        self.config = None
 
         self.trigger_event_queue = Queue.Queue()
         self.result_event_queue = Queue.Queue()
@@ -508,7 +509,8 @@ class BasePipelineManager(object):
         self.success_action = {}
         self.failure_action = {}
         self.start_action = {}
-        if self.sched.config.has_option('zuul', 'report_times'):
+        if self.sched.config and self.sched.config.has_option(
+            'zuul', 'report_times'):
             self.report_times = self.sched.config.getboolean(
                 'zuul', 'report_times')
         else:

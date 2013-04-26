@@ -2071,3 +2071,8 @@ class testScheduler(unittest.TestCase):
         assert B.data['status'] == 'MERGED'
         assert B.reported == 2
         self.assertEmptyQueues()
+
+    def test_test_config(self):
+        "Test that we can test the config"
+        sched = zuul.scheduler.Scheduler()
+        sched.testConfig(CONFIG.get('zuul', 'layout_config'))
