@@ -508,6 +508,11 @@ class BasePipelineManager(object):
         self.success_action = {}
         self.failure_action = {}
         self.start_action = {}
+        if self.sched.config.has_option('zuul', 'report_times'):
+            self.report_times = self.sched.config.getboolean(
+                'zuul', 'report_times')
+        else:
+            self.report_times = True
 
     def __str__(self):
         return "<%s %s>" % (self.__class__.__name__, self.pipeline.name)
@@ -884,7 +889,14 @@ class BasePipelineManager(object):
                     voting = ' (non-voting)'
                 else:
                     voting = ''
-                ret += '- %s : %s%s\n' % (url, result, voting)
+                if self.report_times and build.end_time and build.start_time:
+                    dt = int(build.end_time - build.start_time)
+                    m, s = divmod(dt, 60)
+                    h, m = divmod(m, 60)
+                    elapsed = ' in %02d:%02d:%02d' % (h, m, s)
+                else:
+                    elapsed = ''
+                ret += '- %s : %s%s%s\n' % (url, result, elapsed, voting)
         return ret
 
     def formatDescription(self, build):

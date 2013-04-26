@@ -100,6 +100,11 @@ zuul
   git_dir.
   ``push_change_refs=true``
 
+**report_times**
+  Boolean value (``true`` or ``false``) that determines if Zuul should
+  include elapsed times for each job in the textual report.
+  ``report_times=true``
+
 **status_url**
   URL that will be posted in Zuul comments made to Gerrit changes when
   beginning Jenkins jobs for a change.
