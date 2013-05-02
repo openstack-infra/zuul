@@ -131,8 +131,8 @@ class Gerrit(object):
         if not change.number:
             self.log.debug("Change has no number; not reporting")
             return
-        if not action:
-            self.log.debug("No action specified; not reporting")
+        if not action and not message:
+            self.log.debug("No action or message specified; not reporting")
             return
         changeid = '%s,%s' % (change.number, change.patchset)
         ref = 'refs/heads/' + change.branch
