@@ -937,7 +937,12 @@ class BasePipelineManager(object):
                     dt = int(build.end_time - build.start_time)
                     m, s = divmod(dt, 60)
                     h, m = divmod(m, 60)
-                    elapsed = ' in %02d:%02d:%02d' % (h, m, s)
+                    if h:
+                        elapsed = ' in %dh %02dm %02ds' % (h, m, s)
+                    elif m:
+                        elapsed = ' in %dm %02ds' % (m, s)
+                    else:
+                        elapsed = ' in %ds' % (s)
                 else:
                     elapsed = ''
                 ret += '- %s : %s%s%s\n' % (url, result, elapsed, voting)
