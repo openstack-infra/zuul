@@ -655,17 +655,15 @@ class FakeStatsd(threading.Thread):
 
     def run(self):
         while True:
-            poll = select.poll()
-            poll.register(self.sock, select.POLLIN)
-            poll.register(self.wake_read, select.POLLIN)
-            ret = poll.poll()
-            for (fd, event) in ret:
-                if fd == self.sock.fileno():
+            read_ready = select.select([self.sock, self.wake_read], [], [])[0]
+            for sock in read_ready:
+                if sock is self.sock:
                     data = self.sock.recvfrom(1024)
                     if not data:
                         return
                     self.stats.append(data[0])
-                if fd == self.wake_read:
+                else:
+                    # wake_read
                     return
 
     def stop(self):
