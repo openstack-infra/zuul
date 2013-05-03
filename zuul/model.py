@@ -450,7 +450,6 @@ class Build(object):
     def __init__(self, job, uuid):
         self.job = job
         self.uuid = uuid
-        self.base_url = None
         self.url = None
         self.number = None
         self.result = None

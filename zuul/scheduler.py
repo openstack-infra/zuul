@@ -922,17 +922,13 @@ class BasePipelineManager(object):
                         result = job.failure_message
                     if job.failure_pattern:
                         pattern = job.failure_pattern
-                url = None
-                if build.url:
-                    if pattern:
-                        url = pattern.format(change=changeish,
-                                             pipeline=self.pipeline,
-                                             job=job,
-                                             build=build)
-                    else:
-                        url = build.url
-                if not url:
-                    url = job.name
+                if pattern:
+                    url = pattern.format(change=changeish,
+                                         pipeline=self.pipeline,
+                                         job=job,
+                                         build=build)
+                else:
+                    url = build.url or job.name
                 if not job.voting:
                     voting = ' (non-voting)'
                 else:
@@ -960,10 +956,10 @@ class BasePipelineManager(object):
         change = build.build_set.change
 
         for build in build.build_set.getBuilds():
-            if build.base_url:
+            if build.url:
                 concurrent_builds += """\
 <li>
-  <a href="{build.base_url}">
+  <a href="{build.url}">
   {build.job.name} #{build.number}</a>: {build.result}
 </li>
 """.format(build=build)
@@ -979,7 +975,7 @@ class BasePipelineManager(object):
             if other_build:
                 other_builds += """\
 <li>
-  Preceded by: <a href="{build.base_url}">
+  Preceded by: <a href="{build.url}">
   {build.job.name} #{build.number}</a>
 </li>
 """.format(build=other_build)
@@ -990,7 +986,7 @@ class BasePipelineManager(object):
             if other_build:
                 other_builds += """\
 <li>
-  Succeeded by: <a href="{build.base_url}">
+  Succeeded by: <a href="{build.url}">
   {build.job.name} #{build.number}</a>
 </li>
 """.format(build=other_build)
