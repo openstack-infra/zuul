@@ -26,11 +26,16 @@ class ZuulReference(git.Reference):
 class Repo(object):
     log = logging.getLogger("zuul.Repo")
 
-    def __init__(self, remote, local):
+    def __init__(self, remote, local, email, username):
         self.remote_url = remote
         self.local_path = local
         self._ensure_cloned()
         self.repo = git.Repo(self.local_path)
+        if email:
+            self.repo.config_writer().set_value('user', 'email', email)
+        if username:
+            self.repo.config_writer().set_value('user', 'name', username)
+        self.repo.config_writer().write()
 
     def _ensure_cloned(self):
         if not os.path.exists(self.local_path):
@@ -117,7 +122,8 @@ class Repo(object):
 class Merger(object):
     log = logging.getLogger("zuul.Merger")
 
-    def __init__(self, trigger, working_root, push_refs, sshkey):
+    def __init__(self, trigger, working_root, push_refs, sshkey, email,
+            username):
         self.trigger = trigger
         self.repos = {}
         self.working_root = working_root
@@ -126,6 +132,8 @@ class Merger(object):
         self.push_refs = push_refs
         if sshkey:
             self._makeSSHWrapper(sshkey)
+        self.email = email
+        self.username = username
 
     def _makeSSHWrapper(self, key):
         name = os.path.join(self.working_root, '.ssh_wrapper')
@@ -139,7 +147,8 @@ class Merger(object):
     def addProject(self, project, url):
         try:
             path = os.path.join(self.working_root, project.name)
-            repo = Repo(url, path)
+            repo = Repo(url, path, self.email, self.username)
+
             self.repos[project] = repo
         except:
             self.log.exception("Unable to initialize repo for %s" % project)

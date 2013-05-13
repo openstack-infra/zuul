@@ -94,6 +94,14 @@ zuul
   Directory that Zuul should clone local git repositories to.
   ``git_dir=/var/lib/zuul/git``
 
+**git_user_email**
+  Optional: Value to pass to `git config user.email`.
+  ``git_user_email=zuul@example.com``
+
+**git_user_name**
+  Optional: Value to pass to `git config user.name`.
+  ``git_user_name=zuul``
+
 **push_change_refs**
   Boolean value (``true`` or ``false``) that determines if Zuul should
   push change refs to the git origin server for the git repositories in

@@ -15,4 +15,6 @@ log_config=/etc/zuul/logging.conf
 pidfile=/var/run/zuul/zuul.pid
 state_dir=/var/lib/zuul
 git_dir=/var/lib/zuul/git
+;git_user_email=zuul@example.com
+;git_user_name=zuul
 status_url=https://jenkins.example.com/zuul/status
