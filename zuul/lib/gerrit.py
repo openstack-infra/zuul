@@ -116,12 +116,11 @@ class Gerrit(object):
         cmd = 'gerrit review --project %s' % project
         if message:
             cmd += ' --message "%s"' % message
-        if action:
-            for k, v in action.items():
-                if v is True:
-                    cmd += ' --%s' % k
-                else:
-                    cmd += ' --%s %s' % (k, v)
+        for k, v in action.items():
+            if v is True:
+                cmd += ' --%s' % k
+            else:
+                cmd += ' --%s %s' % (k, v)
         cmd += ' %s' % change
         out, err = self._ssh(cmd)
         return err
