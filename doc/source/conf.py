@@ -216,7 +216,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'zuul', u'Zuul Documentation',
+    ('index', 'zuul-server', u'Zuul Documentation',
      [u'OpenStack'], 1)
 ]
 
