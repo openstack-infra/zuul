@@ -40,6 +40,25 @@ pipelines:
         approval: 
           - approved: 1
 
+  - name: dup1
+    manager: IndependentPipelineManager
+    trigger:
+      - event: change-restored
+    success:
+      verified: 1
+    failure:
+      verified: -1
+
+  - name: dup2
+    manager: IndependentPipelineManager
+    trigger:
+      - event: change-restored
+    success:
+      verified: 1
+    failure:
+      verified: -1
+
+
 jobs:
   - name: ^.*-merge$
     failure-message: Unable to merge change
@@ -73,6 +92,10 @@ projects:
         - project-testfile
     post:
       - project-post
+    dup1:
+      - project-test1
+    dup2:
+      - project-test1
 
   - name: org/project1
     check:

@@ -78,6 +78,10 @@ def init_repo(project):
     path = os.path.join(UPSTREAM_ROOT, project)
     repo = git.Repo.init(path)
 
+    repo.config_writer().set_value('user', 'email', 'user@example.com')
+    repo.config_writer().set_value('user', 'name', 'User Name')
+    repo.config_writer().write()
+
     fn = os.path.join(path, 'README')
     f = open(fn, 'w')
     f.write("test\n")
@@ -180,6 +184,7 @@ class FakeChange(object):
         self.depends_on_change = None
         self.needed_by_changes = []
         self.fail_merge = False
+        self.messages = []
         self.data = {
             'branch': branch,
             'comments': [],
@@ -243,6 +248,19 @@ class FakeChange(object):
                             "url": "https://hostname/3"},
                  "patchSet": self.patchsets[patchset - 1],
                  "uploader": {"name": "User Name"}}
+        return event
+
+    def getChangeRestoredEvent(self):
+        event = {"type": "change-restored",
+                 "change": {"project": self.project,
+                            "branch": self.branch,
+                            "id": "I5459869c07352a31bfb1e7a8cac379cabfcb25af",
+                            "number": str(self.number),
+                            "subject": self.subject,
+                            "owner": {"name": "User Name"},
+                            "url": "https://hostname/3"},
+                 "restorer": {"name": "User Name"},
+                 "reason": ""}
         return event
 
     def addApproval(self, category, value):
@@ -376,6 +394,7 @@ class FakeGerrit(object):
     def review(self, project, changeid, message, action):
         number, ps = changeid.split(',')
         change = self.changes[int(number)]
+        change.messages.append(message)
         if 'submit' in action:
             change.setMerged()
         if message:
@@ -955,6 +974,36 @@ class testScheduler(unittest.TestCase):
             'zuul.pipeline.gate.org.project.resident_time')
         self.assertReportedStat(
             'zuul.pipeline.gate.org.project.total_changes', '1|c')
+
+    def test_duplicate_pipelines(self):
+        "Test that a change matching multiple pipelines works"
+        builds = self.worker.running_builds
+        history = self.worker.build_history
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getChangeRestoredEvent())
+        self.waitUntilSettled()
+
+        print builds
+        print A.messages
+
+        self.assertEmptyQueues()
+
+        assert len(history) == 2
+        history[0].name == 'project-test1'
+        history[1].name == 'project-test1'
+
+        assert len(A.messages) == 2
+        if 'dup1/project-test1' in A.messages[0]:
+            assert 'dup1/project-test1' in A.messages[0]
+            assert 'dup2/project-test1' not in A.messages[0]
+            assert 'dup1/project-test1' not in A.messages[1]
+            assert 'dup2/project-test1' in A.messages[1]
+        else:
+            assert 'dup1/project-test1' in A.messages[1]
+            assert 'dup2/project-test1' not in A.messages[1]
+            assert 'dup1/project-test1' not in A.messages[0]
+            assert 'dup2/project-test1' in A.messages[0]
 
     def test_parallel_changes(self):
         "Test that changes are tested in parallel and merged in series"

@@ -22,7 +22,7 @@
         demo = location.search.match(/[?&]demo=([^?&]*)/),
         source = demo ?
             './status-' + (demo[1] || 'basic') + '.json-sample' :
-            '/zuul/status.json';
+            'status.json';
 
     zuul = {
         enabled: true,

@@ -246,6 +246,16 @@ class Scheduler(threading.Thread):
         else:
             merge_root = '/var/lib/zuul/git'
 
+        if self.config.has_option('zuul', 'git_user_email'):
+            merge_email = self.config.get('zuul', 'git_user_email')
+        else:
+            merge_email = None
+
+        if self.config.has_option('zuul', 'git_user_name'):
+            merge_name = self.config.get('zuul', 'git_user_name')
+        else:
+            merge_name = None
+
         if self.config.has_option('zuul', 'push_change_refs'):
             push_refs = self.config.getboolean('zuul', 'push_change_refs')
         else:
@@ -257,7 +267,7 @@ class Scheduler(threading.Thread):
             sshkey = None
 
         self.merger = merger.Merger(self.trigger, merge_root, push_refs,
-                                    sshkey)
+                                    sshkey, merge_email, merge_name)
         for project in self.projects.values():
             url = self.trigger.getGitUrl(project)
             self.merger.addProject(project, url)
