@@ -28,6 +28,8 @@ import os
 import sys
 import signal
 
+import gear
+
 # No zuul imports here because they pull in paramiko which must not be
 # imported until after the daemonization.
 # https://github.com/paramiko/paramiko/issues/59
@@ -37,6 +39,7 @@ class Server(object):
     def __init__(self):
         self.args = None
         self.config = None
+        self.gear_server_pid = None
 
     def parse_arguments(self):
         parser = argparse.ArgumentParser(description='Project gating system.')
@@ -65,9 +68,9 @@ class Server(object):
                 return
         raise Exception("Unable to locate config file in %s" % locations)
 
-    def setup_logging(self):
-        if self.config.has_option('zuul', 'log_config'):
-            fp = os.path.expanduser(self.config.get('zuul', 'log_config'))
+    def setup_logging(self, section, parameter):
+        if self.config.has_option(section, parameter):
+            fp = os.path.expanduser(self.config.get(section, parameter))
             if not os.path.exists(fp):
                 raise Exception("Unable to read logging config file at %s" %
                                 fp)
@@ -84,7 +87,12 @@ class Server(object):
 
     def exit_handler(self, signum, frame):
         signal.signal(signal.SIGUSR1, signal.SIG_IGN)
+        self.stop_gear_server()
         self.sched.exit()
+
+    def term_handler(self, signum, frame):
+        self.stop_gear_server()
+        os._exit(0)
 
     def test_config(self):
         # See comment at top of file about zuul imports
@@ -96,12 +104,38 @@ class Server(object):
         self.sched = zuul.scheduler.Scheduler()
         self.sched.testConfig(self.config.get('zuul', 'layout_config'))
 
+    def start_gear_server(self):
+        pipe_read, pipe_write = os.pipe()
+        child_pid = os.fork()
+        if child_pid == 0:
+            os.close(pipe_write)
+            self.setup_logging('gearman_server', 'log_config')
+            gear.Server(4730)
+            # Keep running until the parent dies:
+            pipe_read = os.fdopen(pipe_read)
+            pipe_read.read()
+            os._exit(0)
+        else:
+            os.close(pipe_read)
+            self.gear_server_pid = child_pid
+            self.gear_pipe_write = pipe_write
+
+    def stop_gear_server(self):
+        if self.gear_server_pid:
+            os.kill(self.gear_server_pid, signal.SIGKILL)
+
     def main(self):
         # See comment at top of file about zuul imports
         import zuul.scheduler
         import zuul.launcher.gearman
         import zuul.trigger.gerrit
         import zuul.webapp
+
+        if (self.config.has_option('gearman_server', 'start') and
+            self.config.getboolean('gearman_server', 'start')):
+            self.start_gear_server()
+
+        self.setup_logging('zuul', 'log_config')
 
         self.sched = zuul.scheduler.Scheduler()
 
@@ -119,6 +153,7 @@ class Server(object):
 
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
         signal.signal(signal.SIGUSR1, self.exit_handler)
+        signal.signal(signal.SIGTERM, self.term_handler)
         while True:
             try:
                 signal.pause()
@@ -167,11 +202,9 @@ def main():
     pid = pid_file_module.TimeoutPIDLockFile(pid_fn, 10)
 
     if server.args.nodaemon:
-        server.setup_logging()
         server.main()
     else:
         with daemon.DaemonContext(pidfile=pid):
-            server.setup_logging()
             server.main()
 
 
