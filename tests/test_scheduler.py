@@ -918,6 +918,13 @@ class testScheduler(unittest.TestCase):
         jobs = filter(lambda x: x.result == result, jobs)
         return len(jobs)
 
+    def getJobFromHistory(self, name):
+        history = self.worker.build_history
+        for job in history:
+            if job.name == name:
+                return job
+        raise Exception("Unable to find job %s in history" % name)
+
     def assertEmptyQueues(self):
         # Make sure there are no orphaned jobs
         for pipeline in self.sched.pipelines.values():
@@ -954,13 +961,9 @@ class testScheduler(unittest.TestCase):
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
-        job_names = [x.name for x in history]
-        assert 'project-merge' in job_names
-        assert 'project-test1' in job_names
-        assert 'project-test2' in job_names
-        assert history[0].result == 'SUCCESS'
-        assert history[1].result == 'SUCCESS'
-        assert history[2].result == 'SUCCESS'
+        assert self.getJobFromHistory('project-merge').result == 'SUCCESS'
+        assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
+        assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
         self.assertEmptyQueues()
@@ -1566,12 +1569,9 @@ class testScheduler(unittest.TestCase):
             'org/templated-project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
-        job_names = [x.name for x in history]
 
-        assert 'project-test1' in job_names
-        assert 'project-test2' in job_names
-        assert history[0].result == 'SUCCESS'
-        assert history[1].result == 'SUCCESS'
+        assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
+        assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
 
     def test_dependent_changes_dequeue(self):
         "Test that dependent patches are not needlessly tested"
@@ -1694,9 +1694,12 @@ class testScheduler(unittest.TestCase):
 
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
-        assert history[0].result == 'SUCCESS'
-        assert history[1].result == 'SUCCESS'
-        assert history[2].result == 'FAILURE'
+        assert (self.getJobFromHistory('nonvoting-project-merge').result ==
+                'SUCCESS')
+        assert (self.getJobFromHistory('nonvoting-project-test1').result ==
+                'SUCCESS')
+        assert (self.getJobFromHistory('nonvoting-project-test2').result ==
+                'FAILURE')
         self.assertEmptyQueues()
 
     def test_check_queue_success(self):
@@ -1711,9 +1714,9 @@ class testScheduler(unittest.TestCase):
 
         assert A.data['status'] == 'NEW'
         assert A.reported == 1
-        assert history[0].result == 'SUCCESS'
-        assert history[1].result == 'SUCCESS'
-        assert history[2].result == 'SUCCESS'
+        assert self.getJobFromHistory('project-merge').result == 'SUCCESS'
+        assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
+        assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
         self.assertEmptyQueues()
 
     def test_check_queue_failure(self):
@@ -1729,9 +1732,9 @@ class testScheduler(unittest.TestCase):
 
         assert A.data['status'] == 'NEW'
         assert A.reported == 1
-        assert history[0].result == 'SUCCESS'
-        assert history[1].result == 'SUCCESS'
-        assert history[2].result == 'FAILURE'
+        assert self.getJobFromHistory('project-merge').result == 'SUCCESS'
+        assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
+        assert self.getJobFromHistory('project-test2').result == 'FAILURE'
         self.assertEmptyQueues()
 
     def test_dependent_behind_dequeue(self):
@@ -1833,16 +1836,13 @@ class testScheduler(unittest.TestCase):
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
-        job_names = [x.name for x in history]
-        assert 'project-merge' in job_names
-        assert 'project-test1' in job_names
-        assert 'project-test2' in job_names
-        assert history[0].result == 'SUCCESS'
-        assert history[1].result == 'SUCCESS'
-        assert history[2].result == 'SUCCESS'
+        assert self.getJobFromHistory('project-merge').result == 'SUCCESS'
+        assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
+        assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
         self.assertEmptyQueues()
+        self.worker.build_history = []
 
         path = os.path.join(GIT_ROOT, "org/project")
         os.system('git --git-dir=%s/.git repack -afd' % path)
@@ -1851,13 +1851,9 @@ class testScheduler(unittest.TestCase):
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
-        job_names = [x.name for x in history]
-        assert 'project-merge' in job_names
-        assert 'project-test1' in job_names
-        assert 'project-test2' in job_names
-        assert history[0].result == 'SUCCESS'
-        assert history[1].result == 'SUCCESS'
-        assert history[2].result == 'SUCCESS'
+        assert self.getJobFromHistory('project-merge').result == 'SUCCESS'
+        assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
+        assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
         self.assertEmptyQueues()
@@ -1878,13 +1874,9 @@ class testScheduler(unittest.TestCase):
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
-        job_names = [x.name for x in history]
-        assert 'project1-merge' in job_names
-        assert 'project1-test1' in job_names
-        assert 'project1-test2' in job_names
-        assert history[0].result == 'SUCCESS'
-        assert history[1].result == 'SUCCESS'
-        assert history[2].result == 'SUCCESS'
+        assert self.getJobFromHistory('project1-merge').result == 'SUCCESS'
+        assert self.getJobFromHistory('project1-test1').result == 'SUCCESS'
+        assert self.getJobFromHistory('project1-test2').result == 'SUCCESS'
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
         self.assertEmptyQueues()
@@ -1916,13 +1908,9 @@ class testScheduler(unittest.TestCase):
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
-        job_names = [x.name for x in history]
-        assert 'project-merge' in job_names
-        assert 'project-test1' in job_names
-        assert 'project-test2' in job_names
-        assert history[0].result == 'SUCCESS'
-        assert history[1].result == 'SUCCESS'
-        assert history[2].result == 'SUCCESS'
+        assert self.getJobFromHistory('project-merge').result == 'SUCCESS'
+        assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
+        assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
         self.assertEmptyQueues()
@@ -2280,6 +2268,7 @@ class testScheduler(unittest.TestCase):
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
-        assert history[0].node is None
-        assert history[1].node == 'debian'
-        assert history[2].node is None
+
+        assert self.getJobFromHistory('node-project-merge').node is None
+        assert self.getJobFromHistory('node-project-test1').node == 'debian'
+        assert self.getJobFromHistory('node-project-test2').node is None

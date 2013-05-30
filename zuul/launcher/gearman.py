@@ -145,7 +145,6 @@ class Gearman(object):
             try:
                 req = gear.StatusAdminRequest()
                 connection.sendAdminRequest(req)
-                req.waitForResponse()
             except Exception:
                 self.log.exception("Exception while checking functions")
                 continue
@@ -247,7 +246,6 @@ class Gearman(object):
             self.onBuildCompleted(gearman_job, 'LOST')
             return build
 
-        gearman_job.waitForHandle(30)
         if not gearman_job.handle:
             self.log.error("No job handle was received for %s after 30 seconds"
                            " marking as lost." %
@@ -331,7 +329,6 @@ class Gearman(object):
 
         req = gear.CancelJobAdminRequest(job.handle)
         job.connection.sendAdminRequest(req)
-        req.waitForResponse()
         self.log.debug("Response to cancel build %s request: %s" %
                        (build, req.response.strip()))
         if req.response.startswith("OK"):
