@@ -15,6 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from zuul.openstack.common import version as common_version
+import pbr.version
 
-version_info = common_version.VersionInfo('zuul')
+version_info = pbr.version.VersionInfo('zuul')
