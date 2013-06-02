@@ -775,6 +775,8 @@ class testScheduler(unittest.TestCase):
         self.sched.resume()
         self.launcher.gearman.waitForServer()
         self.registerJobs()
+        self.builds = self.worker.running_builds
+        self.history = self.worker.build_history
 
     def tearDown(self):
         self.launcher.stop()
@@ -962,8 +964,6 @@ class testScheduler(unittest.TestCase):
 
     def test_jobs_launched(self):
         "Test that jobs are launched and a change is merged"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('CRVW', 2)
@@ -988,21 +988,19 @@ class testScheduler(unittest.TestCase):
 
     def test_duplicate_pipelines(self):
         "Test that a change matching multiple pipelines works"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getChangeRestoredEvent())
         self.waitUntilSettled()
 
-        print builds
+        print self.builds
         print A.messages
 
         self.assertEmptyQueues()
 
-        assert len(history) == 2
-        history[0].name == 'project-test1'
-        history[1].name == 'project-test1'
+        assert len(self.history) == 2
+        self.history[0].name == 'project-test1'
+        self.history[1].name == 'project-test1'
 
         assert len(A.messages) == 2
         if 'dup1/project-test1' in A.messages[0]:
@@ -1018,8 +1016,6 @@ class testScheduler(unittest.TestCase):
 
     def test_parallel_changes(self):
         "Test that changes are tested in parallel and merged in series"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -1034,60 +1030,60 @@ class testScheduler(unittest.TestCase):
         self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
 
         self.waitUntilSettled()
-        assert len(builds) == 1
-        assert builds[0].name == 'project-merge'
-        assert job_has_changes(builds[0], A)
+        assert len(self.builds) == 1
+        assert self.builds[0].name == 'project-merge'
+        assert job_has_changes(self.builds[0], A)
 
         self.worker.release('.*-merge')
         self.waitUntilSettled()
-        assert len(builds) == 3
-        assert builds[0].name == 'project-test1'
-        assert job_has_changes(builds[0], A)
-        assert builds[1].name == 'project-test2'
-        assert job_has_changes(builds[1], A)
-        assert builds[2].name == 'project-merge'
-        assert job_has_changes(builds[2], A, B)
+        assert len(self.builds) == 3
+        assert self.builds[0].name == 'project-test1'
+        assert job_has_changes(self.builds[0], A)
+        assert self.builds[1].name == 'project-test2'
+        assert job_has_changes(self.builds[1], A)
+        assert self.builds[2].name == 'project-merge'
+        assert job_has_changes(self.builds[2], A, B)
 
         self.worker.release('.*-merge')
         self.waitUntilSettled()
-        assert len(builds) == 5
-        assert builds[0].name == 'project-test1'
-        assert job_has_changes(builds[0], A)
-        assert builds[1].name == 'project-test2'
-        assert job_has_changes(builds[1], A)
+        assert len(self.builds) == 5
+        assert self.builds[0].name == 'project-test1'
+        assert job_has_changes(self.builds[0], A)
+        assert self.builds[1].name == 'project-test2'
+        assert job_has_changes(self.builds[1], A)
 
-        assert builds[2].name == 'project-test1'
-        assert job_has_changes(builds[2], A, B)
-        assert builds[3].name == 'project-test2'
-        assert job_has_changes(builds[3], A, B)
+        assert self.builds[2].name == 'project-test1'
+        assert job_has_changes(self.builds[2], A, B)
+        assert self.builds[3].name == 'project-test2'
+        assert job_has_changes(self.builds[3], A, B)
 
-        assert builds[4].name == 'project-merge'
-        assert job_has_changes(builds[4], A, B, C)
+        assert self.builds[4].name == 'project-merge'
+        assert job_has_changes(self.builds[4], A, B, C)
 
         self.worker.release('.*-merge')
         self.waitUntilSettled()
-        assert len(builds) == 6
-        assert builds[0].name == 'project-test1'
-        assert job_has_changes(builds[0], A)
-        assert builds[1].name == 'project-test2'
-        assert job_has_changes(builds[1], A)
+        assert len(self.builds) == 6
+        assert self.builds[0].name == 'project-test1'
+        assert job_has_changes(self.builds[0], A)
+        assert self.builds[1].name == 'project-test2'
+        assert job_has_changes(self.builds[1], A)
 
-        assert builds[2].name == 'project-test1'
-        assert job_has_changes(builds[2], A, B)
-        assert builds[3].name == 'project-test2'
-        assert job_has_changes(builds[3], A, B)
+        assert self.builds[2].name == 'project-test1'
+        assert job_has_changes(self.builds[2], A, B)
+        assert self.builds[3].name == 'project-test2'
+        assert job_has_changes(self.builds[3], A, B)
 
-        assert builds[4].name == 'project-test1'
-        assert job_has_changes(builds[4], A, B, C)
-        assert builds[5].name == 'project-test2'
-        assert job_has_changes(builds[5], A, B, C)
+        assert self.builds[4].name == 'project-test1'
+        assert job_has_changes(self.builds[4], A, B, C)
+        assert self.builds[5].name == 'project-test2'
+        assert job_has_changes(self.builds[5], A, B, C)
 
         self.worker.hold_jobs_in_build = False
         self.worker.release()
         self.waitUntilSettled()
-        assert len(builds) == 0
+        assert len(self.builds) == 0
 
-        assert len(history) == 9
+        assert len(self.history) == 9
         assert A.data['status'] == 'MERGED'
         assert B.data['status'] == 'MERGED'
         assert C.data['status'] == 'MERGED'
@@ -1098,8 +1094,6 @@ class testScheduler(unittest.TestCase):
 
     def test_failed_changes(self):
         "Test that a change behind a failed change is retested"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
@@ -1112,7 +1106,7 @@ class testScheduler(unittest.TestCase):
         self.worker.addFailTest('project-test1', A)
 
         self.waitUntilSettled()
-        assert len(history) > 6
+        assert len(self.history) > 6
         assert A.data['status'] == 'NEW'
         assert B.data['status'] == 'MERGED'
         assert A.reported == 2
@@ -1121,8 +1115,6 @@ class testScheduler(unittest.TestCase):
 
     def test_independent_queues(self):
         "Test that changes end up in the right queues"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -1139,11 +1131,11 @@ class testScheduler(unittest.TestCase):
         self.waitUntilSettled()
 
         # There should be one merge job at the head of each queue running
-        assert len(builds) == 2
-        assert builds[0].name == 'project-merge'
-        assert job_has_changes(builds[0], A)
-        assert builds[1].name == 'project1-merge'
-        assert job_has_changes(builds[1], B)
+        assert len(self.builds) == 2
+        assert self.builds[0].name == 'project-merge'
+        assert job_has_changes(self.builds[0], A)
+        assert self.builds[1].name == 'project1-merge'
+        assert job_has_changes(self.builds[1], B)
 
         # Release the current merge builds
         self.worker.release('.*-merge')
@@ -1154,13 +1146,13 @@ class testScheduler(unittest.TestCase):
 
         # All the test builds should be running:
         # project1 (3) + project2 (3) + project (2) = 8
-        assert len(builds) == 8
+        assert len(self.builds) == 8
 
         self.worker.release()
         self.waitUntilSettled()
-        assert len(builds) == 0
+        assert len(self.builds) == 0
 
-        assert len(history) == 11
+        assert len(self.history) == 11
         assert A.data['status'] == 'MERGED'
         assert B.data['status'] == 'MERGED'
         assert C.data['status'] == 'MERGED'
@@ -1171,8 +1163,6 @@ class testScheduler(unittest.TestCase):
 
     def test_failed_change_at_head(self):
         "Test that if a change at the head fails, jobs behind it are canceled"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -1190,9 +1180,9 @@ class testScheduler(unittest.TestCase):
 
         self.waitUntilSettled()
 
-        assert len(builds) == 1
-        assert builds[0].name == 'project-merge'
-        assert job_has_changes(builds[0], A)
+        assert len(self.builds) == 1
+        assert self.builds[0].name == 'project-merge'
+        assert job_has_changes(self.builds[0], A)
 
         self.worker.release('.*-merge')
         self.waitUntilSettled()
@@ -1201,26 +1191,26 @@ class testScheduler(unittest.TestCase):
         self.worker.release('.*-merge')
         self.waitUntilSettled()
 
-        assert len(builds) == 6
-        assert builds[0].name == 'project-test1'
-        assert builds[1].name == 'project-test2'
-        assert builds[2].name == 'project-test1'
-        assert builds[3].name == 'project-test2'
-        assert builds[4].name == 'project-test1'
-        assert builds[5].name == 'project-test2'
+        assert len(self.builds) == 6
+        assert self.builds[0].name == 'project-test1'
+        assert self.builds[1].name == 'project-test2'
+        assert self.builds[2].name == 'project-test1'
+        assert self.builds[3].name == 'project-test2'
+        assert self.builds[4].name == 'project-test1'
+        assert self.builds[5].name == 'project-test2'
 
-        self.release(builds[0])
+        self.release(self.builds[0])
         self.waitUntilSettled()
 
-        assert len(builds) == 2  # project-test2, project-merge for B
-        assert self.countJobResults(history, 'ABORTED') == 4
+        assert len(self.builds) == 2  # project-test2, project-merge for B
+        assert self.countJobResults(self.history, 'ABORTED') == 4
 
         self.worker.hold_jobs_in_build = False
         self.worker.release()
         self.waitUntilSettled()
 
-        assert len(builds) == 0
-        assert len(history) == 15
+        assert len(self.builds) == 0
+        assert len(self.history) == 15
         assert A.data['status'] == 'NEW'
         assert B.data['status'] == 'MERGED'
         assert C.data['status'] == 'MERGED'
@@ -1231,8 +1221,6 @@ class testScheduler(unittest.TestCase):
 
     def test_failed_change_at_head_with_queue(self):
         "Test that if a change at the head fails, queued jobs are canceled"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         self.gearman_server.hold_jobs_in_queue = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -1250,7 +1238,7 @@ class testScheduler(unittest.TestCase):
 
         self.waitUntilSettled()
         queue = self.gearman_server.getQueue()
-        assert len(builds) == 0
+        assert len(self.builds) == 0
         assert len(queue) == 1
         assert queue[0].name == 'build:project-merge'
         assert job_has_changes(queue[0], A)
@@ -1263,7 +1251,7 @@ class testScheduler(unittest.TestCase):
         self.waitUntilSettled()
         queue = self.gearman_server.getQueue()
 
-        assert len(builds) == 0
+        assert len(self.builds) == 0
         assert len(queue) == 6
         assert queue[0].name == 'build:project-test1'
         assert queue[1].name == 'build:project-test2'
@@ -1275,17 +1263,17 @@ class testScheduler(unittest.TestCase):
         self.release(queue[0])
         self.waitUntilSettled()
 
-        assert len(builds) == 0
+        assert len(self.builds) == 0
         queue = self.gearman_server.getQueue()
         assert len(queue) == 2  # project-test2, project-merge for B
-        assert self.countJobResults(history, 'ABORTED') == 0
+        assert self.countJobResults(self.history, 'ABORTED') == 0
 
         self.gearman_server.hold_jobs_in_queue = False
         self.gearman_server.release()
         self.waitUntilSettled()
 
-        assert len(builds) == 0
-        assert len(history) == 11
+        assert len(self.builds) == 0
+        assert len(self.history) == 11
         assert A.data['status'] == 'NEW'
         assert B.data['status'] == 'MERGED'
         assert C.data['status'] == 'MERGED'
@@ -1358,8 +1346,6 @@ class testScheduler(unittest.TestCase):
 
     def test_build_configuration(self):
         "Test that zuul merges the right commits for testing"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         self.gearman_server.hold_jobs_in_queue = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -1395,8 +1381,6 @@ class testScheduler(unittest.TestCase):
 
     def test_build_configuration_conflict(self):
         "Test that merge conflicts are handled"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         self.gearman_server.hold_jobs_in_queue = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -1419,7 +1403,7 @@ class testScheduler(unittest.TestCase):
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
         queue = self.gearman_server.getQueue()
-        ref = self.getParameter(queue[-1], 'ZUUL_REF')
+        self.getParameter(queue[-1], 'ZUUL_REF')
         self.gearman_server.hold_jobs_in_queue = False
         self.gearman_server.release()
         self.waitUntilSettled()
@@ -1434,8 +1418,6 @@ class testScheduler(unittest.TestCase):
 
     def test_post(self):
         "Test that post jobs run"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         e = {
             "type": "ref-updated",
@@ -1452,15 +1434,13 @@ class testScheduler(unittest.TestCase):
         self.fake_gerrit.addEvent(e)
         self.waitUntilSettled()
 
-        job_names = [x.name for x in history]
-        assert len(history) == 1
+        job_names = [x.name for x in self.history]
+        assert len(self.history) == 1
         assert 'project-post' in job_names
         self.assertEmptyQueues()
 
     def test_build_configuration_branch(self):
         "Test that the right commits are on alternate branches"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         self.gearman_server.hold_jobs_in_queue = True
         A = self.fake_gerrit.addFakeChange('org/project', 'mp', 'A')
@@ -1507,8 +1487,6 @@ class testScheduler(unittest.TestCase):
 
     def test_build_configuration_multi_branch(self):
         "Test that dependent changes on multiple branches are merged"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         self.gearman_server.hold_jobs_in_queue = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -1572,8 +1550,6 @@ class testScheduler(unittest.TestCase):
 
     def test_job_from_templates_launched(self):
         "Test whether a job generated via a template can be launched"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         A = self.fake_gerrit.addFakeChange(
             'org/templated-project', 'master', 'A')
@@ -1585,8 +1561,6 @@ class testScheduler(unittest.TestCase):
 
     def test_dependent_changes_dequeue(self):
         "Test that dependent patches are not needlessly tested"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
@@ -1618,15 +1592,13 @@ class testScheduler(unittest.TestCase):
         assert B.reported == 2
         assert C.data['status'] == 'NEW'
         assert C.reported == 2
-        assert len(history) == 1
+        assert len(self.history) == 1
         self.assertEmptyQueues()
 
     def test_head_is_dequeued_once(self):
         "Test that if a change at the head fails it is dequeued only once"
         # If it's dequeued more than once, we should see extra
         # aborted jobs.
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -1646,9 +1618,9 @@ class testScheduler(unittest.TestCase):
 
         self.waitUntilSettled()
 
-        assert len(builds) == 1
-        assert builds[0].name == 'project1-merge'
-        assert job_has_changes(builds[0], A)
+        assert len(self.builds) == 1
+        assert self.builds[0].name == 'project1-merge'
+        assert job_has_changes(self.builds[0], A)
 
         self.worker.release('.*-merge')
         self.waitUntilSettled()
@@ -1657,29 +1629,29 @@ class testScheduler(unittest.TestCase):
         self.worker.release('.*-merge')
         self.waitUntilSettled()
 
-        assert len(builds) == 9
-        assert builds[0].name == 'project1-test1'
-        assert builds[1].name == 'project1-test2'
-        assert builds[2].name == 'project1-project2-integration'
-        assert builds[3].name == 'project1-test1'
-        assert builds[4].name == 'project1-test2'
-        assert builds[5].name == 'project1-project2-integration'
-        assert builds[6].name == 'project1-test1'
-        assert builds[7].name == 'project1-test2'
-        assert builds[8].name == 'project1-project2-integration'
+        assert len(self.builds) == 9
+        assert self.builds[0].name == 'project1-test1'
+        assert self.builds[1].name == 'project1-test2'
+        assert self.builds[2].name == 'project1-project2-integration'
+        assert self.builds[3].name == 'project1-test1'
+        assert self.builds[4].name == 'project1-test2'
+        assert self.builds[5].name == 'project1-project2-integration'
+        assert self.builds[6].name == 'project1-test1'
+        assert self.builds[7].name == 'project1-test2'
+        assert self.builds[8].name == 'project1-project2-integration'
 
-        self.release(builds[0])
+        self.release(self.builds[0])
         self.waitUntilSettled()
 
-        assert len(builds) == 3  # test2, integration, merge for B
-        assert self.countJobResults(history, 'ABORTED') == 6
+        assert len(self.builds) == 3  # test2, integration, merge for B
+        assert self.countJobResults(self.history, 'ABORTED') == 6
 
         self.worker.hold_jobs_in_build = False
         self.worker.release()
         self.waitUntilSettled()
 
-        assert len(builds) == 0
-        assert len(history) == 20
+        assert len(self.builds) == 0
+        assert len(self.history) == 20
 
         assert A.data['status'] == 'NEW'
         assert B.data['status'] == 'MERGED'
@@ -1691,8 +1663,6 @@ class testScheduler(unittest.TestCase):
 
     def test_nonvoting_job(self):
         "Test that non-voting jobs don't vote."
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         A = self.fake_gerrit.addFakeChange('org/nonvoting-project',
                                            'master', 'A')
@@ -1714,8 +1684,6 @@ class testScheduler(unittest.TestCase):
 
     def test_check_queue_success(self):
         "Test successful check queue jobs."
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
@@ -1731,8 +1699,6 @@ class testScheduler(unittest.TestCase):
 
     def test_check_queue_failure(self):
         "Test failed check queue jobs."
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.worker.addFailTest('project-test2', A)
@@ -1751,9 +1717,6 @@ class testScheduler(unittest.TestCase):
         "test that dependent changes behind dequeued changes work"
         # This complicated test is a reproduction of a real life bug
         self.sched.reconfigure(self.config)
-
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -1809,7 +1772,7 @@ class testScheduler(unittest.TestCase):
         # Grab pointers to the jobs we want to release before
         # releasing any, because list indexes may change as
         # the jobs complete.
-        a, b, c = builds[:3]
+        a, b, c = self.builds[:3]
         a.release()
         b.release()
         c.release()
@@ -1833,14 +1796,12 @@ class testScheduler(unittest.TestCase):
         assert E.reported == 2
         assert F.reported == 2
 
-        assert self.countJobResults(history, 'ABORTED') == 15
-        assert len(history) == 44
+        assert self.countJobResults(self.history, 'ABORTED') == 15
+        assert len(self.history) == 44
         self.assertEmptyQueues()
 
     def test_merger_repack(self):
         "Test that the merger works after a repack"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('CRVW', 2)
@@ -1871,9 +1832,6 @@ class testScheduler(unittest.TestCase):
     def test_merger_repack_large_change(self):
         "Test that the merger works with large changes after a repack"
         # https://bugs.launchpad.net/zuul/+bug/1078946
-        builds = self.worker.running_builds
-        history = self.worker.build_history
-
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         A.addPatchset(large=True)
         path = os.path.join(UPSTREAM_ROOT, "org/project1")
@@ -1893,9 +1851,6 @@ class testScheduler(unittest.TestCase):
 
     def test_nonexistent_job(self):
         "Test launching a job that doesn't exist"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
-
         # Set to the state immediately after a restart
         self.resetGearmanServer()
         self.launcher.negative_function_cache_ttl = 0
@@ -1906,7 +1861,7 @@ class testScheduler(unittest.TestCase):
         # There may be a thread about to report a lost change
         while A.reported < 2:
             self.waitUntilSettled()
-        job_names = [x.name for x in history]
+        job_names = [x.name for x in self.history]
         assert not job_names
         assert A.data['status'] == 'NEW'
         assert A.reported == 2
@@ -1927,9 +1882,6 @@ class testScheduler(unittest.TestCase):
 
     def test_single_nonexistent_post_job(self):
         "Test launching a single post job that doesn't exist"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
-
         e = {
             "type": "ref-updated",
             "submitter": {
@@ -1949,15 +1901,12 @@ class testScheduler(unittest.TestCase):
         self.fake_gerrit.addEvent(e)
         self.waitUntilSettled()
 
-        assert len(history) == 0
+        assert len(self.history) == 0
         self.assertEmptyQueues()
 
     def test_new_patchset_dequeues_old(self):
         "Test that a new patchset causes the old to be dequeued"
         # D -> C (depends on B) -> B (depends on A) -> A -> M
-        builds = self.worker.running_builds
-        history = self.worker.build_history
-
         self.worker.hold_jobs_in_build = True
         M = self.fake_gerrit.addFakeChange('org/project', 'master', 'M')
         M.setMerged()
@@ -1997,15 +1946,12 @@ class testScheduler(unittest.TestCase):
         assert C.reported == 2
         assert D.data['status'] == 'MERGED'
         assert D.reported == 2
-        assert len(history) == 9  # 3 each for A, B, D.
+        assert len(self.history) == 9  # 3 each for A, B, D.
         self.assertEmptyQueues()
 
     def test_new_patchset_dequeues_old_on_head(self):
         "Test that a new patchset causes the old to be dequeued (at head)"
         # D -> C (depends on B) -> B (depends on A) -> A -> M
-        builds = self.worker.running_builds
-        history = self.worker.build_history
-
         self.worker.hold_jobs_in_build = True
         M = self.fake_gerrit.addFakeChange('org/project', 'master', 'M')
         M.setMerged()
@@ -2044,14 +1990,11 @@ class testScheduler(unittest.TestCase):
         assert C.reported == 2
         assert D.data['status'] == 'MERGED'
         assert D.reported == 2
-        assert len(history) == 7
+        assert len(self.history) == 7
         self.assertEmptyQueues()
 
     def test_new_patchset_dequeues_old_without_dependents(self):
         "Test that a new patchset causes only the old to be dequeued"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
-
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
@@ -2079,14 +2022,11 @@ class testScheduler(unittest.TestCase):
         assert B.reported == 2
         assert C.data['status'] == 'MERGED'
         assert C.reported == 2
-        assert len(history) == 9
+        assert len(self.history) == 9
         self.assertEmptyQueues()
 
     def test_new_patchset_dequeues_old_independent_queue(self):
         "Test that a new patchset causes the old to be dequeued (independent)"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
-
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
@@ -2110,15 +2050,12 @@ class testScheduler(unittest.TestCase):
         assert B.reported == 1
         assert C.data['status'] == 'NEW'
         assert C.reported == 1
-        assert len(history) == 10
-        assert self.countJobResults(history, 'ABORTED') == 1
+        assert len(self.history) == 10
+        assert self.countJobResults(self.history, 'ABORTED') == 1
         self.assertEmptyQueues()
 
     def test_zuul_refs(self):
         "Test that zuul refs exist and have the right changes"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
-
         self.worker.hold_jobs_in_build = True
         M1 = self.fake_gerrit.addFakeChange('org/project1', 'master', 'M1')
         M1.setMerged()
@@ -2149,7 +2086,7 @@ class testScheduler(unittest.TestCase):
         self.waitUntilSettled()
 
         a_zref = b_zref = c_zref = d_zref = None
-        for x in builds:
+        for x in self.builds:
             if x.parameters['ZUUL_CHANGE'] == '3':
                 a_zref = x.parameters['ZUUL_REF']
             if x.parameters['ZUUL_CHANGE'] == '4':
@@ -2218,9 +2155,6 @@ class testScheduler(unittest.TestCase):
 
     def test_file_jobs(self):
         "Test that file jobs run only when appropriate"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
-
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addPatchset(['pip-requires'])
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
@@ -2230,7 +2164,7 @@ class testScheduler(unittest.TestCase):
         self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
         self.waitUntilSettled()
 
-        testfile_jobs = [x for x in history
+        testfile_jobs = [x for x in self.history
                          if x.name == 'project-testfile']
 
         assert len(testfile_jobs) == 1
@@ -2248,9 +2182,6 @@ class testScheduler(unittest.TestCase):
 
     def test_build_description(self):
         "Test that build descriptions update"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
-
         self.worker.registerFunction('set_description:' +
                                      self.worker.worker_id)
 
@@ -2258,7 +2189,7 @@ class testScheduler(unittest.TestCase):
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
-        desc = history[0].description
+        desc = self.history[0].description
         self.log.debug("Description: %s" % desc)
         assert re.search("Branch.*master", desc)
         assert re.search("Pipeline.*gate", desc)
@@ -2269,9 +2200,6 @@ class testScheduler(unittest.TestCase):
 
     def test_node_label(self):
         "Test that a job runs on a specific node label"
-        builds = self.worker.running_builds
-        history = self.worker.build_history
-
         self.worker.registerFunction('build:node-project-test1:debian')
 
         A = self.fake_gerrit.addFakeChange('org/node-project', 'master', 'A')
