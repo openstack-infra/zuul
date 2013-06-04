@@ -170,16 +170,19 @@ When a Gearman worker starts running a job for Zuul, it should
 immediately send a WORK_DATA packet with the following information
 encoded in JSON format:
 
-**full_url**
-  The URL with the status or results of the build.  Will be used in
-  the status page and the final report.
+**name**
+  The name of the job.
 
 **number**
   The build number (unique to this job).
 
-**master**
+**manager**
   A unique identifier associated with the Gearman worker that can
   abort this build.  See `Stopping Builds`_ for more information.
+
+**url** (optional)
+  The URL with the status or results of the build.  Will be used in
+  the status page and the final report.
 
 It should then immediately send a WORK_STATUS packet with a value of 0
 percent complete.  It may then optionally send subsequent WORK_STATUS
@@ -202,13 +205,19 @@ Stopping Builds
 If Zuul needs to abort a build already in progress, it will invoke the
 following function through Gearman:
 
-  stop:MASTER_NAME
+  stop:MANAGER_NAME
 
-Where **MASTER_NAME** is the name of the master node supplied in the
-initial WORK_DATA packet when the job started.  This is used to direct
-the stop: function invocation to the correct Gearman worker that is
-capable of stopping that particular job.  The argument to the function
-will be the unique ID of the job that should be stopped.
+Where **MANAGER_NAME** is the name of the manager worker supplied in
+the initial WORK_DATA packet when the job started.  This is used to
+direct the stop: function invocation to the correct Gearman worker
+that is capable of stopping that particular job.  The argument to the
+function should be the following encoded in JSON format:
+
+**name**
+  The job name of the build to stop.
+
+**number**
+  The build number of the build to stop.
 
 The original job is expected to complete with a WORK_DATA and
 WORK_FAIL packet as described in `Starting Builds`_.
@@ -220,14 +229,16 @@ In order to update the job running system with a description of the
 current state of all related builds, the job runner may optionally
 implement the following Gearman function:
 
-  set_description:MASTER_NAME
+  set_description:MANAGER_NAME
 
-Where **MASTER_NAME** is used as described in `Stopping Builds`_.  The
-argument to the function is the following encoded in JSON format:
+Where **MANAGER_NAME** is used as described in `Stopping Builds`_.
+The argument to the function is the following encoded in JSON format:
 
-**unique_id**
-  The unique identifier of the build whose description should be
-  updated.
+**name**
+  The job name of the build to describe.
+
+**number**
+  The build number of the build to describe.
 
 **html_description**
   The description of the build in HTML format.

@@ -308,9 +308,9 @@ class Gearman(object):
             self.log.debug("Found build %s" % build)
             if not build.number:
                 self.log.info("Build %s started" % job)
-                build.url = data.get('full_url')
+                build.url = data.get('url')
                 build.number = data.get('number')
-                build.__gearman_master = data.get('master')
+                build.__gearman_manager = data.get('manager')
                 self.sched.onBuildStarted(build)
             build.fraction_complete = job.fraction_complete
         else:
@@ -341,9 +341,10 @@ class Gearman(object):
 
     def cancelRunningBuild(self, build):
         stop_uuid = str(uuid4().hex)
-        stop_job = gear.Job("stop:%s" % build.__gearman_master,
-                            build.uuid,
-                            unique=stop_uuid)
+        data = dict(name=build.job.name,
+                    number=build.number)
+        stop_job = gear.Job("stop:%s" % build.__gearman_manager,
+                            json.dumps(data), unique=stop_uuid)
         self.meta_jobs[stop_uuid] = stop_job
         self.log.debug("Submitting stop job: %s", stop_job)
         self.gearman.submitJob(stop_job)
@@ -351,7 +352,7 @@ class Gearman(object):
 
     def setBuildDescription(self, build, desc):
         try:
-            name = "set_description:%s" % build.__gearman_master
+            name = "set_description:%s" % build.__gearman_manager
         except AttributeError:
             # We haven't yet received the first data packet that tells
             # us where the job is running.
@@ -361,7 +362,8 @@ class Gearman(object):
             return False
 
         desc_uuid = str(uuid4().hex)
-        data = dict(unique_id=build.uuid,
+        data = dict(name=build.job.name,
+                    number=build.number,
                     html_description=desc)
         desc_job = gear.Job(name, json.dumps(data), unique=desc_uuid)
         self.meta_jobs[desc_uuid] = desc_job

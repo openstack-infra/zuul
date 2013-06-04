@@ -515,9 +515,10 @@ class FakeBuild(threading.Thread):
 
     def run(self):
         data = {
-            'full_url': 'https://server/job/%s/%s/' % (self.name, self.number),
+            'url': 'https://server/job/%s/%s/' % (self.name, self.number),
+            'name': self.name,
             'number': self.number,
-            'master': self.worker.worker_id,
+            'manager': self.worker.worker_id,
             }
 
         self.job.sendWorkData(json.dumps(data))
@@ -594,9 +595,11 @@ class FakeWorker(gear.Worker):
 
     def handleStop(self, job, name):
         self.log.debug("handle stop")
-        unique = job.arguments
+        parameters = json.loads(job.arguments)
+        name = parameters['name']
+        number = parameters['number']
         for build in self.running_builds:
-            if build.unique == unique:
+            if build.name == name and build.number == number:
                 build.aborted = True
                 build.release()
                 job.sendWorkComplete()
@@ -606,15 +609,16 @@ class FakeWorker(gear.Worker):
     def handleSetDescription(self, job, name):
         self.log.debug("handle set description")
         parameters = json.loads(job.arguments)
-        unique = parameters['unique_id']
+        name = parameters['name']
+        number = parameters['number']
         descr = parameters['html_description']
         for build in self.running_builds:
-            if build.unique == unique:
+            if build.name == name and build.number == number:
                 build.description = descr
                 job.sendWorkComplete()
                 return
         for build in self.build_history:
-            if build.uuid == unique:
+            if build.name == name and build.number == number:
                 build.description = descr
                 job.sendWorkComplete()
                 return
