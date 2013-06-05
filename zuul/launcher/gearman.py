@@ -95,6 +95,49 @@ class ZuulGearmanClient(gear.Client):
                 if build.__gearman_job.handle == handle:
                     self.__zuul_gearman.onUnknownJob(job)
 
+    def waitForGearmanToSettle(self):
+        # If we're running the internal gearman server, it's possible
+        # that after a restart or reload, we may be immediately ready
+        # to run jobs but all the gearman workers may not have
+        # registered yet.  Give them a sporting chance to show up
+        # before we start declaring jobs lost because we don't have
+        # gearman functions registered for them.
+
+        # Spend up to 30 seconds after we connect to the gearman
+        # server waiting for the set of defined jobs to become
+        # consistent over a sliding 5 second window.
+
+        self.log.info("Waiting for connection to internal Gearman server")
+        self.waitForServer()
+        self.log.info("Waiting for gearman function set to settle")
+        start = time.time()
+        last_change = start
+        all_functions = set()
+        while time.time() - start < 30:
+            now = time.time()
+            last_functions = set()
+            for connection in self.active_connections:
+                try:
+                    req = gear.StatusAdminRequest()
+                    connection.sendAdminRequest(req)
+                except Exception:
+                    self.log.exception("Exception while checking functions")
+                    continue
+                for line in req.response.split('\n'):
+                    parts = [x.strip() for x in line.split()]
+                    if not parts or parts[0] == '.':
+                        continue
+                    last_functions.add(parts[0])
+            if last_functions != all_functions:
+                last_change = now
+                all_functions.update(last_functions)
+            else:
+                if now - last_change > 5:
+                    self.log.info("Gearman function set has settled")
+                    break
+            time.sleep(1)
+        self.log.info("Done waiting for Gearman server")
+
 
 class Gearman(object):
     log = logging.getLogger("zuul.Gearman")
@@ -112,6 +155,10 @@ class Gearman(object):
 
         self.gearman = ZuulGearmanClient(self)
         self.gearman.addServer(server, port)
+
+        if (config.has_option('gearman_server', 'start') and
+            config.getboolean('gearman_server', 'start')):
+            self.gearman.waitForGearmanToSettle()
 
         self.cleanup_thread = GearmanCleanup(self)
         self.cleanup_thread.start()
