@@ -254,6 +254,7 @@ class Pipeline(object):
             ret['url'] = None
         ret['id'] = changeish._id()
         ret['project'] = changeish.project.name
+        ret['enqueue_time'] = int(changeish.enqueue_time * 1000)
         ret['jobs'] = []
         for job in self.getJobs(changeish):
             build = changeish.current_build_set.getBuild(job.name)
