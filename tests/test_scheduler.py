@@ -669,41 +669,45 @@ class FakeGearmanServer(gear.Server):
         super(FakeGearmanServer, self).__init__(0)
 
     def getJobForConnection(self, connection, peek=False):
-        for job in self.queue:
-            if not hasattr(job, 'waiting'):
-                if job.name.startswith('build:'):
-                    job.waiting = self.hold_jobs_in_queue
-                else:
-                    job.waiting = False
-            if job.waiting:
-                continue
-            if job.name in connection.functions:
-                if not peek:
-                    self.queue.remove(job)
-                return job
+        for queue in [self.high_queue, self.normal_queue, self.low_queue]:
+            for job in queue:
+                if not hasattr(job, 'waiting'):
+                    if job.name.startswith('build:'):
+                        job.waiting = self.hold_jobs_in_queue
+                    else:
+                        job.waiting = False
+                if job.waiting:
+                    continue
+                if job.name in connection.functions:
+                    if not peek:
+                        queue.remove(job)
+                    return job
         return None
 
     def release(self, regex=None):
         released = False
-        queue = self.queue[:]
-        self.log.debug("releasing queued job %s (%s)" % (regex,
-                                                         len(self.queue)))
-        for job in queue:
-            cmd, name = job.name.split(':')
-            if cmd != 'build':
-                continue
-            if not regex or re.match(regex, name):
-                self.log.debug("releasing queued job %s" %
-                               job.unique)
-                job.waiting = False
-                released = True
-            else:
-                self.log.debug("not releasing queued job %s" %
-                               job.unique)
+        qlen = (len(self.high_queue) + len(self.normal_queue) +
+                len(self.low_queue))
+        self.log.debug("releasing queued job %s (%s)" % (regex, qlen))
+        for queue in [self.high_queue, self.normal_queue, self.low_queue]:
+            queue = queue[:]
+            for job in queue:
+                cmd, name = job.name.split(':')
+                if cmd != 'build':
+                    continue
+                if not regex or re.match(regex, name):
+                    self.log.debug("releasing queued job %s" %
+                                   job.unique)
+                    job.waiting = False
+                    released = True
+                else:
+                    self.log.debug("not releasing queued job %s" %
+                                   job.unique)
         if released:
             self.wakeConnections()
-        self.log.debug("done releasing queued jobs %s (%s)" %
-                       (regex, len(self.queue)))
+        qlen = (len(self.high_queue) + len(self.normal_queue) +
+                len(self.low_queue))
+        self.log.debug("done releasing queued jobs %s (%s)" % (regex, qlen))
 
 
 class testScheduler(unittest.TestCase):
@@ -1229,7 +1233,6 @@ class testScheduler(unittest.TestCase):
         "Test that if a change at the head fails, queued jobs are canceled"
         builds = self.worker.running_builds
         history = self.worker.build_history
-        queue = self.gearman_server.queue
 
         self.gearman_server.hold_jobs_in_queue = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -1246,6 +1249,7 @@ class testScheduler(unittest.TestCase):
         self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
 
         self.waitUntilSettled()
+        queue = self.gearman_server.getQueue()
         assert len(builds) == 0
         assert len(queue) == 1
         assert queue[0].name == 'build:project-merge'
@@ -1257,6 +1261,7 @@ class testScheduler(unittest.TestCase):
         self.waitUntilSettled()
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
+        queue = self.gearman_server.getQueue()
 
         assert len(builds) == 0
         assert len(queue) == 6
@@ -1271,6 +1276,7 @@ class testScheduler(unittest.TestCase):
         self.waitUntilSettled()
 
         assert len(builds) == 0
+        queue = self.gearman_server.getQueue()
         assert len(queue) == 2  # project-test2, project-merge for B
         assert self.countJobResults(history, 'ABORTED') == 0
 
@@ -1354,7 +1360,6 @@ class testScheduler(unittest.TestCase):
         "Test that zuul merges the right commits for testing"
         builds = self.worker.running_builds
         history = self.worker.build_history
-        queue = self.gearman_server.queue
 
         self.gearman_server.hold_jobs_in_queue = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -1374,7 +1379,7 @@ class testScheduler(unittest.TestCase):
         self.waitUntilSettled()
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
-
+        queue = self.gearman_server.getQueue()
         ref = self.getParameter(queue[-1], 'ZUUL_REF')
         self.gearman_server.hold_jobs_in_queue = False
         self.gearman_server.release()
@@ -1392,7 +1397,6 @@ class testScheduler(unittest.TestCase):
         "Test that merge conflicts are handled"
         builds = self.worker.running_builds
         history = self.worker.build_history
-        queue = self.gearman_server.queue
 
         self.gearman_server.hold_jobs_in_queue = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -1414,6 +1418,7 @@ class testScheduler(unittest.TestCase):
         self.waitUntilSettled()
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
+        queue = self.gearman_server.getQueue()
         ref = self.getParameter(queue[-1], 'ZUUL_REF')
         self.gearman_server.hold_jobs_in_queue = False
         self.gearman_server.release()
@@ -1456,7 +1461,6 @@ class testScheduler(unittest.TestCase):
         "Test that the right commits are on alternate branches"
         builds = self.worker.running_builds
         history = self.worker.build_history
-        queue = self.gearman_server.queue
 
         self.gearman_server.hold_jobs_in_queue = True
         A = self.fake_gerrit.addFakeChange('org/project', 'mp', 'A')
@@ -1476,6 +1480,7 @@ class testScheduler(unittest.TestCase):
         self.waitUntilSettled()
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
+        queue = self.gearman_server.getQueue()
         ref = self.getParameter(queue[-1], 'ZUUL_REF')
         self.gearman_server.hold_jobs_in_queue = False
         self.gearman_server.release()
@@ -1504,7 +1509,6 @@ class testScheduler(unittest.TestCase):
         "Test that dependent changes on multiple branches are merged"
         builds = self.worker.running_builds
         history = self.worker.build_history
-        queue = self.gearman_server.queue
 
         self.gearman_server.hold_jobs_in_queue = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -1520,11 +1524,13 @@ class testScheduler(unittest.TestCase):
 
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
+        queue = self.gearman_server.getQueue()
         ref_mp = self.getParameter(queue[-1], 'ZUUL_REF')
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
+        queue = self.gearman_server.getQueue()
         ref_master = self.getParameter(queue[-1], 'ZUUL_REF')
         self.gearman_server.hold_jobs_in_queue = False
         self.gearman_server.release()
