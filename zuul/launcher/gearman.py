@@ -212,40 +212,43 @@ class Gearman(object):
         self.log.debug("Function %s is not registered" % name)
         return False
 
-    def launch(self, job, change, pipeline, dependent_changes=[]):
+    def launch(self, job, item, pipeline, dependent_items=[]):
         self.log.info("Launch job %s for change %s with dependent changes %s" %
-                      (job, change, dependent_changes))
-        dependent_changes = dependent_changes[:]
-        dependent_changes.reverse()
+                      (job, item.change,
+                       [x.change for x in dependent_items]))
+        dependent_items = dependent_items[:]
+        dependent_items.reverse()
         uuid = str(uuid4().hex)
         params = dict(ZUUL_UUID=uuid,
-                      ZUUL_PROJECT=change.project.name)
+                      ZUUL_PROJECT=item.change.project.name)
         params['ZUUL_PIPELINE'] = pipeline.name
-        if hasattr(change, 'refspec'):
+        if hasattr(item.change, 'refspec'):
             changes_str = '^'.join(
-                ['%s:%s:%s' % (c.project.name, c.branch, c.refspec)
-                 for c in dependent_changes + [change]])
-            params['ZUUL_BRANCH'] = change.branch
+                ['%s:%s:%s' % (i.change.project.name, i.change.branch,
+                               i.change.refspec)
+                 for i in dependent_items + [item]])
+            params['ZUUL_BRANCH'] = item.change.branch
             params['ZUUL_CHANGES'] = changes_str
             params['ZUUL_REF'] = ('refs/zuul/%s/%s' %
-                                  (change.branch,
-                                   change.current_build_set.ref))
-            params['ZUUL_COMMIT'] = change.current_build_set.commit
+                                  (item.change.branch,
+                                   item.current_build_set.ref))
+            params['ZUUL_COMMIT'] = item.current_build_set.commit
 
-            zuul_changes = ' '.join(['%s,%s' % (c.number, c.patchset)
-                                     for c in dependent_changes + [change]])
+            zuul_changes = ' '.join(['%s,%s' % (i.change.number,
+                                                i.change.patchset)
+                                     for i in dependent_items + [item]])
             params['ZUUL_CHANGE_IDS'] = zuul_changes
-            params['ZUUL_CHANGE'] = str(change.number)
-            params['ZUUL_PATCHSET'] = str(change.patchset)
-        if hasattr(change, 'ref'):
-            params['ZUUL_REFNAME'] = change.ref
-            params['ZUUL_OLDREV'] = change.oldrev
-            params['ZUUL_NEWREV'] = change.newrev
-            params['ZUUL_SHORT_OLDREV'] = change.oldrev[:7]
-            params['ZUUL_SHORT_NEWREV'] = change.newrev[:7]
+            params['ZUUL_CHANGE'] = str(item.change.number)
+            params['ZUUL_PATCHSET'] = str(item.change.patchset)
+        if hasattr(item.change, 'ref'):
+            params['ZUUL_REFNAME'] = item.change.ref
+            params['ZUUL_OLDREV'] = item.change.oldrev
+            params['ZUUL_NEWREV'] = item.change.newrev
+            params['ZUUL_SHORT_OLDREV'] = item.change.oldrev[:7]
+            params['ZUUL_SHORT_NEWREV'] = item.change.newrev[:7]
 
-            params['ZUUL_REF'] = change.ref
-            params['ZUUL_COMMIT'] = change.newrev
+            params['ZUUL_REF'] = item.change.ref
+            params['ZUUL_COMMIT'] = item.change.newrev
 
         # This is what we should be heading toward for parameters:
 
@@ -271,9 +274,10 @@ class Gearman(object):
         # ZUUL_SHORT_OLDREV
 
         if callable(job.parameter_function):
-            job.parameter_function(change, params)
+            job.parameter_function(item.change, params)
             self.log.debug("Custom parameter function used for job %s, "
-                           "change: %s, params: %s" % (job, change, params))
+                           "change: %s, params: %s" % (job, item.change,
+                                                       params))
 
         if 'ZUUL_NODE' in params:
             name = "build:%s:%s" % (job.name, params['ZUUL_NODE'])
@@ -310,7 +314,7 @@ class Gearman(object):
     def cancel(self, build):
         self.log.info("Cancel build %s for job %s" % (build, build.job))
 
-        if build.number:
+        if build.number is not None:
             self.log.debug("Build %s has already started" % build)
             self.cancelRunningBuild(build)
             self.log.debug("Canceled running build %s" % build)
@@ -357,11 +361,11 @@ class Gearman(object):
 
     def onWorkStatus(self, job):
         data = getJobData(job)
-        self.log.info("Build %s update" % job)
+        self.log.info("Build %s update %s " % (job, data))
         build = self.builds.get(job.unique)
         if build:
             self.log.debug("Found build %s" % build)
-            if not build.number:
+            if build.number is None:
                 self.log.info("Build %s started" % job)
                 build.url = data.get('url')
                 build.number = data.get('number')

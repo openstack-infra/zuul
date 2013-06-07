@@ -770,7 +770,16 @@ class TestScheduler(testtools.TestCase):
         self.builds = self.worker.running_builds
         self.history = self.worker.build_history
 
-    def tearDown(self):
+        self.addCleanup(self.assertFinalState)
+        self.addCleanup(self.shutdown)
+
+    def assertFinalState(self):
+        # Make sure that the change cache is cleared
+        assert len(self.sched.trigger._change_cache.keys()) == 0
+        self.assertEmptyQueues()
+
+    def shutdown(self):
+        self.log.debug("Shutting down after tests")
         self.launcher.stop()
         self.worker.shutdown()
         self.gearman_server.shutdown()
@@ -1031,7 +1040,6 @@ class TestScheduler(testtools.TestCase):
         assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
-        self.assertEmptyQueues()
 
         self.assertReportedStat('gerrit.event.comment-added', '1|c')
         self.assertReportedStat('zuul.pipeline.gate.current_changes', '1|g')
@@ -1049,11 +1057,6 @@ class TestScheduler(testtools.TestCase):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getChangeRestoredEvent())
         self.waitUntilSettled()
-
-        print self.builds
-        print A.messages
-
-        self.assertEmptyQueues()
 
         assert len(self.history) == 2
         self.history[0].name == 'project-test1'
@@ -1147,7 +1150,6 @@ class TestScheduler(testtools.TestCase):
         assert A.reported == 2
         assert B.reported == 2
         assert C.reported == 2
-        self.assertEmptyQueues()
 
     def test_failed_changes(self):
         "Test that a change behind a failed change is retested"
@@ -1178,7 +1180,6 @@ class TestScheduler(testtools.TestCase):
         assert B.data['status'] == 'MERGED'
         assert A.reported == 2
         assert B.reported == 2
-        self.assertEmptyQueues()
 
     def test_independent_queues(self):
         "Test that changes end up in the right queues"
@@ -1226,7 +1227,6 @@ class TestScheduler(testtools.TestCase):
         assert A.reported == 2
         assert B.reported == 2
         assert C.reported == 2
-        self.assertEmptyQueues()
 
     def test_failed_change_at_head(self):
         "Test that if a change at the head fails, jobs behind it are canceled"
@@ -1284,7 +1284,6 @@ class TestScheduler(testtools.TestCase):
         assert A.reported == 2
         assert B.reported == 2
         assert C.reported == 2
-        self.assertEmptyQueues()
 
     def test_failed_change_at_head_with_queue(self):
         "Test that if a change at the head fails, queued jobs are canceled"
@@ -1347,7 +1346,6 @@ class TestScheduler(testtools.TestCase):
         assert A.reported == 2
         assert B.reported == 2
         assert C.reported == 2
-        self.assertEmptyQueues()
 
     def test_patch_order(self):
         "Test that dependent patches are tested in the right order"
@@ -1392,7 +1390,6 @@ class TestScheduler(testtools.TestCase):
         assert A.reported == 2
         assert B.reported == 2
         assert C.reported == 2
-        self.assertEmptyQueues()
 
     def test_can_merge(self):
         "Test whether a change is ready to merge"
@@ -1403,13 +1400,13 @@ class TestScheduler(testtools.TestCase):
         assert not self.sched.trigger.canMerge(a, mgr.getSubmitAllowNeeds())
 
         A.addApproval('CRVW', 2)
-        a = self.sched.trigger.getChange(1, 2)
+        a = self.sched.trigger.getChange(1, 2, refresh=True)
         assert not self.sched.trigger.canMerge(a, mgr.getSubmitAllowNeeds())
 
         A.addApproval('APRV', 1)
-        a = self.sched.trigger.getChange(1, 2)
+        a = self.sched.trigger.getChange(1, 2, refresh=True)
         assert self.sched.trigger.canMerge(a, mgr.getSubmitAllowNeeds())
-        self.assertEmptyQueues()
+        self.sched.trigger.maintainCache([])
 
     def test_build_configuration(self):
         "Test that zuul merges the right commits for testing"
@@ -1444,7 +1441,6 @@ class TestScheduler(testtools.TestCase):
         repo_messages.reverse()
         correct_messages = ['initial commit', 'A-1', 'B-1', 'C-1']
         assert repo_messages == correct_messages
-        self.assertEmptyQueues()
 
     def test_build_configuration_conflict(self):
         "Test that merge conflicts are handled"
@@ -1481,7 +1477,6 @@ class TestScheduler(testtools.TestCase):
         assert A.reported == 2
         assert B.reported == 2
         assert C.reported == 2
-        self.assertEmptyQueues()
 
     def test_post(self):
         "Test that post jobs run"
@@ -1504,7 +1499,6 @@ class TestScheduler(testtools.TestCase):
         job_names = [x.name for x in self.history]
         assert len(self.history) == 1
         assert 'project-post' in job_names
-        self.assertEmptyQueues()
 
     def test_build_configuration_branch(self):
         "Test that the right commits are on alternate branches"
@@ -1539,7 +1533,6 @@ class TestScheduler(testtools.TestCase):
         repo_messages.reverse()
         correct_messages = ['initial commit', 'mp commit', 'A-1', 'B-1', 'C-1']
         assert repo_messages == correct_messages
-        self.assertEmptyQueues()
 
     def test_build_configuration_branch_interaction(self):
         "Test that switching between branches works"
@@ -1550,7 +1543,6 @@ class TestScheduler(testtools.TestCase):
         repo = git.Repo(path)
         repo.heads.master.commit = repo.commit('init')
         self.test_build_configuration()
-        self.assertEmptyQueues()
 
     def test_build_configuration_multi_branch(self):
         "Test that dependent changes on multiple branches are merged"
@@ -1595,7 +1587,6 @@ class TestScheduler(testtools.TestCase):
         repo_messages.reverse()
         correct_messages = ['initial commit', 'mp commit', 'B-1']
         assert repo_messages == correct_messages
-        self.assertEmptyQueues()
 
     def test_one_job_project(self):
         "Test that queueing works with one job"
@@ -1613,7 +1604,6 @@ class TestScheduler(testtools.TestCase):
         assert A.reported == 2
         assert B.data['status'] == 'MERGED'
         assert B.reported == 2
-        self.assertEmptyQueues()
 
     def test_job_from_templates_launched(self):
         "Test whether a job generated via a template can be launched"
@@ -1660,7 +1650,6 @@ class TestScheduler(testtools.TestCase):
         assert C.data['status'] == 'NEW'
         assert C.reported == 2
         assert len(self.history) == 1
-        self.assertEmptyQueues()
 
     def test_head_is_dequeued_once(self):
         "Test that if a change at the head fails it is dequeued only once"
@@ -1726,7 +1715,6 @@ class TestScheduler(testtools.TestCase):
         assert A.reported == 2
         assert B.reported == 2
         assert C.reported == 2
-        self.assertEmptyQueues()
 
     def test_nonvoting_job(self):
         "Test that non-voting jobs don't vote."
@@ -1747,7 +1735,6 @@ class TestScheduler(testtools.TestCase):
                 'SUCCESS')
         assert (self.getJobFromHistory('nonvoting-project-test2').result ==
                 'FAILURE')
-        self.assertEmptyQueues()
 
     def test_check_queue_success(self):
         "Test successful check queue jobs."
@@ -1762,7 +1749,6 @@ class TestScheduler(testtools.TestCase):
         assert self.getJobFromHistory('project-merge').result == 'SUCCESS'
         assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
         assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
-        self.assertEmptyQueues()
 
     def test_check_queue_failure(self):
         "Test failed check queue jobs."
@@ -1778,7 +1764,6 @@ class TestScheduler(testtools.TestCase):
         assert self.getJobFromHistory('project-merge').result == 'SUCCESS'
         assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
         assert self.getJobFromHistory('project-test2').result == 'FAILURE'
-        self.assertEmptyQueues()
 
     def test_dependent_behind_dequeue(self):
         "test that dependent changes behind dequeued changes work"
@@ -1865,7 +1850,6 @@ class TestScheduler(testtools.TestCase):
 
         assert self.countJobResults(self.history, 'ABORTED') == 15
         assert len(self.history) == 44
-        self.assertEmptyQueues()
 
     def test_merger_repack(self):
         "Test that the merger works after a repack"
@@ -1894,7 +1878,6 @@ class TestScheduler(testtools.TestCase):
         assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
-        self.assertEmptyQueues()
 
     def test_merger_repack_large_change(self):
         "Test that the merger works with large changes after a repack"
@@ -1914,7 +1897,6 @@ class TestScheduler(testtools.TestCase):
         assert self.getJobFromHistory('project1-test2').result == 'SUCCESS'
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
-        self.assertEmptyQueues()
 
     def test_nonexistent_job(self):
         "Test launching a job that doesn't exist"
@@ -1945,7 +1927,6 @@ class TestScheduler(testtools.TestCase):
         assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
         assert A.data['status'] == 'MERGED'
         assert A.reported == 2
-        self.assertEmptyQueues()
 
     def test_single_nonexistent_post_job(self):
         "Test launching a single post job that doesn't exist"
@@ -1969,7 +1950,6 @@ class TestScheduler(testtools.TestCase):
         self.waitUntilSettled()
 
         assert len(self.history) == 0
-        self.assertEmptyQueues()
 
     def test_new_patchset_dequeues_old(self):
         "Test that a new patchset causes the old to be dequeued"
@@ -2014,7 +1994,6 @@ class TestScheduler(testtools.TestCase):
         assert D.data['status'] == 'MERGED'
         assert D.reported == 2
         assert len(self.history) == 9  # 3 each for A, B, D.
-        self.assertEmptyQueues()
 
     def test_new_patchset_dequeues_old_on_head(self):
         "Test that a new patchset causes the old to be dequeued (at head)"
@@ -2058,7 +2037,6 @@ class TestScheduler(testtools.TestCase):
         assert D.data['status'] == 'MERGED'
         assert D.reported == 2
         assert len(self.history) == 7
-        self.assertEmptyQueues()
 
     def test_new_patchset_dequeues_old_without_dependents(self):
         "Test that a new patchset causes only the old to be dequeued"
@@ -2090,7 +2068,6 @@ class TestScheduler(testtools.TestCase):
         assert C.data['status'] == 'MERGED'
         assert C.reported == 2
         assert len(self.history) == 9
-        self.assertEmptyQueues()
 
     def test_new_patchset_dequeues_old_independent_queue(self):
         "Test that a new patchset causes the old to be dequeued (independent)"
@@ -2119,7 +2096,6 @@ class TestScheduler(testtools.TestCase):
         assert C.reported == 1
         assert len(self.history) == 10
         assert self.countJobResults(self.history, 'ABORTED') == 1
-        self.assertEmptyQueues()
 
     def test_zuul_refs(self):
         "Test that zuul refs exist and have the right changes"
@@ -2207,7 +2183,6 @@ class TestScheduler(testtools.TestCase):
         assert C.reported == 2
         assert D.data['status'] == 'MERGED'
         assert D.reported == 2
-        self.assertEmptyQueues()
 
     def test_statsd(self):
         "Test each of the statsd methods used in the scheduler"
@@ -2240,7 +2215,6 @@ class TestScheduler(testtools.TestCase):
         assert A.reported == 2
         assert B.data['status'] == 'MERGED'
         assert B.reported == 2
-        self.assertEmptyQueues()
 
     def test_test_config(self):
         "Test that we can test the config"

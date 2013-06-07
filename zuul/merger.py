@@ -199,7 +199,7 @@ class Merger(object):
             return False
         return commit
 
-    def mergeChanges(self, changes, target_ref=None, mode=None):
+    def mergeChanges(self, items, target_ref=None, mode=None):
         # Merge shortcuts:
         # if this is the only change just merge it against its branch.
         # elif there are changes ahead of us that are from the same project and
@@ -209,27 +209,27 @@ class Merger(object):
         # Shortcuts assume some external entity is checking whether or not
         # changes from other projects can merge.
         commit = False
-        change = changes[-1]
-        sibling_filter = lambda c: (c.project == change.project and
-                                    c.branch == change.branch)
-        sibling_changes = filter(sibling_filter, changes)
+        item = items[-1]
+        sibling_filter = lambda i: (i.change.project == item.change.project and
+                                    i.change.branch == item.change.branch)
+        sibling_items = filter(sibling_filter, items)
         # Only current change to merge against tip of change.branch
-        if len(sibling_changes) == 1:
-            repo = self.getRepo(change.project)
+        if len(sibling_items) == 1:
+            repo = self.getRepo(item.change.project)
             # we need to reset here in order to call getBranchHead
             try:
                 repo.reset()
             except:
                 self.log.exception("Unable to reset repo %s" % repo)
                 return False
-            commit = self._mergeChange(change,
-                                       repo.getBranchHead(change.branch),
+            commit = self._mergeChange(item.change,
+                                       repo.getBranchHead(item.change.branch),
                                        target_ref=target_ref, mode=mode)
         # Sibling changes exist. Merge current change against newest sibling.
-        elif (len(sibling_changes) >= 2 and
-            sibling_changes[-2].current_build_set.commit):
-            last_change = sibling_changes[-2].current_build_set.commit
-            commit = self._mergeChange(change, last_change,
+        elif (len(sibling_items) >= 2 and
+            sibling_items[-2].current_build_set.commit):
+            last_commit = sibling_items[-2].current_build_set.commit
+            commit = self._mergeChange(item.change, last_commit,
                                        target_ref=target_ref, mode=mode)
         # Either change did not merge or we did not need to merge as there were
         # previous merge conflicts.
@@ -237,37 +237,39 @@ class Merger(object):
             return commit
 
         project_branches = []
-        for c in reversed(changes):
+        for i in reversed(items):
             # Here we create all of the necessary zuul refs and potentially
             # push them back to Gerrit.
-            if (c.project, c.branch) in project_branches:
+            if (i.change.project, i.change.branch) in project_branches:
                 continue
-            repo = self.getRepo(c.project)
-            if c.project != change.project or c.branch != change.branch:
+            repo = self.getRepo(i.change.project)
+            if (i.change.project != item.change.project or
+                i.change.branch != item.change.branch):
                 # Create a zuul ref for all dependent changes project
                 # branch combinations as this is the ref that jenkins will
                 # use to test. The ref for change has already been set so
                 # we skip it here.
                 try:
-                    zuul_ref = c.branch + '/' + target_ref
-                    repo.createZuulRef(zuul_ref, c.current_build_set.commit)
+                    zuul_ref = i.change.branch + '/' + target_ref
+                    repo.createZuulRef(zuul_ref, i.current_build_set.commit)
                 except:
                     self.log.exception("Unable to set zuul ref %s for "
-                                       "change %s" % (zuul_ref, c))
+                                       "change %s" % (zuul_ref, i.change))
                     return False
             if self.push_refs:
                 # Push the results upstream to the zuul ref after
                 # they are created.
-                ref = 'refs/zuul/' + c.branch + '/' + target_ref
+                ref = 'refs/zuul/' + i.change.branch + '/' + target_ref
                 try:
                     repo.push(ref, ref)
-                    complete = self.trigger.waitForRefSha(c.project, ref)
+                    complete = self.trigger.waitForRefSha(i.change.project,
+                                                          ref)
                 except:
                     self.log.exception("Unable to push %s" % ref)
                     return False
                 if not complete:
                     self.log.error("Ref %s did not show up in repo" % ref)
                     return False
-            project_branches.append((c.project, c.branch))
+            project_branches.append((i.change.project, i.change.branch))
 
         return commit
