@@ -72,6 +72,11 @@ class ZuulGearmanClient(gear.Client):
         self.__zuul_gearman.onBuildCompleted(job)
         return job
 
+    def handleWorkException(self, packet):
+        job = super(ZuulGearmanClient, self).handleWorkException(packet)
+        self.__zuul_gearman.onBuildCompleted(job)
+        return job
+
     def handleWorkStatus(self, packet):
         job = super(ZuulGearmanClient, self).handleWorkStatus(packet)
         self.__zuul_gearman.onWorkStatus(job)
@@ -336,6 +341,8 @@ class Gearman(object):
             if result is None:
                 data = getJobData(job)
                 result = data.get('result')
+            if result is None:
+                result = 'LOST'
             self.log.info("Build %s complete, result %s" %
                           (job, result))
             build.result = result
