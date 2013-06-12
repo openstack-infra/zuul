@@ -309,15 +309,15 @@ explanation of each of the parameters::
   review --verified 1`` and ``submit: true`` becomes ``gerrit review
   --submit``.
 
-**failure** 
+**failure**
   Uses the same syntax as **success**, but describes what Zuul should
   do if at least one job fails.
 
-**start** 
+**start**
   Uses the same syntax as **success**, but describes what Zuul should
   do when a change is added to the pipeline manager.  This can be used,
   for example, to reset the value of the Verified review category.
-  
+
 Some example pipeline configurations are included in the sample layout
 file.  The first is called a *check* pipeline::
 
@@ -435,10 +435,10 @@ each job as it builds a list from the project specification.
   that can predict whether longer jobs will fail early, this can be
   used to reduce the number of jobs that Zuul will launch and
   ultimately have to cancel.  In that case, a small amount of
-  paralellization of jobs is traded for more efficient use of testing
+  parallelization of jobs is traded for more efficient use of testing
   resources.  On the other hand, to apply this to a long running job
   would largely defeat the parallelization of dependent change testing
-  that is the main feature of Zuul.  The default is False.
+  that is the main feature of Zuul.  Default: ``false``.
 
 **branch (optional)**
   This job should only be run on matching branches.  This field is
@@ -450,6 +450,10 @@ each job as it builds a list from the project specification.
   the change (added, deleted, or modified) matches at least one of the
   file patterns listed here.  This field is treated as a regular
   expression and multiple expressions may be listed.
+
+**voting (optional)**
+  Boolean value (``true`` or ``false``) that indicates whatever
+  a job is voting or not.  Default: ``true``.
 
 **parameter-function (optional)**
   Specifies a function that should be applied to the parameters before
