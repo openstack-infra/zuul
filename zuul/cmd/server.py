@@ -81,7 +81,7 @@ class Server(object):
     def reconfigure_handler(self, signum, frame):
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
         self.read_config()
-        self.setup_logging()
+        self.setup_logging('zuul', 'log_config')
         self.sched.reconfigure(self.config)
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
 
