@@ -628,6 +628,9 @@ class FakeGearmanServer(gear.Server):
                 if job.name in connection.functions:
                     if not peek:
                         queue.remove(job)
+                        connection.related_jobs[job.handle] = job
+                        job.worker_connection = connection
+                    job.running = True
                     return job
         return None
 
@@ -682,9 +685,12 @@ class TestScheduler(testtools.TestCase):
         self.useFixture(fixtures.NestedTempfile())
         if (os.environ.get('OS_LOG_CAPTURE') == 'True' or
             os.environ.get('OS_LOG_CAPTURE') == '1'):
-            self.useFixture(fixtures.FakeLogger())
-
-        tmp_root = os.environ.get("ZUUL_TEST_ROOT", tempfile.mkdtemp())
+            self.useFixture(fixtures.FakeLogger(
+                level=logging.DEBUG,
+                format='%(asctime)s %(name)-32s '
+                '%(levelname)-8s %(message)s'))
+        tmp_root = tempfile.mkdtemp(dir=os.environ.get("ZUUL_TEST_ROOT",
+                                                       '/tmp'))
         self.test_root = os.path.join(tmp_root, "zuul-test")
         self.upstream_root = os.path.join(self.test_root, "upstream")
         self.git_root = os.path.join(self.test_root, "git")
@@ -1135,18 +1141,28 @@ class TestScheduler(testtools.TestCase):
 
     def test_failed_changes(self):
         "Test that a change behind a failed change is retested"
+        self.worker.hold_jobs_in_build = True
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         A.addApproval('CRVW', 2)
         B.addApproval('CRVW', 2)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-
         self.worker.addFailTest('project-test1', A)
 
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
         self.waitUntilSettled()
+
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+
+        self.waitUntilSettled()
+        # It's certain that the merge job for change 2 will run, but
+        # the test1 and test2 jobs may or may not run.
         assert len(self.history) > 6
         assert A.data['status'] == 'NEW'
         assert B.data['status'] == 'MERGED'

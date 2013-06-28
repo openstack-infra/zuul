@@ -120,8 +120,8 @@ plugin as follows::
             Refspec: ${ZUUL_REF}
       Branches to build:
         Branch Specifier: ${ZUUL_COMMIT}
-	  Advanced:
-	    Clean after checkout: True
+            Advanced:
+            Clean after checkout: True
 
 That should be sufficient for a job that only builds a single project.
 If you have multiple interrelated projects (i.e., they share a Zuul
