@@ -324,7 +324,7 @@ class Gerrit(object):
         if change.patchset is None:
             change.patchset = data['currentPatchSet']['number']
 
-        change.project = self.sched.projects[data['project']]
+        change.project = self.sched.layout.projects[data['project']]
         change.branch = data['branch']
         change.url = data['url']
         max_ps = 0

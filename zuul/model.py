@@ -784,3 +784,27 @@ class EventFilter(object):
             if not matches_approval:
                 return False
         return True
+
+
+class Layout(object):
+    def __init__(self):
+        self.projects = {}
+        self.pipelines = {}
+        self.jobs = {}
+        self.metajobs = {}
+
+    def getJob(self, name):
+        if name in self.jobs:
+            return self.jobs[name]
+        job = Job(name)
+        if name.startswith('^'):
+            # This is a meta-job
+            regex = re.compile(name)
+            self.metajobs[regex] = job
+        else:
+            # Apply attributes from matching meta-jobs
+            for regex, metajob in self.metajobs.items():
+                if regex.match(name):
+                    job.copy(metajob)
+            self.jobs[name] = job
+        return job
