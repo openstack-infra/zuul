@@ -393,6 +393,7 @@ class FakeGerritTrigger(zuul.trigger.gerrit.Gerrit):
 class FakeStatsd(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
+        self.daemon = True
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(('', 0))
         self.port = self.sock.getsockname()[1]
@@ -423,6 +424,7 @@ class FakeBuild(threading.Thread):
 
     def __init__(self, worker, job, number, node):
         threading.Thread.__init__(self)
+        self.daemon = True
         self.worker = worker
         self.job = job
         self.name = job.name.split(':')[1]
@@ -514,6 +516,7 @@ class FakeWorker(gear.Worker):
         self.hold_jobs_in_build = False
         self.lock = threading.Lock()
         self.__work_thread = threading.Thread(target=self.work)
+        self.__work_thread.daemon = True
         self.__work_thread.start()
 
     def handleJob(self, job):

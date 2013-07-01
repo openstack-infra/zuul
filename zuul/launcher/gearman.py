@@ -29,6 +29,7 @@ class GearmanCleanup(threading.Thread):
 
     def __init__(self, gearman):
         threading.Thread.__init__(self)
+        self.daemon = True
         self.gearman = gearman
         self.wake_event = threading.Event()
         self._stopped = False

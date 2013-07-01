@@ -27,6 +27,7 @@ class GerritEventConnector(threading.Thread):
 
     def __init__(self, gerrit, sched):
         super(GerritEventConnector, self).__init__()
+        self.daemon = True
         self.gerrit = gerrit
         self.sched = sched
         self._stopped = False

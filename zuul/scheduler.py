@@ -61,6 +61,7 @@ class Scheduler(threading.Thread):
 
     def __init__(self):
         threading.Thread.__init__(self)
+        self.daemon = True
         self.wake_event = threading.Event()
         self.reconfigure_complete_event = threading.Event()
         self._pause = False
