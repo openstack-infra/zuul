@@ -306,12 +306,15 @@ class ChangeQueue(object):
 
     def enqueueChange(self, change):
         item = QueueItem(self.pipeline, change)
+        self.enqueueItem(item)
+        item.enqueue_time = time.time()
+        return item
+
+    def enqueueItem(self, item):
         if self.dependent and self.queue:
             item.item_ahead = self.queue[-1]
             item.item_ahead.item_behind = item
         self.queue.append(item)
-        item.enqueue_time = time.time()
-        return item
 
     def dequeueItem(self, item):
         if item in self.queue:

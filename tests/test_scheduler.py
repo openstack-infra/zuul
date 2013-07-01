@@ -2281,3 +2281,23 @@ class TestScheduler(testtools.TestCase):
         assert self.getJobFromHistory('node-project-merge').node is None
         assert self.getJobFromHistory('node-project-test1').node == 'debian'
         assert self.getJobFromHistory('node-project-test2').node is None
+
+    def test_live_reconfiguration(self):
+        "Test that live reconfiguration works"
+        self.worker.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.sched.reconfigure(self.config)
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+        assert self.getJobFromHistory('project-merge').result == 'SUCCESS'
+        assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
+        assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
+        assert A.data['status'] == 'MERGED'
+        assert A.reported == 2
+        self.assertEmptyQueues()
