@@ -680,7 +680,9 @@ class TestScheduler(testtools.TestCase):
             stderr = self.useFixture(fixtures.StringStream('stderr')).stream
             self.useFixture(fixtures.MonkeyPatch('sys.stderr', stderr))
         self.useFixture(fixtures.NestedTempfile())
-        self.log_fixture = self.useFixture(fixtures.FakeLogger())
+        if (os.environ.get('OS_LOG_CAPTURE') == 'True' or
+            os.environ.get('OS_LOG_CAPTURE') == '1'):
+            self.useFixture(fixtures.FakeLogger())
 
         tmp_root = os.environ.get("ZUUL_TEST_ROOT", tempfile.mkdtemp())
         self.test_root = os.path.join(tmp_root, "zuul-test")
