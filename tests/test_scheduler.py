@@ -29,7 +29,6 @@ import shutil
 import socket
 import string
 import subprocess
-import tempfile
 import threading
 import time
 import urllib
@@ -687,15 +686,14 @@ class TestScheduler(testtools.TestCase):
             os.environ.get('OS_STDERR_CAPTURE') == '1'):
             stderr = self.useFixture(fixtures.StringStream('stderr')).stream
             self.useFixture(fixtures.MonkeyPatch('sys.stderr', stderr))
-        self.useFixture(fixtures.NestedTempfile())
         if (os.environ.get('OS_LOG_CAPTURE') == 'True' or
             os.environ.get('OS_LOG_CAPTURE') == '1'):
             self.useFixture(fixtures.FakeLogger(
                 level=logging.DEBUG,
                 format='%(asctime)s %(name)-32s '
                 '%(levelname)-8s %(message)s'))
-        tmp_root = tempfile.mkdtemp(dir=os.environ.get("ZUUL_TEST_ROOT",
-                                                       '/tmp'))
+        tmp_root = self.useFixture(fixtures.TempDir(
+            rootdir=os.environ.get("ZUUL_TEST_ROOT"))).path
         self.test_root = os.path.join(tmp_root, "zuul-test")
         self.upstream_root = os.path.join(self.test_root, "upstream")
         self.git_root = os.path.join(self.test_root, "git")
