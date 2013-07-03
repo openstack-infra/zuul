@@ -22,13 +22,14 @@ from webob import Request
 class WebApp(threading.Thread):
     log = logging.getLogger("zuul.WebApp")
 
-    def __init__(self, scheduler):
+    def __init__(self, scheduler, port=8001):
         threading.Thread.__init__(self)
         self.scheduler = scheduler
+        self.port = port
 
     def run(self):
-        self.server = httpserver.serve(self.app, host='0.0.0.0', port='8001',
-                                       start_loop=False)
+        self.server = httpserver.serve(self.app, host='0.0.0.0',
+                                       port=self.port, start_loop=False)
         self.server.serve_forever()
 
     def stop(self):

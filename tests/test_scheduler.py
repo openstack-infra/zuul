@@ -32,6 +32,7 @@ import subprocess
 import tempfile
 import threading
 import time
+import urllib
 import urllib2
 import urlparse
 
@@ -42,6 +43,7 @@ import statsd
 import testtools
 
 import zuul.scheduler
+import zuul.webapp
 import zuul.launcher.gearman
 import zuul.trigger.gerrit
 
@@ -754,12 +756,15 @@ class TestScheduler(testtools.TestCase):
         self.fake_gerrit = self.gerrit.gerrit
         self.fake_gerrit.upstream_root = self.upstream_root
 
+        self.webapp = zuul.webapp.WebApp(self.sched, port=0)
+
         self.sched.setLauncher(self.launcher)
         self.sched.setTrigger(self.gerrit)
 
         self.sched.start()
         self.sched.reconfigure(self.config)
         self.sched.resume()
+        self.webapp.start()
         self.launcher.gearman.waitForServer()
         self.registerJobs()
         self.builds = self.worker.running_builds
@@ -774,6 +779,8 @@ class TestScheduler(testtools.TestCase):
         self.sched.join()
         self.statsd.stop()
         self.statsd.join()
+        self.webapp.stop()
+        self.webapp.join()
         threads = threading.enumerate()
         if len(threads) > 1:
             self.log.error("More than one thread is running: %s" % threads)
@@ -2257,6 +2264,36 @@ class TestScheduler(testtools.TestCase):
         assert re.search("project-test1.*SUCCESS", desc)
         assert re.search("project-test2.*SUCCESS", desc)
         assert re.search("Reported result.*SUCCESS", desc)
+
+    def test_json_status(self):
+        "Test that we can retrieve JSON status info"
+        self.worker.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        port = self.webapp.server.socket.getsockname()[1]
+
+        f = urllib.urlopen("http://localhost:%s/status.json" % port)
+        data = f.read()
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        data = json.loads(data)
+        status_jobs = set()
+        for p in data['pipelines']:
+            for q in p['change_queues']:
+                for head in q['heads']:
+                    for change in head:
+                        assert change['id'] == '1,1'
+                        for job in change['jobs']:
+                            status_jobs.add(job['name'])
+        assert 'project-merge' in status_jobs
+        assert 'project-test1' in status_jobs
+        assert 'project-test2' in status_jobs
 
     def test_node_label(self):
         "Test that a job runs on a specific node label"
