@@ -773,7 +773,7 @@ class TestScheduler(testtools.TestCase):
 
     def assertFinalState(self):
         # Make sure that the change cache is cleared
-        assert len(self.sched.trigger._change_cache.keys()) == 0
+        self.assertEqual(len(self.sched.trigger._change_cache.keys()), 0)
         self.assertEmptyQueues()
 
     def shutdown(self):
@@ -1006,10 +1006,10 @@ class TestScheduler(testtools.TestCase):
                 if len(queue.queue) != 0:
                     print 'pipeline %s queue %s contents %s' % (
                         pipeline.name, queue.name, queue.queue)
-                assert len(queue.queue) == 0
+                self.assertEqual(len(queue.queue), 0)
                 if len(queue.severed_heads) != 0:
                     print 'heads', queue.severed_heads
-                assert len(queue.severed_heads) == 0
+                self.assertEqual(len(queue.severed_heads), 0)
 
     def assertReportedStat(self, key, value=None):
         start = time.time()
@@ -1033,11 +1033,14 @@ class TestScheduler(testtools.TestCase):
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
-        assert self.getJobFromHistory('project-merge').result == 'SUCCESS'
-        assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
-        assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
-        assert A.data['status'] == 'MERGED'
-        assert A.reported == 2
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
 
         self.assertReportedStat('gerrit.event.comment-added', '1|c')
         self.assertReportedStat('zuul.pipeline.gate.current_changes', '1|g')
@@ -1056,21 +1059,21 @@ class TestScheduler(testtools.TestCase):
         self.fake_gerrit.addEvent(A.getChangeRestoredEvent())
         self.waitUntilSettled()
 
-        assert len(self.history) == 2
+        self.assertEqual(len(self.history), 2)
         self.history[0].name == 'project-test1'
         self.history[1].name == 'project-test1'
 
-        assert len(A.messages) == 2
+        self.assertEqual(len(A.messages), 2)
         if 'dup1/project-test1' in A.messages[0]:
-            assert 'dup1/project-test1' in A.messages[0]
-            assert 'dup2/project-test1' not in A.messages[0]
-            assert 'dup1/project-test1' not in A.messages[1]
-            assert 'dup2/project-test1' in A.messages[1]
+            self.assertIn('dup1/project-test1', A.messages[0])
+            self.assertNotIn('dup2/project-test1', A.messages[0])
+            self.assertNotIn('dup1/project-test1', A.messages[1])
+            self.assertIn('dup2/project-test1', A.messages[1])
         else:
-            assert 'dup1/project-test1' in A.messages[1]
-            assert 'dup2/project-test1' not in A.messages[1]
-            assert 'dup1/project-test1' not in A.messages[0]
-            assert 'dup2/project-test1' in A.messages[0]
+            self.assertIn('dup1/project-test1', A.messages[1])
+            self.assertNotIn('dup2/project-test1', A.messages[1])
+            self.assertNotIn('dup1/project-test1', A.messages[0])
+            self.assertIn('dup2/project-test1', A.messages[0])
 
     def test_parallel_changes(self):
         "Test that changes are tested in parallel and merged in series"
@@ -1088,66 +1091,66 @@ class TestScheduler(testtools.TestCase):
         self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
 
         self.waitUntilSettled()
-        assert len(self.builds) == 1
-        assert self.builds[0].name == 'project-merge'
-        assert self.job_has_changes(self.builds[0], A)
+        self.assertEqual(len(self.builds), 1)
+        self.assertEqual(self.builds[0].name, 'project-merge')
+        self.assertTrue(self.job_has_changes(self.builds[0], A))
 
         self.worker.release('.*-merge')
         self.waitUntilSettled()
-        assert len(self.builds) == 3
-        assert self.builds[0].name == 'project-test1'
-        assert self.job_has_changes(self.builds[0], A)
-        assert self.builds[1].name == 'project-test2'
-        assert self.job_has_changes(self.builds[1], A)
-        assert self.builds[2].name == 'project-merge'
-        assert self.job_has_changes(self.builds[2], A, B)
+        self.assertEqual(len(self.builds), 3)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertTrue(self.job_has_changes(self.builds[0], A))
+        self.assertEqual(self.builds[1].name, 'project-test2')
+        self.assertTrue(self.job_has_changes(self.builds[1], A))
+        self.assertEqual(self.builds[2].name, 'project-merge')
+        self.assertTrue(self.job_has_changes(self.builds[2], A, B))
 
         self.worker.release('.*-merge')
         self.waitUntilSettled()
-        assert len(self.builds) == 5
-        assert self.builds[0].name == 'project-test1'
-        assert self.job_has_changes(self.builds[0], A)
-        assert self.builds[1].name == 'project-test2'
-        assert self.job_has_changes(self.builds[1], A)
+        self.assertEqual(len(self.builds), 5)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertTrue(self.job_has_changes(self.builds[0], A))
+        self.assertEqual(self.builds[1].name, 'project-test2')
+        self.assertTrue(self.job_has_changes(self.builds[1], A))
 
-        assert self.builds[2].name == 'project-test1'
-        assert self.job_has_changes(self.builds[2], A, B)
-        assert self.builds[3].name == 'project-test2'
-        assert self.job_has_changes(self.builds[3], A, B)
+        self.assertEqual(self.builds[2].name, 'project-test1')
+        self.assertTrue(self.job_has_changes(self.builds[2], A, B))
+        self.assertEqual(self.builds[3].name, 'project-test2')
+        self.assertTrue(self.job_has_changes(self.builds[3], A, B))
 
-        assert self.builds[4].name == 'project-merge'
-        assert self.job_has_changes(self.builds[4], A, B, C)
+        self.assertEqual(self.builds[4].name, 'project-merge')
+        self.assertTrue(self.job_has_changes(self.builds[4], A, B, C))
 
         self.worker.release('.*-merge')
         self.waitUntilSettled()
-        assert len(self.builds) == 6
-        assert self.builds[0].name == 'project-test1'
-        assert self.job_has_changes(self.builds[0], A)
-        assert self.builds[1].name == 'project-test2'
-        assert self.job_has_changes(self.builds[1], A)
+        self.assertEqual(len(self.builds), 6)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertTrue(self.job_has_changes(self.builds[0], A))
+        self.assertEqual(self.builds[1].name, 'project-test2')
+        self.assertTrue(self.job_has_changes(self.builds[1], A))
 
-        assert self.builds[2].name == 'project-test1'
-        assert self.job_has_changes(self.builds[2], A, B)
-        assert self.builds[3].name == 'project-test2'
-        assert self.job_has_changes(self.builds[3], A, B)
+        self.assertEqual(self.builds[2].name, 'project-test1')
+        self.assertTrue(self.job_has_changes(self.builds[2], A, B))
+        self.assertEqual(self.builds[3].name, 'project-test2')
+        self.assertTrue(self.job_has_changes(self.builds[3], A, B))
 
-        assert self.builds[4].name == 'project-test1'
-        assert self.job_has_changes(self.builds[4], A, B, C)
-        assert self.builds[5].name == 'project-test2'
-        assert self.job_has_changes(self.builds[5], A, B, C)
+        self.assertEqual(self.builds[4].name, 'project-test1')
+        self.assertTrue(self.job_has_changes(self.builds[4], A, B, C))
+        self.assertEqual(self.builds[5].name, 'project-test2')
+        self.assertTrue(self.job_has_changes(self.builds[5], A, B, C))
 
         self.worker.hold_jobs_in_build = False
         self.worker.release()
         self.waitUntilSettled()
-        assert len(self.builds) == 0
+        self.assertEqual(len(self.builds), 0)
 
-        assert len(self.history) == 9
-        assert A.data['status'] == 'MERGED'
-        assert B.data['status'] == 'MERGED'
-        assert C.data['status'] == 'MERGED'
-        assert A.reported == 2
-        assert B.reported == 2
-        assert C.reported == 2
+        self.assertEqual(len(self.history), 9)
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.reported, 2)
 
     def test_failed_changes(self):
         "Test that a change behind a failed change is retested"
@@ -1173,11 +1176,11 @@ class TestScheduler(testtools.TestCase):
         self.waitUntilSettled()
         # It's certain that the merge job for change 2 will run, but
         # the test1 and test2 jobs may or may not run.
-        assert len(self.history) > 6
-        assert A.data['status'] == 'NEW'
-        assert B.data['status'] == 'MERGED'
-        assert A.reported == 2
-        assert B.reported == 2
+        self.assertTrue(len(self.history) > 6)
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
 
     def test_independent_queues(self):
         "Test that changes end up in the right queues"
@@ -1197,11 +1200,11 @@ class TestScheduler(testtools.TestCase):
         self.waitUntilSettled()
 
         # There should be one merge job at the head of each queue running
-        assert len(self.builds) == 2
-        assert self.builds[0].name == 'project-merge'
-        assert self.job_has_changes(self.builds[0], A)
-        assert self.builds[1].name == 'project1-merge'
-        assert self.job_has_changes(self.builds[1], B)
+        self.assertEqual(len(self.builds), 2)
+        self.assertEqual(self.builds[0].name, 'project-merge')
+        self.assertTrue(self.job_has_changes(self.builds[0], A))
+        self.assertEqual(self.builds[1].name, 'project1-merge')
+        self.assertTrue(self.job_has_changes(self.builds[1], B))
 
         # Release the current merge builds
         self.worker.release('.*-merge')
@@ -1212,19 +1215,19 @@ class TestScheduler(testtools.TestCase):
 
         # All the test builds should be running:
         # project1 (3) + project2 (3) + project (2) = 8
-        assert len(self.builds) == 8
+        self.assertEqual(len(self.builds), 8)
 
         self.worker.release()
         self.waitUntilSettled()
-        assert len(self.builds) == 0
+        self.assertEqual(len(self.builds), 0)
 
-        assert len(self.history) == 11
-        assert A.data['status'] == 'MERGED'
-        assert B.data['status'] == 'MERGED'
-        assert C.data['status'] == 'MERGED'
-        assert A.reported == 2
-        assert B.reported == 2
-        assert C.reported == 2
+        self.assertEqual(len(self.history), 11)
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.reported, 2)
 
     def test_failed_change_at_head(self):
         "Test that if a change at the head fails, jobs behind it are canceled"
@@ -1245,9 +1248,9 @@ class TestScheduler(testtools.TestCase):
 
         self.waitUntilSettled()
 
-        assert len(self.builds) == 1
-        assert self.builds[0].name == 'project-merge'
-        assert self.job_has_changes(self.builds[0], A)
+        self.assertEqual(len(self.builds), 1)
+        self.assertEqual(self.builds[0].name, 'project-merge')
+        self.assertTrue(self.job_has_changes(self.builds[0], A))
 
         self.worker.release('.*-merge')
         self.waitUntilSettled()
@@ -1256,32 +1259,33 @@ class TestScheduler(testtools.TestCase):
         self.worker.release('.*-merge')
         self.waitUntilSettled()
 
-        assert len(self.builds) == 6
-        assert self.builds[0].name == 'project-test1'
-        assert self.builds[1].name == 'project-test2'
-        assert self.builds[2].name == 'project-test1'
-        assert self.builds[3].name == 'project-test2'
-        assert self.builds[4].name == 'project-test1'
-        assert self.builds[5].name == 'project-test2'
+        self.assertEqual(len(self.builds), 6)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test2')
+        self.assertEqual(self.builds[2].name, 'project-test1')
+        self.assertEqual(self.builds[3].name, 'project-test2')
+        self.assertEqual(self.builds[4].name, 'project-test1')
+        self.assertEqual(self.builds[5].name, 'project-test2')
 
         self.release(self.builds[0])
         self.waitUntilSettled()
 
-        assert len(self.builds) == 2  # project-test2, project-merge for B
-        assert self.countJobResults(self.history, 'ABORTED') == 4
+        # project-test2, project-merge for B
+        self.assertEqual(len(self.builds), 2)
+        self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 4)
 
         self.worker.hold_jobs_in_build = False
         self.worker.release()
         self.waitUntilSettled()
 
-        assert len(self.builds) == 0
-        assert len(self.history) == 15
-        assert A.data['status'] == 'NEW'
-        assert B.data['status'] == 'MERGED'
-        assert C.data['status'] == 'MERGED'
-        assert A.reported == 2
-        assert B.reported == 2
-        assert C.reported == 2
+        self.assertEqual(len(self.builds), 0)
+        self.assertEqual(len(self.history), 15)
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.reported, 2)
 
     def test_failed_change_at_head_with_queue(self):
         "Test that if a change at the head fails, queued jobs are canceled"
@@ -1302,10 +1306,10 @@ class TestScheduler(testtools.TestCase):
 
         self.waitUntilSettled()
         queue = self.gearman_server.getQueue()
-        assert len(self.builds) == 0
-        assert len(queue) == 1
-        assert queue[0].name == 'build:project-merge'
-        assert self.job_has_changes(queue[0], A)
+        self.assertEqual(len(self.builds), 0)
+        self.assertEqual(len(queue), 1)
+        self.assertEqual(queue[0].name, 'build:project-merge')
+        self.assertTrue(self.job_has_changes(queue[0], A))
 
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
@@ -1315,35 +1319,35 @@ class TestScheduler(testtools.TestCase):
         self.waitUntilSettled()
         queue = self.gearman_server.getQueue()
 
-        assert len(self.builds) == 0
-        assert len(queue) == 6
-        assert queue[0].name == 'build:project-test1'
-        assert queue[1].name == 'build:project-test2'
-        assert queue[2].name == 'build:project-test1'
-        assert queue[3].name == 'build:project-test2'
-        assert queue[4].name == 'build:project-test1'
-        assert queue[5].name == 'build:project-test2'
+        self.assertEqual(len(self.builds), 0)
+        self.assertEqual(len(queue), 6)
+        self.assertEqual(queue[0].name, 'build:project-test1')
+        self.assertEqual(queue[1].name, 'build:project-test2')
+        self.assertEqual(queue[2].name, 'build:project-test1')
+        self.assertEqual(queue[3].name, 'build:project-test2')
+        self.assertEqual(queue[4].name, 'build:project-test1')
+        self.assertEqual(queue[5].name, 'build:project-test2')
 
         self.release(queue[0])
         self.waitUntilSettled()
 
-        assert len(self.builds) == 0
+        self.assertEqual(len(self.builds), 0)
         queue = self.gearman_server.getQueue()
-        assert len(queue) == 2  # project-test2, project-merge for B
-        assert self.countJobResults(self.history, 'ABORTED') == 0
+        self.assertEqual(len(queue), 2)  # project-test2, project-merge for B
+        self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 0)
 
         self.gearman_server.hold_jobs_in_queue = False
         self.gearman_server.release()
         self.waitUntilSettled()
 
-        assert len(self.builds) == 0
-        assert len(self.history) == 11
-        assert A.data['status'] == 'NEW'
-        assert B.data['status'] == 'MERGED'
-        assert C.data['status'] == 'MERGED'
-        assert A.reported == 2
-        assert B.reported == 2
-        assert C.reported == 2
+        self.assertEqual(len(self.builds), 0)
+        self.assertEqual(len(self.history), 11)
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.reported, 2)
 
     def test_patch_order(self):
         "Test that dependent patches are tested in the right order"
@@ -1373,21 +1377,21 @@ class TestScheduler(testtools.TestCase):
 
         self.waitUntilSettled()
 
-        assert A.data['status'] == 'NEW'
-        assert B.data['status'] == 'NEW'
-        assert C.data['status'] == 'NEW'
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(C.data['status'], 'NEW')
 
         self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
 
         self.waitUntilSettled()
-        assert M2.queried == 0
-        assert A.data['status'] == 'MERGED'
-        assert B.data['status'] == 'MERGED'
-        assert C.data['status'] == 'MERGED'
-        assert A.reported == 2
-        assert B.reported == 2
-        assert C.reported == 2
+        self.assertEqual(M2.queried, 0)
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.reported, 2)
 
     def test_can_merge(self):
         "Test whether a change is ready to merge"
@@ -1395,15 +1399,18 @@ class TestScheduler(testtools.TestCase):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         a = self.sched.trigger.getChange(1, 2)
         mgr = self.sched.layout.pipelines['gate'].manager
-        assert not self.sched.trigger.canMerge(a, mgr.getSubmitAllowNeeds())
+        self.assertFalse(
+            self.sched.trigger.canMerge(a, mgr.getSubmitAllowNeeds()))
 
         A.addApproval('CRVW', 2)
         a = self.sched.trigger.getChange(1, 2, refresh=True)
-        assert not self.sched.trigger.canMerge(a, mgr.getSubmitAllowNeeds())
+        self.assertFalse(
+            self.sched.trigger.canMerge(a, mgr.getSubmitAllowNeeds()))
 
         A.addApproval('APRV', 1)
         a = self.sched.trigger.getChange(1, 2, refresh=True)
-        assert self.sched.trigger.canMerge(a, mgr.getSubmitAllowNeeds())
+        self.assertTrue(
+            self.sched.trigger.canMerge(a, mgr.getSubmitAllowNeeds()))
         self.sched.trigger.maintainCache([])
 
     def test_build_configuration(self):
@@ -1438,7 +1445,7 @@ class TestScheduler(testtools.TestCase):
         repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
         repo_messages.reverse()
         correct_messages = ['initial commit', 'A-1', 'B-1', 'C-1']
-        assert repo_messages == correct_messages
+        self.assertEqual(repo_messages, correct_messages)
 
     def test_build_configuration_conflict(self):
         "Test that merge conflicts are handled"
@@ -1469,12 +1476,12 @@ class TestScheduler(testtools.TestCase):
         self.gearman_server.release()
         self.waitUntilSettled()
 
-        assert A.data['status'] == 'MERGED'
-        assert B.data['status'] == 'NEW'
-        assert C.data['status'] == 'MERGED'
-        assert A.reported == 2
-        assert B.reported == 2
-        assert C.reported == 2
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.reported, 2)
 
     def test_post(self):
         "Test that post jobs run"
@@ -1495,8 +1502,8 @@ class TestScheduler(testtools.TestCase):
         self.waitUntilSettled()
 
         job_names = [x.name for x in self.history]
-        assert len(self.history) == 1
-        assert 'project-post' in job_names
+        self.assertEqual(len(self.history), 1)
+        self.assertIn('project-post', job_names)
 
     def test_build_configuration_branch(self):
         "Test that the right commits are on alternate branches"
@@ -1530,7 +1537,7 @@ class TestScheduler(testtools.TestCase):
         repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
         repo_messages.reverse()
         correct_messages = ['initial commit', 'mp commit', 'A-1', 'B-1', 'C-1']
-        assert repo_messages == correct_messages
+        self.assertEqual(repo_messages, correct_messages)
 
     def test_build_configuration_branch_interaction(self):
         "Test that switching between branches works"
@@ -1578,13 +1585,13 @@ class TestScheduler(testtools.TestCase):
                          for c in repo.iter_commits(ref_master)]
         repo_messages.reverse()
         correct_messages = ['initial commit', 'A-1', 'C-1']
-        assert repo_messages == correct_messages
+        self.assertEqual(repo_messages, correct_messages)
 
         repo_messages = [c.message.strip()
                          for c in repo.iter_commits(ref_mp)]
         repo_messages.reverse()
         correct_messages = ['initial commit', 'mp commit', 'B-1']
-        assert repo_messages == correct_messages
+        self.assertEqual(repo_messages, correct_messages)
 
     def test_one_job_project(self):
         "Test that queueing works with one job"
@@ -1598,10 +1605,10 @@ class TestScheduler(testtools.TestCase):
         self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
         self.waitUntilSettled()
 
-        assert A.data['status'] == 'MERGED'
-        assert A.reported == 2
-        assert B.data['status'] == 'MERGED'
-        assert B.reported == 2
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(B.reported, 2)
 
     def test_job_from_templates_launched(self):
         "Test whether a job generated via a template can be launched"
@@ -1611,8 +1618,10 @@ class TestScheduler(testtools.TestCase):
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
 
-        assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
-        assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
 
     def test_dependent_changes_dequeue(self):
         "Test that dependent patches are not needlessly tested"
@@ -1641,13 +1650,13 @@ class TestScheduler(testtools.TestCase):
 
         self.waitUntilSettled()
 
-        assert A.data['status'] == 'NEW'
-        assert A.reported == 2
-        assert B.data['status'] == 'NEW'
-        assert B.reported == 2
-        assert C.data['status'] == 'NEW'
-        assert C.reported == 2
-        assert len(self.history) == 1
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.data['status'], 'NEW')
+        self.assertEqual(C.reported, 2)
+        self.assertEqual(len(self.history), 1)
 
     def test_head_is_dequeued_once(self):
         "Test that if a change at the head fails it is dequeued only once"
@@ -1672,9 +1681,9 @@ class TestScheduler(testtools.TestCase):
 
         self.waitUntilSettled()
 
-        assert len(self.builds) == 1
-        assert self.builds[0].name == 'project1-merge'
-        assert self.job_has_changes(self.builds[0], A)
+        self.assertEqual(len(self.builds), 1)
+        self.assertEqual(self.builds[0].name, 'project1-merge')
+        self.assertTrue(self.job_has_changes(self.builds[0], A))
 
         self.worker.release('.*-merge')
         self.waitUntilSettled()
@@ -1683,36 +1692,36 @@ class TestScheduler(testtools.TestCase):
         self.worker.release('.*-merge')
         self.waitUntilSettled()
 
-        assert len(self.builds) == 9
-        assert self.builds[0].name == 'project1-test1'
-        assert self.builds[1].name == 'project1-test2'
-        assert self.builds[2].name == 'project1-project2-integration'
-        assert self.builds[3].name == 'project1-test1'
-        assert self.builds[4].name == 'project1-test2'
-        assert self.builds[5].name == 'project1-project2-integration'
-        assert self.builds[6].name == 'project1-test1'
-        assert self.builds[7].name == 'project1-test2'
-        assert self.builds[8].name == 'project1-project2-integration'
+        self.assertEqual(len(self.builds), 9)
+        self.assertEqual(self.builds[0].name, 'project1-test1')
+        self.assertEqual(self.builds[1].name, 'project1-test2')
+        self.assertEqual(self.builds[2].name, 'project1-project2-integration')
+        self.assertEqual(self.builds[3].name, 'project1-test1')
+        self.assertEqual(self.builds[4].name, 'project1-test2')
+        self.assertEqual(self.builds[5].name, 'project1-project2-integration')
+        self.assertEqual(self.builds[6].name, 'project1-test1')
+        self.assertEqual(self.builds[7].name, 'project1-test2')
+        self.assertEqual(self.builds[8].name, 'project1-project2-integration')
 
         self.release(self.builds[0])
         self.waitUntilSettled()
 
-        assert len(self.builds) == 3  # test2, integration, merge for B
-        assert self.countJobResults(self.history, 'ABORTED') == 6
+        self.assertEqual(len(self.builds), 3)  # test2,integration, merge for B
+        self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 6)
 
         self.worker.hold_jobs_in_build = False
         self.worker.release()
         self.waitUntilSettled()
 
-        assert len(self.builds) == 0
-        assert len(self.history) == 20
+        self.assertEqual(len(self.builds), 0)
+        self.assertEqual(len(self.history), 20)
 
-        assert A.data['status'] == 'NEW'
-        assert B.data['status'] == 'MERGED'
-        assert C.data['status'] == 'MERGED'
-        assert A.reported == 2
-        assert B.reported == 2
-        assert C.reported == 2
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.reported, 2)
 
     def test_nonvoting_job(self):
         "Test that non-voting jobs don't vote."
@@ -1725,14 +1734,17 @@ class TestScheduler(testtools.TestCase):
 
         self.waitUntilSettled()
 
-        assert A.data['status'] == 'MERGED'
-        assert A.reported == 2
-        assert (self.getJobFromHistory('nonvoting-project-merge').result ==
-                'SUCCESS')
-        assert (self.getJobFromHistory('nonvoting-project-test1').result ==
-                'SUCCESS')
-        assert (self.getJobFromHistory('nonvoting-project-test2').result ==
-                'FAILURE')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(
+            self.getJobFromHistory('nonvoting-project-merge').result,
+            'SUCCESS')
+        self.assertEqual(
+            self.getJobFromHistory('nonvoting-project-test1').result,
+            'SUCCESS')
+        self.assertEqual(
+            self.getJobFromHistory('nonvoting-project-test2').result,
+            'FAILURE')
 
     def test_check_queue_success(self):
         "Test successful check queue jobs."
@@ -1742,11 +1754,14 @@ class TestScheduler(testtools.TestCase):
 
         self.waitUntilSettled()
 
-        assert A.data['status'] == 'NEW'
-        assert A.reported == 1
-        assert self.getJobFromHistory('project-merge').result == 'SUCCESS'
-        assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
-        assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
 
     def test_check_queue_failure(self):
         "Test failed check queue jobs."
@@ -1757,11 +1772,14 @@ class TestScheduler(testtools.TestCase):
 
         self.waitUntilSettled()
 
-        assert A.data['status'] == 'NEW'
-        assert A.reported == 1
-        assert self.getJobFromHistory('project-merge').result == 'SUCCESS'
-        assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
-        assert self.getJobFromHistory('project-test2').result == 'FAILURE'
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
+                        'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'FAILURE')
 
     def test_dependent_behind_dequeue(self):
         "test that dependent changes behind dequeued changes work"
@@ -1832,22 +1850,22 @@ class TestScheduler(testtools.TestCase):
         self.worker.release()
         self.waitUntilSettled()
 
-        assert A.data['status'] == 'NEW'
-        assert B.data['status'] == 'MERGED'
-        assert C.data['status'] == 'MERGED'
-        assert D.data['status'] == 'MERGED'
-        assert E.data['status'] == 'MERGED'
-        assert F.data['status'] == 'MERGED'
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(D.data['status'], 'MERGED')
+        self.assertEqual(E.data['status'], 'MERGED')
+        self.assertEqual(F.data['status'], 'MERGED')
 
-        assert A.reported == 2
-        assert B.reported == 2
-        assert C.reported == 2
-        assert D.reported == 2
-        assert E.reported == 2
-        assert F.reported == 2
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.reported, 2)
+        self.assertEqual(D.reported, 2)
+        self.assertEqual(E.reported, 2)
+        self.assertEqual(F.reported, 2)
 
-        assert self.countJobResults(self.history, 'ABORTED') == 15
-        assert len(self.history) == 44
+        self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 15)
+        self.assertEqual(len(self.history), 44)
 
     def test_merger_repack(self):
         "Test that the merger works after a repack"
@@ -1856,11 +1874,14 @@ class TestScheduler(testtools.TestCase):
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
-        assert self.getJobFromHistory('project-merge').result == 'SUCCESS'
-        assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
-        assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
-        assert A.data['status'] == 'MERGED'
-        assert A.reported == 2
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
         self.assertEmptyQueues()
         self.worker.build_history = []
 
@@ -1871,11 +1892,14 @@ class TestScheduler(testtools.TestCase):
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
-        assert self.getJobFromHistory('project-merge').result == 'SUCCESS'
-        assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
-        assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
-        assert A.data['status'] == 'MERGED'
-        assert A.reported == 2
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
 
     def test_merger_repack_large_change(self):
         "Test that the merger works with large changes after a repack"
@@ -1890,11 +1914,14 @@ class TestScheduler(testtools.TestCase):
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
-        assert self.getJobFromHistory('project1-merge').result == 'SUCCESS'
-        assert self.getJobFromHistory('project1-test1').result == 'SUCCESS'
-        assert self.getJobFromHistory('project1-test2').result == 'SUCCESS'
-        assert A.data['status'] == 'MERGED'
-        assert A.reported == 2
+        self.assertEqual(self.getJobFromHistory('project1-merge').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project1-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project1-test2').result,
+                         'SUCCESS')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
 
     def test_nonexistent_job(self):
         "Test launching a job that doesn't exist"
@@ -1909,9 +1936,9 @@ class TestScheduler(testtools.TestCase):
         while A.reported < 2:
             self.waitUntilSettled()
         job_names = [x.name for x in self.history]
-        assert not job_names
-        assert A.data['status'] == 'NEW'
-        assert A.reported == 2
+        self.assertFalse(job_names)
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 2)
         self.assertEmptyQueues()
 
         # Make sure things still work:
@@ -1920,11 +1947,14 @@ class TestScheduler(testtools.TestCase):
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
-        assert self.getJobFromHistory('project-merge').result == 'SUCCESS'
-        assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
-        assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
-        assert A.data['status'] == 'MERGED'
-        assert A.reported == 2
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
 
     def test_single_nonexistent_post_job(self):
         "Test launching a single post job that doesn't exist"
@@ -1947,7 +1977,7 @@ class TestScheduler(testtools.TestCase):
         self.fake_gerrit.addEvent(e)
         self.waitUntilSettled()
 
-        assert len(self.history) == 0
+        self.assertEqual(len(self.history), 0)
 
     def test_new_patchset_dequeues_old(self):
         "Test that a new patchset causes the old to be dequeued"
@@ -1983,15 +2013,15 @@ class TestScheduler(testtools.TestCase):
         self.worker.release()
         self.waitUntilSettled()
 
-        assert A.data['status'] == 'MERGED'
-        assert A.reported == 2
-        assert B.data['status'] == 'NEW'
-        assert B.reported == 2
-        assert C.data['status'] == 'NEW'
-        assert C.reported == 2
-        assert D.data['status'] == 'MERGED'
-        assert D.reported == 2
-        assert len(self.history) == 9  # 3 each for A, B, D.
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.data['status'], 'NEW')
+        self.assertEqual(C.reported, 2)
+        self.assertEqual(D.data['status'], 'MERGED')
+        self.assertEqual(D.reported, 2)
+        self.assertEqual(len(self.history), 9)  # 3 each for A, B, D.
 
     def test_new_patchset_dequeues_old_on_head(self):
         "Test that a new patchset causes the old to be dequeued (at head)"
@@ -2026,15 +2056,15 @@ class TestScheduler(testtools.TestCase):
         self.worker.release()
         self.waitUntilSettled()
 
-        assert A.data['status'] == 'NEW'
-        assert A.reported == 2
-        assert B.data['status'] == 'NEW'
-        assert B.reported == 2
-        assert C.data['status'] == 'NEW'
-        assert C.reported == 2
-        assert D.data['status'] == 'MERGED'
-        assert D.reported == 2
-        assert len(self.history) == 7
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.data['status'], 'NEW')
+        self.assertEqual(C.reported, 2)
+        self.assertEqual(D.data['status'], 'MERGED')
+        self.assertEqual(D.reported, 2)
+        self.assertEqual(len(self.history), 7)
 
     def test_new_patchset_dequeues_old_without_dependents(self):
         "Test that a new patchset causes only the old to be dequeued"
@@ -2059,13 +2089,13 @@ class TestScheduler(testtools.TestCase):
         self.worker.release()
         self.waitUntilSettled()
 
-        assert A.data['status'] == 'MERGED'
-        assert A.reported == 2
-        assert B.data['status'] == 'NEW'
-        assert B.reported == 2
-        assert C.data['status'] == 'MERGED'
-        assert C.reported == 2
-        assert len(self.history) == 9
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(C.reported, 2)
+        self.assertEqual(len(self.history), 9)
 
     def test_new_patchset_dequeues_old_independent_queue(self):
         "Test that a new patchset causes the old to be dequeued (independent)"
@@ -2086,14 +2116,14 @@ class TestScheduler(testtools.TestCase):
         self.worker.release()
         self.waitUntilSettled()
 
-        assert A.data['status'] == 'NEW'
-        assert A.reported == 1
-        assert B.data['status'] == 'NEW'
-        assert B.reported == 1
-        assert C.data['status'] == 'NEW'
-        assert C.reported == 1
-        assert len(self.history) == 10
-        assert self.countJobResults(self.history, 'ABORTED') == 1
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(B.reported, 1)
+        self.assertEqual(C.data['status'], 'NEW')
+        self.assertEqual(C.reported, 1)
+        self.assertEqual(len(self.history), 10)
+        self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 1)
 
     def test_zuul_refs(self):
         "Test that zuul refs exist and have the right changes"
@@ -2138,49 +2168,49 @@ class TestScheduler(testtools.TestCase):
                 d_zref = x.parameters['ZUUL_REF']
 
         # There are... four... refs.
-        assert a_zref is not None
-        assert b_zref is not None
-        assert c_zref is not None
-        assert d_zref is not None
+        self.assertIsNotNone(a_zref)
+        self.assertIsNotNone(b_zref)
+        self.assertIsNotNone(c_zref)
+        self.assertIsNotNone(d_zref)
 
         # And they should all be different
         refs = set([a_zref, b_zref, c_zref, d_zref])
-        assert len(refs) == 4
+        self.assertEqual(len(refs), 4)
 
         # a ref should have a, not b, and should not be in project2
-        assert self.ref_has_change(a_zref, A)
-        assert not self.ref_has_change(a_zref, B)
-        assert not self.ref_has_change(a_zref, M2)
+        self.assertTrue(self.ref_has_change(a_zref, A))
+        self.assertFalse(self.ref_has_change(a_zref, B))
+        self.assertFalse(self.ref_has_change(a_zref, M2))
 
         # b ref should have a and b, and should not be in project2
-        assert self.ref_has_change(b_zref, A)
-        assert self.ref_has_change(b_zref, B)
-        assert not self.ref_has_change(b_zref, M2)
+        self.assertTrue(self.ref_has_change(b_zref, A))
+        self.assertTrue(self.ref_has_change(b_zref, B))
+        self.assertFalse(self.ref_has_change(b_zref, M2))
 
         # c ref should have a and b in 1, c in 2
-        assert self.ref_has_change(c_zref, A)
-        assert self.ref_has_change(c_zref, B)
-        assert self.ref_has_change(c_zref, C)
-        assert not self.ref_has_change(c_zref, D)
+        self.assertTrue(self.ref_has_change(c_zref, A))
+        self.assertTrue(self.ref_has_change(c_zref, B))
+        self.assertTrue(self.ref_has_change(c_zref, C))
+        self.assertFalse(self.ref_has_change(c_zref, D))
 
         # d ref should have a and b in 1, c and d in 2
-        assert self.ref_has_change(d_zref, A)
-        assert self.ref_has_change(d_zref, B)
-        assert self.ref_has_change(d_zref, C)
-        assert self.ref_has_change(d_zref, D)
+        self.assertTrue(self.ref_has_change(d_zref, A))
+        self.assertTrue(self.ref_has_change(d_zref, B))
+        self.assertTrue(self.ref_has_change(d_zref, C))
+        self.assertTrue(self.ref_has_change(d_zref, D))
 
         self.worker.hold_jobs_in_build = False
         self.worker.release()
         self.waitUntilSettled()
 
-        assert A.data['status'] == 'MERGED'
-        assert A.reported == 2
-        assert B.data['status'] == 'MERGED'
-        assert B.reported == 2
-        assert C.data['status'] == 'MERGED'
-        assert C.reported == 2
-        assert D.data['status'] == 'MERGED'
-        assert D.reported == 2
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(C.reported, 2)
+        self.assertEqual(D.data['status'], 'MERGED')
+        self.assertEqual(D.reported, 2)
 
     def test_statsd(self):
         "Test each of the statsd methods used in the scheduler"
@@ -2207,12 +2237,12 @@ class TestScheduler(testtools.TestCase):
         testfile_jobs = [x for x in self.history
                          if x.name == 'project-testfile']
 
-        assert len(testfile_jobs) == 1
-        assert testfile_jobs[0].changes == '1,2'
-        assert A.data['status'] == 'MERGED'
-        assert A.reported == 2
-        assert B.data['status'] == 'MERGED'
-        assert B.reported == 2
+        self.assertEqual(len(testfile_jobs), 1)
+        self.assertEqual(testfile_jobs[0].changes, '1,2')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(B.reported, 2)
 
     def test_test_config(self):
         "Test that we can test the config"
@@ -2230,12 +2260,12 @@ class TestScheduler(testtools.TestCase):
         self.waitUntilSettled()
         desc = self.history[0].description
         self.log.debug("Description: %s" % desc)
-        assert re.search("Branch.*master", desc)
-        assert re.search("Pipeline.*gate", desc)
-        assert re.search("project-merge.*SUCCESS", desc)
-        assert re.search("project-test1.*SUCCESS", desc)
-        assert re.search("project-test2.*SUCCESS", desc)
-        assert re.search("Reported result.*SUCCESS", desc)
+        self.assertTrue(re.search("Branch.*master", desc))
+        self.assertTrue(re.search("Pipeline.*gate", desc))
+        self.assertTrue(re.search("project-merge.*SUCCESS", desc))
+        self.assertTrue(re.search("project-test1.*SUCCESS", desc))
+        self.assertTrue(re.search("project-test2.*SUCCESS", desc))
+        self.assertTrue(re.search("Reported result.*SUCCESS", desc))
 
     def test_json_status(self):
         "Test that we can retrieve JSON status info"
@@ -2260,12 +2290,12 @@ class TestScheduler(testtools.TestCase):
             for q in p['change_queues']:
                 for head in q['heads']:
                     for change in head:
-                        assert change['id'] == '1,1'
+                        self.assertEqual(change['id'], '1,1')
                         for job in change['jobs']:
                             status_jobs.add(job['name'])
-        assert 'project-merge' in status_jobs
-        assert 'project-test1' in status_jobs
-        assert 'project-test2' in status_jobs
+        self.assertIn('project-merge', status_jobs)
+        self.assertIn('project-test1', status_jobs)
+        self.assertIn('project-test2', status_jobs)
 
     def test_node_label(self):
         "Test that a job runs on a specific node label"
@@ -2276,9 +2306,10 @@ class TestScheduler(testtools.TestCase):
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
 
-        assert self.getJobFromHistory('node-project-merge').node is None
-        assert self.getJobFromHistory('node-project-test1').node == 'debian'
-        assert self.getJobFromHistory('node-project-test2').node is None
+        self.assertIsNone(self.getJobFromHistory('node-project-merge').node)
+        self.assertEqual(self.getJobFromHistory('node-project-test1').node,
+                         'debian')
+        self.assertIsNone(self.getJobFromHistory('node-project-test2').node)
 
     def test_live_reconfiguration(self):
         "Test that live reconfiguration works"
@@ -2293,9 +2324,12 @@ class TestScheduler(testtools.TestCase):
         self.worker.hold_jobs_in_build = False
         self.worker.release()
         self.waitUntilSettled()
-        assert self.getJobFromHistory('project-merge').result == 'SUCCESS'
-        assert self.getJobFromHistory('project-test1').result == 'SUCCESS'
-        assert self.getJobFromHistory('project-test2').result == 'SUCCESS'
-        assert A.data['status'] == 'MERGED'
-        assert A.reported == 2
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
         self.assertEmptyQueues()
