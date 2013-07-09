@@ -428,8 +428,8 @@ class Scheduler(threading.Thread):
                             continue
                         item.change.project = project
                         severed = item in shared_queue.severed_heads
-                        if not new_pipeline.manager.reEnqueueItem(item,
-                                severed=severed):
+                        if not new_pipeline.manager.reEnqueueItem(
+                            item, severed=severed):
                             items_to_remove.append(item)
                 builds_to_remove = []
                 for build, item in old_pipeline.manager.building_jobs.items():

@@ -123,7 +123,7 @@ class Merger(object):
     log = logging.getLogger("zuul.Merger")
 
     def __init__(self, trigger, working_root, push_refs, sshkey, email,
-            username):
+                 username):
         self.trigger = trigger
         self.repos = {}
         self.working_root = working_root
@@ -227,7 +227,7 @@ class Merger(object):
                                        target_ref=target_ref, mode=mode)
         # Sibling changes exist. Merge current change against newest sibling.
         elif (len(sibling_items) >= 2 and
-            sibling_items[-2].current_build_set.commit):
+              sibling_items[-2].current_build_set.commit):
             last_commit = sibling_items[-2].current_build_set.commit
             commit = self._mergeChange(item.change, last_commit,
                                        target_ref=target_ref, mode=mode)

@@ -601,7 +601,7 @@ class FakeWorker(gear.Worker):
     def release(self, regex=None):
         builds = self.running_builds[:]
         self.log.debug("releasing build %s (%s)" % (regex,
-                                                   len(self.running_builds)))
+                                                    len(self.running_builds)))
         for build in builds:
             if not regex or re.match(regex, build.name):
                 self.log.debug("releasing build %s" %
@@ -1775,7 +1775,7 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(A.reported, 1)
         self.assertEqual(self.getJobFromHistory('project-merge').result,
-                        'SUCCESS')
+                         'SUCCESS')
         self.assertEqual(self.getJobFromHistory('project-test1').result,
                          'SUCCESS')
         self.assertEqual(self.getJobFromHistory('project-test2').result,
