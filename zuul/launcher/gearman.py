@@ -274,7 +274,7 @@ class Gearman(object):
         # ZUUL_SHORT_OLDREV
 
         if callable(job.parameter_function):
-            job.parameter_function(item.change, params)
+            job.parameter_function(item, params)
             self.log.debug("Custom parameter function used for job %s, "
                            "change: %s, params: %s" % (job, item.change,
                                                        params))
@@ -284,6 +284,7 @@ class Gearman(object):
         else:
             name = "build:%s" % job.name
         build = Build(job, uuid)
+        build.parameters = params
 
         gearman_job = gear.Job(name, json.dumps(params),
                                unique=uuid)
