@@ -316,6 +316,13 @@ explanation of each of the parameters::
   do when a change is added to the pipeline manager.  This can be used,
   for example, to reset the value of the Verified review category.
 
+**precedence**
+  Indicates how the build scheduler should prioritize jobs for
+  different pipelines.  Each pipeline may have one precedence, jobs
+  for pipelines with a higher precedence will be run before ones with
+  lower.  The value should be one of ``high``, ``normal``, or ``low``.
+  Default: ``normal``.
+
 Some example pipeline configurations are included in the sample layout
 file.  The first is called a *check* pipeline::
 

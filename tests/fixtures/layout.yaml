@@ -31,6 +31,7 @@ pipelines:
       verified: -2
     start:
       verified: 0
+    precedence: high
 
   - name: unused
     manager: IndependentPipelineManager

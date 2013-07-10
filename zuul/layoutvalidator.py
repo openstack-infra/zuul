@@ -30,6 +30,9 @@ class LayoutSchema(object):
 
     manager = v.Any('IndependentPipelineManager',
                     'DependentPipelineManager')
+
+    precedence = v.Any('normal', 'low', 'high')
+
     variable_dict = v.Schema({}, extra=True)
 
     trigger = {v.Required('event'): toList(v.Any('patchset-created',
@@ -47,6 +50,7 @@ class LayoutSchema(object):
 
     pipeline = {v.Required('name'): str,
                 v.Required('manager'): manager,
+                'precedence': precedence,
                 'description': str,
                 'success-message': str,
                 'failure-message': str,

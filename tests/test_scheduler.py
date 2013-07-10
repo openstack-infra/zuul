@@ -495,7 +495,8 @@ class FakeBuild(threading.Thread):
         self.worker.build_history.append(
             BuildHistory(name=self.name, number=self.number,
                          result=result, changes=changes, node=self.node,
-                         uuid=self.unique, description=self.description)
+                         uuid=self.unique, description=self.description,
+                         pipeline=self.parameters['ZUUL_PIPELINE'])
             )
 
         self.job.sendWorkComplete(json.dumps(data))
@@ -2266,6 +2267,28 @@ class TestScheduler(testtools.TestCase):
         self.assertTrue(re.search("project-test1.*SUCCESS", desc))
         self.assertTrue(re.search("project-test2.*SUCCESS", desc))
         self.assertTrue(re.search("Reported result.*SUCCESS", desc))
+
+    def test_queue_precedence(self):
+        "Test that queue precedence works"
+
+        self.gearman_server.hold_jobs_in_queue = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+
+        self.waitUntilSettled()
+        self.gearman_server.hold_jobs_in_queue = False
+        self.gearman_server.release()
+        self.waitUntilSettled()
+
+        self.log.debug(self.history)
+        self.assertEqual(self.history[0].pipeline, 'gate')
+        self.assertEqual(self.history[1].pipeline, 'check')
+        self.assertEqual(self.history[2].pipeline, 'gate')
+        self.assertEqual(self.history[3].pipeline, 'gate')
+        self.assertEqual(self.history[4].pipeline, 'check')
+        self.assertEqual(self.history[5].pipeline, 'check')
 
     def test_json_status(self):
         "Test that we can retrieve JSON status info"

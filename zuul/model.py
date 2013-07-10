@@ -22,6 +22,17 @@ MERGE_ALWAYS = 2
 MERGE_IF_NECESSARY = 3
 CHERRY_PICK = 4
 
+PRECEDENCE_NORMAL = 0
+PRECEDENCE_LOW = 1
+PRECEDENCE_HIGH = 2
+
+PRECEDENCE_MAP = {
+    None: PRECEDENCE_NORMAL,
+    'low': PRECEDENCE_LOW,
+    'normal': PRECEDENCE_NORMAL,
+    'high': PRECEDENCE_HIGH,
+}
+
 
 class Pipeline(object):
     """A top-level pipeline such as check, gate, post, etc."""
@@ -34,6 +45,7 @@ class Pipeline(object):
         self.job_trees = {}  # project -> JobTree
         self.manager = None
         self.queues = []
+        self.precedence = PRECEDENCE_NORMAL
 
     def __repr__(self):
         return '<Pipeline %s>' % self.name

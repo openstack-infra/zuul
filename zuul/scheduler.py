@@ -123,6 +123,8 @@ class Scheduler(threading.Thread):
         for conf_pipeline in data.get('pipelines', []):
             pipeline = Pipeline(conf_pipeline['name'])
             pipeline.description = conf_pipeline.get('description')
+            precedence = model.PRECEDENCE_MAP[conf_pipeline.get('precedence')]
+            pipeline.precedence = precedence
             pipeline.failure_message = conf_pipeline.get('failure-message',
                                                          "Build failed.")
             pipeline.success_message = conf_pipeline.get('success-message',

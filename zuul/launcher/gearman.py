@@ -19,6 +19,7 @@ import time
 import threading
 from uuid import uuid4
 
+import zuul.model
 from zuul.model import Build
 
 
@@ -297,8 +298,15 @@ class Gearman(object):
             self.onBuildCompleted(gearman_job, 'LOST')
             return build
 
+        if pipeline.precedence == zuul.model.PRECEDENCE_NORMAL:
+            precedence = gear.PRECEDENCE_NORMAL
+        elif pipeline.precedence == zuul.model.PRECEDENCE_HIGH:
+            precedence = gear.PRECEDENCE_HIGH
+        elif pipeline.precedence == zuul.model.PRECEDENCE_LOW:
+            precedence = gear.PRECEDENCE_LOW
+
         try:
-            self.gearman.submitJob(gearman_job)
+            self.gearman.submitJob(gearman_job, precedence=precedence)
         except Exception:
             self.log.exception("Unable to submit job to Gearman")
             self.onBuildCompleted(gearman_job, 'LOST')
@@ -407,7 +415,7 @@ class Gearman(object):
                             json.dumps(data), unique=stop_uuid)
         self.meta_jobs[stop_uuid] = stop_job
         self.log.debug("Submitting stop job: %s", stop_job)
-        self.gearman.submitJob(stop_job)
+        self.gearman.submitJob(stop_job, precedence=gear.PRECEDENCE_HIGH)
         return True
 
     def setBuildDescription(self, build, desc):
@@ -428,7 +436,7 @@ class Gearman(object):
         desc_job = gear.Job(name, json.dumps(data), unique=desc_uuid)
         self.meta_jobs[desc_uuid] = desc_job
         self.log.debug("Submitting describe job: %s", desc_job)
-        self.gearman.submitJob(desc_job)
+        self.gearman.submitJob(desc_job, precedence=gear.PRECEDENCE_LOW)
         return True
 
     def lookForLostBuilds(self):
