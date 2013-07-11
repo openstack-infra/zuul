@@ -1394,6 +1394,52 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
+    def test_trigger_cache(self):
+        "Test that the trigger cache operates correctly"
+        self.worker.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        X = self.fake_gerrit.addFakeChange('org/project', 'master', 'X')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+
+        M1 = self.fake_gerrit.addFakeChange('org/project', 'master', 'M1')
+        M1.setMerged()
+
+        B.setDependsOn(A, 1)
+        A.setDependsOn(M1, 1)
+
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(X.getPatchsetCreatedEvent(1))
+
+        self.waitUntilSettled()
+
+        for build in self.builds:
+            if build.parameters['ZUUL_PIPELINE'] == 'check':
+                build.release()
+        self.waitUntilSettled()
+        for build in self.builds:
+            if build.parameters['ZUUL_PIPELINE'] == 'check':
+                build.release()
+        self.waitUntilSettled()
+
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.log.debug("len %s " % self.sched.trigger._change_cache.keys())
+        # there should still be changes in the cache
+        self.assertNotEqual(len(self.sched.trigger._change_cache.keys()), 0)
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(A.queried, 2)  # Initial and isMerged
+        self.assertEqual(B.queried, 3)  # Initial A, refresh from B, isMerged
+
     def test_can_merge(self):
         "Test whether a change is ready to merge"
         # TODO: move to test_gerrit (this is a unit test!)

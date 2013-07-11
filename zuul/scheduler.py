@@ -76,6 +76,7 @@ class Scheduler(threading.Thread):
         self.launcher = None
         self.trigger = None
         self.config = None
+        self._maintain_trigger_cache = False
 
         self.trigger_event_queue = Queue.Queue()
         self.result_event_queue = Queue.Queue()
@@ -499,8 +500,22 @@ class Scheduler(threading.Thread):
                 else:
                     if not self.result_event_queue.empty():
                         self.wake_event.set()
+
+                if self._maintain_trigger_cache:
+                    self.maintainTriggerCache()
+                    self._maintain_trigger_cache = False
+
             except:
                 self.log.exception("Exception in run handler:")
+
+    def maintainTriggerCache(self):
+        relevant = set()
+        for pipeline in self.layout.pipelines.values():
+            for item in pipeline.getAllItems():
+                relevant.add(item.change)
+                relevant.update(item.change.getRelatedChanges())
+        self.log.debug("Trigger cache size: %s" % len(relevant))
+        self.trigger.maintainCache(relevant)
 
     def process_event_queue(self):
         self.log.debug("Fetching trigger event")
@@ -794,14 +809,7 @@ class BasePipelineManager(object):
             (item.change.is_reportable and not item.reported)):
             self.log.debug("Adding %s as a severed head" % item.change)
             change_queue.addSeveredHead(item)
-        self.maintainTriggerCache()
-
-    def maintainTriggerCache(self):
-        relevant = set()
-        for item in self.pipeline.getAllItems():
-            relevant.add(item.change)
-            relevant.update(item.change.getRelatedChanges())
-        self.sched.trigger.maintainCache(relevant)
+        self.sched._maintain_trigger_cache = True
 
     def removeChange(self, change):
         # Remove a change from the queue, probably because it has been
