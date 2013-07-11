@@ -370,7 +370,7 @@ class Gearman(object):
 
     def onWorkStatus(self, job):
         data = getJobData(job)
-        self.log.info("Build %s update %s " % (job, data))
+        self.log.debug("Build %s update %s " % (job, data))
         build = self.builds.get(job.unique)
         if build:
             self.log.debug("Found build %s" % build)
