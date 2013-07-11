@@ -715,6 +715,7 @@ class TestScheduler(testtools.TestCase):
         self.init_repo("org/nonvoting-project")
         self.init_repo("org/templated-project")
         self.init_repo("org/node-project")
+        self.init_repo("org/conflict-project")
 
         self.statsd = FakeStatsd()
         os.environ['STATSD_HOST'] = 'localhost'
@@ -1498,11 +1499,14 @@ class TestScheduler(testtools.TestCase):
         "Test that merge conflicts are handled"
 
         self.gearman_server.hold_jobs_in_queue = True
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A = self.fake_gerrit.addFakeChange('org/conflict-project',
+                                           'master', 'A')
         A.addPatchset(['conflict'])
-        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        B = self.fake_gerrit.addFakeChange('org/conflict-project',
+                                           'master', 'B')
         B.addPatchset(['conflict'])
-        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        C = self.fake_gerrit.addFakeChange('org/conflict-project',
+                                           'master', 'C')
         A.addApproval('CRVW', 2)
         B.addApproval('CRVW', 2)
         C.addApproval('CRVW', 2)
@@ -1510,6 +1514,10 @@ class TestScheduler(testtools.TestCase):
         self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
         self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
         self.waitUntilSettled()
+
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.reported, 1)
+        self.assertEqual(C.reported, 1)
 
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
@@ -1529,6 +1537,32 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(A.reported, 2)
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
+
+    def test_dequeue_conflict(self):
+        "Test that the option to dequeue merge conflicts works"
+
+        self.gearman_server.hold_jobs_in_queue = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addPatchset(['conflict'])
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        B.addPatchset(['conflict'])
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.reported, 2)
+
+        self.gearman_server.hold_jobs_in_queue = False
+        self.gearman_server.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
 
     def test_post(self):
         "Test that post jobs run"

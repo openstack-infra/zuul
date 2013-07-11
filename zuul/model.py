@@ -42,6 +42,7 @@ class Pipeline(object):
         self.failure_message = None
         self.success_message = None
         self.dequeue_on_new_patchset = True
+        self.dequeue_on_conflict = True
         self.job_trees = {}  # project -> JobTree
         self.manager = None
         self.queues = []
@@ -162,8 +163,9 @@ class Pipeline(object):
                 fakebuild.result = 'SKIPPED'
                 item.addBuild(fakebuild)
 
-    def setUnableToMerge(self, item):
+    def setUnableToMerge(self, item, msg):
         item.current_build_set.unable_to_merge = True
+        item.current_build_set.unable_to_merge_message = msg
         root = self.getJobTree(item.change.project)
         for job in root.getJobs():
             fakebuild = Build(job, None)
@@ -495,6 +497,7 @@ class BuildSet(object):
         self.ref = None
         self.commit = None
         self.unable_to_merge = False
+        self.unable_to_merge_message = None
 
     def setConfiguration(self):
         # The change isn't enqueued until after it's created

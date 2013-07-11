@@ -11,3 +11,9 @@ Since 1.2.0:
   context for why the change is being run (including the pipeline,
   items ahead and behind, etc.).  The Change is still available via
   the "change" attribute on the QueueItem.
+
+* The default behavior is now to immediately dequeue changes that have
+  merge conflicts, even those not at the head of the queue.  To enable
+  the old behavior (which would wait until the conflicting change was
+  at the head before dequeuing it), see the new "dequeue-on-conflict"
+  option.

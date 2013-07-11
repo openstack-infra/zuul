@@ -22,7 +22,7 @@ pipelines:
     failure-message: Build failed.  For information on how to proceed, see http://wiki.example.org/Test_Failures
     trigger:
       - event: comment-added
-        approval: 
+        approval:
           - approved: 1
     success:
       verified: 2
@@ -38,7 +38,7 @@ pipelines:
     dequeue-on-new-patchset: false
     trigger:
       - event: comment-added
-        approval: 
+        approval:
           - approved: 1
 
   - name: dup1
@@ -59,6 +59,21 @@ pipelines:
     failure:
       verified: -1
 
+  - name: conflict
+    dequeue-on-conflict: false
+    manager: DependentPipelineManager
+    failure-message: Build failed.  For information on how to proceed, see http://wiki.example.org/Test_Failures
+    trigger:
+      - event: comment-added
+        approval:
+          - approved: 1
+    success:
+      verified: 2
+      submit: true
+    failure:
+      verified: -2
+    start:
+      verified: 0
 
 jobs:
   - name: ^.*-merge$
@@ -170,3 +185,9 @@ projects:
       - node-project-merge:
         - node-project-test1
         - node-project-test2
+
+  - name: org/conflict-project
+    conflict:
+      - conflict-project-merge:
+        - conflict-project-test1
+        - conflict-project-test2

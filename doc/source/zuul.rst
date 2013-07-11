@@ -306,6 +306,14 @@ explanation of each of the parameters::
   well.  To suppress this behavior (and allow jobs to continue
   running), set this to ``false``.  Default: ``true``.
 
+**dequeue-on-conflict**
+  Normally, if there is a merge conflict or similar error with a
+  change, Zuul will immediately remove it from the queue, even if the
+  error is only due to a change that happened to be enqueued ahead of
+  it.  If you would like to keep the change in the queue until it is
+  at the head to be certain that the merge conflict is intrinsic to
+  the change, set this to ``false``.  Default: ``true``.
+
 **success**
   Describes what Zuul should do if all the jobs complete successfully.
   This section is optional; if it is omitted, Zuul will run jobs and

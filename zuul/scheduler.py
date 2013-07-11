@@ -131,8 +131,9 @@ class Scheduler(threading.Thread):
             pipeline.success_message = conf_pipeline.get('success-message',
                                                          "Build succeeded.")
             pipeline.dequeue_on_new_patchset = conf_pipeline.get(
-                'dequeue-on-new-patchset',
-                True)
+                'dequeue-on-new-patchset', True)
+            pipeline.dequeue_on_conflict = conf_pipeline.get(
+                'dequeue-on-conflict', True)
             manager = globals()[conf_pipeline['manager']](self, pipeline)
             pipeline.setManager(manager)
 
@@ -831,16 +832,30 @@ class BasePipelineManager(object):
             ref = item.current_build_set.ref
             dependent_items = self.getDependentItems(item)
             dependent_items.reverse()
+            dependent_str = ', '.join(
+                ['%s' % i.change.number for i in dependent_items
+                 if i.change.project == item.change.project])
+            if dependent_str:
+                msg = \
+                    "This change was unable to be automatically merged "\
+                    "with the current state of the repository and the "\
+                    "following changes which were enqueued ahead of it: "\
+                    "%s. Please rebase your change and upload a new "\
+                    "patchset." % dependent_str
+            else:
+                msg = "This change was unable to be automatically merged "\
+                    "with the current state of the repository. Please "\
+                    "rebase your change and upload a new patchset."
             all_items = dependent_items + [item]
             if (dependent_items and
                 not dependent_items[-1].current_build_set.commit):
-                self.pipeline.setUnableToMerge(item)
+                self.pipeline.setUnableToMerge(item, msg)
                 return True
             commit = self.sched.merger.mergeChanges(all_items, ref)
             item.current_build_set.commit = commit
             if not commit:
                 self.log.info("Unable to merge change %s" % item.change)
-                self.pipeline.setUnableToMerge(item)
+                self.pipeline.setUnableToMerge(item, msg)
                 return True
         return False
 
@@ -900,6 +915,15 @@ class BasePipelineManager(object):
         item_behind = item.item_behind
         if self.prepareRef(item):
             changed = True
+            if self.pipeline.dequeue_on_conflict:
+                self.log.info("Dequeuing change %s because "
+                              "of a git merge error" % item.change)
+                self.dequeueItem(item, keep_severed_heads=False)
+                try:
+                    self.reportItem(item)
+                except MergeFailure:
+                    pass
+                return changed
         if self.checkForChangesNeededBy(item.change) is not True:
             # It's not okay to enqueue this change, we should remove it.
             self.log.info("Dequeuing change %s because "
@@ -1047,10 +1071,8 @@ class BasePipelineManager(object):
 
         if item.dequeued_needing_change:
             ret += "This change depends on a change that failed to merge."
-        elif item.current_build_set.unable_to_merge:
-            ret += "This change was unable to be automatically merged "\
-                   "with the current state of the repository. Please "\
-                   "rebase your change and upload a new patchset."
+        elif item.current_build_set.unable_to_merge_message:
+            ret += item.current_build_set.unable_to_merge_message
         else:
             if self.sched.config.has_option('zuul', 'url_pattern'):
                 url_pattern = self.sched.config.get('zuul', 'url_pattern')
