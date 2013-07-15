@@ -1,7 +1,8 @@
-[jenkins]
-server=https://jenkins.example.com
-user=jenkins
-apikey=1234567890abcdef1234567890abcdef
+[gearman]
+server=127.0.0.1
+
+[gearman_server]
+start=true
 
 [gerrit]
 server=review.example.com

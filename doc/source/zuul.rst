@@ -49,6 +49,17 @@ gearman
   Port on which the Gearman server is listening
   ``port=4730``
 
+gearman_server
+""""""""""""""
+
+**start**
+  Whether to start the internal Gearman server (default: False).
+  ``start=true``
+
+**log_config**
+  Path to log config file for internal Gearman server.
+  ``log_config=/etc/zuul/gearman-logging.yaml``
+
 gerrit
 """"""
 

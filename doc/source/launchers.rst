@@ -38,10 +38,16 @@ distribute those jobs to any number of Jenkins systems (including
 multiple Jenkins masters).
 
 In order for Zuul to run any jobs, you will need a running Gearman
-server.  The latest version of gearmand from gearman.org is required
-in order to support canceling jobs while in the queue.  The server is
-easy to set up -- just make sure that it allows connections from Zuul
-and any workers (e.g., Jenkins masters) on port 4730, and nowhere else
+server.  Zuul includes a Gearman server, and it is recommended that it
+be used as it supports the following features needed by Zuul:
+
+* Canceling jobs in the queue (admin protocol command "cancel job").
+* Strict FIFO queue operation (gearmand's round-robin mode may be
+  sufficient, but is untested).
+
+To enable the built-in server, see the ``gearman_server`` section of
+``zuul.conf``.  Be sure that the host allows connections from Zuul and
+any workers (e.g., Jenkins masters) on TCP port 4730, and nowhere else
 (as the Gearman protocol does not include any provision for
 authentication.
 
