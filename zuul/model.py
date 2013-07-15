@@ -113,6 +113,13 @@ class Pipeline(object):
             return []
         return self._findJobsToRun(tree.job_trees, item)
 
+    def haveAllJobsStarted(self, item):
+        for job in self.getJobs(item.change):
+            build = item.current_build_set.getBuild(job.name)
+            if not build or not build.start_time:
+                return False
+        return True
+
     def areAllJobsComplete(self, item):
         for job in self.getJobs(item.change):
             build = item.current_build_set.getBuild(job.name)
@@ -218,6 +225,12 @@ class Pipeline(object):
                 e = head
                 while e:
                     j_changes.append(self.formatItemJSON(e))
+                    if (len(j_changes) > 1 and
+                        (j_changes[-2]['remaining_time'] is not None) and
+                        (j_changes[-1]['remaining_time'] is not None)):
+                        j_changes[-1]['remaining_time'] = max(
+                            j_changes[-2]['remaining_time'],
+                            j_changes[-1]['remaining_time'])
                     e = e.item_behind
                 j_queue['heads'].append(j_changes)
         return j_pipeline
@@ -272,20 +285,42 @@ class Pipeline(object):
         ret['project'] = changeish.project.name
         ret['enqueue_time'] = int(item.enqueue_time * 1000)
         ret['jobs'] = []
+        max_remaining = 0
         for job in self.getJobs(changeish):
+            now = time.time()
             build = item.current_build_set.getBuild(job.name)
+            elapsed = None
+            remaining = None
+            result = None
+            url = None
             if build:
                 result = build.result
                 url = build.url
-            else:
-                result = None
-                url = None
+                if build.start_time:
+                    if build.end_time:
+                        elapsed = int((build.end_time -
+                                       build.start_time) * 1000)
+                        remaining = 0
+                    else:
+                        elapsed = int((now - build.start_time) * 1000)
+                        if build.estimated_time:
+                            remaining = max(
+                                int(build.estimated_time * 1000) - elapsed,
+                                0)
+            if remaining and remaining > max_remaining:
+                max_remaining = remaining
             ret['jobs'].append(
                 dict(
                     name=job.name,
+                    elapsed_time=elapsed,
+                    remaining_time=remaining,
                     url=url,
                     result=result,
                     voting=job.voting))
+        if self.haveAllJobsStarted(item):
+            ret['remaining_time'] = max_remaining
+        else:
+            ret['remaining_time'] = None
         return ret
 
 
@@ -479,8 +514,8 @@ class Build(object):
         self.launch_time = time.time()
         self.start_time = None
         self.end_time = None
+        self.estimated_time = None
         self.parameters = {}
-        self.fraction_complete = None
 
     def __repr__(self):
         return '<Build %s of %s>' % (self.uuid, self.job.name)
