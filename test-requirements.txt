@@ -3,6 +3,7 @@ hacking>=0.5.3,<0.6
 coverage
 sphinx
 docutils==0.9.1
+discover
 fixtures>=0.3.12
 python-subunit
 testrepository>=0.0.13
