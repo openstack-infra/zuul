@@ -1,5 +1,0 @@
-coverage
-nose
-nosehtmloutput
-sphinx
-docutils==0.9.1

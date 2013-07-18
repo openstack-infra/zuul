@@ -27,6 +27,7 @@ class GerritEventConnector(threading.Thread):
 
     def __init__(self, gerrit, sched):
         super(GerritEventConnector, self).__init__()
+        self.daemon = True
         self.gerrit = gerrit
         self.sched = sched
         self._stopped = False
@@ -80,6 +81,14 @@ class GerritEventConnector(threading.Thread):
                     Can not get account information." % event.type)
             event.account = None
 
+        if event.change_number:
+            # Call getChange for the side effect of updating the
+            # cache.  Note that this modifies Change objects outside
+            # the main thread.
+            self.sched.trigger.getChange(event.change_number,
+                                         event.patch_number,
+                                         refresh=True)
+
         self.sched.addEvent(event)
         self.gerrit.eventDone()
 
@@ -99,6 +108,7 @@ class Gerrit(object):
     replication_retry_interval = 5
 
     def __init__(self, config, sched):
+        self._change_cache = {}
         self.sched = sched
         self.config = config
         self.server = config.get('gerrit', 'server')
@@ -278,29 +288,54 @@ class Gerrit(object):
             return False
         return True
 
-    def getChange(self, number, patchset, changes=None):
-        self.log.info("Getting information for %s,%s" % (number, patchset))
-        if changes is None:
-            changes = {}
-        data = self.gerrit.query(number)
-        project = self.sched.projects[data['project']]
-        change = Change(project)
+    def maintainCache(self, relevant):
+        # This lets the user supply a list of change objects that are
+        # still in use.  Anything in our cache that isn't in the supplied
+        # list should be same to remove from the cache.
+        remove = []
+        for key, change in self._change_cache.items():
+            if change not in relevant:
+                remove.append(key)
+        for key in remove:
+            del self._change_cache[key]
+
+    def getChange(self, number, patchset, refresh=False):
+        key = '%s,%s' % (number, patchset)
+        change = None
+        if key in self._change_cache:
+            change = self._change_cache.get(key)
+            if not refresh:
+                return change
+        if not change:
+            change = Change(None)
+            change.number = number
+            change.patchset = patchset
+        key = '%s,%s' % (change.number, change.patchset)
+        self._change_cache[key] = change
+        self.updateChange(change)
+        return change
+
+    def updateChange(self, change):
+        self.log.info("Updating information for %s,%s" %
+                      (change.number, change.patchset))
+        data = self.gerrit.query(change.number)
         change._data = data
 
-        change.number = number
-        change.patchset = patchset
-        change.project = project
+        if change.patchset is None:
+            change.patchset = data['currentPatchSet']['number']
+
+        change.project = self.sched.getProject(data['project'])
         change.branch = data['branch']
         change.url = data['url']
         max_ps = 0
         for ps in data['patchSets']:
-            if ps['number'] == patchset:
+            if ps['number'] == change.patchset:
                 change.refspec = ps['ref']
                 for f in ps.get('files', []):
                     change.files.append(f['file'])
             if int(ps['number']) > int(max_ps):
                 max_ps = ps['number']
-        if max_ps == patchset:
+        if max_ps == change.patchset:
             change.is_current_patchset = True
         else:
             change.is_current_patchset = False
@@ -311,20 +346,10 @@ class Gerrit(object):
             # for dependencies.
             return change
 
-        key = '%s,%s' % (number, patchset)
-        changes[key] = change
-
-        def cachedGetChange(num, ps):
-            key = '%s,%s' % (num, ps)
-            if key in changes:
-                return changes.get(key)
-            c = self.getChange(num, ps, changes)
-            return c
-
         if 'dependsOn' in data:
             parts = data['dependsOn'][0]['ref'].split('/')
             dep_num, dep_ps = parts[3], parts[4]
-            dep = cachedGetChange(dep_num, dep_ps)
+            dep = self.getChange(dep_num, dep_ps)
             if not dep.is_merged:
                 change.needs_change = dep
 
@@ -332,7 +357,7 @@ class Gerrit(object):
             for needed in data['neededBy']:
                 parts = needed['ref'].split('/')
                 dep_num, dep_ps = parts[3], parts[4]
-                dep = cachedGetChange(dep_num, dep_ps)
+                dep = self.getChange(dep_num, dep_ps)
                 if not dep.is_merged and dep.is_current_patchset:
                     change.needed_by_changes.append(dep)
 

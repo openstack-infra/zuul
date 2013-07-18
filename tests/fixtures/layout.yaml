@@ -1,3 +1,6 @@
+includes:
+  - python-file: custom_functions.py
+
 pipelines:
   - name: check
     manager: IndependentPipelineManager
@@ -28,6 +31,7 @@ pipelines:
       verified: -2
     start:
       verified: 0
+    precedence: high
 
   - name: unused
     manager: IndependentPipelineManager
@@ -65,6 +69,8 @@ jobs:
   - name: project-testfile
     files:
       - '.*-requires'
+  - name: node-project-test1
+    parameter-function: select_debian_node
 
 project-templates:
   - name: test-one-and-two
@@ -158,3 +164,9 @@ projects:
     template:
      - name: test-one-and-two
        projectname: project
+
+  - name: org/node-project
+    gate:
+      - node-project-merge:
+        - node-project-test1
+        - node-project-test2

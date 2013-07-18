@@ -18,7 +18,6 @@
 
 import urllib2
 import json
-import sys
 import argparse
 
 parser = argparse.ArgumentParser()

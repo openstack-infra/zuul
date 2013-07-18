@@ -9,7 +9,8 @@ Configuration
 Zuul has three configuration files:
 
 **zuul.conf**
-  Credentials for Gerrit and Jenkins, locations of the other config files
+  Connection information for Gerrit and Gearman, locations of the
+  other config files
 **layout.yaml**
   Project and pipeline configuration -- what Zuul does
 **logging.conf**
@@ -27,30 +28,37 @@ Zuul will look for ``/etc/zuul/zuul.conf`` or ``~/zuul.conf`` to
 bootstrap its configuration.  Alternately, you may specify ``-c
 /path/to/zuul.conf`` on the command line.
 
-Gerrit and Jenkins credentials are each described in a section of
-zuul.conf.  The location of the other two configuration files (as well
-as the location of the PID file when running Zuul as a server) are
-specified in a third section.
+Gerrit and Gearman connection information are each described in a
+section of zuul.conf.  The location of the other two configuration
+files (as well as the location of the PID file when running Zuul as a
+server) are specified in a third section.
 
 The three sections of this config and their options are documented below.
 You can also find an example zuul.conf file in the git
 `repository
 <https://github.com/openstack-infra/zuul/blob/master/etc/zuul.conf-sample>`_
 
-jenkins
+gearman
 """""""
 
 **server**
-  URL for the root of the Jenkins HTTP server.
-  ``server=https://jenkins.example.com``
+  Hostname or IP address of the Gearman server.
+  ``server=gearman.example.com``
 
-**user**
-  User to authenticate against Jenkins with.
-  ``user=jenkins``
+**port**
+  Port on which the Gearman server is listening
+  ``port=4730``
 
-**apikey**
-  Jenkins API Key credentials for the above user.
-  ``apikey=1234567890abcdef1234567890abcdef``
+gearman_server
+""""""""""""""
+
+**start**
+  Whether to start the internal Gearman server (default: False).
+  ``start=true``
+
+**log_config**
+  Path to log config file for internal Gearman server.
+  ``log_config=/etc/zuul/gearman-logging.yaml``
 
 gerrit
 """"""
@@ -65,11 +73,11 @@ gerrit
 
 **user**
   User name to use when logging into above server via ssh.
-  ``user=jenkins``
+  ``user=zuul``
 
 **sshkey**
   Path to SSH key to use when logging into above server.
-  ``sshkey=/home/jenkins/.ssh/id_rsa``
+  ``sshkey=/home/zuul/.ssh/id_rsa``
 
 zuul
 """"
@@ -115,13 +123,14 @@ zuul
 
 **status_url**
   URL that will be posted in Zuul comments made to Gerrit changes when
-  beginning Jenkins jobs for a change.
-  ``status_url=https://jenkins.example.com/zuul/status``
+  starting jobs for a change.
+  ``status_url=https://zuul.example.com/status``
 
 **url_pattern**
-  If you are storing build logs external to Jenkins and wish to link to
-  those logs when Zuul makes comments on Gerrit changes for completed
-  jobs this setting configures what the URLs for those links should be.
+  If you are storing build logs external to the system that originally
+  ran jobs and wish to link to those logs when Zuul makes comments on
+  Gerrit changes for completed jobs this setting configures what the
+  URLs for those links should be.
   ``http://logs.example.com/{change.number}/{change.patchset}/{pipeline.name}/{job.name}/{build.number}``
 
 layout.yaml
@@ -318,6 +327,13 @@ explanation of each of the parameters::
   do when a change is added to the pipeline manager.  This can be used,
   for example, to reset the value of the Verified review category.
 
+**precedence**
+  Indicates how the build scheduler should prioritize jobs for
+  different pipelines.  Each pipeline may have one precedence, jobs
+  for pipelines with a higher precedence will be run before ones with
+  lower.  The value should be one of ``high``, ``normal``, or ``low``.
+  Default: ``normal``.
+
 Some example pipeline configurations are included in the sample layout
 file.  The first is called a *check* pipeline::
 
@@ -418,13 +434,13 @@ each job as it builds a list from the project specification.
 
 **failure-pattern (optional)**
   The URL that should be reported to Gerrit if the job fails.
-  Defaults to the Jenkins build URL or the url_pattern configured in
+  Defaults to the build URL or the url_pattern configured in
   zuul.conf.  May be supplied as a string pattern with substitutions
   as described in url_pattern in :ref:`zuulconf`.
 
 **success-pattern (optional)**
   The URL that should be reported to Gerrit if the job succeeds.
-  Defaults to the Jenkins build URL or the url_pattern configured in
+  Defaults to the build URL or the url_pattern configured in
   zuul.conf.  May be supplied as a string pattern with substitutions
   as described in url_pattern in :ref:`zuulconf`.
 
@@ -461,17 +477,21 @@ each job as it builds a list from the project specification.
   included with the :ref:`includes` directive.  The function
   should have the following signature:
 
-  .. function:: parameters(change, parameters)
+  .. function:: parameters(item, parameters)
 
      Manipulate the parameters passed to a job before a build is
      launched.  The ``parameters`` dictionary will already contain the
      standard Zuul job parameters, and is expected to be modified
      in-place.
 
-     :param change: the current change
-     :type change: zuul.model.Change
+     :param item: the current queue item
+     :type item: zuul.model.QueueItem
      :param parameters: parameters to be passed to the job
      :type parameters: dict
+
+  If the parameter **ZUUL_NODE** is set by this function, then it will
+  be used to specify on what node (or class of node) the job should be
+  run.
 
 Here is an example of setting the failure message for jobs that check
 whether a change merges cleanly::

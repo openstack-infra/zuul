@@ -22,6 +22,17 @@ MERGE_ALWAYS = 2
 MERGE_IF_NECESSARY = 3
 CHERRY_PICK = 4
 
+PRECEDENCE_NORMAL = 0
+PRECEDENCE_LOW = 1
+PRECEDENCE_HIGH = 2
+
+PRECEDENCE_MAP = {
+    None: PRECEDENCE_NORMAL,
+    'low': PRECEDENCE_LOW,
+    'normal': PRECEDENCE_NORMAL,
+    'high': PRECEDENCE_HIGH,
+}
+
 
 class Pipeline(object):
     """A top-level pipeline such as check, gate, post, etc."""
@@ -34,6 +45,7 @@ class Pipeline(object):
         self.job_trees = {}  # project -> JobTree
         self.manager = None
         self.queues = []
+        self.precedence = PRECEDENCE_NORMAL
 
     def __repr__(self):
         return '<Pipeline %s>' % self.name
@@ -68,20 +80,20 @@ class Pipeline(object):
             return []
         return changeish.filterJobs(tree.getJobs())
 
-    def _findJobsToRun(self, job_trees, changeish):
+    def _findJobsToRun(self, job_trees, item):
         torun = []
-        if changeish.change_ahead:
+        if item.item_ahead:
             # Only run jobs if any 'hold' jobs on the change ahead
             # have completed successfully.
-            if self.isHoldingFollowingChanges(changeish.change_ahead):
+            if self.isHoldingFollowingChanges(item.item_ahead):
                 return []
         for tree in job_trees:
             job = tree.job
             result = None
             if job:
-                if not job.changeMatches(changeish):
+                if not job.changeMatches(item.change):
                     continue
-                build = changeish.current_build_set.getBuild(job.name)
+                build = item.current_build_set.getBuild(job.name)
                 if build:
                     result = build.result
                 else:
@@ -91,93 +103,93 @@ class Pipeline(object):
             # If there is no job, this is a null job tree, and we should
             # run all of its jobs.
             if result == 'SUCCESS' or not job:
-                torun.extend(self._findJobsToRun(tree.job_trees, changeish))
+                torun.extend(self._findJobsToRun(tree.job_trees, item))
         return torun
 
-    def findJobsToRun(self, changeish):
-        tree = self.getJobTree(changeish.project)
+    def findJobsToRun(self, item):
+        tree = self.getJobTree(item.change.project)
         if not tree:
             return []
-        return self._findJobsToRun(tree.job_trees, changeish)
+        return self._findJobsToRun(tree.job_trees, item)
 
-    def areAllJobsComplete(self, changeish):
-        for job in self.getJobs(changeish):
-            build = changeish.current_build_set.getBuild(job.name)
+    def areAllJobsComplete(self, item):
+        for job in self.getJobs(item.change):
+            build = item.current_build_set.getBuild(job.name)
             if not build or not build.result:
                 return False
         return True
 
-    def didAllJobsSucceed(self, changeish):
-        for job in self.getJobs(changeish):
+    def didAllJobsSucceed(self, item):
+        for job in self.getJobs(item.change):
             if not job.voting:
                 continue
-            build = changeish.current_build_set.getBuild(job.name)
+            build = item.current_build_set.getBuild(job.name)
             if not build:
                 return False
             if build.result != 'SUCCESS':
                 return False
         return True
 
-    def didAnyJobFail(self, changeish):
-        for job in self.getJobs(changeish):
+    def didAnyJobFail(self, item):
+        for job in self.getJobs(item.change):
             if not job.voting:
                 continue
-            build = changeish.current_build_set.getBuild(job.name)
+            build = item.current_build_set.getBuild(job.name)
             if build and build.result and (build.result != 'SUCCESS'):
                 return True
         return False
 
-    def isHoldingFollowingChanges(self, changeish):
-        for job in self.getJobs(changeish):
+    def isHoldingFollowingChanges(self, item):
+        for job in self.getJobs(item.change):
             if not job.hold_following_changes:
                 continue
-            build = changeish.current_build_set.getBuild(job.name)
+            build = item.current_build_set.getBuild(job.name)
             if not build:
                 return True
             if build.result != 'SUCCESS':
                 return True
-        if not changeish.change_ahead:
+        if not item.item_ahead:
             return False
-        return self.isHoldingFollowingChanges(changeish.change_ahead)
+        return self.isHoldingFollowingChanges(item.item_ahead)
 
-    def setResult(self, changeish, build):
+    def setResult(self, item, build):
         if build.result != 'SUCCESS':
             # Get a JobTree from a Job so we can find only its dependent jobs
-            root = self.getJobTree(changeish.project)
+            root = self.getJobTree(item.change.project)
             tree = root.getJobTreeForJob(build.job)
             for job in tree.getJobs():
                 fakebuild = Build(job, None)
                 fakebuild.result = 'SKIPPED'
-                changeish.addBuild(fakebuild)
+                item.addBuild(fakebuild)
 
-    def setUnableToMerge(self, changeish):
-        changeish.current_build_set.unable_to_merge = True
-        root = self.getJobTree(changeish.project)
+    def setUnableToMerge(self, item):
+        item.current_build_set.unable_to_merge = True
+        root = self.getJobTree(item.change.project)
         for job in root.getJobs():
             fakebuild = Build(job, None)
             fakebuild.result = 'SKIPPED'
-            changeish.addBuild(fakebuild)
+            item.addBuild(fakebuild)
 
-    def setDequeuedNeedingChange(self, changeish):
-        changeish.dequeued_needing_change = True
-        root = self.getJobTree(changeish.project)
+    def setDequeuedNeedingChange(self, item):
+        item.dequeued_needing_change = True
+        root = self.getJobTree(item.change.project)
         for job in root.getJobs():
             fakebuild = Build(job, None)
             fakebuild.result = 'SKIPPED'
-            changeish.addBuild(fakebuild)
+            item.addBuild(fakebuild)
 
     def getChangesInQueue(self):
         changes = []
         for shared_queue in self.queues:
-            changes.extend(shared_queue.queue)
+            changes.extend([x.change for x in shared_queue.queue])
         return changes
 
-    def getAllChanges(self):
-        changes = []
+    def getAllItems(self):
+        items = []
         for shared_queue in self.queues:
-            changes.extend(shared_queue.queue)
-            changes.extend(shared_queue.severed_heads)
-        return changes
+            items.extend(shared_queue.queue)
+            items.extend(shared_queue.severed_heads)
+        return items
 
     def formatStatusHTML(self):
         ret = ''
@@ -201,14 +213,15 @@ class Pipeline(object):
             j_queue['heads'] = []
             for head in queue.getHeads():
                 j_changes = []
-                c = head
-                while c:
-                    j_changes.append(self.formatChangeJSON(c))
-                    c = c.change_behind
+                e = head
+                while e:
+                    j_changes.append(self.formatItemJSON(e))
+                    e = e.item_behind
                 j_queue['heads'].append(j_changes)
         return j_pipeline
 
-    def formatStatus(self, changeish, indent=0, html=False):
+    def formatStatus(self, item, indent=0, html=False):
+        changeish = item.change
         indent_str = ' ' * indent
         ret = ''
         if html and hasattr(changeish, 'url') and changeish.url is not None:
@@ -222,7 +235,7 @@ class Pipeline(object):
                                                  changeish.project.name,
                                                  changeish._id())
         for job in self.getJobs(changeish):
-            build = changeish.current_build_set.getBuild(job.name)
+            build = item.current_build_set.getBuild(job.name)
             if build:
                 result = build.result
             else:
@@ -241,12 +254,13 @@ class Pipeline(object):
                     job_name = '<a href="%s">%s</a>' % (url, job_name)
             ret += '%s  %s: %s%s' % (indent_str, job_name, result, voting)
             ret += '\n'
-        if changeish.change_behind:
+        if item.item_behind:
             ret += '%sFollowed by:\n' % (indent_str)
-            ret += self.formatStatus(changeish.change_behind, indent + 2, html)
+            ret += self.formatStatus(item.item_behind, indent + 2, html)
         return ret
 
-    def formatChangeJSON(self, changeish):
+    def formatItemJSON(self, item):
+        changeish = item.change
         ret = {}
         if hasattr(changeish, 'url') and changeish.url is not None:
             ret['url'] = changeish.url
@@ -254,10 +268,10 @@ class Pipeline(object):
             ret['url'] = None
         ret['id'] = changeish._id()
         ret['project'] = changeish.project.name
-        ret['enqueue_time'] = int(changeish.enqueue_time * 1000)
+        ret['enqueue_time'] = int(item.enqueue_time * 1000)
         ret['jobs'] = []
         for job in self.getJobs(changeish):
-            build = changeish.current_build_set.getBuild(job.name)
+            build = item.current_build_set.getBuild(job.name)
             if build:
                 result = build.result
                 url = build.url
@@ -303,27 +317,32 @@ class ChangeQueue(object):
             self._jobs |= set(self.pipeline.getJobTree(project).getJobs())
 
     def enqueueChange(self, change):
+        item = QueueItem(self.pipeline, change)
+        self.enqueueItem(item)
+        item.enqueue_time = time.time()
+        return item
+
+    def enqueueItem(self, item):
         if self.dependent and self.queue:
-            change.change_ahead = self.queue[-1]
-            change.change_ahead.change_behind = change
-        self.queue.append(change)
-        change.enqueue_time = time.time()
+            item.item_ahead = self.queue[-1]
+            item.item_ahead.item_behind = item
+        self.queue.append(item)
 
-    def dequeueChange(self, change):
-        if change in self.queue:
-            self.queue.remove(change)
-        if change in self.severed_heads:
-            self.severed_heads.remove(change)
-        if change.change_ahead:
-            change.change_ahead.change_behind = change.change_behind
-        if change.change_behind:
-            change.change_behind.change_ahead = change.change_ahead
-        change.change_ahead = None
-        change.change_behind = None
-        change.dequeue_time = time.time()
+    def dequeueItem(self, item):
+        if item in self.queue:
+            self.queue.remove(item)
+        if item in self.severed_heads:
+            self.severed_heads.remove(item)
+        if item.item_ahead:
+            item.item_ahead.item_behind = item.item_behind
+        if item.item_behind:
+            item.item_behind.item_ahead = item.item_ahead
+        item.item_ahead = None
+        item.item_behind = None
+        item.dequeue_time = time.time()
 
-    def addSeveredHead(self, change):
-        self.severed_heads.append(change)
+    def addSeveredHead(self, item):
+        self.severed_heads.append(item)
 
     def mergeChangeQueue(self, other):
         for project in other.projects:
@@ -458,14 +477,16 @@ class Build(object):
         self.launch_time = time.time()
         self.start_time = None
         self.end_time = None
+        self.parameters = {}
+        self.fraction_complete = None
 
     def __repr__(self):
         return '<Build %s of %s>' % (self.uuid, self.job.name)
 
 
 class BuildSet(object):
-    def __init__(self, change):
-        self.change = change
+    def __init__(self, item):
+        self.item = item
         self.other_changes = []
         self.builds = {}
         self.result = None
@@ -480,10 +501,10 @@ class BuildSet(object):
         # so we don't know what the other changes ahead will be
         # until jobs start.
         if not self.other_changes:
-            next_change = self.change.change_ahead
-            while next_change:
-                self.other_changes.append(next_change)
-                next_change = next_change.change_ahead
+            next_item = self.item.item_ahead
+            while next_item:
+                self.other_changes.append(next_item.change)
+                next_item = next_item.item_ahead
         if not self.ref:
             self.ref = 'Z' + uuid4().hex
 
@@ -500,29 +521,21 @@ class BuildSet(object):
         return [self.builds.get(x) for x in keys]
 
 
-class Changeish(object):
-    """Something like a change; either a change or a ref"""
-    is_reportable = False
+class QueueItem(object):
+    """A changish inside of a Pipeline queue"""
 
-    def __init__(self, project):
-        self.project = project
+    def __init__(self, pipeline, change):
+        self.pipeline = pipeline
+        self.change = change  # a changeish
         self.build_sets = []
         self.dequeued_needing_change = False
         self.current_build_set = BuildSet(self)
         self.build_sets.append(self.current_build_set)
-        self.change_ahead = None
-        self.change_behind = None
+        self.item_ahead = None
+        self.item_behind = None
         self.enqueue_time = None
         self.dequeue_time = None
-
-    def equals(self, other):
-        raise NotImplementedError()
-
-    def isUpdateOf(self, other):
-        raise NotImplementedError()
-
-    def filterJobs(self, jobs):
-        return filter(lambda job: job.changeMatches(self), jobs)
+        self.reported = False
 
     def resetAllBuilds(self):
         old = self.current_build_set
@@ -534,6 +547,29 @@ class Changeish(object):
 
     def addBuild(self, build):
         self.current_build_set.addBuild(build)
+
+    def setReportedResult(self, result):
+        self.current_build_set.result = result
+
+
+class Changeish(object):
+    """Something like a change; either a change or a ref"""
+    is_reportable = False
+
+    def __init__(self, project):
+        self.project = project
+
+    def equals(self, other):
+        raise NotImplementedError()
+
+    def isUpdateOf(self, other):
+        raise NotImplementedError()
+
+    def filterJobs(self, jobs):
+        return filter(lambda job: job.changeMatches(self), jobs)
+
+    def getRelatedChanges(self):
+        return set()
 
 
 class Change(Changeish):
@@ -548,12 +584,12 @@ class Change(Changeish):
         self.refspec = None
 
         self.files = []
-        self.reported = False
         self.needs_change = None
         self.needed_by_changes = []
         self.is_current_patchset = True
         self.can_merge = False
         self.is_merged = False
+        self.failed_to_merge = False
 
     def _id(self):
         return '%s,%s' % (self.number, self.patchset)
@@ -568,12 +604,21 @@ class Change(Changeish):
 
     def isUpdateOf(self, other):
         if ((hasattr(other, 'number') and self.number == other.number) and
-            (hasattr(other, 'patchset') and self.patchset > other.patchset)):
+            (hasattr(other, 'patchset') and
+             self.patchset is not None and
+             other.patchset is not None and
+             int(self.patchset) > int(other.patchset))):
             return True
         return False
 
-    def setReportedResult(self, result):
-        self.current_build_set.result = result
+    def getRelatedChanges(self):
+        related = set()
+        if self.needs_change:
+            related.add(self.needs_change)
+        for c in self.needed_by_changes:
+            related.add(c)
+            related.update(c.getRelatedChanges())
+        return related
 
 
 class Ref(Changeish):
@@ -650,10 +695,6 @@ class TriggerEvent(object):
         return ret
 
     def getChange(self, project, trigger):
-        # TODO: make the scheduler deal with events (which may have
-        # changes) rather than changes so that we don't have to create
-        # "fake" changes for events that aren't associated with changes.
-
         if self.change_number:
             change = trigger.getChange(self.change_number, self.patch_number)
         if self.ref:
@@ -762,3 +803,27 @@ class EventFilter(object):
             if not matches_approval:
                 return False
         return True
+
+
+class Layout(object):
+    def __init__(self):
+        self.projects = {}
+        self.pipelines = {}
+        self.jobs = {}
+        self.metajobs = {}
+
+    def getJob(self, name):
+        if name in self.jobs:
+            return self.jobs[name]
+        job = Job(name)
+        if name.startswith('^'):
+            # This is a meta-job
+            regex = re.compile(name)
+            self.metajobs[regex] = job
+        else:
+            # Apply attributes from matching meta-jobs
+            for regex, metajob in self.metajobs.items():
+                if regex.match(name):
+                    job.copy(metajob)
+            self.jobs[name] = job
+        return job
