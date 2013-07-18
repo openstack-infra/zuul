@@ -1614,13 +1614,15 @@ class TestScheduler(testtools.TestCase):
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
         queue = self.gearman_server.getQueue()
-        ref_mp = self.getParameter(queue[-1], 'ZUUL_REF')
+        ref_B = self.getParameter(queue[-1], 'ZUUL_REF')
+        self.log.debug("Got Zuul ref for change B: %s" % ref_B)
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
         queue = self.gearman_server.getQueue()
-        ref_master = self.getParameter(queue[-1], 'ZUUL_REF')
+        ref_C = self.getParameter(queue[-1], 'ZUUL_REF')
+        self.log.debug("Got Zuul ref for change C: %s" % ref_C)
         self.gearman_server.hold_jobs_in_queue = False
         self.gearman_server.release()
         self.waitUntilSettled()
@@ -1629,13 +1631,13 @@ class TestScheduler(testtools.TestCase):
         repo = git.Repo(path)
 
         repo_messages = [c.message.strip()
-                         for c in repo.iter_commits(ref_master)]
+                         for c in repo.iter_commits(ref_C)]
         repo_messages.reverse()
         correct_messages = ['initial commit', 'A-1', 'C-1']
         self.assertEqual(repo_messages, correct_messages)
 
         repo_messages = [c.message.strip()
-                         for c in repo.iter_commits(ref_mp)]
+                         for c in repo.iter_commits(ref_B)]
         repo_messages.reverse()
         correct_messages = ['initial commit', 'mp commit', 'B-1']
         self.assertEqual(repo_messages, correct_messages)
