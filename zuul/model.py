@@ -437,17 +437,24 @@ class Job(object):
         return '<Job %s>' % (self.name)
 
     def copy(self, other):
-        self.failure_message = other.failure_message
-        self.success_message = other.success_message
-        self.failure_pattern = other.failure_pattern
-        self.success_pattern = other.success_pattern
-        self.parameter_function = other.parameter_function
+        if other.failure_message:
+            self.failure_message = other.failure_message
+        if other.success_message:
+            self.success_message = other.success_message
+        if other.failure_pattern:
+            self.failure_pattern = other.failure_pattern
+        if other.success_pattern:
+            self.success_pattern = other.success_pattern
+        if other.parameter_function:
+            self.parameter_function = other.parameter_function
+        if other.branches:
+            self.branches = other.branches[:]
+            self._branches = other._branches[:]
+        if other.files:
+            self.files = other.files[:]
+            self._files = other._files[:]
         self.hold_following_changes = other.hold_following_changes
         self.voting = other.voting
-        self.branches = other.branches[:]
-        self._branches = other._branches[:]
-        self.files = other.files[:]
-        self._files = other._files[:]
 
     def changeMatches(self, change):
         matches_branch = False
@@ -848,7 +855,7 @@ class Layout(object):
         self.projects = {}
         self.pipelines = {}
         self.jobs = {}
-        self.metajobs = {}
+        self.metajobs = []
 
     def getJob(self, name):
         if name in self.jobs:
@@ -857,10 +864,10 @@ class Layout(object):
         if name.startswith('^'):
             # This is a meta-job
             regex = re.compile(name)
-            self.metajobs[regex] = job
+            self.metajobs.append((regex, job))
         else:
             # Apply attributes from matching meta-jobs
-            for regex, metajob in self.metajobs.items():
+            for regex, metajob in self.metajobs:
                 if regex.match(name):
                     job.copy(metajob)
             self.jobs[name] = job

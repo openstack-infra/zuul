@@ -239,7 +239,7 @@ class Scheduler(threading.Thread):
 
         # All jobs should be defined at this point, get rid of
         # metajobs so that getJob isn't doing anything weird.
-        layout.metajobs = {}
+        layout.metajobs = []
 
         for pipeline in layout.pipelines.values():
             pipeline.manager._postConfig(layout)
