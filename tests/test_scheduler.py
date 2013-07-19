@@ -2354,6 +2354,7 @@ class TestScheduler(testtools.TestCase):
         "Test that queue precedence works"
 
         self.gearman_server.hold_jobs_in_queue = True
+        self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         A.addApproval('CRVW', 2)
@@ -2362,6 +2363,13 @@ class TestScheduler(testtools.TestCase):
         self.waitUntilSettled()
         self.gearman_server.hold_jobs_in_queue = False
         self.gearman_server.release()
+        self.waitUntilSettled()
+
+        # Run one build at a time to ensure non-race order:
+        for x in range(6):
+            self.release(self.builds[0])
+            self.waitUntilSettled()
+        self.worker.hold_jobs_in_build = False
         self.waitUntilSettled()
 
         self.log.debug(self.history)
