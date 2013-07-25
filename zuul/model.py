@@ -318,7 +318,19 @@ class Pipeline(object):
                     result=result,
                     voting=job.voting))
         if self.haveAllJobsStarted(item):
-            ret['remaining_time'] = max_remaining
+            # if a change ahead has failed, we are unknown.
+            item_ahead_failed = False
+            i = item.item_ahead
+            while i:
+                if self.didAnyJobFail(i):
+                    item_ahead_failed = True
+                    i = None  # safe to stop looking
+                else:
+                    i = i.item_ahead
+            if item_ahead_failed:
+                ret['remaining_time'] = None
+            else:
+                ret['remaining_time'] = max_remaining
         else:
             ret['remaining_time'] = None
         return ret
