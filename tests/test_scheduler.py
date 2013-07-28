@@ -148,7 +148,11 @@ class FakeChange(object):
                 f.close()
                 repo.index.add([fn])
 
-        return repo.index.commit(msg)
+        r = repo.index.commit(msg)
+        repo.head.reference = 'master'
+        repo.head.reset(index=True, working_tree=True)
+        repo.git.clean('-x', '-f', '-d')
+        return r
 
     def addPatchset(self, files=[], large=False):
         self.latest_patchset += 1
@@ -2445,4 +2449,23 @@ class TestScheduler(testtools.TestCase):
                          'SUCCESS')
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
-        self.assertEmptyQueues()
+
+    def test_delayed_repo_init(self):
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-delayed-repo-init.yaml')
+        self.sched.reconfigure(self.config)
+
+        self.init_repo("org/new-project")
+        A = self.fake_gerrit.addFakeChange('org/new-project', 'master', 'A')
+
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)

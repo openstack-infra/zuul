@@ -29,24 +29,37 @@ class Repo(object):
     def __init__(self, remote, local, email, username):
         self.remote_url = remote
         self.local_path = local
-        self._ensure_cloned()
-        self.repo = git.Repo(self.local_path)
-        if email:
-            self.repo.config_writer().set_value('user', 'email', email)
-        if username:
-            self.repo.config_writer().set_value('user', 'name', username)
-        self.repo.config_writer().write()
+        self.email = email
+        self.username = username
+        self._initialized = False
+        try:
+            self._ensure_cloned()
+        except:
+            self.log.exception("Unable to initialize repo for %s" % remote)
 
     def _ensure_cloned(self):
+        if self._initialized:
+            return
         if not os.path.exists(self.local_path):
             self.log.debug("Cloning from %s to %s" % (self.remote_url,
                                                       self.local_path))
             git.Repo.clone_from(self.remote_url, self.local_path)
+        self.repo = git.Repo(self.local_path)
+        if self.email:
+            self.repo.config_writer().set_value('user', 'email',
+                                                self.email)
+        if self.username:
+            self.repo.config_writer().set_value('user', 'name',
+                                                self.username)
+        self.repo.config_writer().write()
+        self._initialized = True
 
     def recreateRepoObject(self):
+        self._ensure_cloned()
         self.repo = git.Repo(self.local_path)
 
     def reset(self):
+        self._ensure_cloned()
         self.log.debug("Resetting repository %s" % self.local_path)
         self.update()
         origin = self.repo.remotes.origin
@@ -64,21 +77,25 @@ class Repo(object):
         return self.repo.heads[branch]
 
     def checkout(self, ref):
+        self._ensure_cloned()
         self.log.debug("Checking out %s" % ref)
         self.repo.head.reference = ref
         self.repo.head.reset(index=True, working_tree=True)
 
     def cherryPick(self, ref):
+        self._ensure_cloned()
         self.log.debug("Cherry-picking %s" % ref)
         self.fetch(ref)
         self.repo.git.cherry_pick("FETCH_HEAD")
 
     def merge(self, ref):
+        self._ensure_cloned()
         self.log.debug("Merging %s" % ref)
         self.fetch(ref)
         self.repo.git.merge("FETCH_HEAD")
 
     def fetch(self, ref):
+        self._ensure_cloned()
         # The git.remote.fetch method may read in git progress info and
         # interpret it improperly causing an AssertionError. Because the
         # data was fetched properly subsequent fetches don't seem to fail.
@@ -97,16 +114,19 @@ class Repo(object):
         self.repo = git.Repo(self.local_path)
 
     def createZuulRef(self, ref, commit='HEAD'):
+        self._ensure_cloned()
         self.log.debug("CreateZuulRef %s at %s " % (ref, commit))
         ref = ZuulReference.create(self.repo, ref, commit)
         return ref.commit
 
     def push(self, local, remote):
+        self._ensure_cloned()
         self.log.debug("Pushing %s:%s to %s " % (local, remote,
                                                  self.remote_url))
         self.repo.remotes.origin.push('%s:%s' % (local, remote))
 
     def update(self):
+        self._ensure_cloned()
         self.log.debug("Updating repository %s" % self.local_path)
         origin = self.repo.remotes.origin
         origin.update()
@@ -151,7 +171,7 @@ class Merger(object):
 
             self.repos[project] = repo
         except:
-            self.log.exception("Unable to initialize repo for %s" % project)
+            self.log.exception("Unable to add project %s" % project)
 
     def getRepo(self, project):
         r = self.repos.get(project, None)
