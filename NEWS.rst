@@ -1,4 +1,4 @@
-Since 1.2.0:
+Since 1.3.0:
 
 * The Jenkins launcher is replaced with Gearman launcher.  An internal
   Gearman server is provided, and there is a Gearman plugin for
@@ -17,3 +17,10 @@ Since 1.2.0:
   the old behavior (which would wait until the conflicting change was
   at the head before dequeuing it), see the new "dequeue-on-conflict"
   option.
+
+* Some statsd keys have changed in a backwards incompatible way:
+  * The counters and timers of the form zuul.job.{name} is now split
+    into several keys of the form:
+    zuul.pipeline.{pipeline-name}.job.{job-name}.{result}
+  * Job names in statsd keys now have the '_' character substituted
+    for the '.' character.

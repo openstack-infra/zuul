@@ -1013,16 +1013,21 @@ class TestScheduler(testtools.TestCase):
                     print 'heads', queue.severed_heads
                 self.assertEqual(len(queue.severed_heads), 0)
 
-    def assertReportedStat(self, key, value=None):
+    def assertReportedStat(self, key, value=None, kind=None):
         start = time.time()
         while time.time() < (start + 5):
             for stat in self.statsd.stats:
+                pprint.pprint(self.statsd.stats)
                 k, v = stat.split(':')
                 if key == k:
-                    if value is None:
+                    if value is None and kind is None:
                         return
-                    if value == v:
-                        return
+                    elif value:
+                        if value == v:
+                            return
+                    elif kind:
+                        if v.endswith('|' + kind):
+                            return
             time.sleep(0.1)
 
         pprint.pprint(self.statsd.stats)
@@ -1044,15 +1049,20 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
-        self.assertReportedStat('gerrit.event.comment-added', '1|c')
-        self.assertReportedStat('zuul.pipeline.gate.current_changes', '1|g')
-        self.assertReportedStat('zuul.job.project-merge')
-        self.assertReportedStat('zuul.pipeline.gate.resident_time')
-        self.assertReportedStat('zuul.pipeline.gate.total_changes', '1|c')
+        self.assertReportedStat('gerrit.event.comment-added', value='1|c')
+        self.assertReportedStat('zuul.pipeline.gate.current_changes',
+                                value='1|g')
+        self.assertReportedStat('zuul.pipeline.gate.job.project-merge.SUCCESS',
+                                kind='ms')
+        self.assertReportedStat('zuul.pipeline.gate.job.project-merge.SUCCESS',
+                                value='1|c')
+        self.assertReportedStat('zuul.pipeline.gate.resident_time', kind='ms')
+        self.assertReportedStat('zuul.pipeline.gate.total_changes',
+                                value='1|c')
         self.assertReportedStat(
-            'zuul.pipeline.gate.org.project.resident_time')
+            'zuul.pipeline.gate.org.project.resident_time', kind='ms')
         self.assertReportedStat(
-            'zuul.pipeline.gate.org.project.total_changes', '1|c')
+            'zuul.pipeline.gate.org.project.total_changes', value='1|c')
 
     def test_duplicate_pipelines(self):
         "Test that a change matching multiple pipelines works"
