@@ -61,6 +61,12 @@ to set up the virtualenv)::
 
   .tox/py27/bin/python -m testtools.run tests.test_scheduler.TestScheduler.test_jobs_launched
 
+List Failing Tests
+------------------
+
+  .tox/py27/bin/activate
+  testr failing --list
+
 Need More Info?
 ---------------
 
