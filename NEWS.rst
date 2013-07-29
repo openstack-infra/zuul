@@ -6,11 +6,17 @@ Since 1.2.0:
   straightforward.  See the Launchers section of the documentation for
   details.
 
-* The custom parameter function signature now takes a QueueItem as the
-  first argument, rather than the Change.  The QueueItem has the full
-  context for why the change is being run (including the pipeline,
-  items ahead and behind, etc.).  The Change is still available via
-  the "change" attribute on the QueueItem.
+* The custom parameter function signature has changed.  It now takes a
+  QueueItem as the first argument, rather than the Change.  The
+  QueueItem has the full context for why the change is being run
+  (including the pipeline, items ahead and behind, etc.).  The Change
+  is still available via the "change" attribute on the QueueItem.  The
+  second argument is now the Job that is about to be run, ande the
+  parameter dictionary is shifted to the third position.
+
+* The ZUUS_SHORT_* parameters have been removed (the same
+  functionality may be achieved with a custom parameter function that
+  matches all jobs).
 
 * The default behavior is now to immediately dequeue changes that have
   merge conflicts, even those not at the head of the queue.  To enable

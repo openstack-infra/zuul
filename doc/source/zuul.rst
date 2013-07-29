@@ -485,7 +485,7 @@ each job as it builds a list from the project specification.
   included with the :ref:`includes` directive.  The function
   should have the following signature:
 
-  .. function:: parameters(item, parameters)
+  .. function:: parameters(item, job, parameters)
 
      Manipulate the parameters passed to a job before a build is
      launched.  The ``parameters`` dictionary will already contain the
@@ -494,6 +494,8 @@ each job as it builds a list from the project specification.
 
      :param item: the current queue item
      :type item: zuul.model.QueueItem
+     :param job: the job about to be run
+     :type job: zuul.model.Job
      :param parameters: parameters to be passed to the job
      :type parameters: dict
 
