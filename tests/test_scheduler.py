@@ -472,7 +472,7 @@ class FakeBuild(threading.Thread):
             'name': self.name,
             'number': self.number,
             'manager': self.worker.worker_id,
-            }
+        }
 
         self.job.sendWorkData(json.dumps(data))
         self.job.sendWorkStatus(0, 100)
@@ -501,7 +501,7 @@ class FakeBuild(threading.Thread):
                          result=result, changes=changes, node=self.node,
                          uuid=self.unique, description=self.description,
                          pipeline=self.parameters['ZUUL_PIPELINE'])
-            )
+        )
 
         self.job.sendWorkComplete(json.dumps(data))
         del self.worker.gearman_jobs[self.job.unique]
