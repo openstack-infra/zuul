@@ -1652,14 +1652,19 @@ class TestScheduler(testtools.TestCase):
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
         queue = self.gearman_server.getQueue()
-        ref_B = self.getParameter(queue[-1], 'ZUUL_REF')
+        job_B = None
+        for job in queue:
+            if 'project-merge' in job.name:
+                job_B = job
+        ref_B = self.getParameter(job_B, 'ZUUL_REF')
         self.log.debug("Got Zuul ref for change B: %s" % ref_B)
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
-        self.gearman_server.release('.*-merge')
-        self.waitUntilSettled()
         queue = self.gearman_server.getQueue()
-        ref_C = self.getParameter(queue[-1], 'ZUUL_REF')
+        for job in queue:
+            if 'project-merge' in job.name:
+                job_C = job
+        ref_C = self.getParameter(job_C, 'ZUUL_REF')
         self.log.debug("Got Zuul ref for change C: %s" % ref_C)
         self.gearman_server.hold_jobs_in_queue = False
         self.gearman_server.release()
