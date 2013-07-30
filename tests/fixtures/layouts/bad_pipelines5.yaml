@@ -2,8 +2,9 @@ pipelines:
   - name: check
     manager: IndependentPipelineManager
     trigger:
-      - approval:
-          - approved: 1
+      gerrit:
+        - approval:
+            - approved: 1
 
 projects:
   - name: foo

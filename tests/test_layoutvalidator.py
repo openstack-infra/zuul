@@ -28,7 +28,7 @@ FIXTURE_DIR = os.path.join(os.path.dirname(__file__),
 LAYOUT_RE = re.compile(r'^(good|bad)_.*\.yaml$')
 
 
-class testScheduler(testtools.TestCase):
+class TestLayoutValidator(testtools.TestCase):
     def test_layouts(self):
         """Test layout file validation"""
         print

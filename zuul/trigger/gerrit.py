@@ -25,11 +25,12 @@ class GerritEventConnector(threading.Thread):
 
     log = logging.getLogger("zuul.GerritEventConnector")
 
-    def __init__(self, gerrit, sched):
+    def __init__(self, gerrit, sched, trigger):
         super(GerritEventConnector, self).__init__()
         self.daemon = True
         self.gerrit = gerrit
         self.sched = sched
+        self.trigger = trigger
         self._stopped = False
 
     def stop(self):
@@ -42,6 +43,7 @@ class GerritEventConnector(threading.Thread):
             return
         event = TriggerEvent()
         event.type = data.get('type')
+        event.trigger_name = self.trigger.name
         change = data.get('change')
         if change:
             event.project_name = change.get('project')
@@ -85,9 +87,9 @@ class GerritEventConnector(threading.Thread):
             # Call getChange for the side effect of updating the
             # cache.  Note that this modifies Change objects outside
             # the main thread.
-            self.sched.trigger.getChange(event.change_number,
-                                         event.patch_number,
-                                         refresh=True)
+            self.trigger.getChange(event.change_number,
+                                   event.patch_number,
+                                   refresh=True)
 
         self.sched.addEvent(event)
         self.gerrit.eventDone()
@@ -103,6 +105,7 @@ class GerritEventConnector(threading.Thread):
 
 
 class Gerrit(object):
+    name = 'gerrit'
     log = logging.getLogger("zuul.Gerrit")
     replication_timeout = 60
     replication_retry_interval = 5
@@ -128,7 +131,7 @@ class Gerrit(object):
         self.gerrit = gerrit.Gerrit(self.server, user, port, sshkey)
         self.gerrit.startWatching()
         self.gerrit_connector = GerritEventConnector(
-            self.gerrit, sched)
+            self.gerrit, sched, self)
         self.gerrit_connector.start()
 
     def stop(self):

@@ -178,7 +178,8 @@ explanation of each of the parameters::
   - name: check
     manager: IndependentPipelineManager
     trigger:
-      - event: patchset-created
+      gerrit:
+        - event: patchset-created
     success:
       verified: 1
     failure:
@@ -253,51 +254,55 @@ explanation of each of the parameters::
     DependentPipelineManager, see: :doc:`gating`.
 
 **trigger**
-  This describes what Gerrit events should be placed in the pipeline.
+  Exactly one trigger source must be supplied for each pipeline.
   Triggers are not exclusive -- matching events may be placed in
-  multiple pipelines, and they will behave independently in each of the
-  pipelines they match.  Multiple triggers may be listed.  Further
-  parameters describe the kind of events that match:
+  multiple pipelines, and they will behave independently in each of
+  the pipelines they match.  You may select from the following:
 
-  *event*
-  The event name from gerrit.  Examples: ``patchset-created``,
-  ``comment-added``, ``ref-updated``.  This field is treated as a
-  regular expression.
+  **gerrit**
+    This describes what Gerrit events should be placed in the
+    pipeline.  Multiple gerrit triggers may be listed.  Further
+    parameters describe the kind of events that match:
 
-  *branch*
-  The branch associated with the event.  Example: ``master``.  This
-  field is treated as a regular expression, and multiple branches may
-  be listed.
+    *event*
+    The event name from gerrit.  Examples: ``patchset-created``,
+    ``comment-added``, ``ref-updated``.  This field is treated as a
+    regular expression.
 
-  *ref*
-  On ref-updated events, the branch parameter is not used, instead the
-  ref is provided.  Currently Gerrit has the somewhat idiosyncratic
-  behavior of specifying bare refs for branch names (e.g., ``master``),
-  but full ref names for other kinds of refs (e.g., ``refs/tags/foo``).
-  Zuul matches what you put here exactly against what Gerrit
-  provides.  This field is treated as a regular expression, and
-  multiple refs may be listed.
+    *branch*
+    The branch associated with the event.  Example: ``master``.  This
+    field is treated as a regular expression, and multiple branches may
+    be listed.
 
-  *approval*
-  This is only used for ``comment-added`` events.  It only matches if
-  the event has a matching approval associated with it.  Example:
-  ``code-review: 2`` matches a ``+2`` vote on the code review category.
-  Multiple approvals may be listed.
+    *ref*
+    On ref-updated events, the branch parameter is not used, instead the
+    ref is provided.  Currently Gerrit has the somewhat idiosyncratic
+    behavior of specifying bare refs for branch names (e.g., ``master``),
+    but full ref names for other kinds of refs (e.g., ``refs/tags/foo``).
+    Zuul matches what you put here exactly against what Gerrit
+    provides.  This field is treated as a regular expression, and
+    multiple refs may be listed.
 
-  *email_filter*
-  This is used for any event.  It takes a regex applied on the performer
-  email, i.e Gerrit account email address.  If you want to specify
-  several email filters, you must use a YAML list.  Make sure to use non
-  greedy matchers and to escapes dots!
-  Example: ``email_filter: ^.*?@example\.org$``.
+    *approval*
+    This is only used for ``comment-added`` events.  It only matches if
+    the event has a matching approval associated with it.  Example:
+    ``code-review: 2`` matches a ``+2`` vote on the code review category.
+    Multiple approvals may be listed.
 
-  *comment_filter*
-  This is only used for ``comment-added`` events.  It accepts a list of
-  regexes that are searched for in the comment string. If any of these
-  regexes matches a portion of the comment string the trigger is
-  matched. ``comment_filter: retrigger`` will match when comments
-  containing 'retrigger' somewhere in the comment text are added to a
-  change.
+    *email_filter*
+    This is used for any event.  It takes a regex applied on the performer
+    email, i.e Gerrit account email address.  If you want to specify
+    several email filters, you must use a YAML list.  Make sure to use non
+    greedy matchers and to escapes dots!
+    Example: ``email_filter: ^.*?@example\.org$``.
+
+    *comment_filter*
+    This is only used for ``comment-added`` events.  It accepts a list of
+    regexes that are searched for in the comment string. If any of these
+    regexes matches a portion of the comment string the trigger is
+    matched. ``comment_filter: retrigger`` will match when comments
+    containing 'retrigger' somewhere in the comment text are added to a
+    change.
 
 **dequeue-on-new-patchset**
   Normally, if a new patchset is uploaded to a change that is in a

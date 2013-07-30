@@ -35,18 +35,21 @@ class LayoutSchema(object):
 
     variable_dict = v.Schema({}, extra=True)
 
-    trigger = {v.Required('event'): toList(v.Any('patchset-created',
-                                                 'change-abandoned',
-                                                 'change-restored',
-                                                 'change-merged',
-                                                 'comment-added',
-                                                 'ref-updated')),
-               'comment_filter': toList(str),
-               'email_filter': toList(str),
-               'branch': toList(str),
-               'ref': toList(str),
-               'approval': toList(variable_dict),
-               }
+    gerrit_trigger = {v.Required('event'):
+                      toList(v.Any('patchset-created',
+                                   'change-abandoned',
+                                   'change-restored',
+                                   'change-merged',
+                                   'comment-added',
+                                   'ref-updated')),
+                      'comment_filter': toList(str),
+                      'email_filter': toList(str),
+                      'branch': toList(str),
+                      'ref': toList(str),
+                      'approval': toList(variable_dict),
+                      }
+
+    trigger = v.Required(v.Any({'gerrit': toList(gerrit_trigger)}))
 
     pipeline = {v.Required('name'): str,
                 v.Required('manager'): manager,
@@ -56,7 +59,7 @@ class LayoutSchema(object):
                 'failure-message': str,
                 'dequeue-on-new-patchset': bool,
                 'dequeue-on-conflict': bool,
-                'trigger': toList(trigger),
+                'trigger': trigger,
                 'success': variable_dict,
                 'failure': variable_dict,
                 'start': variable_dict,

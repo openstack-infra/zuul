@@ -11,12 +11,18 @@ Since 1.3.0:
   QueueItem has the full context for why the change is being run
   (including the pipeline, items ahead and behind, etc.).  The Change
   is still available via the "change" attribute on the QueueItem.  The
-  second argument is now the Job that is about to be run, ande the
+  second argument is now the Job that is about to be run, and the
   parameter dictionary is shifted to the third position.
 
 * The ZUUL_SHORT_* parameters have been removed (the same
   functionality may be achieved with a custom parameter function that
   matches all jobs).
+
+* Multiple triggers are now supported, in principle (though only
+  Gerrit is defined currently).  Your layout.yaml file will need to
+  change to add the key "gerrit:" inside of the "triggers:" list to
+  specify a Gerrit trigger (and facilitate adding other kinds of
+  triggers later).  See the sample layout.yaml.
 
 * The default behavior is now to immediately dequeue changes that have
   merge conflicts, even those not at the head of the queue.  To enable

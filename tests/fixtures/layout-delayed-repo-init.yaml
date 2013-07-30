@@ -2,7 +2,8 @@ pipelines:
   - name: check
     manager: IndependentPipelineManager
     trigger:
-      - event: patchset-created
+      gerrit:
+        - event: patchset-created
     success:
       verified: 1
     failure:
@@ -11,16 +12,18 @@ pipelines:
   - name: post
     manager: IndependentPipelineManager
     trigger:
-      - event: ref-updated
-        ref: ^(?!refs/).*$
+      gerrit:
+        - event: ref-updated
+          ref: ^(?!refs/).*$
 
   - name: gate
     manager: DependentPipelineManager
     failure-message: Build failed.  For information on how to proceed, see http://wiki.example.org/Test_Failures
     trigger:
-      - event: comment-added
-        approval:
-          - approved: 1
+      gerrit:
+        - event: comment-added
+          approval:
+            - approved: 1
     success:
       verified: 2
       submit: true

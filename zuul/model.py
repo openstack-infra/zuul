@@ -47,6 +47,7 @@ class Pipeline(object):
         self.manager = None
         self.queues = []
         self.precedence = PRECEDENCE_NORMAL
+        self.trigger = None
 
     def __repr__(self):
         return '<Pipeline %s>' % self.name
@@ -724,6 +725,7 @@ class TriggerEvent(object):
         # common
         self.type = None
         self.project_name = None
+        self.trigger_name = None
         # Representation of the user account that performed the event.
         self.account = None
         # patchset-created, comment-added, etc.

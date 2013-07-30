@@ -761,7 +761,7 @@ class TestScheduler(testtools.TestCase):
         self.webapp = zuul.webapp.WebApp(self.sched, port=0)
 
         self.sched.setLauncher(self.launcher)
-        self.sched.setTrigger(self.gerrit)
+        self.sched.registerTrigger(self.gerrit)
 
         self.sched.start()
         self.sched.reconfigure(self.config)
@@ -777,7 +777,7 @@ class TestScheduler(testtools.TestCase):
 
     def assertFinalState(self):
         # Make sure that the change cache is cleared
-        self.assertEqual(len(self.sched.trigger._change_cache.keys()), 0)
+        self.assertEqual(len(self.gerrit._change_cache.keys()), 0)
         self.assertEmptyQueues()
 
     def shutdown(self):
@@ -1440,9 +1440,9 @@ class TestScheduler(testtools.TestCase):
         self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
         self.waitUntilSettled()
 
-        self.log.debug("len %s " % self.sched.trigger._change_cache.keys())
+        self.log.debug("len %s " % self.gerrit._change_cache.keys())
         # there should still be changes in the cache
-        self.assertNotEqual(len(self.sched.trigger._change_cache.keys()), 0)
+        self.assertNotEqual(len(self.gerrit._change_cache.keys()), 0)
 
         self.worker.hold_jobs_in_build = False
         self.worker.release()
@@ -1457,21 +1457,19 @@ class TestScheduler(testtools.TestCase):
         "Test whether a change is ready to merge"
         # TODO: move to test_gerrit (this is a unit test!)
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        a = self.sched.trigger.getChange(1, 2)
+        trigger = self.sched.layout.pipelines['gate'].trigger
+        a = self.sched.triggers['gerrit'].getChange(1, 2)
         mgr = self.sched.layout.pipelines['gate'].manager
-        self.assertFalse(
-            self.sched.trigger.canMerge(a, mgr.getSubmitAllowNeeds()))
+        self.assertFalse(trigger.canMerge(a, mgr.getSubmitAllowNeeds()))
 
         A.addApproval('CRVW', 2)
-        a = self.sched.trigger.getChange(1, 2, refresh=True)
-        self.assertFalse(
-            self.sched.trigger.canMerge(a, mgr.getSubmitAllowNeeds()))
+        a = trigger.getChange(1, 2, refresh=True)
+        self.assertFalse(trigger.canMerge(a, mgr.getSubmitAllowNeeds()))
 
         A.addApproval('APRV', 1)
-        a = self.sched.trigger.getChange(1, 2, refresh=True)
-        self.assertTrue(
-            self.sched.trigger.canMerge(a, mgr.getSubmitAllowNeeds()))
-        self.sched.trigger.maintainCache([])
+        a = trigger.getChange(1, 2, refresh=True)
+        self.assertTrue(trigger.canMerge(a, mgr.getSubmitAllowNeeds()))
+        trigger.maintainCache([])
 
     def test_build_configuration(self):
         "Test that zuul merges the right commits for testing"
@@ -2347,6 +2345,7 @@ class TestScheduler(testtools.TestCase):
     def test_test_config(self):
         "Test that we can test the config"
         sched = zuul.scheduler.Scheduler()
+        sched.registerTrigger(None, 'gerrit')
         sched.testConfig(CONFIG.get('zuul', 'layout_config'))
 
     def test_build_description(self):

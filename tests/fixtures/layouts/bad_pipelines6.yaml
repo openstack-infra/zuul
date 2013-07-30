@@ -2,8 +2,9 @@ pipelines:
   - name: check
     manager: IndependentPipelineManager
     trigger:
-      - event: comment-added
-        approved: 1
+      gerrit:
+        - event: comment-added
+          approved: 1
 
 projects:
   - name: foo
