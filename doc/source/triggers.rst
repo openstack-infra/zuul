@@ -4,11 +4,10 @@ Triggers
 ========
 
 The process of merging a change starts with proposing a change to be
-merged.  Currently Zuul only supports Gerrit as a triggering system.
+merged.  Primarily, Zuul supports Gerrit as a triggering system, as
+well as a facility for triggering jobs based on a timer.
 Zuul's design is modular, so alternate triggering and reporting
-systems can be supported.  However, Gerrit has a particularly robust
-data model, and Zuul does make some assumptions that include that data
-model.  Nonetheless, patches to support alternate systems are welcome.
+systems can be supported.
 
 Gerrit
 ------
@@ -101,3 +100,9 @@ instance, a clone will produce a repository in an unpredictable state
 depending on what the state of Zuul's repository is when the clone
 happens).  They are, however, suitable for automated systems that
 respond to Zuul triggers.
+
+Timer
+-----
+
+A simple timer trigger is available as well.  It supports triggering
+jobs in a pipeline based on cron-style time instructions.

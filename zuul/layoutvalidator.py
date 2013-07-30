@@ -49,7 +49,10 @@ class LayoutSchema(object):
                       'approval': toList(variable_dict),
                       }
 
-    trigger = v.Required(v.Any({'gerrit': toList(gerrit_trigger)}))
+    timer_trigger = {v.Required('time'): str}
+
+    trigger = v.Required(v.Any({'gerrit': toList(gerrit_trigger)},
+                               {'timer': toList(timer_trigger)}))
 
     pipeline = {v.Required('name'): str,
                 v.Required('manager'): manager,

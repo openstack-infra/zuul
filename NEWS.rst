@@ -18,11 +18,12 @@ Since 1.3.0:
   functionality may be achieved with a custom parameter function that
   matches all jobs).
 
-* Multiple triggers are now supported, in principle (though only
-  Gerrit is defined currently).  Your layout.yaml file will need to
+* Multiple triggers are now supported (currently Gerrit and a simple
+  Timer trigger ar supported).  Your layout.yaml file will need to
   change to add the key "gerrit:" inside of the "triggers:" list to
   specify a Gerrit trigger (and facilitate adding other kinds of
-  triggers later).  See the sample layout.yaml.
+  triggers later).  See the sample layout.yaml and Zuul section of the
+  documentation.
 
 * The default behavior is now to immediately dequeue changes that have
   merge conflicts, even those not at the head of the queue.  To enable

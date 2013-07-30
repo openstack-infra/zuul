@@ -106,6 +106,7 @@ class Server(object):
         logging.basicConfig(level=logging.DEBUG)
         self.sched = zuul.scheduler.Scheduler()
         self.sched.registerTrigger(None, 'gerrit')
+        self.sched.registerTrigger(None, 'timer')
         layout = self.sched.testConfig(self.config.get('zuul',
                                                        'layout_config'))
         if not job_list_path:
@@ -151,6 +152,7 @@ class Server(object):
         import zuul.scheduler
         import zuul.launcher.gearman
         import zuul.trigger.gerrit
+        import zuul.trigger.timer
         import zuul.webapp
 
         if (self.config.has_option('gearman_server', 'start') and
@@ -163,10 +165,12 @@ class Server(object):
 
         gearman = zuul.launcher.gearman.Gearman(self.config, self.sched)
         gerrit = zuul.trigger.gerrit.Gerrit(self.config, self.sched)
+        timer = zuul.trigger.timer.Timer(self.config, self.sched)
         webapp = zuul.webapp.WebApp(self.sched)
 
         self.sched.setLauncher(gearman)
         self.sched.registerTrigger(gerrit)
+        self.sched.registerTrigger(timer)
 
         self.sched.start()
         self.sched.reconfigure(self.config)

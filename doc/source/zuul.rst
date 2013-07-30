@@ -304,6 +304,18 @@ explanation of each of the parameters::
     containing 'retrigger' somewhere in the comment text are added to a
     change.
 
+  **timer**
+    This trigger will run based on a cron-style time specification.
+    It will enqueue an event into its pipeline for every project
+    defined in the configuration.  Any job associated with the
+    pipeline will run in response to that event.
+
+    *time*
+    The time specification in cron syntax.  Only the 5 part syntax is
+    supported, not the symbolic names.  Example: ``0 0 * * *`` runs
+    at midnight.
+
+
 **dequeue-on-new-patchset**
   Normally, if a new patchset is uploaded to a change that is in a
   pipeline, the existing entry in the pipeline will be removed (with

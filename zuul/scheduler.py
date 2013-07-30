@@ -159,6 +159,12 @@ class Scheduler(threading.Thread):
                                     email_filters=
                                     toList(trigger.get('email_filter')))
                     manager.event_filters.append(f)
+            elif 'timer' in conf_pipeline['trigger']:
+                pipeline.trigger = self.triggers['timer']
+                for trigger in toList(conf_pipeline['trigger']['timer']):
+                    f = EventFilter(types=['timer'],
+                                    timespecs=toList(trigger['time']))
+                    manager.event_filters.append(f)
 
         for project_template in data.get('project-templates', []):
             # Make sure the template only contains valid pipelines
@@ -460,6 +466,8 @@ class Scheduler(threading.Thread):
                     old_pipeline.manager.building_jobs
             self.layout = layout
             self._setupMerger()
+            for trigger in self.triggers.values():
+                trigger.postConfig()
             self._reconfigure = False
             self.reconfigure_complete_event.set()
         finally:
@@ -1190,7 +1198,7 @@ class BasePipelineManager(object):
   Branch: <b>{change.branch}</b><br/>
   Pipeline: <b>{self.pipeline.name}</b>
 </p>"""
-        else:
+        elif hasattr(change, 'ref'):
             ret = """\
 <p>
   Triggered by reference:
@@ -1199,6 +1207,8 @@ class BasePipelineManager(object):
   New revision: <b>{change.newrev}</b><br/>
   Pipeline: <b>{self.pipeline.name}</b>
 </p>"""
+        else:
+            ret = ""
 
         if concurrent_changes:
             ret += """\

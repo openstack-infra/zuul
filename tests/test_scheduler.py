@@ -45,6 +45,7 @@ import zuul.scheduler
 import zuul.webapp
 import zuul.launcher.gearman
 import zuul.trigger.gerrit
+import zuul.trigger.timer
 
 FIXTURE_DIR = os.path.join(os.path.dirname(__file__),
                            'fixtures')
@@ -762,6 +763,8 @@ class TestScheduler(testtools.TestCase):
 
         self.sched.setLauncher(self.launcher)
         self.sched.registerTrigger(self.gerrit)
+        self.timer = zuul.trigger.timer.Timer(self.config, self.sched)
+        self.sched.registerTrigger(self.timer)
 
         self.sched.start()
         self.sched.reconfigure(self.config)
@@ -786,6 +789,7 @@ class TestScheduler(testtools.TestCase):
         self.worker.shutdown()
         self.gearman_server.shutdown()
         self.gerrit.stop()
+        self.timer.stop()
         self.sched.stop()
         self.sched.join()
         self.statsd.stop()
@@ -2346,6 +2350,7 @@ class TestScheduler(testtools.TestCase):
         "Test that we can test the config"
         sched = zuul.scheduler.Scheduler()
         sched.registerTrigger(None, 'gerrit')
+        sched.registerTrigger(None, 'timer')
         sched.testConfig(CONFIG.get('zuul', 'layout_config'))
 
     def test_build_description(self):
@@ -2481,3 +2486,50 @@ class TestScheduler(testtools.TestCase):
                          'SUCCESS')
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
+
+    def test_timer(self):
+        "Test that a periodic job is triggered"
+        self.worker.hold_jobs_in_build = True
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-timer.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+
+        start = time.time()
+        failed = True
+        while ((time.time() - start) < 30):
+            if len(self.builds) == 2:
+                failed = False
+                break
+            else:
+                time.sleep(1)
+
+        if failed:
+            raise Exception("Expected jobs never ran")
+
+        self.waitUntilSettled()
+        port = self.webapp.server.socket.getsockname()[1]
+
+        f = urllib.urlopen("http://localhost:%s/status.json" % port)
+        data = f.read()
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(self.getJobFromHistory(
+            'project-bitrot-stable-old').result, 'SUCCESS')
+        self.assertEqual(self.getJobFromHistory(
+            'project-bitrot-stable-older').result, 'SUCCESS')
+
+        data = json.loads(data)
+        status_jobs = set()
+        for p in data['pipelines']:
+            for q in p['change_queues']:
+                for head in q['heads']:
+                    for change in head:
+                        self.assertEqual(change['id'], 'None')
+                        for job in change['jobs']:
+                            status_jobs.add(job['name'])
+        self.assertIn('project-bitrot-stable-old', status_jobs)
+        self.assertIn('project-bitrot-stable-older', status_jobs)

@@ -302,6 +302,9 @@ class Gerrit(object):
         for key in remove:
             del self._change_cache[key]
 
+    def postConfig(self):
+        pass
+
     def getChange(self, number, patchset, refresh=False):
         key = '%s,%s' % (number, patchset)
         change = None

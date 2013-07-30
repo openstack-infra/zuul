@@ -719,6 +719,22 @@ class Ref(Changeish):
         return False
 
 
+class NullChange(Changeish):
+    is_reportable = False
+
+    def __init__(self, project):
+        super(NullChange, self).__init__(project)
+
+    def _id(self):
+        return 'None'
+
+    def equals(self, other):
+        return False
+
+    def isUpdateOf(self, other):
+        return False
+
+
 class TriggerEvent(object):
     def __init__(self):
         self.data = None
@@ -740,6 +756,8 @@ class TriggerEvent(object):
         self.ref = None
         self.oldrev = None
         self.newrev = None
+        # timer
+        self.timespec = None
 
     def __repr__(self):
         ret = '<TriggerEvent %s %s' % (self.type, self.project_name)
@@ -758,19 +776,21 @@ class TriggerEvent(object):
     def getChange(self, project, trigger):
         if self.change_number:
             change = trigger.getChange(self.change_number, self.patch_number)
-        if self.ref:
+        elif self.ref:
             change = Ref(project)
             change.ref = self.ref
             change.oldrev = self.oldrev
             change.newrev = self.newrev
             change.url = trigger.getGitwebUrl(project, sha=self.newrev)
+        else:
+            change = NullChange(project)
 
         return change
 
 
 class EventFilter(object):
     def __init__(self, types=[], branches=[], refs=[], approvals={},
-                 comment_filters=[], email_filters=[]):
+                 comment_filters=[], email_filters=[], timespecs=[]):
         self._types = types
         self._branches = branches
         self._refs = refs
@@ -782,6 +802,7 @@ class EventFilter(object):
         self.comment_filters = [re.compile(x) for x in comment_filters]
         self.email_filters = [re.compile(x) for x in email_filters]
         self.approvals = approvals
+        self.timespecs = timespecs
 
     def __repr__(self):
         ret = '<EventFilter'
@@ -799,6 +820,8 @@ class EventFilter(object):
             ret += ' comment_filters: %s' % ', '.join(self._comment_filters)
         if self._email_filters:
             ret += ' email_filters: %s' % ', '.join(self._email_filters)
+        if self.timespecs:
+            ret += ' timespecs: %s' % ', '.join(self.timespecs)
         ret += '>'
 
         return ret
@@ -863,6 +886,15 @@ class EventFilter(object):
                     matches_approval = True
             if not matches_approval:
                 return False
+
+        # timespecs are ORed
+        matches_timespec = False
+        for timespec in self.timespecs:
+            if (event.timespec == timespec):
+                matches_timespec = True
+        if self.timespecs and not matches_timespec:
+            return False
+
         return True
 
 
