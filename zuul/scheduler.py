@@ -87,7 +87,7 @@ class Scheduler(threading.Thread):
         self.wake_event.set()
 
     def testConfig(self, config_path):
-        self._parseConfig(config_path)
+        return self._parseConfig(config_path)
 
     def _parseConfig(self, config_path):
         layout = model.Layout()

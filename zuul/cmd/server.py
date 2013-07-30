@@ -49,8 +49,11 @@ class Server(object):
                             help='specify the layout file')
         parser.add_argument('-d', dest='nodaemon', action='store_true',
                             help='do not run as a daemon')
-        parser.add_argument('-t', dest='validate', action='store_true',
-                            help='validate layout file syntax')
+        parser.add_argument('-t', dest='validate', nargs='?', const=True,
+                            metavar='JOB_LIST',
+                            help='validate layout file syntax (optionally '
+                            'providing the path to a file with a list of '
+                            'available job names)')
         parser.add_argument('--version', dest='version', action='store_true',
                             help='show zuul version')
         self.args = parser.parse_args()
@@ -94,7 +97,7 @@ class Server(object):
         self.stop_gear_server()
         os._exit(0)
 
-    def test_config(self):
+    def test_config(self, job_list_path):
         # See comment at top of file about zuul imports
         import zuul.scheduler
         import zuul.launcher.gearman
@@ -102,7 +105,25 @@ class Server(object):
 
         logging.basicConfig(level=logging.DEBUG)
         self.sched = zuul.scheduler.Scheduler()
-        self.sched.testConfig(self.config.get('zuul', 'layout_config'))
+        layout = self.sched.testConfig(self.config.get('zuul',
+                                                       'layout_config'))
+        if not job_list_path:
+            return False
+
+        failure = False
+        path = os.path.expanduser(job_list_path)
+        if not os.path.exists(path):
+            raise Exception("Unable to find job list: %s" % path)
+        jobs = set()
+        for line in open(path):
+            v = line.strip()
+            if v:
+                jobs.add(v)
+        for job in sorted(layout.jobs):
+            if job not in jobs:
+                print "Job %s not defined" % job
+                failure = True
+        return failure
 
     def start_gear_server(self):
         pipe_read, pipe_write = os.pipe()
@@ -177,8 +198,10 @@ def main():
         server.config.set('zuul', 'layout_config', server.args.layout)
 
     if server.args.validate:
-        server.test_config()
-        sys.exit(0)
+        path = server.args.validate
+        if path is True:
+            path = None
+        sys.exit(server.test_config(path))
 
     if server.config.has_option('zuul', 'state_dir'):
         state_dir = os.path.expanduser(server.config.get('zuul', 'state_dir'))
