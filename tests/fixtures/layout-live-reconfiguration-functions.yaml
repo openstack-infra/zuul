@@ -1,0 +1,34 @@
+includes:
+  - python-file: custom_functions_live_reconfiguration_functions.py
+
+pipelines:
+  - name: gate
+    manager: DependentPipelineManager
+    failure-message: Build failed.  For information on how to proceed, see http://wiki.example.org/Test_Failures
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - approved: 1
+    success:
+      verified: 2
+      submit: true
+    failure:
+      verified: -2
+    start:
+      verified: 0
+    precedence: high
+
+jobs:
+  - name: ^.*-merge$
+    failure-message: Unable to merge change
+    hold-following-changes: true
+  - name: node-project-test1
+    parameter-function: select_debian_node
+
+projects:
+  - name: org/node-project
+    gate:
+      - node-project-merge:
+        - node-project-test1
+        - node-project-test2

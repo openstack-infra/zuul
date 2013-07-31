@@ -2467,6 +2467,36 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
+    def test_live_reconfiguration_functions(self):
+        "Test live reconfiguration with a custom function"
+        self.worker.registerFunction('build:node-project-test1:debian')
+        self.worker.registerFunction('build:node-project-test1:wheezy')
+        A = self.fake_gerrit.addFakeChange('org/node-project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertIsNone(self.getJobFromHistory('node-project-merge').node)
+        self.assertEqual(self.getJobFromHistory('node-project-test1').node,
+                         'debian')
+        self.assertIsNone(self.getJobFromHistory('node-project-test2').node)
+
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-live-'
+                        'reconfiguration-functions.yaml')
+        self.sched.reconfigure(self.config)
+        self.worker.build_history = []
+
+        B = self.fake_gerrit.addFakeChange('org/node-project', 'master', 'B')
+        B.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertIsNone(self.getJobFromHistory('node-project-merge').node)
+        self.assertEqual(self.getJobFromHistory('node-project-test1').node,
+                         'wheezy')
+        self.assertIsNone(self.getJobFromHistory('node-project-test2').node)
+
     def test_delayed_repo_init(self):
         self.config.set('zuul', 'layout_config',
                         'tests/fixtures/layout-delayed-repo-init.yaml')
