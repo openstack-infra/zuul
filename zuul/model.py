@@ -534,6 +534,7 @@ class Build(object):
         self.start_time = None
         self.end_time = None
         self.estimated_time = None
+        self.pipeline = None
         self.parameters = {}
 
     def __repr__(self):
@@ -604,6 +605,7 @@ class QueueItem(object):
 
     def addBuild(self, build):
         self.current_build_set.addBuild(build)
+        build.pipeline = self.pipeline
 
     def setReportedResult(self, result):
         self.current_build_set.result = result

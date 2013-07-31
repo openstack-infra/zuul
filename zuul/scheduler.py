@@ -315,8 +315,10 @@ class Scheduler(threading.Thread):
         self.log.debug("Adding complete event for build: %s" % build)
         build.end_time = time.time()
         try:
-            if statsd:
-                key = 'zuul.job.%s' % build.job.name
+            if statsd and build.pipeline:
+                jobname = build.job.name.replace('.', '_')
+                key = 'zuul.pipeline.%s.job.%s.%s' % (build.pipeline.name,
+                                                      jobname, build.result)
                 if build.result in ['SUCCESS', 'FAILURE'] and build.start_time:
                     dt = int((build.end_time - build.start_time) * 1000)
                     statsd.timing(key, dt)
