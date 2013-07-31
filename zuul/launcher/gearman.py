@@ -13,6 +13,7 @@
 # under the License.
 
 import gear
+import inspect
 import json
 import logging
 import time
@@ -245,8 +246,6 @@ class Gearman(object):
             params['ZUUL_REFNAME'] = item.change.ref
             params['ZUUL_OLDREV'] = item.change.oldrev
             params['ZUUL_NEWREV'] = item.change.newrev
-            params['ZUUL_SHORT_OLDREV'] = item.change.oldrev[:7]
-            params['ZUUL_SHORT_NEWREV'] = item.change.newrev[:7]
 
             params['ZUUL_REF'] = item.change.ref
             params['ZUUL_COMMIT'] = item.change.newrev
@@ -271,11 +270,13 @@ class Gearman(object):
         # optional (ref updated only):
         # ZUUL_OLDREV
         # ZUUL_NEWREV
-        # ZUUL_SHORT_NEWREV
-        # ZUUL_SHORT_OLDREV
 
         if callable(job.parameter_function):
-            job.parameter_function(item, params)
+            pargs = inspect.getargspec(job.parameter_function)
+            if len(pargs.args) == 2:
+                job.parameter_function(item, params)
+            else:
+                job.parameter_function(item, job, params)
             self.log.debug("Custom parameter function used for job %s, "
                            "change: %s, params: %s" % (job, item.change,
                                                        params))
