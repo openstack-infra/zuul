@@ -648,20 +648,18 @@ class FakeGearmanServer(gear.Server):
         qlen = (len(self.high_queue) + len(self.normal_queue) +
                 len(self.low_queue))
         self.log.debug("releasing queued job %s (%s)" % (regex, qlen))
-        for queue in [self.high_queue, self.normal_queue, self.low_queue]:
-            queue = queue[:]
-            for job in queue:
-                cmd, name = job.name.split(':')
-                if cmd != 'build':
-                    continue
-                if not regex or re.match(regex, name):
-                    self.log.debug("releasing queued job %s" %
-                                   job.unique)
-                    job.waiting = False
-                    released = True
-                else:
-                    self.log.debug("not releasing queued job %s" %
-                                   job.unique)
+        for job in self.getQueue():
+            cmd, name = job.name.split(':')
+            if cmd != 'build':
+                continue
+            if not regex or re.match(regex, name):
+                self.log.debug("releasing queued job %s" %
+                               job.unique)
+                job.waiting = False
+                released = True
+            else:
+                self.log.debug("not releasing queued job %s" %
+                               job.unique)
         if released:
             self.wakeConnections()
         qlen = (len(self.high_queue) + len(self.normal_queue) +
