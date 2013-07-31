@@ -14,7 +14,7 @@ Since 1.3.0:
   second argument is now the Job that is about to be run, ande the
   parameter dictionary is shifted to the third position.
 
-* The ZUUS_SHORT_* parameters have been removed (the same
+* The ZUUL_SHORT_* parameters have been removed (the same
   functionality may be achieved with a custom parameter function that
   matches all jobs).
 
