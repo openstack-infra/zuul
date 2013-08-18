@@ -1137,12 +1137,11 @@ class BasePipelineManager(object):
                         elapsed = ' in %ds' % (s)
                 else:
                     elapsed = ''
+                name = ''
                 if self.sched.config.has_option('zuul', 'job_name_in_report'):
                     if self.sched.config.getboolean('zuul',
                                                     'job_name_in_report'):
                         name = job.name + ' '
-                else:
-                    name = ''
                 ret += '- %s%s : %s%s%s\n' % (name, url, result, elapsed,
                                               voting)
         return ret
