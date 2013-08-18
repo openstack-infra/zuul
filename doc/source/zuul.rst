@@ -133,6 +133,12 @@ zuul
   URLs for those links should be.
   ``http://logs.example.com/{change.number}/{change.patchset}/{pipeline.name}/{job.name}/{build.number}``
 
+**job_name_in_report**
+  Boolean value (``true`` or ``false``) that indicates whether the
+  job name should be included in the report (normally only the URL
+  is included).  Defaults to ``false``.
+  ``job_name_in_report=true``
+
 layout.yaml
 ~~~~~~~~~~~
 
