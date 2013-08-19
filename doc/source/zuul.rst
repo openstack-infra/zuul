@@ -139,6 +139,23 @@ zuul
   is included).  Defaults to ``false``.
   ``job_name_in_report=true``
 
+smtp
+""""
+
+**server**
+  SMTP server hostname or address to use.
+  ``server=localhost``
+
+**default_from**
+  Who the email should appear to be sent from when emailing the report.
+  This can be overridden by individual pipelines.
+  ``default_from=zuul@example.com``
+
+**default_to**
+  Who the report should be emailed to by default.
+  This can be overridden by individual pipelines.
+  ``default_to=you@example.com``
+
 layout.yaml
 ~~~~~~~~~~~
 

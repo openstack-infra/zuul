@@ -54,7 +54,8 @@ class LayoutSchema(object):
     trigger = v.Required(v.Any({'gerrit': toList(gerrit_trigger)},
                                {'timer': toList(timer_trigger)}))
 
-    report_actions = {'gerrit': variable_dict}
+    report_actions = {'gerrit': variable_dict,
+                      'smtp': variable_dict}
 
     pipeline = {v.Required('name'): str,
                 v.Required('manager'): manager,

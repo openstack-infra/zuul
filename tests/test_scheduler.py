@@ -45,6 +45,7 @@ import zuul.scheduler
 import zuul.webapp
 import zuul.launcher.gearman
 import zuul.reporter.gerrit
+import zuul.reporter.smtp
 import zuul.trigger.gerrit
 import zuul.trigger.timer
 
@@ -682,6 +683,35 @@ class FakeGearmanServer(gear.Server):
         self.log.debug("done releasing queued jobs %s (%s)" % (regex, qlen))
 
 
+class FakeSMTP(object):
+    log = logging.getLogger('zuul.FakeSMTP')
+    messages = []
+
+    def __init__(self, server, port):
+        self.server = server
+        self.port = port
+
+    def sendmail(self, from_email, to_email, msg):
+        self.log.info("Sending email from %s, to %s, with msg %s" % (
+                      from_email, to_email, msg))
+
+        headers = msg.split('\n\n', 1)[0]
+        body = msg.split('\n\n', 1)[1]
+
+        FakeSMTP.messages.append(dict(
+            from_email=from_email,
+            to_email=to_email,
+            msg=msg,
+            headers=headers,
+            body=body,
+        ))
+
+        return True
+
+    def quit(self):
+        return True
+
+
 class TestScheduler(testtools.TestCase):
     log = logging.getLogger("zuul.test")
 
@@ -765,6 +795,7 @@ class TestScheduler(testtools.TestCase):
         self.launcher = zuul.launcher.gearman.Gearman(self.config, self.sched)
 
         zuul.lib.gerrit.Gerrit = FakeGerrit
+        self.useFixture(fixtures.MonkeyPatch('smtplib.SMTP', FakeSMTP))
 
         self.gerrit = FakeGerritTrigger(
             self.upstream_root, self.config, self.sched)
@@ -782,6 +813,11 @@ class TestScheduler(testtools.TestCase):
 
         self.sched.registerReporter(
             zuul.reporter.gerrit.Reporter(self.gerrit))
+        self.smtp_reporter = zuul.reporter.smtp.Reporter(
+            self.config.get('smtp', 'default_from'),
+            self.config.get('smtp', 'default_to'),
+            self.config.get('smtp', 'server'))
+        self.sched.registerReporter(self.smtp_reporter)
 
         self.sched.start()
         self.sched.reconfigure(self.config)
@@ -2670,3 +2706,34 @@ class TestScheduler(testtools.TestCase):
                             status_jobs.add(job['name'])
         self.assertIn('project-bitrot-stable-old', status_jobs)
         self.assertIn('project-bitrot-stable-older', status_jobs)
+
+    def test_check_smtp_pool(self):
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-smtp.yaml')
+        self.sched.reconfigure(self.config)
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.waitUntilSettled()
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(FakeSMTP.messages), 2)
+
+        # A.messages only holds what FakeGerrit places in it. Thus we
+        # work on the knowledge of what the first message should be as
+        # it is only configured to go to SMTP.
+
+        self.assertEqual('zuul@example.com',
+                         FakeSMTP.messages[0]['from_email'])
+        self.assertEqual(['you@example.com'],
+                         FakeSMTP.messages[0]['to_email'])
+        self.assertEqual('Starting check jobs.',
+                         FakeSMTP.messages[0]['body'])
+
+        self.assertEqual('zuul_from@example.com',
+                         FakeSMTP.messages[1]['from_email'])
+        self.assertEqual(['alternative_me@example.com'],
+                         FakeSMTP.messages[1]['to_email'])
+        self.assertEqual(A.messages[0],
+                         FakeSMTP.messages[1]['body'])

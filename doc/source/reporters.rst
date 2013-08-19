@@ -29,4 +29,31 @@ Gerrit Configuration
 ~~~~~~~~~~~~~~~~~~~~
 
 The configuration for posting back to gerrit is shared with the gerrit
-trigger in zuul.conf. Please consult the gerrit trigger documentation.
+trigger in zuul.conf as described in :ref:`zuulconf`.
+
+SMTP
+----
+
+A simple email reporter is also available.
+
+SMTP Configuration
+~~~~~~~~~~~~~~~~~~
+
+zuul.conf contains the smtp server and default to/from as describe
+in :ref:`zuulconf`.
+
+Each pipeline can overwrite the to or from address by providing
+alternatives as arguments to the reporter. For example, ::
+
+  pipelines:
+    - name: post-merge
+      manager: IndependentPipelineManager
+      trigger:
+        - event: change-merged
+      success:
+        smtp:
+          to: you@example.com
+      failure:
+        smtp:
+          to: you@example.com
+          from: alternative@example.com

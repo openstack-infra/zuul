@@ -1,0 +1,25 @@
+pipelines:
+  - name: check
+    manager: IndependentPipelineManager
+    trigger:
+      gerrit:
+        - event: patchset-created
+    start:
+      smtp:
+        to: you@example.com
+    success:
+      gerrit:
+        verified: 1
+      smtp:
+        to: alternative_me@example.com
+        from: zuul_from@example.com
+    failure:
+      gerrit:
+        verified: -1
+
+projects:
+  - name: org/project
+    check:
+      - project-merge:
+        - project-test1
+        - project-test2

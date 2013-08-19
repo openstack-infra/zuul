@@ -19,3 +19,9 @@ git_dir=/var/lib/zuul/git
 ;git_user_email=zuul@example.com
 ;git_user_name=zuul
 status_url=https://jenkins.example.com/zuul/status
+
+[smtp]
+server=localhost
+port=25
+default_from=zuul@example.com
+default_to=you@example.com
