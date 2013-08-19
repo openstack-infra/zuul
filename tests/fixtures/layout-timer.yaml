@@ -5,9 +5,11 @@ pipelines:
       gerrit:
         - event: patchset-created
     success:
-      verified: 1
+      gerrit:
+        verified: 1
     failure:
-      verified: -1
+      gerrit:
+        verified: -1
 
   - name: periodic
     manager: IndependentPipelineManager

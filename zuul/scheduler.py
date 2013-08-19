@@ -28,7 +28,7 @@ import yaml
 
 import layoutvalidator
 import model
-from model import Pipeline, Project, ChangeQueue, EventFilter
+from model import ActionReporter, Pipeline, Project, ChangeQueue, EventFilter
 import merger
 
 statsd = extras.try_import('statsd.statsd')
@@ -75,6 +75,7 @@ class Scheduler(threading.Thread):
         self._stopped = False
         self.launcher = None
         self.triggers = dict()
+        self.reporters = dict()
         self.config = None
         self._maintain_trigger_cache = False
 
@@ -134,13 +135,27 @@ class Scheduler(threading.Thread):
                 'dequeue-on-new-patchset', True)
             pipeline.dequeue_on_conflict = conf_pipeline.get(
                 'dequeue-on-conflict', True)
+
+            action_reporters = {}
+            for action in ['start', 'success', 'failure']:
+                action_reporters[action] = []
+                if conf_pipeline.get(action):
+                    for reporter_name, params \
+                        in conf_pipeline.get(action).items():
+                        if reporter_name in self.reporters.keys():
+                            action_reporters[action].append(ActionReporter(
+                                self.reporters[reporter_name], params))
+                        else:
+                            self.log.error('Invalid reporter name %s' %
+                                           reporter_name)
+            pipeline.start_actions = action_reporters['start']
+            pipeline.success_actions = action_reporters['success']
+            pipeline.failure_actions = action_reporters['failure']
+
             manager = globals()[conf_pipeline['manager']](self, pipeline)
             pipeline.setManager(manager)
-
             layout.pipelines[conf_pipeline['name']] = pipeline
-            manager.success_action = conf_pipeline.get('success')
-            manager.failure_action = conf_pipeline.get('failure')
-            manager.start_action = conf_pipeline.get('start')
+
             # TODO: move this into triggers (may require pluggable
             # configuration)
             if 'gerrit' in conf_pipeline['trigger']:
@@ -298,6 +313,11 @@ class Scheduler(threading.Thread):
         if name is None:
             name = trigger.name
         self.triggers[name] = trigger
+
+    def registerReporter(self, reporter, name=None):
+        if name is None:
+            name = reporter.name
+        self.reporters[name] = reporter
 
     def getProject(self, name):
         self.layout_lock.acquire()
@@ -655,9 +675,6 @@ class BasePipelineManager(object):
         self.pipeline = pipeline
         self.building_jobs = {}
         self.event_filters = []
-        self.success_action = {}
-        self.failure_action = {}
-        self.start_action = {}
         if self.sched.config and self.sched.config.has_option(
             'zuul', 'report_times'):
             self.report_times = self.sched.config.getboolean(
@@ -701,25 +718,22 @@ class BasePipelineManager(object):
             if tree:
                 self.log.info("    %s" % p)
                 log_jobs(tree)
-        if self.start_action:
-            self.log.info("  On start:")
-            self.log.info("    %s" % self.start_action)
-        if self.success_action:
-            self.log.info("  On success:")
-            self.log.info("    %s" % self.success_action)
-        if self.failure_action:
-            self.log.info("  On failure:")
-            self.log.info("    %s" % self.failure_action)
+        self.log.info("  On start:")
+        self.log.info("    %s" % self.pipeline.start_actions)
+        self.log.info("  On success:")
+        self.log.info("    %s" % self.pipeline.success_actions)
+        self.log.info("  On failure:")
+        self.log.info("    %s" % self.pipeline.failure_actions)
 
     def getSubmitAllowNeeds(self):
         # Get a list of code review labels that are allowed to be
         # "needed" in the submit records for a change, with respect
         # to this queue.  In other words, the list of review labels
         # this queue itself is likely to set before submitting.
-        if self.success_action:
-            return self.success_action.keys()
-        else:
-            return {}
+        allow_needs = set()
+        for action_reporter in self.pipeline.success_actions:
+            allow_needs.update(action_reporter.getSubmitAllowNeeds())
+        return allow_needs
 
     def eventMatches(self, event):
         for ef in self.event_filters:
@@ -736,16 +750,37 @@ class BasePipelineManager(object):
     def reportStart(self, change):
         try:
             self.log.info("Reporting start, action %s change %s" %
-                          (self.start_action, change))
+                          (self.pipeline.start_actions, change))
             msg = "Starting %s jobs." % self.pipeline.name
             if self.sched.config.has_option('zuul', 'status_url'):
                 msg += "\n" + self.sched.config.get('zuul', 'status_url')
-            ret = self.pipeline.trigger.report(change, msg, self.start_action)
+            ret = self.sendReport(self.pipeline.start_actions,
+                                  change, msg)
             if ret:
                 self.log.error("Reporting change start %s received: %s" %
                                (change, ret))
         except:
             self.log.exception("Exception while reporting start:")
+
+    def sendReport(self, action_reporters, change, message):
+        """Sends the built message off to configured reporters.
+
+        Takes the action_reporters, change, message and extra options and
+        sends them to the pluggable reporters.
+        """
+        report_errors = []
+        if len(action_reporters) > 0:
+            if not change.number:
+                self.log.debug("Not reporting change %s: No number present."
+                               % change)
+                return
+            for action_reporter in action_reporters:
+                ret = action_reporter.report(change, message)
+                if ret:
+                    report_errors.append(ret)
+            if len(report_errors) == 0:
+                return
+        return report_errors
 
     def isChangeReadyToBeEnqueued(self, change):
         return True
@@ -824,7 +859,7 @@ class BasePipelineManager(object):
         if change_queue:
             self.log.debug("Adding change %s to queue %s" %
                            (change, change_queue))
-            if self.start_action:
+            if len(self.pipeline.start_actions) > 0:
                 self.reportStart(change)
             item = change_queue.enqueueChange(change)
             self.reportStats(item)
@@ -1076,19 +1111,19 @@ class BasePipelineManager(object):
         self.log.debug("Reporting change %s" % item.change)
         ret = True  # Means error as returned by trigger.report
         if self.pipeline.didAllJobsSucceed(item):
-            self.log.debug("success %s %s" % (self.success_action,
-                                              self.failure_action))
-            action = self.success_action
+            self.log.debug("success %s %s" % (self.pipeline.success_actions,
+                                              self.pipeline.failure_actions))
+            actions = self.pipeline.success_actions
             item.setReportedResult('SUCCESS')
         else:
-            action = self.failure_action
+            actions = self.pipeline.failure_actions
             item.setReportedResult('FAILURE')
         report = self.formatReport(item)
         item.reported = True
         try:
-            self.log.info("Reporting change %s, action: %s" %
-                          (item.change, action))
-            ret = self.pipeline.trigger.report(item.change, report, action)
+            self.log.info("Reporting change %s, actions: %s" %
+                          (item.change, actions))
+            ret = self.sendReport(actions, item.change, report)
             if ret:
                 self.log.error("Reporting change %s received: %s" %
                                (item.change, ret))

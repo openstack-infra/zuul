@@ -8,9 +8,11 @@ pipelines:
       gerrit:
         - event: patchset-created
     success:
-      verified: 1
+      gerrit:
+        verified: 1
     failure:
-      verified: -1
+      gerrit:
+        verified: -1
 
   - name: post
     manager: IndependentPipelineManager
@@ -28,15 +30,18 @@ pipelines:
         - event: comment-added
           approval:
             - approved: 1
-    success:
-      verified: 2
-      code-review: 1
-      submit: true
-    failure:
-      verified: -2
-      workinprogress: true
     start:
-      verified: 0
+      gerrit:
+        verified: 0
+    success:
+      gerrit:
+        verified: 2
+        code-review: 1
+        submit: true
+    failure:
+      gerrit:
+        verified: -2
+        workinprogress: true
 
 jobs:
   - name: ^.*-merge$

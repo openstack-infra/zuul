@@ -8,9 +8,11 @@ pipelines:
       gerrit:
         - event: patchset-created
     success:
-      verified: 1
+      gerrit:
+        verified: 1
     failure:
-      verified: -1
+      gerrit:
+        verified: -1
 
   - name: post
     manager: IndependentPipelineManager
@@ -28,12 +30,15 @@ pipelines:
           approval:
             - approved: 1
     success:
-      verified: 2
-      submit: true
+      gerrit:
+        verified: 2
+        submit: true
     failure:
-      verified: -2
+      gerrit:
+        verified: -2
     start:
-      verified: 0
+      gerrit:
+        verified: 0
     precedence: high
 
   - name: unused
@@ -51,9 +56,11 @@ pipelines:
       gerrit:
         - event: change-restored
     success:
-      verified: 1
+      gerrit:
+        verified: 1
     failure:
-      verified: -1
+      gerrit:
+        verified: -1
 
   - name: dup2
     manager: IndependentPipelineManager
@@ -61,9 +68,11 @@ pipelines:
       gerrit:
         - event: change-restored
     success:
-      verified: 1
+      gerrit:
+        verified: 1
     failure:
-      verified: -1
+      gerrit:
+        verified: -1
 
   - name: conflict
     dequeue-on-conflict: false
@@ -75,12 +84,15 @@ pipelines:
           approval:
             - approved: 1
     success:
-      verified: 2
-      submit: true
+      gerrit:
+        verified: 2
+        submit: true
     failure:
-      verified: -2
+      gerrit:
+        verified: -2
     start:
-      verified: 0
+      gerrit:
+        verified: 0
 
 jobs:
   - name: ^.*-merge$

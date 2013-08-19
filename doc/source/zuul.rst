@@ -338,16 +338,14 @@ explanation of each of the parameters::
   the change, set this to ``false``.  Default: ``true``.
 
 **success**
-  Describes what Zuul should do if all the jobs complete successfully.
+  Describes where Zuul should report to if all the jobs complete
+  successfully.
   This section is optional; if it is omitted, Zuul will run jobs and
   do nothing on success; it will not even report a message to Gerrit.
-  If the section is present, it will leave a message on the Gerrit
-  review.  Each additional argument is assumed to be an argument to
-  ``gerrit review``, with the boolean value of ``true`` simply
-  indicating that the argument should be present without following it
-  with a value.  For example, ``verified: 1`` becomes ``gerrit
-  review --verified 1`` and ``submit: true`` becomes ``gerrit review
-  --submit``.
+  If the section is present, the listed reporter plugins will be
+  asked to report on the jobs.
+  Each reporter's value dictionary is handled by the reporter. See
+  reporters for more details.
 
 **failure**
   Uses the same syntax as **success**, but describes what Zuul should
@@ -373,9 +371,11 @@ file.  The first is called a *check* pipeline::
     trigger:
       - event: patchset-created
     success:
-      verified: 1
+      gerrit:
+        verified: 1
     failure:
-      verified: -1
+      gerrit:
+        verified: -1
 
 This will trigger jobs each time a new patchset (or change) is
 uploaded to Gerrit, and report +/-1 values to Gerrit in the
@@ -388,10 +388,12 @@ uploaded to Gerrit, and report +/-1 values to Gerrit in the
         approval:
           - approved: 1
     success:
-      verified: 2
-      submit: true
+      gerrit:
+        verified: 2
+        submit: true
     failure:
-      verified: -2
+      gerrit:
+        verified: -2
 
 This will trigger jobs whenever a reviewer leaves a vote of ``1`` in the
 ``approved`` review category in Gerrit (a non-standard category).
@@ -425,9 +427,11 @@ development and not yet ready to be presented to developers. ::
       trigger:
         - event: change-merged
       success:
-        force-message: True
+        gerrit:
+          force-message: True
       failure:
-        force-message: True
+        gerrit:
+          force-message: True
 
 The ``change-merged`` events happen when a change has been merged in the git
 repository. The change is thus closed and Gerrit will not accept modifications

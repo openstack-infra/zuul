@@ -57,6 +57,9 @@ class Pipeline(object):
         self.queues = []
         self.precedence = PRECEDENCE_NORMAL
         self.trigger = None
+        self.start_actions = None
+        self.success_actions = None
+        self.failure_actions = None
 
     def __repr__(self):
         return '<Pipeline %s>' % self.name
@@ -346,6 +349,28 @@ class Pipeline(object):
         else:
             ret['remaining_time'] = None
         return ret
+
+
+class ActionReporter(object):
+    """An ActionReporter has a reporter and its configured paramaters"""
+
+    def __repr__(self):
+        return '<ActionReporter %s, %s>' % (self.reporter, self.params)
+
+    def __init__(self, reporter, params):
+        self.reporter = reporter
+        self.params = params
+
+    def report(self, change, message):
+        """Sends the built message off to the configured reporter.
+        Takes the change and message and adds the configured parameters.
+        """
+        return self.reporter.report(change, message, self.params)
+
+    def getSubmitAllowNeeds(self):
+        """Gets the submit allow needs from the reporter based off the
+        parameters."""
+        return self.reporter.getSubmitAllowNeeds(self.params)
 
 
 class ChangeQueue(object):

@@ -11,12 +11,15 @@ pipelines:
           approval:
             - approved: 1
     success:
-      verified: 2
-      submit: true
+      gerrit:
+        verified: 2
+        submit: true
     failure:
-      verified: -2
+      gerrit:
+        verified: -2
     start:
-      verified: 0
+      gerrit:
+        verified: 0
     precedence: high
 
 jobs:

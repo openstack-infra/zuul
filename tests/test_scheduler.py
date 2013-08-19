@@ -44,6 +44,7 @@ import testtools
 import zuul.scheduler
 import zuul.webapp
 import zuul.launcher.gearman
+import zuul.reporter.gerrit
 import zuul.trigger.gerrit
 import zuul.trigger.timer
 
@@ -388,6 +389,8 @@ class FakeURLOpener(object):
 
 
 class FakeGerritTrigger(zuul.trigger.gerrit.Gerrit):
+    name = 'gerrit'
+
     def __init__(self, upstream_root, *args):
         super(FakeGerritTrigger, self).__init__(*args)
         self.upstream_root = upstream_root
@@ -776,6 +779,9 @@ class TestScheduler(testtools.TestCase):
         self.sched.registerTrigger(self.gerrit)
         self.timer = zuul.trigger.timer.Timer(self.config, self.sched)
         self.sched.registerTrigger(self.timer)
+
+        self.sched.registerReporter(
+            zuul.reporter.gerrit.Reporter(self.gerrit))
 
         self.sched.start()
         self.sched.reconfigure(self.config)

@@ -40,9 +40,6 @@ class Timer(object):
     def stop(self):
         self.apsched.shutdown()
 
-    def report(self, change, message, action):
-        raise Exception("Timer trigger does not support reporting.")
-
     def isMerged(self, change, head=None):
         raise Exception("Timer trigger does not support checking if "
                         "a change is merged.")

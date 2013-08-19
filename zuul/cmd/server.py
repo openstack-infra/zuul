@@ -165,6 +165,7 @@ class Server(object):
         # See comment at top of file about zuul imports
         import zuul.scheduler
         import zuul.launcher.gearman
+        import zuul.reporter.gerrit
         import zuul.trigger.gerrit
         import zuul.trigger.timer
         import zuul.webapp
@@ -181,10 +182,12 @@ class Server(object):
         gerrit = zuul.trigger.gerrit.Gerrit(self.config, self.sched)
         timer = zuul.trigger.timer.Timer(self.config, self.sched)
         webapp = zuul.webapp.WebApp(self.sched)
+        gerrit_reporter = zuul.reporter.gerrit.Reporter(gerrit)
 
         self.sched.setLauncher(gearman)
         self.sched.registerTrigger(gerrit)
         self.sched.registerTrigger(timer)
+        self.sched.registerReporter(gerrit_reporter)
 
         self.sched.start()
         self.sched.reconfigure(self.config)

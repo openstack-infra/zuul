@@ -21,6 +21,7 @@ Contents:
    gating
    triggers
    launchers
+   reporters
    zuul
 
 Indices and tables

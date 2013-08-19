@@ -5,9 +5,11 @@ pipelines:
       gerrit:
         - event: patchset-created
     success:
-      verified: 1
+      gerrit:
+        verified: 1
     failure:
-      verified: -1
+     gerrit:
+        verified: -1
 
   - name: tests
     manager: IndependentPipelineManager
@@ -16,9 +18,11 @@ pipelines:
         - event: patchset-created
           email_filter: ^.*@example.org$
     success:
-      verified: 1
+      gerrit:
+        verified: 1
     failure:
-      verified: -1
+      gerrit:
+        verified: -1
 
   - name: post
     manager: IndependentPipelineManager
@@ -35,12 +39,14 @@ pipelines:
           approval:
             - approved: 1
     start:
-      verified: 0
+      gerrit:
+        verified: 0
     success:
-      verified: 2
-      submit: true
+      gerrit:
+        verified: 1
     failure:
-      verified: -2
+      gerrit:
+        verified: -1
 
 jobs:
   - name: ^.*-merge$

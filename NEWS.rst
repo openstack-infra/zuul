@@ -37,3 +37,8 @@ Since 1.3.0:
     zuul.pipeline.{pipeline-name}.job.{job-name}.{result}
   * Job names in statsd keys now have the '_' character substituted
     for the '.' character.
+
+* The layout.yaml structure has changed to introduce configurable
+  reporters. This requires restructuring the start/success/failure
+  actions to include a dictionary of reporters and their parameters.
+  See reporters in the docs and layout.yaml-sample.
