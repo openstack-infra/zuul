@@ -653,3 +653,7 @@ recheck changes for the gate and check pipelines respectively::
       http://zuul.openstack.org/ gate 'reverify no bug'
   ./tools/zuul-changes.py --review-host=review.openstack.org \
       http://zuul.openstack.org/ check 'recheck no bug'
+
+If you send a SIGUSR2 to the zuul-server process, Zuul will dump a stack
+trace for each running thread into its debug log. This is useful for
+tracking down deadlock or otherwise slow threads.

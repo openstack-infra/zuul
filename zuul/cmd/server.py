@@ -23,16 +23,29 @@ import extras
 # instead it depends on lockfile-0.9.1 which uses pidfile.
 pid_file_module = extras.try_imports(['daemon.pidlockfile', 'daemon.pidfile'])
 
+import logging
 import logging.config
 import os
 import sys
 import signal
+import traceback
 
 import gear
 
 # No zuul imports here because they pull in paramiko which must not be
 # imported until after the daemonization.
 # https://github.com/paramiko/paramiko/issues/59
+
+
+def stack_dump_handler(signum, frame):
+    signal.signal(signal.SIGUSR2, signal.SIG_IGN)
+    log_str = ""
+    for thread_id, stack_frame in sys._current_frames().items():
+        log_str += "Thread: %s\n" % thread_id
+        log_str += "".join(traceback.format_stack(stack_frame))
+    log = logging.getLogger("zuul.stack_dump")
+    log.debug(log_str)
+    signal.signal(signal.SIGUSR2, stack_dump_handler)
 
 
 class Server(object):
@@ -179,6 +192,7 @@ class Server(object):
 
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
         signal.signal(signal.SIGUSR1, self.exit_handler)
+        signal.signal(signal.SIGUSR2, stack_dump_handler)
         signal.signal(signal.SIGTERM, self.term_handler)
         while True:
             try:
