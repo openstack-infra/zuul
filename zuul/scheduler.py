@@ -532,9 +532,11 @@ class Scheduler(threading.Thread):
     def maintainTriggerCache(self):
         relevant = set()
         for pipeline in self.layout.pipelines.values():
+            self.log.debug("Start maintain trigger cache for: %s" % pipeline)
             for item in pipeline.getAllItems():
                 relevant.add(item.change)
                 relevant.update(item.change.getRelatedChanges())
+            self.log.debug("End maintain trigger cache for: %s" % pipeline)
         self.log.debug("Trigger cache size: %s" % len(relevant))
         for trigger in self.triggers.values():
             trigger.maintainCache(relevant)
@@ -992,6 +994,8 @@ class BasePipelineManager(object):
             if self._processOneItem(item):
                 changed = True
             self.reportStats(item)
+        self.log.debug("Finished queue processor: %s (changed: %s)" %
+                       (self.pipeline.name, changed))
         return changed
 
     def updateBuildDescriptions(self, build_set):
