@@ -334,6 +334,7 @@ class Gerrit(object):
         change.branch = data['branch']
         change.url = data['url']
         max_ps = 0
+        change.files = []
         for ps in data['patchSets']:
             if ps['number'] == change.patchset:
                 change.refspec = ps['ref']
@@ -352,6 +353,7 @@ class Gerrit(object):
             # for dependencies.
             return change
 
+        change.needs_change = None
         if 'dependsOn' in data:
             parts = data['dependsOn'][0]['ref'].split('/')
             dep_num, dep_ps = parts[3], parts[4]
@@ -359,6 +361,7 @@ class Gerrit(object):
             if not dep.is_merged:
                 change.needs_change = dep
 
+        change.needed_by_changes = []
         if 'neededBy' in data:
             for needed in data['neededBy']:
                 parts = needed['ref'].split('/')
