@@ -536,6 +536,7 @@ class Build(object):
         self.end_time = None
         self.estimated_time = None
         self.pipeline = None
+        self.canceled = False
         self.parameters = {}
 
     def __repr__(self):

@@ -1305,6 +1305,73 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
+    def test_failed_change_in_middle(self):
+        "Test a failed change in the middle of the queue"
+
+        self.worker.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+
+        self.worker.addFailTest('project-test1', B)
+
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+
+        self.waitUntilSettled()
+
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 6)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test2')
+        self.assertEqual(self.builds[2].name, 'project-test1')
+        self.assertEqual(self.builds[3].name, 'project-test2')
+        self.assertEqual(self.builds[4].name, 'project-test1')
+        self.assertEqual(self.builds[5].name, 'project-test2')
+
+        self.release(self.builds[2])
+        self.waitUntilSettled()
+
+        # project-test1 and project-test2 for A, project-test2 for B
+        self.assertEqual(len(self.builds), 3)
+        self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 2)
+
+        # check that build status of aborted jobs are masked ('CANCELED')
+        items = self.sched.layout.pipelines['gate'].getAllItems()
+        builds = items[0].current_build_set.getBuilds()
+        self.assertEqual(self.countJobResults(builds, 'SUCCESS'), 1)
+        self.assertEqual(self.countJobResults(builds, None), 2)
+        builds = items[1].current_build_set.getBuilds()
+        self.assertEqual(self.countJobResults(builds, 'SUCCESS'), 1)
+        self.assertEqual(self.countJobResults(builds, 'FAILURE'), 1)
+        self.assertEqual(self.countJobResults(builds, None), 1)
+        builds = items[2].current_build_set.getBuilds()
+        self.assertEqual(self.countJobResults(builds, 'SUCCESS'), 1)
+        self.assertEqual(self.countJobResults(builds, 'CANCELED'), 2)
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 0)
+        self.assertEqual(len(self.history), 12)
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.reported, 2)
+
     def test_failed_change_at_head_with_queue(self):
         "Test that if a change at the head fails, queued jobs are canceled"
 

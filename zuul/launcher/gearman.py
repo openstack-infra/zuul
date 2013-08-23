@@ -324,6 +324,7 @@ class Gearman(object):
     def cancel(self, build):
         self.log.info("Cancel build %s for job %s" % (build, build.job))
 
+        build.canceled = True
         if build.number is not None:
             self.log.debug("Build %s has already started" % build)
             self.cancelRunningBuild(build)
@@ -353,15 +354,16 @@ class Gearman(object):
 
         build = self.builds.get(job.unique)
         if build:
-            if result is None:
-                data = getJobData(job)
-                result = data.get('result')
-            if result is None:
-                result = 'LOST'
-            self.log.info("Build %s complete, result %s" %
-                          (job, result))
-            build.result = result
-            self.sched.onBuildCompleted(build)
+            if not build.canceled:
+                if result is None:
+                    data = getJobData(job)
+                    result = data.get('result')
+                if result is None:
+                    result = 'LOST'
+                self.log.info("Build %s complete, result %s" %
+                              (job, result))
+                build.result = result
+                self.sched.onBuildCompleted(build)
             # The test suite expects the build to be removed from the
             # internal dict after it's added to the report queue.
             del self.builds[job.unique]
