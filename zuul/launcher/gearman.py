@@ -359,7 +359,7 @@ class Gearman(object):
                     data = getJobData(job)
                     result = data.get('result')
                 if result is None:
-                    result = 'LOST'
+                    build.retry = True
                 self.log.info("Build %s complete, result %s" %
                               (job, result))
                 build.result = result

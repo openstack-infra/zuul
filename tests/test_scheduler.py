@@ -443,6 +443,7 @@ class FakeBuild(threading.Thread):
         self.aborted = False
         self.created = time.time()
         self.description = ''
+        self.run_error = False
 
     def release(self):
         self.wait_condition.acquire()
@@ -492,7 +493,13 @@ class FakeBuild(threading.Thread):
         if self.aborted:
             result = 'ABORTED'
 
-        data = {'result': result}
+        if self.run_error:
+            work_fail = True
+            result = 'RUN_ERROR'
+        else:
+            data['result'] = result
+            work_fail = False
+
         changes = None
         if 'ZUUL_CHANGE_IDS' in self.parameters:
             changes = self.parameters['ZUUL_CHANGE_IDS']
@@ -504,7 +511,11 @@ class FakeBuild(threading.Thread):
                          pipeline=self.parameters['ZUUL_PIPELINE'])
         )
 
-        self.job.sendWorkComplete(json.dumps(data))
+        self.job.sendWorkData(json.dumps(data))
+        if work_fail:
+            self.job.sendWorkFail()
+        else:
+            self.job.sendWorkComplete(json.dumps(data))
         del self.worker.gearman_jobs[self.job.unique]
         self.worker.running_builds.remove(self)
         self.worker.lock.release()
@@ -2380,6 +2391,21 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(C.reported, 2)
         self.assertEqual(D.data['status'], 'MERGED')
         self.assertEqual(D.reported, 2)
+
+    def test_rerun_on_error(self):
+        "Test that if a worker fails to run a job, it is run again"
+        self.worker.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.builds[0].run_error = True
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+        self.assertEqual(self.countJobResults(self.history, 'RUN_ERROR'), 1)
+        self.assertEqual(self.countJobResults(self.history, 'SUCCESS'), 3)
 
     def test_statsd(self):
         "Test each of the statsd methods used in the scheduler"

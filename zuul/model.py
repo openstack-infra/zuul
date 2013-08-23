@@ -162,7 +162,9 @@ class Pipeline(object):
         return self.isHoldingFollowingChanges(item.item_ahead)
 
     def setResult(self, item, build):
-        if build.result != 'SUCCESS':
+        if build.retry:
+            item.removeBuild(build)
+        elif build.result != 'SUCCESS':
             # Get a JobTree from a Job so we can find only its dependent jobs
             root = self.getJobTree(item.change.project)
             tree = root.getJobTreeForJob(build.job)
@@ -537,6 +539,7 @@ class Build(object):
         self.estimated_time = None
         self.pipeline = None
         self.canceled = False
+        self.retry = False
         self.parameters = {}
 
     def __repr__(self):
@@ -571,6 +574,9 @@ class BuildSet(object):
     def addBuild(self, build):
         self.builds[build.job.name] = build
         build.build_set = self
+
+    def removeBuild(self, build):
+        del self.builds[build.job.name]
 
     def getBuild(self, job_name):
         return self.builds.get(job_name)
@@ -608,6 +614,9 @@ class QueueItem(object):
     def addBuild(self, build):
         self.current_build_set.addBuild(build)
         build.pipeline = self.pipeline
+
+    def removeBuild(self, build):
+        self.current_build_set.removeBuild(build)
 
     def setReportedResult(self, result):
         self.current_build_set.result = result
