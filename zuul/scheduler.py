@@ -470,6 +470,16 @@ class Scheduler(threading.Thread):
             self._setupMerger()
             for trigger in self.triggers.values():
                 trigger.postConfig()
+            if statsd:
+                try:
+                    for pipeline in self.layout.pipelines.values():
+                        items = len(pipeline.getAllItems())
+                        # stats.gauges.zuul.pipeline.NAME.current_changes
+                        key = 'zuul.pipeline.%s' % pipeline.name
+                        statsd.gauge(key + '.current_changes', items)
+                except Exception:
+                    self.log.exception("Exception reporting initial "
+                                       "pipeline stats:")
             self._reconfigure = False
             self.reconfigure_complete_event.set()
         finally:

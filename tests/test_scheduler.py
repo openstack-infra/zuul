@@ -1070,6 +1070,14 @@ class TestScheduler(testtools.TestCase):
         self.assertReportedStat(
             'zuul.pipeline.gate.org.project.total_changes', value='1|c')
 
+    def test_initial_pipeline_gauges(self):
+        "Test that each pipeline reported its length on start"
+        pipeline_names = self.sched.layout.pipelines.keys()
+        self.assertNotEqual(len(pipeline_names), 0)
+        for name in pipeline_names:
+            self.assertReportedStat('zuul.pipeline.%s.current_changes' % name,
+                                    value='0|g')
+
     def test_duplicate_pipelines(self):
         "Test that a change matching multiple pipelines works"
 
