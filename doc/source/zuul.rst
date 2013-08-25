@@ -558,6 +558,22 @@ projects.  Here is an example::
 **name**
   The name of the project (as known by Gerrit).
 
+**merge-mode (optional)**
+  An optional value that indicates what strategy should be used to
+  merge changes to this project.  Supported values are:
+
+  ** merge-resolve **
+  Equivalent to 'git merge -s resolve'.  This corresponds closely to
+  what Gerrit performs (using JGit) for a project if the "Merge if
+  necessary" merge mode is selected and "Automatically resolve
+  conflicts" is checked.  This is the default.
+
+  ** merge **
+  Equivalent to 'git merge'.
+
+  ** cherry-pick **
+  Equivalent to 'git cherry-pick'.
+
 This is followed by a section for each of the pipelines defined above.
 Pipelines may be omitted if no jobs should run for this project in a
 given pipeline.  Within the pipeline section, the jobs that should be

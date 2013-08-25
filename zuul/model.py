@@ -17,10 +17,15 @@ import time
 from uuid import uuid4
 
 
-FAST_FORWARD_ONLY = 1
-MERGE_ALWAYS = 2
-MERGE_IF_NECESSARY = 3
-CHERRY_PICK = 4
+MERGER_MERGE = 1          # "git merge"
+MERGER_MERGE_RESOLVE = 2  # "git merge -s resolve"
+MERGER_CHERRY_PICK = 3    # "git cherry-pick"
+
+MERGER_MAP = {
+    'merge': MERGER_MERGE,
+    'merge-resolve': MERGER_MERGE_RESOLVE,
+    'cherry-pick': MERGER_CHERRY_PICK,
+}
 
 PRECEDENCE_NORMAL = 0
 PRECEDENCE_LOW = 1
@@ -420,7 +425,7 @@ class ChangeQueue(object):
 class Project(object):
     def __init__(self, name):
         self.name = name
-        self.merge_mode = MERGE_IF_NECESSARY
+        self.merge_mode = MERGER_MERGE_RESOLVE
 
     def __str__(self):
         return self.name

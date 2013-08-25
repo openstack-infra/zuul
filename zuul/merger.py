@@ -88,11 +88,15 @@ class Repo(object):
         self.fetch(ref)
         self.repo.git.cherry_pick("FETCH_HEAD")
 
-    def merge(self, ref):
+    def merge(self, ref, strategy=None):
         self._ensure_cloned()
-        self.log.debug("Merging %s" % ref)
+        args = []
+        if strategy:
+            args += ['-s', strategy]
+        args.append('FETCH_HEAD')
         self.fetch(ref)
-        self.repo.git.merge("FETCH_HEAD")
+        self.log.debug("Merging %s with args %s" % (ref, args))
+        self.repo.git.merge(*args)
 
     def fetch(self, ref):
         self._ensure_cloned()
@@ -186,7 +190,7 @@ class Merger(object):
         except:
             self.log.exception("Unable to update %s", project)
 
-    def _mergeChange(self, change, ref, target_ref, mode):
+    def _mergeChange(self, change, ref, target_ref):
         repo = self.getRepo(change.project)
         try:
             repo.checkout(ref)
@@ -195,13 +199,16 @@ class Merger(object):
             return False
 
         try:
-            if not mode:
-                mode = change.project.merge_mode
-            if mode == model.MERGE_IF_NECESSARY:
+            mode = change.project.merge_mode
+            if mode == model.MERGER_MERGE:
                 repo.merge(change.refspec)
-            elif mode == model.CHERRY_PICK:
+            elif mode == model.MERGER_MERGE_RESOLVE:
+                repo.merge(change.refspec, 'resolve')
+            elif mode == model.MERGER_CHERRY_PICK:
                 repo.cherryPick(change.refspec)
-        except:
+            else:
+                raise Exception("Unsupported merge mode: %s" % mode)
+        except Exception:
             # Log exceptions at debug level because they are
             # usually benign merge conflicts
             self.log.debug("Unable to merge %s" % change, exc_info=True)
@@ -219,7 +226,7 @@ class Merger(object):
             return False
         return commit
 
-    def mergeChanges(self, items, target_ref=None, mode=None):
+    def mergeChanges(self, items, target_ref=None):
         # Merge shortcuts:
         # if this is the only change just merge it against its branch.
         # elif there are changes ahead of us that are from the same project and
@@ -244,13 +251,13 @@ class Merger(object):
                 return False
             commit = self._mergeChange(item.change,
                                        repo.getBranchHead(item.change.branch),
-                                       target_ref=target_ref, mode=mode)
+                                       target_ref=target_ref)
         # Sibling changes exist. Merge current change against newest sibling.
         elif (len(sibling_items) >= 2 and
               sibling_items[-2].current_build_set.commit):
             last_commit = sibling_items[-2].current_build_set.commit
             commit = self._mergeChange(item.change, last_commit,
-                                       target_ref=target_ref, mode=mode)
+                                       target_ref=target_ref)
         # Either change did not merge or we did not need to merge as there were
         # previous merge conflicts.
         if not commit:

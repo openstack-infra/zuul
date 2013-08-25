@@ -161,7 +161,8 @@ class LayoutSchema(object):
             self.templates_schemas[t_name] = v.Schema(schema)
 
         project = {'name': str,
-                   'merge-mode': v.Any('cherry-pick'),
+                   'merge-mode': v.Any('merge', 'merge-resolve,',
+                                       'cherry-pick'),
                    'template': self.validateTemplateCalls,
                    }
 

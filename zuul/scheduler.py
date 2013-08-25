@@ -238,9 +238,8 @@ class Scheduler(threading.Thread):
                 config_project.update(expanded)
 
             layout.projects[config_project['name']] = project
-            mode = config_project.get('merge-mode')
-            if mode and mode == 'cherry-pick':
-                project.merge_mode = model.CHERRY_PICK
+            mode = config_project.get('merge-mode', 'merge-resolve')
+            project.merge_mode = model.MERGER_MAP[mode]
             for pipeline in layout.pipelines.values():
                 if pipeline.name in config_project:
                     job_tree = pipeline.addProject(project)
