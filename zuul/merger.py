@@ -34,6 +34,8 @@ class Repo(object):
         self._initialized = False
         try:
             self._ensure_cloned()
+            # Pick up any tags or branch updates since we last ran:
+            self.update()
         except:
             self.log.exception("Unable to initialize repo for %s" % remote)
 
@@ -182,13 +184,18 @@ class Merger(object):
         r.recreateRepoObject()
         return r
 
-    def updateRepo(self, project):
+    def updateRepo(self, project, ref=None):
         repo = self.getRepo(project)
         try:
-            self.log.info("Updating local repository %s", project)
-            repo.update()
+            if ref:
+                self.log.debug("Fetching ref %s for local repository %s" %
+                               (ref, project))
+                repo.fetch(ref)
+            else:
+                self.log.info("Updating local repository %s" % project)
+                repo.update()
         except:
-            self.log.exception("Unable to update %s", project)
+            self.log.exception("Unable to update %s" % project)
 
     def _mergeChange(self, change, ref, target_ref):
         repo = self.getRepo(change.project)
