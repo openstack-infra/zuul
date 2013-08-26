@@ -60,29 +60,18 @@ class Repo(object):
         self._ensure_cloned()
         self.repo = git.Repo(self.local_path)
 
-    def reset(self):
-        self._ensure_cloned()
-        self.log.debug("Resetting repository %s" % self.local_path)
-        self.update()
-        origin = self.repo.remotes.origin
-        for ref in origin.refs:
-            if ref.remote_head == 'HEAD':
-                continue
-            self.repo.create_head(ref.remote_head, ref, force=True)
-
-        # Reset to remote HEAD (usually origin/master)
-        self.repo.head.reference = origin.refs['HEAD']
-        self.repo.head.reset(index=True, working_tree=True)
-        self.repo.git.clean('-x', '-f', '-d')
-
-    def getBranchHead(self, branch):
-        return self.repo.heads[branch]
-
     def checkout(self, ref):
         self._ensure_cloned()
         self.log.debug("Checking out %s" % ref)
-        self.repo.head.reference = ref
+        self.log.debug(repr(ref))
+        if self.repo.re_hexsha_only.match(ref):
+            self.repo.head.reference = ref
+        else:
+            self.fetch(ref)
+            self.repo.head.reference = \
+                self.repo.remotes.origin.refs[ref].commit.hexsha
         self.repo.head.reset(index=True, working_tree=True)
+        self.repo.git.clean('-x', '-f', '-d')
 
     def cherryPick(self, ref):
         self._ensure_cloned()
@@ -107,15 +96,15 @@ class Repo(object):
         # data was fetched properly subsequent fetches don't seem to fail.
         # So try again if an AssertionError is caught.
         origin = self.repo.remotes.origin
+        self.log.debug("Fetching %s" % ref)
         try:
             origin.fetch(ref)
         except AssertionError:
             origin.fetch(ref)
 
         # If the repository is packed, and we fetch a change that is
-        # also entirely packed, the cache may be out of date for the
-        # same reason as reset() above.  Avoid these problems by
-        # recreating the repo object.
+        # also entirely packed, the cache may be out of date.
+        # See the comment in update() and
         # https://bugs.launchpad.net/zuul/+bug/1078946
         self.repo = git.Repo(self.local_path)
 
@@ -250,14 +239,8 @@ class Merger(object):
         # Only current change to merge against tip of change.branch
         if len(sibling_items) == 1:
             repo = self.getRepo(item.change.project)
-            # we need to reset here in order to call getBranchHead
-            try:
-                repo.reset()
-            except:
-                self.log.exception("Unable to reset repo %s" % repo)
-                return False
             commit = self._mergeChange(item.change,
-                                       repo.getBranchHead(item.change.branch),
+                                       item.change.branch,
                                        target_ref=target_ref)
         # Sibling changes exist. Merge current change against newest sibling.
         elif (len(sibling_items) >= 2 and
