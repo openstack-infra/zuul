@@ -338,6 +338,8 @@ class Scheduler(threading.Thread):
                     dt = int((build.end_time - build.start_time) * 1000)
                     statsd.timing(key, dt)
                 statsd.incr(key)
+                key = 'zuul.pipeline.%s.all_jobs' % build.pipeline.name
+                statsd.incr(key)
         except:
             self.log.exception("Exception reporting runtime stats")
         self.result_event_queue.put(('completed', build))
