@@ -63,15 +63,13 @@ class Repo(object):
     def checkout(self, ref):
         self._ensure_cloned()
         self.log.debug("Checking out %s" % ref)
-        self.log.debug(repr(ref))
-        if self.repo.re_hexsha_only.match(ref):
-            self.repo.head.reference = ref
-        else:
-            self.fetch(ref)
-            self.repo.head.reference = \
-                self.repo.remotes.origin.refs[ref].commit.hexsha
         self.repo.head.reset(index=True, working_tree=True)
         self.repo.git.clean('-x', '-f', '-d')
+        if self.repo.re_hexsha_only.match(ref):
+            self.repo.git.checkout(ref)
+        else:
+            self.fetch(ref)
+            self.repo.git.checkout("FETCH_HEAD")
 
     def cherryPick(self, ref):
         self._ensure_cloned()
