@@ -1065,7 +1065,7 @@ class BasePipelineManager(object):
         if item.change.is_reportable and item.reported:
             return 0
         self.log.debug("Reporting change %s" % item.change)
-        ret = None
+        ret = True  # Means error as returned by trigger.report
         if self.pipeline.didAllJobsSucceed(item):
             self.log.debug("success %s %s" % (self.success_action,
                                               self.failure_action))
