@@ -845,6 +845,7 @@ class BasePipelineManager(object):
                                "because it is being removed." % item.change)
                 self.cancelJobs(item)
                 self.dequeueItem(item, keep_severed_heads=False)
+                self.reportStats(item)
 
     def prepareRef(self, item):
         # Returns False on success.
