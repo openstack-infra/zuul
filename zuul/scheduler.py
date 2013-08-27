@@ -600,7 +600,6 @@ class Scheduler(threading.Thread):
             ret += '</p>'
 
         keys = self.layout.pipelines.keys()
-        keys.sort()
         for key in keys:
             pipeline = self.layout.pipelines[key]
             s = 'Pipeline: %s' % pipeline.name
@@ -631,7 +630,6 @@ class Scheduler(threading.Thread):
         pipelines = []
         data['pipelines'] = pipelines
         keys = self.layout.pipelines.keys()
-        keys.sort()
         for key in keys:
             pipeline = self.layout.pipelines[key]
             pipelines.append(pipeline.formatStatusJSON())

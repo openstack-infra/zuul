@@ -15,6 +15,10 @@
 import re
 import time
 from uuid import uuid4
+import extras
+
+OrderedDict = extras.try_imports(['collections.OrderedDict',
+                                  'ordereddict.OrderedDict'])
 
 
 MERGER_MERGE = 1          # "git merge"
@@ -916,7 +920,7 @@ class EventFilter(object):
 class Layout(object):
     def __init__(self):
         self.projects = {}
-        self.pipelines = {}
+        self.pipelines = OrderedDict()
         self.jobs = {}
         self.metajobs = []
 

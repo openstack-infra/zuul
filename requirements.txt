@@ -9,6 +9,7 @@ WebOb
 paramiko
 GitPython>=0.3.2.RC1
 lockfile
+ordereddict
 python-daemon
 extras
 statsd>=1.0.0,<3.0
