@@ -103,8 +103,9 @@ class Server(object):
 
     def exit_handler(self, signum, frame):
         signal.signal(signal.SIGUSR1, signal.SIG_IGN)
-        self.stop_gear_server()
         self.sched.exit()
+        self.sched.join()
+        self.stop_gear_server()
 
     def term_handler(self, signum, frame):
         self.stop_gear_server()
