@@ -563,7 +563,7 @@ class Scheduler(threading.Thread):
             return
 
         # Preprocessing for ref-update events
-        if hasattr(event, 'refspec'):
+        if event.ref:
             # Make sure the local git repo is up-to-date with the remote one.
             # We better have the new ref before enqueuing the changes.
             # This is done before enqueuing the changes to avoid calling an
