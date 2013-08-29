@@ -25,12 +25,6 @@ Since 1.3.0:
   triggers later).  See the sample layout.yaml and Zuul section of the
   documentation.
 
-* The default behavior is now to immediately dequeue changes that have
-  merge conflicts, even those not at the head of the queue.  To enable
-  the old behavior (which would wait until the conflicting change was
-  at the head before dequeuing it), see the new "dequeue-on-conflict"
-  option.
-
 * Some statsd keys have changed in a backwards incompatible way:
   * The counters and timers of the form zuul.job.{name} is now split
     into several keys of the form:

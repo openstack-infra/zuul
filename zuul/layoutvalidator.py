@@ -64,7 +64,6 @@ class LayoutSchema(object):
                 'success-message': str,
                 'failure-message': str,
                 'dequeue-on-new-patchset': bool,
-                'dequeue-on-conflict': bool,
                 'trigger': trigger,
                 'success': report_actions,
                 'failure': report_actions,
