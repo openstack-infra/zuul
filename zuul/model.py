@@ -722,11 +722,8 @@ class Ref(Changeish):
 class NullChange(Changeish):
     is_reportable = False
 
-    def __init__(self, project):
-        super(NullChange, self).__init__(project)
-
     def _id(self):
-        return 'None'
+        return None
 
     def equals(self, other):
         return False

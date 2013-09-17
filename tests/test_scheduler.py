@@ -2558,7 +2558,7 @@ class TestScheduler(testtools.TestCase):
             for q in p['change_queues']:
                 for head in q['heads']:
                     for change in head:
-                        self.assertEqual(change['id'], 'None')
+                        self.assertEqual(change['id'], None)
                         for job in change['jobs']:
                             status_jobs.add(job['name'])
         self.assertIn('project-bitrot-stable-old', status_jobs)
