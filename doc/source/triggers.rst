@@ -69,6 +69,7 @@ member)::
             create = group CI Tools
             push = +force CI Tools
             pushMerge = group CI Tools
+            forgeAuthor = group CI Tools
     [access "refs/for/refs/zuul/*"]
             pushMerge = group CI Tools
 
