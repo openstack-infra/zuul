@@ -435,6 +435,7 @@ class ChangeQueue(object):
             item_behind.item_ahead = item.item_ahead
         # Add to new location
         item.item_ahead = item_ahead
+        item.items_behind = []
         if item.item_ahead:
             item.item_ahead.items_behind.append(item)
         return True
