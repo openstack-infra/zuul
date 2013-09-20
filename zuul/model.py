@@ -51,7 +51,6 @@ class Pipeline(object):
         self.failure_message = None
         self.success_message = None
         self.dequeue_on_new_patchset = True
-        self.dequeue_on_conflict = True
         self.job_trees = {}  # project -> JobTree
         self.manager = None
         self.queues = []
@@ -169,6 +168,7 @@ class Pipeline(object):
                 return True
             if build.result != 'SUCCESS':
                 return True
+
         if not item.item_ahead:
             return False
         return self.isHoldingFollowingChanges(item.item_ahead)
@@ -212,7 +212,6 @@ class Pipeline(object):
         items = []
         for shared_queue in self.queues:
             items.extend(shared_queue.queue)
-            items.extend(shared_queue.severed_heads)
         return items
 
     def formatStatusHTML(self):
@@ -222,8 +221,8 @@ class Pipeline(object):
                 s = 'Change queue: %s' % queue.name
                 ret += s + '\n'
                 ret += '-' * len(s) + '\n'
-            for head in queue.getHeads():
-                ret += self.formatStatus(head, html=True)
+            for item in queue.queue:
+                ret += self.formatStatus(item, html=True)
         return ret
 
     def formatStatusJSON(self):
@@ -235,18 +234,21 @@ class Pipeline(object):
             j_queue = dict(name=queue.name)
             j_queues.append(j_queue)
             j_queue['heads'] = []
-            for head in queue.getHeads():
-                j_changes = []
-                e = head
-                while e:
-                    j_changes.append(self.formatItemJSON(e))
-                    if (len(j_changes) > 1 and
-                        (j_changes[-2]['remaining_time'] is not None) and
-                        (j_changes[-1]['remaining_time'] is not None)):
-                        j_changes[-1]['remaining_time'] = max(
-                            j_changes[-2]['remaining_time'],
-                            j_changes[-1]['remaining_time'])
-                    e = e.item_behind
+
+            j_changes = []
+            for e in queue.queue:
+                if not e.item_ahead:
+                    if j_changes:
+                        j_queue['heads'].append(j_changes)
+                    j_changes = []
+                j_changes.append(self.formatItemJSON(e))
+                if (len(j_changes) > 1 and
+                    (j_changes[-2]['remaining_time'] is not None) and
+                    (j_changes[-1]['remaining_time'] is not None)):
+                    j_changes[-1]['remaining_time'] = max(
+                        j_changes[-2]['remaining_time'],
+                        j_changes[-1]['remaining_time'])
+            if j_changes:
                 j_queue['heads'].append(j_changes)
         return j_pipeline
 
@@ -261,9 +263,11 @@ class Pipeline(object):
                 changeish.url,
                 changeish._id())
         else:
-            ret += '%sProject %s change %s\n' % (indent_str,
-                                                 changeish.project.name,
-                                                 changeish._id())
+            ret += '%sProject %s change %s based on %s\n' % (
+                indent_str,
+                changeish.project.name,
+                changeish._id(),
+                item.item_ahead)
         for job in self.getJobs(changeish):
             build = item.current_build_set.getBuild(job.name)
             if build:
@@ -284,9 +288,6 @@ class Pipeline(object):
                     job_name = '<a href="%s">%s</a>' % (url, job_name)
             ret += '%s  %s: %s%s' % (indent_str, job_name, result, voting)
             ret += '\n'
-        if item.item_behind:
-            ret += '%sFollowed by:\n' % (indent_str)
-            ret += self.formatStatus(item.item_behind, indent + 2, html)
         return ret
 
     def formatItemJSON(self, item):
@@ -333,19 +334,7 @@ class Pipeline(object):
                     result=result,
                     voting=job.voting))
         if self.haveAllJobsStarted(item):
-            # if a change ahead has failed, we are unknown.
-            item_ahead_failed = False
-            i = item.item_ahead
-            while i:
-                if self.didAnyJobFail(i):
-                    item_ahead_failed = True
-                    i = None  # safe to stop looking
-                else:
-                    i = i.item_ahead
-            if item_ahead_failed:
-                ret['remaining_time'] = None
-            else:
-                ret['remaining_time'] = max_remaining
+            ret['remaining_time'] = max_remaining
         else:
             ret['remaining_time'] = None
         return ret
@@ -385,7 +374,6 @@ class ChangeQueue(object):
         self.projects = []
         self._jobs = set()
         self.queue = []
-        self.severed_heads = []
         self.dependent = dependent
 
     def __repr__(self):
@@ -411,44 +399,43 @@ class ChangeQueue(object):
     def enqueueItem(self, item):
         if self.dependent and self.queue:
             item.item_ahead = self.queue[-1]
-            item.item_ahead.item_behind = item
+            item.item_ahead.items_behind.append(item)
         self.queue.append(item)
 
     def dequeueItem(self, item):
         if item in self.queue:
             self.queue.remove(item)
-        if item in self.severed_heads:
-            self.severed_heads.remove(item)
         if item.item_ahead:
-            item.item_ahead.item_behind = item.item_behind
-        if item.item_behind:
-            item.item_behind.item_ahead = item.item_ahead
+            item.item_ahead.items_behind.remove(item)
+        for item_behind in item.items_behind:
+            if item.item_ahead:
+                item.item_ahead.items_behind.append(item_behind)
+            item_behind.item_ahead = item.item_ahead
         item.item_ahead = None
-        item.item_behind = None
+        item.items_behind = []
         item.dequeue_time = time.time()
 
-    def addSeveredHead(self, item):
-        self.severed_heads.append(item)
+    def moveItem(self, item, item_ahead):
+        if not self.dependent:
+            return False
+        if item.item_ahead == item_ahead:
+            return False
+        # Remove from current location
+        if item.item_ahead:
+            item.item_ahead.items_behind.remove(item)
+        for item_behind in item.items_behind:
+            if item.item_ahead:
+                item.item_ahead.items_behind.append(item_behind)
+            item_behind.item_ahead = item.item_ahead
+        # Add to new location
+        item.item_ahead = item_ahead
+        if item.item_ahead:
+            item.item_ahead.items_behind.append(item)
+        return True
 
     def mergeChangeQueue(self, other):
         for project in other.projects:
             self.addProject(project)
-
-    def getHead(self):
-        if not self.queue:
-            return None
-        return self.queue[0]
-
-    def getHeads(self):
-        heads = []
-        if self.dependent:
-            h = self.getHead()
-            if h:
-                heads.append(h)
-        else:
-            heads.extend(self.queue)
-        heads.extend(self.severed_heads)
-        return heads
 
 
 class Project(object):
@@ -592,6 +579,7 @@ class BuildSet(object):
         self.commit = None
         self.unable_to_merge = False
         self.unable_to_merge_message = None
+        self.failing_reasons = []
 
     def setConfiguration(self):
         # The change isn't enqueued until after it's created
@@ -632,10 +620,18 @@ class QueueItem(object):
         self.current_build_set = BuildSet(self)
         self.build_sets.append(self.current_build_set)
         self.item_ahead = None
-        self.item_behind = None
+        self.items_behind = []
         self.enqueue_time = None
         self.dequeue_time = None
         self.reported = False
+
+    def __repr__(self):
+        if self.pipeline:
+            pipeline = self.pipeline.name
+        else:
+            pipeline = None
+        return '<QueueItem 0x%x for %s in %s>' % (
+            id(self), self.change, pipeline)
 
     def resetAllBuilds(self):
         old = self.current_build_set
