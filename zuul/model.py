@@ -298,6 +298,12 @@ class Pipeline(object):
         else:
             ret['url'] = None
         ret['id'] = changeish._id()
+        if item.item_ahead:
+            ret['item_ahead'] = item.item_ahead.change._id()
+        else:
+            ret['item_ahead'] = None
+        ret['items_behind'] = [i.change._id() for i in item.items_behind]
+        ret['failing_reasons'] = item.current_build_set.failing_reasons
         ret['project'] = changeish.project.name
         ret['enqueue_time'] = int(item.enqueue_time * 1000)
         ret['jobs'] = []
