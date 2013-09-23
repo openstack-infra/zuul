@@ -1501,6 +1501,111 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
+    def test_two_failed_changes_at_head(self):
+        "Test that changes are reparented correctly if 2 fail at head"
+
+        self.worker.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+
+        self.worker.addFailTest('project-test1', A)
+        self.worker.addFailTest('project-test1', B)
+
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 6)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test2')
+        self.assertEqual(self.builds[2].name, 'project-test1')
+        self.assertEqual(self.builds[3].name, 'project-test2')
+        self.assertEqual(self.builds[4].name, 'project-test1')
+        self.assertEqual(self.builds[5].name, 'project-test2')
+
+        self.assertTrue(self.job_has_changes(self.builds[0], A))
+        self.assertTrue(self.job_has_changes(self.builds[2], A))
+        self.assertTrue(self.job_has_changes(self.builds[2], B))
+        self.assertTrue(self.job_has_changes(self.builds[4], A))
+        self.assertTrue(self.job_has_changes(self.builds[4], B))
+        self.assertTrue(self.job_has_changes(self.builds[4], C))
+
+        # Fail change B first
+        self.release(self.builds[2])
+        self.waitUntilSettled()
+
+        # restart of C after B failure
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 5)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test2')
+        self.assertEqual(self.builds[2].name, 'project-test2')
+        self.assertEqual(self.builds[3].name, 'project-test1')
+        self.assertEqual(self.builds[4].name, 'project-test2')
+
+        self.assertTrue(self.job_has_changes(self.builds[1], A))
+        self.assertTrue(self.job_has_changes(self.builds[2], A))
+        self.assertTrue(self.job_has_changes(self.builds[2], B))
+        self.assertTrue(self.job_has_changes(self.builds[4], A))
+        self.assertFalse(self.job_has_changes(self.builds[4], B))
+        self.assertTrue(self.job_has_changes(self.builds[4], C))
+
+        # Finish running all passing jobs for change A
+        self.release(self.builds[1])
+        self.waitUntilSettled()
+        # Fail and report change A
+        self.release(self.builds[0])
+        self.waitUntilSettled()
+
+        # restart of B,C after A failure
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 4)
+        self.assertEqual(self.builds[0].name, 'project-test1')  # B
+        self.assertEqual(self.builds[1].name, 'project-test2')  # B
+        self.assertEqual(self.builds[2].name, 'project-test1')  # C
+        self.assertEqual(self.builds[3].name, 'project-test2')  # C
+
+        self.assertFalse(self.job_has_changes(self.builds[1], A))
+        self.assertTrue(self.job_has_changes(self.builds[1], B))
+        self.assertFalse(self.job_has_changes(self.builds[1], C))
+
+        self.assertFalse(self.job_has_changes(self.builds[2], A))
+        # After A failed and B and C restarted, B should be back in
+        # C's tests because it has not failed yet.
+        self.assertTrue(self.job_has_changes(self.builds[2], B))
+        self.assertTrue(self.job_has_changes(self.builds[2], C))
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 0)
+        self.assertEqual(len(self.history), 21)
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.reported, 2)
+
     def test_patch_order(self):
         "Test that dependent patches are tested in the right order"
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')

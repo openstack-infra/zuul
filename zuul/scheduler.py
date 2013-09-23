@@ -982,8 +982,11 @@ class BasePipelineManager(object):
             failing_reasons.append('a needed change is failing')
             self.cancelJobs(item, prime=False)
         else:
-            if (item_ahead and item_ahead != nnfi and
-                not item_ahead.change.is_merged):
+            item_ahead_merged = False
+            if ((item_ahead and item_ahead.change.is_merged) or
+                not change_queue.dependent):
+                item_ahead_merged = True
+            if (item_ahead != nnfi and not item_ahead_merged):
                 # Our current base is different than what we expected,
                 # and it's not because our current base merged.  Something
                 # ahead must have failed.
