@@ -304,6 +304,7 @@ class Pipeline(object):
             ret['item_ahead'] = None
         ret['items_behind'] = [i.change._id() for i in item.items_behind]
         ret['failing_reasons'] = item.current_build_set.failing_reasons
+        ret['zuul_ref'] = item.current_build_set.ref
         ret['project'] = changeish.project.name
         ret['enqueue_time'] = int(item.enqueue_time * 1000)
         ret['jobs'] = []

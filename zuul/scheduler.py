@@ -998,7 +998,7 @@ class BasePipelineManager(object):
                 self.cancelJobs(item)
             self.prepareRef(item)
             if item.current_build_set.unable_to_merge:
-                failing_reasons.append("merge conflict")
+                failing_reasons.append("it has a merge conflict")
         if self.launchJobs(item):
             changed = True
         if self.pipeline.didAnyJobFail(item):
@@ -1007,7 +1007,7 @@ class BasePipelineManager(object):
             try:
                 self.reportItem(item)
             except MergeFailure:
-                failing_reasons.append("did not merge")
+                failing_reasons.append("it did not merge")
                 for item_behind in item.items_behind:
                     self.log.info("Resetting builds for change %s because the "
                                   "item ahead, %s, failed to merge" %
