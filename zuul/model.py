@@ -532,10 +532,9 @@ class JobTree(object):
         self.job_trees = []
 
     def addJob(self, job):
-        if job not in [x.job for x in self.job_trees]:
-            t = JobTree(job)
-            self.job_trees.append(t)
-            return t
+        t = JobTree(job)
+        self.job_trees.append(t)
+        return t
 
     def getJobs(self):
         jobs = []
