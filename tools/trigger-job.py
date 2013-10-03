@@ -42,6 +42,8 @@ def main():
                         help='Old revision (SHA)')
     parser.add_argument('--newrev', dest='newrev',
                         help='New revision (SHA)')
+    parser.add_argument('--logpath', dest='logpath', required=True,
+                        help='Path for log files.')
     args = parser.parse_args()
 
     data = {'ZUUL_PIPELINE': args.pipeline,
@@ -54,6 +56,7 @@ def main():
             'ZUUL_SHORT_OLDREV': args.oldrev[:7],
             'ZUUL_SHORT_NEWREV': args.newrev[:7],
             'ZUUL_COMMIT': args.newrev,
+            'LOG_PATH': args.logpath,
             }
 
     c.addServer('127.0.0.1', 4730)
