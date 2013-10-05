@@ -23,6 +23,7 @@ Contents:
    launchers
    reporters
    zuul
+   statsd
 
 Indices and tables
 ==================
