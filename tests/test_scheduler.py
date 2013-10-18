@@ -2807,6 +2807,43 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
+    def test_repo_deleted(self):
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-repo-deleted.yaml')
+        self.sched.reconfigure(self.config)
+
+        self.init_repo("org/delete-project")
+        A = self.fake_gerrit.addFakeChange('org/delete-project', 'master', 'A')
+
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+
+        # Delete org/new-project zuul repo. Should be recloned.
+        shutil.rmtree(os.path.join(self.git_root, "org/delete-project"))
+
+        B = self.fake_gerrit.addFakeChange('org/delete-project', 'master', 'B')
+
+        B.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(B.reported, 2)
+
     def test_timer(self):
         "Test that a periodic job is triggered"
         self.worker.hold_jobs_in_build = True
