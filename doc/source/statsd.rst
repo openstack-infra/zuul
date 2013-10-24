@@ -4,7 +4,7 @@ Statsd reporting
 ================
 
 Zuul comes with support for the statsd protocol, when enabled and configured
-(see below), the Zuul scheduler will emit raw metrics to a Statsd receiver
+(see below), the Zuul scheduler will emit raw metrics to a statsd receiver
 which let you in turn generate nice graphics. An example is OpenStack Zuul
 status page: http://status.openstack.org/zuul/
 
@@ -14,9 +14,9 @@ Configuration
 Statsd support uses the statsd python module. Note that Zuul will start without
 the statsd python module, so an existing Zuul installation may be missing it.
 
-The configuration is done via environnement variables STATSD_HOST and
+The configuration is done via environment variables STATSD_HOST and
 STATSD_PORT. They are interpreted by the statsd module directly and there is no
-such paremeter in zuul.conf yet. Your init script will have to initialize both
+such parameter in zuul.conf yet. Your init script will have to initialize both
 of them before launching Zuul.
 
 Your init script most probably loads a configuration file named

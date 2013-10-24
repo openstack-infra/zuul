@@ -49,7 +49,7 @@ To enable the built-in server, see the ``gearman_server`` section of
 ``zuul.conf``.  Be sure that the host allows connections from Zuul and
 any workers (e.g., Jenkins masters) on TCP port 4730, and nowhere else
 (as the Gearman protocol does not include any provision for
-authentication.
+authentication).
 
 Gearman Jenkins Plugin
 ----------------------

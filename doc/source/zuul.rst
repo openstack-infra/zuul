@@ -314,7 +314,7 @@ explanation of each of the parameters::
 
     *email_filter*
     This is used for any event.  It takes a regex applied on the performer
-    email, i.e Gerrit account email address.  If you want to specify
+    email, i.e. Gerrit account email address.  If you want to specify
     several email filters, you must use a YAML list.  Make sure to use non
     greedy matchers and to escapes dots!
     Example: ``email_filter: ^.*?@example\.org$``.
@@ -453,7 +453,7 @@ That kind of pipeline is nice to run regression or performance tests.
 .. note::
   The ``change-merged`` event does not include the commit sha1 which can be
   hazardous, it would let you report back to Gerrit though.  If you were to
-  build a tarball for a specific commit, you should consider insteading using
+  build a tarball for a specific commit, you should consider instead using
   the ``ref-updated`` event which does include the commit sha1 (but lack the
   Gerrit change number).
 
@@ -601,11 +601,11 @@ can help avoid running unnecessary jobs.
 Project Templates
 """""""""""""""""
 
-Whenever you have lot of similiar projects (such as plugins for a project) you
+Whenever you have lot of similar projects (such as plugins for a project) you
 will most probably want to use the same pipeline configurations.  The
 project templates let you define pipelines and job name templates to trigger.
 One can then just apply the template on its project which make it easier to
-update several similiar projects. As an example::
+update several similar projects. As an example::
 
   project-templates:
     # Name of the template
@@ -672,7 +672,7 @@ then exit. While waiting to exit Zuul will queue Gerrit events and
 save these events prior to exiting. When Zuul starts again it will
 read these saved events and act on them.
 
-If you need to abort zuul and intend to manually requeue changes for
+If you need to abort Zuul and intend to manually requeue changes for
 jobs which were running in its pipelines, prior to terminating you can
 use the zuul-changes.py tool script to simplify the process. For
 example, this would give you a list of Gerrit commands to reverify or
