@@ -139,6 +139,10 @@ zuul
   is included).  Defaults to ``false``.
   ``job_name_in_report=true``
 
+**zuul_url**
+  URL of Zuul's git repos, accessible to test workers.  
+  Usually "http://zuul.example.com/p".
+
 smtp
 """"
 

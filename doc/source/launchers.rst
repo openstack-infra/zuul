@@ -86,6 +86,10 @@ follows:
   The project that triggered this build
 **ZUUL_PIPELINE**
   The Zuul pipeline that is building this job
+**ZUUL_URL**
+  The url for the zuul server as configured in zuul.conf.  
+  A test runner may use this URL as the basis for fetching 
+  git commits.
 
 The following additional parameters will only be provided for builds
 associated with changes (i.e., in response to patchset-created or

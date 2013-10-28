@@ -2408,6 +2408,24 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(D.reported, 2)
         self.assertEqual(len(self.history), 9)  # 3 each for A, B, D.
 
+    def test_zuul_url_return(self):
+        "Test if ZUUL_URL is returning when zuul_url is set in zuul.conf"
+        self.assertTrue(self.sched.config.has_option('zuul', 'zuul_url'))
+        self.worker.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 1)
+        for build in self.builds:
+            self.assertTrue('ZUUL_URL' in build.parameters)
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
     def test_new_patchset_dequeues_old_on_head(self):
         "Test that a new patchset causes the old to be dequeued (at head)"
         # D -> C (depends on B) -> B (depends on A) -> A -> M
