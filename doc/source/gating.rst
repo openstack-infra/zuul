@@ -58,9 +58,15 @@ succession::
   A, B, C, D, E
 
 Zuul queues those changes in the order they were approved, and notes
-that each subsequent change depends on the one ahead of it merging::
+that each subsequent change depends on the one ahead of it merging:
 
-  A <-- B <-- C <-- D <-- E
+.. blockdiag::
+
+  blockdiag foo {
+    node_width = 40;
+    span_width = 40;
+    A <- B <- C <- D <- E;
+  }
 
 Zuul then starts immediately testing all of the changes in parallel.
 But in the case of changes that depend on others, it instructs the
@@ -74,23 +80,131 @@ well::
   Jobs for D: merge changes A, B, C and D, then test
   Jobs for E: merge changes A, B, C, D and E, then test
 
-If changes *A* and *B* pass tests, and *C*, *D*, and *E* fail::
+Hence jobs triggered to tests A will only test A and ignore B, C, D:
 
-  A[pass] <-- B[pass] <-- C[fail] <-- D[fail] <-- E[fail]
+.. blockdiag::
 
-Zuul will merge change *A* followed by change *B*, leaving this queue::
+  blockdiag foo {
+    node_width = 40;
+    span_width = 40;
+    master -> A -> B -> C -> D -> E;
+    group jobs_for_A {
+        label = "Merged changes for A";
+        master -> A;
+    }
+    group ignored_to_test_A {
+        label = "Ignored changes";
+        color = "lightgray";
+        B -> C -> D -> E;
+    }
+  }
 
-  C[fail] <-- D[fail] <-- E[fail]
+The jobs for E would include the whole dependency chain: A, B, C, D, and E.
+E will be tested assuming A, B, C, and D passed:
+
+.. blockdiag::
+
+  blockdiag foo {
+    node_width = 40;
+    span_width = 40;
+    group jobs_for_E {
+        label = "Merged changes for E";
+        master -> A -> B -> C -> D -> E;
+    }
+  }
+
+If changes *A* and *B* pass tests (green), and *C*, *D*, and *E* fail (red):
+
+.. blockdiag::
+
+  blockdiag foo {
+    node_width = 40;
+    span_width = 40;
+
+    A [color = lightgreen];
+    B [color = lightgreen];
+    C [color = pink];
+    D [color = pink];
+    E [color = pink];
+
+    master <- A <- B <- C <- D <- E;
+  }
+
+Zuul will merge change *A* followed by change *B*, leaving this queue:
+
+.. blockdiag::
+
+  blockdiag foo {
+    node_width = 40;
+    span_width = 40;
+
+    C [color = pink];
+    D [color = pink];
+    E [color = pink];
+
+    C <- D <- E;
+  }
 
 Since *D* was dependent on *C*, it is not clear whether *D*'s failure is the
-result of a defect in *D* or *C*::
+result of a defect in *D* or *C*:
 
-  C[fail] <-- D[unknown] <-- E[unknown]
+.. blockdiag::
 
-Since *C* failed, it will report the failure and drop *C* from the queue::
+  blockdiag foo {
+    node_width = 40;
+    span_width = 40;
 
-  D[unknown] <-- E[unknown]
+    C [color = pink];
+    D [label = "D\n?"];
+    E [label = "E\n?"];
+
+    C <- D <- E;
+  }
+
+Since *C* failed, Zuul will report its failure and drop *C* from the queue,
+keeping D and E:
+
+.. blockdiag::
+
+  blockdiag foo {
+    node_width = 40;
+    span_width = 40;
+
+    D [label = "D\n?"];
+    E [label = "E\n?"];
+
+    D <- E;
+  }
 
 This queue is the same as if two new changes had just arrived, so Zuul
 starts the process again testing *D* against the tip of the branch, and
-*E* against *D*.
+*E* against *D*:
+
+.. blockdiag::
+
+  blockdiag foo {
+    node_width = 40;
+    span_width = 40;
+    master -> D -> E;
+    group jobs_for_D {
+        label = "Merged changes for D";
+        master -> D;
+    }
+    group ignored_to_test_D {
+        label = "Skip";
+        color = "lightgray";
+        E;
+    }
+  }
+
+.. blockdiag::
+
+  blockdiag foo {
+    node_width = 40;
+    span_width = 40;
+    group jobs_for_E {
+        label = "Merged changes for E";
+        master -> D -> E;
+    }
+  }
+
