@@ -97,7 +97,7 @@ class LayoutSchema(object):
             for k, v in value.items():
                 self.validateJob(v, path + [k])
         else:
-            self.job_name.validate(path, self.job_name.schema, value)
+            self.job_name.schema(value)
 
     def validateTemplateCalls(self, calls):
         """ Verify a project pass the parameters required
