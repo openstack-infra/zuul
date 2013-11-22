@@ -119,6 +119,8 @@ class Server(object):
 
         logging.basicConfig(level=logging.DEBUG)
         self.sched = zuul.scheduler.Scheduler()
+        self.sched.registerReporter(None, 'gerrit')
+        self.sched.registerReporter(None, 'smtp')
         self.sched.registerTrigger(None, 'gerrit')
         self.sched.registerTrigger(None, 'timer')
         layout = self.sched.testConfig(self.config.get('zuul',
