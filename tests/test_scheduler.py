@@ -16,6 +16,7 @@
 
 import ConfigParser
 from cStringIO import StringIO
+import gc
 import hashlib
 import json
 import logging
@@ -834,6 +835,13 @@ class TestScheduler(testtools.TestCase):
     def assertFinalState(self):
         # Make sure that the change cache is cleared
         self.assertEqual(len(self.gerrit._change_cache.keys()), 0)
+        # Make sure that git.Repo objects have been garbage collected.
+        repos = []
+        gc.collect()
+        for obj in gc.get_objects():
+            if isinstance(obj, git.Repo):
+                repos.append(obj)
+        self.assertEqual(len(repos), 0)
         self.assertEmptyQueues()
 
     def shutdown(self):
