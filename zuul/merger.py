@@ -38,9 +38,11 @@ class Repo(object):
             self.log.exception("Unable to initialize repo for %s" % remote)
 
     def _ensure_cloned(self):
-        if self._initialized:
+        repo_is_cloned = os.path.exists(self.local_path)
+        if self._initialized and repo_is_cloned:
             return
-        if not os.path.exists(self.local_path):
+        # If the repo does not exist, clone the repo.
+        if not repo_is_cloned:
             self.log.debug("Cloning from %s to %s" % (self.remote_url,
                                                       self.local_path))
             git.Repo.clone_from(self.remote_url, self.local_path)
