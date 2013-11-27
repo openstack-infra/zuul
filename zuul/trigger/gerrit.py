@@ -302,7 +302,11 @@ class Gerrit(object):
             change.patchset = patchset
         key = '%s,%s' % (change.number, change.patchset)
         self._change_cache[key] = change
-        self.updateChange(change)
+        try:
+            self.updateChange(change)
+        except Exception:
+            del self._change_cache[key]
+            raise
         return change
 
     def updateChange(self, change):
@@ -314,6 +318,9 @@ class Gerrit(object):
         if change.patchset is None:
             change.patchset = data['currentPatchSet']['number']
 
+        if 'project' not in data:
+            raise Exception("Change %s,%s not found" % (change.number,
+                                                        change.patchset))
         change.project = self.sched.getProject(data['project'])
         change.branch = data['branch']
         change.url = data['url']

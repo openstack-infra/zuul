@@ -802,6 +802,9 @@ class TriggerEvent(object):
         self.newrev = None
         # timer
         self.timespec = None
+        # For events that arrive with a destination pipeline (eg, from
+        # an admin command, etc):
+        self.forced_pipeline = None
 
     def __repr__(self):
         ret = '<TriggerEvent %s %s' % (self.type, self.project_name)

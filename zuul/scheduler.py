@@ -731,6 +731,11 @@ class BasePipelineManager(object):
         return allow_needs
 
     def eventMatches(self, event):
+        if event.forced_pipeline:
+            if event.forced_pipeline == self.pipeline.name:
+                return True
+            else:
+                return False
         for ef in self.event_filters:
             if ef.matches(event):
                 return True
