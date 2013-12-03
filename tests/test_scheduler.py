@@ -2747,6 +2747,13 @@ class TestScheduler(testtools.TestCase):
         self.assertIn('project-test1', status_jobs)
         self.assertIn('project-test2', status_jobs)
 
+    def test_merging_queues(self):
+        "Test that transitively-connected change queues are merged"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-merge-queues.yaml')
+        self.sched.reconfigure(self.config)
+        self.assertEqual(len(self.sched.layout.pipelines['gate'].queues), 1)
+
     def test_node_label(self):
         "Test that a job runs on a specific node label"
         self.worker.registerFunction('build:node-project-test1:debian')

@@ -72,7 +72,7 @@ class Pipeline(object):
         return job_tree
 
     def getProjects(self):
-        return self.job_trees.keys()
+        return sorted(self.job_trees.keys(), lambda a, b: cmp(a.name, b.name))
 
     def addQueue(self, queue):
         self.queues.append(queue)

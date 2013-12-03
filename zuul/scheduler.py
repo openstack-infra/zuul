@@ -1368,6 +1368,21 @@ class DependentPipelineManager(BasePipelineManager):
             change_queues.append(change_queue)
             self.log.debug("Created queue: %s" % change_queue)
 
+        # Iterate over all queues trying to combine them, and keep doing
+        # so until they can not be combined further.
+        last_change_queues = change_queues
+        while True:
+            new_change_queues = self.combineChangeQueues(last_change_queues)
+            if len(last_change_queues) == len(new_change_queues):
+                break
+            last_change_queues = new_change_queues
+
+        self.log.info("  Shared change queues:")
+        for queue in new_change_queues:
+            self.pipeline.addQueue(queue)
+            self.log.info("    %s" % queue)
+
+    def combineChangeQueues(self, change_queues):
         self.log.debug("Combining shared queues")
         new_change_queues = []
         for a in change_queues:
@@ -1381,11 +1396,7 @@ class DependentPipelineManager(BasePipelineManager):
             if not merged_a:
                 self.log.debug("Keeping queue %s" % (a))
                 new_change_queues.append(a)
-
-        self.log.info("  Shared change queues:")
-        for queue in new_change_queues:
-            self.pipeline.addQueue(queue)
-            self.log.info("    %s" % queue)
+        return new_change_queues
 
     def isChangeReadyToBeEnqueued(self, change):
         if not self.pipeline.trigger.canMerge(change,
