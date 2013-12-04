@@ -36,3 +36,9 @@ Since 1.3.0:
   reporters. This requires restructuring the start/success/failure
   actions to include a dictionary of reporters and their parameters.
   See reporters in the docs and layout.yaml-sample.
+
+* The zuul_url configuration option is required in zuul.conf.  It
+  specifies the URL of the git repositories that should be used by
+  workers when fetching Zuul refs and is passed to the workers as the
+  ZUUL_URL parameter.  It should probably be set to
+  "http://zuul-host-name/p/".
