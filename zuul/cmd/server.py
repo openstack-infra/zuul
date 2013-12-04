@@ -172,6 +172,7 @@ class Server(object):
         import zuul.trigger.gerrit
         import zuul.trigger.timer
         import zuul.webapp
+        import zuul.rpclistener
 
         if (self.config.has_option('gearman_server', 'start') and
             self.config.getboolean('gearman_server', 'start')):
@@ -185,6 +186,7 @@ class Server(object):
         gerrit = zuul.trigger.gerrit.Gerrit(self.config, self.sched)
         timer = zuul.trigger.timer.Timer(self.config, self.sched)
         webapp = zuul.webapp.WebApp(self.sched)
+        rpc = zuul.rpclistener.RPCListener(self.config, self.sched)
         gerrit_reporter = zuul.reporter.gerrit.Reporter(gerrit)
         smtp_reporter = zuul.reporter.smtp.Reporter(
             self.config.get('smtp', 'default_from')
@@ -207,6 +209,7 @@ class Server(object):
         self.sched.reconfigure(self.config)
         self.sched.resume()
         webapp.start()
+        rpc.start()
 
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
         signal.signal(signal.SIGUSR1, self.exit_handler)
