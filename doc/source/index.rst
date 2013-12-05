@@ -23,6 +23,7 @@ Contents:
    launchers
    reporters
    zuul
+   client
    statsd
 
 Indices and tables
