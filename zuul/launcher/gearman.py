@@ -379,8 +379,6 @@ class Gearman(object):
         self.log.debug("Build %s update %s " % (job, data))
         build = self.builds.get(job.unique)
         if build:
-            self.log.debug("Found build %s" % build)
-
             # Allow URL to be updated
             build.url = data.get('url') or build.url
 
