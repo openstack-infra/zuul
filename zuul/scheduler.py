@@ -60,6 +60,30 @@ class MergeFailure(Exception):
     pass
 
 
+class ManagementEvent(object):
+    """An event that should be processed within the main queue run loop"""
+    def __init__(self):
+        self._wait_event = threading.Event()
+
+    def setComplete(self):
+        self._wait_event.set()
+
+    def wait(self, timeout=None):
+        self._wait_event.wait(timeout)
+        return self._wait_event.is_set()
+
+
+class ReconfigureEvent(ManagementEvent):
+    """Reconfigure the scheduler.  The layout will be (re-)loaded from
+    the path specified in the configuration.
+
+    :arg ConfigParser config: the new configuration
+    """
+    def __init__(self, config):
+        super(ReconfigureEvent, self).__init__()
+        self.config = config
+
+
 class Scheduler(threading.Thread):
     log = logging.getLogger("zuul.Scheduler")
 
@@ -68,9 +92,7 @@ class Scheduler(threading.Thread):
         self.daemon = True
         self.wake_event = threading.Event()
         self.layout_lock = threading.Lock()
-        self.reconfigure_complete_event = threading.Event()
         self._pause = False
-        self._reconfigure = False
         self._exit = False
         self._stopped = False
         self.launcher = None
@@ -81,6 +103,7 @@ class Scheduler(threading.Thread):
 
         self.trigger_event_queue = Queue.Queue()
         self.result_event_queue = Queue.Queue()
+        self.management_event_queue = Queue.Queue()
         self.layout = model.Layout()
 
     def stop(self):
@@ -366,12 +389,11 @@ class Scheduler(threading.Thread):
 
     def reconfigure(self, config):
         self.log.debug("Prepare to reconfigure")
-        self.config = config
-        self._reconfigure = True
+        event = ReconfigureEvent(config)
+        self.management_event_queue.put(event)
         self.wake_event.set()
         self.log.debug("Waiting for reconfiguration")
-        self.reconfigure_complete_event.wait()
-        self.reconfigure_complete_event.clear()
+        event.wait()
         self.log.debug("Reconfiguration complete")
 
     def exit(self):
@@ -434,10 +456,11 @@ class Scheduler(threading.Thread):
             self._save_queue()
             os._exit(0)
 
-    def _doReconfigureEvent(self):
-        # This is called in the scheduler loop after another thread sets
-        # the reconfigure flag
+    def _doReconfigureEvent(self, event):
+        # This is called in the scheduler loop after another thread submits
+        # a request
         self.layout_lock.acquire()
+        self.config = event.config
         try:
             self.log.debug("Performing reconfiguration")
             layout = self._parseConfig(
@@ -494,8 +517,6 @@ class Scheduler(threading.Thread):
                 except Exception:
                     self.log.exception("Exception reporting initial "
                                        "pipeline stats:")
-            self._reconfigure = False
-            self.reconfigure_complete_event.set()
         finally:
             self.layout_lock.release()
 
@@ -526,8 +547,8 @@ class Scheduler(threading.Thread):
                 return
             self.log.debug("Run handler awake")
             try:
-                if self._reconfigure:
-                    self._doReconfigureEvent()
+                if not self.management_event_queue.empty():
+                    self.process_management_queue()
 
                 # Give result events priority -- they let us stop builds,
                 # whereas trigger evensts cause us to launch builds.
@@ -599,6 +620,15 @@ class Scheduler(threading.Thread):
                 pass
 
         self.trigger_event_queue.task_done()
+
+    def process_management_queue(self):
+        self.log.debug("Fetching management event")
+        event = self.management_event_queue.get()
+        self.log.debug("Processing management event %s" % event)
+        if isinstance(event, ReconfigureEvent):
+            self._doReconfigureEvent(event)
+        event.setComplete()
+        self.management_event_queue.task_done()
 
     def process_result_queue(self):
         self.log.debug("Fetching result event")
