@@ -2976,8 +2976,7 @@ class TestScheduler(testtools.TestCase):
         r = client.enqueue(pipeline='gate',
                            project='org/project',
                            trigger='gerrit',
-                           change='1',
-                           patchset='1')
+                           change='1,1')
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project-merge').result,
                          'SUCCESS')
@@ -2998,8 +2997,7 @@ class TestScheduler(testtools.TestCase):
             r = client.enqueue(pipeline='gate',
                                project='project-does-not-exist',
                                trigger='gerrit',
-                               change='1',
-                               patchset='1')
+                               change='1,1')
             client.shutdown()
             self.assertEqual(r, False)
 
@@ -3008,8 +3006,7 @@ class TestScheduler(testtools.TestCase):
             r = client.enqueue(pipeline='pipeline-does-not-exist',
                                project='org/project',
                                trigger='gerrit',
-                               change='1',
-                               patchset='1')
+                               change='1,1')
             client.shutdown()
             self.assertEqual(r, False)
 
@@ -3018,8 +3015,7 @@ class TestScheduler(testtools.TestCase):
             r = client.enqueue(pipeline='gate',
                                project='org/project',
                                trigger='trigger-does-not-exist',
-                               change='1',
-                               patchset='1')
+                               change='1,1')
             client.shutdown()
             self.assertEqual(r, False)
 
@@ -3028,11 +3024,164 @@ class TestScheduler(testtools.TestCase):
             r = client.enqueue(pipeline='gate',
                                project='org/project',
                                trigger='gerrit',
-                               change='1',
-                               patchset='1')
+                               change='1,1')
             client.shutdown()
             self.assertEqual(r, False)
 
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
         self.assertEqual(len(self.builds), 0)
+
+    def test_client_promote(self):
+        "Test that the RPC client can promote a change"
+        self.worker.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+
+        self.waitUntilSettled()
+
+        client = zuul.rpcclient.RPCClient('127.0.0.1',
+                                          self.gearman_server.port)
+        r = client.promote(pipeline='gate',
+                           change_ids=['2,1', '3,1'])
+
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 6)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test2')
+        self.assertEqual(self.builds[2].name, 'project-test1')
+        self.assertEqual(self.builds[3].name, 'project-test2')
+        self.assertEqual(self.builds[4].name, 'project-test1')
+        self.assertEqual(self.builds[5].name, 'project-test2')
+
+        self.assertTrue(self.job_has_changes(self.builds[0], B))
+        self.assertFalse(self.job_has_changes(self.builds[0], A))
+        self.assertFalse(self.job_has_changes(self.builds[0], C))
+
+        self.assertTrue(self.job_has_changes(self.builds[2], B))
+        self.assertTrue(self.job_has_changes(self.builds[2], C))
+        self.assertFalse(self.job_has_changes(self.builds[2], A))
+
+        self.assertTrue(self.job_has_changes(self.builds[4], B))
+        self.assertTrue(self.job_has_changes(self.builds[4], C))
+        self.assertTrue(self.job_has_changes(self.builds[4], A))
+
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(C.reported, 2)
+
+        client.shutdown()
+        self.assertEqual(r, True)
+
+    def test_client_promote_dependent(self):
+        "Test that the RPC client can promote a dependent change"
+        # C (depends on B) -> B -> A ; then promote C to get:
+        # A -> C (depends on B) -> B
+        self.worker.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+
+        C.setDependsOn(B, 1)
+
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+
+        self.waitUntilSettled()
+
+        client = zuul.rpcclient.RPCClient('127.0.0.1',
+                                          self.gearman_server.port)
+        r = client.promote(pipeline='gate',
+                           change_ids=['3,1'])
+
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 6)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test2')
+        self.assertEqual(self.builds[2].name, 'project-test1')
+        self.assertEqual(self.builds[3].name, 'project-test2')
+        self.assertEqual(self.builds[4].name, 'project-test1')
+        self.assertEqual(self.builds[5].name, 'project-test2')
+
+        self.assertTrue(self.job_has_changes(self.builds[0], B))
+        self.assertFalse(self.job_has_changes(self.builds[0], A))
+        self.assertFalse(self.job_has_changes(self.builds[0], C))
+
+        self.assertTrue(self.job_has_changes(self.builds[2], B))
+        self.assertTrue(self.job_has_changes(self.builds[2], C))
+        self.assertFalse(self.job_has_changes(self.builds[2], A))
+
+        self.assertTrue(self.job_has_changes(self.builds[4], B))
+        self.assertTrue(self.job_has_changes(self.builds[4], C))
+        self.assertTrue(self.job_has_changes(self.builds[4], A))
+
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(C.reported, 2)
+
+        client.shutdown()
+        self.assertEqual(r, True)
+
+    def test_client_promote_negative(self):
+        "Test that the RPC client returns errors for promotion"
+        self.worker.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        client = zuul.rpcclient.RPCClient('127.0.0.1',
+                                          self.gearman_server.port)
+
+        with testtools.ExpectedException(zuul.rpcclient.RPCFailure):
+            r = client.promote(pipeline='nonexistent',
+                               change_ids=['2,1', '3,1'])
+            client.shutdown()
+            self.assertEqual(r, False)
+
+        with testtools.ExpectedException(zuul.rpcclient.RPCFailure):
+            r = client.promote(pipeline='gate',
+                               change_ids=['4,1'])
+            client.shutdown()
+            self.assertEqual(r, False)
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
