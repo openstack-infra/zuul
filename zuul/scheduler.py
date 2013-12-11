@@ -22,6 +22,7 @@ import os
 import pickle
 import Queue
 import re
+import sys
 import threading
 import time
 import yaml
@@ -64,12 +65,21 @@ class ManagementEvent(object):
     """An event that should be processed within the main queue run loop"""
     def __init__(self):
         self._wait_event = threading.Event()
+        self._exception = None
+        self._traceback = None
 
-    def setComplete(self):
+    def exception(self, e, tb):
+        self._exception = e
+        self._traceback = tb
+        self._wait_event.set()
+
+    def done(self):
         self._wait_event.set()
 
     def wait(self, timeout=None):
         self._wait_event.wait(timeout)
+        if self._exception:
+            raise self._exception, None, self._traceback
         return self._wait_event.is_set()
 
 
@@ -82,6 +92,20 @@ class ReconfigureEvent(ManagementEvent):
     def __init__(self, config):
         super(ReconfigureEvent, self).__init__()
         self.config = config
+
+
+class PromoteEvent(ManagementEvent):
+    """Promote one or more changes to the head of the queue.
+
+    :arg str pipeline_name: the name of the pipeline
+    :arg list change_ids: a list of strings of change ids in the form
+        1234,1
+    """
+
+    def __init__(self, pipeline_name, change_ids):
+        super(PromoteEvent, self).__init__()
+        self.pipeline_name = pipeline_name
+        self.change_ids = change_ids
 
 
 class Scheduler(threading.Thread):
@@ -396,6 +420,14 @@ class Scheduler(threading.Thread):
         event.wait()
         self.log.debug("Reconfiguration complete")
 
+    def promote(self, pipeline_name, change_ids):
+        event = PromoteEvent(pipeline_name, change_ids)
+        self.management_event_queue.put(event)
+        self.wake_event.set()
+        self.log.debug("Waiting for promotion")
+        event.wait()
+        self.log.debug("Promotion complete")
+
     def exit(self):
         self.log.debug("Prepare to exit")
         self._pause = True
@@ -520,6 +552,43 @@ class Scheduler(threading.Thread):
         finally:
             self.layout_lock.release()
 
+    def _doPromoteEvent(self, event):
+        pipeline = self.layout.pipelines[event.pipeline_name]
+        change_ids = [c.split(',') for c in event.change_ids]
+        items_to_enqueue = []
+        change_queue = None
+        for shared_queue in pipeline.queues:
+            if change_queue:
+                break
+            for item in shared_queue.queue:
+                if (item.change.number == change_ids[0][0] and
+                    item.change.patchset == change_ids[0][1]):
+                    change_queue = shared_queue
+                    break
+        if not change_queue:
+            raise Exception("Unable to find shared change queue for %s" %
+                            event.change_ids[0])
+        for number, patchset in change_ids:
+            found = False
+            for item in change_queue.queue:
+                if (item.change.number == number and
+                    item.change.patchset == patchset):
+                    found = True
+                    items_to_enqueue.append(item)
+                    break
+            if not found:
+                raise Exception("Unable to find %s,%s in queue %s" %
+                                (number, patchset, change_queue))
+        for item in change_queue.queue[:]:
+            if item not in items_to_enqueue:
+                items_to_enqueue.append(item)
+            pipeline.manager.cancelJobs(item)
+            pipeline.manager.dequeueItem(item)
+        for item in items_to_enqueue:
+            pipeline.manager.addChange(item.change, quiet=True)
+        while pipeline.manager.processQueue():
+            pass
+
     def _areAllBuildsComplete(self):
         self.log.debug("Checking if all builds are complete")
         waiting = False
@@ -625,9 +694,16 @@ class Scheduler(threading.Thread):
         self.log.debug("Fetching management event")
         event = self.management_event_queue.get()
         self.log.debug("Processing management event %s" % event)
-        if isinstance(event, ReconfigureEvent):
-            self._doReconfigureEvent(event)
-        event.setComplete()
+        try:
+            if isinstance(event, ReconfigureEvent):
+                self._doReconfigureEvent(event)
+            elif isinstance(event, PromoteEvent):
+                self._doPromoteEvent(event)
+            else:
+                self.log.error("Unable to handle event %s" % event)
+            event.done()
+        except Exception as e:
+            event.exception(e, sys.exc_info()[2])
         self.management_event_queue.task_done()
 
     def process_result_queue(self):
@@ -815,10 +891,10 @@ class BasePipelineManager(object):
     def isChangeReadyToBeEnqueued(self, change):
         return True
 
-    def enqueueChangesAhead(self, change):
+    def enqueueChangesAhead(self, change, quiet):
         return True
 
-    def enqueueChangesBehind(self, change):
+    def enqueueChangesBehind(self, change, quiet):
         return True
 
     def checkForChangesNeededBy(self, change):
@@ -872,7 +948,7 @@ class BasePipelineManager(object):
                            item.change.project)
             return False
 
-    def addChange(self, change):
+    def addChange(self, change, quiet=False):
         self.log.debug("Considering adding change %s" % change)
         if self.isChangeAlreadyInQueue(change):
             self.log.debug("Change %s is already in queue, ignoring" % change)
@@ -883,7 +959,7 @@ class BasePipelineManager(object):
                            change)
             return False
 
-        if not self.enqueueChangesAhead(change):
+        if not self.enqueueChangesAhead(change, quiet):
             self.log.debug("Failed to enqueue changes ahead of %s" % change)
             return False
 
@@ -895,11 +971,12 @@ class BasePipelineManager(object):
         if change_queue:
             self.log.debug("Adding change %s to queue %s" %
                            (change, change_queue))
-            if len(self.pipeline.start_actions) > 0:
-                self.reportStart(change)
+            if not quiet:
+                if len(self.pipeline.start_actions) > 0:
+                    self.reportStart(change)
             item = change_queue.enqueueChange(change)
             self.reportStats(item)
-            self.enqueueChangesBehind(change)
+            self.enqueueChangesBehind(change, quiet)
         else:
             self.log.error("Unable to find change queue for project %s" %
                            change.project)
@@ -970,7 +1047,7 @@ class BasePipelineManager(object):
         self.log.debug("Cancel jobs for change %s" % item.change)
         canceled = False
         to_remove = []
-        if prime and item.current_build_set.builds:
+        if prime and item.current_build_set.ref:
             item.resetAllBuilds()
         for build, build_item in self.building_jobs.items():
             if build_item == item:
@@ -1440,7 +1517,7 @@ class DependentPipelineManager(BasePipelineManager):
             return False
         return True
 
-    def enqueueChangesBehind(self, change):
+    def enqueueChangesBehind(self, change, quiet):
         to_enqueue = []
         self.log.debug("Checking for changes needing %s:" % change)
         if not hasattr(change, 'needed_by_changes'):
@@ -1456,15 +1533,15 @@ class DependentPipelineManager(BasePipelineManager):
             self.log.debug("  No changes need %s" % change)
 
         for other_change in to_enqueue:
-            self.addChange(other_change)
+            self.addChange(other_change, quiet)
 
-    def enqueueChangesAhead(self, change):
+    def enqueueChangesAhead(self, change, quiet):
         ret = self.checkForChangesNeededBy(change)
         if ret in [True, False]:
             return ret
         self.log.debug("  Change %s must be merged ahead of %s" %
                        (ret, change))
-        return self.addChange(ret)
+        return self.addChange(ret, quiet)
 
     def checkForChangesNeededBy(self, change):
         self.log.debug("Checking for changes needed by %s:" % change)

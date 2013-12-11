@@ -55,9 +55,15 @@ class Client(object):
                                  required=True)
         cmd_enqueue.add_argument('--change', help='change id',
                                  required=True)
-        cmd_enqueue.add_argument('--patchset', help='patchset number',
-                                 required=True)
         cmd_enqueue.set_defaults(func=self.enqueue)
+
+        cmd_promote = subparsers.add_parser('promote',
+                                            help='promote one or more changes')
+        cmd_promote.add_argument('--pipeline', help='pipeline name',
+                                 required=True)
+        cmd_promote.add_argument('--changes', help='change ids',
+                                 required=True, nargs='+')
+        cmd_promote.set_defaults(func=self.promote)
 
         self.args = parser.parse_args()
 
@@ -104,8 +110,13 @@ class Client(object):
         r = client.enqueue(pipeline=self.args.pipeline,
                            project=self.args.project,
                            trigger=self.args.trigger,
-                           change=self.args.change,
-                           patchset=self.args.patchset)
+                           change=self.args.change)
+        return r
+
+    def promote(self):
+        client = zuul.rpcclient.RPCClient(self.server, self.port)
+        r = client.promote(pipeline=self.args.pipeline,
+                           change_ids=self.args.changes)
         return r
 
 
