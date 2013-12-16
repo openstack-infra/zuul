@@ -634,8 +634,11 @@ key::
       - name: plugin-triggering
         jobprefix: plugin-foobar
 
-You can pass several parameters to a template. A ``parameter`` value will be
-used for expansion of ``{parameter}`` in the template strings.
+You can pass several parameters to a template. A ``parameter`` value
+will be used for expansion of ``{parameter}`` in the template
+strings. The parameter ``name`` will be automatically provided and
+will contain the short name of the project, that is the portion of the
+project name after the last ``/`` character.
 
 Multiple templates can be combined in a project, and the jobs from all
 of those templates will be added to the project.  Individual jobs may

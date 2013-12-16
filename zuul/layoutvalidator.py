@@ -156,6 +156,9 @@ class LayoutSchema(object):
             # Craft the templates schemas
             schema = {v.Required('name'): v.Any(*template_names)}
             for required_param in template_parameters:
+                # special case 'name' which will be automatically provided
+                if required_param == 'name':
+                    continue
                 # add this template parameters as requirements:
                 schema.update({v.Required(required_param): str})
 

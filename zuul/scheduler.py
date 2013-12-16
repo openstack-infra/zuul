@@ -286,6 +286,7 @@ class Scheduler(threading.Thread):
 
         for config_project in data.get('projects', []):
             project = Project(config_project['name'])
+            shortname = config_project['name'].split('/')[-1]
 
             # This is reversed due to the prepend operation below, so
             # the ultimate order is templates (in order) followed by
@@ -296,6 +297,7 @@ class Scheduler(threading.Thread):
                 tpl = project_templates.get(
                     requested_template.get('name'))
                 # Expand it with the project context
+                requested_template['name'] = shortname
                 expanded = deep_format(tpl, requested_template)
                 # Finally merge the expansion with whatever has been
                 # already defined for this project.  Prepend our new
