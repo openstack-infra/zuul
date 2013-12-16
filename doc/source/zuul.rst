@@ -637,6 +637,30 @@ key::
 You can pass several parameters to a template. A ``parameter`` value will be
 used for expansion of ``{parameter}`` in the template strings.
 
+Multiple templates can be combined in a project, and the jobs from all
+of those templates will be added to the project.  Individual jobs may
+also be added::
+
+  projects:
+   - name: plugin/foobar
+     template:
+      - name: plugin-triggering
+        jobprefix: plugin-foobar
+      - name: plugin-extras
+        jobprefix: plugin-foobar
+     check:
+      - foobar-extra-special-job
+
+The order of the jobs listed in the project (which only affects the
+order of jobs listed on the report) will be the jobs from each
+template in the order listed, followed by any jobs individually listed
+for the project.
+
+Note that if multiple templates are used for a project and one
+template specifies a job that is also specified in another template,
+or specified in the project itself, those jobs will be duplicated in
+the resulting project configuration.
+
 logging.conf
 ~~~~~~~~~~~~
 This file is optional.  If provided, it should be a standard

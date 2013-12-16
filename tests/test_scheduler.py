@@ -766,6 +766,7 @@ class TestScheduler(testtools.TestCase):
         self.init_repo("org/one-job-project")
         self.init_repo("org/nonvoting-project")
         self.init_repo("org/templated-project")
+        self.init_repo("org/layered-project")
         self.init_repo("org/node-project")
         self.init_repo("org/conflict-project")
 
@@ -1956,6 +1957,32 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(self.getJobFromHistory('project-test1').result,
                          'SUCCESS')
         self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+
+    def test_layered_templates(self):
+        "Test whether a job generated via a template can be launched"
+
+        A = self.fake_gerrit.addFakeChange(
+            'org/layered-project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test3').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test4').result,
+                         'SUCCESS')
+        # project-test5 should run twice because two templates define it
+        test5_count = 0
+        for job in self.worker.build_history:
+            if job.name == 'project-test5':
+                test5_count += 1
+                self.assertEqual(job.result, 'SUCCESS')
+        self.assertEqual(test5_count, 2)
+        self.assertEqual(self.getJobFromHistory('project-test6').result,
                          'SUCCESS')
 
     def test_dependent_changes_dequeue(self):

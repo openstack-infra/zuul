@@ -287,15 +287,30 @@ class Scheduler(threading.Thread):
         for config_project in data.get('projects', []):
             project = Project(config_project['name'])
 
-            for requested_template in config_project.get('template', []):
+            # This is reversed due to the prepend operation below, so
+            # the ultimate order is templates (in order) followed by
+            # statically defined jobs.
+            for requested_template in reversed(
+                config_project.get('template', [])):
                 # Fetch the template from 'project-templates'
                 tpl = project_templates.get(
                     requested_template.get('name'))
                 # Expand it with the project context
                 expanded = deep_format(tpl, requested_template)
-                # Finally merge the expansion with whatever has been already
-                # defined for this project
-                config_project.update(expanded)
+                # Finally merge the expansion with whatever has been
+                # already defined for this project.  Prepend our new
+                # jobs to existing ones (which may have been
+                # statically defined or defined by other templates).
+                for pipeline in layout.pipelines.values():
+                    if pipeline.name in expanded:
+                        config_project.update(
+                            {pipeline.name: expanded[pipeline.name] +
+                             config_project.get(pipeline.name, [])})
+            # TODO: future enhancement -- add an option to the
+            # template block to indicate that duplicate jobs should be
+            # merged (especially to handle the case where they have
+            # children and you want all of the children to run after a
+            # single run of the parent).
 
             layout.projects[config_project['name']] = project
             mode = config_project.get('merge-mode', 'merge-resolve')

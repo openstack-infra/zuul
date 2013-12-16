@@ -110,6 +110,16 @@ project-templates:
     check:
      - '{projectname}-test1'
      - '{projectname}-test2'
+  - name: test-three-and-four
+    check:
+     - '{projectname}-test3'
+     - '{projectname}-test4'
+  - name: test-five
+    check:
+     - '{projectname}-test5'
+  - name: test-five-also
+    check:
+     - '{projectname}-test5'
 
 projects:
   - name: org/project
@@ -195,8 +205,21 @@ projects:
 
   - name: org/templated-project
     template:
-     - name: test-one-and-two
-       projectname: project
+      - name: test-one-and-two
+        projectname: project
+
+  - name: org/layered-project
+    template:
+      - name: test-one-and-two
+        projectname: project
+      - name: test-three-and-four
+        projectname: project
+      - name: test-five
+        projectname: project
+      - name: test-five-also
+        projectname: project
+    check:
+      - project-test6
 
   - name: org/node-project
     gate:
