@@ -6,7 +6,8 @@ Zuul is a trunk gating system developed for the OpenStack Project.
 Contributing
 ------------
 
-To get the latest code, see: https://github.com/openstack-infra/zuul
+To browse the latest code, see: https://git.openstack.org/cgit/openstack-infra/zuul/tree/
+To clone the latest code, use `git clone git://git.openstack.org/openstack-infra/zuul`
 
 Bugs are handled at: https://launchpad.net/zuul
 
