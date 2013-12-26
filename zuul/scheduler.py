@@ -31,6 +31,7 @@ import layoutvalidator
 import model
 from model import ActionReporter, Pipeline, Project, ChangeQueue, EventFilter
 import merger
+from zuul import version as zuul_version
 
 statsd = extras.try_import('statsd.statsd')
 
@@ -129,6 +130,8 @@ class Scheduler(threading.Thread):
         self.result_event_queue = Queue.Queue()
         self.management_event_queue = Queue.Queue()
         self.layout = model.Layout()
+
+        self.zuul_version = zuul_version.version_info.version_string()
 
     def stop(self):
         self._stopped = True
@@ -761,6 +764,9 @@ class Scheduler(threading.Thread):
 
     def formatStatusJSON(self):
         data = {}
+
+        data['zuul_version'] = self.zuul_version
+
         if self._pause:
             ret = '<p><b>Queue only mode:</b> preparing to '
             if self._exit:
