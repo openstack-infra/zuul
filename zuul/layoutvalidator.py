@@ -44,6 +44,7 @@ class LayoutSchema(object):
                                    'ref-updated')),
                       'comment_filter': toList(str),
                       'email_filter': toList(str),
+                      'username_filter': toList(str),
                       'branch': toList(str),
                       'ref': toList(str),
                       'approval': toList(variable_dict),
