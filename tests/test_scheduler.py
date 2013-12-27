@@ -690,11 +690,11 @@ class FakeGearmanServer(gear.Server):
 
 class FakeSMTP(object):
     log = logging.getLogger('zuul.FakeSMTP')
-    messages = []
 
-    def __init__(self, server, port):
+    def __init__(self, messages, server, port):
         self.server = server
         self.port = port
+        self.messages = messages
 
     def sendmail(self, from_email, to_email, msg):
         self.log.info("Sending email from %s, to %s, with msg %s" % (
@@ -703,7 +703,7 @@ class FakeSMTP(object):
         headers = msg.split('\n\n', 1)[0]
         body = msg.split('\n\n', 1)[1]
 
-        FakeSMTP.messages.append(dict(
+        self.messages.append(dict(
             from_email=from_email,
             to_email=to_email,
             msg=msg,
@@ -729,7 +729,7 @@ class TestScheduler(testtools.TestCase):
             # If timeout value is invalid do not set a timeout.
             test_timeout = 0
         if test_timeout > 0:
-            self.useFixture(fixtures.Timeout(test_timeout, gentle=True))
+            self.useFixture(fixtures.Timeout(test_timeout, gentle=False))
 
         if (os.environ.get('OS_STDOUT_CAPTURE') == 'True' or
             os.environ.get('OS_STDOUT_CAPTURE') == '1'):
@@ -800,8 +800,14 @@ class TestScheduler(testtools.TestCase):
         urllib2.urlopen = URLOpenerFactory
         self.launcher = zuul.launcher.gearman.Gearman(self.config, self.sched)
 
+        self.smtp_messages = []
+
+        def FakeSMTPFactory(*args, **kw):
+            args = [self.smtp_messages] + list(args)
+            return FakeSMTP(*args, **kw)
+
         zuul.lib.gerrit.Gerrit = FakeGerrit
-        self.useFixture(fixtures.MonkeyPatch('smtplib.SMTP', FakeSMTP))
+        self.useFixture(fixtures.MonkeyPatch('smtplib.SMTP', FakeSMTPFactory))
 
         self.gerrit = FakeGerritTrigger(
             self.upstream_root, self.config, self.sched)
@@ -2972,25 +2978,25 @@ class TestScheduler(testtools.TestCase):
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
 
-        self.assertEqual(len(FakeSMTP.messages), 2)
+        self.assertEqual(len(self.smtp_messages), 2)
 
         # A.messages only holds what FakeGerrit places in it. Thus we
         # work on the knowledge of what the first message should be as
         # it is only configured to go to SMTP.
 
         self.assertEqual('zuul@example.com',
-                         FakeSMTP.messages[0]['from_email'])
+                         self.smtp_messages[0]['from_email'])
         self.assertEqual(['you@example.com'],
-                         FakeSMTP.messages[0]['to_email'])
+                         self.smtp_messages[0]['to_email'])
         self.assertEqual('Starting check jobs.',
-                         FakeSMTP.messages[0]['body'])
+                         self.smtp_messages[0]['body'])
 
         self.assertEqual('zuul_from@example.com',
-                         FakeSMTP.messages[1]['from_email'])
+                         self.smtp_messages[1]['from_email'])
         self.assertEqual(['alternative_me@example.com'],
-                         FakeSMTP.messages[1]['to_email'])
+                         self.smtp_messages[1]['to_email'])
         self.assertEqual(A.messages[0],
-                         FakeSMTP.messages[1]['body'])
+                         self.smtp_messages[1]['body'])
 
     def test_timer_smtp(self):
         "Test that a periodic job is triggered"
@@ -3018,18 +3024,18 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(self.getJobFromHistory(
             'project-bitrot-stable-older').result, 'SUCCESS')
 
-        self.assertEqual(len(FakeSMTP.messages), 1)
+        self.assertEqual(len(self.smtp_messages), 1)
 
         # A.messages only holds what FakeGerrit places in it. Thus we
         # work on the knowledge of what the first message should be as
         # it is only configured to go to SMTP.
 
         self.assertEqual('zuul_from@example.com',
-                         FakeSMTP.messages[0]['from_email'])
+                         self.smtp_messages[0]['from_email'])
         self.assertEqual(['alternative_me@example.com'],
-                         FakeSMTP.messages[0]['to_email'])
+                         self.smtp_messages[0]['to_email'])
         self.assertIn('Subject: Periodic check for org/project succeeded',
-                      FakeSMTP.messages[0]['headers'])
+                      self.smtp_messages[0]['headers'])
 
     def test_client_enqueue(self):
         "Test that the RPC client can enqueue a change"
