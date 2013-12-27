@@ -893,10 +893,6 @@ class BasePipelineManager(object):
         """
         report_errors = []
         if len(action_reporters) > 0:
-            if not change.number:
-                self.log.debug("Not reporting change %s: No number present."
-                               % change)
-                return
             for action_reporter in action_reporters:
                 ret = action_reporter.report(change, message)
                 if ret:
@@ -1220,7 +1216,7 @@ class BasePipelineManager(object):
         return True
 
     def reportItem(self, item):
-        if item.change.is_reportable and item.reported:
+        if item.reported:
             raise Exception("Already reported change %s" % item.change)
         ret = self._reportItem(item)
         if self.changes_merge:
@@ -1237,9 +1233,7 @@ class BasePipelineManager(object):
                 raise MergeFailure("Change %s failed to merge" % item.change)
 
     def _reportItem(self, item):
-        if not item.change.is_reportable:
-            return False
-        if item.change.is_reportable and item.reported:
+        if item.reported:
             return 0
         self.log.debug("Reporting change %s" % item.change)
         ret = True  # Means error as returned by trigger.report
@@ -1251,18 +1245,19 @@ class BasePipelineManager(object):
         else:
             actions = self.pipeline.failure_actions
             item.setReportedResult('FAILURE')
-        report = self.formatReport(item)
         item.reported = True
-        try:
-            self.log.info("Reporting change %s, actions: %s" %
-                          (item.change, actions))
-            ret = self.sendReport(actions, item.change, report)
-            if ret:
-                self.log.error("Reporting change %s received: %s" %
-                               (item.change, ret))
-        except:
-            self.log.exception("Exception while reporting:")
-            item.setReportedResult('ERROR')
+        if actions:
+            report = self.formatReport(item)
+            try:
+                self.log.info("Reporting change %s, actions: %s" %
+                              (item.change, actions))
+                ret = self.sendReport(actions, item.change, report)
+                if ret:
+                    self.log.error("Reporting change %s received: %s" %
+                                   (item.change, ret))
+            except:
+                self.log.exception("Exception while reporting:")
+                item.setReportedResult('ERROR')
         self.updateBuildDescriptions(item.current_build_set)
         return ret
 

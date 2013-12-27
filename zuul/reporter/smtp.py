@@ -46,7 +46,11 @@ class Reporter(object):
         to_email = params['to']\
             if 'to' in params else self.smtp_default_to
         msg = MIMEText(message)
-        msg['Subject'] = "Report change %s" % change
+        if 'subject' in params:
+            subject = params['subject'].format(change=change)
+        else:
+            subject = "Report for change %s" % change
+        msg['Subject'] = subject
         msg['From'] = from_email
         msg['To'] = to_email
 

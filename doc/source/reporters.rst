@@ -42,8 +42,8 @@ SMTP Configuration
 zuul.conf contains the SMTP server and default to/from as describe
 in :ref:`zuulconf`.
 
-Each pipeline can overwrite the to or from address by providing
-alternatives as arguments to the reporter. For example, ::
+Each pipeline can overwrite the subject or the to or from address by
+providing alternatives as arguments to the reporter. For example, ::
 
   pipelines:
     - name: post-merge
@@ -57,3 +57,4 @@ alternatives as arguments to the reporter. For example, ::
         smtp:
           to: you@example.com
           from: alternative@example.com
+          subject: Change {change} failed

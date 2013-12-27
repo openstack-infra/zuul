@@ -2992,6 +2992,45 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(A.messages[0],
                          FakeSMTP.messages[1]['body'])
 
+    def test_timer_smtp(self):
+        "Test that a periodic job is triggered"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-timer-smtp.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+
+        start = time.time()
+        failed = True
+        while ((time.time() - start) < 30):
+            if len(self.history) == 2:
+                failed = False
+                break
+            else:
+                time.sleep(1)
+
+        if failed:
+            raise Exception("Expected jobs never ran")
+
+        self.waitUntilSettled()
+
+        self.assertEqual(self.getJobFromHistory(
+            'project-bitrot-stable-old').result, 'SUCCESS')
+        self.assertEqual(self.getJobFromHistory(
+            'project-bitrot-stable-older').result, 'SUCCESS')
+
+        self.assertEqual(len(FakeSMTP.messages), 1)
+
+        # A.messages only holds what FakeGerrit places in it. Thus we
+        # work on the knowledge of what the first message should be as
+        # it is only configured to go to SMTP.
+
+        self.assertEqual('zuul_from@example.com',
+                         FakeSMTP.messages[0]['from_email'])
+        self.assertEqual(['alternative_me@example.com'],
+                         FakeSMTP.messages[0]['to_email'])
+        self.assertIn('Subject: Periodic check for org/project succeeded',
+                      FakeSMTP.messages[0]['headers'])
+
     def test_client_enqueue(self):
         "Test that the RPC client can enqueue a change"
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')

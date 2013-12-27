@@ -661,7 +661,6 @@ class QueueItem(object):
 
 class Changeish(object):
     """Something like a change; either a change or a ref"""
-    is_reportable = False
 
     def __init__(self, project):
         self.project = project
@@ -680,8 +679,6 @@ class Changeish(object):
 
 
 class Change(Changeish):
-    is_reportable = True
-
     def __init__(self, project):
         super(Change, self).__init__(project)
         self.branch = None
@@ -729,8 +726,6 @@ class Change(Changeish):
 
 
 class Ref(Changeish):
-    is_reportable = False
-
     def __init__(self, project):
         super(Ref, self).__init__(project)
         self.ref = None
@@ -767,7 +762,8 @@ class Ref(Changeish):
 
 
 class NullChange(Changeish):
-    is_reportable = False
+    def __repr__(self):
+        return '<NullChange for %s>' % (self.project)
 
     def _id(self):
         return None

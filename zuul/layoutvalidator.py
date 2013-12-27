@@ -55,7 +55,11 @@ class LayoutSchema(object):
                                {'timer': toList(timer_trigger)}))
 
     report_actions = {'gerrit': variable_dict,
-                      'smtp': variable_dict}
+                      'smtp': {'to': str,
+                               'from': str,
+                               'subject': str,
+                               },
+                      }
 
     pipeline = {v.Required('name'): str,
                 v.Required('manager'): manager,
