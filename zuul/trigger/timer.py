@@ -28,11 +28,12 @@ class Timer(object):
         self.apsched = apscheduler.scheduler.Scheduler()
         self.apsched.start()
 
-    def _onTrigger(self, timespec):
+    def _onTrigger(self, pipeline_name, timespec):
         for project in self.sched.layout.projects.values():
             event = TriggerEvent()
             event.type = 'timer'
             event.timespec = timespec
+            event.forced_pipeline = pipeline_name
             event.project_name = project.name
             self.log.debug("Adding event %s" % event)
             self.sched.addEvent(event)
@@ -78,7 +79,8 @@ class Timer(object):
                                               hour=hour,
                                               minute=minute,
                                               second=second,
-                                              args=(timespec,))
+                                              args=(pipeline.name,
+                                                    timespec,))
 
     def getChange(self, number, patchset, refresh=False):
         raise Exception("Timer trigger does not support changes.")
