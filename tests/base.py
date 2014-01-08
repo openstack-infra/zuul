@@ -210,6 +210,21 @@ class FakeChange(object):
                             "owner": {"name": "User Name"},
                             "url": "https://hostname/3"},
                  "restorer": {"name": "User Name"},
+                 "patchSet": self.patchsets[-1],
+                 "reason": ""}
+        return event
+
+    def getChangeAbandonedEvent(self):
+        event = {"type": "change-abandoned",
+                 "change": {"project": self.project,
+                            "branch": self.branch,
+                            "id": "I5459869c07352a31bfb1e7a8cac379cabfcb25af",
+                            "number": str(self.number),
+                            "subject": self.subject,
+                            "owner": {"name": "User Name"},
+                            "url": "https://hostname/3"},
+                 "abandoner": {"name": "User Name"},
+                 "patchSet": self.patchsets[-1],
                  "reason": ""}
         return event
 
@@ -920,7 +935,8 @@ class ZuulTestCase(testtools.TestCase):
 
     def assertFinalState(self):
         # Make sure that the change cache is cleared
-        self.assertEqual(len(self.gerrit._change_cache.keys()), 0)
+        self.assertEqual(len(self.gerrit._change_cache.keys()), 0,
+                         "Change cache should have been cleared")
         # Make sure that git.Repo objects have been garbage collected.
         repos = []
         gc.collect()
@@ -1181,7 +1197,8 @@ class ZuulTestCase(testtools.TestCase):
                 if len(queue.queue) != 0:
                     print 'pipeline %s queue %s contents %s' % (
                         pipeline.name, queue.name, queue.queue)
-                self.assertEqual(len(queue.queue), 0)
+                self.assertEqual(len(queue.queue), 0,
+                                 "Pipelines queues should be empty")
 
     def assertReportedStat(self, key, value=None, kind=None):
         start = time.time()
