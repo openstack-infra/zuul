@@ -16,6 +16,7 @@ import git
 import os
 import logging
 import model
+import threading
 
 
 class ZuulReference(git.Reference):
@@ -131,6 +132,11 @@ class Repo(object):
                                                  self.remote_url))
         repo.remotes.origin.push('%s:%s' % (local, remote))
 
+    def push_url(self, url, refspecs):
+        repo = self.createRepoObject()
+        self.log.debug("Pushing %s to %s" % (refspecs, url))
+        repo.git.push([url] + refspecs)
+
     def update(self):
         repo = self.createRepoObject()
         self.log.debug("Updating repository %s" % self.local_path)
@@ -142,7 +148,7 @@ class Merger(object):
     log = logging.getLogger("zuul.Merger")
 
     def __init__(self, trigger, working_root, push_refs, sshkey, email,
-                 username):
+                 username, replicate_urls):
         self.trigger = trigger
         self.repos = {}
         self.working_root = working_root
@@ -153,6 +159,7 @@ class Merger(object):
             self._makeSSHWrapper(sshkey)
         self.email = email
         self.username = username
+        self.replicate_urls = replicate_urls
 
     def _makeSSHWrapper(self, key):
         name = os.path.join(self.working_root, '.ssh_wrapper')
@@ -219,6 +226,25 @@ class Merger(object):
             return False
         return commit
 
+    def replicateRefspecs(self, refspecs):
+        threads = []
+        for url in self.replicate_urls:
+            t = threading.Thread(target=self._replicate,
+                                 args=(url, refspecs))
+            t.start()
+            threads.append(t)
+        for t in threads:
+            t.join()
+
+    def _replicate(self, url, project_refspecs):
+        try:
+            for project, refspecs in project_refspecs.items():
+                repo = self.getRepo(project)
+                repo.push_url(os.path.join(url, project.name + '.git'),
+                              refspecs)
+        except Exception:
+            self.log.exception("Exception pushing to %s" % url)
+
     def mergeChanges(self, items, target_ref=None):
         # Merge shortcuts:
         # if this is the only change just merge it against its branch.
@@ -257,6 +283,7 @@ class Merger(object):
             return commit
 
         project_branches = []
+        replicate_refspecs = {}
         for i in reversed(items):
             # Here we create all of the necessary zuul refs and potentially
             # push them back to Gerrit.
@@ -276,10 +303,13 @@ class Merger(object):
                     self.log.exception("Unable to set zuul ref %s for "
                                        "change %s" % (zuul_ref, i.change))
                     return False
+            ref = 'refs/zuul/' + i.change.branch + '/' + target_ref
+            refspecs = replicate_refspecs.get(i.change.project, [])
+            refspecs.append('%s:%s' % (ref, ref))
+            replicate_refspecs[i.change.project] = refspecs
             if self.push_refs:
                 # Push the results upstream to the zuul ref after
                 # they are created.
-                ref = 'refs/zuul/' + i.change.branch + '/' + target_ref
                 try:
                     repo.push(ref, ref)
                     complete = self.trigger.waitForRefSha(i.change.project,
@@ -291,5 +321,5 @@ class Merger(object):
                     self.log.error("Ref %s did not show up in repo" % ref)
                     return False
             project_branches.append((i.change.project, i.change.branch))
-
+        self.replicateRefspecs(replicate_refspecs)
         return commit

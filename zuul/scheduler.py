@@ -356,6 +356,11 @@ class Scheduler(threading.Thread):
         else:
             push_refs = False
 
+        replicate_urls = []
+        if self.config.has_section('replication'):
+            for k, v in self.config.items('replication'):
+                replicate_urls.append(v)
+
         if self.config.has_option('gerrit', 'sshkey'):
             sshkey = self.config.get('gerrit', 'sshkey')
         else:
@@ -366,7 +371,8 @@ class Scheduler(threading.Thread):
         # location.
         self.merger = merger.Merger(self.triggers['gerrit'],
                                     merge_root, push_refs,
-                                    sshkey, merge_email, merge_name)
+                                    sshkey, merge_email, merge_name,
+                                    replicate_urls)
         for project in self.layout.projects.values():
             url = self.triggers['gerrit'].getGitUrl(project)
             self.merger.addProject(project, url)
