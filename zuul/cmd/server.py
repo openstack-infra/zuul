@@ -30,11 +30,10 @@ import sys
 import signal
 import traceback
 
-import gear
-
 # No zuul imports here because they pull in paramiko which must not be
 # imported until after the daemonization.
 # https://github.com/paramiko/paramiko/issues/59
+# Similar situation with gear and statsd.
 
 
 def stack_dump_handler(signum, frame):
@@ -149,6 +148,7 @@ class Server(object):
         if child_pid == 0:
             os.close(pipe_write)
             self.setup_logging('gearman_server', 'log_config')
+            import gear
             gear.Server(4730)
             # Keep running until the parent dies:
             pipe_read = os.fdopen(pipe_read)
