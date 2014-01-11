@@ -611,7 +611,10 @@ class Scheduler(threading.Thread):
             pipeline.manager.cancelJobs(item)
             pipeline.manager.dequeueItem(item)
         for item in items_to_enqueue:
-            pipeline.manager.addChange(item.change, quiet=True)
+            pipeline.manager.addChange(
+                item.change,
+                enqueue_time=item.enqueue_time,
+                quiet=True)
         while pipeline.manager.processQueue():
             pass
 
@@ -973,7 +976,7 @@ class BasePipelineManager(object):
                            item.change.project)
             return False
 
-    def addChange(self, change, quiet=False):
+    def addChange(self, change, quiet=False, enqueue_time=None):
         self.log.debug("Considering adding change %s" % change)
         if self.isChangeAlreadyInQueue(change):
             self.log.debug("Change %s is already in queue, ignoring" % change)
@@ -1000,6 +1003,8 @@ class BasePipelineManager(object):
                 if len(self.pipeline.start_actions) > 0:
                     self.reportStart(change)
             item = change_queue.enqueueChange(change)
+            if enqueue_time:
+                item.enqueue_time = enqueue_time
             self.reportStats(item)
             self.enqueueChangesBehind(change, quiet)
         else:

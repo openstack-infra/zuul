@@ -3153,10 +3153,21 @@ class TestScheduler(testtools.TestCase):
 
         self.waitUntilSettled()
 
+        items = self.sched.layout.pipelines['gate'].getAllItems()
+        enqueue_times = {}
+        for item in items:
+            enqueue_times[str(item.change)] = item.enqueue_time
+
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
         r = client.promote(pipeline='gate',
                            change_ids=['2,1', '3,1'])
+
+        # ensure that enqueue times are durable
+        items = self.sched.layout.pipelines['gate'].getAllItems()
+        for item in items:
+            self.assertEqual(
+                enqueue_times[str(item.change)], item.enqueue_time)
 
         self.worker.release('.*-merge')
         self.waitUntilSettled()
