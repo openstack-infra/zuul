@@ -87,8 +87,8 @@ follows:
 **ZUUL_PIPELINE**
   The Zuul pipeline that is building this job
 **ZUUL_URL**
-  The url for the zuul server as configured in zuul.conf.  
-  A test runner may use this URL as the basis for fetching 
+  The url for the zuul server as configured in zuul.conf.
+  A test runner may use this URL as the basis for fetching
   git commits.
 
 The following additional parameters will only be provided for builds
@@ -194,6 +194,30 @@ encoded in JSON format:
 **url** (optional)
   The URL with the status or results of the build.  Will be used in
   the status page and the final report.
+
+To help with debugging builds a worker may send back some optional
+metadata:
+
+**worker_name** (optional)
+  The name of the worker.
+
+**worker_hostname** (optional)
+  The hostname of the worker.
+
+**worker_ips** (optional)
+  A list of IPs for the worker.
+
+**worker_fqdn** (optional)
+  The FQDN of the worker.
+
+**worker_program** (optional)
+  The program name of the worker. For example Jenkins or turbo-hipster.
+
+**worker_version** (optional)
+  The version of the software running the job.
+
+**worker_extra** (optional)
+  A dictionary of any extra metadata you may want to pass along.
 
 It should then immediately send a WORK_STATUS packet with a value of 0
 percent complete.  It may then optionally send subsequent WORK_STATUS

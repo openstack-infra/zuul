@@ -494,12 +494,23 @@ class FakeBuild(threading.Thread):
             'name': self.name,
             'number': self.number,
             'manager': self.worker.worker_id,
+            'worker_name': 'My Worker',
+            'worker_hostname': 'localhost',
+            'worker_ips': ['127.0.0.1', '192.168.1.1'],
+            'worker_fqdn': 'zuul.example.org',
+            'worker_program': 'FakeBuilder',
+            'worker_version': 'v1.1',
+            'worker_extra': {'something': 'else'}
         }
 
+        self.log.debug('Running build %s' % self.unique)
+
         self.job.sendWorkData(json.dumps(data))
+        self.log.debug('Sent WorkData packet with %s' % json.dumps(data))
         self.job.sendWorkStatus(0, 100)
 
         if self.worker.hold_jobs_in_build:
+            self.log.debug('Holding build %s' % self.unique)
             self._wait()
         self.log.debug("Build %s continuing" % self.unique)
 
@@ -3570,3 +3581,41 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(queue.window, 2)
         self.assertEqual(queue.window_floor, 1)
         self.assertEqual(C.data['status'], 'MERGED')
+
+    def test_worker_update_metadata(self):
+        "Test if a worker can send back metadata about itself"
+        self.worker.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.launcher.builds), 1)
+
+        self.log.debug('Current builds:')
+        self.log.debug(self.launcher.builds)
+
+        start = time.time()
+        while True:
+            if time.time() - start > 10:
+                raise Exception("Timeout waiting for gearman server to report "
+                                + "back to the client")
+            build = self.launcher.builds.values()[0]
+            if build.worker.name == "My Worker":
+                break
+            else:
+                time.sleep(0)
+
+        self.log.debug(build)
+        self.assertEqual("My Worker", build.worker.name)
+        self.assertEqual("localhost", build.worker.hostname)
+        self.assertEqual(['127.0.0.1', '192.168.1.1'], build.worker.ips)
+        self.assertEqual("zuul.example.org", build.worker.fqdn)
+        self.assertEqual("FakeBuilder", build.worker.program)
+        self.assertEqual("v1.1", build.worker.version)
+        self.assertEqual({'something': 'else'}, build.worker.extra)
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
