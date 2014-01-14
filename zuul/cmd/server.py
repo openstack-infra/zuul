@@ -66,9 +66,14 @@ class Server(object):
                             help='validate layout file syntax (optionally '
                             'providing the path to a file with a list of '
                             'available job names)')
-        parser.add_argument('--version', dest='version', action='store_true',
+        parser.add_argument('--version', dest='version', action='version',
+                            version=self._get_version(),
                             help='show zuul version')
         self.args = parser.parse_args()
+
+    def _get_version(self):
+        from zuul.version import version_info as zuul_version_info
+        return "Zuul version: %s" % zuul_version_info.version_string()
 
     def read_config(self):
         self.config = ConfigParser.ConfigParser()
@@ -226,11 +231,6 @@ class Server(object):
 def main():
     server = Server()
     server.parse_arguments()
-
-    if server.args.version:
-        from zuul.version import version_info as zuul_version_info
-        print "Zuul version: %s" % zuul_version_info.version_string()
-        sys.exit(0)
 
     server.read_config()
 
