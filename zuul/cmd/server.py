@@ -184,6 +184,7 @@ class Server(object):
             self.start_gear_server()
 
         self.setup_logging('zuul', 'log_config')
+        self.log = logging.getLogger("zuul.Server")
 
         self.sched = zuul.scheduler.Scheduler()
 
@@ -210,10 +211,13 @@ class Server(object):
         self.sched.registerReporter(gerrit_reporter)
         self.sched.registerReporter(smtp_reporter)
 
+        self.log.info('Starting scheduler')
         self.sched.start()
         self.sched.reconfigure(self.config)
         self.sched.resume()
+        self.log.info('Starting Webapp')
         webapp.start()
+        self.log.info('Starting RPC')
         rpc.start()
 
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
