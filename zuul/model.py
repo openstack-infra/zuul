@@ -59,6 +59,12 @@ class Pipeline(object):
         self.start_actions = None
         self.success_actions = None
         self.failure_actions = None
+        self.window = None
+        self.window_floor = None
+        self.window_increase_type = None
+        self.window_increase_factor = None
+        self.window_decrease_type = None
+        self.window_decrease_factor = None
 
     def __repr__(self):
         return '<Pipeline %s>' % self.name
@@ -375,13 +381,21 @@ class ChangeQueue(object):
     a queue shared by interrelated projects foo and bar, and a second
     queue for independent project baz.  Pipelines have one or more
     PipelineQueues."""
-    def __init__(self, pipeline, dependent=True):
+    def __init__(self, pipeline, dependent=True, window=0, window_floor=1,
+                 window_increase_type='linear', window_increase_factor=1,
+                 window_decrease_type='exponential', window_decrease_factor=2):
         self.pipeline = pipeline
         self.name = ''
         self.projects = []
         self._jobs = set()
         self.queue = []
         self.dependent = dependent
+        self.window = window
+        self.window_floor = window_floor
+        self.window_increase_type = window_increase_type
+        self.window_increase_factor = window_increase_factor
+        self.window_decrease_type = window_decrease_type
+        self.window_decrease_factor = window_decrease_factor
 
     def __repr__(self):
         return '<ChangeQueue %s: %s>' % (self.pipeline.name, self.name)
@@ -398,7 +412,7 @@ class ChangeQueue(object):
             self._jobs |= set(self.pipeline.getJobTree(project).getJobs())
 
     def enqueueChange(self, change):
-        item = QueueItem(self.pipeline, change)
+        item = QueueItem(self, self.pipeline, change)
         self.enqueueItem(item)
         item.enqueue_time = time.time()
         return item
@@ -444,6 +458,32 @@ class ChangeQueue(object):
     def mergeChangeQueue(self, other):
         for project in other.projects:
             self.addProject(project)
+        self.window = min(self.window, other.window)
+        # TODO merge semantics
+
+    def getActionableItems(self):
+        if self.dependent and self.window:
+            return self.queue[:self.window]
+        else:
+            return self.queue[:]
+
+    def increaseWindowSize(self):
+        if self.dependent:
+            if self.window_increase_type == 'linear':
+                self.window += self.window_increase_factor
+            elif self.window_increase_type == 'exponential':
+                self.window *= self.window_increase_factor
+
+    def decreaseWindowSize(self):
+        if self.dependent:
+            if self.window_decrease_type == 'linear':
+                self.window = max(
+                    self.window_floor,
+                    self.window - self.window_decrease_factor)
+            elif self.window_decrease_type == 'exponential':
+                self.window = max(
+                    self.window_floor,
+                    self.window / self.window_decrease_factor)
 
 
 class Project(object):
@@ -619,7 +659,8 @@ class BuildSet(object):
 class QueueItem(object):
     """A changish inside of a Pipeline queue"""
 
-    def __init__(self, pipeline, change):
+    def __init__(self, change_queue, pipeline, change):
+        self.change_queue = change_queue
         self.pipeline = pipeline
         self.change = change  # a changeish
         self.build_sets = []

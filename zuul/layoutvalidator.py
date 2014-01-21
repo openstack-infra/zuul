@@ -60,6 +60,10 @@ class LayoutSchema(object):
                                'subject': str,
                                },
                       }
+    window = v.All(int, v.Range(min=1))
+    window_floor = v.All(int, v.Range(min=1))
+    window_type = v.Any('linear', 'exponential')
+    window_factor = v.All(int, v.Range(min=1))
 
     pipeline = {v.Required('name'): str,
                 v.Required('manager'): manager,
@@ -72,6 +76,12 @@ class LayoutSchema(object):
                 'success': report_actions,
                 'failure': report_actions,
                 'start': report_actions,
+                'window': window,
+                'window-floor': window_floor,
+                'window-increase-type': window_type,
+                'window-increase-factor': window_factor,
+                'window-decrease-type': window_type,
+                'window-decrease-factor': window_factor,
                 }
     pipelines = [pipeline]
 

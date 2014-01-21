@@ -200,6 +200,17 @@ class Scheduler(threading.Thread):
             pipeline.success_actions = action_reporters['success']
             pipeline.failure_actions = action_reporters['failure']
 
+            pipeline.window = conf_pipeline.get('window', 20)
+            pipeline.window_floor = conf_pipeline.get('window-floor', 3)
+            pipeline.window_increase_type = conf_pipeline.get(
+                'window-increase-type', 'linear')
+            pipeline.window_increase_factor = conf_pipeline.get(
+                'window-increase-factor', 1)
+            pipeline.window_decrease_type = conf_pipeline.get(
+                'window-decrease-type', 'exponential')
+            pipeline.window_decrease_factor = conf_pipeline.get(
+                'window-decrease-factor', 2)
+
             manager = globals()[conf_pipeline['manager']](self, pipeline)
             pipeline.setManager(manager)
             layout.pipelines[conf_pipeline['name']] = pipeline
@@ -1172,7 +1183,7 @@ class BasePipelineManager(object):
         for queue in self.pipeline.queues:
             queue_changed = False
             nnfi = None  # Nearest non-failing item
-            for item in queue.queue[:]:
+            for item in queue.getActionableItems():
                 item_changed, nnfi = self._processOneItem(item, nnfi)
                 if item_changed:
                     queue_changed = True
@@ -1247,7 +1258,16 @@ class BasePipelineManager(object):
             if not (succeeded and merged):
                 self.log.debug("Reported change %s failed tests or failed "
                                "to merge" % (item.change))
+                item.change_queue.decreaseWindowSize()
+                self.log.debug("%s window size decreased to %s" %
+                               (item.change_queue,
+                                item.change_queue.window))
                 raise MergeFailure("Change %s failed to merge" % item.change)
+            else:
+                item.change_queue.increaseWindowSize()
+                self.log.debug("%s window size increased to %s" %
+                               (item.change_queue,
+                                item.change_queue.window))
 
     def _reportItem(self, item):
         if item.reported:
@@ -1504,7 +1524,14 @@ class DependentPipelineManager(BasePipelineManager):
         change_queues = []
 
         for project in self.pipeline.getProjects():
-            change_queue = ChangeQueue(self.pipeline)
+            change_queue = ChangeQueue(
+                self.pipeline,
+                window=self.pipeline.window,
+                window_floor=self.pipeline.window_floor,
+                window_increase_type=self.pipeline.window_increase_type,
+                window_increase_factor=self.pipeline.window_increase_factor,
+                window_decrease_type=self.pipeline.window_decrease_type,
+                window_decrease_factor=self.pipeline.window_decrease_factor)
             change_queue.addProject(project)
             change_queues.append(change_queue)
             self.log.debug("Created queue: %s" % change_queue)
