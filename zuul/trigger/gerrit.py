@@ -361,6 +361,8 @@ class Gerrit(object):
                 if not dep.is_merged and dep.is_current_patchset:
                     change.needed_by_changes.append(dep)
 
+        change.approvals = data['currentPatchSet'].get('approvals', [])
+
         return change
 
     def getGitUrl(self, project):

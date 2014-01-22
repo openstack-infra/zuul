@@ -348,6 +348,35 @@ explanation of each of the parameters::
     containing 'retrigger' somewhere in the comment text are added to a
     change.
 
+    *require-approval*
+    This may be used for any event.  It requires that a certain kind
+    of approval be present for the current patchset of the change (the
+    approval could be added by the event in question).  It takes
+    several sub-parameters, all of which are optional and are combined
+    together so that there must be an approval matching all specified
+    requirements.
+
+      *username*
+      If present, an approval from this username is required.
+
+      *email-filter*
+      If present, an approval with this email address is required.  It
+      is treated as a regular expression as above.
+
+      *older-than*
+      If present, the approval must be older than this amount of time
+      to match.  Provide a time interval as a number with a suffix of
+      "w" (weeks), "d" (days), "h" (hours), "m" (minutes), "s"
+      (seconds).  Example "48h" or "2d".
+
+      *newer-than*
+      If present, the approval must be newer than this amount of time
+      to match.  Same format as "older-than".
+
+      Any other field is interpreted as a review category and value
+      pair.  For example "verified: 1" would require that the approval
+      be for a +1 vote in the "Verified" column.
+
   **timer**
     This trigger will run based on a cron-style time specification.
     It will enqueue an event into its pipeline for every project

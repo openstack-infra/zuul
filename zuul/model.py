@@ -43,6 +43,20 @@ PRECEDENCE_MAP = {
 }
 
 
+def time_to_seconds(s):
+    if s.endswith('s'):
+        return int(s[:-1])
+    if s.endswith('m'):
+        return int(s[:-1]) * 60
+    if s.endswith('h'):
+        return int(s[:-1]) * 60 * 60
+    if s.endswith('d'):
+        return int(s[:-1]) * 24 * 60 * 60
+    if s.endswith('w'):
+        return int(s[:-1]) * 7 * 24 * 60 * 60
+    raise Exception("Unable to parse time value: %s" % s)
+
+
 class Pipeline(object):
     """A top-level pipeline such as check, gate, post, etc."""
     def __init__(self, name):
@@ -735,6 +749,7 @@ class Change(Changeish):
         self.can_merge = False
         self.is_merged = False
         self.failed_to_merge = False
+        self.approvals = []
 
     def _id(self):
         return '%s,%s' % (self.number, self.patchset)
@@ -873,9 +888,9 @@ class TriggerEvent(object):
 
 
 class EventFilter(object):
-    def __init__(self, types=[], branches=[], refs=[], approvals={},
+    def __init__(self, types=[], branches=[], refs=[], event_approvals={},
                  comment_filters=[], email_filters=[], username_filters=[],
-                 timespecs=[]):
+                 timespecs=[], require_approvals=[]):
         self._types = types
         self._branches = branches
         self._refs = refs
@@ -888,8 +903,17 @@ class EventFilter(object):
         self.comment_filters = [re.compile(x) for x in comment_filters]
         self.email_filters = [re.compile(x) for x in email_filters]
         self.username_filters = [re.compile(x) for x in username_filters]
-        self.approvals = approvals
+        self.event_approvals = event_approvals
+        self.require_approvals = require_approvals
         self.timespecs = timespecs
+
+        for a in self.require_approvals:
+            if 'older-than' in a:
+                a['older-than'] = time_to_seconds(a['older-than'])
+            if 'newer-than' in a:
+                a['newer-than'] = time_to_seconds(a['newer-than'])
+            if 'email-filter' in a:
+                a['email-filter'] = re.compile(a['email-filter'])
 
     def __repr__(self):
         ret = '<EventFilter'
@@ -900,9 +924,9 @@ class EventFilter(object):
             ret += ' branches: %s' % ', '.join(self._branches)
         if self._refs:
             ret += ' refs: %s' % ', '.join(self._refs)
-        if self.approvals:
-            ret += ' approvals: %s' % ', '.join(
-                ['%s:%s' % a for a in self.approvals.items()])
+        if self.event_approvals:
+            ret += ' event_approvals: %s' % ', '.join(
+                ['%s:%s' % a for a in self.event_approvals.items()])
         if self._comment_filters:
             ret += ' comment_filters: %s' % ', '.join(self._comment_filters)
         if self._email_filters:
@@ -915,7 +939,7 @@ class EventFilter(object):
 
         return ret
 
-    def matches(self, event):
+    def matches(self, event, change):
         def normalizeCategory(name):
             name = name.lower()
             return re.sub(' ', '-', name)
@@ -977,12 +1001,46 @@ class EventFilter(object):
                 return False
 
         # approvals are ANDed
-        for category, value in self.approvals.items():
+        for category, value in self.event_approvals.items():
             matches_approval = False
             for eapproval in event.approvals:
                 if (normalizeCategory(eapproval['description']) == category and
                     int(eapproval['value']) == int(value)):
                     matches_approval = True
+            if not matches_approval:
+                return False
+
+        if self.require_approvals and not change.approvals:
+            # A change with no approvals can not match
+            return False
+
+        now = time.time()
+        for rapproval in self.require_approvals:
+            matches_approval = False
+            for approval in change.approvals:
+                found_approval = True
+                for k, v in rapproval.items():
+                    if k == 'username':
+                        if (approval['username'] != v):
+                            found_approval = False
+                    elif k == 'email-filter':
+                        if (not v.search(approval['email'])):
+                            found_approval = False
+                    elif k == 'newer-than':
+                        t = now - v
+                        if (approval['grantedOn'] < t):
+                            found_approval = False
+                    elif k == 'older-than':
+                        t = now - v
+                        if (approval['grantedOn'] >= t):
+                            found_approval = False
+                    else:
+                        if (normalizeCategory(approval['description']) != k or
+                            int(approval['value']) != v):
+                            found_approval = False
+                if found_approval:
+                    matches_approval = True
+                    break
             if not matches_approval:
                 return False
 

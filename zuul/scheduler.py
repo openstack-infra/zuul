@@ -227,13 +227,15 @@ class Scheduler(threading.Thread):
                     f = EventFilter(types=toList(trigger['event']),
                                     branches=toList(trigger.get('branch')),
                                     refs=toList(trigger.get('ref')),
-                                    approvals=approvals,
+                                    event_approvals=approvals,
                                     comment_filters=
                                     toList(trigger.get('comment_filter')),
                                     email_filters=
                                     toList(trigger.get('email_filter')),
                                     username_filters=
-                                    toList(trigger.get('username_filter')))
+                                    toList(trigger.get('username_filter')),
+                                    require_approvals=
+                                    toList(trigger.get('require-approval')))
                     manager.event_filters.append(f)
             elif 'timer' in conf_pipeline['trigger']:
                 pipeline.trigger = self.triggers['timer']
@@ -723,7 +725,7 @@ class Scheduler(threading.Thread):
                                      self.triggers.get(event.trigger_name))
             if event.type == 'patchset-created':
                 pipeline.manager.removeOldVersionsOfChange(change)
-            if pipeline.manager.eventMatches(event):
+            if pipeline.manager.eventMatches(event, change):
                 self.log.info("Adding %s, %s to %s" %
                               (project, change, pipeline))
                 pipeline.manager.addChange(change)
@@ -881,14 +883,14 @@ class BasePipelineManager(object):
             allow_needs.update(action_reporter.getSubmitAllowNeeds())
         return allow_needs
 
-    def eventMatches(self, event):
+    def eventMatches(self, event, change):
         if event.forced_pipeline:
             if event.forced_pipeline == self.pipeline.name:
                 return True
             else:
                 return False
         for ef in self.event_filters:
-            if ef.matches(event):
+            if ef.matches(event, change):
                 return True
         return False
 

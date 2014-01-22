@@ -35,6 +35,12 @@ class LayoutSchema(object):
 
     variable_dict = v.Schema({}, extra=True)
 
+    require_approval = v.Schema({'username': str,
+                                 'email-filter': str,
+                                 'older-than': str,
+                                 'newer-than': str,
+                                 }, extra=True)
+
     gerrit_trigger = {v.Required('event'):
                       toList(v.Any('patchset-created',
                                    'change-abandoned',
@@ -48,6 +54,7 @@ class LayoutSchema(object):
                       'branch': toList(str),
                       'ref': toList(str),
                       'approval': toList(variable_dict),
+                      'require-approval': toList(require_approval),
                       }
 
     timer_trigger = {v.Required('time'): str}

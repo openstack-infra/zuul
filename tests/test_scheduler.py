@@ -214,10 +214,19 @@ class FakeChange(object):
                  "reason": ""}
         return event
 
-    def addApproval(self, category, value):
+    def addApproval(self, category, value, username='jenkins',
+                    granted_on=None):
+        if not granted_on:
+            granted_on = time.time()
         approval = {'description': self.categories[category][0],
                     'type': category,
-                    'value': str(value)}
+                    'value': str(value),
+                    'username': username,
+                    'email': username + '@example.com',
+                    'grantedOn': int(granted_on)}
+        for i, x in enumerate(self.patchsets[-1]['approvals'][:]):
+            if x['username'] == username and x['type'] == category:
+                del self.patchsets[-1]['approvals'][i]
         self.patchsets[-1]['approvals'].append(approval)
         event = {'approvals': [approval],
                  'author': {'email': 'user@example.com',
@@ -2657,6 +2666,95 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(C.reported, 2)
         self.assertEqual(D.data['status'], 'MERGED')
         self.assertEqual(D.reported, 2)
+
+    def test_required_approval_check_and_gate(self):
+        "Test required-approval triggers both check and gate"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-require-approval.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        # Add a too-old +1
+        A.addApproval('VRFY', 1, granted_on=time.time() - 72 * 60 * 60)
+
+        aprv = A.addApproval('APRV', 1)
+        self.fake_gerrit.addEvent(aprv)
+        self.waitUntilSettled()
+        # Should have run a check job
+        self.assertEqual(len(self.history), 1)
+        self.assertEqual(self.history[0].name, 'project-check')
+
+        # Report the result of that check job (overrides previous vrfy)
+        # Skynet alert: this should trigger a gate job now that
+        # all reqs are met
+        self.fake_gerrit.addEvent(A.addApproval('VRFY', 1))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 2)
+        self.assertEqual(self.history[1].name, 'project-gate')
+
+    def test_required_approval_newer(self):
+        "Test required-approval newer trigger parameter"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-require-approval.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        aprv = A.addApproval('APRV', 1)
+        self.fake_gerrit.addEvent(aprv)
+        self.waitUntilSettled()
+        # No +1 from Jenkins so should not be enqueued
+        self.assertEqual(len(self.history), 0)
+
+        # Add a too-old +1, should trigger check but not gate
+        A.addApproval('VRFY', 1, granted_on=time.time() - 72 * 60 * 60)
+        self.fake_gerrit.addEvent(aprv)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+        self.assertEqual(self.history[0].name, 'project-check')
+
+        # Add a recent +1
+        self.fake_gerrit.addEvent(A.addApproval('VRFY', 1))
+        self.fake_gerrit.addEvent(aprv)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 2)
+        self.assertEqual(self.history[1].name, 'project-gate')
+
+    def test_required_approval_older(self):
+        "Test required-approval older trigger parameter"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-require-approval.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        crvw = A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(crvw)
+        self.waitUntilSettled()
+        # No +1 from Jenkins so should not be enqueued
+        self.assertEqual(len(self.history), 0)
+
+        # Add an old +1 and trigger check with a comment
+        A.addApproval('VRFY', 1, granted_on=time.time() - 72 * 60 * 60)
+        self.fake_gerrit.addEvent(crvw)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+        self.assertEqual(self.history[0].name, 'project-check')
+
+        # Add a recent +1 and make sure nothing changes
+        A.addApproval('VRFY', 1)
+        self.fake_gerrit.addEvent(crvw)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+
+        # The last thing we did was query a change then do nothing
+        # with a pipeline, so it will be in the cache; clean it up so
+        # it does not fail the test.
+        for pipeline in self.sched.layout.pipelines.values():
+            pipeline.trigger.maintainCache([])
 
     def test_rerun_on_error(self):
         "Test that if a worker fails to run a job, it is run again"
