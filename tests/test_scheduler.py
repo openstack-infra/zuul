@@ -30,6 +30,7 @@ import shutil
 import socket
 import string
 import subprocess
+import swiftclient
 import threading
 import time
 import urllib
@@ -47,6 +48,7 @@ import zuul.webapp
 import zuul.rpclistener
 import zuul.rpcclient
 import zuul.launcher.gearman
+import zuul.lib.swift
 import zuul.merger.server
 import zuul.merger.client
 import zuul.reporter.gerrit
@@ -743,6 +745,18 @@ class FakeSMTP(object):
         return True
 
 
+class FakeSwiftClientConnection(swiftclient.client.Connection):
+    def post_account(self, headers):
+        # Do nothing
+        pass
+
+    def get_auth(self):
+        # Returns endpoint and (unused) auth token
+        endpoint = os.path.join('https://storage.example.org', 'V1',
+                                'AUTH_account')
+        return endpoint, ''
+
+
 class TestScheduler(testtools.TestCase):
     log = logging.getLogger("zuul.test")
 
@@ -823,12 +837,18 @@ class TestScheduler(testtools.TestCase):
 
         self.sched = zuul.scheduler.Scheduler()
 
+        self.useFixture(fixtures.MonkeyPatch('swiftclient.client.Connection',
+                                             FakeSwiftClientConnection))
+        self.swift = zuul.lib.swift.Swift(self.config)
+
         def URLOpenerFactory(*args, **kw):
             args = [self.fake_gerrit] + list(args)
             return FakeURLOpener(self.upstream_root, *args, **kw)
 
         urllib2.urlopen = URLOpenerFactory
-        self.launcher = zuul.launcher.gearman.Gearman(self.config, self.sched)
+
+        self.launcher = zuul.launcher.gearman.Gearman(self.config, self.sched,
+                                                      self.swift)
         self.merge_client = zuul.merger.client.MergeClient(
             self.config, self.sched)
 
@@ -3810,3 +3830,48 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(1, len(self.smtp_messages))
         self.assertEqual('The merge failed! For more information...',
                          self.smtp_messages[0]['body'])
+
+    def test_swift_instructions(self):
+        "Test that the correct swift instructions are sent to the workers"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-swift.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+
+        self.worker.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(
+            "https://storage.example.org/V1/AUTH_account/merge_logs/1/1/1/"
+            "gate/test-merge/",
+            self.builds[0].parameters['SWIFT_logs_URL'][:-32])
+        self.assertEqual(5,
+                         len(self.builds[0].parameters['SWIFT_logs_HMAC_BODY'].
+                             split('\n')))
+        self.assertIn('SWIFT_logs_SIGNATURE', self.builds[0].parameters)
+
+        self.assertEqual(
+            "https://storage.example.org/V1/AUTH_account/logs/1/1/1/"
+            "gate/test-test/",
+            self.builds[1].parameters['SWIFT_logs_URL'][:-32])
+        self.assertEqual(5,
+                         len(self.builds[1].parameters['SWIFT_logs_HMAC_BODY'].
+                             split('\n')))
+        self.assertIn('SWIFT_logs_SIGNATURE', self.builds[1].parameters)
+
+        self.assertEqual(
+            "https://storage.example.org/V1/AUTH_account/stash/1/1/1/"
+            "gate/test-test/",
+            self.builds[1].parameters['SWIFT_MOSTLY_URL'][:-32])
+        self.assertEqual(5,
+                         len(self.builds[1].
+                             parameters['SWIFT_MOSTLY_HMAC_BODY'].split('\n')))
+        self.assertIn('SWIFT_MOSTLY_SIGNATURE', self.builds[1].parameters)
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()

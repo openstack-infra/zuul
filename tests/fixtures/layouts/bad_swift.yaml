@@ -1,0 +1,29 @@
+pipelines:
+  - name: check
+    manager: IndependentPipelineManager
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+jobs:
+  - name: ^.*$
+    swift:
+      - name: logs
+  - name: ^.*-merge$
+    swift:
+        container: merge_assets
+    failure-message: Unable to merge change
+  - name: test-test
+    swift:
+
+projects:
+  - name: test-org/test
+    check:
+      - test-merge
+      - test-test

@@ -23,6 +23,15 @@ git_dir=/var/lib/zuul/git
 ;git_user_name=zuul
 zuul_url=http://zuul.example.com/p
 
+[swift]
+authurl=https://identity.api.example.org/v2.0/
+user=username
+key=password
+
+default_container=logs
+region_name=EXP
+logserver_prefix=http://logs.example.org/server.app/
+
 [smtp]
 server=localhost
 port=25

@@ -347,6 +347,10 @@ class Scheduler(threading.Thread):
             if files:
                 job._files = files
                 job.files = [re.compile(x) for x in files]
+            swift = toList(config_job.get('swift'))
+            if swift:
+                for s in swift:
+                    job.swift[s['name']] = s
 
         def add_jobs(job_tree, config_jobs):
             for job in config_jobs:

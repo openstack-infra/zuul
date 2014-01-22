@@ -16,6 +16,7 @@ import gear
 import inspect
 import json
 import logging
+import os
 import time
 import threading
 from uuid import uuid4
@@ -151,8 +152,10 @@ class Gearman(object):
     log = logging.getLogger("zuul.Gearman")
     negative_function_cache_ttl = 5
 
-    def __init__(self, config, sched):
+    def __init__(self, config, sched, swift):
+        self.config = config
         self.sched = sched
+        self.swift = swift
         self.builds = {}
         self.meta_jobs = {}  # A list of meta-jobs like stop or describe
 
@@ -215,6 +218,50 @@ class Gearman(object):
         self.log.debug("Function %s is not registered" % name)
         return False
 
+    def updateBuildParams(self, job, item, params):
+        """Allow the job to modify and add build parameters"""
+
+        # NOTE(jhesketh): The params need to stay in a key=value data pair
+        # as workers cannot necessarily handle lists.
+
+        if job.swift and self.swift.connection:
+
+            for name, s in job.swift.items():
+                swift_instructions = {}
+                s_config = {}
+                s_config.update((k, v.format(item=item, job=job,
+                                             change=item.change))
+                                for k, v in s.items())
+
+                (swift_instructions['URL'],
+                 swift_instructions['HMAC_BODY'],
+                 swift_instructions['SIGNATURE']) = \
+                    self.swift.generate_form_post_middleware_params(
+                        params['LOG_PATH'], **s_config)
+
+                if 'logserver_prefix' in s_config:
+                    swift_instructions['LOGSERVER_PREFIX'] = \
+                        s_config['logserver_prefix']
+                elif self.config.has_option('swift',
+                                            'default_logserver_prefix'):
+                    swift_instructions['LOGSERVER_PREFIX'] = \
+                        s_config['logserver_prefix']
+
+                # Create a set of zuul instructions for each instruction-set
+                # given  in the form of NAME_PARAMETER=VALUE
+                for key, value in swift_instructions.items():
+                    params['_'.join(['SWIFT', name, key])] = value
+
+        if callable(job.parameter_function):
+            pargs = inspect.getargspec(job.parameter_function)
+            if len(pargs.args) == 2:
+                job.parameter_function(item, params)
+            else:
+                job.parameter_function(item, job, params)
+            self.log.debug("Custom parameter function used for job %s, "
+                           "change: %s, params: %s" % (job, item.change,
+                                                       params))
+
     def launch(self, job, item, pipeline, dependent_items=[]):
         self.log.info("Launch job %s for change %s with dependent changes %s" %
                       (job, item.change,
@@ -252,6 +299,16 @@ class Gearman(object):
             params['ZUUL_REF'] = item.change.ref
             params['ZUUL_COMMIT'] = item.change.newrev
 
+        # The destination_path is a unqiue path for this build request
+        # and generally where the logs are expected to be placed
+        destination_path = os.path.join(item.change.getBasePath(),
+                                        pipeline.name, job.name, uuid)
+        params['BASE_LOG_PATH'] = item.change.getBasePath()
+        params['LOG_PATH'] = destination_path
+
+        # Allow the job to update the params
+        self.updateBuildParams(job, item, params)
+
         # This is what we should be heading toward for parameters:
 
         # required:
@@ -272,16 +329,6 @@ class Gearman(object):
         # optional (ref updated only):
         # ZUUL_OLDREV
         # ZUUL_NEWREV
-
-        if callable(job.parameter_function):
-            pargs = inspect.getargspec(job.parameter_function)
-            if len(pargs.args) == 2:
-                job.parameter_function(item, params)
-            else:
-                job.parameter_function(item, job, params)
-            self.log.debug("Custom parameter function used for job %s, "
-                           "change: %s, params: %s" % (job, item.change,
-                                                       params))
 
         if 'ZUUL_NODE' in params:
             name = "build:%s:%s" % (job.name, params['ZUUL_NODE'])

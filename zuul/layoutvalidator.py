@@ -99,6 +99,14 @@ class LayoutSchema(object):
     project_template = {v.Required('name'): str}
     project_templates = [project_template]
 
+    swift = {v.Required('name'): str,
+             'container': str,
+             'expiry': int,
+             'max_file_size': int,
+             'max_file_count': int,
+             'logserver_prefix': int,
+             }
+
     job = {v.Required('name'): str,
            'failure-message': str,
            'success-message': str,
@@ -109,6 +117,7 @@ class LayoutSchema(object):
            'parameter-function': str,
            'branch': toList(str),
            'files': toList(str),
+           'swift': toList(swift),
            }
     jobs = [job]
 

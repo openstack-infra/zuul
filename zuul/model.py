@@ -537,6 +537,7 @@ class Job(object):
         self._branches = []
         self.files = []
         self._files = []
+        self.swift = {}
 
     def __str__(self):
         return self.name
@@ -561,6 +562,8 @@ class Job(object):
         if other.files:
             self.files = other.files[:]
             self._files = other._files[:]
+        if other.swift:
+            self.swift.update(other.swift)
         self.hold_following_changes = other.hold_following_changes
         self.voting = other.voting
 
@@ -762,6 +765,16 @@ class Changeish(object):
 
     def __init__(self, project):
         self.project = project
+
+    def getBasePath(self):
+        base_path = ''
+        if hasattr(self, 'refspec'):
+            base_path = "%s/%s/%s" % (
+                self.number[-2:], self.number, self.patchset)
+        elif hasattr(self, 'ref'):
+            base_path = "%s/%s" % (self.newrev[:2], self.newrev)
+
+        return base_path
 
     def equals(self, other):
         raise NotImplementedError()
