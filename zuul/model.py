@@ -874,17 +874,20 @@ class TriggerEvent(object):
 
 class EventFilter(object):
     def __init__(self, types=[], branches=[], refs=[], approvals={},
-                 comment_filters=[], email_filters=[], timespecs=[]):
+                 comment_filters=[], email_filters=[], username_filters=[],
+                 timespecs=[]):
         self._types = types
         self._branches = branches
         self._refs = refs
         self._comment_filters = comment_filters
         self._email_filters = email_filters
+        self._username_filters = username_filters
         self.types = [re.compile(x) for x in types]
         self.branches = [re.compile(x) for x in branches]
         self.refs = [re.compile(x) for x in refs]
         self.comment_filters = [re.compile(x) for x in comment_filters]
         self.email_filters = [re.compile(x) for x in email_filters]
+        self.username_filters = [re.compile(x) for x in username_filters]
         self.approvals = approvals
         self.timespecs = timespecs
 
@@ -904,6 +907,8 @@ class EventFilter(object):
             ret += ' comment_filters: %s' % ', '.join(self._comment_filters)
         if self._email_filters:
             ret += ' email_filters: %s' % ', '.join(self._email_filters)
+        if self._username_filters:
+            ret += ' username_filters: %s' % ', '.join(self._username_filters)
         if self.timespecs:
             ret += ' timespecs: %s' % ', '.join(self.timespecs)
         ret += '>'
@@ -959,6 +964,16 @@ class EventFilter(object):
                     email_filter.search(account_email)):
                     matches_email_filter = True
             if self.email_filters and not matches_email_filter:
+                return False
+
+            # username_filters are ORed
+            account_username = event.account.get('username')
+            matches_username_filter = False
+            for username_filter in self.username_filters:
+                if (account_username is not None and
+                    username_filter.search(account_username)):
+                    matches_username_filter = True
+            if self.username_filters and not matches_username_filter:
                 return False
 
         # approvals are ANDed

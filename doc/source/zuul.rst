@@ -333,6 +333,13 @@ explanation of each of the parameters::
     greedy matchers and to escapes dots!
     Example: ``email_filter: ^.*?@example\.org$``.
 
+    *username_filter*
+    This is used for any event.  It takes a regex applied on the performer
+    username, i.e. Gerrit account name.  If you want to specify several
+    username filters, you must use a YAML list.  Make sure to use non greedy
+    matchers and to escapes dots!
+    Example: ``username_filter: ^jenkins$``.
+
     *comment_filter*
     This is only used for ``comment-added`` events.  It accepts a list of
     regexes that are searched for in the comment string. If any of these

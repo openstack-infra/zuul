@@ -231,7 +231,9 @@ class Scheduler(threading.Thread):
                                     comment_filters=
                                     toList(trigger.get('comment_filter')),
                                     email_filters=
-                                    toList(trigger.get('email_filter')))
+                                    toList(trigger.get('email_filter')),
+                                    username_filters=
+                                    toList(trigger.get('username_filter')))
                     manager.event_filters.append(f)
             elif 'timer' in conf_pipeline['trigger']:
                 pipeline.trigger = self.triggers['timer']
