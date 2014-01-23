@@ -2781,8 +2781,13 @@ class TestScheduler(testtools.TestCase):
         status_jobs = set()
         for p in data['pipelines']:
             for q in p['change_queues']:
+                if q['dependent']:
+                    self.assertEqual(q['window'], 20)
+                else:
+                    self.assertEqual(q['window'], 0)
                 for head in q['heads']:
                     for change in head:
+                        self.assertTrue(change['active'])
                         self.assertEqual(change['id'], '1,1')
                         for job in change['jobs']:
                             status_jobs.add(job['name'])
