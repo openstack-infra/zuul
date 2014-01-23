@@ -147,14 +147,11 @@ class Repo(object):
 class Merger(object):
     log = logging.getLogger("zuul.Merger")
 
-    def __init__(self, trigger, working_root, push_refs, sshkey, email,
-                 username, replicate_urls):
-        self.trigger = trigger
+    def __init__(self, working_root, sshkey, email, username, replicate_urls):
         self.repos = {}
         self.working_root = working_root
         if not os.path.exists(working_root):
             os.makedirs(working_root)
-        self.push_refs = push_refs
         if sshkey:
             self._makeSSHWrapper(sshkey)
         self.email = email
@@ -307,19 +304,6 @@ class Merger(object):
             refspecs = replicate_refspecs.get(i.change.project, [])
             refspecs.append('%s:%s' % (ref, ref))
             replicate_refspecs[i.change.project] = refspecs
-            if self.push_refs:
-                # Push the results upstream to the zuul ref after
-                # they are created.
-                try:
-                    repo.push(ref, ref)
-                    complete = self.trigger.waitForRefSha(i.change.project,
-                                                          ref)
-                except:
-                    self.log.exception("Unable to push %s" % ref)
-                    return False
-                if not complete:
-                    self.log.error("Ref %s did not show up in repo" % ref)
-                    return False
             project_branches.append((i.change.project, i.change.branch))
         self.replicateRefspecs(replicate_refspecs)
         return commit
