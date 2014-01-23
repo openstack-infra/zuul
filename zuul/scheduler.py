@@ -1149,10 +1149,11 @@ class BasePipelineManager(object):
                 change_queue.moveItem(item, nnfi)
                 changed = True
                 self.cancelJobs(item)
-            self.prepareRef(item)
-            if item.current_build_set.unable_to_merge:
-                failing_reasons.append("it has a merge conflict")
-        if self.launchJobs(item):
+            if change_queue.isActionable(item):
+                self.prepareRef(item)
+                if item.current_build_set.unable_to_merge:
+                    failing_reasons.append("it has a merge conflict")
+        if change_queue.isActionable(item) and self.launchJobs(item):
             changed = True
         if self.pipeline.didAnyJobFail(item):
             failing_reasons.append("at least one job failed")
@@ -1183,7 +1184,7 @@ class BasePipelineManager(object):
         for queue in self.pipeline.queues:
             queue_changed = False
             nnfi = None  # Nearest non-failing item
-            for item in queue.getActionableItems():
+            for item in queue.queue[:]:
                 item_changed, nnfi = self._processOneItem(item, nnfi)
                 if item_changed:
                     queue_changed = True

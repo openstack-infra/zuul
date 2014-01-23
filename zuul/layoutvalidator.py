@@ -60,7 +60,7 @@ class LayoutSchema(object):
                                'subject': str,
                                },
                       }
-    window = v.All(int, v.Range(min=1))
+    window = v.All(int, v.Range(min=0))
     window_floor = v.All(int, v.Range(min=1))
     window_type = v.Any('linear', 'exponential')
     window_factor = v.All(int, v.Range(min=1))
