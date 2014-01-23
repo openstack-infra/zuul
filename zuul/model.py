@@ -254,6 +254,8 @@ class Pipeline(object):
             j_queue = dict(name=queue.name)
             j_queues.append(j_queue)
             j_queue['heads'] = []
+            j_queue['window'] = queue.window
+            j_queue['dependent'] = queue.dependent
 
             j_changes = []
             for e in queue.queue:
@@ -313,6 +315,7 @@ class Pipeline(object):
     def formatItemJSON(self, item):
         changeish = item.change
         ret = {}
+        ret['active'] = item.active
         if hasattr(changeish, 'url') and changeish.url is not None:
             ret['url'] = changeish.url
         else:
@@ -686,6 +689,7 @@ class QueueItem(object):
         self.enqueue_time = None
         self.dequeue_time = None
         self.reported = False
+        self.active = False
 
     def __repr__(self):
         if self.pipeline:
