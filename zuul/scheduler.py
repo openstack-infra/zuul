@@ -1255,19 +1255,18 @@ class BasePipelineManager(object):
                                                         item.change.branch)
             self.log.info("Reported change %s status: all-succeeded: %s, "
                           "merged: %s" % (item.change, succeeded, merged))
+            change_queue = self.pipeline.getQueue(item.change.project)
             if not (succeeded and merged):
                 self.log.debug("Reported change %s failed tests or failed "
                                "to merge" % (item.change))
-                item.change_queue.decreaseWindowSize()
+                change_queue.decreaseWindowSize()
                 self.log.debug("%s window size decreased to %s" %
-                               (item.change_queue,
-                                item.change_queue.window))
+                               (change_queue, change_queue.window))
                 raise MergeFailure("Change %s failed to merge" % item.change)
             else:
-                item.change_queue.increaseWindowSize()
+                change_queue.increaseWindowSize()
                 self.log.debug("%s window size increased to %s" %
-                               (item.change_queue,
-                                item.change_queue.window))
+                               (change_queue, change_queue.window))
 
     def _reportItem(self, item):
         if item.reported:

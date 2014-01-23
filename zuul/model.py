@@ -412,12 +412,13 @@ class ChangeQueue(object):
             self._jobs |= set(self.pipeline.getJobTree(project).getJobs())
 
     def enqueueChange(self, change):
-        item = QueueItem(self, self.pipeline, change)
+        item = QueueItem(self.pipeline, change)
         self.enqueueItem(item)
         item.enqueue_time = time.time()
         return item
 
     def enqueueItem(self, item):
+        item.pipeline = self.pipeline
         if self.dependent and self.queue:
             item.item_ahead = self.queue[-1]
             item.item_ahead.items_behind.append(item)
@@ -659,8 +660,7 @@ class BuildSet(object):
 class QueueItem(object):
     """A changish inside of a Pipeline queue"""
 
-    def __init__(self, change_queue, pipeline, change):
-        self.change_queue = change_queue
+    def __init__(self, pipeline, change):
         self.pipeline = pipeline
         self.change = change  # a changeish
         self.build_sets = []
