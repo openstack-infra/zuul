@@ -66,9 +66,10 @@ logging.basicConfig(level=logging.DEBUG,
 
 
 def repack_repo(path):
-    output = subprocess.Popen(
-        ['git', '--git-dir=%s/.git' % path, 'repack', '-afd'],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    cmd = ['git', '--git-dir=%s/.git' % path, 'repack', '-afd']
+    output = subprocess.Popen(cmd, close_fds=True,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE)
     out = output.communicate()
     if output.returncode:
         raise Exception("git repack returned %d" % output.returncode)
@@ -158,6 +159,7 @@ class FakeChange(object):
         repo.head.reference = 'master'
         repo.head.reset(index=True, working_tree=True)
         repo.git.clean('-x', '-f', '-d')
+        repo.heads['master'].checkout()
         return r
 
     def addPatchset(self, files=[], large=False):
@@ -944,11 +946,17 @@ class TestScheduler(testtools.TestCase):
         repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
         repo_shas = [c.hexsha for c in repo.iter_commits(ref)]
         commit_messages = ['%s-1' % commit.subject for commit in commits]
+        self.log.debug("Checking if job %s has changes; commit_messages %s;"
+                       " repo_messages %s; sha %s" % (job, commit_messages,
+                                                      repo_messages, sha))
         for msg in commit_messages:
             if msg not in repo_messages:
+                self.log.debug("  messages do not match")
                 return False
         if repo_shas[0] != sha:
+            self.log.debug("  sha does not match")
             return False
+        self.log.debug("  OK")
         return True
 
     def registerJobs(self):
@@ -2343,6 +2351,10 @@ class TestScheduler(testtools.TestCase):
     def test_merger_repack_large_change(self):
         "Test that the merger works with large changes after a repack"
         # https://bugs.launchpad.net/zuul/+bug/1078946
+        # This test assumes the repo is already cloned; make sure it is
+        url = self.sched.triggers['gerrit'].getGitUrl(
+            self.sched.layout.projects['org/project1'])
+        self.sched.merger.addProject('org/project1', url)
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         A.addPatchset(large=True)
         path = os.path.join(self.upstream_root, "org/project1")

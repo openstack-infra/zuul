@@ -377,9 +377,6 @@ class Scheduler(threading.Thread):
         # location.
         self.merger = merger.Merger(merge_root, sshkey,
                                     merge_email, merge_name)
-        for project in self.layout.projects.values():
-            url = self.triggers['gerrit'].getGitUrl(project)
-            self.merger.addProject(project, url)
 
     def setLauncher(self, launcher):
         self.launcher = launcher
@@ -708,7 +705,8 @@ class Scheduler(threading.Thread):
             # This is done before enqueuing the changes to avoid calling an
             # update per pipeline accepting the change.
             self.log.info("Fetching references for %s" % project)
-            self.merger.updateRepo(project)
+            url = self.triggers['gerrit'].getGitUrl(project)
+            self.merger.updateRepo(project, url)
 
         for pipeline in self.layout.pipelines.values():
             change = event.getChange(project,
@@ -1040,6 +1038,18 @@ class BasePipelineManager(object):
                 self.dequeueItem(item)
                 self.reportStats(item)
 
+    def _makeMergerItem(self, item):
+        # Create a dictionary with all info about the item needed by
+        # the merger.
+        return dict(project=item.change.project.name,
+                    url=self.sched.triggers['gerrit'].getGitUrl(
+                        item.change.project),
+                    merge_mode=item.change.project.merge_mode,
+                    refspec=item.change.refspec,
+                    branch=item.change.branch,
+                    ref=item.current_build_set.ref,
+                    )
+
     def prepareRef(self, item):
         # Returns False on success.
         # Returns True if we were unable to prepare the ref.
@@ -1051,7 +1061,8 @@ class BasePipelineManager(object):
             dependent_items = self.getDependentItems(item)
             dependent_items.reverse()
             all_items = dependent_items + [item]
-            commit = self.sched.merger.mergeChanges(all_items, ref)
+            merger_items = map(self._makeMergerItem, all_items)
+            commit = self.sched.merger.mergeChanges(merger_items)
             item.current_build_set.commit = commit
             if not commit:
                 self.log.info("Unable to merge change %s" % item.change)
