@@ -221,11 +221,13 @@ class FakeChange(object):
         approval = {'description': self.categories[category][0],
                     'type': category,
                     'value': str(value),
-                    'username': username,
-                    'email': username + '@example.com',
+                    'by': {
+                        'username': username,
+                        'email': username + '@example.com',
+                    },
                     'grantedOn': int(granted_on)}
         for i, x in enumerate(self.patchsets[-1]['approvals'][:]):
-            if x['username'] == username and x['type'] == category:
+            if x['by']['username'] == username and x['type'] == category:
                 del self.patchsets[-1]['approvals'][i]
         self.patchsets[-1]['approvals'].append(approval)
         event = {'approvals': [approval],

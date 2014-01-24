@@ -1023,12 +1023,13 @@ class EventFilter(object):
             matches_approval = False
             for approval in change.approvals:
                 found_approval = True
+                by = approval.get('by', {})
                 for k, v in rapproval.items():
                     if k == 'username':
-                        if (approval['username'] != v):
+                        if (by.get('username', '') != v):
                             found_approval = False
                     elif k == 'email-filter':
-                        if (not v.search(approval['email'])):
+                        if (not v.search(by.get('email', ''))):
                             found_approval = False
                     elif k == 'newer-than':
                         t = now - v
