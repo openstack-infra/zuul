@@ -1,9 +1,7 @@
 Since 2.0.0:
 
 * The push_change_refs option which specified that Zuul refs should be
-  pushed to Gerrit has been removed.  Similar functionality may be
-  obtained using the replication feature.  See the Triggers
-  documentation for details.
+  pushed to Gerrit has been removed.
 
 Since 1.3.0:
 

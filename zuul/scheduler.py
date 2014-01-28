@@ -367,11 +367,6 @@ class Scheduler(threading.Thread):
         else:
             merge_name = None
 
-        replicate_urls = []
-        if self.config.has_section('replication'):
-            for k, v in self.config.items('replication'):
-                replicate_urls.append(v)
-
         if self.config.has_option('gerrit', 'sshkey'):
             sshkey = self.config.get('gerrit', 'sshkey')
         else:
@@ -380,8 +375,8 @@ class Scheduler(threading.Thread):
         # TODO: The merger should have an upstream repo independent of
         # triggers, and then each trigger should provide a fetch
         # location.
-        self.merger = merger.Merger(merge_root, sshkey, merge_email,
-                                    merge_name, replicate_urls)
+        self.merger = merger.Merger(merge_root, sshkey,
+                                    merge_email, merge_name)
         for project in self.layout.projects.values():
             url = self.triggers['gerrit'].getGitUrl(project)
             self.merger.addProject(project, url)
