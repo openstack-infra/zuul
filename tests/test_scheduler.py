@@ -47,6 +47,8 @@ import zuul.webapp
 import zuul.rpclistener
 import zuul.rpcclient
 import zuul.launcher.gearman
+import zuul.merger.server
+import zuul.merger.client
 import zuul.reporter.gerrit
 import zuul.reporter.smtp
 import zuul.trigger.gerrit
@@ -764,7 +766,7 @@ class TestScheduler(testtools.TestCase):
         self.upstream_root = os.path.join(self.test_root, "upstream")
         self.git_root = os.path.join(self.test_root, "git")
 
-        CONFIG.set('zuul', 'git_dir', self.git_root)
+        CONFIG.set('merger', 'git_dir', self.git_root)
         if os.path.exists(self.test_root):
             shutil.rmtree(self.test_root)
         os.makedirs(self.test_root)
@@ -804,6 +806,9 @@ class TestScheduler(testtools.TestCase):
         self.worker.addServer('127.0.0.1', self.gearman_server.port)
         self.gearman_server.worker = self.worker
 
+        self.merge_server = zuul.merger.server.MergeServer(self.config)
+        self.merge_server.start()
+
         self.sched = zuul.scheduler.Scheduler()
 
         def URLOpenerFactory(*args, **kw):
@@ -812,6 +817,8 @@ class TestScheduler(testtools.TestCase):
 
         urllib2.urlopen = URLOpenerFactory
         self.launcher = zuul.launcher.gearman.Gearman(self.config, self.sched)
+        self.merge_client = zuul.merger.client.MergeClient(
+            self.config, self.sched)
 
         self.smtp_messages = []
 
@@ -833,6 +840,7 @@ class TestScheduler(testtools.TestCase):
         self.rpc = zuul.rpclistener.RPCListener(self.config, self.sched)
 
         self.sched.setLauncher(self.launcher)
+        self.sched.setMerger(self.merge_client)
         self.sched.registerTrigger(self.gerrit)
         self.timer = zuul.trigger.timer.Timer(self.config, self.sched)
         self.sched.registerTrigger(self.timer)
@@ -873,6 +881,9 @@ class TestScheduler(testtools.TestCase):
     def shutdown(self):
         self.log.debug("Shutting down after tests")
         self.launcher.stop()
+        self.merge_server.stop()
+        self.merge_server.join()
+        self.merge_client.stop()
         self.worker.shutdown()
         self.gearman_server.shutdown()
         self.gerrit.stop()
@@ -991,13 +1002,15 @@ class TestScheduler(testtools.TestCase):
             done = True
             for connection in self.gearman_server.active_connections:
                 if (connection.functions and
-                    connection.client_id != 'Zuul RPC Listener'):
+                    connection.client_id not in ['Zuul RPC Listener',
+                                                 'Zuul Merger']):
                     done = False
             if done:
                 break
             time.sleep(0)
         self.gearman_server.functions = set()
         self.rpc.register()
+        self.merge_server.register()
 
     def haveAllBuildsReported(self):
         # See if Zuul is waiting on a meta job to complete
@@ -1087,6 +1100,7 @@ class TestScheduler(testtools.TestCase):
                 if (self.sched.trigger_event_queue.empty() and
                     self.sched.result_event_queue.empty() and
                     self.fake_gerrit.event_queue.empty() and
+                    not self.merge_client.build_sets and
                     self.areAllBuildsWaiting()):
                     self.sched.run_handler_lock.release()
                     self.worker.lock.release()
@@ -2357,7 +2371,7 @@ class TestScheduler(testtools.TestCase):
         # This test assumes the repo is already cloned; make sure it is
         url = self.sched.triggers['gerrit'].getGitUrl(
             self.sched.layout.projects['org/project1'])
-        self.sched.merger.addProject('org/project1', url)
+        self.merge_server.merger.addProject('org/project1', url)
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         A.addPatchset(large=True)
         path = os.path.join(self.upstream_root, "org/project1")
@@ -2479,7 +2493,7 @@ class TestScheduler(testtools.TestCase):
 
     def test_zuul_url_return(self):
         "Test if ZUUL_URL is returning when zuul_url is set in zuul.conf"
-        self.assertTrue(self.sched.config.has_option('zuul', 'zuul_url'))
+        self.assertTrue(self.sched.config.has_option('merger', 'zuul_url'))
         self.worker.hold_jobs_in_build = True
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')

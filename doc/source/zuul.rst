@@ -83,20 +83,48 @@ zuul
 """"
 
 **layout_config**
-  Path to layout config file.
+  Path to layout config file.  Used by zuul-server only.
   ``layout_config=/etc/zuul/layout.yaml``
 
 **log_config**
-  Path to log config file.
+  Path to log config file.  Used by all Zuul commands.
   ``log_config=/etc/zuul/logging.yaml``
 
 **pidfile**
-  Path to PID lock file.
+  Path to PID lock file.  Used by all Zuul commands.
   ``pidfile=/var/run/zuul/zuul.pid``
 
 **state_dir**
-  Path to directory that Zuul should save state to.
+  Path to directory that Zuul should save state to.  Used by all Zuul
+  commands.
   ``state_dir=/var/lib/zuul``
+
+**report_times**
+  Boolean value (``true`` or ``false``) that determines if Zuul should
+  include elapsed times for each job in the textual report.  Used by
+  zuul-server only.
+  ``report_times=true``
+
+**status_url**
+  URL that will be posted in Zuul comments made to Gerrit changes when
+  starting jobs for a change.  Used by zuul-server only.
+  ``status_url=https://zuul.example.com/status``
+
+**url_pattern**
+  If you are storing build logs external to the system that originally
+  ran jobs and wish to link to those logs when Zuul makes comments on
+  Gerrit changes for completed jobs this setting configures what the
+  URLs for those links should be.  Used by zuul-server only.
+  ``http://logs.example.com/{change.number}/{change.patchset}/{pipeline.name}/{job.name}/{build.number}``
+
+**job_name_in_report**
+  Boolean value (``true`` or ``false``) that indicates whether the
+  job name should be included in the report (normally only the URL
+  is included).  Defaults to ``false``.  Used by zuul-server only.
+  ``job_name_in_report=true``
+
+merger
+""""""
 
 **git_dir**
   Directory that Zuul should clone local git repositories to.
@@ -110,32 +138,10 @@ zuul
   Optional: Value to pass to `git config user.name`.
   ``git_user_name=zuul``
 
-**report_times**
-  Boolean value (``true`` or ``false``) that determines if Zuul should
-  include elapsed times for each job in the textual report.
-  ``report_times=true``
-
-**status_url**
-  URL that will be posted in Zuul comments made to Gerrit changes when
-  starting jobs for a change.
-  ``status_url=https://zuul.example.com/status``
-
-**url_pattern**
-  If you are storing build logs external to the system that originally
-  ran jobs and wish to link to those logs when Zuul makes comments on
-  Gerrit changes for completed jobs this setting configures what the
-  URLs for those links should be.
-  ``http://logs.example.com/{change.number}/{change.patchset}/{pipeline.name}/{job.name}/{build.number}``
-
-**job_name_in_report**
-  Boolean value (``true`` or ``false``) that indicates whether the
-  job name should be included in the report (normally only the URL
-  is included).  Defaults to ``false``.
-  ``job_name_in_report=true``
-
 **zuul_url**
-  URL of Zuul's git repos, accessible to test workers.  
-  Usually "http://zuul.example.com/p".
+  URL of this merger's git repos, accessible to test workers.  Usually
+  "http://zuul.example.com/p" or "http://zuul-merger01.example.com/p"
+  depending on whether the merger is co-located with the Zuul server.
 
 smtp
 """"

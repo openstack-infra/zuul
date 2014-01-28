@@ -172,6 +172,7 @@ class Server(object):
         # See comment at top of file about zuul imports
         import zuul.scheduler
         import zuul.launcher.gearman
+        import zuul.merger.client
         import zuul.reporter.gerrit
         import zuul.reporter.smtp
         import zuul.trigger.gerrit
@@ -188,6 +189,7 @@ class Server(object):
         self.sched = zuul.scheduler.Scheduler()
 
         gearman = zuul.launcher.gearman.Gearman(self.config, self.sched)
+        merger = zuul.merger.client.MergeClient(self.config, self.sched)
         gerrit = zuul.trigger.gerrit.Gerrit(self.config, self.sched)
         timer = zuul.trigger.timer.Timer(self.config, self.sched)
         webapp = zuul.webapp.WebApp(self.sched)
@@ -205,6 +207,7 @@ class Server(object):
         )
 
         self.sched.setLauncher(gearman)
+        self.sched.setMerger(merger)
         self.sched.registerTrigger(gerrit)
         self.sched.registerTrigger(timer)
         self.sched.registerReporter(gerrit_reporter)
@@ -242,21 +245,6 @@ def main():
         if path is True:
             path = None
         sys.exit(server.test_config(path))
-
-    if server.config.has_option('zuul', 'state_dir'):
-        state_dir = os.path.expanduser(server.config.get('zuul', 'state_dir'))
-    else:
-        state_dir = '/var/lib/zuul'
-    test_fn = os.path.join(state_dir, 'test')
-    try:
-        f = open(test_fn, 'w')
-        f.close()
-        os.unlink(test_fn)
-    except:
-        print
-        print "Unable to write to state directory: %s" % state_dir
-        print
-        raise
 
     if server.config.has_option('zuul', 'pidfile'):
         pid_fn = os.path.expanduser(server.config.get('zuul', 'pidfile'))

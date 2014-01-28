@@ -3,6 +3,15 @@ Since 2.0.0:
 * The push_change_refs option which specified that Zuul refs should be
   pushed to Gerrit has been removed.
 
+* Git merge operations are now performed in a separate process.  Run
+  at least one instance of the ``zuul-merger`` program which is now
+  included.  Any number of Zuul-Mergers may be run in order to
+  distribute the work of speculatively merging changes into git and
+  serving the results to test workers.  This system is designed to
+  scale out to many servers, but one instance may be co-located with
+  the Zuul server in smaller deployments.  Several configuration
+  options have moved from the ``zuul`` section to ``merger``.
+
 Since 1.3.0:
 
 * The Jenkins launcher is replaced with Gearman launcher.  An internal

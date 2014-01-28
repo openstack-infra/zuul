@@ -155,7 +155,6 @@ class Gearman(object):
         self.sched = sched
         self.builds = {}
         self.meta_jobs = {}  # A list of meta-jobs like stop or describe
-        self.zuul_server = config.get('zuul', 'zuul_url')
 
         server = config.get('gearman', 'server')
         if config.has_option('gearman', 'port'):
@@ -226,7 +225,7 @@ class Gearman(object):
         params = dict(ZUUL_UUID=uuid,
                       ZUUL_PROJECT=item.change.project.name)
         params['ZUUL_PIPELINE'] = pipeline.name
-        params['ZUUL_URL'] = self.zuul_server
+        params['ZUUL_URL'] = item.current_build_set.zuul_url
         if hasattr(item.change, 'refspec'):
             changes_str = '^'.join(
                 ['%s:%s:%s' % (i.change.project.name, i.change.branch,

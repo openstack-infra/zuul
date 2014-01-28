@@ -86,7 +86,8 @@ class Timer(object):
         raise Exception("Timer trigger does not support changes.")
 
     def getGitUrl(self, project):
-        pass
+        # For the moment, the timer trigger requires gerrit.
+        return self.sched.triggers['gerrit'].getGitUrl(project)
 
     def getGitwebUrl(self, project, sha=None):
         url = '%s/gitweb?p=%s.git' % (self.baseurl, project)

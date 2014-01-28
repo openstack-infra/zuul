@@ -633,6 +633,11 @@ class Build(object):
 
 
 class BuildSet(object):
+    # Merge states:
+    NEW = 1
+    PENDING = 2
+    COMPLETE = 3
+
     def __init__(self, item):
         self.item = item
         self.other_changes = []
@@ -642,9 +647,11 @@ class BuildSet(object):
         self.previous_build_set = None
         self.ref = None
         self.commit = None
+        self.zuul_url = None
         self.unable_to_merge = False
         self.unable_to_merge_message = None
         self.failing_reasons = []
+        self.merge_state = self.NEW
 
     def setConfiguration(self):
         # The change isn't enqueued until after it's created

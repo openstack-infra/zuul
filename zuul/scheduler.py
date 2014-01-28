@@ -30,7 +30,6 @@ import yaml
 import layoutvalidator
 import model
 from model import ActionReporter, Pipeline, Project, ChangeQueue, EventFilter
-import merger
 from zuul import version as zuul_version
 
 statsd = extras.try_import('statsd.statsd')
@@ -136,6 +135,24 @@ class BuildCompletedEvent(ResultEvent):
         self.build = build
 
 
+class MergeCompletedEvent(ResultEvent):
+    """A remote merge operation has completed
+
+    :arg BuildSet build_set: The build_set which is ready.
+    :arg str zuul_url: The URL of the Zuul Merger.
+    :arg bool merged: Whether the merge succeeded (changes with refs).
+    :arg bool updated: Whether the repo was updated (changes without refs).
+    :arg str commit: The SHA of the merged commit (changes with refs).
+    """
+
+    def __init__(self, build_set, zuul_url, merged, updated, commit):
+        self.build_set = build_set
+        self.zuul_url = zuul_url
+        self.merged = merged
+        self.updated = updated
+        self.commit = commit
+
+
 class Scheduler(threading.Thread):
     log = logging.getLogger("zuul.Scheduler")
 
@@ -149,6 +166,7 @@ class Scheduler(threading.Thread):
         self._exit = False
         self._stopped = False
         self.launcher = None
+        self.merger = None
         self.triggers = dict()
         self.reporters = dict()
         self.config = None
@@ -379,35 +397,11 @@ class Scheduler(threading.Thread):
 
         return layout
 
-    def _setupMerger(self):
-        if self.config.has_option('zuul', 'git_dir'):
-            merge_root = self.config.get('zuul', 'git_dir')
-        else:
-            merge_root = '/var/lib/zuul/git'
-
-        if self.config.has_option('zuul', 'git_user_email'):
-            merge_email = self.config.get('zuul', 'git_user_email')
-        else:
-            merge_email = None
-
-        if self.config.has_option('zuul', 'git_user_name'):
-            merge_name = self.config.get('zuul', 'git_user_name')
-        else:
-            merge_name = None
-
-        if self.config.has_option('gerrit', 'sshkey'):
-            sshkey = self.config.get('gerrit', 'sshkey')
-        else:
-            sshkey = None
-
-        # TODO: The merger should have an upstream repo independent of
-        # triggers, and then each trigger should provide a fetch
-        # location.
-        self.merger = merger.Merger(merge_root, sshkey,
-                                    merge_email, merge_name)
-
     def setLauncher(self, launcher):
         self.launcher = launcher
+
+    def setMerger(self, merger):
+        self.merger = merger
 
     def registerTrigger(self, trigger, name=None):
         if name is None:
@@ -467,6 +461,14 @@ class Scheduler(threading.Thread):
         self.result_event_queue.put(event)
         self.wake_event.set()
         self.log.debug("Done adding complete event for build: %s" % build)
+
+    def onMergeCompleted(self, build_set, zuul_url, merged, updated, commit):
+        self.log.debug("Adding merge complete event for build set: %s" %
+                       build_set)
+        event = MergeCompletedEvent(build_set, zuul_url,
+                                    merged, updated, commit)
+        self.result_event_queue.put(event)
+        self.wake_event.set()
 
     def reconfigure(self, config):
         self.log.debug("Prepare to reconfigure")
@@ -594,7 +596,6 @@ class Scheduler(threading.Thread):
                 new_pipeline.manager.building_jobs = \
                     old_pipeline.manager.building_jobs
             self.layout = layout
-            self._setupMerger()
             for trigger in self.triggers.values():
                 trigger.postConfig()
             if statsd:
@@ -651,6 +652,8 @@ class Scheduler(threading.Thread):
     def _areAllBuildsComplete(self):
         self.log.debug("Checking if all builds are complete")
         waiting = False
+        if self.merger.areMergesOutstanding():
+            waiting = True
         for pipeline in self.layout.pipelines.values():
             for build in pipeline.manager.building_jobs.keys():
                 self.log.debug("%s waiting on %s" % (pipeline.manager, build))
@@ -672,6 +675,7 @@ class Scheduler(threading.Thread):
             self.wake_event.wait()
             self.wake_event.clear()
             if self._stopped:
+                self.log.debug("Run handler stopping")
                 return
             self.log.debug("Run handler awake")
             self.run_handler_lock.acquire()
@@ -728,17 +732,6 @@ class Scheduler(threading.Thread):
                 self.log.warning("Project %s not found" % event.project_name)
                 return
 
-            # Preprocessing for ref-update events
-            if event.ref:
-                # Make sure the local git repo is up-to-date with the
-                # remote one.  We better have the new ref before
-                # enqueuing the changes.  This is done before
-                # enqueuing the changes to avoid calling an update per
-                # pipeline accepting the change.
-                self.log.info("Fetching references for %s" % project)
-                url = self.triggers['gerrit'].getGitUrl(project)
-                self.merger.updateRepo(project.name, url)
-
             for pipeline in self.layout.pipelines.values():
                 change = event.getChange(project,
                                          self.triggers.get(event.trigger_name))
@@ -776,24 +769,50 @@ class Scheduler(threading.Thread):
                 self._doBuildStartedEvent(event)
             elif isinstance(event, BuildCompletedEvent):
                 self._doBuildCompletedEvent(event)
+            elif isinstance(event, MergeCompletedEvent):
+                self._doMergeCompletedEvent(event)
             else:
                 self.log.error("Unable to handle event %s" % event)
         finally:
             self.result_event_queue.task_done()
 
     def _doBuildStartedEvent(self, event):
-        for pipeline in self.layout.pipelines.values():
-            if pipeline.manager.onBuildStarted(event.build):
-                return
-        self.log.warning("Build %s not found by any queue manager" %
-                         (event.build))
+        build = event.build
+        if build.build_set is not build.build_set.item.current_build_set:
+            self.log.warning("Build %s is not in the current build set" %
+                             (build,))
+            return
+        pipeline = build.build_set.item.pipeline
+        if not pipeline:
+            self.log.warning("Build %s is not associated with a pipeline" %
+                             (build,))
+            return
+        pipeline.manager.onBuildStarted(event.build)
 
     def _doBuildCompletedEvent(self, event):
-        for pipeline in self.layout.pipelines.values():
-            if pipeline.manager.onBuildCompleted(event.build):
-                return
-        self.log.warning("Build %s not found by any queue manager" %
-                         (event.build))
+        build = event.build
+        if build.build_set is not build.build_set.item.current_build_set:
+            self.log.warning("Build %s is not in the current build set" %
+                             (build,))
+            return
+        pipeline = build.build_set.item.pipeline
+        if not pipeline:
+            self.log.warning("Build %s is not associated with a pipeline" %
+                             (build,))
+            return
+        pipeline.manager.onBuildCompleted(event.build)
+
+    def _doMergeCompletedEvent(self, event):
+        build_set = event.build_set
+        if build_set is not build_set.item.current_build_set:
+            self.log.warning("Build set %s is not current" % (build_set,))
+            return
+        pipeline = build_set.item.pipeline
+        if not pipeline:
+            self.log.warning("Build set %s is not associated with a pipeline" %
+                             (build_set,))
+            return
+        pipeline.manager.onMergeCompleted(event)
 
     def formatStatusHTML(self):
         ret = '<html><pre>'
@@ -1083,7 +1102,7 @@ class BasePipelineManager(object):
         # Create a dictionary with all info about the item needed by
         # the merger.
         return dict(project=item.change.project.name,
-                    url=self.sched.triggers['gerrit'].getGitUrl(
+                    url=self.pipeline.trigger.getGitUrl(
                         item.change.project),
                     merge_mode=item.change.project.merge_mode,
                     refspec=item.change.refspec,
@@ -1092,26 +1111,28 @@ class BasePipelineManager(object):
                     )
 
     def prepareRef(self, item):
-        # Returns False on success.
-        # Returns True if we were unable to prepare the ref.
-        ref = item.current_build_set.ref
+        # Returns True if the ref is ready, false otherwise
+        build_set = item.current_build_set
+        if build_set.merge_state == build_set.COMPLETE:
+            return True
+        if build_set.merge_state == build_set.PENDING:
+            return False
+        build_set.merge_state = build_set.PENDING
+        ref = build_set.ref
         if hasattr(item.change, 'refspec') and not ref:
             self.log.debug("Preparing ref for: %s" % item.change)
             item.current_build_set.setConfiguration()
-            ref = item.current_build_set.ref
             dependent_items = self.getDependentItems(item)
             dependent_items.reverse()
             all_items = dependent_items + [item]
             merger_items = map(self._makeMergerItem, all_items)
-            commit = self.sched.merger.mergeChanges(merger_items)
-            item.current_build_set.commit = commit
-            if not commit:
-                self.log.info("Unable to merge change %s" % item.change)
-                msg = ("This change was unable to be automatically merged "
-                       "with the current state of the repository. Please "
-                       "rebase your change and upload a new patchset.")
-                self.pipeline.setUnableToMerge(item, msg)
-                return True
+            self.sched.merger.mergeChanges(merger_items,
+                                           item.current_build_set)
+        else:
+            self.log.debug("Preparing update repo for: %s" % item.change)
+            url = self.pipeline.trigger.getGitUrl(item.change.project)
+            self.sched.merger.updateRepo(item.change.project.name,
+                                         url, build_set)
         return False
 
     def _launchJobs(self, item, jobs):
@@ -1164,7 +1185,7 @@ class BasePipelineManager(object):
                 canceled = True
         return canceled
 
-    def _processOneItem(self, item, nnfi):
+    def _processOneItem(self, item, nnfi, ready_ahead):
         changed = False
         item_ahead = item.item_ahead
         change_queue = self.pipeline.getQueue(item.change.project)
@@ -1181,10 +1202,11 @@ class BasePipelineManager(object):
                 self.reportItem(item)
             except MergeFailure:
                 pass
-            return (True, nnfi)
+            return (True, nnfi, ready_ahead)
         dep_item = self.getFailingDependentItem(item)
         actionable = change_queue.isActionable(item)
         item.active = actionable
+        ready = False
         if dep_item:
             failing_reasons.append('a needed change is failing')
             self.cancelJobs(item, prime=False)
@@ -1204,10 +1226,13 @@ class BasePipelineManager(object):
                 changed = True
                 self.cancelJobs(item)
             if actionable:
-                self.prepareRef(item)
+                ready = self.prepareRef(item)
                 if item.current_build_set.unable_to_merge:
                     failing_reasons.append("it has a merge conflict")
-        if actionable and self.launchJobs(item):
+                    ready = False
+        if not ready:
+            ready_ahead = False
+        if actionable and ready_ahead and self.launchJobs(item):
             changed = True
         if self.pipeline.didAnyJobFail(item):
             failing_reasons.append("at least one job failed")
@@ -1229,7 +1254,7 @@ class BasePipelineManager(object):
         if failing_reasons:
             self.log.debug("%s is a failing item because %s" %
                            (item, failing_reasons))
-        return (changed, nnfi)
+        return (changed, nnfi, ready_ahead)
 
     def processQueue(self):
         # Do whatever needs to be done for each change in the queue
@@ -1238,8 +1263,10 @@ class BasePipelineManager(object):
         for queue in self.pipeline.queues:
             queue_changed = False
             nnfi = None  # Nearest non-failing item
+            ready_ahead = True  # All build sets ahead are ready
             for item in queue.queue[:]:
-                item_changed, nnfi = self._processOneItem(item, nnfi)
+                item_changed, nnfi, ready_ahhead = self._processOneItem(
+                    item, nnfi, ready_ahead)
                 if item_changed:
                     queue_changed = True
                 self.reportStats(item)
@@ -1293,6 +1320,22 @@ class BasePipelineManager(object):
                        (change, self.pipeline.formatStatus(change)))
         self.updateBuildDescriptions(build.build_set)
         return True
+
+    def onMergeCompleted(self, event):
+        build_set = event.build_set
+        item = build_set.item
+        build_set.merge_state = build_set.COMPLETE
+        build_set.zuul_url = event.zuul_url
+        if event.merged:
+            build_set.commit = event.commit
+        elif event.updated:
+            build_set.commit = item.change.newrev
+        if not build_set.commit:
+            self.log.info("Unable to merge change %s" % item.change)
+            msg = ("This change was unable to be automatically merged "
+                   "with the current state of the repository. Please "
+                   "rebase your change and upload a new patchset.")
+            self.pipeline.setUnableToMerge(item, msg)
 
     def reportItem(self, item):
         if item.reported:

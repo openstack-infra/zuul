@@ -1,4 +1,5 @@
 # Copyright 2012 Hewlett-Packard Development Company, L.P.
+# Copyright 2013-2014 OpenStack Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -201,9 +202,9 @@ class Merger(object):
         repo = self.getRepo(item['project'], item['url'])
         try:
             repo.checkout(ref)
-        except:
+        except Exception:
             self.log.exception("Unable to checkout %s" % ref)
-            return False
+            return None
 
         try:
             mode = item['merge_mode']
@@ -219,7 +220,7 @@ class Merger(object):
             # Log exceptions at debug level because they are
             # usually benign merge conflicts
             self.log.debug("Unable to merge %s" % item, exc_info=True)
-            return False
+            return None
 
         return commit
 
@@ -256,6 +257,8 @@ class Merger(object):
             self.log.debug("Found base commit %s for %s" % (base, key,))
         # Merge the change
         commit = self._mergeChange(item, base)
+        if not commit:
+            return None
         # Store this commit as the most recent for this project-branch
         recent[key] = commit
         # Set the Zuul ref for this item to point to the most recent
