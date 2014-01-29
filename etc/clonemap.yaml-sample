@@ -1,0 +1,16 @@
+# vim: ft=yaml
+#
+# Example clone map for Zuul cloner
+#
+# By default it would clone projects under the directory specified by its
+# option --basepath, but you can override this behavior by definining per
+# project destinations.
+clonemap:
+
+ # Clone project 'mediawiki/core' directly in {basepath}
+ - name: 'mediawiki/core'
+   dest: '.'
+
+ # Clone projects below mediawiki/extensions to {basepath}/extensions/
+ - name: 'mediawiki/extensions/(.*)'
+   dest: 'extensions/\1'

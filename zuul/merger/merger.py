@@ -146,6 +146,10 @@ class Repo(object):
         except AssertionError:
             origin.fetch(ref)
 
+    def fetchFrom(self, repository, refspec):
+        repo = self.createRepoObject()
+        repo.git.fetch(repository, refspec)
+
     def createZuulRef(self, ref, commit='HEAD'):
         repo = self.createRepoObject()
         self.log.debug("CreateZuulRef %s at %s" % (ref, commit))
