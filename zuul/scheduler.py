@@ -226,6 +226,11 @@ class Scheduler(threading.Thread):
             pipeline.precedence = precedence
             pipeline.failure_message = conf_pipeline.get('failure-message',
                                                          "Build failed.")
+            pipeline.merge_failure_message = conf_pipeline.get(
+                'merge-failure-message', "Merge Failed.\n\nThis change was "
+                "unable to be automatically merged with the current state of "
+                "the repository. Please rebase your change and upload a new "
+                "patchset.")
             pipeline.success_message = conf_pipeline.get('success-message',
                                                          "Build succeeded.")
             pipeline.footer_message = conf_pipeline.get('footer-message', "")
@@ -233,7 +238,7 @@ class Scheduler(threading.Thread):
                 'dequeue-on-new-patchset', True)
 
             action_reporters = {}
-            for action in ['start', 'success', 'failure']:
+            for action in ['start', 'success', 'failure', 'merge-failure']:
                 action_reporters[action] = []
                 if conf_pipeline.get(action):
                     for reporter_name, params \
@@ -247,6 +252,11 @@ class Scheduler(threading.Thread):
             pipeline.start_actions = action_reporters['start']
             pipeline.success_actions = action_reporters['success']
             pipeline.failure_actions = action_reporters['failure']
+            if len(action_reporters['merge-failure']) > 0:
+                pipeline.merge_failure_actions = \
+                    action_reporters['merge-failure']
+            else:
+                pipeline.merge_failure_actions = action_reporters['failure']
 
             pipeline.window = conf_pipeline.get('window', 20)
             pipeline.window_floor = conf_pipeline.get('window-floor', 3)
@@ -936,6 +946,8 @@ class BasePipelineManager(object):
         self.log.info("    %s" % self.pipeline.success_actions)
         self.log.info("  On failure:")
         self.log.info("    %s" % self.pipeline.failure_actions)
+        self.log.info("  On merge-failure:")
+        self.log.info("    %s" % self.pipeline.merge_failure_actions)
 
     def getSubmitAllowNeeds(self):
         # Get a list of code review labels that are allowed to be
@@ -1334,10 +1346,7 @@ class BasePipelineManager(object):
             build_set.commit = item.change.newrev
         if not build_set.commit:
             self.log.info("Unable to merge change %s" % item.change)
-            msg = ("This change was unable to be automatically merged "
-                   "with the current state of the repository. Please "
-                   "rebase your change and upload a new patchset.")
-            self.pipeline.setUnableToMerge(item, msg)
+            self.pipeline.setUnableToMerge(item)
 
     def reportItem(self, item):
         if item.reported:
@@ -1370,10 +1379,12 @@ class BasePipelineManager(object):
         self.log.debug("Reporting change %s" % item.change)
         ret = True  # Means error as returned by trigger.report
         if self.pipeline.didAllJobsSucceed(item):
-            self.log.debug("success %s %s" % (self.pipeline.success_actions,
-                                              self.pipeline.failure_actions))
+            self.log.debug("success %s" % (self.pipeline.success_actions))
             actions = self.pipeline.success_actions
             item.setReportedResult('SUCCESS')
+        elif not self.pipeline.didMergerSucceed(item):
+            actions = self.pipeline.merge_failure_actions
+            item.setReportedResult('MERGER_FAILURE')
         else:
             actions = self.pipeline.failure_actions
             item.setReportedResult('FAILURE')
@@ -1395,66 +1406,72 @@ class BasePipelineManager(object):
 
     def formatReport(self, item):
         ret = ''
+
+        if not self.pipeline.didMergerSucceed(item):
+            ret += self.pipeline.merge_failure_message
+            if item.dequeued_needing_change:
+                ret += ('\n\nThis change depends on a change that failed to '
+                        'merge.')
+            if self.pipeline.footer_message:
+                ret += '\n\n' + self.pipeline.footer_message
+            return ret
+
         if self.pipeline.didAllJobsSucceed(item):
             ret += self.pipeline.success_message + '\n\n'
         else:
             ret += self.pipeline.failure_message + '\n\n'
 
-        if item.dequeued_needing_change:
-            ret += "This change depends on a change that failed to merge."
-        elif item.current_build_set.unable_to_merge_message:
-            ret += item.current_build_set.unable_to_merge_message
+        if self.sched.config.has_option('zuul', 'url_pattern'):
+            url_pattern = self.sched.config.get('zuul', 'url_pattern')
         else:
-            if self.sched.config.has_option('zuul', 'url_pattern'):
-                url_pattern = self.sched.config.get('zuul', 'url_pattern')
+            url_pattern = None
+
+        for job in self.pipeline.getJobs(item.change):
+            build = item.current_build_set.getBuild(job.name)
+            result = build.result
+            pattern = url_pattern
+            if result == 'SUCCESS':
+                if job.success_message:
+                    result = job.success_message
+                if job.success_pattern:
+                    pattern = job.success_pattern
+            elif result == 'FAILURE':
+                if job.failure_message:
+                    result = job.failure_message
+                if job.failure_pattern:
+                    pattern = job.failure_pattern
+            if pattern:
+                url = pattern.format(change=item.change,
+                                     pipeline=self.pipeline,
+                                     job=job,
+                                     build=build)
             else:
-                url_pattern = None
-            for job in self.pipeline.getJobs(item.change):
-                build = item.current_build_set.getBuild(job.name)
-                result = build.result
-                pattern = url_pattern
-                if result == 'SUCCESS':
-                    if job.success_message:
-                        result = job.success_message
-                    if job.success_pattern:
-                        pattern = job.success_pattern
-                elif result == 'FAILURE':
-                    if job.failure_message:
-                        result = job.failure_message
-                    if job.failure_pattern:
-                        pattern = job.failure_pattern
-                if pattern:
-                    url = pattern.format(change=item.change,
-                                         pipeline=self.pipeline,
-                                         job=job,
-                                         build=build)
+                url = build.url or job.name
+            if not job.voting:
+                voting = ' (non-voting)'
+            else:
+                voting = ''
+            if self.report_times and build.end_time and build.start_time:
+                dt = int(build.end_time - build.start_time)
+                m, s = divmod(dt, 60)
+                h, m = divmod(m, 60)
+                if h:
+                    elapsed = ' in %dh %02dm %02ds' % (h, m, s)
+                elif m:
+                    elapsed = ' in %dm %02ds' % (m, s)
                 else:
-                    url = build.url or job.name
-                if not job.voting:
-                    voting = ' (non-voting)'
-                else:
-                    voting = ''
-                if self.report_times and build.end_time and build.start_time:
-                    dt = int(build.end_time - build.start_time)
-                    m, s = divmod(dt, 60)
-                    h, m = divmod(m, 60)
-                    if h:
-                        elapsed = ' in %dh %02dm %02ds' % (h, m, s)
-                    elif m:
-                        elapsed = ' in %dm %02ds' % (m, s)
-                    else:
-                        elapsed = ' in %ds' % (s)
-                else:
-                    elapsed = ''
-                name = ''
-                if self.sched.config.has_option('zuul', 'job_name_in_report'):
-                    if self.sched.config.getboolean('zuul',
-                                                    'job_name_in_report'):
-                        name = job.name + ' '
-                ret += '- %s%s : %s%s%s\n' % (name, url, result, elapsed,
-                                              voting)
-            ret += '\n'
-        ret += self.pipeline.footer_message
+                    elapsed = ' in %ds' % (s)
+            else:
+                elapsed = ''
+            name = ''
+            if self.sched.config.has_option('zuul', 'job_name_in_report'):
+                if self.sched.config.getboolean('zuul',
+                                                'job_name_in_report'):
+                    name = job.name + ' '
+            ret += '- %s%s : %s%s%s\n' % (name, url, result, elapsed,
+                                          voting)
+        if self.pipeline.footer_message:
+            ret += '\n' + self.pipeline.footer_message
         return ret
 
     def formatDescription(self, build):

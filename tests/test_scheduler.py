@@ -3712,3 +3712,82 @@ For CI problems and help debugging, contact ci@example.org"""
 
         self.assertEqual(failure_body, self.smtp_messages[0]['body'])
         self.assertEqual(success_body, self.smtp_messages[1]['body'])
+
+    def test_merge_failure_reporters(self):
+        """Check that the config is set up correctly"""
+
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-merge-failure.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+
+        self.assertEqual(
+            "Merge Failed.\n\nThis change was unable to be automatically "
+            "merged with the current state of the repository. Please rebase "
+            "your change and upload a new patchset.",
+            self.sched.layout.pipelines['check'].merge_failure_message)
+        self.assertEqual(
+            "The merge failed! For more information...",
+            self.sched.layout.pipelines['gate'].merge_failure_message)
+
+        self.assertEqual(
+            len(self.sched.layout.pipelines['check'].merge_failure_actions), 1)
+        self.assertEqual(
+            len(self.sched.layout.pipelines['gate'].merge_failure_actions), 2)
+
+        self.assertTrue(isinstance(
+            self.sched.layout.pipelines['check'].merge_failure_actions[0].
+            reporter, zuul.reporter.gerrit.Reporter))
+
+        self.assertTrue(
+            (
+                isinstance(self.sched.layout.pipelines['gate'].
+                           merge_failure_actions[0].reporter,
+                           zuul.reporter.smtp.Reporter) and
+                isinstance(self.sched.layout.pipelines['gate'].
+                           merge_failure_actions[1].reporter,
+                           zuul.reporter.gerrit.Reporter)
+            ) or (
+                isinstance(self.sched.layout.pipelines['gate'].
+                           merge_failure_actions[0].reporter,
+                           zuul.reporter.gerrit.Reporter) and
+                isinstance(self.sched.layout.pipelines['gate'].
+                           merge_failure_actions[1].reporter,
+                           zuul.reporter.smtp.Reporter)
+            )
+        )
+
+    def test_merge_failure_reports(self):
+        """Check that when a change fails to merge the correct message is sent
+        to the correct reporter"""
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-merge-failure.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+
+        # Check a test failure isn't reported to SMTP
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        self.worker.addFailTest('project-test1', A)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(3, len(self.history))  # 3 jobs
+        self.assertEqual(0, len(self.smtp_messages))
+
+        # Check a merge failure is reported to SMTP
+        # B should be merged, but C will conflict with B
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        B.addPatchset(['conflict'])
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        C.addPatchset(['conflict'])
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(6, len(self.history))  # A and B jobs
+        self.assertEqual(1, len(self.smtp_messages))
+        self.assertEqual('The merge failed! For more information...',
+                         self.smtp_messages[0]['body'])
