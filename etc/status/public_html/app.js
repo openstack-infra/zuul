@@ -63,6 +63,10 @@
                     $msgWrap.addClass('zuul-msg-wrap-off');
                 }
 
+                if ('zuul_version' in data) {
+                    $('#zuul-version-span').text(data['zuul_version']);
+                }
+
                 $.each(data.pipelines, function (i, pipeline) {
                     html += zuul.format.pipeline(pipeline);
                 });
@@ -223,8 +227,9 @@
         $queueEventsNum =  $queueInfo.find('span').eq(0);
         $queueResultsNum =  $queueEventsNum.next();
         $pipelines = $('<div class="row"></div>');
+        $zuulVersion = $('<p>Zuul version: <span id="zuul-version-span"></span></p>');
 
-        $container = $('#zuul-container').append($msgWrap, $indicator, $queueInfo, $pipelines);
+        $container = $('#zuul-container').append($msgWrap, $indicator, $queueInfo, $pipelines, $zuulVersion);
 
         zuul.schedule();
 
