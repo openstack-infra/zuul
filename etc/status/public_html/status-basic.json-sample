@@ -173,5 +173,6 @@
     },
     "result_event_queue": {
         "length": 0
-    }
+    },
+    "zuul_version": "2.0.0.19"
 }
