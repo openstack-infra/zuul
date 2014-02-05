@@ -66,6 +66,10 @@
                 if ('zuul_version' in data) {
                     $('#zuul-version-span').text(data['zuul_version']);
                 }
+                if ('last_reconfigured' in data) {
+                    var last_reconfigured = new Date(data['last_reconfigured']);
+                    $('#last-reconfigured-span').text(last_reconfigured.toString());
+                }
 
                 $.each(data.pipelines, function (i, pipeline) {
                     html += zuul.format.pipeline(pipeline);
@@ -228,8 +232,9 @@
         $queueResultsNum =  $queueEventsNum.next();
         $pipelines = $('<div class="row"></div>');
         $zuulVersion = $('<p>Zuul version: <span id="zuul-version-span"></span></p>');
+        $lastReconf = $('<p>Last reconfigured: <span id="last-reconfigured-span"></span></p>');
 
-        $container = $('#zuul-container').append($msgWrap, $indicator, $queueInfo, $pipelines, $zuulVersion);
+        $container = $('#zuul-container').append($msgWrap, $indicator, $queueInfo, $pipelines, $zuulVersion, $lastReconf);
 
         zuul.schedule();
 
