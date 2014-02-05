@@ -39,7 +39,8 @@ class Client(object):
                             help='specify the config file')
         parser.add_argument('-v', dest='verbose', action='store_true',
                             help='verbose output')
-        parser.add_argument('--version', dest='version', action='store_true',
+        parser.add_argument('--version', dest='version', action='version',
+                            version=self._get_version(),
                             help='show zuul version')
 
         subparsers = parser.add_subparsers(title='commands',
@@ -67,6 +68,10 @@ class Client(object):
 
         self.args = parser.parse_args()
 
+    def _get_version(self):
+        from zuul.version import version_info as zuul_version_info
+        return "Zuul version: %s" % zuul_version_info.version_string()
+
     def read_config(self):
         self.config = ConfigParser.ConfigParser()
         if self.args.config:
@@ -88,11 +93,6 @@ class Client(object):
         self.parse_arguments()
         self.read_config()
         self.setup_logging()
-
-        if self.args.version:
-            from zuul.version import version_info as zuul_version_info
-            print "Zuul version: %s" % zuul_version_info.version_string()
-            sys.exit(0)
 
         self.server = self.config.get('gearman', 'server')
         if self.config.has_option('gearman', 'port'):
