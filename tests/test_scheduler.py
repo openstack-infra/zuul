@@ -1083,13 +1083,16 @@ class TestScheduler(testtools.TestCase):
                 self.fake_gerrit.event_queue.join()
                 self.sched.trigger_event_queue.join()
                 self.sched.result_event_queue.join()
+                self.sched.run_handler_lock.acquire()
                 if (self.sched.trigger_event_queue.empty() and
                     self.sched.result_event_queue.empty() and
                     self.fake_gerrit.event_queue.empty() and
                     self.areAllBuildsWaiting()):
+                    self.sched.run_handler_lock.release()
                     self.worker.lock.release()
                     self.log.debug("...settled.")
                     return
+                self.sched.run_handler_lock.release()
             self.worker.lock.release()
             self.sched.wake_event.wait(0.1)
 
