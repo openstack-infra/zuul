@@ -567,6 +567,7 @@ class Scheduler(threading.Thread):
                     continue
                 self.log.debug("Re-enqueueing changes for pipeline %s" % name)
                 items_to_remove = []
+                builds_to_remove = []
                 for shared_queue in old_pipeline.queues:
                     for item in shared_queue.queue:
                         item.item_ahead = None
@@ -582,32 +583,25 @@ class Scheduler(threading.Thread):
                             continue
                         item.change.project = project
                         for build in item.current_build_set.getBuilds():
-                            build.job = layout.jobs.get(build.job.name,
-                                                        build.job)
+                            job = layout.jobs.get(build.job.name)
+                            if job:
+                                build.job = job
+                            else:
+                                builds_to_remove.append(build)
                         if not new_pipeline.manager.reEnqueueItem(item):
                             items_to_remove.append(item)
-                builds_to_remove = []
-                for build, item in old_pipeline.manager.building_jobs.items():
-                    if item in items_to_remove:
+                for item in items_to_remove:
+                    for build in item.current_build_set.getBuilds():
                         builds_to_remove.append(build)
-                        self.log.warning(
-                            "Deleting running build %s for change %s whose "
-                            "item was not re-enqueued" % (build, item.change))
-                    if build.job not in new_pipeline.getJobs(item.change):
-                        builds_to_remove.append(build)
-                        self.log.warning(
-                            "Deleting running build %s for change %s because "
-                            "the job is not defined" % (build, item.change))
                 for build in builds_to_remove:
+                    self.log.warning(
+                        "Canceling build %s during reconfiguration" % (build,))
                     try:
                         self.launcher.cancel(build)
                     except Exception:
                         self.log.exception(
                             "Exception while canceling build %s "
                             "for change %s" % (build, item.change))
-                    del old_pipeline.manager.building_jobs[build]
-                new_pipeline.manager.building_jobs = \
-                    old_pipeline.manager.building_jobs
             self.layout = layout
             for trigger in self.triggers.values():
                 trigger.postConfig()
@@ -668,9 +662,12 @@ class Scheduler(threading.Thread):
         if self.merger.areMergesOutstanding():
             waiting = True
         for pipeline in self.layout.pipelines.values():
-            for build in pipeline.manager.building_jobs.keys():
-                self.log.debug("%s waiting on %s" % (pipeline.manager, build))
-                waiting = True
+            for item in pipeline.getAllItems():
+                for build in item.current_build_set.getBuilds():
+                    if build.result is None:
+                        self.log.debug("%s waiting on %s" %
+                                       (pipeline.manager, build))
+                        waiting = True
         if not waiting:
             self.log.debug("All builds are complete")
             return True
@@ -888,7 +885,6 @@ class BasePipelineManager(object):
     def __init__(self, sched, pipeline):
         self.sched = sched
         self.pipeline = pipeline
-        self.building_jobs = {}
         self.event_filters = []
         if self.sched.config and self.sched.config.has_option(
             'zuul', 'report_times'):
@@ -1157,7 +1153,6 @@ class BasePipelineManager(object):
                 build = self.sched.launcher.launch(job, item,
                                                    self.pipeline,
                                                    dependent_items)
-                self.building_jobs[build] = item
                 self.log.debug("Adding build %s of job %s to item %s" %
                                (build, job, item))
                 item.addBuild(build)
@@ -1173,24 +1168,17 @@ class BasePipelineManager(object):
     def cancelJobs(self, item, prime=True):
         self.log.debug("Cancel jobs for change %s" % item.change)
         canceled = False
-        to_remove = []
+        old_build_set = item.current_build_set
         if prime and item.current_build_set.ref:
             item.resetAllBuilds()
-        for build, build_item in self.building_jobs.items():
-            if build_item == item:
-                self.log.debug("Found build %s for change %s to cancel" %
-                               (build, item.change))
-                try:
-                    self.sched.launcher.cancel(build)
-                except:
-                    self.log.exception("Exception while canceling build %s "
-                                       "for change %s" % (build, item.change))
-                to_remove.append(build)
-                canceled = True
-        for build in to_remove:
-            self.log.debug("Removing build %s from running builds" % build)
+        for build in old_build_set.getBuilds():
+            try:
+                self.sched.launcher.cancel(build)
+            except:
+                self.log.exception("Exception while canceling build %s "
+                                   "for change %s" % (build, item.change))
             build.result = 'CANCELED'
-            del self.building_jobs[build]
+            canceled = True
         for item_behind in item.items_behind:
             self.log.debug("Canceling jobs for change %s, behind change %s" %
                            (item_behind.change, item.change))
@@ -1306,31 +1294,17 @@ class BasePipelineManager(object):
                 self.sched.launcher.setBuildDescription(build, desc)
 
     def onBuildStarted(self, build):
-        if build not in self.building_jobs:
-            # Or triggered externally, or triggered before zuul started,
-            # or restarted
-            return False
-
         self.log.debug("Build %s started" % build)
         self.updateBuildDescriptions(build.build_set)
         return True
 
     def onBuildCompleted(self, build):
-        if build not in self.building_jobs:
-            # Or triggered externally, or triggered before zuul started,
-            # or restarted
-            return False
-
         self.log.debug("Build %s completed" % build)
-        change = self.building_jobs[build]
-        self.log.debug("Found change %s which triggered completed build %s" %
-                       (change, build))
+        item = build.build_set.item
 
-        del self.building_jobs[build]
-
-        self.pipeline.setResult(change, build)
-        self.log.debug("Change %s status is now:\n %s" %
-                       (change, self.pipeline.formatStatus(change)))
+        self.pipeline.setResult(item, build)
+        self.log.debug("Item %s status is now:\n %s" %
+                       (item, self.pipeline.formatStatus(item)))
         self.updateBuildDescriptions(build.build_set)
         return True
 
