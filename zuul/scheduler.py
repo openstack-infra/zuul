@@ -565,8 +565,7 @@ class Scheduler(threading.Thread):
                         self.log.warning("No old pipeline matching %s found "
                                          "when reconfiguring" % name)
                     continue
-                self.log.debug("Re-enqueueing changes for pipeline %s" %
-                               name)
+                self.log.debug("Re-enqueueing changes for pipeline %s" % name)
                 items_to_remove = []
                 for shared_queue in old_pipeline.queues:
                     for item in shared_queue.queue:
@@ -582,16 +581,30 @@ class Scheduler(threading.Thread):
                             items_to_remove.append(item)
                             continue
                         item.change.project = project
+                        for build in item.current_build_set.getBuilds():
+                            build.job = layout.jobs.get(build.job.name,
+                                                        build.job)
                         if not new_pipeline.manager.reEnqueueItem(item):
                             items_to_remove.append(item)
                 builds_to_remove = []
                 for build, item in old_pipeline.manager.building_jobs.items():
                     if item in items_to_remove:
                         builds_to_remove.append(build)
-                        self.log.warning("Deleting running build %s for "
-                                         "change %s while reenqueueing" % (
-                                         build, item.change))
+                        self.log.warning(
+                            "Deleting running build %s for change %s whose "
+                            "item was not re-enqueued" % (build, item.change))
+                    if build.job not in new_pipeline.getJobs(item.change):
+                        builds_to_remove.append(build)
+                        self.log.warning(
+                            "Deleting running build %s for change %s because "
+                            "the job is not defined" % (build, item.change))
                 for build in builds_to_remove:
+                    try:
+                        self.launcher.cancel(build)
+                    except Exception:
+                        self.log.exception(
+                            "Exception while canceling build %s "
+                            "for change %s" % (build, item.change))
                     del old_pipeline.manager.building_jobs[build]
                 new_pipeline.manager.building_jobs = \
                     old_pipeline.manager.building_jobs
