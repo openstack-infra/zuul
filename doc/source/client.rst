@@ -28,4 +28,6 @@ Enqueue
 
 Example::
 
-  zuul enqueue --trigger gerrit --pipeline check --project example_project --change 12345 --patchset 1
+  zuul enqueue --trigger gerrit --pipeline check --project example_project --change 12345,1
+
+Note that the format of change id is <number>,<patchset>.
