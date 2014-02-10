@@ -422,6 +422,51 @@ explanation of each of the parameters::
   lower.  The value should be one of ``high``, ``normal``, or ``low``.
   Default: ``normal``.
 
+**window**
+  DependentPipelineManagers only. Zuul can rate limit
+  DependentPipelineManagers in a manner similar to TCP flow control.
+  Jobs are only started for changes in the queue if they sit in the
+  actionable window for the pipeline. The initial length of this window
+  is configurable with this value. The value given should be a positive
+  integer value. A value of ``0`` disables rate limiting on the
+  DependentPipelineManager.
+  Default: ``20``.
+
+**window-floor**
+  DependentPipelineManagers only. This is the minimum value for the
+  window described above. Should be a positive non zero integer value.
+  Default: ``3``.
+
+**window-increase-type**
+  DependentPipelineManagers only. This value describes how the window
+  should grow when changes are successfully merged by zuul. A value of
+  ``linear`` indicates that ``window-increase-factor`` should be added
+  to the previous window value. A value of ``exponential`` indicates
+  that ``window-increase-factor`` should be multiplied against the
+  previous window value and the result will become the window size.
+  Default: ``linear``.
+
+**window-increase-factor**
+  DependentPipelineManagers only. The value to be added or mulitplied
+  against the previous window value to determine the new window after
+  successful change merges.
+  Default: ``1``.
+
+**window-decrease-type**
+  DependentPipelineManagers only. This value describes how the window
+  should shrink when changes are not able to be merged by Zuul. A value
+  of ``linear`` indicates that ``window-decrease-factor`` should be
+  subtracted from the previous window value. A value of ``exponential``
+  indicates that ``window-decrease-factor`` should be divided against
+  the previous window value and the result will become the window size.
+  Default: ``exponential``.
+
+**window-decrease-factor**
+  DependentPipelineManagers only. The value to be subtracted or divided
+  against the previous window value to determine the new window after
+  unsuccessful change merges.
+  Default: ``2``.
+
 Some example pipeline configurations are included in the sample layout
 file.  The first is called a *check* pipeline::
 
