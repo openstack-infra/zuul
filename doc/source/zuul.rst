@@ -110,12 +110,6 @@ zuul
   Optional: Value to pass to `git config user.name`.
   ``git_user_name=zuul``
 
-**push_change_refs**
-  Boolean value (``true`` or ``false``) that determines if Zuul should
-  push change refs to the git origin server for the git repositories in
-  git_dir.
-  ``push_change_refs=true``
-
 **report_times**
   Boolean value (``true`` or ``false``) that determines if Zuul should
   include elapsed times for each job in the textual report.

@@ -49,32 +49,11 @@ and checking it out.  The parameters that provide this information are
 described in :ref:`launchers`.
 
 These references need to be made available via a Git repository that
-is available to Jenkins.  You may accomplish this by either allowing
-Zuul to push the references back to Gerrit, in which case you may
-simply use the Gerrit Git repository.  If you do not have access to
-the Gerrit repository, or would prefer Zuul not push its refs there,
-you may directly serve the Git repositories that Zuul uses, and
-configure Jenkins to use those.  Instructions for each of these
-alternatives are in the following sections.
-
-Pushing to Gerrit
-"""""""""""""""""
-
-If you want to push Zuul refs back to Gerrit, set the following
-permissions for your project (or ``All-Projects``) in Gerrit (where
-``CI Tools`` is a group of which the user you created above is a
-member)::
-
-    [access "refs/zuul/*"]
-            create = group CI Tools
-            push = +force CI Tools
-            pushMerge = group CI Tools
-            forgeAuthor = group CI Tools
-    [access "refs/for/refs/zuul/*"]
-            pushMerge = group CI Tools
-
-And set ``push_change_refs`` to ``true`` in the ``zuul`` section of
-zuul.conf.
+is available to Jenkins.  You may accomplish this by either serving
+Zuul's git repositories directly, allowing Zuul to push the references
+back to Gerrit, or pushing the references to a third location.
+Instructions for each of these alternatives are in the following
+sections.
 
 Serving Zuul Git Repos
 """"""""""""""""""""""
@@ -101,6 +80,33 @@ instance, a clone will produce a repository in an unpredictable state
 depending on what the state of Zuul's repository is when the clone
 happens).  They are, however, suitable for automated systems that
 respond to Zuul triggers.
+
+Pushing to Gerrit
+"""""""""""""""""
+
+If you want to push Zuul refs back to Gerrit, set the following
+permissions for your project (or ``All-Projects``) in Gerrit (where
+``CI Tools`` is a group of which the user you created above is a
+member)::
+
+    [access "refs/zuul/*"]
+            create = group CI Tools
+            push = +force CI Tools
+            pushMerge = group CI Tools
+            forgeAuthor = group CI Tools
+    [access "refs/for/refs/zuul/*"]
+            pushMerge = group CI Tools
+
+And set the following in ``zuul.conf``:
+
+  [replication]
+    url1=ssh://user@review.example.com:29418/
+
+Pushing to Another Location
+"""""""""""""""""""""""""""
+
+Simply set one or more destination URLs in the ``replication`` section
+of zuul.conf as above.
 
 Timer
 -----
