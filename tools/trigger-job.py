@@ -42,6 +42,8 @@ def main():
                         help='Old revision (SHA)')
     parser.add_argument('--newrev', dest='newrev',
                         help='New revision (SHA)')
+    parser.add_argument('--url', dest='url',
+                        default='http://zuul.openstack.org/p', help='Zuul URL')
     parser.add_argument('--logpath', dest='logpath', required=True,
                         help='Path for log files.')
     args = parser.parse_args()
@@ -56,6 +58,7 @@ def main():
             'ZUUL_SHORT_OLDREV': args.oldrev[:7],
             'ZUUL_SHORT_NEWREV': args.newrev[:7],
             'ZUUL_COMMIT': args.newrev,
+            'ZUUL_URL': args.url,
             'LOG_PATH': args.logpath,
             }
 
