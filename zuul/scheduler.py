@@ -706,7 +706,7 @@ class Scheduler(threading.Thread):
             # update per pipeline accepting the change.
             self.log.info("Fetching references for %s" % project)
             url = self.triggers['gerrit'].getGitUrl(project)
-            self.merger.updateRepo(project, url)
+            self.merger.updateRepo(project.name, url)
 
         for pipeline in self.layout.pipelines.values():
             change = event.getChange(project,
