@@ -49,20 +49,17 @@ and checking it out.  The parameters that provide this information are
 described in :ref:`launchers`.
 
 These references need to be made available via a Git repository that
-is available to Jenkins.  You may accomplish this by either serving
-Zuul's git repositories directly, allowing Zuul to push the references
-back to Gerrit, or pushing the references to a third location.
-Instructions for each of these alternatives are in the following
-sections.
+is available to Jenkins.  This is accomplished by serving Zuul's Git
+repositories directly.
 
 Serving Zuul Git Repos
 """"""""""""""""""""""
 
 Zuul maintains its own copies of any needed Git repositories in the
 directory specified by ``git_dir`` in the ``zuul`` section of
-zuul.conf (by default, /var/lib/zuul/git).  If you want to serve
-Zuul's Git repositories in order to provide Zuul refs for Jenkins, you
-can configure Apache to do so using the following directives::
+zuul.conf (by default, /var/lib/zuul/git).  To directly serve Zuul's
+Git repositories in order to provide Zuul refs for Jenkins, you can
+configure Apache to do so using the following directives::
 
   SetEnv GIT_PROJECT_ROOT /var/lib/zuul/git
   SetEnv GIT_HTTP_EXPORT_ALL
@@ -80,33 +77,6 @@ instance, a clone will produce a repository in an unpredictable state
 depending on what the state of Zuul's repository is when the clone
 happens).  They are, however, suitable for automated systems that
 respond to Zuul triggers.
-
-Pushing to Gerrit
-"""""""""""""""""
-
-If you want to push Zuul refs back to Gerrit, set the following
-permissions for your project (or ``All-Projects``) in Gerrit (where
-``CI Tools`` is a group of which the user you created above is a
-member)::
-
-    [access "refs/zuul/*"]
-            create = group CI Tools
-            push = +force CI Tools
-            pushMerge = group CI Tools
-            forgeAuthor = group CI Tools
-    [access "refs/for/refs/zuul/*"]
-            pushMerge = group CI Tools
-
-And set the following in ``zuul.conf``:
-
-  [replication]
-    url1=ssh://user@review.example.com:29418/
-
-Pushing to Another Location
-"""""""""""""""""""""""""""
-
-Simply set one or more destination URLs in the ``replication`` section
-of zuul.conf as above.
 
 Timer
 -----

@@ -154,16 +154,6 @@ smtp
   This can be overridden by individual pipelines.
   ``default_to=you@example.com``
 
-replication
-"""""""""""
-
-Zuul can push the refs it creates to any number of servers.  To do so,
-list the git push URLs in this section, one per line as follows::
-
-  [replication]
-    url1=ssh://user@host1.example.com:port/path/to/repo
-    url2=ssh://user@host2.example.com:port/path/to/repo
-
 layout.yaml
 ~~~~~~~~~~~
 

@@ -3025,39 +3025,6 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(B.reported, 2)
 
-    def test_push_urls(self):
-        "Test that Zuul can push refs to multiple URLs"
-        upstream_path = os.path.join(self.upstream_root, 'org/project')
-        replica1 = os.path.join(self.upstream_root, 'replica1')
-        replica2 = os.path.join(self.upstream_root, 'replica2')
-
-        self.config.add_section('replication')
-        self.config.set('replication', 'url1', 'file://%s' % replica1)
-        self.config.set('replication', 'url2', 'file://%s' % replica2)
-        self.sched.reconfigure(self.config)
-
-        r1 = git.Repo.clone_from(upstream_path, replica1 + '/org/project.git')
-        r2 = git.Repo.clone_from(upstream_path, replica2 + '/org/project.git')
-
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        B = self.fake_gerrit.addFakeChange('org/project', 'mp', 'B')
-        B.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.waitUntilSettled()
-        count = 0
-        for ref in r1.refs:
-            if ref.path.startswith('refs/zuul'):
-                count += 1
-        self.assertEqual(count, 3)
-
-        count = 0
-        for ref in r2.refs:
-            if ref.path.startswith('refs/zuul'):
-                count += 1
-        self.assertEqual(count, 3)
-
     def test_timer(self):
         "Test that a periodic job is triggered"
         self.worker.hold_jobs_in_build = True
