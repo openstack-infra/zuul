@@ -94,7 +94,7 @@ class Merger(object):
         # See comment at top of file about zuul imports
         import zuul.merger.server
 
-        self.setup_logging('zuul', 'log_config')
+        self.setup_logging('merger', 'log_config')
 
         self.merger = zuul.merger.server.MergeServer(self.config)
         self.merger.start()
@@ -135,10 +135,10 @@ def main():
         print
         raise
 
-    if server.config.has_option('zuul', 'pidfile'):
-        pid_fn = os.path.expanduser(server.config.get('zuul', 'pidfile'))
+    if server.config.has_option('merger', 'pidfile'):
+        pid_fn = os.path.expanduser(server.config.get('merger', 'pidfile'))
     else:
-        pid_fn = '/var/run/zuul/merger.pid'
+        pid_fn = '/var/run/zuul-merger/merger.pid'
     pid = pid_file_module.TimeoutPIDLockFile(pid_fn, 10)
 
     if server.args.nodaemon:

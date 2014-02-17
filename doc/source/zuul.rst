@@ -87,11 +87,11 @@ zuul
   ``layout_config=/etc/zuul/layout.yaml``
 
 **log_config**
-  Path to log config file.  Used by all Zuul commands.
+  Path to log config file.  Used by zuul-server only.
   ``log_config=/etc/zuul/logging.yaml``
 
 **pidfile**
-  Path to PID lock file.  Used by all Zuul commands.
+  Path to PID lock file.  Used by zuul-server only.
   ``pidfile=/var/run/zuul/zuul.pid``
 
 **state_dir**
@@ -142,6 +142,14 @@ merger
   URL of this merger's git repos, accessible to test workers.  Usually
   "http://zuul.example.com/p" or "http://zuul-merger01.example.com/p"
   depending on whether the merger is co-located with the Zuul server.
+
+**log_config**
+  Path to log config file for the merger process.
+  ``log_config=/etc/zuul/logging.yaml``
+
+**pidfile**
+  Path to PID lock file for the merger process.
+  ``pidfile=/var/run/zuul-merger/merger.pid``
 
 smtp
 """"
