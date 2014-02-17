@@ -231,3 +231,7 @@ projects:
       - conflict-project-merge:
         - conflict-project-test1
         - conflict-project-test2
+
+  - name: org/noop-project
+    gate:
+      - noop

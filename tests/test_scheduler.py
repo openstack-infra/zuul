@@ -2813,6 +2813,29 @@ class TestScheduler(testtools.TestCase):
         self.assertReportedStat('test-timing', '3|ms')
         self.assertReportedStat('test-guage', '12|g')
 
+    def test_stuck_job_cleanup(self):
+        "Test that pending jobs are cleaned up if removed from layout"
+        self.gearman_server.hold_jobs_in_queue = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.gearman_server.getQueue()), 1)
+
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-no-jobs.yaml')
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        self.gearman_server.release('noop')
+        self.waitUntilSettled()
+        self.assertEqual(len(self.gearman_server.getQueue()), 0)
+        self.assertTrue(self.sched._areAllBuildsComplete())
+
+        self.assertEqual(len(self.history), 1)
+        self.assertEqual(self.history[0].name, 'noop')
+        self.assertEqual(self.history[0].result, 'SUCCESS')
+
     def test_file_jobs(self):
         "Test that file jobs run only when appropriate"
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
