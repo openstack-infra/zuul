@@ -61,11 +61,14 @@ class MergeServer(object):
             port = 4730
         self.worker = gear.Worker('Zuul Merger')
         self.worker.addServer(server, port)
+        self.log.debug("Waiting for server")
+        self.worker.waitForServer()
+        self.log.debug("Registering")
+        self.register()
+        self.log.debug("Starting worker")
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
         self.thread.start()
-        self.worker.waitForServer()
-        self.register()
 
     def register(self):
         self.worker.registerFunction("merger:merge")
