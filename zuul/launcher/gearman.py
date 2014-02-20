@@ -380,6 +380,8 @@ class Gearman(object):
         if build:
             # Allow URL to be updated
             build.url = data.get('url') or build.url
+            # Update information about worker
+            build.worker.updateFromData(data)
 
             if build.number is None:
                 self.log.info("Build %s started" % job)
