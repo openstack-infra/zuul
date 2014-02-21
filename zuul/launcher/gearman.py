@@ -298,7 +298,7 @@ class Gearman(object):
         if not self.isJobRegistered(gearman_job.name):
             self.log.error("Job %s is not registered with Gearman" %
                            gearman_job)
-            self.onBuildCompleted(gearman_job, 'LOST')
+            self.onBuildCompleted(gearman_job, 'NOT_REGISTERED')
             return build
 
         if pipeline.precedence == zuul.model.PRECEDENCE_NORMAL:
@@ -312,14 +312,14 @@ class Gearman(object):
             self.gearman.submitJob(gearman_job, precedence=precedence)
         except Exception:
             self.log.exception("Unable to submit job to Gearman")
-            self.onBuildCompleted(gearman_job, 'LOST')
+            self.onBuildCompleted(gearman_job, 'EXCEPTION')
             return build
 
         if not gearman_job.handle:
             self.log.error("No job handle was received for %s after 30 seconds"
                            " marking as lost." %
                            gearman_job)
-            self.onBuildCompleted(gearman_job, 'LOST')
+            self.onBuildCompleted(gearman_job, 'NO_HANDLE')
 
         return build
 
@@ -396,7 +396,7 @@ class Gearman(object):
 
     def onDisconnect(self, job):
         self.log.info("Gearman job %s lost due to disconnect" % job)
-        self.onBuildCompleted(job, 'LOST')
+        self.onBuildCompleted(job)
 
     def onUnknownJob(self, job):
         self.log.info("Gearman job %s lost due to unknown handle" % job)
