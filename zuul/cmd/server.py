@@ -154,7 +154,13 @@ class Server(object):
             os.close(pipe_write)
             self.setup_logging('gearman_server', 'log_config')
             import gear
-            gear.Server(4730)
+            statsd_host = os.environ.get('STATSD_HOST')
+            statsd_port = int(os.environ.get('STATSD_PORT', 8125))
+            gear.Server(4730,
+                        statsd_host=statsd_host,
+                        statsd_port=statsd_port,
+                        statsd_prefix='zuul.geard')
+
             # Keep running until the parent dies:
             pipe_read = os.fdopen(pipe_read)
             pipe_read.read()
