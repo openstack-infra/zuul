@@ -46,7 +46,7 @@ class RPCClient(object):
         if job.exception:
             raise RPCFailure(job.exception)
         self.log.debug("Job complete, success: %s" % (not job.failure))
-        return (not job.failure)
+        return job
 
     def enqueue(self, pipeline, project, trigger, change):
         data = {'pipeline': pipeline,
@@ -54,13 +54,21 @@ class RPCClient(object):
                 'trigger': trigger,
                 'change': change,
                 }
-        return self.submitJob('zuul:enqueue', data)
+        return not self.submitJob('zuul:enqueue', data).failure
 
     def promote(self, pipeline, change_ids):
         data = {'pipeline': pipeline,
                 'change_ids': change_ids,
                 }
-        return self.submitJob('zuul:promote', data)
+        return not self.submitJob('zuul:promote', data).failure
+
+    def get_running_jobs(self):
+        data = {}
+        job = self.submitJob('zuul:get_running_jobs', data)
+        if job.failure:
+            return False
+        else:
+            return json.loads(job.data[0])
 
     def shutdown(self):
         self.gearman.shutdown()

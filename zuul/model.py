@@ -269,7 +269,7 @@ class Pipeline(object):
                     if j_changes:
                         j_queue['heads'].append(j_changes)
                     j_changes = []
-                j_changes.append(self.formatItemJSON(e))
+                j_changes.append(e.formatJSON())
                 if (len(j_changes) > 1 and
                     (j_changes[-2]['remaining_time'] is not None) and
                     (j_changes[-1]['remaining_time'] is not None)):
@@ -279,101 +279,6 @@ class Pipeline(object):
             if j_changes:
                 j_queue['heads'].append(j_changes)
         return j_pipeline
-
-    def formatStatus(self, item, indent=0, html=False):
-        changeish = item.change
-        indent_str = ' ' * indent
-        ret = ''
-        if html and hasattr(changeish, 'url') and changeish.url is not None:
-            ret += '%sProject %s change <a href="%s">%s</a>\n' % (
-                indent_str,
-                changeish.project.name,
-                changeish.url,
-                changeish._id())
-        else:
-            ret += '%sProject %s change %s based on %s\n' % (
-                indent_str,
-                changeish.project.name,
-                changeish._id(),
-                item.item_ahead)
-        for job in self.getJobs(changeish):
-            build = item.current_build_set.getBuild(job.name)
-            if build:
-                result = build.result
-            else:
-                result = None
-            job_name = job.name
-            if not job.voting:
-                voting = ' (non-voting)'
-            else:
-                voting = ''
-            if html:
-                if build:
-                    url = build.url
-                else:
-                    url = None
-                if url is not None:
-                    job_name = '<a href="%s">%s</a>' % (url, job_name)
-            ret += '%s  %s: %s%s' % (indent_str, job_name, result, voting)
-            ret += '\n'
-        return ret
-
-    def formatItemJSON(self, item):
-        changeish = item.change
-        ret = {}
-        ret['active'] = item.active
-        if hasattr(changeish, 'url') and changeish.url is not None:
-            ret['url'] = changeish.url
-        else:
-            ret['url'] = None
-        ret['id'] = changeish._id()
-        if item.item_ahead:
-            ret['item_ahead'] = item.item_ahead.change._id()
-        else:
-            ret['item_ahead'] = None
-        ret['items_behind'] = [i.change._id() for i in item.items_behind]
-        ret['failing_reasons'] = item.current_build_set.failing_reasons
-        ret['zuul_ref'] = item.current_build_set.ref
-        ret['project'] = changeish.project.name
-        ret['enqueue_time'] = int(item.enqueue_time * 1000)
-        ret['jobs'] = []
-        max_remaining = 0
-        for job in self.getJobs(changeish):
-            now = time.time()
-            build = item.current_build_set.getBuild(job.name)
-            elapsed = None
-            remaining = None
-            result = None
-            url = None
-            if build:
-                result = build.result
-                url = build.url
-                if build.start_time:
-                    if build.end_time:
-                        elapsed = int((build.end_time -
-                                       build.start_time) * 1000)
-                        remaining = 0
-                    else:
-                        elapsed = int((now - build.start_time) * 1000)
-                        if build.estimated_time:
-                            remaining = max(
-                                int(build.estimated_time * 1000) - elapsed,
-                                0)
-            if remaining and remaining > max_remaining:
-                max_remaining = remaining
-            ret['jobs'].append(
-                dict(
-                    name=job.name,
-                    elapsed_time=elapsed,
-                    remaining_time=remaining,
-                    url=url,
-                    result=result,
-                    voting=job.voting))
-        if self.haveAllJobsStarted(item):
-            ret['remaining_time'] = max_remaining
-        else:
-            ret['remaining_time'] = None
-        return ret
 
 
 class ActionReporter(object):
@@ -759,6 +664,124 @@ class QueueItem(object):
 
     def setReportedResult(self, result):
         self.current_build_set.result = result
+
+    def formatJSON(self):
+        changeish = self.change
+        ret = {}
+        ret['active'] = self.active
+        if hasattr(changeish, 'url') and changeish.url is not None:
+            ret['url'] = changeish.url
+        else:
+            ret['url'] = None
+        ret['id'] = changeish._id()
+        if self.item_ahead:
+            ret['item_ahead'] = self.item_ahead.change._id()
+        else:
+            ret['item_ahead'] = None
+        ret['items_behind'] = [i.change._id() for i in self.items_behind]
+        ret['failing_reasons'] = self.current_build_set.failing_reasons
+        ret['zuul_ref'] = self.current_build_set.ref
+        ret['project'] = changeish.project.name
+        ret['enqueue_time'] = int(self.enqueue_time * 1000)
+        ret['jobs'] = []
+        max_remaining = 0
+        for job in self.pipeline.getJobs(changeish):
+            now = time.time()
+            build = self.current_build_set.getBuild(job.name)
+            elapsed = None
+            remaining = None
+            result = None
+            url = None
+            worker = None
+            if build:
+                result = build.result
+                url = build.url
+                if build.start_time:
+                    if build.end_time:
+                        elapsed = int((build.end_time -
+                                       build.start_time) * 1000)
+                        remaining = 0
+                    else:
+                        elapsed = int((now - build.start_time) * 1000)
+                        if build.estimated_time:
+                            remaining = max(
+                                int(build.estimated_time * 1000) - elapsed,
+                                0)
+                worker = {
+                    'name': build.worker.name,
+                    'hostname': build.worker.hostname,
+                    'ips': build.worker.ips,
+                    'fqdn': build.worker.fqdn,
+                    'program': build.worker.program,
+                    'version': build.worker.version,
+                    'extra': build.worker.extra
+                }
+            if remaining and remaining > max_remaining:
+                max_remaining = remaining
+
+            ret['jobs'].append({
+                'name': job.name,
+                'elapsed_time': elapsed,
+                'remaining_time': remaining,
+                'url': url,
+                'result': result,
+                'voting': job.voting,
+                'uuid': build.uuid if build else None,
+                'launch_time': build.launch_time if build else None,
+                'start_time': build.start_time if build else None,
+                'end_time': build.end_time if build else None,
+                'estimated_time': build.estimated_time if build else None,
+                'pipeline': build.pipeline.name if build else None,
+                'canceled': build.canceled if build else None,
+                'retry': build.retry if build else None,
+                'number': build.number if build else None,
+                'parameters': build.parameters if build else None,
+                'worker': worker
+            })
+
+        if self.pipeline.haveAllJobsStarted(self):
+            ret['remaining_time'] = max_remaining
+        else:
+            ret['remaining_time'] = None
+        return ret
+
+    def formatStatus(self, indent=0, html=False):
+        changeish = self.change
+        indent_str = ' ' * indent
+        ret = ''
+        if html and hasattr(changeish, 'url') and changeish.url is not None:
+            ret += '%sProject %s change <a href="%s">%s</a>\n' % (
+                indent_str,
+                changeish.project.name,
+                changeish.url,
+                changeish._id())
+        else:
+            ret += '%sProject %s change %s based on %s\n' % (
+                indent_str,
+                changeish.project.name,
+                changeish._id(),
+                self.item_ahead)
+        for job in self.pipeline.getJobs(changeish):
+            build = self.current_build_set.getBuild(job.name)
+            if build:
+                result = build.result
+            else:
+                result = None
+            job_name = job.name
+            if not job.voting:
+                voting = ' (non-voting)'
+            else:
+                voting = ''
+            if html:
+                if build:
+                    url = build.url
+                else:
+                    url = None
+                if url is not None:
+                    job_name = '<a href="%s">%s</a>' % (url, job_name)
+            ret += '%s  %s: %s%s' % (indent_str, job_name, result, voting)
+            ret += '\n'
+        return ret
 
 
 class Changeish(object):

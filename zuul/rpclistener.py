@@ -48,6 +48,7 @@ class RPCListener(object):
     def register(self):
         self.worker.registerFunction("zuul:enqueue")
         self.worker.registerFunction("zuul:promote")
+        self.worker.registerFunction("zuul:get_running_jobs")
 
     def stop(self):
         self.log.debug("Stopping")
@@ -123,3 +124,14 @@ class RPCListener(object):
         change_ids = args['change_ids']
         self.sched.promote(pipeline_name, change_ids)
         job.sendWorkComplete()
+
+    def handle_get_running_jobs(self, job):
+        # args = json.loads(job.arguments)
+        # TODO: use args to filter by pipeline etc
+        running_items = []
+        for pipeline_name, pipeline in self.sched.layout.pipelines.iteritems():
+            for queue in pipeline.queues:
+                for item in queue.queue:
+                    running_items.append(item.formatJSON())
+
+        job.sendWorkComplete(json.dumps(running_items))

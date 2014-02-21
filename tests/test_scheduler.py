@@ -3870,3 +3870,62 @@ For CI problems and help debugging, contact ci@example.org"""
         self.worker.hold_jobs_in_build = False
         self.worker.release()
         self.waitUntilSettled()
+
+    def test_client_get_running_jobs(self):
+        "Test that the RPC client can get a list of running jobs"
+        self.worker.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        client = zuul.rpcclient.RPCClient('127.0.0.1',
+                                          self.gearman_server.port)
+
+        # Wait for gearman server to send the initial workData back to zuul
+        start = time.time()
+        while True:
+            if time.time() - start > 10:
+                raise Exception("Timeout waiting for gearman server to report "
+                                + "back to the client")
+            build = self.launcher.builds.values()[0]
+            if build.worker.name == "My Worker":
+                break
+            else:
+                time.sleep(0)
+
+        running_items = client.get_running_jobs()
+
+        self.assertEqual(1, len(running_items))
+        running_item = running_items[0]
+        self.assertEqual([], running_item['failing_reasons'])
+        self.assertEqual([], running_item['items_behind'])
+        self.assertEqual('https://hostname/1', running_item['url'])
+        self.assertEqual(None, running_item['item_ahead'])
+        self.assertEqual('org/project', running_item['project'])
+        self.assertEqual(None, running_item['remaining_time'])
+        self.assertEqual(True, running_item['active'])
+        self.assertEqual('1,1', running_item['id'])
+
+        self.assertEqual(3, len(running_item['jobs']))
+        for job in running_item['jobs']:
+            if job['name'] == 'project-merge':
+                self.assertEqual('project-merge', job['name'])
+                self.assertEqual('gate', job['pipeline'])
+                self.assertEqual(False, job['retry'])
+                self.assertEqual(13, len(job['parameters']))
+                self.assertEqual('https://server/job/project-merge/0/',
+                                 job['url'])
+                self.assertEqual(7, len(job['worker']))
+                self.assertEqual(False, job['canceled'])
+                self.assertEqual(True, job['voting'])
+                self.assertEqual(None, job['result'])
+                self.assertEqual('gate', job['pipeline'])
+                break
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        running_items = client.get_running_jobs()
+        self.assertEqual(0, len(running_items))
