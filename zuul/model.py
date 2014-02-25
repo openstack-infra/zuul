@@ -403,6 +403,8 @@ class ChangeQueue(object):
                  window_decrease_type='exponential', window_decrease_factor=2):
         self.pipeline = pipeline
         self.name = ''
+        self.assigned_name = None
+        self.generated_name = None
         self.projects = []
         self._jobs = set()
         self.queue = []
@@ -423,10 +425,21 @@ class ChangeQueue(object):
     def addProject(self, project):
         if project not in self.projects:
             self.projects.append(project)
+            self._jobs |= set(self.pipeline.getJobTree(project).getJobs())
+
             names = [x.name for x in self.projects]
             names.sort()
-            self.name = ', '.join(names)
-            self._jobs |= set(self.pipeline.getJobTree(project).getJobs())
+            self.generated_name = ', '.join(names)
+
+            for job in self._jobs:
+                if job.queue_name:
+                    if (self.assigned_name and
+                        job.queue_name != self.assigned_name):
+                        raise Exception("More than one name assigned to "
+                                        "change queue: %s != %s" %
+                                        (self.assigned_name, job.queue_name))
+                    self.assigned_name = job.queue_name
+            self.name = self.assigned_name or self.generated_name
 
     def enqueueChange(self, change):
         item = QueueItem(self.pipeline, change)
@@ -520,6 +533,7 @@ class Job(object):
     def __init__(self, name):
         # If you add attributes here, be sure to add them to the copy method.
         self.name = name
+        self.queue_name = None
         self.failure_message = None
         self.success_message = None
         self.failure_pattern = None

@@ -97,6 +97,7 @@ class LayoutSchema(object):
     project_templates = [project_template]
 
     job = {v.Required('name'): str,
+           'queue-name': str,
            'failure-message': str,
            'success-message': str,
            'failure-pattern': str,

@@ -104,6 +104,8 @@ jobs:
       - '.*-requires'
   - name: node-project-test1
     parameter-function: select_debian_node
+  - name: project1-project2-integration
+    queue-name: integration
 
 project-templates:
   - name: test-one-and-two

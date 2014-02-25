@@ -2893,6 +2893,21 @@ class TestScheduler(testtools.TestCase):
         self.assertTrue(re.search("project-test2.*SUCCESS", desc))
         self.assertTrue(re.search("Reported result.*SUCCESS", desc))
 
+    def test_queue_names(self):
+        "Test shared change queue names"
+        project1 = self.sched.layout.projects['org/project1']
+        project2 = self.sched.layout.projects['org/project2']
+        q1 = self.sched.layout.pipelines['gate'].getQueue(project1)
+        q2 = self.sched.layout.pipelines['gate'].getQueue(project2)
+        self.assertEqual(q1.name, 'integration')
+        self.assertEqual(q2.name, 'integration')
+
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-bad-queue.yaml')
+        with testtools.ExpectedException(
+            Exception, "More than one name assigned to change queue"):
+            self.sched.reconfigure(self.config)
+
     def test_queue_precedence(self):
         "Test that queue precedence works"
 

@@ -563,6 +563,18 @@ each job as it builds a list from the project specification.
   The name of the job.  This field is treated as a regular expression
   and will be applied to each job that matches.
 
+**queue-name (optional)**
+  Zuul will automatically combine projects that share a job into
+  shared change queues for dependent pipeline managers.  In order to
+  report statistics about these queues, it is convenient for them to
+  have names.  Zuul can automatically name change queues, however
+  these can grow quite long and are prone to changing as projects in
+  the queue change.  If you assign a queue-name to a job, Zuul will
+  use that as the name for the shared change queue that contains that
+  job instead of the automatically generated one.  It is an error for
+  a shared change queue to have more than one job with a queue-name if
+  they are not the same.
+
 **failure-message (optional)**
   The message that should be reported to Gerrit if the job fails.
 
