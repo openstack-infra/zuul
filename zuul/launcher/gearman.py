@@ -321,12 +321,21 @@ class Gearman(object):
                            gearman_job)
             self.onBuildCompleted(gearman_job, 'NO_HANDLE')
 
+        self.log.debug("Received handle %s for %s" % (gearman_job.handle,
+                                                      build))
+
         return build
 
     def cancel(self, build):
         self.log.info("Cancel build %s for job %s" % (build, build.job))
 
         build.canceled = True
+        try:
+            job = build.__gearman_job  # noqa
+        except AttributeError:
+            self.log.debug("Build %s has no associated gearman job" % build)
+            return
+
         if build.number is not None:
             self.log.debug("Build %s has already started" % build)
             self.cancelRunningBuild(build)
