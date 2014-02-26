@@ -1056,6 +1056,8 @@ class EventFilter(object):
         for rapproval in self.require_approvals:
             matches_approval = False
             for approval in change.approvals:
+                if 'description' not in approval:
+                    continue
                 found_approval = True
                 by = approval.get('by', {})
                 for k, v in rapproval.items():
