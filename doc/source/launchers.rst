@@ -77,17 +77,17 @@ as well as to the running job as environment variables.  They are as
 follows:
 
 **ZUUL_UUID**
-  Zuul provided key to link builds with Gerrit events
+  Zuul provided key to link builds with Gerrit events.
 **ZUUL_REF**
-  Zuul provided ref that includes commit(s) to build
+  Zuul provided ref that includes commit(s) to build.
 **ZUUL_COMMIT**
-  The commit SHA1 at the head of ZUUL_REF
+  The commit SHA1 at the head of ZUUL_REF.
 **ZUUL_PROJECT**
-  The project that triggered this build
+  The project that triggered this build.
 **ZUUL_PIPELINE**
-  The Zuul pipeline that is building this job
+  The Zuul pipeline that is building this job.
 **ZUUL_URL**
-  The url for the zuul server as configured in zuul.conf.
+  The URL for the zuul server as configured in zuul.conf.
   A test runner may use this URL as the basis for fetching
   git commits.
 
@@ -96,28 +96,28 @@ associated with changes (i.e., in response to patchset-created or
 comment-added events):
 
 **ZUUL_BRANCH**
-  The target branch for the change that triggered this build
+  The target branch for the change that triggered this build.
 **ZUUL_CHANGE**
-  The Gerrit change ID for the change that triggered this build
+  The Gerrit change ID for the change that triggered this build.
 **ZUUL_CHANGE_IDS**
   All of the Gerrit change IDs that are included in this build (useful
-  when the DependentPipelineManager combines changes for testing)
+  when the DependentPipelineManager combines changes for testing).
 **ZUUL_PATCHSET**
-  The Gerrit patchset number for the change that triggered this build
+  The Gerrit patchset number for the change that triggered this build.
 
 The following additional parameters will only be provided for
 post-merge (ref-updated) builds:
 
 **ZUUL_OLDREV**
   The SHA1 of the old revision at this ref (recall the ref name is
-  in ZUUL_REF)
+  in ZUUL_REF).
 **ZUUL_NEWREV**
   The SHA1 of the new revision at this ref (recall the ref name is
-  in ZUUL_REF)
+  in ZUUL_REF).
 **ZUUL_SHORT_OLDREV**
-  The shortened (7 character) SHA1 of the old revision
+  The shortened (7 character) SHA1 of the old revision.
 **ZUUL_SHORT_NEWREV**
-  The shortened (7 character) SHA1 of the new revision
+  The shortened (7 character) SHA1 of the new revision.
 
 In order to test the correct build, configure the Jenkins Git SCM
 plugin as follows::

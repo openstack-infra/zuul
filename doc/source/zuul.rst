@@ -10,11 +10,11 @@ Zuul has three configuration files:
 
 **zuul.conf**
   Connection information for Gerrit and Gearman, locations of the
-  other config files
+  other config files.
 **layout.yaml**
-  Project and pipeline configuration -- what Zuul does
+  Project and pipeline configuration -- what Zuul does.
 **logging.conf**
-    Python logging config
+    Python logging config.
 
 Examples of each of the three files can be found in the etc/ directory
 of the source distribution.
@@ -46,7 +46,7 @@ gearman
   ``server=gearman.example.com``
 
 **port**
-  Port on which the Gearman server is listening
+  Port on which the Gearman server is listening.
   ``port=4730``
 
 gearman_server
@@ -365,14 +365,14 @@ explanation of each of the parameters::
       If present, the approval must be older than this amount of time
       to match.  Provide a time interval as a number with a suffix of
       "w" (weeks), "d" (days), "h" (hours), "m" (minutes), "s"
-      (seconds).  Example "48h" or "2d".
+      (seconds).  Example ``48h`` or ``2d``.
 
       *newer-than*
       If present, the approval must be newer than this amount of time
       to match.  Same format as "older-than".
 
       Any other field is interpreted as a review category and value
-      pair.  For example "verified: 1" would require that the approval
+      pair.  For example ``verified: 1`` would require that the approval
       be for a +1 vote in the "Verified" column.
 
   **timer**
@@ -547,7 +547,7 @@ That kind of pipeline is nice to run regression or performance tests.
   The ``change-merged`` event does not include the commit sha1 which can be
   hazardous, it would let you report back to Gerrit though.  If you were to
   build a tarball for a specific commit, you should consider instead using
-  the ``ref-updated`` event which does include the commit sha1 (but lack the
+  the ``ref-updated`` event which does include the commit sha1 (but lacks the
   Gerrit change number).
 
 Jobs
