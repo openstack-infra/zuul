@@ -73,8 +73,13 @@ Zuul Parameters
 Zuul will pass some parameters with every job it launches.  The
 Gearman Plugin will ensure these are supplied as Jenkins build
 parameters, so they will be available for use in the job configuration
-as well as to the running job as environment variables.  They are as
-follows:
+as well as to the running job as environment variables.  Builds can
+be triggered either by an action on a change or by a reference update.
+Both events share a common set of parameters and more specific
+parameters as follows:
+
+Common parameters
+~~~~~~~~~~~~~~~~~
 
 **ZUUL_UUID**
   Zuul provided key to link builds with Gerrit events
@@ -91,6 +96,9 @@ follows:
   A test runner may use this URL as the basis for fetching
   git commits.
 
+Change related parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
 The following additional parameters will only be provided for builds
 associated with changes (i.e., in response to patchset-created or
 comment-added events):
@@ -105,6 +113,9 @@ comment-added events):
 **ZUUL_PATCHSET**
   The Gerrit patchset number for the change that triggered this build
 
+Reference updated parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 The following additional parameters will only be provided for
 post-merge (ref-updated) builds:
 
@@ -118,6 +129,37 @@ post-merge (ref-updated) builds:
   The shortened (7 character) SHA1 of the old revision
 **ZUUL_SHORT_NEWREV**
   The shortened (7 character) SHA1 of the new revision
+
+Unset revisions default to 00000000000000000000000000000000.
+
+Examples:
+
+When a reference is created::
+
+    ZUUL_OLDREV=00000000000000000000000000000000
+    ZUUL_NEWREV=123456789abcdef123456789abcdef12
+    ZUUL_SHORT_OLDREV=0000000
+    ZUUL_SHORT_NEWREV=1234567
+
+When a reference is deleted::
+
+    ZUUL_OLDREV=123456789abcdef123456789abcdef12
+    ZUUL_NEWREV=00000000000000000000000000000000
+    ZUUL_SHORT_OLDREV=1234567
+    ZUUL_SHORT_NEWREV=0000000
+
+And finally a reference being altered::
+
+    ZUUL_OLDREV=123456789abcdef123456789abcdef12
+    ZUUL_NEWREV=abcdef123456789abcdef123456789ab
+    ZUUL_SHORT_OLDREV=1234567
+    ZUUL_SHORT_NEWREV=abcdef1
+
+Your jobs can check whether the parameters are ``000000`` to act
+differently on each kind of event.
+
+Jenkins git plugin configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In order to test the correct build, configure the Jenkins Git SCM
 plugin as follows::
