@@ -3640,3 +3640,43 @@ class TestScheduler(testtools.TestCase):
         self.worker.hold_jobs_in_build = False
         self.worker.release()
         self.waitUntilSettled()
+
+    def test_footer_message(self):
+        "Test a pipeline's footer message is correctly added to the report."
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-footer-message.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        self.worker.addFailTest('test1', A)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        B.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(2, len(self.smtp_messages))
+
+        failure_body = """\
+Build failed.  For information on how to proceed, see \
+http://wiki.example.org/Test_Failures
+
+- test1 http://logs.example.com/1/1/gate/test1/0 : FAILURE in 0s
+- test2 http://logs.example.com/1/1/gate/test2/1 : SUCCESS in 0s
+
+For CI problems and help debugging, contact ci@example.org"""
+
+        success_body = """\
+Build succeeded.
+
+- test1 http://logs.example.com/2/1/gate/test1/2 : SUCCESS in 0s
+- test2 http://logs.example.com/2/1/gate/test2/3 : SUCCESS in 0s
+
+For CI problems and help debugging, contact ci@example.org"""
+
+        self.assertEqual(failure_body, self.smtp_messages[0]['body'])
+        self.assertEqual(success_body, self.smtp_messages[1]['body'])

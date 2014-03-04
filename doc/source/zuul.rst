@@ -238,6 +238,11 @@ explanation of each of the parameters::
   reported back to Gerrit when at least one voting build fails.
   Defaults to "Build failed."
 
+**footer-message**
+  An optional field to supply additional information after test results.
+  Useful for adding information about the CI system such as debugging
+  and contact details.
+
 **manager**
   There are currently two schemes for managing pipelines:
 

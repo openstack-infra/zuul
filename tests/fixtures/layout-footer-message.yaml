@@ -1,0 +1,34 @@
+includes:
+  - python-file: custom_functions.py
+
+pipelines:
+  - name: gate
+    manager: DependentPipelineManager
+    failure-message: Build failed.  For information on how to proceed, see http://wiki.example.org/Test_Failures
+    footer-message: For CI problems and help debugging, contact ci@example.org
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - approved: 1
+    success:
+      gerrit:
+        verified: 2
+        submit: true
+      smtp:
+        to: success@example.org
+    failure:
+      gerrit:
+        verified: -2
+      smtp:
+        to: failure@example.org
+    start:
+      gerrit:
+        verified: 0
+    precedence: high
+
+projects:
+  - name: org/project
+    gate:
+      - test1
+      - test2

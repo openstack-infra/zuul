@@ -64,6 +64,7 @@ class Pipeline(object):
         self.description = None
         self.failure_message = None
         self.success_message = None
+        self.footer_message = None
         self.dequeue_on_new_patchset = True
         self.job_trees = {}  # project -> JobTree
         self.manager = None

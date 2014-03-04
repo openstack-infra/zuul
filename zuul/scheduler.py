@@ -228,6 +228,7 @@ class Scheduler(threading.Thread):
                                                          "Build failed.")
             pipeline.success_message = conf_pipeline.get('success-message',
                                                          "Build succeeded.")
+            pipeline.footer_message = conf_pipeline.get('footer-message', "")
             pipeline.dequeue_on_new_patchset = conf_pipeline.get(
                 'dequeue-on-new-patchset', True)
 
@@ -1438,6 +1439,8 @@ class BasePipelineManager(object):
                         name = job.name + ' '
                 ret += '- %s%s : %s%s%s\n' % (name, url, result, elapsed,
                                               voting)
+            ret += '\n'
+        ret += self.pipeline.footer_message
         return ret
 
     def formatDescription(self, build):
