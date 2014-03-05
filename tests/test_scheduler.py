@@ -34,11 +34,11 @@ import threading
 import time
 import urllib
 import urllib2
-import urlparse
 
 import git
 import gear
 import fixtures
+import six.moves.urllib.parse as urlparse
 import statsd
 import testtools
 
