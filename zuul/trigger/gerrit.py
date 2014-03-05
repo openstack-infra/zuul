@@ -107,7 +107,7 @@ class GerritEventConnector(threading.Thread):
 class Gerrit(object):
     name = 'gerrit'
     log = logging.getLogger("zuul.Gerrit")
-    replication_timeout = 60
+    replication_timeout = 300
     replication_retry_interval = 5
 
     def __init__(self, config, sched):
