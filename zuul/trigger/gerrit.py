@@ -236,7 +236,7 @@ class Gerrit(object):
         if not status:
             return False
         self.log.debug("Change %s status: %s" % (change, status))
-        if status == 'MERGED' or status == 'SUBMITTED':
+        if status == 'MERGED':
             return True
 
     def canMerge(self, change, allow_needs):
