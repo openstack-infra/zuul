@@ -896,7 +896,6 @@ class TestScheduler(testtools.TestCase):
         self.merge_server.join()
         self.merge_client.stop()
         self.worker.shutdown()
-        self.gearman_server.shutdown()
         self.gerrit.stop()
         self.timer.stop()
         self.sched.stop()
@@ -907,6 +906,7 @@ class TestScheduler(testtools.TestCase):
         self.webapp.join()
         self.rpc.stop()
         self.rpc.join()
+        self.gearman_server.shutdown()
         threads = threading.enumerate()
         if len(threads) > 1:
             self.log.error("More than one thread is running: %s" % threads)
