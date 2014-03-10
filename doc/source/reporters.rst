@@ -39,10 +39,10 @@ A simple email reporter is also available.
 SMTP Configuration
 ~~~~~~~~~~~~~~~~~~
 
-zuul.conf contains the SMTP server and default to/from as describe
+zuul.conf contains the SMTP server and default to/from as described
 in :ref:`zuulconf`.
 
-Each pipeline can overwrite the subject or the to or from address by
+Each pipeline can overwrite the ``subject`` or the ``to`` or ``from`` address by
 providing alternatives as arguments to the reporter. For example, ::
 
   pipelines:
