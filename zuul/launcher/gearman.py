@@ -352,11 +352,11 @@ class Gearman(object):
         self.log.debug("Still unable to find build %s to cancel" % build)
         if build.number:
             self.log.debug("Build %s has just started" % build)
-            self.cancelRunningBuild(build)
-            self.log.debug("Canceled just running build %s" % build)
         else:
-            self.log.error("Build %s has not started but "
-                           "was not found in queue" % build)
+            self.log.error("Build %s has not started but was not"
+                           "found in queue; canceling anyway" % build)
+        self.cancelRunningBuild(build)
+        self.log.debug("Canceled possibly running build %s" % build)
 
     def onBuildCompleted(self, job, result=None):
         if job.unique in self.meta_jobs:

@@ -1112,6 +1112,7 @@ class TestScheduler(testtools.TestCase):
                     self.sched.result_event_queue.empty() and
                     self.fake_gerrit.event_queue.empty() and
                     not self.merge_client.build_sets and
+                    self.haveAllBuildsReported() and
                     self.areAllBuildsWaiting()):
                     self.sched.run_handler_lock.release()
                     self.worker.lock.release()
