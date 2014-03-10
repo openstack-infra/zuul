@@ -1110,6 +1110,16 @@ class BasePipelineManager(object):
     def _makeMergerItem(self, item):
         # Create a dictionary with all info about the item needed by
         # the merger.
+        number = None
+        patchset = None
+        oldrev = None
+        newrev = None
+        if hasattr(item.change, 'number'):
+            number = item.change.number
+            patchset = item.change.patchset
+        elif hasattr(item.change, 'newrev'):
+            oldrev = item.change.oldrev
+            newrev = item.change.newrev
         return dict(project=item.change.project.name,
                     url=self.pipeline.trigger.getGitUrl(
                         item.change.project),
@@ -1117,6 +1127,10 @@ class BasePipelineManager(object):
                     refspec=item.change.refspec,
                     branch=item.change.branch,
                     ref=item.current_build_set.ref,
+                    number=number,
+                    patchset=patchset,
+                    oldrev=oldrev,
+                    newrev=newrev,
                     )
 
     def prepareRef(self, item):
