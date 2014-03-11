@@ -26,10 +26,11 @@ class WebApp(threading.Thread):
         threading.Thread.__init__(self)
         self.scheduler = scheduler
         self.port = port
-
-    def run(self):
+        self.daemon = True
         self.server = httpserver.serve(self.app, host='0.0.0.0',
                                        port=self.port, start_loop=False)
+
+    def run(self):
         self.server.serve_forever()
 
     def stop(self):
