@@ -27,7 +27,7 @@ from zuul.model import Build
 class GearmanCleanup(threading.Thread):
     """ A thread that checks to see if outstanding builds have
     completed without reporting back. """
-    log = logging.getLogger("zuul.JenkinsCleanup")
+    log = logging.getLogger("zuul.GearmanCleanup")
 
     def __init__(self, gearman):
         threading.Thread.__init__(self)

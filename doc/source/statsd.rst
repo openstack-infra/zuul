@@ -66,10 +66,10 @@ The metrics are emitted by the Zuul scheduler (`zuul/scheduler.py`):
         #. **<jobname>** The triggered job name.
         #. **<build result>** Result as defined in your triggering system. For
                  Jenkins that would be SUCCESS, FAILURE, UNSTABLE, LOST.  The
-                 metrics holds both an increasing counter and a timing reporting
-                 the duration of the build. Whenever the result is a SUCCESS or
-                 FAILURE, Zuul will additionally report the duration of the
-                 build as a timing event.
+                 metrics holds both an increasing counter and a timing
+                 reporting the duration of the build. Whenever the result is a
+                 SUCCESS or FAILURE, Zuul will additionally report the duration
+                 of the build as a timing event.
 
       #. **resident_time** timing representing how long the Change has been
                known by Zuul (which includes build time and Zuul overhead).
