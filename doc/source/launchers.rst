@@ -5,6 +5,12 @@
 .. _`Gearman Plugin`:
    https://wiki.jenkins-ci.org/display/JENKINS/Gearman+Plugin
 
+.. _`Turbo-Hipster`:
+   http://git.openstack.org/cgit/stackforge/turbo-hipster/
+
+.. _`Turbo-Hipster Documentation`:
+   http://turbo-hipster.rtfd.org/
+
 .. _launchers:
 
 Launchers
@@ -185,6 +191,14 @@ instead.  As an example, the OpenStack project uses the following
 script to prepare the workspace for its integration testing:
 
   https://github.com/openstack-infra/devstack-gate/blob/master/devstack-vm-gate-wrap.sh
+
+Turbo Hipster Worker
+~~~~~~~~~~~~~~~~~~~~
+
+As an alternative to Jenkins, `Turbo-Hipster`_ is a small python
+project designed specifically as a zuul job worker which can be
+registered with gearman as a job runner. Please see the
+`Turbo-Hipster Documentation`_ for details on how to set it up.
 
 Zuul-Gearman Protocol
 ~~~~~~~~~~~~~~~~~~~~~
