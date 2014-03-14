@@ -266,12 +266,12 @@ class Merger(object):
         recent[key] = commit
         # Set the Zuul ref for this item to point to the most recent
         # commits of each project-branch
-        for key, commit in recent.items():
+        for key, mrc in recent.items():
             project, branch = key
             try:
                 repo = self.getRepo(project, None)
                 zuul_ref = branch + '/' + item['ref']
-                repo.createZuulRef(zuul_ref, commit)
+                repo.createZuulRef(zuul_ref, mrc)
             except Exception:
                 self.log.exception("Unable to set zuul ref %s for "
                                    "item %s" % (zuul_ref, item))

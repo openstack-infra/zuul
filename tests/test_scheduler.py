@@ -1946,6 +1946,15 @@ class TestScheduler(testtools.TestCase):
         self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
         self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
         self.waitUntilSettled()
+        queue = self.gearman_server.getQueue()
+        job_A = None
+        for job in queue:
+            if 'project-merge' in job.name:
+                job_A = job
+        ref_A = self.getParameter(job_A, 'ZUUL_REF')
+        commit_A = self.getParameter(job_A, 'ZUUL_COMMIT')
+        self.log.debug("Got Zuul ref for change A: %s" % ref_A)
+        self.log.debug("Got Zuul commit for change A: %s" % commit_A)
 
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
@@ -1955,7 +1964,10 @@ class TestScheduler(testtools.TestCase):
             if 'project-merge' in job.name:
                 job_B = job
         ref_B = self.getParameter(job_B, 'ZUUL_REF')
+        commit_B = self.getParameter(job_B, 'ZUUL_COMMIT')
         self.log.debug("Got Zuul ref for change B: %s" % ref_B)
+        self.log.debug("Got Zuul commit for change B: %s" % commit_B)
+
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
         queue = self.gearman_server.getQueue()
@@ -1963,7 +1975,9 @@ class TestScheduler(testtools.TestCase):
             if 'project-merge' in job.name:
                 job_C = job
         ref_C = self.getParameter(job_C, 'ZUUL_REF')
+        commit_C = self.getParameter(job_C, 'ZUUL_COMMIT')
         self.log.debug("Got Zuul ref for change C: %s" % ref_C)
+        self.log.debug("Got Zuul commit for change C: %s" % commit_C)
         self.gearman_server.hold_jobs_in_queue = False
         self.gearman_server.release()
         self.waitUntilSettled()
@@ -1973,15 +1987,32 @@ class TestScheduler(testtools.TestCase):
 
         repo_messages = [c.message.strip()
                          for c in repo.iter_commits(ref_C)]
+        repo_shas = [c.hexsha for c in repo.iter_commits(ref_C)]
         repo_messages.reverse()
         correct_messages = ['initial commit', 'A-1', 'C-1']
+        # Ensure the right commits are in the history for this ref
         self.assertEqual(repo_messages, correct_messages)
+        # Ensure ZUUL_REF -> ZUUL_COMMIT
+        self.assertEqual(repo_shas[0], commit_C)
 
         repo_messages = [c.message.strip()
                          for c in repo.iter_commits(ref_B)]
+        repo_shas = [c.hexsha for c in repo.iter_commits(ref_B)]
         repo_messages.reverse()
         correct_messages = ['initial commit', 'mp commit', 'B-1']
         self.assertEqual(repo_messages, correct_messages)
+        self.assertEqual(repo_shas[0], commit_B)
+
+        repo_messages = [c.message.strip()
+                         for c in repo.iter_commits(ref_A)]
+        repo_shas = [c.hexsha for c in repo.iter_commits(ref_A)]
+        repo_messages.reverse()
+        correct_messages = ['initial commit', 'A-1']
+        self.assertEqual(repo_messages, correct_messages)
+        self.assertEqual(repo_shas[0], commit_A)
+
+        self.assertNotEqual(ref_A, ref_B, ref_C)
+        self.assertNotEqual(commit_A, commit_B, commit_C)
 
     def test_one_job_project(self):
         "Test that queueing works with one job"
