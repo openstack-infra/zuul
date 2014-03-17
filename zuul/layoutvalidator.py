@@ -79,6 +79,7 @@ class LayoutSchema(object):
                 'description': str,
                 'success-message': str,
                 'failure-message': str,
+                'footer-message': str,
                 'dequeue-on-new-patchset': bool,
                 'trigger': trigger,
                 'success': report_actions,
