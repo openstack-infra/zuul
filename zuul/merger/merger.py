@@ -195,7 +195,7 @@ class Merger(object):
         try:
             self.log.info("Updating local repository %s", project)
             repo.update()
-        except:
+        except Exception:
             self.log.exception("Unable to update %s", project)
 
     def _mergeChange(self, item, ref):
@@ -282,6 +282,12 @@ class Merger(object):
         recent = {}
         commit = None
         for item in items:
+            if item.get("number") and item.get("patchset"):
+                self.log.debug("Merging for change %s,%s." %
+                               (item["number"], item["patchset"]))
+            elif item.get("newrev") and item.get("oldrev"):
+                self.log.debug("Merging for rev %s with oldrev %s." %
+                               (item["newrev"], item["oldrev"]))
             commit = self._mergeItem(item, recent)
             if not commit:
                 return None
