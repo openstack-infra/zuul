@@ -694,6 +694,11 @@ succeeds.  In the above example, project-unittest, project-pep8, and
 project-pyflakes are only executed if project-merge succeeds.  This
 can help avoid running unnecessary jobs.
 
+The special job named ``noop`` is internal to Zuul and will always
+return ``SUCCESS`` immediately.  This can be useful if you require
+that all changes be processed by a pipeline but a project has no jobs
+that can be run on it.
+
 .. seealso:: The OpenStack Zuul configuration for a comprehensive example: https://github.com/openstack-infra/config/blob/master/modules/openstack_project/files/zuul/layout.yaml
 
 Project Templates

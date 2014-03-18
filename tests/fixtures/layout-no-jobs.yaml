@@ -38,6 +38,6 @@ projects:
   - name: org/project
     merge-mode: cherry-pick
     check:
-      - noop
+      - gate-noop
     gate:
-      - noop
+      - gate-noop
