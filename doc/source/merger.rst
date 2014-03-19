@@ -33,8 +33,8 @@ and checking it out.  The parameters that provide this information are
 described in :ref:`launchers`.
 
 These references need to be made available via a Git repository that
-is available to Jenkins.  This is accomplished by serving Zuul's Git
-repositories directly.
+is available to workers (such as Jenkins).  This is accomplished by
+serving Zuul's Git repositories directly.
 
 Serving Zuul Git Repos
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -42,7 +42,7 @@ Serving Zuul Git Repos
 Zuul maintains its own copies of any needed Git repositories in the
 directory specified by ``git_dir`` in the ``merger`` section of
 zuul.conf (by default, /var/lib/zuul/git).  To directly serve Zuul's
-Git repositories in order to provide Zuul refs for Jenkins, you can
+Git repositories in order to provide Zuul refs for workers, you can
 configure Apache to do so using the following directives::
 
   SetEnv GIT_PROJECT_ROOT /var/lib/zuul/git

@@ -22,61 +22,14 @@ launcher -- if it can trigger jobs, cancel them, and receive success
 or failure reports, it should be able to be used with Zuul.  Patches
 to this effect are welcome.
 
-Gearman
--------
-
-Gearman_ is a general-purpose protocol for distributing jobs to any
-number of workers.  Zuul works with Gearman by sending specific
-information with job requests to Gearman, and expects certain
-information to be returned on completion.  This protocol is described
-in `Zuul-Gearman Protocol`_.
-
-The `Gearman Jenkins Plugin`_ makes it easy to use Jenkins with Zuul
-by providing an interface between Jenkins and Gearman.  In this
-configuration, Zuul asks Gearman to run jobs, and Gearman can then
-distribute those jobs to any number of Jenkins systems (including
-multiple Jenkins masters).
-
-In order for Zuul to run any jobs, you will need a running Gearman
-server.  Zuul includes a Gearman server, and it is recommended that it
-be used as it supports the following features needed by Zuul:
-
-* Canceling jobs in the queue (admin protocol command "cancel job").
-* Strict FIFO queue operation (gearmand's round-robin mode may be
-  sufficient, but is untested).
-
-To enable the built-in server, see the ``gearman_server`` section of
-``zuul.conf``.  Be sure that the host allows connections from Zuul and
-any workers (e.g., Jenkins masters) on TCP port 4730, and nowhere else
-(as the Gearman protocol does not include any provision for
-authentication).
-
-Gearman Jenkins Plugin
-----------------------
-
-The `Gearman Plugin`_ can be installed in Jenkins in order to
-facilitate Jenkins running jobs for Zuul.  Install the plugin and
-configure it with the hostname or IP address of your Gearman server
-and the port on which it is listening (4730 by default).  It will
-automatically register all known Jenkins jobs as functions that Zuul
-can invoke via Gearman.
-
-Any number of masters can be configured in this way, and Gearman will
-distribute jobs to all of them as appropriate.
-
-No special Jenkins job configuration is needed to support triggering
-by Zuul.
-
 Zuul Parameters
 ---------------
 
-Zuul will pass some parameters with every job it launches.  The
-Gearman Plugin will ensure these are supplied as Jenkins build
-parameters, so they will be available for use in the job configuration
-as well as to the running job as environment variables.  Builds can
-be triggered either by an action on a change or by a reference update.
-Both events share a common set of parameters and more specific
-parameters as follows:
+Zuul will pass some parameters with every job it launches.  These are
+for workers to be able to get the repositories into the state they are
+intended to be tested in.  Builds can be triggered either by an action
+on a change or by a reference update.  Both events share a common set
+of parameters and more specific parameters as follows:
 
 Common parameters
 ~~~~~~~~~~~~~~~~~
@@ -158,8 +111,57 @@ And finally a reference being altered::
 Your jobs can check whether the parameters are ``000000`` to act
 differently on each kind of event.
 
+Gearman
+-------
+
+Gearman_ is a general-purpose protocol for distributing jobs to any
+number of workers.  Zuul works with Gearman by sending specific
+information with job requests to Gearman, and expects certain
+information to be returned on completion.  This protocol is described
+in `Zuul-Gearman Protocol`_.
+
+In order for Zuul to run any jobs, you will need a running Gearman
+server.  Zuul includes a Gearman server, and it is recommended that it
+be used as it supports the following features needed by Zuul:
+
+* Canceling jobs in the queue (admin protocol command "cancel job").
+* Strict FIFO queue operation (gearmand's round-robin mode may be
+  sufficient, but is untested).
+
+To enable the built-in server, see the ``gearman_server`` section of
+``zuul.conf``.  Be sure that the host allows connections from Zuul and
+any workers (e.g., Jenkins masters) on TCP port 4730, and nowhere else
+(as the Gearman protocol does not include any provision for
+authentication).
+
+Gearman Jenkins Plugin
+~~~~~~~~~~~~~~~~~~~~~~
+
+The `Gearman Jenkins Plugin`_ makes it easy to use Jenkins with Zuul
+by providing an interface between Jenkins and Gearman.  In this
+configuration, Zuul asks Gearman to run jobs, and Gearman can then
+distribute those jobs to any number of Jenkins systems (including
+multiple Jenkins masters).
+
+The `Gearman Plugin`_ can be installed in Jenkins in order to
+facilitate Jenkins running jobs for Zuul.  Install the plugin and
+configure it with the hostname or IP address of your Gearman server
+and the port on which it is listening (4730 by default).  It will
+automatically register all known Jenkins jobs as functions that Zuul
+can invoke via Gearman.
+
+Any number of masters can be configured in this way, and Gearman will
+distribute jobs to all of them as appropriate.
+
+No special Jenkins job configuration is needed to support triggering
+by Zuul.
+
+The Gearman Plugin will ensure the `Zuul Parameters`_ are supplied as
+Jenkins build parameters, so they will be available for use in the job
+configuration as well as to the running job as environment variables.
+
 Jenkins git plugin configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In order to test the correct build, configure the Jenkins Git SCM
 plugin as follows::
@@ -184,9 +186,8 @@ script to prepare the workspace for its integration testing:
 
   https://github.com/openstack-infra/devstack-gate/blob/master/devstack-vm-gate-wrap.sh
 
-
 Zuul-Gearman Protocol
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 
 This section is only relevant if you intend to implement a new kind of
 worker that runs jobs for Zuul via Gearman.  If you just want to use
@@ -195,7 +196,7 @@ Jenkins, see `Gearman Jenkins Plugin`_ instead.
 The Zuul protocol as used with Gearman is as follows:
 
 Starting Builds
-~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^
 
 To start a build, Zuul invokes a Gearman function with the following
 format:
@@ -277,7 +278,7 @@ appropriate.  A WORK_EXCEPTION packet will be interpreted as a
 WORK_FAIL, but the exception will be logged in Zuul's error log.
 
 Stopping Builds
-~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^
 
 If Zuul needs to abort a build already in progress, it will invoke the
 following function through Gearman:
@@ -300,7 +301,7 @@ The original job is expected to complete with a WORK_DATA and
 WORK_FAIL packet as described in `Starting Builds`_.
 
 Build Descriptions
-~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^
 
 In order to update the job running system with a description of the
 current state of all related builds, the job runner may optionally
