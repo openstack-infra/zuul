@@ -19,7 +19,7 @@
 (function ($) {
     var $container, $msg, $msgWrap, $indicator, $queueInfo, $queueEventsNum,
         $queueResultsNum, $pipelines, $jq;
-    var xhr, prevHtml, zuul,
+    var xhr, zuul,
         demo = location.search.match(/[?&]demo=([^?&]*)/),
         source = demo ?
             './status-' + (demo[1] || 'basic') + '.json-sample' :
@@ -47,128 +47,135 @@
 
             zuul.emit('update-start');
 
-            xhr = $.ajax({
-                url: source,
-                dataType: 'json',
-                cache: false
-            })
-            .done(function (data) {
-                var html = '';
-                data = data || {};
+            xhr = $.getJSON(source)
+                .done(function (data) {
+                    if ('message' in data) {
+                        $msg.text(data.message);
+                        $msgWrap.removeClass('zuul-msg-wrap-off');
+                    } else {
+                        $msg.empty();
+                        $msgWrap.addClass('zuul-msg-wrap-off');
+                    }
 
-                if ('message' in data) {
-                    $msg.html(data.message);
+                    if ('zuul_version' in data) {
+                        $('#zuul-version-span').text(data['zuul_version']);
+                    }
+                    if ('last_reconfigured' in data) {
+                        var last_reconfigured =
+                            new Date(data['last_reconfigured']);
+                        $('#last-reconfigured-span').text(
+                            last_reconfigured.toString());
+                    }
+
+                    $pipelines.html('');
+                    $.each(data.pipelines, function (i, pipeline) {
+                        $pipelines.append(zuul.format.pipeline(pipeline));
+                    });
+
+                    $queueEventsNum.text(
+                        data.trigger_event_queue ?
+                            data.trigger_event_queue.length : '0'
+                    );
+                    $queueResultsNum.text(
+                        data.result_event_queue ?
+                            data.result_event_queue.length : '0'
+                    );
+                })
+                .fail(function (err, jqXHR, errMsg) {
+                    $msg.text(source + ': ' + errMsg).show();
                     $msgWrap.removeClass('zuul-msg-wrap-off');
-                } else {
-                    $msg.empty();
-                    $msgWrap.addClass('zuul-msg-wrap-off');
-                }
-
-                if ('zuul_version' in data) {
-                    $('#zuul-version-span').text(data['zuul_version']);
-                }
-                if ('last_reconfigured' in data) {
-                    var last_reconfigured =
-                        new Date(data['last_reconfigured']);
-                    $('#last-reconfigured-span').text(
-                        last_reconfigured.toString());
-                }
-
-                $.each(data.pipelines, function (i, pipeline) {
-                    html += zuul.format.pipeline(pipeline);
+                })
+                .complete(function () {
+                    xhr = undefined;
+                    zuul.emit('update-end');
                 });
-
-                // Only re-parse the DOM if we have to
-                if (html !== prevHtml) {
-                    prevHtml = html;
-                    $pipelines.html(html);
-                }
-
-                $queueEventsNum.text(
-                    data.trigger_event_queue ?
-                        data.trigger_event_queue.length : '0'
-                );
-                $queueResultsNum.text(
-                    data.result_event_queue ?
-                        data.result_event_queue.length : '0'
-                );
-            })
-            .fail(function (err, jqXHR, errMsg) {
-                $msg.text(source + ': ' + errMsg).show();
-                $msgWrap.removeClass('zuul-msg-wrap-off');
-            })
-            .complete(function () {
-                xhr = undefined;
-                zuul.emit('update-end');
-            });
 
             return xhr;
         },
 
         format: {
             change: function (change) {
-                var html = '<div class="well well-small zuul-change">' +
-                        '<ul class="nav nav-list">',
-                    id = change.id,
-                    url = change.url;
+                if (change.id.length === 40) {
+                    change.id = change.id.substr(0, 7);
+                }
 
-                html += '<li class="nav-header">' + change.project;
-                if (id.length === 40) {
-                    id = id.substr(0, 7);
+                var $html = $('<div />')
+                    .addClass('well well-small zuul-change')
+                var $list = $('<ul />').addClass('nav nav-list');
+                var $first_item = $('<li />').text(change.project)
+                    .addClass('nav-header');
+
+                if (change.url !== null) {
+                    var $id_span = $('<span />').append(
+                        $("<a />").attr("href", change.url).text(change.id)
+                    );
                 }
-                html += ' <span class="zuul-change-id">';
-                if (url !== null) {
-                    html += '<a href="' + url + '">';
+                else {
+                    var $id_span = $('<span />').text(change.id);
                 }
-                html += id;
-                if (url !== null) {
-                    html += '</a>';
-                }
-                html += '</span></li>';
+                $first_item.append($id_span.addClass('zuul-change-id'));
+                $list.append($first_item);
 
                 $.each(change.jobs, function (i, job) {
-                    var result = job.result ? job.result.toLowerCase() : null,
-                        resultClass = 'zuul-result label';
+                    var $item = $('<li />');
+
+                    var result = job.result ? job.result.toLowerCase() : null;
                     if (result === null) {
                         result = job.url ? 'in progress' : 'queued';
                     }
                     switch (result) {
-                    case 'success':
-                        resultClass += ' label-success';
-                        break;
-                    case 'failure':
-                        resultClass += ' label-important';
-                        break;
-                    case 'lost':
-                    case 'unstable':
-                        resultClass += ' label-warning';
-                        break;
+                        case 'success':
+                            resultClass = ' label-success';
+                            break;
+                        case 'failure':
+                            resultClass = ' label-important';
+                            break;
+                        case 'lost':
+                        case 'unstable':
+                            resultClass = ' label-warning';
+                            break;
                     }
-                    html += '<li class="zuul-change-job">';
-                    html += job.url !== null ?
-                        '<a href="' + job.url + '" ' +
-                        'class="zuul-change-job-link">' :
-                        '<span class="zuul-change-job-link">';
-                    html += job.name;
-                    html += ' <span class="' + resultClass + '">' + result +
-                        '</span>';
+
+                    $item.addClass('zuul-change-job');
+                    if (job.url !== null) {
+                        $job_line = $('<a href="' + job.url + '" />').
+                            addClass('zuul-change-job-link');
+                    }
+                    else{
+                        $job_line = $('<span />').
+                            addClass('zuul-change-job-link');
+                    }
+                    $job_line.text(job.name)
+                        .append(
+                            $('<span />').addClass('zuul-result label').
+                                addClass(resultClass).text(result)
+                    );
+
                     if (job.voting === false) {
-                        html += ' <span class="muted">(non-voting)</span>';
+                        $job_line.append(
+                            $(' <span />').addClass('muted').
+                                text(' (non-voting)')
+                        );
                     }
-                    html += job.url !== null ? '</a>' : '</span>';
-                    html += '</li>';
+                    $item.append($job_line);
+                    $list.append($item);
                 });
 
-                html += '</ul></div>';
-                return html;
+                $html.append($list);
+                return $html;
             },
 
             pipeline: function (pipeline) {
-                var html = '<div class="zuul-pipeline span4"><h3>' +
-                    pipeline.name + '</h3>';
+                var $html = $('<div />')
+                    .addClass('zuul-pipeline span4')
+                    .append($('<h3 />').text(pipeline.name));
+
                 if (typeof pipeline.description === 'string') {
-                    html += '<p><small>' + pipeline.description +
-                        '</small></p>';
+                    $html.append(
+                        $('<p />').append(
+                            $('<small />').text(pipeline.description)
+                        )
+                    );
                 }
 
                 $.each(pipeline.change_queues,
@@ -177,26 +184,25 @@
                         if (pipeline.change_queues.length > 1 &&
                             headNum === 0) {
                             var name = changeQueue.name;
-                            html += '<p>Queue: <abbr title="' + name + '">';
                             if (name.length > 32) {
-                                name = name.substr(0, 32) + '...';
+                                short_name = name.substr(0, 32) + '...';
                             }
-                            html += name + '</abbr></p>';
+                            $html.append(
+                                $('<p />')
+                                    .text('Queue: ')
+                                    .append(
+                                        $('<abbr />')
+                                            .attr('title', name)
+                                            .text(short_name)
+                                    )
+                            );
                         }
                         $.each(changes, function (changeNum, change) {
-                            // If there are multiple changes in the same head
-                            // it means they're connected
-                            if (changeNum > 0) {
-                                html += '<div class="zuul-change-arrow">' +
-                                    '&uarr;</div>';
-                            }
-                            html += zuul.format.change(change);
+                            $html.append(zuul.format.change(change))
                         });
                     });
                 });
-
-                html += '</div>';
-                return html;
+                return $html;
             }
         },
 
@@ -246,8 +252,8 @@
                        '<i class="icon-refresh"></i></span>');
         $queueInfo = $('<p>Queue lengths: <span>0</span> events, ' +
                        '<span>0</span> results.</p>');
-        $queueEventsNum =  $queueInfo.find('span').eq(0);
-        $queueResultsNum =  $queueEventsNum.next();
+        $queueEventsNum = $queueInfo.find('span').eq(0);
+        $queueResultsNum = $queueEventsNum.next();
         $pipelines = $('<div class="row"></div>');
         $zuulVersion = $('<p>Zuul version: <span id="zuul-version-span">' +
                          '</span></p>');
