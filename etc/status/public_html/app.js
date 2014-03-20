@@ -17,8 +17,9 @@
 // under the License.
 
 (function ($) {
-    var $container, $msg, $msgWrap, $indicator, $queueInfo, $queueEventsNum, $queueResultsNum, $pipelines,
-        prevHtml, xhr, zuul, $jq,
+    var $container, $msg, $msgWrap, $indicator, $queueInfo, $queueEventsNum,
+        $queueResultsNum, $pipelines, $jq;
+    var xhr, prevHtml, zuul,
         demo = location.search.match(/[?&]demo=([^?&]*)/),
         source = demo ?
             './status-' + (demo[1] || 'basic') + '.json-sample' :
@@ -67,8 +68,10 @@
                     $('#zuul-version-span').text(data['zuul_version']);
                 }
                 if ('last_reconfigured' in data) {
-                    var last_reconfigured = new Date(data['last_reconfigured']);
-                    $('#last-reconfigured-span').text(last_reconfigured.toString());
+                    var last_reconfigured =
+                        new Date(data['last_reconfigured']);
+                    $('#last-reconfigured-span').text(
+                        last_reconfigured.toString());
                 }
 
                 $.each(data.pipelines, function (i, pipeline) {
@@ -82,10 +85,12 @@
                 }
 
                 $queueEventsNum.text(
-                    data.trigger_event_queue ? data.trigger_event_queue.length : '0'
+                    data.trigger_event_queue ?
+                        data.trigger_event_queue.length : '0'
                 );
                 $queueResultsNum.text(
-                    data.result_event_queue ? data.result_event_queue.length : '0'
+                    data.result_event_queue ?
+                        data.result_event_queue.length : '0'
                 );
             })
             .fail(function (err, jqXHR, errMsg) {
@@ -102,7 +107,8 @@
 
         format: {
             change: function (change) {
-                var html = '<div class="well well-small zuul-change"><ul class="nav nav-list">',
+                var html = '<div class="well well-small zuul-change">' +
+                        '<ul class="nav nav-list">',
                     id = change.id,
                     url = change.url;
 
@@ -140,10 +146,12 @@
                     }
                     html += '<li class="zuul-change-job">';
                     html += job.url !== null ?
-                        '<a href="' + job.url + '" class="zuul-change-job-link">' :
+                        '<a href="' + job.url + '" ' +
+                        'class="zuul-change-job-link">' :
                         '<span class="zuul-change-job-link">';
                     html += job.name;
-                    html += ' <span class="' + resultClass + '">' + result + '</span>';
+                    html += ' <span class="' + resultClass + '">' + result +
+                        '</span>';
                     if (job.voting === false) {
                         html += ' <span class="muted">(non-voting)</span>';
                     }
@@ -159,12 +167,15 @@
                 var html = '<div class="zuul-pipeline span4"><h3>' +
                     pipeline.name + '</h3>';
                 if (typeof pipeline.description === 'string') {
-                    html += '<p><small>' + pipeline.description + '</small></p>';
+                    html += '<p><small>' + pipeline.description +
+                        '</small></p>';
                 }
 
-                $.each(pipeline.change_queues, function (queueNum, changeQueue) {
+                $.each(pipeline.change_queues,
+                       function (queueNum, changeQueue) {
                     $.each(changeQueue.heads, function (headNum, changes) {
-                        if (pipeline.change_queues.length > 1 && headNum === 0) {
+                        if (pipeline.change_queues.length > 1 &&
+                            headNum === 0) {
                             var name = changeQueue.name;
                             html += '<p>Queue: <abbr title="' + name + '">';
                             if (name.length > 32) {
@@ -173,9 +184,11 @@
                             html += name + '</abbr></p>';
                         }
                         $.each(changes, function (changeNum, change) {
-                            // If there are multiple changes in the same head it means they're connected
+                            // If there are multiple changes in the same head
+                            // it means they're connected
                             if (changeNum > 0) {
-                                html += '<div class="zuul-change-arrow">&uarr;</div>';
+                                html += '<div class="zuul-change-arrow">' +
+                                    '&uarr;</div>';
                             }
                             html += zuul.format.change(change);
                         });
@@ -216,25 +229,34 @@
     });
 
     $jq.one('update-end', function () {
-        // Do this asynchronous so that if the first update adds a message, it will not animate
-        // while we fade in the content. Instead it simply appears with the rest of the content.
+        // Do this asynchronous so that if the first update adds a message, it
+        // will not animate while we fade in the content. Instead it simply
+        // appears with the rest of the content.
         setTimeout(function () {
-            $container.addClass('zuul-container-ready'); // Fades in the content
+            // Fade in the content
+            $container.addClass('zuul-container-ready');
         });
     });
 
     $(function ($) {
         $msg = $('<div class="zuul-msg alert alert-error"></div>');
-        $msgWrap = $msg.wrap('<div class="zuul-msg-wrap zuul-msg-wrap-off"></div>').parent();
-        $indicator = $('<span class="btn pull-right zuul-spinner">updating <i class="icon-refresh"></i></span>');
-        $queueInfo = $('<p>Queue lengths: <span>0</span> events, <span>0</span> results.</p>');
+        $msgWrap = $msg.wrap('<div class="zuul-msg-wrap zuul-msg-wrap-off">' +
+                             '</div>').parent();
+        $indicator = $('<span class="btn pull-right zuul-spinner">updating ' +
+                       '<i class="icon-refresh"></i></span>');
+        $queueInfo = $('<p>Queue lengths: <span>0</span> events, ' +
+                       '<span>0</span> results.</p>');
         $queueEventsNum =  $queueInfo.find('span').eq(0);
         $queueResultsNum =  $queueEventsNum.next();
         $pipelines = $('<div class="row"></div>');
-        $zuulVersion = $('<p>Zuul version: <span id="zuul-version-span"></span></p>');
-        $lastReconf = $('<p>Last reconfigured: <span id="last-reconfigured-span"></span></p>');
+        $zuulVersion = $('<p>Zuul version: <span id="zuul-version-span">' +
+                         '</span></p>');
+        $lastReconf = $('<p>Last reconfigured: ' +
+                        '<span id="last-reconfigured-span"></span></p>');
 
-        $container = $('#zuul-container').append($msgWrap, $indicator, $queueInfo, $pipelines, $zuulVersion, $lastReconf);
+        $container = $('#zuul-container').append($msgWrap, $indicator,
+                                                 $queueInfo, $pipelines,
+                                                 $zuulVersion, $lastReconf);
 
         zuul.schedule();
 
