@@ -30,6 +30,7 @@
 
     zuul = {
         enabled: true,
+        collapsed_exceptions: [],
 
         schedule: function () {
             if (!zuul.enabled) {
@@ -319,14 +320,21 @@
 
             change_panel: function (change) {
                 var $header = $('<div />')
-                    .addClass('panel-heading')
+                    .addClass('panel-heading patchset-header')
                     .append(zuul.format.change_header(change));
 
-                var $html = $('<div />')
+                var panel_id = change.id ? change.id.replace(',', '_')
+                                         : change.project.replace('/', '_') +
+                                           '-' + change.enqueue_time
+                var $panel = $('<div />')
+                    .attr("id", panel_id)
                     .addClass('panel panel-default zuul-change')
                     .append($header)
                     .append(zuul.format.change_list(change.jobs));
-                return $html;
+
+                $header.click(zuul.toggle_patchset);
+                zuul.display_patchset($panel);
+                return $panel;
             },
 
             pipeline: function (pipeline) {
@@ -382,7 +390,41 @@
         one: function () {
             $jq.one.apply($jq, arguments);
             return this;
-        }
+        },
+
+        toggle_patchset: function(e) {
+            // Toggle showing/hiding the patchset when the header is clicked
+            // Grab the patchset panel
+            var $panel = $(e.target).parents('.zuul-change');
+            var $body = $panel.children(':not(.patchset-header)');
+            $body.toggle(200);
+            var collapsed_index = zuul.collapsed_exceptions.indexOf(
+                $panel.attr('id'));
+            if (collapsed_index == -1 ) {
+                // Currently not an exception, add it to list
+                zuul.collapsed_exceptions.push($panel.attr('id'));
+            }
+            else {
+                // Currently an except, remove from exceptions
+                zuul.collapsed_exceptions.splice(collapsed_index, 1);
+            }
+        },
+
+        display_patchset: function($panel) {
+            // Determine if to show or hide the patchset when loaded
+            var $body = $panel.children(':not(.patchset-header)');
+            var collapsed_index = zuul.collapsed_exceptions.indexOf(
+                $panel.attr('id'));
+            if (collapsed_index == -1 ) {
+                // Currently not an exception
+                // we are hiding by default
+                $body.hide();
+            }
+            else {
+                // Currently an exception
+                // Do nothing more (will display)
+            }
+        },
     };
 
     $jq = $(zuul);
