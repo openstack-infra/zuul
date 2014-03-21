@@ -174,6 +174,21 @@
                 return $bar_outter;
             },
 
+            enqueue_time: function(ms) {
+                // Special format case for enqueue time to add style
+                var hours = 60 * 60 * 1000;
+                var now = Date.now();
+                var delta = now - ms;
+                var status = "text-success";
+                var text = zuul.format.time(delta, true);
+                if (delta > (4 * hours)) {
+                    status = "text-danger";
+                } else if (delta > (2 * hours)) {
+                    status = "text-warning";
+                }
+                return '<span class="' + status + '">' + text + '</span>';
+            },
+
             time: function(ms, words) {
                 if (typeof(words) === 'undefined') words = false;
                 var seconds = (+ms)/1000;
@@ -199,32 +214,49 @@
                 return r;
             },
 
-            change: function (change) {
-                if (change.id.length === 40) {
-                    change.id = change.id.substr(0, 7);
+            change_header: function(change) {
+                change_id = change.id || 'NA';
+                if (change_id.length === 40) {
+                    change_id = change_id.substr(0, 7);
                 }
 
-                var $html = $('<div />')
-                    .addClass('panel panel-default zuul-change')
-
-                var $change_header = $('<div />').text(change.project);
-                $change_header.addClass('panel-heading');
-
+                $change_link = $('<small />');
                 if (change.url !== null) {
-                    var $id_span = $('<span />').append(
+                    $change_link.append(
                         $("<a />").attr("href", change.url).text(change.id)
                     );
                 }
                 else {
-                    var $id_span = $('<span />').text(change.id);
+                    $change_link.text(change_id);
                 }
-                $change_header.append($id_span.addClass('zuul-change-id'));
-                $html.append($change_header);
 
+                $left = $('<div />')
+                    .addClass('col-xs-8')
+                    .html(change.project + '<br />')
+                    .append($change_link);
+
+                remaining_time = zuul.format.time(change.remaining_time, true);
+                enqueue_time = zuul.format.enqueue_time(change.enqueue_time);
+                $remaining_time = $('<small />').addClass('time')
+                    .attr('title', 'Remaining Time').html(remaining_time);
+                $enqueue_time = $('<small />').addClass('time')
+                    .attr('title', 'Elapsed Time').html(enqueue_time);
+
+                $right = $('<div />')
+                    .addClass('col-xs-4 text-right')
+                    .append($remaining_time, $('<br />'), $enqueue_time);
+
+                $header = $('<div />')
+                    .addClass('row')
+                    .append($left, $right);
+                return $header;
+            },
+
+            change_list: function(jobs) {
                 var $list = $('<ul />')
                     .addClass('list-group');
 
-                $.each(change.jobs, function (i, job) {
+                $.each(jobs, function (i, job) {
                     var $item = $('<li />')
                         .addClass('list-group-item')
                         .addClass('zuul-change-job')
@@ -232,7 +264,18 @@
                     $list.append($item);
                 });
 
-                $html.append($list);
+                return $list;
+            },
+
+            change_panel: function (change) {
+                var $header = $('<div />')
+                    .addClass('panel-heading')
+                    .append(zuul.format.change_header(change));
+
+                var $html = $('<div />')
+                    .addClass('panel panel-default zuul-change')
+                    .append($header)
+                    .append(zuul.format.change_list(change.jobs));
                 return $html;
             },
 
@@ -270,7 +313,7 @@
                             );
                         }
                         $.each(changes, function (changeNum, change) {
-                            $html.append(zuul.format.change(change))
+                            $html.append(zuul.format.change_panel(change))
                         });
                     });
                 });
