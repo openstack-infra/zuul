@@ -22,9 +22,15 @@ under the License.
     <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="bootstrap/css/bootstrap-responsive.min.css">
     <style>
-        .zuul-result,
         .zuul-change-id {
             float: right;
+        }
+
+        .zuul-result {
+            float: right;
+            width: 70px;
+            height: 15px;
+            margin: 0;
         }
 
         .zuul-spinner,
@@ -41,6 +47,11 @@ under the License.
             transition-duration: 0.4s;
             cursor: progress;
         }
+
+        .zuul-change-job {
+            padding: 5px 10px;
+        }
+
     </style>
 </head>
 <body>
