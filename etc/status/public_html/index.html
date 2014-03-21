@@ -22,109 +22,25 @@ under the License.
     <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="bootstrap/css/bootstrap-responsive.min.css">
     <style>
-.zuul-container {
-    transition-property: opacity, background-color;
-    transition-duration: 1s;
-    transition-timing-function: ease-in-out;
-    clear: both;
-    opacity: 0;
-    cursor: progress;
-    min-height: 400px;
-    background-color: #f8ffaa;
-}
+        .zuul-result,
+        .zuul-change-id {
+            float: right;
+        }
 
-.zuul-container-ready {
-    opacity: 1;
-    cursor: auto;
-    background-color: #fff;
-}
+        .zuul-spinner,
+        .zuul-spinner:hover {
+            opacity: 0;
+            transition: opacity 3s ease-out;
+            cursor: default;
+            pointer-events: none;
+        }
 
-.zuul-spinner,
-.zuul-spinner:hover {
-    opacity: 0;
-    transition: opacity 3s ease-out;
-    cursor: default;
-    pointer-events: none;
-}
-
-.zuul-spinner-on,
-.zuul-spinner-on:hover {
-    opacity: 1;
-    transition-duration: 0.4s;
-    cursor: progress;
-}
-
-.zuul-change-arrow {
-    text-align: center;
-    font-size: 16pt;
-    line-height: 1.0;
-}
-
-.zuul-change-id {
-    text-transform: none;
-}
-
-.zuul-change-job a {
-    overflow: auto;
-}
-
-.zuul-result {
-    text-shadow: none;
-    font-weight: normal;
-    background-color: #E9E9E9;
-    color: #555;
-}
-
-.zuul-result.label-success {
-    background-color: #CDF0CD;
-    color: #468847;
-}
-
-.zuul-result.label-important {
-    background-color: #F1DBDA;
-    color: #B94A48;
-}
-
-.zuul-result.label-warning {
-    background-color: #F3E6D4;
-    color: #F89406;
-}
-
-.zuul-msg-wrap {
-    max-height: 150px;
-    overflow: hidden;
-}
-
-.zuul-container-ready .zuul-msg-wrap {
-    transition: max-height 1s ease-in;
-}
-
-.zuul-msg-wrap-off {
-    max-height: 0;
-}
-
-.zuul-msg p {
-    margin: 0;
-}
-
-/**
- * Styles for Bootstrap only
- * (remove when not using Bootstrap)
- */
-
-.zuul-change-id {
-    float: right;
-}
-
-.zuul-change-job-link {
-    overflow: auto;
-    display: block;
-}
-
-.zuul-result {
-    float: right;
-}
-
+        .zuul-spinner-on,
+        .zuul-spinner-on:hover {
+            opacity: 1;
+            transition-duration: 0.4s;
+            cursor: progress;
+        }
     </style>
 </head>
 <body>

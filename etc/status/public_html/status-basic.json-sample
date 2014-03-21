@@ -1,6 +1,6 @@
 {
     "last_reconfigured": 1389381756000,
-    "message": "Example error message",
+    "message": "Example info message",
     "pipelines": [
         {
             "name": "test",
