@@ -290,6 +290,11 @@ class Gearman(object):
         build = Build(job, uuid)
         build.parameters = params
 
+        if job.name == 'noop':
+            build.result = 'SUCCESS'
+            self.sched.onBuildCompleted(build)
+            return build
+
         gearman_job = gear.Job(name, json.dumps(params),
                                unique=uuid)
         build.__gearman_job = gearman_job
