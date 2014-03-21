@@ -137,6 +137,7 @@ class Server(object):
         if not os.path.exists(path):
             raise Exception("Unable to find job list: %s" % path)
         jobs = set()
+        jobs.add('noop')
         for line in open(path):
             v = line.strip()
             if v:
