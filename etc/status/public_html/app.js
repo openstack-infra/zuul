@@ -21,9 +21,11 @@
         $queueResultsNum, $pipelines, $jq;
     var xhr, zuul,
         demo = location.search.match(/[?&]demo=([^?&]*)/),
+        source_url = location.search.match(/[?&]source_url=([^?&]*)/),
         source = demo ?
             './status-' + (demo[1] || 'basic') + '.json-sample' :
             'status.json';
+        source = source_url ? source_url[1] : source;
 
     zuul = {
         enabled: true,
