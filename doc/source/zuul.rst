@@ -67,6 +67,10 @@ gerrit
   FQDN of Gerrit server.
   ``server=review.example.com``
 
+**port**
+  Optional: Gerrit server port.
+  ``port=29418``
+
 **baseurl**
   Optional: path to Gerrit web interface. Defaults to ``https://<value
   of server>/``. ``baseurl=https://review.example.com/review_site/``
@@ -157,6 +161,10 @@ smtp
 **server**
   SMTP server hostname or address to use.
   ``server=localhost``
+
+**port**
+  Optional: SMTP server port.
+  ``port=25``
 
 **default_from**
   Who the email should appear to be sent from when emailing the report.
