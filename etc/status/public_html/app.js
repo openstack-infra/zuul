@@ -442,17 +442,40 @@
                 return $form_group;
             },
 
-            filter_form: function() {
+            expand_form_group: function() {
+                expand_by_default = (
+                    read_cookie('zuul_expand_by_default', false) === 'true');
+
+                $checkbox = $('<input />')
+                    .attr('type', 'checkbox')
+                    .attr('id', 'expand_by_default')
+                    .prop('checked', expand_by_default)
+                    .change(zuul.handle_expand_by_default);
+
+                $label = $('<label />')
+                    .css('padding-left', '1em')
+                    .html('Expand by default: ')
+                    .append($checkbox);
+
+                var $form_group = $('<div />')
+                    .addClass('checkbox')
+                    .append($label);
+                return $form_group;
+            },
+
+            control_form: function() {
                 // Build the filter form filling anything from cookies
 
-                $filter_form = $('<form />')
+                $control_form = $('<form />')
                     .attr('role', 'form')
                     .addClass('form-inline')
                     .submit(zuul.handle_filter_change);
 
-                $filter_form.append(zuul.format.filter_form_group(
-                    current_filter));
-                return $filter_form;
+                $control_form
+                    .append(zuul.format.filter_form_group(current_filter))
+                    .append(zuul.format.expand_form_group());
+
+                return $control_form;
             },
         },
 
@@ -493,16 +516,16 @@
 
             // See if we should hide the body/results
             var $body = $panel.children(':not(.patchset-header)');
+            var expand_by_default = $('#expand_by_default').prop('checked');
             var collapsed_index = zuul.collapsed_exceptions.indexOf(
                 $panel.attr('id'));
-            if (collapsed_index == -1 ) {
-                // Currently not an exception
-                // we are hiding by default
-                $body.hide();
+            if (expand_by_default && collapsed_index == -1 ||
+                !expand_by_default && collapsed_index != -1) {
+                // Expand by default, or is an exception
+                $body.show(animate);
             }
             else {
-                // Currently an exception
-                // Do nothing more (will display)
+                $body.hide(animate);
             }
 
             // Check if we should hide the whole panel
@@ -553,6 +576,16 @@
             })
             return false;
         },
+
+        handle_expand_by_default: function(e) {
+            // Handle toggling expand by default
+            set_cookie('zuul_expand_by_default', e.target.checked);
+            zuul.collapsed_exceptions = [];
+            $('.zuul-change').each(function(index, obj) {
+                $panel = $(obj);
+                zuul.display_patchset($panel, 200);
+            })
+        },
     };
 
     current_filter = read_cookie('zuul_filter_string', current_filter);
@@ -591,7 +624,7 @@
         $queueEventsNum = $queueInfo.find('span').eq(0);
         $queueResultsNum = $queueEventsNum.next();
 
-        $filter_form = zuul.format.filter_form();
+        $control_form = zuul.format.control_form();
 
         $pipelines = $('<div class="row"></div>');
         $zuulVersion = $('<p>Zuul version: <span id="zuul-version-span">' +
@@ -600,7 +633,7 @@
                         '<span id="last-reconfigured-span"></span></p>');
 
         $container = $('#zuul-container').append($msg, $indicator,
-                                                 $queueInfo, $filter_form,
+                                                 $queueInfo, $control_form,
                                                  $pipelines, $zuulVersion,
                                                  $lastReconf);
 
