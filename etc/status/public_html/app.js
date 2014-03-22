@@ -16,6 +16,7 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
+'use strict';
 
 (function ($) {
     var $container, $msg, $indicator, $queueInfo, $queueEventsNum,
@@ -27,19 +28,21 @@
         source = demo ?
             './status-' + (demo[1] || 'basic') + '.json-sample' :
             'status.json';
-        source = source_url ? source_url[1] : source;
+    source = source_url ? source_url[1] : source;
 
     function set_cookie(name, value) {
-        document.cookie = name + "=" + value + "; path=/";
+        document.cookie = name + '=' + value + '; path=/';
     }
 
     function read_cookie(name, default_value) {
-        var nameEQ = name + "=";
+        var nameEQ = name + '=';
         var ca = document.cookie.split(';');
         for(var i=0;i < ca.length;i++) {
             var c = ca[i];
-            while (c.charAt(0) == ' ') c = c.substring(1, c.length);
-            if (c.indexOf(nameEQ) == 0) {
+            while (c.charAt(0) === ' ') {
+                c = c.substring(1, c.length);
+            }
+            if (c.indexOf(nameEQ) === 0) {
                 return c.substring(nameEQ.length, c.length);
             }
         }
@@ -82,11 +85,11 @@
                     }
 
                     if ('zuul_version' in data) {
-                        $('#zuul-version-span').text(data['zuul_version']);
+                        $('#zuul-version-span').text(data.zuul_version);
                     }
                     if ('last_reconfigured' in data) {
                         var last_reconfigured =
-                            new Date(data['last_reconfigured']);
+                            new Date(data.last_reconfigured);
                         $('#last-reconfigured-span').text(
                             last_reconfigured.toString());
                     }
@@ -107,7 +110,7 @@
                 })
                 .fail(function (err, jqXHR, errMsg) {
                     $msg.text(source + ': ' + errMsg).show();
-                    $msgWrap.removeClass('zuul-msg-wrap-off');
+                    $msg.removeClass('zuul-msg-wrap-off');
                 })
                 .complete(function () {
                     xhr = undefined;
@@ -119,6 +122,7 @@
 
         format: {
             job: function(job) {
+                var $job_line;
                 if (job.url !== null) {
                     $job_line = $('<a href="' + job.url + '" />');
                 }
@@ -142,7 +146,7 @@
                     result = job.url ? 'in progress' : 'queued';
                 }
 
-                if (result == 'in progress') {
+                if (result === 'in progress') {
                     return zuul.format.job_progress_bar(job.elapsed_time,
                                                         job.remaining_time);
                 }
@@ -152,7 +156,7 @@
             },
 
             status_label: function(result) {
-                $status = $('<span />');
+                var $status = $('<span />');
                 $status.addClass('zuul-job-result label');
 
                 switch (result) {
@@ -199,24 +203,26 @@
                 var hours = 60 * 60 * 1000;
                 var now = Date.now();
                 var delta = now - ms;
-                var status = "text-success";
+                var status = 'text-success';
                 var text = zuul.format.time(delta, true);
                 if (delta > (4 * hours)) {
-                    status = "text-danger";
+                    status = 'text-danger';
                 } else if (delta > (2 * hours)) {
-                    status = "text-warning";
+                    status = 'text-warning';
                 }
                 return '<span class="' + status + '">' + text + '</span>';
             },
 
             time: function(ms, words) {
-                if (typeof(words) === 'undefined') words = false;
+                if (typeof(words) === 'undefined') {
+                    words = false;
+                }
                 var seconds = (+ms)/1000;
                 var minutes = Math.floor(seconds/60);
                 var hours = Math.floor(minutes/60);
                 seconds = Math.floor(seconds % 60);
                 minutes = Math.floor(minutes % 60);
-                r = '';
+                var r = '';
                 if (words) {
                     if (hours) {
                         r += hours;
@@ -224,18 +230,24 @@
                     }
                     r += minutes + ' min';
                 } else {
-                    if (hours < 10) r += '0';
+                    if (hours < 10) {
+                        r += '0';
+                    }
                     r += hours + ':';
-                    if (minutes < 10) r += '0';
+                    if (minutes < 10) {
+                        r += '0';
+                    }
                     r += minutes + ':';
-                    if (seconds < 10) r += '0';
+                    if (seconds < 10) {
+                        r += '0';
+                    }
                     r += seconds;
                 }
                 return r;
             },
 
             change_total_progress_bar: function(change) {
-                job_percent = Math.floor(100 / change.jobs.length);
+                var job_percent = Math.floor(100 / change.jobs.length);
                 var $bar_outter = $('<div />')
                     .addClass('progress zuul-change-total-result');
 
@@ -245,7 +257,7 @@
                         result = job.url ? 'in progress' : 'queued';
                     }
 
-                    if (result != 'queued') {
+                    if (result !== 'queued') {
                         var $bar_inner = $('<div />')
                             .addClass('progress-bar');
 
@@ -273,53 +285,55 @@
             },
 
             change_header: function(change) {
-                change_id = change.id || 'NA';
+                var change_id = change.id || 'NA';
                 if (change_id.length === 40) {
                     change_id = change_id.substr(0, 7);
                 }
 
-                $change_link = $('<small />');
+                var $change_link = $('<small />');
                 if (change.url !== null) {
                     $change_link.append(
-                        $("<a />").attr("href", change.url).text(change.id)
+                        $('<a />').attr('href', change.url).text(change.id)
                     );
                 }
                 else {
                     $change_link.text(change_id);
                 }
 
-                $change_progress_row_left = $('<div />')
+                var $change_progress_row_left = $('<div />')
                     .addClass('col-xs-3')
                     .append($change_link);
-                $change_progress_row_right = $('<div />')
+                var $change_progress_row_right = $('<div />')
                     .addClass('col-xs-9')
-                    .append(zuul.format.change_total_progress_bar(change))
+                    .append(zuul.format.change_total_progress_bar(change));
 
-                $change_progress_row = $('<div />')
+                var $change_progress_row = $('<div />')
                     .addClass('row')
                     .append($change_progress_row_left)
-                    .append($change_progress_row_right)
+                    .append($change_progress_row_right);
 
-                $project_span = $('<span />')
+                var $project_span = $('<span />')
                     .addClass('change_project')
                     .text(change.project);
 
-                $left = $('<div />')
+                var $left = $('<div />')
                     .addClass('col-xs-8')
                     .append($project_span, $('<br />'), $change_progress_row);
 
-                remaining_time = zuul.format.time(change.remaining_time, true);
-                enqueue_time = zuul.format.enqueue_time(change.enqueue_time);
-                $remaining_time = $('<small />').addClass('time')
+                var remaining_time = zuul.format.time(
+                        change.remaining_time, true);
+                var enqueue_time = zuul.format.enqueue_time(
+                        change.enqueue_time);
+                var $remaining_time = $('<small />').addClass('time')
                     .attr('title', 'Remaining Time').html(remaining_time);
-                $enqueue_time = $('<small />').addClass('time')
+                var $enqueue_time = $('<small />').addClass('time')
                     .attr('title', 'Elapsed Time').html(enqueue_time);
 
-                $right = $('<div />')
+                var $right = $('<div />')
                     .addClass('col-xs-4 text-right')
                     .append($remaining_time, $('<br />'), $enqueue_time);
 
-                $header = $('<div />')
+                var $header = $('<div />')
                     .addClass('row')
                     .append($left, $right);
                 return $header;
@@ -347,9 +361,9 @@
 
                 var panel_id = change.id ? change.id.replace(',', '_')
                                          : change.project.replace('/', '_') +
-                                           '-' + change.enqueue_time
+                                           '-' + change.enqueue_time;
                 var $panel = $('<div />')
-                    .attr("id", panel_id)
+                    .attr('id', panel_id)
                     .addClass('panel panel-default zuul-change')
                     .append($header)
                     .append(zuul.format.change_list(change.jobs));
@@ -393,7 +407,7 @@
                         }
                         $.each(changes, function (changeNum, change) {
                             var $panel = zuul.format.change_panel(change);
-                            $html.append($panel)
+                            $html.append($panel);
                             zuul.display_patchset($panel);
                         });
                     });
@@ -432,7 +446,7 @@
                     $('#filter_string').val('').change();
                 });
 
-                if (default_text == '') {
+                if (default_text === '') {
                     $clear_icon.hide();
                 }
 
@@ -443,16 +457,16 @@
             },
 
             expand_form_group: function() {
-                expand_by_default = (
+                var expand_by_default = (
                     read_cookie('zuul_expand_by_default', false) === 'true');
 
-                $checkbox = $('<input />')
+                var $checkbox = $('<input />')
                     .attr('type', 'checkbox')
                     .attr('id', 'expand_by_default')
                     .prop('checked', expand_by_default)
                     .change(zuul.handle_expand_by_default);
 
-                $label = $('<label />')
+                var $label = $('<label />')
                     .css('padding-left', '1em')
                     .html('Expand by default: ')
                     .append($checkbox);
@@ -466,7 +480,7 @@
             control_form: function() {
                 // Build the filter form filling anything from cookies
 
-                $control_form = $('<form />')
+                var $control_form = $('<form />')
                     .attr('role', 'form')
                     .addClass('form-inline')
                     .submit(zuul.handle_filter_change);
@@ -500,7 +514,7 @@
             $body.toggle(200);
             var collapsed_index = zuul.collapsed_exceptions.indexOf(
                 $panel.attr('id'));
-            if (collapsed_index == -1 ) {
+            if (collapsed_index === -1 ) {
                 // Currently not an exception, add it to list
                 zuul.collapsed_exceptions.push($panel.attr('id'));
             }
@@ -519,8 +533,8 @@
             var expand_by_default = $('#expand_by_default').prop('checked');
             var collapsed_index = zuul.collapsed_exceptions.indexOf(
                 $panel.attr('id'));
-            if (expand_by_default && collapsed_index == -1 ||
-                !expand_by_default && collapsed_index != -1) {
+            if (expand_by_default && collapsed_index === -1 ||
+                !expand_by_default && collapsed_index !== -1) {
                 // Expand by default, or is an exception
                 $body.show(animate);
             }
@@ -534,20 +548,20 @@
             var panel_pipeline = $panel.parents('.zuul-pipeline')
                 .children('h3').text().toLowerCase();
             var panel_change = $panel.attr('id');
-            if (current_filter != '') {
-                show_panel = false;
-                filter = current_filter.trim().split(/[\s,]+/);
+            if (current_filter !== '') {
+                var show_panel = false;
+                var filter = current_filter.trim().split(/[\s,]+/);
                 $.each(filter, function(index, f_val) {
-                    if (f_val != '') {
+                    if (f_val !== '') {
                         f_val = f_val.toLowerCase();
-                        if (panel_project.indexOf(f_val) != '-1' ||
-                            panel_pipeline.indexOf(f_val) != '-1' ||
-                            panel_change.indexOf(f_val) != '-1') {
+                        if (panel_project.indexOf(f_val) !== '-1' ||
+                            panel_pipeline.indexOf(f_val) !== '-1' ||
+                            panel_change.indexOf(f_val) !== '-1') {
                             show_panel = true;
                         }
                     }
                 });
-                if (show_panel == true) {
+                if (show_panel === true) {
                     $panel.show(animate);
                 }
                 else {
@@ -559,11 +573,11 @@
             }
         },
 
-        handle_filter_change: function(e) {
+        handle_filter_change: function() {
             // Update the filter and save it to a cookie
             current_filter = $('#filter_string').val();
             set_cookie('zuul_filter_string', current_filter);
-            if (current_filter == '') {
+            if (current_filter === '') {
                 $('#filter_form_clear_box').hide();
             }
             else {
@@ -571,9 +585,9 @@
             }
 
             $('.zuul-change').each(function(index, obj) {
-                $panel = $(obj);
+                var $panel = $(obj);
                 zuul.display_patchset($panel, 200);
-            })
+            });
             return false;
         },
 
@@ -582,9 +596,9 @@
             set_cookie('zuul_expand_by_default', e.target.checked);
             zuul.collapsed_exceptions = [];
             $('.zuul-change').each(function(index, obj) {
-                $panel = $(obj);
+                var $panel = $(obj);
                 zuul.display_patchset($panel, 200);
-            })
+            });
         },
     };
 
@@ -616,20 +630,21 @@
 
     $(function ($) {
         $msg = $('<div />').addClass('alert').hide();
-        $indicator = $('<button class="btn pull-right zuul-spinner">updating '
-                       + '<span class="glyphicon glyphicon-refresh"></span>'
-                       + '</button>');
+        $indicator = $('<button class="btn pull-right zuul-spinner">' +
+                       'updating ' +
+                       '<span class="glyphicon glyphicon-refresh"></span>' +
+                       '</button>');
         $queueInfo = $('<p>Queue lengths: <span>0</span> events, ' +
                        '<span>0</span> results.</p>');
         $queueEventsNum = $queueInfo.find('span').eq(0);
         $queueResultsNum = $queueEventsNum.next();
 
-        $control_form = zuul.format.control_form();
+        var $control_form = zuul.format.control_form();
 
-        $pipelines = $('<div class="row"></div>');
-        $zuulVersion = $('<p>Zuul version: <span id="zuul-version-span">' +
+        var $pipelines = $('<div class="row"></div>');
+        var $zuulVersion = $('<p>Zuul version: <span id="zuul-version-span">' +
                          '</span></p>');
-        $lastReconf = $('<p>Last reconfigured: ' +
+        var $lastReconf = $('<p>Last reconfigured: ' +
                         '<span id="last-reconfigured-span"></span></p>');
 
         $container = $('#zuul-container').append($msg, $indicator,
