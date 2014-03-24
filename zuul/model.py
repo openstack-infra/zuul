@@ -63,6 +63,7 @@ class Pipeline(object):
         self.name = name
         self.description = None
         self.failure_message = None
+        self.merge_failure_message = None
         self.success_message = None
         self.footer_message = None
         self.dequeue_on_new_patchset = True
@@ -171,6 +172,11 @@ class Pipeline(object):
                 return False
         return True
 
+    def didMergerSucceed(self, item):
+        if item.current_build_set.unable_to_merge:
+            return False
+        return True
+
     def didAnyJobFail(self, item):
         for job in self.getJobs(item.change):
             if not job.voting:
@@ -206,9 +212,8 @@ class Pipeline(object):
                 fakebuild.result = 'SKIPPED'
                 item.addBuild(fakebuild)
 
-    def setUnableToMerge(self, item, msg):
+    def setUnableToMerge(self, item):
         item.current_build_set.unable_to_merge = True
-        item.current_build_set.unable_to_merge_message = msg
         root = self.getJobTree(item.change.project)
         for job in root.getJobs():
             fakebuild = Build(job, None)
@@ -677,7 +682,6 @@ class BuildSet(object):
         self.commit = None
         self.zuul_url = None
         self.unable_to_merge = False
-        self.unable_to_merge_message = None
         self.failing_reasons = []
         self.merge_state = self.NEW
 
