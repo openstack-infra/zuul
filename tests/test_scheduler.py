@@ -2061,13 +2061,8 @@ class TestScheduler(testtools.TestCase):
                                                 ).result, 'SUCCESS')
         self.assertEqual(self.getJobFromHistory('layered-project-test4'
                                                 ).result, 'SUCCESS')
-        # test5 should run twice because two templates define it
-        test5_count = 0
-        for job in self.worker.build_history:
-            if job.name == 'layered-project-foo-test5':
-                test5_count += 1
-                self.assertEqual(job.result, 'SUCCESS')
-        self.assertEqual(test5_count, 2)
+        self.assertEqual(self.getJobFromHistory('layered-project-foo-test5'
+                                                ).result, 'SUCCESS')
         self.assertEqual(self.getJobFromHistory('project-test6').result,
                          'SUCCESS')
 

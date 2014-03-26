@@ -772,8 +772,8 @@ for the project.
 
 Note that if multiple templates are used for a project and one
 template specifies a job that is also specified in another template,
-or specified in the project itself, those jobs will be duplicated in
-the resulting project configuration.
+or specified in the project itself, the configuration defined by
+either the last template or the project itself will take priority.
 
 logging.conf
 ~~~~~~~~~~~~

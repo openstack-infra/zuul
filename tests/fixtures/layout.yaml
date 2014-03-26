@@ -117,9 +117,6 @@ project-templates:
   - name: test-five
     check:
      - '{name}-{something}-test5'
-  - name: test-five-also
-    check:
-     - '{name}-{something}-test5'
 
 projects:
   - name: org/project
@@ -214,8 +211,6 @@ projects:
         projectname: project
       - name: test-three-and-four
       - name: test-five
-        something: foo
-      - name: test-five-also
         something: foo
     check:
       - project-test6

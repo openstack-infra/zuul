@@ -384,11 +384,10 @@ class Scheduler(threading.Thread):
                         config_project.update(
                             {pipeline.name: expanded[pipeline.name] +
                              config_project.get(pipeline.name, [])})
-            # TODO: future enhancement -- add an option to the
-            # template block to indicate that duplicate jobs should be
-            # merged (especially to handle the case where they have
-            # children and you want all of the children to run after a
-            # single run of the parent).
+            # TODO: future enhancement -- handle the case where
+            # duplicate jobs have different children and you want all
+            # of the children to run after a single run of the
+            # parent).
 
             layout.projects[config_project['name']] = project
             mode = config_project.get('merge-mode', 'merge-resolve')
