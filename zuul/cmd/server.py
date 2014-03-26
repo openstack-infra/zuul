@@ -180,6 +180,7 @@ class Server(object):
         import zuul.scheduler
         import zuul.launcher.gearman
         import zuul.merger.client
+        import zuul.lib.swift
         import zuul.reporter.gerrit
         import zuul.reporter.smtp
         import zuul.trigger.gerrit
@@ -195,8 +196,10 @@ class Server(object):
         self.log = logging.getLogger("zuul.Server")
 
         self.sched = zuul.scheduler.Scheduler()
+        self.swift = zuul.lib.swift.Swift(self.config)
 
-        gearman = zuul.launcher.gearman.Gearman(self.config, self.sched)
+        gearman = zuul.launcher.gearman.Gearman(self.config, self.sched,
+                                                self.swift)
         merger = zuul.merger.client.MergeClient(self.config, self.sched)
         gerrit = zuul.trigger.gerrit.Gerrit(self.config, self.sched)
         timer = zuul.trigger.timer.Timer(self.config, self.sched)
