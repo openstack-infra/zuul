@@ -415,7 +415,7 @@
                 return $html;
             },
 
-            filter_form_group: function(default_text) {
+            filter_form_group: function() {
                 // Update the filter form with a clear button if required
 
                 var $label = $('<label />')
@@ -431,7 +431,7 @@
                     .attr('title',
                           'project(s), pipeline(s) or review(s) comma ' +
                           'separated')
-                    .attr('value', default_text);
+                    .attr('value', current_filter);
 
                 $input.change(zuul.handle_filter_change);
 
@@ -446,7 +446,7 @@
                     $('#filter_string').val('').change();
                 });
 
-                if (default_text === '') {
+                if (current_filter === '') {
                     $clear_icon.hide();
                 }
 
@@ -486,7 +486,7 @@
                     .submit(zuul.handle_filter_change);
 
                 $control_form
-                    .append(zuul.format.filter_form_group(current_filter))
+                    .append(zuul.format.filter_form_group())
                     .append(zuul.format.expand_form_group());
 
                 return $control_form;
@@ -554,9 +554,9 @@
                 $.each(filter, function(index, f_val) {
                     if (f_val !== '') {
                         f_val = f_val.toLowerCase();
-                        if (panel_project.indexOf(f_val) !== '-1' ||
-                            panel_pipeline.indexOf(f_val) !== '-1' ||
-                            panel_change.indexOf(f_val) !== '-1') {
+                        if (panel_project.indexOf(f_val) !== -1 ||
+                            panel_pipeline.indexOf(f_val) !== -1 ||
+                            panel_change.indexOf(f_val) !== -1) {
                             show_panel = true;
                         }
                     }
@@ -641,7 +641,7 @@
 
         var $control_form = zuul.format.control_form();
 
-        var $pipelines = $('<div class="row"></div>');
+        $pipelines = $('<div class="row"></div>');
         var $zuulVersion = $('<p>Zuul version: <span id="zuul-version-span">' +
                          '</span></p>');
         var $lastReconf = $('<p>Last reconfigured: ' +
