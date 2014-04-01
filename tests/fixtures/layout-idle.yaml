@@ -1,0 +1,12 @@
+pipelines:
+  - name: periodic
+    manager: IndependentPipelineManager
+    trigger:
+      timer:
+        - time: '* * * * * */1'
+
+projects:
+  - name: org/project
+    periodic:
+      - project-test1
+      - project-test2

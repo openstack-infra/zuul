@@ -3201,6 +3201,33 @@ class TestScheduler(testtools.TestCase):
         self.assertIn('project-bitrot-stable-old', status_jobs)
         self.assertIn('project-bitrot-stable-older', status_jobs)
 
+    def test_idle(self):
+        "Test that frequent periodic jobs work"
+        self.worker.hold_jobs_in_build = True
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-idle.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+
+        # The pipeline triggers every second, so we should have seen
+        # several by now.
+        time.sleep(5)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 2)
+        self.worker.release('.*')
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 0)
+        self.assertEqual(len(self.history), 2)
+
+        time.sleep(5)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 2)
+        self.assertEqual(len(self.history), 2)
+        self.worker.release('.*')
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 0)
+        self.assertEqual(len(self.history), 4)
+
     def test_check_smtp_pool(self):
         self.config.set('zuul', 'layout_config',
                         'tests/fixtures/layout-smtp.yaml')
