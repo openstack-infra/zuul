@@ -22,6 +22,8 @@
     var $container, $msg, $indicator, $queueInfo, $queueEventsNum,
         $queueResultsNum, $pipelines, $jq;
     var xhr, zuul,
+        zuul_graph_update_count = 0,
+        zuul_sparkline_urls = {},
         current_filter = '',
         demo = location.search.match(/[?&]demo=([^?&]*)/),
         source_url = location.search.match(/[?&]source_url=([^?&]*)/),
@@ -52,6 +54,7 @@
 
     zuul = {
         enabled: true,
+        graphite_url: '',
         collapsed_exceptions: [],
 
         schedule: function () {
@@ -62,6 +65,12 @@
             zuul.update().complete(function () {
                 setTimeout(zuul.schedule, 5000);
             });
+
+            /* Only update graphs every minute */
+            if (zuul_graph_update_count > 11) {
+                zuul_graph_update_count = 0;
+                zuul.update_sparklines();
+            }
         },
 
         /** @return {jQuery.Promise} */
@@ -118,6 +127,17 @@
                 });
 
             return xhr;
+        },
+
+        update_sparklines: function() {
+            $.each(zuul_sparkline_urls, function(name, url) {
+                var newimg = new Image();
+                var parts = url.split('#');
+                newimg.src = parts[0] + '#' + new Date().getTime();
+                $(newimg).load(function (x) {
+                    zuul_sparkline_urls[name] = newimg.src;
+                });
+            });
         },
 
         format: {
@@ -474,30 +494,50 @@
                 return $change_table;
             },
 
-            pipeline: function (pipeline) {
-                var count = zuul.create_tree(pipeline);
-                var $html = $('<div />')
-                    .addClass('zuul-pipeline col-md-4')
+            pipeline_sparkline: function(pipeline_name) {
+                if (zuul.graphite_url !== '') {
+                    var $sparkline = $('<img />')
+                        .addClass('pull-right')
+                        .attr('src', zuul.get_sparkline_url(pipeline_name));
+                    return $sparkline;
+                }
+                return false;
+            },
+
+            pipeline_header: function(pipeline, count) {
+                // Format the pipeline name, sparkline and description
+                var $header_div = $('<div />')
+                    .addClass('zuul-pipeline-header');
+
+                var $heading = $('<h3 />')
+                    .css('vertical-align', 'middle')
+                    .text(pipeline.name)
                     .append(
-                        $('<h3 />')
+                        $('<span />')
+                            .addClass('badge pull-right')
                             .css('vertical-align', 'middle')
-                            .text(pipeline.name)
-                            .append(
-                                $('<span />')
-                                    .addClass('badge pull-right')
-                                    .css('vertical-align', 'middle')
-                                    .css('margin-top', '0.5em')
-                                    .text(count)
-                            )
-                    );
+                            .css('margin-top', '0.5em')
+                            .text(count)
+                    )
+                    .append(zuul.format.pipeline_sparkline(pipeline.name));
+
+                $header_div.append($heading);
 
                 if (typeof pipeline.description === 'string') {
-                    $html.append(
+                    $header_div.append(
                         $('<p />').append(
                             $('<small />').text(pipeline.description)
                         )
                     );
                 }
+                return $header_div;
+            },
+
+            pipeline: function (pipeline) {
+                var count = zuul.create_tree(pipeline);
+                var $html = $('<div />')
+                    .addClass('zuul-pipeline col-md-4')
+                    .append(zuul.format.pipeline_header(pipeline, count));
 
                 $.each(pipeline.change_queues,
                        function (queue_i, change_queue) {
@@ -667,8 +707,11 @@
                 .toLowerCase();
 
 
-            var panel_pipeline = $change_box.parents('.zuul-pipeline')
-                .children('h3').html().toLowerCase();
+            var panel_pipeline = $change_box
+                .parents('.zuul-pipeline')
+                .find('.zuul-pipeline-header > h3')
+                .html()
+                .toLowerCase();
 
             if (current_filter !== '') {
                 var show_panel = false;
@@ -784,6 +827,28 @@
             pipeline._tree_columns = pipeline_max_tree_columns;
             return count;
         },
+
+        get_sparkline_url: function(pipeline_name) {
+            if (zuul.graphite_url !== '') {
+                if (!(pipeline_name in zuul_sparkline_urls)) {
+                    zuul_sparkline_urls[pipeline_name] = $.fn.graphite.geturl({
+                        url: zuul.graphite_url,
+                        from: "-8hours",
+                        width: 100,
+                        height: 26,
+                        margin: 0,
+                        hideLegend: true,
+                        hideAxes: true,
+                        hideGrid: true,
+                        target: [
+                            "color(stats.gauges.zuul.pipeline."+pipeline_name+".current_changes, '6b8182')"
+                        ]
+                    });
+                }
+                return zuul_sparkline_urls[pipeline_name];
+            }
+            return false;
+        },
     };
 
     current_filter = read_cookie('zuul_filter_string', current_filter);
@@ -836,6 +901,7 @@
                                                  $pipelines, $zuulVersion,
                                                  $lastReconf);
 
+        //zuul.graphite_url = 'http://graphite.openstack.org/render/'
         zuul.schedule();
 
         $(document).on({
