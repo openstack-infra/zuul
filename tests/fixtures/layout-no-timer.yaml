@@ -1,9 +1,11 @@
 pipelines:
   - name: periodic
     manager: IndependentPipelineManager
+    # Trigger is required, set it to one that is a noop
+    # during tests that check the timer trigger.
     trigger:
-      timer:
-        - time: '* * * * * */1'
+      gerrit:
+        - event: patchset-created
 
 projects:
   - name: org/project

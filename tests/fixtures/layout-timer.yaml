@@ -15,7 +15,7 @@ pipelines:
     manager: IndependentPipelineManager
     trigger:
       timer:
-        - time: '* * * * * */10'
+        - time: '* * * * * */1'
 
 projects:
   - name: org/project

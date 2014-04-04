@@ -3,7 +3,7 @@ pipelines:
     manager: IndependentPipelineManager
     trigger:
       timer:
-        - time: '* * * * * */10'
+        - time: '* * * * * */1'
     success:
       smtp:
         to: alternative_me@example.com
