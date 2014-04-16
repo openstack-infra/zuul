@@ -16,7 +16,8 @@
 import logging
 import threading
 from paste import httpserver
-from webob import Request
+import webob
+from webob import dec
 
 
 class WebApp(threading.Thread):
@@ -27,7 +28,7 @@ class WebApp(threading.Thread):
         self.scheduler = scheduler
         self.port = port
         self.daemon = True
-        self.server = httpserver.serve(self.app, host='0.0.0.0',
+        self.server = httpserver.serve(dec.wsgify(self.app), host='0.0.0.0',
                                        port=self.port, start_loop=False)
 
     def run(self):
@@ -36,17 +37,17 @@ class WebApp(threading.Thread):
     def stop(self):
         self.server.server_close()
 
-    def app(self, environ, start_response):
-        request = Request(environ)
-        if request.path == '/status.json':
-            try:
-                ret = self.scheduler.formatStatusJSON()
-            except:
-                self.log.exception("Exception formatting status:")
-                raise
-            start_response('200 OK', [('content-type', 'application/json'),
-                                      ('Access-Control-Allow-Origin', '*')])
-            return [ret]
-        else:
-            start_response('404 Not Found', [('content-type', 'text/plain')])
-            return ['Not found.']
+    def app(self, request):
+        if request.path != '/status.json':
+            raise webob.exc.HTTPNotFound()
+        try:
+            ret = self.scheduler.formatStatusJSON()
+        except:
+            self.log.exception("Exception formatting status:")
+            raise
+        response = webob.Response(body=ret, content_type='application/json')
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Vary'] = 'Accept-Encoding'
+        if 'gzip' in request.headers.get('accept-encoding', ()):
+            response.encode_content('gzip')
+        return response
