@@ -56,6 +56,16 @@ Common parameters
   The URL for the zuul server as configured in zuul.conf.
   A test runner may use this URL as the basis for fetching
   git commits.
+**BASE_LOG_PATH**
+  zuul suggests a path to store and address logs. This is deterministic
+  and hence useful for where you want workers to upload to a specific
+  destination or need them to have a specific final URL you can link to
+  in advanced. For changes it is:
+  "last-two-digits-of-change/change-number/patchset-number".
+  For reference updates it is: "first-two-digits-of-newrev/newrev"
+**LOG_PATH**
+  zuul also suggests a unique path for logs to the worker. This is
+  "BASE_LOG_PATH/pipeline-name/job-name/uuid"
 
 Change related parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~
