@@ -17,6 +17,7 @@
 import ConfigParser
 from cStringIO import StringIO
 import gc
+import gzip
 import hashlib
 import json
 import logging
@@ -842,9 +843,12 @@ class TestScheduler(testtools.TestCase):
         self.swift = zuul.lib.swift.Swift(self.config)
 
         def URLOpenerFactory(*args, **kw):
+            if isinstance(args[0], urllib2.Request):
+                return old_urlopen(*args, **kw)
             args = [self.fake_gerrit] + list(args)
             return FakeURLOpener(self.upstream_root, *args, **kw)
 
+        old_urlopen = urllib2.urlopen
         urllib2.urlopen = URLOpenerFactory
 
         self.launcher = zuul.launcher.gearman.Gearman(self.config, self.sched,
@@ -2989,7 +2993,7 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(self.history[4].pipeline, 'check')
         self.assertEqual(self.history[5].pipeline, 'check')
 
-    def test_json_status(self):
+    def test_json_status(self, compressed=False):
         "Test that we can retrieve JSON status info"
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -2999,8 +3003,14 @@ class TestScheduler(testtools.TestCase):
 
         port = self.webapp.server.socket.getsockname()[1]
 
-        f = urllib.urlopen("http://localhost:%s/status.json" % port)
+        req = urllib2.Request("http://localhost:%s/status.json" % port)
+        if compressed:
+            req.add_header("accept-encoding", "gzip")
+        f = urllib2.urlopen(req)
         data = f.read()
+        if compressed:
+            gz = gzip.GzipFile(fileobj=StringIO(data))
+            data = gz.read()
 
         self.worker.hold_jobs_in_build = False
         self.worker.release()
@@ -3023,6 +3033,9 @@ class TestScheduler(testtools.TestCase):
         self.assertIn('project-merge', status_jobs)
         self.assertIn('project-test1', status_jobs)
         self.assertIn('project-test2', status_jobs)
+
+    def test_json_status_gzip(self):
+        self.test_json_status(True)
 
     def test_merging_queues(self):
         "Test that transitively-connected change queues are merged"
