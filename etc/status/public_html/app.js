@@ -122,21 +122,34 @@
 
         format: {
             job: function(job) {
-                var $job_line;
+                var $job_line = $('<span />');
+
                 if (job.url !== null) {
-                    $job_line = $('<a href="' + job.url + '" />');
+                    $job_line.append(
+                        $('<a />')
+                            .addClass('zuul-job-name')
+                            .attr('href', job.url)
+                            .text(job.name)
+                    );
                 }
-                else{
-                    $job_line = $('<span />');
+                else {
+                    $job_line.append(
+                        $('<span />')
+                            .addClass('zuul-job-name')
+                            .text(job.name)
+                    );
                 }
-                $job_line.text(job.name)
-                    .append(zuul.format.job_status(job));
+
+                $job_line.append(zuul.format.job_status(job));
 
                 if (job.voting === false) {
                     $job_line.append(
-                        $(' <small />').text(' (non-voting)')
+                        $(' <small />')
+                            .addClass('zuul-non-voting-desc')
+                            .text(' (non-voting)')
                     );
                 }
+
                 return $job_line;
             },
 
