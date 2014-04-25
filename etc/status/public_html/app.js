@@ -331,7 +331,7 @@
 
                 var $left = $('<div />')
                     .addClass('col-xs-8')
-                    .append($project_span, $('<br />'), $change_progress_row);
+                    .append($project_span, $change_progress_row);
 
                 var remaining_time = zuul.format.time(
                         change.remaining_time, true);
