@@ -93,6 +93,16 @@ pipelines:
       gerrit:
         verified: 0
 
+  - name: experimental
+    manager: IndependentPipelineManager
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit: {}
+    failure:
+      gerrit: {}
+
 jobs:
   - name: ^.*-merge$
     failure-message: Unable to merge change
@@ -230,3 +240,7 @@ projects:
   - name: org/noop-project
     gate:
       - noop
+
+  - name: org/experimental-project
+    experimental:
+      - experimental-project-test

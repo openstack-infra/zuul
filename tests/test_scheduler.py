@@ -811,6 +811,7 @@ class TestScheduler(testtools.TestCase):
         self.init_repo("org/node-project")
         self.init_repo("org/conflict-project")
         self.init_repo("org/noop-project")
+        self.init_repo("org/experimental-project")
 
         self.statsd = FakeStatsd()
         os.environ['STATSD_HOST'] = 'localhost'
@@ -3969,3 +3970,13 @@ For CI problems and help debugging, contact ci@example.org"""
 
         running_items = client.get_running_jobs()
         self.assertEqual(0, len(running_items))
+
+    def test_nonvoting_pipeline(self):
+        "Test that a nonvoting pipeline (experimental) can still report"
+
+        A = self.fake_gerrit.addFakeChange('org/experimental-project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('experimental-project-test').result,
+                         'SUCCESS')
+        self.assertEqual(A.reported, 1)

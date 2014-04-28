@@ -30,10 +30,6 @@ class Reporter(object):
         """Send a message to gerrit."""
         self.log.debug("Report change %s, params %s, message: %s" %
                        (change, params, message))
-        if not params:
-            self.log.debug("Not reporting change %s: No params specified." %
-                           change)
-            return
         changeid = '%s,%s' % (change.number, change.patchset)
         change._ref_sha = self.trigger.getRefSha(change.project.name,
                                                  'refs/heads/' + change.branch)
