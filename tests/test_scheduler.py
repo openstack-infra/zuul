@@ -3974,9 +3974,11 @@ For CI problems and help debugging, contact ci@example.org"""
     def test_nonvoting_pipeline(self):
         "Test that a nonvoting pipeline (experimental) can still report"
 
-        A = self.fake_gerrit.addFakeChange('org/experimental-project', 'master', 'A')
+        A = self.fake_gerrit.addFakeChange('org/experimental-project',
+                                           'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
-        self.assertEqual(self.getJobFromHistory('experimental-project-test').result,
-                         'SUCCESS')
+        self.assertEqual(
+            self.getJobFromHistory('experimental-project-test').result,
+            'SUCCESS')
         self.assertEqual(A.reported, 1)
