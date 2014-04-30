@@ -663,8 +663,10 @@
                         );
                     })
                     .fail(function (err, jqXHR, errMsg) {
-                        $msg.text(source + ': ' + errMsg).show();
-                        $msg.removeClass('zuul-msg-wrap-off');
+                        $msg.text(options.source + ': ' + errMsg)
+                            .addClass('alert-danger')
+                            .removeClass('zuul-msg-wrap-off')
+                            .show();
                     })
                     .complete(function () {
                         xhr = undefined;
