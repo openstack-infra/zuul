@@ -315,6 +315,9 @@ class Scheduler(threading.Thread):
             job = layout.getJob(config_job['name'])
             # Be careful to only set attributes explicitly present on
             # this job, to avoid squashing attributes set by a meta-job.
+            m = config_job.get('queue-name', None)
+            if m:
+                job.queue_name = m
             m = config_job.get('failure-message', None)
             if m:
                 job.failure_message = m
@@ -1665,7 +1668,8 @@ class DependentPipelineManager(BasePipelineManager):
         self.log.info("  Shared change queues:")
         for queue in new_change_queues:
             self.pipeline.addQueue(queue)
-            self.log.info("    %s" % queue)
+            self.log.info("    %s containing %s" % (
+                queue, queue.generated_name))
 
     def combineChangeQueues(self, change_queues):
         self.log.debug("Combining shared queues")
