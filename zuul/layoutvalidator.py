@@ -68,6 +68,11 @@ class LayoutSchema(object):
                                'subject': str,
                                },
                       }
+
+    require = {'approval': toList(require_approval),
+               'open': bool,
+               'status': toList(str)}
+
     window = v.All(int, v.Range(min=0))
     window_floor = v.All(int, v.Range(min=1))
     window_type = v.Any('linear', 'exponential')
@@ -77,6 +82,7 @@ class LayoutSchema(object):
                 v.Required('manager'): manager,
                 'precedence': precedence,
                 'description': str,
+                'require': require,
                 'success-message': str,
                 'failure-message': str,
                 'merge-failure-message': str,

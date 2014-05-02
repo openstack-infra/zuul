@@ -57,6 +57,11 @@ def time_to_seconds(s):
     raise Exception("Unable to parse time value: %s" % s)
 
 
+def normalizeCategory(name):
+    name = name.lower()
+    return re.sub(' ', '-', name)
+
+
 class Pipeline(object):
     """A top-level pipeline such as check, gate, post, etc."""
     def __init__(self, name):
@@ -844,6 +849,8 @@ class Change(Changeish):
         self.is_merged = False
         self.failed_to_merge = False
         self.approvals = []
+        self.open = None
+        self.status = None
 
     def _id(self):
         return '%s,%s' % (self.number, self.patchset)
@@ -1036,10 +1043,6 @@ class EventFilter(object):
         return ret
 
     def matches(self, event, change):
-        def normalizeCategory(name):
-            name = name.lower()
-            return re.sub(' ', '-', name)
-
         # event types are ORed
         matches_type = False
         for etype in self.types:
@@ -1150,6 +1153,82 @@ class EventFilter(object):
                 matches_timespec = True
         if self.timespecs and not matches_timespec:
             return False
+
+        return True
+
+
+class ChangeishFilter(object):
+    def __init__(self, open=None, statuses=[], approvals=[]):
+        self.open = open
+        self.statuses = statuses
+        self.approvals = approvals
+
+        for a in self.approvals:
+            if 'older-than' in a:
+                a['older-than'] = time_to_seconds(a['older-than'])
+            if 'newer-than' in a:
+                a['newer-than'] = time_to_seconds(a['newer-than'])
+            if 'email-filter' in a:
+                a['email-filter'] = re.compile(a['email-filter'])
+
+    def __repr__(self):
+        ret = '<ChangeishFilter'
+
+        if self.open is not None:
+            ret += ' open: %s' % self.open
+        if self.statuses:
+            ret += ' statuses: %s' % ', '.join(self.statuses)
+        if self.approvals:
+            ret += ' approvals: %s' % ', '.join(str(self.approvals))
+        ret += '>'
+
+        return ret
+
+    def matches(self, change):
+        if self.open is not None:
+            if self.open != change.open:
+                return False
+
+        if self.statuses:
+            if change.status not in self.statuses:
+                return False
+
+        if self.approvals and not change.approvals:
+            # A change with no approvals can not match
+            return False
+
+        now = time.time()
+        for rapproval in self.approvals:
+            matches_approval = False
+            for approval in change.approvals:
+                if 'description' not in approval:
+                    continue
+                found_approval = True
+                by = approval.get('by', {})
+                for k, v in rapproval.items():
+                    if k == 'username':
+                        if (by.get('username', '') != v):
+                            found_approval = False
+                    elif k == 'email-filter':
+                        if (not v.search(by.get('email', ''))):
+                            found_approval = False
+                    elif k == 'newer-than':
+                        t = now - v
+                        if (approval['grantedOn'] < t):
+                            found_approval = False
+                    elif k == 'older-than':
+                        t = now - v
+                        if (approval['grantedOn'] >= t):
+                            found_approval = False
+                    else:
+                        if (normalizeCategory(approval['description']) != k or
+                            int(approval['value']) != v):
+                            found_approval = False
+                if found_approval:
+                    matches_approval = True
+                    break
+            if not matches_approval:
+                return False
 
         return True
 

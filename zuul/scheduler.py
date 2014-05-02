@@ -29,7 +29,8 @@ import yaml
 
 import layoutvalidator
 import model
-from model import ActionReporter, Pipeline, Project, ChangeQueue, EventFilter
+from model import ActionReporter, Pipeline, Project, ChangeQueue
+from model import EventFilter, ChangeishFilter
 from zuul import version as zuul_version
 
 statsd = extras.try_import('statsd.statsd')
@@ -272,6 +273,13 @@ class Scheduler(threading.Thread):
             manager = globals()[conf_pipeline['manager']](self, pipeline)
             pipeline.setManager(manager)
             layout.pipelines[conf_pipeline['name']] = pipeline
+
+            if 'require' in conf_pipeline:
+                require = conf_pipeline['require']
+                f = ChangeishFilter(open=require.get('open'),
+                                    statuses=toList(require.get('status')),
+                                    approvals=toList(require.get('approval')))
+                manager.changeish_filters.append(f)
 
             # TODO: move this into triggers (may require pluggable
             # configuration)
@@ -903,6 +911,7 @@ class BasePipelineManager(object):
         self.sched = sched
         self.pipeline = pipeline
         self.event_filters = []
+        self.changeish_filters = []
         if self.sched.config and self.sched.config.has_option(
             'zuul', 'report_times'):
             self.report_times = self.sched.config.getboolean(
@@ -915,6 +924,9 @@ class BasePipelineManager(object):
 
     def _postConfig(self, layout):
         self.log.info("Configured Pipeline Manager %s" % self.pipeline.name)
+        self.log.info("  Requirements:")
+        for f in self.changeish_filters:
+            self.log.info("    %s" % f)
         self.log.info("  Events:")
         for e in self.event_filters:
             self.log.info("    %s" % e)
@@ -1083,6 +1095,12 @@ class BasePipelineManager(object):
             self.log.debug("Change %s is not ready to be enqueued, ignoring" %
                            change)
             return False
+
+        for f in self.changeish_filters:
+            if not f.matches(change):
+                self.log.debug("Change %s does not match pipeline "
+                               "requirements" % change)
+                return False
 
         if not self.enqueueChangesAhead(change, quiet):
             self.log.debug("Failed to enqueue changes ahead of %s" % change)

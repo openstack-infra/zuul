@@ -118,7 +118,7 @@ class FakeChange(object):
             'id': 'I' + random_sha1(),
             'lastUpdated': time.time(),
             'number': str(number),
-            'open': True,
+            'open': status == 'NEW',
             'owner': {'email': 'user@example.com',
                       'name': 'User Name',
                       'username': 'username'},
@@ -345,10 +345,11 @@ class FakeGerrit(object):
         self.change_number = 0
         self.changes = {}
 
-    def addFakeChange(self, project, branch, subject):
+    def addFakeChange(self, project, branch, subject, status='NEW'):
         self.change_number += 1
         c = FakeChange(self, self.change_number, project, branch, subject,
-                       upstream_root=self.upstream_root)
+                       upstream_root=self.upstream_root,
+                       status=status)
         self.changes[self.change_number] = c
         return c
 
@@ -1813,6 +1814,31 @@ class TestScheduler(testtools.TestCase):
         self.assertTrue(trigger.canMerge(a, mgr.getSubmitAllowNeeds()))
         trigger.maintainCache([])
 
+    def test_pipeline_requirements_closed_change(self):
+        "Test that pipeline requirements for closed changes are effective"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-pipeline-requirements.yaml')
+        self.sched.reconfigure(self.config)
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           status='MERGED')
+        self.fake_gerrit.addEvent(A.addApproval('CRVW', 2))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+        self.assertEqual(len(self.builds), 0)
+
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B',
+                                           status='MERGED')
+        B.addApproval('CRVW', 2)
+        B.addApproval('VRFY', 1)
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+        self.assertEqual(len(self.builds), 0)
+
+        for pipeline in self.sched.layout.pipelines.values():
+            pipeline.trigger.maintainCache([])
+
     def test_build_configuration(self):
         "Test that zuul merges the right commits for testing"
 
@@ -2775,13 +2801,23 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(D.data['status'], 'MERGED')
         self.assertEqual(D.reported, 2)
 
+    def test_pipeline_requirements_approval_check_and_gate(self):
+        "Test pipeline requirements triggers both check and gate"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-pipeline-requirements.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+        self._test_required_approval_check_and_gate()
+
     def test_required_approval_check_and_gate(self):
         "Test required-approval triggers both check and gate"
         self.config.set('zuul', 'layout_config',
                         'tests/fixtures/layout-require-approval.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
+        self._test_required_approval_check_and_gate()
 
+    def _test_required_approval_check_and_gate(self):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('CRVW', 2)
         # Add a too-old +1
@@ -2802,8 +2838,23 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(len(self.history), 2)
         self.assertEqual(self.history[1].name, 'project-gate')
 
+    def test_pipeline_requirements_approval_newer(self):
+        "Test pipeline requirements newer trigger parameter"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-pipeline-requirements.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+        self._test_required_approval_newer()
+
     def test_required_approval_newer(self):
         "Test required-approval newer trigger parameter"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-require-approval.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+        self._test_required_approval_newer()
+
+    def _test_required_approval_newer(self):
         self.config.set('zuul', 'layout_config',
                         'tests/fixtures/layout-require-approval.yaml')
         self.sched.reconfigure(self.config)
@@ -2831,8 +2882,23 @@ class TestScheduler(testtools.TestCase):
         self.assertEqual(len(self.history), 2)
         self.assertEqual(self.history[1].name, 'project-gate')
 
+    def test_pipeline_requirements_approval_older(self):
+        "Test pipeline requirements older trigger parameter"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-pipeline-requirements.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+        self._test_required_approval_older()
+
     def test_required_approval_older(self):
         "Test required-approval older trigger parameter"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-require-approval.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+        self._test_required_approval_older()
+
+    def _test_required_approval_older(self):
         self.config.set('zuul', 'layout_config',
                         'tests/fixtures/layout-require-approval.yaml')
         self.sched.reconfigure(self.config)

@@ -363,6 +363,8 @@ class Gerrit(object):
                     change.needed_by_changes.append(dep)
 
         change.approvals = data['currentPatchSet'].get('approvals', [])
+        change.open = data['open']
+        change.status = data['status']
 
         return change
 

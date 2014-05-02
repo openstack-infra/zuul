@@ -418,34 +418,13 @@ explanation of each of the parameters::
     containing 'retrigger' somewhere in the comment text are added to a
     change.
 
-    *require-approval*
+    *require-approval* (deprecated)
     This may be used for any event.  It requires that a certain kind
     of approval be present for the current patchset of the change (the
-    approval could be added by the event in question).  It takes
-    several sub-parameters, all of which are optional and are combined
-    together so that there must be an approval matching all specified
-    requirements.
-
-      *username*
-      If present, an approval from this username is required.
-
-      *email-filter*
-      If present, an approval with this email address is required.  It
-      is treated as a regular expression as above.
-
-      *older-than*
-      If present, the approval must be older than this amount of time
-      to match.  Provide a time interval as a number with a suffix of
-      "w" (weeks), "d" (days), "h" (hours), "m" (minutes), "s"
-      (seconds).  Example ``48h`` or ``2d``.
-
-      *newer-than*
-      If present, the approval must be newer than this amount of time
-      to match.  Same format as "older-than".
-
-      Any other field is interpreted as a review category and value
-      pair.  For example ``verified: 1`` would require that the approval
-      be for a +1 vote in the "Verified" column.
+    approval could be added by the event in question).  It follows the
+    same syntax as the "approval" pipeline requirement below.  This
+    form should be considered deprecated and the pipeline requirement
+    used instead.
 
   **timer**
     This trigger will run based on a cron-style time specification.
@@ -458,6 +437,49 @@ explanation of each of the parameters::
     supported, not the symbolic names.  Example: ``0 0 * * *`` runs
     at midnight.
 
+**require**
+  If this section is present, it established pre-requisites for any
+  kind of item entering the Pipeline.  Regardless of how the item is
+  to be enqueued (via any trigger or automatic dependency resolution),
+  the conditions specified here must be met or the item will not be
+  enqueued.
+
+  **approval**
+  This requires that a certain kind of approval be present for the
+  current patchset of the change (the approval could be added by the
+  event in question).  It takes several sub-parameters, all of which
+  are optional and are combined together so that there must be an
+  approval matching all specified requirements.
+
+    *username*
+    If present, an approval from this username is required.
+
+    *email-filter*
+    If present, an approval with this email address is required.  It
+    is treated as a regular expression as above.
+
+    *older-than*
+    If present, the approval must be older than this amount of time
+    to match.  Provide a time interval as a number with a suffix of
+    "w" (weeks), "d" (days), "h" (hours), "m" (minutes), "s"
+    (seconds).  Example ``48h`` or ``2d``.
+
+    *newer-than*
+    If present, the approval must be newer than this amount of time
+    to match.  Same format as "older-than".
+
+    Any other field is interpreted as a review category and value
+    pair.  For example ``verified: 1`` would require that the approval
+    be for a +1 vote in the "Verified" column.
+
+  **open**
+  A boolean value (``true`` or ``false``) that indicates whether the change
+  must be open or closed in order to be enqueued.
+
+  **status**
+  A string value that corresponds with the status of the change
+  reported by the trigger.  For example, when using the Gerrit
+  trigger, status values such as ``NEW`` or ``MERGED`` may be useful.
 
 **dequeue-on-new-patchset**
   Normally, if a new patchset is uploaded to a change that is in a
