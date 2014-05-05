@@ -82,6 +82,14 @@ class Repo(object):
         repo.head.reset(index=True, working_tree=True)
         repo.git.clean('-x', '-f', '-d')
 
+    def prune(self):
+        repo = self.createRepoObject()
+        origin = repo.remotes.origin
+        stale_refs = origin.stale_refs
+        if stale_refs:
+            self.log.debug("Pruning stale refs: %s", stale_refs)
+            git.refs.RemoteReference.delete(repo, *stale_refs)
+
     def getBranchHead(self, branch):
         repo = self.createRepoObject()
         branch_head = repo.heads[branch]
