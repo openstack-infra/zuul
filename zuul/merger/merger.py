@@ -95,6 +95,11 @@ class Repo(object):
         branch_head = repo.heads[branch]
         return branch_head.commit
 
+    def hasBranch(self, branch):
+        repo = self.createRepoObject()
+        origin = repo.remotes.origin
+        return branch in origin.refs
+
     def getCommitFromRef(self, refname):
         repo = self.createRepoObject()
         if not refname in repo.refs:
