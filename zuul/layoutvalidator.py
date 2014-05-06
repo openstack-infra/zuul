@@ -45,6 +45,7 @@ class LayoutSchema(object):
 
     gerrit_trigger = {v.Required('event'):
                       toList(v.Any('patchset-created',
+                                   'draft-published',
                                    'change-abandoned',
                                    'change-restored',
                                    'change-merged',
