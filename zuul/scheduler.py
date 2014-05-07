@@ -849,29 +849,6 @@ class Scheduler(threading.Thread):
             return
         pipeline.manager.onMergeCompleted(event)
 
-    def formatStatusHTML(self):
-        ret = '<html><pre>'
-        if self._pause:
-            ret += '<p><b>Queue only mode:</b> preparing to '
-            if self._exit:
-                ret += 'exit'
-            ret += ', queue length: %s' % self.trigger_event_queue.qsize()
-            ret += '</p>'
-
-        if self.last_reconfigured:
-            ret += '<p>Last reconfigured: %s</p>' % self.last_reconfigured
-
-        keys = self.layout.pipelines.keys()
-        for key in keys:
-            pipeline = self.layout.pipelines[key]
-            s = 'Pipeline: %s' % pipeline.name
-            ret += s + '\n'
-            ret += '-' * len(s) + '\n'
-            ret += pipeline.formatStatusHTML()
-            ret += '\n'
-        ret += '</pre></html>'
-        return ret
-
     def formatStatusJSON(self):
         data = {}
 

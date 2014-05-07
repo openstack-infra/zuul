@@ -245,17 +245,6 @@ class Pipeline(object):
             items.extend(shared_queue.queue)
         return items
 
-    def formatStatusHTML(self):
-        ret = ''
-        for queue in self.queues:
-            if len(self.queues) > 1:
-                s = 'Change queue: %s' % queue.name
-                ret += s + '\n'
-                ret += '-' * len(s) + '\n'
-            for item in queue.queue:
-                ret += self.formatStatus(item, html=True)
-        return ret
-
     def formatStatusJSON(self):
         j_pipeline = dict(name=self.name,
                           description=self.description)
