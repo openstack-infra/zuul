@@ -71,6 +71,7 @@ class LayoutSchema(object):
 
     require = {'approval': toList(require_approval),
                'open': bool,
+               'current-patchset': bool,
                'status': toList(str)}
 
     window = v.All(int, v.Range(min=0))

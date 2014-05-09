@@ -1,0 +1,24 @@
+includes:
+  - python-file: custom_functions.py
+
+pipelines:
+  - name: check
+    manager: IndependentPipelineManager
+    require:
+      current-patchset: True
+    trigger:
+      gerrit:
+        - event: patchset-created
+        - event: comment-added
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+projects:
+  - name: org/project
+    merge-mode: cherry-pick
+    check:
+      - project-check

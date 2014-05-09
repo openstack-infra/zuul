@@ -1158,8 +1158,10 @@ class EventFilter(object):
 
 
 class ChangeishFilter(object):
-    def __init__(self, open=None, statuses=[], approvals=[]):
+    def __init__(self, open=None, current_patchset=None,
+                 statuses=[], approvals=[]):
         self.open = open
+        self.current_patchset = current_patchset
         self.statuses = statuses
         self.approvals = approvals
 
@@ -1176,10 +1178,12 @@ class ChangeishFilter(object):
 
         if self.open is not None:
             ret += ' open: %s' % self.open
+        if self.current_patchset is not None:
+            ret += ' current-patchset: %s' % self.current_patchset
         if self.statuses:
             ret += ' statuses: %s' % ', '.join(self.statuses)
         if self.approvals:
-            ret += ' approvals: %s' % ', '.join(str(self.approvals))
+            ret += ' approvals: %s' % str(self.approvals)
         ret += '>'
 
         return ret
@@ -1187,6 +1191,10 @@ class ChangeishFilter(object):
     def matches(self, change):
         if self.open is not None:
             if self.open != change.open:
+                return False
+
+        if self.current_patchset is not None:
+            if self.current_patchset != change.is_current_patchset:
                 return False
 
         if self.statuses:

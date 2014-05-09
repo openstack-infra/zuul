@@ -276,9 +276,11 @@ class Scheduler(threading.Thread):
 
             if 'require' in conf_pipeline:
                 require = conf_pipeline['require']
-                f = ChangeishFilter(open=require.get('open'),
-                                    statuses=toList(require.get('status')),
-                                    approvals=toList(require.get('approval')))
+                f = ChangeishFilter(
+                    open=require.get('open'),
+                    current_patchset=require.get('current-patchset'),
+                    statuses=toList(require.get('status')),
+                    approvals=toList(require.get('approval')))
                 manager.changeish_filters.append(f)
 
             # TODO: move this into triggers (may require pluggable

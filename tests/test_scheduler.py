@@ -132,6 +132,7 @@ class FakeChange(object):
         self.upstream_root = upstream_root
         self.addPatchset()
         self.data['submitRecords'] = self.getSubmitRecords()
+        self.open = True
 
     def add_fake_change_to_repo(self, msg, fn, large):
         path = os.path.join(self.upstream_root, self.project)
@@ -219,6 +220,23 @@ class FakeChange(object):
                             "url": "https://hostname/3"},
                  "restorer": {"name": "User Name"},
                  "reason": ""}
+        return event
+
+    def getChangeCommentEvent(self, patchset):
+        event = {"type": "comment-added",
+                 "change": {"project": self.project,
+                            "branch": self.branch,
+                            "id": "I5459869c07352a31bfb1e7a8cac379cabfcb25af",
+                            "number": str(self.number),
+                            "subject": self.subject,
+                            "owner": {"name": "User Name"},
+                            "url": "https://hostname/3"},
+                 "patchSet": self.patchsets[patchset - 1],
+                 "author": {"name": "User Name"},
+                 "approvals": [{"type": "Code-Review",
+                                "description": "Code-Review",
+                                "value": "0"}],
+                 "comment": "This is a comment"}
         return event
 
     def addApproval(self, category, value, username='jenkins',
@@ -4063,3 +4081,35 @@ For CI problems and help debugging, contact ci@example.org"""
             self.getJobFromHistory('experimental-project-test').result,
             'SUCCESS')
         self.assertEqual(A.reported, 1)
+
+    def test_old_patchset_doesnt_trigger(self):
+        "Test that jobs never run against old patchsets"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-current-patchset.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+        # Create two patchsets and let their tests settle out. Then
+        # comment on first patchset and check that no additional
+        # jobs are run.
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        # Added because the layout file really wants an approval but this
+        # doesn't match anyways.
+        self.fake_gerrit.addEvent(A.addApproval('CRVW', 1))
+        self.waitUntilSettled()
+        A.addPatchset()
+        self.fake_gerrit.addEvent(A.addApproval('CRVW', 1))
+        self.waitUntilSettled()
+
+        old_history_count = len(self.history)
+        self.assertEqual(old_history_count, 2)  # one job for each ps
+        self.fake_gerrit.addEvent(A.getChangeCommentEvent(1))
+        self.waitUntilSettled()
+
+        # Assert no new jobs ran after event for old patchset.
+        self.assertEqual(len(self.history), old_history_count)
+
+        # The last thing we did was add an event for a change then do
+        # nothing with a pipeline, so it will be in the cache;
+        # clean it up so it does not fail the test.
+        for pipeline in self.sched.layout.pipelines.values():
+            pipeline.trigger.maintainCache([])

@@ -476,6 +476,10 @@ explanation of each of the parameters::
   A boolean value (``true`` or ``false``) that indicates whether the change
   must be open or closed in order to be enqueued.
 
+  **current-patchset**
+  A boolean value (``true`` or ``false``) that indicates whether the change
+  must be the current patchset in order to be enqueued.
+
   **status**
   A string value that corresponds with the status of the change
   reported by the trigger.  For example, when using the Gerrit
