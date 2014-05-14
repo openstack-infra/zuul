@@ -14,6 +14,7 @@
 
 import hmac
 from hashlib import sha1
+import logging
 from time import time
 import os
 import random
@@ -23,6 +24,8 @@ import urlparse
 
 
 class Swift(object):
+    log = logging.getLogger("zuul.lib.swift")
+
     def __init__(self, config):
         self.config = config
         self.connection = False
@@ -35,7 +38,13 @@ class Swift(object):
                 for x in range(20)
             )
 
-        self.connect()
+        self.storage_url = ''
+
+        try:
+            self.connect()
+        except Exception as e:
+            self.log.warning("Unable to set up swift. Signed storage URL is "
+                             "likely to be wrong. %s" % e)
 
     def connect(self):
         if self.config.has_section('swift'):
