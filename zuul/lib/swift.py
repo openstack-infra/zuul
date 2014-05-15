@@ -39,16 +39,29 @@ class Swift(object):
             )
 
         self.storage_url = ''
+        if self.config.has_option('swift', 'X-Storage-Url'):
+            self.storage_url = self.config.get('swift', 'X-Storage-Url')
 
         try:
-            self.connect()
+            if self.config.has_section('swift'):
+                if (not self.config.has_option('swift', 'Send-Temp-Url-Key')
+                    or self.config.getboolean('swift', 'Send-Temp-Url-Key')):
+                    self.connect()
+
+                    # Tell swift of our key
+                    headers = {}
+                    headers['X-Account-Meta-Temp-Url-Key'] = self.secure_key
+                    self.connection.post_account(headers)
+
+                if not self.config.has_option('swift', 'X-Storage-Url'):
+                    self.connect()
+                    self.storage_url = self.connection.get_auth()[0]
         except Exception as e:
             self.log.warning("Unable to set up swift. Signed storage URL is "
                              "likely to be wrong. %s" % e)
 
     def connect(self):
-        if self.config.has_section('swift'):
-            # required
+        if not self.connection:
             authurl = self.config.get('swift', 'authurl')
 
             user = (self.config.get('swift', 'user')
@@ -104,13 +117,6 @@ class Swift(object):
                 tenant_name=tenant_name, os_options=os_options,
                 auth_version=auth_version, cacert=cacert, insecure=insecure,
                 ssl_compression=ssl_compression)
-
-            # Tell swift of our key
-            headers = {}
-            headers['X-Account-Meta-Temp-Url-Key'] = self.secure_key
-            self.connection.post_account(headers)
-
-            self.storage_url, self.auth_token = self.connection.get_auth()
 
     def generate_form_post_middleware_params(self, destination_prefix='',
                                              **kwargs):

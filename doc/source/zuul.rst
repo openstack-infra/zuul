@@ -185,20 +185,33 @@ To send (optional) swift upload instructions this section must be
 present. Multiple destinations can be defined in the :ref:`jobs`
 section of the layout.
 
-**authurl**
-  The (keystone) Auth URL for swift
+**X-Account-Meta-Temp-Url-Key** (optional)
+  This is the key used to sign the HMAC message. If you do not set a
+  key Zuul will generate one automatically.
+
+**Send-Temp-Url-Key** (optional)
+  Zuul can send the X-Account-Meta-Temp-Url-Key to swift for you if
+  you have set up the appropriate credentials in ``authurl`` below.
+  This isn't necessary if you know and have set your
+  X-Account-Meta-Temp-Url-Key.
+  ``default: true``
+
+**X-Storage-Url** (optional)
+  The storage URL is the destination to upload files into. If you do
+  not set this the ``authurl`` credentials are used to fetch the url
+  from swift.
+
+**authurl** (optional)
+  The (keystone) Auth URL for swift.
   ``For example, https://identity.api.rackspacecloud.com/v2.0/``
+  This is required if you have Send-Temp-Url-Key set to ``True`` or
+  if you have not supplied the X-Storage-Url.
 
 Any of the `swiftclient connection parameters`_ can also be defined
 here by the same name. Including the os_options by their key name (
 ``for example tenant_id``)
 
 .. _swiftclient connection parameters: http://docs.openstack.org/developer/python-swiftclient/swiftclient.html#module-swiftclient.client
-
-**X-Account-Meta-Temp-Url-Key** (optional)
-  This is the key used to sign the HMAC message. zuul will send the
-  key to swift for you so you only need to define it here. If you do
-  not set a key zuul will generate one automatically.
 
 **region_name** (optional)
   The region name holding the swift container
