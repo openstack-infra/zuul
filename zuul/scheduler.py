@@ -1135,7 +1135,7 @@ class BasePipelineManager(object):
 
     def removeChange(self, change):
         # Remove a change from the queue, probably because it has been
-        # superceded by another change.
+        # superseded by another change.
         for item in self.pipeline.getAllItems():
             if item.change == change:
                 self.log.debug("Canceling builds behind change: %s "

@@ -287,7 +287,7 @@ class Pipeline(object):
 
 
 class ActionReporter(object):
-    """An ActionReporter has a reporter and its configured paramaters"""
+    """An ActionReporter has a reporter and its configured parameters"""
 
     def __repr__(self):
         return '<ActionReporter %s, %s>' % (self.reporter, self.params)

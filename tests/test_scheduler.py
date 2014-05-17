@@ -1127,7 +1127,7 @@ class TestScheduler(testtools.TestCase):
                 raise Exception("Timeout waiting for Zuul to settle")
             # Make sure no new events show up while we're checking
             self.worker.lock.acquire()
-            # have all build states propogated to zuul?
+            # have all build states propagated to zuul?
             if self.haveAllBuildsReported():
                 # Join ensures that the queue is empty _and_ events have been
                 # processed
@@ -2951,10 +2951,10 @@ class TestScheduler(testtools.TestCase):
         statsd = extras.try_import('statsd.statsd')
         statsd.incr('test-incr')
         statsd.timing('test-timing', 3)
-        statsd.gauge('test-guage', 12)
+        statsd.gauge('test-gauge', 12)
         self.assertReportedStat('test-incr', '1|c')
         self.assertReportedStat('test-timing', '3|ms')
-        self.assertReportedStat('test-guage', '12|g')
+        self.assertReportedStat('test-gauge', '12|g')
 
     def test_stuck_job_cleanup(self):
         "Test that pending jobs are cleaned up if removed from layout"
