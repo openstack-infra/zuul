@@ -16,25 +16,19 @@
 
 import argparse
 import babel.dates
-import ConfigParser
 import datetime
 import logging
-import logging.config
-import os
 import prettytable
 import sys
 import time
 
+
 import zuul.rpcclient
+import zuul.cmd
 
 
-class Client(object):
+class Client(zuul.cmd.ZuulApp):
     log = logging.getLogger("zuul.Client")
-
-    def __init__(self):
-        self.args = None
-        self.config = None
-        self.gear_server_pid = None
 
     def parse_arguments(self):
         parser = argparse.ArgumentParser(
@@ -89,24 +83,8 @@ class Client(object):
 
         self.args = parser.parse_args()
 
-    def _get_version(self):
-        from zuul.version import version_info as zuul_version_info
-        return "Zuul version: %s" % zuul_version_info.version_string()
-
-    def read_config(self):
-        self.config = ConfigParser.ConfigParser()
-        if self.args.config:
-            locations = [self.args.config]
-        else:
-            locations = ['/etc/zuul/zuul.conf',
-                         '~/zuul.conf']
-        for fp in locations:
-            if os.path.exists(os.path.expanduser(fp)):
-                self.config.read(os.path.expanduser(fp))
-                return
-        raise Exception("Unable to locate config file in %s" % locations)
-
     def setup_logging(self):
+        """Client logging does not rely on conf file"""
         if self.args.verbose:
             logging.basicConfig(level=logging.DEBUG)
 

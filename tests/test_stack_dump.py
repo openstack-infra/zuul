@@ -17,7 +17,7 @@ import logging
 import signal
 import testtools
 
-import zuul.cmd.server
+import zuul.cmd
 
 
 class TestStackDump(testtools.TestCase):
@@ -29,6 +29,6 @@ class TestStackDump(testtools.TestCase):
     def test_stack_dump_logs(self):
         "Test that stack dumps end up in logs."
 
-        zuul.cmd.server.stack_dump_handler(signal.SIGUSR2, None)
+        zuul.cmd.stack_dump_handler(signal.SIGUSR2, None)
         self.assertIn("Thread", self.log_fixture.output)
         self.assertIn("test_stack_dump_logs", self.log_fixture.output)

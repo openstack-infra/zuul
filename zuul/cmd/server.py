@@ -15,7 +15,6 @@
 # under the License.
 
 import argparse
-import ConfigParser
 import daemon
 import extras
 
@@ -24,11 +23,11 @@ import extras
 pid_file_module = extras.try_imports(['daemon.pidlockfile', 'daemon.pidfile'])
 
 import logging
-import logging.config
 import os
 import sys
 import signal
-import traceback
+
+import zuul.cmd
 
 # No zuul imports here because they pull in paramiko which must not be
 # imported until after the daemonization.
@@ -36,21 +35,9 @@ import traceback
 # Similar situation with gear and statsd.
 
 
-def stack_dump_handler(signum, frame):
-    signal.signal(signal.SIGUSR2, signal.SIG_IGN)
-    log_str = ""
-    for thread_id, stack_frame in sys._current_frames().items():
-        log_str += "Thread: %s\n" % thread_id
-        log_str += "".join(traceback.format_stack(stack_frame))
-    log = logging.getLogger("zuul.stack_dump")
-    log.debug(log_str)
-    signal.signal(signal.SIGUSR2, stack_dump_handler)
-
-
-class Server(object):
+class Server(zuul.cmd.ZuulApp):
     def __init__(self):
-        self.args = None
-        self.config = None
+        super(Server, self).__init__()
         self.gear_server_pid = None
 
     def parse_arguments(self):
@@ -70,33 +57,6 @@ class Server(object):
                             version=self._get_version(),
                             help='show zuul version')
         self.args = parser.parse_args()
-
-    def _get_version(self):
-        from zuul.version import version_info as zuul_version_info
-        return "Zuul version: %s" % zuul_version_info.version_string()
-
-    def read_config(self):
-        self.config = ConfigParser.ConfigParser()
-        if self.args.config:
-            locations = [self.args.config]
-        else:
-            locations = ['/etc/zuul/zuul.conf',
-                         '~/zuul.conf']
-        for fp in locations:
-            if os.path.exists(os.path.expanduser(fp)):
-                self.config.read(os.path.expanduser(fp))
-                return
-        raise Exception("Unable to locate config file in %s" % locations)
-
-    def setup_logging(self, section, parameter):
-        if self.config.has_option(section, parameter):
-            fp = os.path.expanduser(self.config.get(section, parameter))
-            if not os.path.exists(fp):
-                raise Exception("Unable to read logging config file at %s" %
-                                fp)
-            logging.config.fileConfig(fp)
-        else:
-            logging.basicConfig(level=logging.DEBUG)
 
     def reconfigure_handler(self, signum, frame):
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
@@ -235,7 +195,7 @@ class Server(object):
 
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
         signal.signal(signal.SIGUSR1, self.exit_handler)
-        signal.signal(signal.SIGUSR2, stack_dump_handler)
+        signal.signal(signal.SIGUSR2, zuul.cmd.stack_dump_handler)
         signal.signal(signal.SIGTERM, self.term_handler)
         while True:
             try:
