@@ -1,4 +1,4 @@
-// Client script for Zuul status page
+// jquery plugin for Zuul status page
 //
 // Copyright 2012 OpenStack Foundation
 // Copyright 2013 Timo Tijhof
