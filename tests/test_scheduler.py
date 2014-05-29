@@ -3275,25 +3275,25 @@ class TestScheduler(testtools.TestCase):
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
-        start = time.time()
-        failed = True
-        while ((time.time() - start) < 30):
-            if len(self.builds) == 2:
-                failed = False
-                break
-            else:
-                time.sleep(1)
-
-        if failed:
-            raise Exception("Expected jobs never ran")
-
+        # The pipeline triggers every second, so we should have seen
+        # several by now.
+        time.sleep(5)
         self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 2)
+
         port = self.webapp.server.socket.getsockname()[1]
 
         f = urllib.urlopen("http://localhost:%s/status.json" % port)
         data = f.read()
 
         self.worker.hold_jobs_in_build = False
+        # Stop queuing timer triggered jobs so that the assertions
+        # below don't race against more jobs being queued.
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-no-timer.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
         self.worker.release()
         self.waitUntilSettled()
 
@@ -3317,29 +3317,33 @@ class TestScheduler(testtools.TestCase):
     def test_idle(self):
         "Test that frequent periodic jobs work"
         self.worker.hold_jobs_in_build = True
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-idle.yaml')
-        self.sched.reconfigure(self.config)
-        self.registerJobs()
 
-        # The pipeline triggers every second, so we should have seen
-        # several by now.
-        time.sleep(5)
-        self.waitUntilSettled()
-        self.assertEqual(len(self.builds), 2)
-        self.worker.release('.*')
-        self.waitUntilSettled()
-        self.assertEqual(len(self.builds), 0)
-        self.assertEqual(len(self.history), 2)
+        for x in range(1, 3):
+            # Test that timer triggers periodic jobs even across
+            # layout config reloads.
+            # Start timer trigger
+            self.config.set('zuul', 'layout_config',
+                            'tests/fixtures/layout-idle.yaml')
+            self.sched.reconfigure(self.config)
+            self.registerJobs()
 
-        time.sleep(5)
-        self.waitUntilSettled()
-        self.assertEqual(len(self.builds), 2)
-        self.assertEqual(len(self.history), 2)
-        self.worker.release('.*')
-        self.waitUntilSettled()
-        self.assertEqual(len(self.builds), 0)
-        self.assertEqual(len(self.history), 4)
+            # The pipeline triggers every second, so we should have seen
+            # several by now.
+            time.sleep(5)
+            self.waitUntilSettled()
+
+            # Stop queuing timer triggered jobs so that the assertions
+            # below don't race against more jobs being queued.
+            self.config.set('zuul', 'layout_config',
+                            'tests/fixtures/layout-no-timer.yaml')
+            self.sched.reconfigure(self.config)
+            self.registerJobs()
+
+            self.assertEqual(len(self.builds), 2)
+            self.worker.release('.*')
+            self.waitUntilSettled()
+            self.assertEqual(len(self.builds), 0)
+            self.assertEqual(len(self.history), x * 2)
 
     def test_check_smtp_pool(self):
         self.config.set('zuul', 'layout_config',
@@ -3374,24 +3378,21 @@ class TestScheduler(testtools.TestCase):
 
     def test_timer_smtp(self):
         "Test that a periodic job is triggered"
+        self.worker.hold_jobs_in_build = True
         self.config.set('zuul', 'layout_config',
                         'tests/fixtures/layout-timer-smtp.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
-        start = time.time()
-        failed = True
-        while ((time.time() - start) < 30):
-            if len(self.history) == 2:
-                failed = False
-                break
-            else:
-                time.sleep(1)
-
-        if failed:
-            raise Exception("Expected jobs never ran")
-
+        # The pipeline triggers every second, so we should have seen
+        # several by now.
+        time.sleep(5)
         self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 2)
+        self.worker.release('.*')
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 2)
 
         self.assertEqual(self.getJobFromHistory(
             'project-bitrot-stable-old').result, 'SUCCESS')
@@ -3410,6 +3411,15 @@ class TestScheduler(testtools.TestCase):
                          self.smtp_messages[0]['to_email'])
         self.assertIn('Subject: Periodic check for org/project succeeded',
                       self.smtp_messages[0]['headers'])
+
+        # Stop queuing timer triggered jobs and let any that may have
+        # queued through so that end of test assertions pass.
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-no-timer.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+        self.worker.release('.*')
+        self.waitUntilSettled()
 
     def test_client_enqueue(self):
         "Test that the RPC client can enqueue a change"
