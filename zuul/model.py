@@ -1019,6 +1019,9 @@ class EventFilter(object):
         if self.event_approvals:
             ret += ' event_approvals: %s' % ', '.join(
                 ['%s:%s' % a for a in self.event_approvals.items()])
+        if self.require_approvals:
+            ret += ' require_approvals: %s' % ', '.join(
+                ['%s' % a for a in self.require_approvals])
         if self._comment_filters:
             ret += ' comment_filters: %s' % ', '.join(self._comment_filters)
         if self._email_filters:
