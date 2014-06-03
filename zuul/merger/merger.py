@@ -132,14 +132,14 @@ class Repo(object):
 
     def createZuulRef(self, ref, commit='HEAD'):
         repo = self.createRepoObject()
-        self.log.debug("CreateZuulRef %s at %s " % (ref, commit))
+        self.log.debug("CreateZuulRef %s at %s" % (ref, commit))
         ref = ZuulReference.create(repo, ref, commit)
         return ref.commit
 
     def push(self, local, remote):
         repo = self.createRepoObject()
-        self.log.debug("Pushing %s:%s to %s " % (local, remote,
-                                                 self.remote_url))
+        self.log.debug("Pushing %s:%s to %s" % (local, remote,
+                                                self.remote_url))
         repo.remotes.origin.push('%s:%s' % (local, remote))
 
     def update(self):
