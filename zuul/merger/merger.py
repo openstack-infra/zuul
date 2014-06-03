@@ -58,6 +58,9 @@ class Repo(object):
         repo.config_writer().write()
         self._initialized = True
 
+    def isInitialized(self):
+        return self._initialized
+
     def createRepoObject(self):
         try:
             self._ensure_cloned()
