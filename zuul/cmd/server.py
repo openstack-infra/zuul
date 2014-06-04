@@ -163,7 +163,11 @@ class Server(zuul.cmd.ZuulApp):
         merger = zuul.merger.client.MergeClient(self.config, self.sched)
         gerrit = zuul.trigger.gerrit.Gerrit(self.config, self.sched)
         timer = zuul.trigger.timer.Timer(self.config, self.sched)
-        webapp = zuul.webapp.WebApp(self.sched)
+        if self.config.has_option('zuul', 'status_expiry'):
+            cache_expiry = self.config.getint('zuul', 'status_expiry')
+        else:
+            cache_expiry = 1
+        webapp = zuul.webapp.WebApp(self.sched, cache_expiry=cache_expiry)
         rpc = zuul.rpclistener.RPCListener(self.config, self.sched)
         gerrit_reporter = zuul.reporter.gerrit.Reporter(gerrit)
         smtp_reporter = zuul.reporter.smtp.Reporter(

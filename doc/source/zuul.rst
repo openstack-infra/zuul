@@ -114,6 +114,11 @@ zuul
   starting jobs for a change.  Used by zuul-server only.
   ``status_url=https://zuul.example.com/status``
 
+**status_expiry**
+  Zuul will cache the status.json file for this many seconds. This is an
+  optional value and ``1`` is used by default.
+  ``status_expiry=1``
+
 **url_pattern**
   If you are storing build logs external to the system that originally
   ran jobs and wish to link to those logs when Zuul makes comments on

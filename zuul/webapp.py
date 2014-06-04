@@ -15,6 +15,7 @@
 
 import logging
 import threading
+import time
 from paste import httpserver
 import webob
 from webob import dec
@@ -23,10 +24,13 @@ from webob import dec
 class WebApp(threading.Thread):
     log = logging.getLogger("zuul.WebApp")
 
-    def __init__(self, scheduler, port=8001):
+    def __init__(self, scheduler, port=8001, cache_expiry=1):
         threading.Thread.__init__(self)
         self.scheduler = scheduler
         self.port = port
+        self.cache_expiry = cache_expiry
+        self.cache_time = 0
+        self.cache = None
         self.daemon = True
         self.server = httpserver.serve(dec.wsgify(self.app), host='0.0.0.0',
                                        port=self.port, start_loop=False)
@@ -40,11 +44,17 @@ class WebApp(threading.Thread):
     def app(self, request):
         if request.path != '/status.json':
             raise webob.exc.HTTPNotFound()
-        try:
-            ret = self.scheduler.formatStatusJSON()
-        except:
-            self.log.exception("Exception formatting status:")
-            raise
-        response = webob.Response(body=ret, content_type='application/json')
+        if (not self.cache or
+            (time.time() - self.cache_time) > self.cache_expiry):
+            try:
+                self.cache = self.scheduler.formatStatusJSON()
+                # Call time.time() again because formatting above may take
+                # longer than the cache timeout.
+                self.cache_time = time.time()
+            except:
+                self.log.exception("Exception formatting status:")
+                raise
+        response = webob.Response(body=self.cache,
+                                  content_type='application/json')
         response.headers['Access-Control-Allow-Origin'] = '*'
         return response
