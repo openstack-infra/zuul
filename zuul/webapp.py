@@ -47,7 +47,4 @@ class WebApp(threading.Thread):
             raise
         response = webob.Response(body=ret, content_type='application/json')
         response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Vary'] = 'Accept-Encoding'
-        if 'gzip' in request.headers.get('accept-encoding', ()):
-            response.encode_content('gzip')
         return response

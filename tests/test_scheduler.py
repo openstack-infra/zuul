@@ -14,8 +14,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from cStringIO import StringIO
-import gzip
 import json
 import logging
 import os
@@ -1927,7 +1925,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.history[4].pipeline, 'check')
         self.assertEqual(self.history[5].pipeline, 'check')
 
-    def test_json_status(self, compressed=False):
+    def test_json_status(self):
         "Test that we can retrieve JSON status info"
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -1938,13 +1936,8 @@ class TestScheduler(ZuulTestCase):
         port = self.webapp.server.socket.getsockname()[1]
 
         req = urllib2.Request("http://localhost:%s/status.json" % port)
-        if compressed:
-            req.add_header("accept-encoding", "gzip")
         f = urllib2.urlopen(req)
         data = f.read()
-        if compressed:
-            gz = gzip.GzipFile(fileobj=StringIO(data))
-            data = gz.read()
 
         self.worker.hold_jobs_in_build = False
         self.worker.release()
@@ -1967,9 +1960,6 @@ class TestScheduler(ZuulTestCase):
         self.assertIn('project-merge', status_jobs)
         self.assertIn('project-test1', status_jobs)
         self.assertIn('project-test2', status_jobs)
-
-    def test_json_status_gzip(self):
-        self.test_json_status(True)
 
     def test_merging_queues(self):
         "Test that transitively-connected change queues are merged"
