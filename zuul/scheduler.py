@@ -876,9 +876,7 @@ class Scheduler(threading.Thread):
 
         pipelines = []
         data['pipelines'] = pipelines
-        keys = self.layout.pipelines.keys()
-        for key in keys:
-            pipeline = self.layout.pipelines[key]
+        for pipeline in self.layout.pipelines.values():
             pipelines.append(pipeline.formatStatusJSON())
         return json.dumps(data)
 
