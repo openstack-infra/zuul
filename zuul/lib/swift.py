@@ -19,7 +19,6 @@ from time import time
 import os
 import random
 import string
-import swiftclient
 import urlparse
 
 
@@ -110,6 +109,7 @@ class Swift(object):
                 if self.config.has_option('swift', os_option):
                     os_options[os_option] = self.config.get('swift', os_option)
 
+            import swiftclient
             self.connection = swiftclient.client.Connection(
                 authurl=authurl, user=user, key=key, retries=retries,
                 preauthurl=preauthurl, preauthtoken=preauthtoken, snet=snet,

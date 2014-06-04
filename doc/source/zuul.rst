@@ -182,8 +182,11 @@ swift
 """""
 
 To send (optional) swift upload instructions this section must be
-present. Multiple destinations can be defined in the :ref:`jobs`
-section of the layout.
+present. Multiple destinations can be defined in the :ref:`jobs` section
+of the layout.
+
+If you are sending the temp-url-key or fetching the x-storage-url, you
+will need the python-swiftclient module installed.
 
 **X-Account-Meta-Temp-Url-Key** (optional)
   This is the key used to sign the HMAC message. If you do not set a
@@ -194,12 +197,13 @@ section of the layout.
   you have set up the appropriate credentials in ``authurl`` below.
   This isn't necessary if you know and have set your
   X-Account-Meta-Temp-Url-Key.
+  If set, Zuul requires the python-swiftclient module.
   ``default: true``
 
 **X-Storage-Url** (optional)
   The storage URL is the destination to upload files into. If you do
   not set this the ``authurl`` credentials are used to fetch the url
-  from swift.
+  from swift and Zuul will requires the python-swiftclient module.
 
 **authurl** (optional)
   The (keystone) Auth URL for swift.
