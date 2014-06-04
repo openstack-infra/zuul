@@ -1937,6 +1937,12 @@ class TestScheduler(ZuulTestCase):
 
         req = urllib2.Request("http://localhost:%s/status.json" % port)
         f = urllib2.urlopen(req)
+        headers = f.info()
+        self.assertIn('Content-Length', headers)
+        self.assertIn('Content-Type', headers)
+        self.assertEqual(headers['Content-Type'],
+                         'application/json; charset=UTF-8')
+        self.assertIn('Last-Modified', headers)
         data = f.read()
 
         self.worker.hold_jobs_in_build = False

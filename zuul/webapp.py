@@ -57,4 +57,5 @@ class WebApp(threading.Thread):
         response = webob.Response(body=self.cache,
                                   content_type='application/json')
         response.headers['Access-Control-Allow-Origin'] = '*'
+        response.last_modified = self.cache_time
         return response
