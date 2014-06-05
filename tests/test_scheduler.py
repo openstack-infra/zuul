@@ -633,7 +633,7 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
         self.waitUntilSettled()
 
-        self.log.debug("len %s " % self.gerrit._change_cache.keys())
+        self.log.debug("len %s" % self.gerrit._change_cache.keys())
         # there should still be changes in the cache
         self.assertNotEqual(len(self.gerrit._change_cache.keys()), 0)
 
