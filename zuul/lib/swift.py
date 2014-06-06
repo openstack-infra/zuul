@@ -17,6 +17,7 @@ from hashlib import sha1
 from time import time
 import os
 import random
+import six
 import string
 import swiftclient
 import urlparse
@@ -116,7 +117,7 @@ class Swift(object):
             'file_path_prefix': ''
         }
 
-        for key, default in settings.iteritems():
+        for key, default in six.iteritems(settings):
             if key in kwargs:
                 settings[key] = kwargs[key]
             elif self.config.has_option('swift', 'default_' + key):

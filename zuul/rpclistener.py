@@ -19,6 +19,7 @@ import threading
 import traceback
 
 import gear
+import six
 
 import model
 
@@ -129,7 +130,8 @@ class RPCListener(object):
         # args = json.loads(job.arguments)
         # TODO: use args to filter by pipeline etc
         running_items = []
-        for pipeline_name, pipeline in self.sched.layout.pipelines.iteritems():
+        for pipeline_name, pipeline in six.iteritems(
+                self.sched.layout.pipelines):
             for queue in pipeline.queues:
                 for item in queue.queue:
                     running_items.append(item.formatJSON())

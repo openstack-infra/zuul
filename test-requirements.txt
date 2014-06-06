@@ -7,7 +7,6 @@ docutils==0.9.1
 discover
 fixtures>=0.3.14
 python-subunit
-six>=1.4.1
 testrepository>=0.0.17
 testtools>=0.9.32
 sphinxcontrib-programoutput
