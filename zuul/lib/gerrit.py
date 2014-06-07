@@ -17,7 +17,7 @@ import threading
 import select
 import json
 import time
-import Queue
+from six.moves import queue as Queue
 import paramiko
 import logging
 import pprint

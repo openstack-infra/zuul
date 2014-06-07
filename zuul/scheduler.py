@@ -20,7 +20,7 @@ import json
 import logging
 import os
 import pickle
-import Queue
+from six.moves import queue as Queue
 import re
 import sys
 import threading
