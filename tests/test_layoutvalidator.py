@@ -44,7 +44,7 @@ class TestLayoutValidator(testtools.TestCase):
             if m.group(1) == 'good':
                 try:
                     validator.validate(data)
-                except voluptuous.Invalid, e:
+                except voluptuous.Invalid as e:
                     raise Exception(
                         'Unexpected YAML syntax error in %s:\n  %s' %
                         (fn, str(e)))
@@ -53,7 +53,7 @@ class TestLayoutValidator(testtools.TestCase):
                     validator.validate(data)
                     raise Exception("Expected a YAML syntax error in %s." %
                                     fn)
-                except voluptuous.Invalid, e:
+                except voluptuous.Invalid as e:
                     error = str(e)
                     print '  ', error
                     if error in errors:
