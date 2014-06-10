@@ -18,3 +18,4 @@ python-swiftclient>=1.6
 python-keystoneclient>=0.4.2
 PrettyTable>=0.6,<0.8
 babel
+six>=1.6.0
