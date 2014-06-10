@@ -21,7 +21,7 @@ import json
 import logging
 import os
 import pprint
-import Queue
+from six.moves import queue as Queue
 import random
 import re
 import select
