@@ -292,16 +292,23 @@ class Scheduler(threading.Thread):
                     for approval_dict in toList(trigger.get('approval')):
                         for k, v in approval_dict.items():
                             approvals[k] = v
+                    # Backwards compat for *_filter versions of these args
+                    comments = toList(trigger.get('comment'))
+                    if not comments:
+                        comments = toList(trigger.get('comment_filter'))
+                    emails = toList(trigger.get('email'))
+                    if not emails:
+                        emails = toList(trigger.get('email_filter'))
+                    usernames = toList(trigger.get('username'))
+                    if not usernames:
+                        usernames = toList(trigger.get('username_filter'))
                     f = EventFilter(types=toList(trigger['event']),
                                     branches=toList(trigger.get('branch')),
                                     refs=toList(trigger.get('ref')),
                                     event_approvals=approvals,
-                                    comment_filters=
-                                    toList(trigger.get('comment_filter')),
-                                    email_filters=
-                                    toList(trigger.get('email_filter')),
-                                    username_filters=
-                                    toList(trigger.get('username_filter')),
+                                    comments=comments,
+                                    emails=emails,
+                                    usernames=usernames,
                                     required_approvals=
                                     toList(trigger.get('require-approval')))
                     manager.event_filters.append(f)

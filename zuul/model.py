@@ -987,8 +987,8 @@ class BaseFilter(object):
             for k, v in a.items():
                 if k == 'username':
                     pass
-                elif k == 'email-filter':
-                    a[k] = re.compile(v)
+                elif k in ['email', 'email-filter']:
+                    a['email'] = re.compile(v)
                 elif k == 'newer-than':
                     a[k] = time_to_seconds(v)
                 elif k == 'older-than':
@@ -996,6 +996,8 @@ class BaseFilter(object):
                 else:
                     if not isinstance(v, list):
                         a[k] = [v]
+            if 'email-filter' in a:
+                del a['email-filter']
 
     def matchesRequiredApprovals(self, change):
         now = time.time()
@@ -1010,7 +1012,7 @@ class BaseFilter(object):
                     if k == 'username':
                         if (by.get('username', '') != v):
                             found_approval = False
-                    elif k == 'email-filter':
+                    elif k == 'email':
                         if (not v.search(by.get('email', ''))):
                             found_approval = False
                     elif k == 'newer-than':
@@ -1035,22 +1037,22 @@ class BaseFilter(object):
 
 class EventFilter(BaseFilter):
     def __init__(self, types=[], branches=[], refs=[], event_approvals={},
-                 comment_filters=[], email_filters=[], username_filters=[],
-                 timespecs=[], required_approvals=[]):
+                 comments=[], emails=[], usernames=[], timespecs=[],
+                 required_approvals=[]):
         super(EventFilter, self).__init__(
             required_approvals=required_approvals)
         self._types = types
         self._branches = branches
         self._refs = refs
-        self._comment_filters = comment_filters
-        self._email_filters = email_filters
-        self._username_filters = username_filters
+        self._comments = comments
+        self._emails = emails
+        self._usernames = usernames
         self.types = [re.compile(x) for x in types]
         self.branches = [re.compile(x) for x in branches]
         self.refs = [re.compile(x) for x in refs]
-        self.comment_filters = [re.compile(x) for x in comment_filters]
-        self.email_filters = [re.compile(x) for x in email_filters]
-        self.username_filters = [re.compile(x) for x in username_filters]
+        self.comments = [re.compile(x) for x in comments]
+        self.emails = [re.compile(x) for x in emails]
+        self.usernames = [re.compile(x) for x in usernames]
         self.event_approvals = event_approvals
         self.timespecs = timespecs
 
@@ -1069,12 +1071,12 @@ class EventFilter(BaseFilter):
         if self.required_approvals:
             ret += ' required_approvals: %s' % ', '.join(
                 ['%s' % a for a in self.required_approvals])
-        if self._comment_filters:
-            ret += ' comment_filters: %s' % ', '.join(self._comment_filters)
-        if self._email_filters:
-            ret += ' email_filters: %s' % ', '.join(self._email_filters)
-        if self._username_filters:
-            ret += ' username_filters: %s' % ', '.join(self._username_filters)
+        if self._comments:
+            ret += ' comments: %s' % ', '.join(self._comments)
+        if self._emails:
+            ret += ' emails: %s' % ', '.join(self._emails)
+        if self._usernames:
+            ret += ' username_filters: %s' % ', '.join(self._usernames)
         if self.timespecs:
             ret += ' timespecs: %s' % ', '.join(self.timespecs)
         ret += '>'
@@ -1106,36 +1108,36 @@ class EventFilter(BaseFilter):
         if self.refs and not matches_ref:
             return False
 
-        # comment_filters are ORed
-        matches_comment_filter = False
-        for comment_filter in self.comment_filters:
+        # comments are ORed
+        matches_comment_re = False
+        for comment_re in self.comments:
             if (event.comment is not None and
-                comment_filter.search(event.comment)):
-                matches_comment_filter = True
-        if self.comment_filters and not matches_comment_filter:
+                comment_re.search(event.comment)):
+                matches_comment_re = True
+        if self.comments and not matches_comment_re:
             return False
 
         # We better have an account provided by Gerrit to do
         # email filtering.
         if event.account is not None:
             account_email = event.account.get('email')
-            # email_filters are ORed
-            matches_email_filter = False
-            for email_filter in self.email_filters:
+            # emails are ORed
+            matches_email_re = False
+            for email_re in self.emails:
                 if (account_email is not None and
-                    email_filter.search(account_email)):
-                    matches_email_filter = True
-            if self.email_filters and not matches_email_filter:
+                    email_re.search(account_email)):
+                    matches_email_re = True
+            if self.emails and not matches_email_re:
                 return False
 
-            # username_filters are ORed
+            # usernames are ORed
             account_username = event.account.get('username')
-            matches_username_filter = False
-            for username_filter in self.username_filters:
+            matches_username_re = False
+            for username_re in self.usernames:
                 if (account_username is not None and
-                    username_filter.search(account_username)):
-                    matches_username_filter = True
-            if self.username_filters and not matches_username_filter:
+                    username_re.search(account_username)):
+                    matches_username_re = True
+            if self.usernames and not matches_username_re:
                 return False
 
         # approvals are ANDed

@@ -401,27 +401,39 @@ explanation of each of the parameters::
     ``code-review: 2`` matches a ``+2`` vote on the code review category.
     Multiple approvals may be listed.
 
-    *email_filter*
+    *email*
     This is used for any event.  It takes a regex applied on the performer
     email, i.e. Gerrit account email address.  If you want to specify
     several email filters, you must use a YAML list.  Make sure to use non
     greedy matchers and to escapes dots!
-    Example: ``email_filter: ^.*?@example\.org$``.
+    Example: ``email: ^.*?@example\.org$``.
 
-    *username_filter*
+    *email_filter* (deprecated)
+    A deprecated alternate spelling of *email*.  Only one of *email* or
+    *email_filter* should be used.
+
+    *username*
     This is used for any event.  It takes a regex applied on the performer
     username, i.e. Gerrit account name.  If you want to specify several
     username filters, you must use a YAML list.  Make sure to use non greedy
     matchers and to escapes dots!
-    Example: ``username_filter: ^jenkins$``.
+    Example: ``username: ^jenkins$``.
 
-    *comment_filter*
+    *username_filter* (deprecated)
+    A deprecated alternate spelling of *username*.  Only one of *username* or
+    *username_filter* should be used.
+
+    *comment*
     This is only used for ``comment-added`` events.  It accepts a list of
     regexes that are searched for in the comment string. If any of these
     regexes matches a portion of the comment string the trigger is
-    matched. ``comment_filter: retrigger`` will match when comments
+    matched. ``comment: retrigger`` will match when comments
     containing 'retrigger' somewhere in the comment text are added to a
     change.
+
+    *comment_filter* (deprecated)
+    A deprecated alternate spelling of *comment*.  Only one of *comment* or
+    *comment_filter* should be used.
 
     *require-approval*
     This may be used for any event.  It requires that a certain kind
@@ -457,9 +469,13 @@ explanation of each of the parameters::
     *username*
     If present, an approval from this username is required.
 
-    *email-filter*
+    *email*
     If present, an approval with this email address is required.  It
     is treated as a regular expression as above.
+
+    *email-filter* (deprecated)
+    A deprecated alternate spelling of *email*.  Only one of *email* or
+    *email_filter* should be used.
 
     *older-than*
     If present, the approval must be older than this amount of time

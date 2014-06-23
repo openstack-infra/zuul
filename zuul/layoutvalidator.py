@@ -1,6 +1,7 @@
 # Copyright 2013 OpenStack Foundation
 # Copyright 2013 Antoine "hashar" Musso
 # Copyright 2013 Wikimedia Foundation Inc.
+# Copyright 2014 Hewlett-Packard Development Company, L.P.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -37,6 +38,7 @@ class LayoutSchema(object):
 
     require_approval = v.Schema({'username': str,
                                  'email-filter': str,
+                                 'email': str,
                                  'older-than': str,
                                  'newer-than': str,
                                  }, extra=True)
@@ -49,8 +51,11 @@ class LayoutSchema(object):
                                    'comment-added',
                                    'ref-updated')),
                       'comment_filter': toList(str),
+                      'comment': toList(str),
                       'email_filter': toList(str),
+                      'email': toList(str),
                       'username_filter': toList(str),
+                      'username': toList(str),
                       'branch': toList(str),
                       'ref': toList(str),
                       'approval': toList(variable_dict),
