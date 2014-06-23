@@ -12,7 +12,7 @@ pipelines:
               older-than: 48h
         - event: comment-added
           require-approval:
-            - email-filter: jenkins@example.com
+            - email: jenkins@example.com
               newer-than: 48h
         - event: comment-added
           require-approval:
@@ -21,7 +21,7 @@ pipelines:
           require-approval:
             - approved: 1
               username: jenkins
-              email-filter: jenkins@example.com
+              email: jenkins@example.com
     success:
       gerrit:
         verified: 1

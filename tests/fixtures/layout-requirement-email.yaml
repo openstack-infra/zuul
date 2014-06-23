@@ -3,7 +3,7 @@ pipelines:
     manager: IndependentPipelineManager
     require:
       approval:
-        - email-filter: jenkins@example.com
+        - email: jenkins@example.com
     trigger:
       gerrit:
         - event: comment-added
@@ -20,7 +20,7 @@ pipelines:
       gerrit:
         - event: comment-added
           require-approval:
-            - email-filter: jenkins@example.com
+            - email: jenkins@example.com
     success:
       gerrit:
         verified: 1
