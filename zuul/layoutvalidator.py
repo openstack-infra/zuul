@@ -115,8 +115,11 @@ class LayoutSchema(object):
              'container': str,
              'expiry': int,
              'max_file_size': int,
+             'max-file-size': int,
              'max_file_count': int,
+             'max-file-count': int,
              'logserver_prefix': str,
+             'logserver-prefix': str,
              }
 
     job = {v.Required('name'): str,

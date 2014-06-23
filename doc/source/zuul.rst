@@ -792,18 +792,27 @@ each job as it builds a list from the project specification.
   *expiry* (optional)
     How long the signed destination should be available for
 
-  *max_file_size** (optional)
+  *max-file-size** (optional)
     The maximum size of an individual file
 
-  *max_file_count* (optional)
+  *max_file_size** (optional, deprecated)
+    A deprecated alternate spelling of *max-file-size*.
+
+  *max-file-count* (optional)
     The maximum number of separate files to allow
 
-  *logserver_prefix*
+  *max_file_count* (optional, deprecated)
+    A deprecated alternate spelling of *max-file-count*.
+
+  *logserver-prefix*
     Provide a URL to the CDN or logserver app so that a worker knows
     what URL to return.
     ``For example: http://logs.example.org/server.app?obj=``
-    The worker should return the logserver_prefix url and the object
+    The worker should return the logserver-prefix url and the object
     path as the URL in the results data packet.
+
+  *logserver_prefix* (deprecated)
+    A deprecated alternate spelling of *logserver-prefix*.
 
 Here is an example of setting the failure message for jobs that check
 whether a change merges cleanly::

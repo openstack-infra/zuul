@@ -118,8 +118,17 @@ class Swift(object):
         }
 
         for key, default in six.iteritems(settings):
+            # TODO(jeblair): Remove the following two lines after a
+            # deprecation period for the underscore variants of the
+            # settings in YAML.
             if key in kwargs:
                 settings[key] = kwargs[key]
+            # Since we prefer '-' rather than '_' in YAML, look up
+            # keys there using hyphens.  Continue to use underscores
+            # everywhere else.
+            altkey = key.replace('_', '-')
+            if altkey in kwargs:
+                settings[key] = kwargs[altkey]
             elif self.config.has_option('swift', 'default_' + key):
                 settings[key] = self.config.get('swift', 'default_' + key)
 
