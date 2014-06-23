@@ -280,7 +280,7 @@ class Scheduler(threading.Thread):
                     open=require.get('open'),
                     current_patchset=require.get('current-patchset'),
                     statuses=toList(require.get('status')),
-                    approvals=toList(require.get('approval')))
+                    required_approvals=toList(require.get('approval')))
                 manager.changeish_filters.append(f)
 
             # TODO: move this into triggers (may require pluggable
@@ -302,7 +302,7 @@ class Scheduler(threading.Thread):
                                     toList(trigger.get('email_filter')),
                                     username_filters=
                                     toList(trigger.get('username_filter')),
-                                    require_approvals=
+                                    required_approvals=
                                     toList(trigger.get('require-approval')))
                     manager.event_filters.append(f)
             elif 'timer' in conf_pipeline['trigger']:

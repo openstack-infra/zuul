@@ -1,6 +1,3 @@
-includes:
-  - python-file: custom_functions.py
-
 pipelines:
   - name: check
     manager: IndependentPipelineManager
@@ -19,6 +16,5 @@ pipelines:
 
 projects:
   - name: org/project
-    merge-mode: cherry-pick
     check:
       - project-check

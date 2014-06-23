@@ -423,13 +423,11 @@ explanation of each of the parameters::
     containing 'retrigger' somewhere in the comment text are added to a
     change.
 
-    *require-approval* (deprecated)
+    *require-approval*
     This may be used for any event.  It requires that a certain kind
     of approval be present for the current patchset of the change (the
     approval could be added by the event in question).  It follows the
-    same syntax as the "approval" pipeline requirement below.  This
-    form should be considered deprecated and the pipeline requirement
-    used instead.
+    same syntax as the "approval" pipeline requirement below.
 
   **timer**
     This trigger will run based on a cron-style time specification.
@@ -475,7 +473,9 @@ explanation of each of the parameters::
 
     Any other field is interpreted as a review category and value
     pair.  For example ``verified: 1`` would require that the approval
-    be for a +1 vote in the "Verified" column.
+    be for a +1 vote in the "Verified" column.  The value may either
+    be a single value or a list: ``verified: [1, 2]`` would match
+    either a +1 or +2 vote.
 
   **open**
   A boolean value (``true`` or ``false``) that indicates whether the change
