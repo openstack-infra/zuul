@@ -966,11 +966,15 @@ class BasePipelineManager(object):
     def eventMatches(self, event, change):
         if event.forced_pipeline:
             if event.forced_pipeline == self.pipeline.name:
+                self.log.debug("Event %s for change %s was directly assigned "
+                               "to pipeline %s" % (event, change, self))
                 return True
             else:
                 return False
         for ef in self.event_filters:
             if ef.matches(event, change):
+                self.log.debug("Event %s for change %s matched %s "
+                               "in pipeline %s" % (event, change, ef, self))
                 return True
         return False
 
@@ -1085,7 +1089,7 @@ class BasePipelineManager(object):
         for f in self.changeish_filters:
             if not f.matches(change):
                 self.log.debug("Change %s does not match pipeline "
-                               "requirements" % change)
+                               "requirement %s" % (change, f))
                 return False
 
         if not self.enqueueChangesAhead(change, quiet):

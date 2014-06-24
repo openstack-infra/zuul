@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import copy
 import re
 import time
 from uuid import uuid4
@@ -981,6 +982,7 @@ class TriggerEvent(object):
 
 class BaseFilter(object):
     def __init__(self, required_approvals=[]):
+        self._required_approvals = copy.deepcopy(required_approvals)
         self.required_approvals = required_approvals
 
         for a in self.required_approvals:
@@ -1070,7 +1072,7 @@ class EventFilter(BaseFilter):
                 ['%s:%s' % a for a in self.event_approvals.items()])
         if self.required_approvals:
             ret += ' required_approvals: %s' % ', '.join(
-                ['%s' % a for a in self.required_approvals])
+                ['%s' % a for a in self._required_approvals])
         if self._comments:
             ret += ' comments: %s' % ', '.join(self._comments)
         if self._emails:
