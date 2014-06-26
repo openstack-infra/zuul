@@ -39,6 +39,7 @@ logging.basicConfig(level=logging.DEBUG,
 
 
 class TestScheduler(ZuulTestCase):
+
     def test_jobs_launched(self):
         "Test that jobs are launched and a change is merged"
 
@@ -1405,6 +1406,36 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(D.data['status'], 'MERGED')
         self.assertEqual(D.reported, 2)
         self.assertEqual(len(self.history), 9)  # 3 each for A, B, D.
+
+    def test_abandoned_change_dequeues(self):
+        "Test that an abandoned change is dequeued"
+
+        self.worker.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 1, "One job being built (on hold)")
+        self.assertEqual(self.builds[0].name, 'project-merge')
+
+        self.fake_gerrit.addEvent(A.getChangeAbandonedEvent())
+        self.waitUntilSettled()
+
+        # For debugging purposes...
+        #for pipeline in self.sched.layout.pipelines.values():
+        #    for queue in pipeline.queues:
+        #        self.log.info("pipepline %s queue %s contents %s" % (
+        #            pipeline.name, queue.name, queue.queue))
+
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 0, "No job running")
+        self.assertEmptyQueues()
+        self.assertEqual(len(self.history), 1, "Only one build in history")
+        self.assertEqual(self.history[0].result, 'ABORTED',
+                         'Build should have been aborted')
+        self.assertEqual(A.reported, 0, "Abandoned change should not report")
 
     def test_zuul_url_return(self):
         "Test if ZUUL_URL is returning when zuul_url is set in zuul.conf"
