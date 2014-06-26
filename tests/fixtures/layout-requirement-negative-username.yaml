@@ -2,9 +2,8 @@ pipelines:
   - name: pipeline
     manager: IndependentPipelineManager
     require:
-      any-approval:
-        - username: jenkins
-          older-than: 48h
+      all-approvals:
+        - username: '!jenkins'
     trigger:
       gerrit:
         - event: comment-added
@@ -20,9 +19,8 @@ pipelines:
     trigger:
       gerrit:
         - event: comment-added
-          require-any-approval:
-            - username: jenkins
-              older-than: 48h
+          require-all-approvals:
+            - username: '!jenkins'
     success:
       gerrit:
         verified: 1
