@@ -323,3 +323,105 @@ class TestRequirements(ZuulTestCase):
         self.fake_gerrit.addEvent(B.addApproval('CRVW', 2))
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
+
+    def _test_require_reject_username(self, project, job):
+        "Test negative username's match"
+        # Should only trigger if Jenkins hasn't voted.
+        self.config.set(
+            'zuul', 'layout_config',
+            'tests/fixtures/layout-requirement-reject-username.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+
+        # add in a change with no comments
+        A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+
+        # add in a comment that will trigger
+        self.fake_gerrit.addEvent(A.addApproval('CRVW', 1,
+                                                username='reviewer'))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+        self.assertEqual(self.history[0].name, job)
+
+        # add in a comment from jenkins user which shouldn't trigger
+        self.fake_gerrit.addEvent(A.addApproval('VRFY', 1, username='jenkins'))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+
+        # Check future reviews also won't trigger as a 'jenkins' user has
+        # commented previously
+        self.fake_gerrit.addEvent(A.addApproval('CRVW', 1,
+                                                username='reviewer'))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+
+    def test_pipeline_reject_username(self):
+        "Test negative pipeline requirement: no comment from jenkins"
+        return self._test_require_reject_username('org/project1',
+                                                  'project1-pipeline')
+
+    def test_trigger_reject_username(self):
+        "Test negative trigger requirement: no comment from jenkins"
+        return self._test_require_reject_username('org/project2',
+                                                  'project2-trigger')
+
+    def _test_require_reject(self, project, job):
+        "Test no approval matches a reject param"
+        self.config.set(
+            'zuul', 'layout_config',
+            'tests/fixtures/layout-requirement-reject.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+
+        A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+
+        # First positive vote should not queue until jenkins has +1'd
+        comment = A.addApproval('VRFY', 1, username='reviewer_a')
+        self.fake_gerrit.addEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+
+        # Jenkins should put in a +1 which will also queue
+        comment = A.addApproval('VRFY', 1, username='jenkins')
+        self.fake_gerrit.addEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+        self.assertEqual(self.history[0].name, job)
+
+        # Negative vote should not queue
+        comment = A.addApproval('VRFY', -1, username='reviewer_b')
+        self.fake_gerrit.addEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+
+        # Future approvals should do nothing
+        comment = A.addApproval('VRFY', 1, username='reviewer_c')
+        self.fake_gerrit.addEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+
+        # Change/update negative vote should queue
+        comment = A.addApproval('VRFY', 1, username='reviewer_b')
+        self.fake_gerrit.addEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 2)
+        self.assertEqual(self.history[1].name, job)
+
+        # Future approvals should also queue
+        comment = A.addApproval('VRFY', 1, username='reviewer_d')
+        self.fake_gerrit.addEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 3)
+        self.assertEqual(self.history[2].name, job)
+
+    def test_pipeline_require_reject(self):
+        "Test pipeline requirement: rejections absent"
+        return self._test_require_reject('org/project1', 'project1-pipeline')
+
+    def test_trigger_require_reject(self):
+        "Test trigger requirement: rejections absent"
+        return self._test_require_reject('org/project2', 'project2-trigger')
