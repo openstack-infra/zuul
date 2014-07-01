@@ -258,8 +258,8 @@ class FakeChange(object):
                  "comment": "This is a comment"}
         return event
 
-    def addApproval(self, category, value, username='jenkins',
-                    granted_on=None):
+    def addApproval(self, category, value, username='reviewer_john',
+                    granted_on=None, message=''):
         if not granted_on:
             granted_on = time.time()
         approval = {
@@ -277,20 +277,20 @@ class FakeChange(object):
                 del self.patchsets[-1]['approvals'][i]
         self.patchsets[-1]['approvals'].append(approval)
         event = {'approvals': [approval],
-                 'author': {'email': 'user@example.com',
-                            'name': 'User Name',
-                            'username': 'username'},
+                 'author': {'email': 'author@example.com',
+                            'name': 'Patchset Author',
+                            'username': 'author_phil'},
                  'change': {'branch': self.branch,
                             'id': 'Iaa69c46accf97d0598111724a38250ae76a22c87',
                             'number': str(self.number),
-                            'owner': {'email': 'user@example.com',
-                                      'name': 'User Name',
-                                      'username': 'username'},
+                            'owner': {'email': 'owner@example.com',
+                                      'name': 'Change Owner',
+                                      'username': 'owner_jane'},
                             'project': self.project,
                             'subject': self.subject,
                             'topic': 'master',
                             'url': 'https://hostname/459'},
-                 'comment': '',
+                 'comment': message,
                  'patchSet': self.patchsets[-1],
                  'type': 'comment-added'}
         self.data['submitRecords'] = self.getSubmitRecords()
@@ -380,11 +380,16 @@ class FakeChange(object):
 class FakeGerrit(object):
     log = logging.getLogger("zuul.test.FakeGerrit")
 
-    def __init__(self, *args, **kw):
+    def __init__(self, hostname, username, port=29418, keyfile=None,
+                 changes_dbs={}):
+        self.hostname = hostname
+        self.username = username
+        self.port = port
+        self.keyfile = keyfile
         self.event_queue = Queue.Queue()
         self.fixture_dir = os.path.join(FIXTURE_DIR, 'gerrit')
         self.change_number = 0
-        self.changes = {}
+        self.changes = changes_dbs.get(hostname, {})
         self.queries = []
 
     def addFakeChange(self, project, branch, subject, status='NEW'):
@@ -407,7 +412,27 @@ class FakeGerrit(object):
     def review(self, project, changeid, message, action):
         number, ps = changeid.split(',')
         change = self.changes[int(number)]
+
+        # Add the approval back onto the change (ie simulate what gerrit would
+        # do).
+        # Usually when zuul leaves a review it'll create a feedback loop where
+        # zuul's review enters another gerrit event (which is then picked up by
+        # zuul). However, we can't mimic this behaviour (by adding this
+        # approval event into the queue) as it stops jobs from checking what
+        # happens before this event is triggered. If a job needs to see what
+        # happens they can add their own verified event into the queue.
+        # Nevertheless, we can update change with the new review in gerrit.
+
+        for cat in ['CRVW', 'VRFY', 'APRV']:
+            if cat in action:
+                change.addApproval(cat, action[cat], username=self.username)
+
+        if 'label' in action:
+            parts = action['label'].split('=')
+            change.addApproval(parts[0], parts[2], username=self.username)
+
         change.messages.append(message)
+
         if 'submit' in action:
             change.setMerged()
         if message:
@@ -938,7 +963,19 @@ class ZuulTestCase(BaseTestCase):
             args = [self.smtp_messages] + list(args)
             return FakeSMTP(*args, **kw)
 
-        zuul.lib.gerrit.Gerrit = FakeGerrit
+        # Set a changes database so multiple FakeGerrit's can report back to
+        # a virtual canonical database given by the configured hostname
+        self.gerrit_changes_dbs = {
+            self.config.get('gerrit', 'server'): {}
+        }
+
+        def FakeGerritFactory(*args, **kw):
+            kw['changes_dbs'] = self.gerrit_changes_dbs
+            return FakeGerrit(*args, **kw)
+
+        self.useFixture(fixtures.MonkeyPatch('zuul.lib.gerrit.Gerrit',
+                                             FakeGerritFactory))
+
         self.useFixture(fixtures.MonkeyPatch('smtplib.SMTP', FakeSMTPFactory))
 
         self.gerrit = FakeGerritTrigger(
