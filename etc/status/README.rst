@@ -19,8 +19,8 @@ The script depends on jQuery (tested with version 1.8 and 1.9).
 The script optimises updates by stopping when the page is not visible.
 This is done by listerning to ``show`` and ``hide`` events emitted by the
 Page Visibility plugin for jQuery. If you don't want to load this plugin you
-can undo undo this optimisation by removing the 9 lines using this on the
-bottom of ``app.js``
+can undo undo this optimisation by removing the code at the bottom of
+``index.html``
 
 To automatically fetch the latest versions of jQuery, the Page Visibility
 plugin and Twitter Boostrap, run the ``fetch-dependencies.sh`` script.
