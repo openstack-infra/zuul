@@ -302,7 +302,7 @@ class Gearman(object):
         # The destination_path is a unqiue path for this build request
         # and generally where the logs are expected to be placed
         destination_path = os.path.join(item.change.getBasePath(),
-                                        pipeline.name, job.name, uuid)
+                                        pipeline.name, job.name, uuid[:7])
         params['BASE_LOG_PATH'] = item.change.getBasePath()
         params['LOG_PATH'] = destination_path
 

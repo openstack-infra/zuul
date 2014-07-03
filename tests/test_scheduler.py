@@ -2700,7 +2700,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(
             "https://storage.example.org/V1/AUTH_account/merge_logs/1/1/1/"
             "gate/test-merge/",
-            self.builds[0].parameters['SWIFT_logs_URL'][:-32])
+            self.builds[0].parameters['SWIFT_logs_URL'][:-7])
         self.assertEqual(5,
                          len(self.builds[0].parameters['SWIFT_logs_HMAC_BODY'].
                              split('\n')))
@@ -2709,7 +2709,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(
             "https://storage.example.org/V1/AUTH_account/logs/1/1/1/"
             "gate/test-test/",
-            self.builds[1].parameters['SWIFT_logs_URL'][:-32])
+            self.builds[1].parameters['SWIFT_logs_URL'][:-7])
         self.assertEqual(5,
                          len(self.builds[1].parameters['SWIFT_logs_HMAC_BODY'].
                              split('\n')))
@@ -2718,7 +2718,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(
             "https://storage.example.org/V1/AUTH_account/stash/1/1/1/"
             "gate/test-test/",
-            self.builds[1].parameters['SWIFT_MOSTLY_URL'][:-32])
+            self.builds[1].parameters['SWIFT_MOSTLY_URL'][:-7])
         self.assertEqual(5,
                          len(self.builds[1].
                              parameters['SWIFT_MOSTLY_HMAC_BODY'].split('\n')))
