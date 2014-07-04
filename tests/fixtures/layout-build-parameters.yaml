@@ -1,0 +1,33 @@
+pipelines:
+  - name: gate
+    manager: DependentPipelineManager
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - approved: 1
+    success:
+      gerrit:
+        verified: 2
+        submit: true
+    failure:
+      gerrit:
+        verified: -2
+    start:
+      gerrit:
+        verified: 0
+    precedence: high
+
+jobs:
+  - name: log-path
+    success-pattern: foo{build.parameters[LOG_PATH]}bar
+  - name: nonexistent
+    success-pattern: foo{build.parameters[NONEXISTENT]}bar
+
+projects:
+  - name: org/project1
+    gate:
+        - log-path
+  - name: org/project2
+    gate:
+        - nonexistent
