@@ -116,7 +116,7 @@ class RPCListener(object):
         if errors:
             job.sendWorkException(errors.encode('utf8'))
         else:
-            self.sched.addEvent(event)
+            self.sched.enqueue(event)
             job.sendWorkComplete()
 
     def handle_promote(self, job):
