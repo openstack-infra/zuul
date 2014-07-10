@@ -688,7 +688,8 @@ class Scheduler(threading.Thread):
             pipeline.manager.addChange(
                 item.change,
                 enqueue_time=item.enqueue_time,
-                quiet=True)
+                quiet=True,
+                ignore_requirements=True)
 
     def _areAllBuildsComplete(self):
         self.log.debug("Checking if all builds are complete")
@@ -1020,10 +1021,10 @@ class BasePipelineManager(object):
     def isChangeReadyToBeEnqueued(self, change):
         return True
 
-    def enqueueChangesAhead(self, change, quiet):
+    def enqueueChangesAhead(self, change, quiet, ignore_requirements):
         return True
 
-    def enqueueChangesBehind(self, change, quiet):
+    def enqueueChangesBehind(self, change, quiet, ignore_requirements):
         return True
 
     def checkForChangesNeededBy(self, change):
@@ -1081,7 +1082,8 @@ class BasePipelineManager(object):
                            item.change.project)
             return False
 
-    def addChange(self, change, quiet=False, enqueue_time=None):
+    def addChange(self, change, quiet=False, enqueue_time=None,
+                  ignore_requirements=False):
         self.log.debug("Considering adding change %s" % change)
         if self.isChangeAlreadyInQueue(change):
             self.log.debug("Change %s is already in queue, ignoring" % change)
@@ -1092,13 +1094,14 @@ class BasePipelineManager(object):
                            change)
             return False
 
-        for f in self.changeish_filters:
-            if not f.matches(change):
-                self.log.debug("Change %s does not match pipeline "
-                               "requirement %s" % (change, f))
-                return False
+        if not ignore_requirements:
+            for f in self.changeish_filters:
+                if not f.matches(change):
+                    self.log.debug("Change %s does not match pipeline "
+                                   "requirement %s" % (change, f))
+                    return False
 
-        if not self.enqueueChangesAhead(change, quiet):
+        if not self.enqueueChangesAhead(change, quiet, ignore_requirements):
             self.log.debug("Failed to enqueue changes ahead of %s" % change)
             return False
 
@@ -1117,7 +1120,7 @@ class BasePipelineManager(object):
             if enqueue_time:
                 item.enqueue_time = enqueue_time
             self.reportStats(item)
-            self.enqueueChangesBehind(change, quiet)
+            self.enqueueChangesBehind(change, quiet, ignore_requirements)
         else:
             self.log.error("Unable to find change queue for project %s" %
                            change.project)
@@ -1708,7 +1711,7 @@ class DependentPipelineManager(BasePipelineManager):
             return False
         return True
 
-    def enqueueChangesBehind(self, change, quiet):
+    def enqueueChangesBehind(self, change, quiet, ignore_requirements):
         to_enqueue = []
         self.log.debug("Checking for changes needing %s:" % change)
         if not hasattr(change, 'needed_by_changes'):
@@ -1724,15 +1727,17 @@ class DependentPipelineManager(BasePipelineManager):
             self.log.debug("  No changes need %s" % change)
 
         for other_change in to_enqueue:
-            self.addChange(other_change, quiet)
+            self.addChange(other_change, quiet=quiet,
+                           ignore_requirements=ignore_requirements)
 
-    def enqueueChangesAhead(self, change, quiet):
+    def enqueueChangesAhead(self, change, quiet, ignore_requirements):
         ret = self.checkForChangesNeededBy(change)
         if ret in [True, False]:
             return ret
         self.log.debug("  Change %s must be merged ahead of %s" %
                        (ret, change))
-        return self.addChange(ret, quiet)
+        return self.addChange(ret, quiet=quiet,
+                              ignore_requirements=ignore_requirements)
 
     def checkForChangesNeededBy(self, change):
         self.log.debug("Checking for changes needed by %s:" % change)
