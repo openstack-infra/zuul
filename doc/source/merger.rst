@@ -52,9 +52,6 @@ configure Apache to do so using the following directives::
   AliasMatch ^/p/(.*/objects/pack/pack-[0-9a-f]{40}.(pack|idx))$ /var/lib/zuul/git/$1
   ScriptAlias /p/ /usr/lib/git-core/git-http-backend/
 
-And set ``push_change_refs`` to ``false`` (the default) in the
-``zuul`` section of zuul.conf.
-
 Note that Zuul's Git repositories are not bare, which means they have
 a working tree, and are not suitable for public consumption (for
 instance, a clone will produce a repository in an unpredictable state
