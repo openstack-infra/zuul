@@ -1405,12 +1405,12 @@ class BasePipelineManager(object):
             self.pipeline.setUnableToMerge(item)
 
     def reportItem(self, item):
-        if item.reported:
-            raise Exception("Already reported change %s" % item.change)
-        ret = self._reportItem(item)
+        if not item.reported:
+            # _reportItem() returns True if it failed to report.
+            item.reported = not self._reportItem(item)
         if self.changes_merge:
             succeeded = self.pipeline.didAllJobsSucceed(item)
-            merged = (not ret)
+            merged = item.reported
             if merged:
                 merged = self.pipeline.trigger.isMerged(item.change,
                                                         item.change.branch)
@@ -1430,8 +1430,6 @@ class BasePipelineManager(object):
                                (change_queue, change_queue.window))
 
     def _reportItem(self, item):
-        if item.reported:
-            return 0
         self.log.debug("Reporting change %s" % item.change)
         ret = True  # Means error as returned by trigger.report
         if self.pipeline.didAllJobsSucceed(item):
@@ -1444,7 +1442,6 @@ class BasePipelineManager(object):
         else:
             actions = self.pipeline.failure_actions
             item.setReportedResult('FAILURE')
-        item.reported = True
         if actions:
             report = self.formatReport(item)
             try:
