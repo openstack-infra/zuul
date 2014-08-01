@@ -1494,15 +1494,10 @@ class BasePipelineManager(object):
                 if job.failure_pattern:
                     pattern = job.failure_pattern
             if pattern:
-                try:
-                    url = pattern.format(change=item.change,
-                                         pipeline=self.pipeline,
-                                         job=job,
-                                         build=build)
-                except KeyError:
-                    self.log.exception("Unknown key while formatting url %s" %
-                                       pattern)
-                    url = pattern
+                url = pattern.format(change=item.change,
+                                     pipeline=self.pipeline,
+                                     job=job,
+                                     build=build)
             else:
                 url = build.url or job.name
             if not job.voting:

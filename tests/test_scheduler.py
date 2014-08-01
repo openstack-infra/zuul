@@ -2683,44 +2683,6 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual('The merge failed! For more information...',
                          self.smtp_messages[0]['body'])
 
-    def test_build_parameter_in_report(self):
-        """Check that a message is sent to a reporter when embedding a build
-        parameter"""
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-build-parameters.yaml')
-        self.sched.reconfigure(self.config)
-        self.registerJobs()
-
-        # Check the reported message is valid
-        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.waitUntilSettled()
-
-        self.assertEqual(1, len(self.history))  # 1 job
-        self.assertEqual(2, len(A.messages))  # 2 messages
-
-        self.assertIn('gate/log-path', A.messages[1])
-
-    def test_nonexistent_build_parameter_in_report(self):
-        """Check that a message is sent to a reporter even when embedding a
-        nonexistent build parameter"""
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-build-parameters.yaml')
-        self.sched.reconfigure(self.config)
-        self.registerJobs()
-
-        # Check the reported message is valid
-        A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.waitUntilSettled()
-
-        self.assertEqual(1, len(self.history))  # 1 job
-        self.assertEqual(2, len(A.messages))  # 2 messages
-
-        self.assertIn('NONEXISTENT', A.messages[1])
-
     def test_swift_instructions(self):
         "Test that the correct swift instructions are sent to the workers"
         self.config.set('zuul', 'layout_config',
