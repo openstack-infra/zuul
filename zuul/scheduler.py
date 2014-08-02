@@ -1460,19 +1460,25 @@ class BasePipelineManager(object):
     def formatReport(self, item):
         ret = ''
 
-        if not self.pipeline.didMergerSucceed(item):
+        if item.dequeued_needing_change:
+            ret += 'This change depends on a change that failed to merge.\n'
+        elif not self.pipeline.didMergerSucceed(item):
             ret += self.pipeline.merge_failure_message
-            if item.dequeued_needing_change:
-                ret += ('\n\nThis change depends on a change that failed to '
-                        'merge.')
-            if self.pipeline.footer_message:
-                ret += '\n\n' + self.pipeline.footer_message
-            return ret
-
-        if self.pipeline.didAllJobsSucceed(item):
-            ret += self.pipeline.success_message + '\n\n'
         else:
-            ret += self.pipeline.failure_message + '\n\n'
+            if self.pipeline.didAllJobsSucceed(item):
+                ret += self.pipeline.success_message + '\n\n'
+            else:
+                ret += self.pipeline.failure_message + '\n\n'
+            ret += self._formatReportJobs(item)
+
+        if self.pipeline.footer_message:
+            ret += '\n' + self.pipeline.footer_message
+
+        return ret
+
+    def _formatReportJobs(self, item):
+        # Return the list of jobs portion of the report
+        ret = ''
 
         if self.sched.config.has_option('zuul', 'url_pattern'):
             url_pattern = self.sched.config.get('zuul', 'url_pattern')
@@ -1523,8 +1529,6 @@ class BasePipelineManager(object):
                     name = job.name + ' '
             ret += '- %s%s : %s%s%s\n' % (name, url, result, elapsed,
                                           voting)
-        if self.pipeline.footer_message:
-            ret += '\n' + self.pipeline.footer_message
         return ret
 
     def formatDescription(self, build):

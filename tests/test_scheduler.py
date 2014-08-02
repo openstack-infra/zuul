@@ -1028,14 +1028,19 @@ class TestScheduler(ZuulTestCase):
 
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
+        self.assertIn('Build succeeded', A.messages[1])
         self.assertEqual(B.data['status'], 'NEW')
         self.assertEqual(B.reported, 2)
+        self.assertIn('Build failed', B.messages[1])
         self.assertEqual(C.data['status'], 'NEW')
         self.assertEqual(C.reported, 2)
+        self.assertIn('depends on a change', C.messages[1])
         self.assertEqual(D.data['status'], 'NEW')
         self.assertEqual(D.reported, 2)
+        self.assertIn('depends on a change', D.messages[1])
         self.assertEqual(E.data['status'], 'MERGED')
         self.assertEqual(E.reported, 2)
+        self.assertIn('Build succeeded', E.messages[1])
         self.assertEqual(len(self.history), 18)
 
     def test_head_is_dequeued_once(self):
