@@ -109,7 +109,7 @@ class RPCListener(object):
         if not errors:
             event.change_number, event.patch_number = args['change'].split(',')
             try:
-                event.getChange(project, trigger)
+                pipeline.source.getChange(event, project)
             except Exception:
                 errors += 'Invalid change: %s\n' % (args['change'],)
 

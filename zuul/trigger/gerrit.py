@@ -17,7 +17,7 @@ import threading
 import time
 import urllib2
 from zuul.lib import gerrit
-from zuul.model import TriggerEvent, Change
+from zuul.model import TriggerEvent, Change, Ref, NullChange
 
 
 class GerritEventConnector(threading.Thread):
@@ -84,12 +84,12 @@ class GerritEventConnector(threading.Thread):
             event.account = None
 
         if event.change_number:
-            # Call getChange for the side effect of updating the
+            # Call _getChange for the side effect of updating the
             # cache.  Note that this modifies Change objects outside
             # the main thread.
-            self.trigger.getChange(event.change_number,
-                                   event.patch_number,
-                                   refresh=True)
+            self.trigger._getChange(event.change_number,
+                                    event.patch_number,
+                                    refresh=True)
 
         self.sched.addEvent(event)
         self.gerrit.eventDone()
@@ -290,7 +290,20 @@ class Gerrit(object):
     def postConfig(self):
         pass
 
-    def getChange(self, number, patchset, refresh=False):
+    def getChange(self, event, project):
+        if event.change_number:
+            change = self._getChange(event.change_number, event.patch_number)
+        elif event.ref:
+            change = Ref(project)
+            change.ref = event.ref
+            change.oldrev = event.oldrev
+            change.newrev = event.newrev
+            change.url = self.getGitwebUrl(project, sha=event.newrev)
+        else:
+            change = NullChange(project)
+        return change
+
+    def _getChange(self, number, patchset, refresh=False):
         key = '%s,%s' % (number, patchset)
         change = None
         if key in self._change_cache:
@@ -349,7 +362,7 @@ class Gerrit(object):
         if 'dependsOn' in data:
             parts = data['dependsOn'][0]['ref'].split('/')
             dep_num, dep_ps = parts[3], parts[4]
-            dep = self.getChange(dep_num, dep_ps)
+            dep = self._getChange(dep_num, dep_ps)
             if not dep.is_merged:
                 change.needs_change = dep
 
@@ -358,7 +371,7 @@ class Gerrit(object):
             for needed in data['neededBy']:
                 parts = needed['ref'].split('/')
                 dep_num, dep_ps = parts[3], parts[4]
-                dep = self.getChange(dep_num, dep_ps)
+                dep = self._getChange(dep_num, dep_ps)
                 if not dep.is_merged and dep.is_current_patchset:
                     change.needed_by_changes.append(dep)
 

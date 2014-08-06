@@ -651,19 +651,19 @@ class TestScheduler(ZuulTestCase):
         "Test whether a change is ready to merge"
         # TODO: move to test_gerrit (this is a unit test!)
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        trigger = self.sched.layout.pipelines['gate'].trigger
-        a = self.sched.triggers['gerrit'].getChange(1, 2)
+        source = self.sched.layout.pipelines['gate'].source
+        a = source._getChange(1, 2)
         mgr = self.sched.layout.pipelines['gate'].manager
-        self.assertFalse(trigger.canMerge(a, mgr.getSubmitAllowNeeds()))
+        self.assertFalse(source.canMerge(a, mgr.getSubmitAllowNeeds()))
 
         A.addApproval('CRVW', 2)
-        a = trigger.getChange(1, 2, refresh=True)
-        self.assertFalse(trigger.canMerge(a, mgr.getSubmitAllowNeeds()))
+        a = source._getChange(1, 2, refresh=True)
+        self.assertFalse(source.canMerge(a, mgr.getSubmitAllowNeeds()))
 
         A.addApproval('APRV', 1)
-        a = trigger.getChange(1, 2, refresh=True)
-        self.assertTrue(trigger.canMerge(a, mgr.getSubmitAllowNeeds()))
-        trigger.maintainCache([])
+        a = source._getChange(1, 2, refresh=True)
+        self.assertTrue(source.canMerge(a, mgr.getSubmitAllowNeeds()))
+        source.maintainCache([])
 
     def test_build_configuration(self):
         "Test that zuul merges the right commits for testing"

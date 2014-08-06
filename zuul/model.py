@@ -77,7 +77,7 @@ class Pipeline(object):
         self.manager = None
         self.queues = []
         self.precedence = PRECEDENCE_NORMAL
-        self.trigger = None
+        self.source = None
         self.start_actions = None
         self.success_actions = None
         self.failure_actions = None
@@ -965,20 +965,6 @@ class TriggerEvent(object):
 
         return ret
 
-    def getChange(self, project, trigger):
-        if self.change_number:
-            change = trigger.getChange(self.change_number, self.patch_number)
-        elif self.ref:
-            change = Ref(project)
-            change.ref = self.ref
-            change.oldrev = self.oldrev
-            change.newrev = self.newrev
-            change.url = trigger.getGitwebUrl(project, sha=self.newrev)
-        else:
-            change = NullChange(project)
-
-        return change
-
 
 class BaseFilter(object):
     def __init__(self, required_approvals=[]):
@@ -1038,11 +1024,12 @@ class BaseFilter(object):
 
 
 class EventFilter(BaseFilter):
-    def __init__(self, types=[], branches=[], refs=[], event_approvals={},
-                 comments=[], emails=[], usernames=[], timespecs=[],
-                 required_approvals=[]):
+    def __init__(self, trigger, types=[], branches=[], refs=[],
+                 event_approvals={}, comments=[], emails=[], usernames=[],
+                 timespecs=[], required_approvals=[]):
         super(EventFilter, self).__init__(
             required_approvals=required_approvals)
+        self.trigger = trigger
         self._types = types
         self._branches = branches
         self._refs = refs
