@@ -64,8 +64,16 @@ class LayoutSchema(object):
 
     timer_trigger = {v.Required('time'): str}
 
-    trigger = v.Required(v.Any({'gerrit': toList(gerrit_trigger)},
-                               {'timer': toList(timer_trigger)}))
+    zuul_trigger = {v.Required('event'):
+                    toList(v.Any('parent-change-enqueued',
+                                 'project-change-merged')),
+                    'pipeline': toList(str),
+                    'require-approval': toList(require_approval),
+                    }
+
+    trigger = v.Required({'gerrit': toList(gerrit_trigger),
+                          'timer': toList(timer_trigger),
+                          'zuul': toList(zuul_trigger)})
 
     report_actions = {'gerrit': variable_dict,
                       'smtp': {'to': str,

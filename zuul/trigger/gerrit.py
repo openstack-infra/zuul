@@ -323,6 +323,14 @@ class Gerrit(object):
             raise
         return change
 
+    def getProjectOpenChanges(self, project):
+        data = self.gerrit.simpleQuery("project:%s status:open" % project.name)
+        changes = []
+        for record in data:
+            changes.append(self._getChange(record['number'],
+                                           record['currentPatchSet']['number']))
+        return changes
+
     def updateChange(self, change):
         self.log.info("Updating information for %s,%s" %
                       (change.number, change.patchset))

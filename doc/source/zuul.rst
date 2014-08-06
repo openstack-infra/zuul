@@ -372,7 +372,7 @@ explanation of each of the parameters::
     DependentPipelineManager, see: :doc:`gating`.
 
 **trigger**
-  Exactly one trigger source must be supplied for each pipeline.
+  At least one trigger source must be supplied for each pipeline.
   Triggers are not exclusive -- matching events may be placed in
   multiple pipelines, and they will behave independently in each of
   the pipelines they match.  You may select from the following:
@@ -457,6 +457,31 @@ explanation of each of the parameters::
     The time specification in cron syntax.  Only the 5 part syntax is
     supported, not the symbolic names.  Example: ``0 0 * * *`` runs
     at midnight.
+
+  **zuul**
+    This trigger supplies events generated internally by Zuul.
+    Multiple events may be listed.
+
+    *event*
+    The event name.  Currently supported:
+
+      *project-change-merged* when Zuul merges a change to a project,
+      it generates this event for every open change in the project.
+
+      *parent-change-enqueued* when Zuul enqueues a change into any
+      pipeline, it generates this event for every child of that
+      change.
+
+    *pipeline*
+    Only available for ``parent-change-enqueued`` events.  This is the
+    name of the pipeline in which the parent change was enqueued.
+
+    *require-approval*
+    This may be used for any event.  It requires that a certain kind
+    of approval be present for the current patchset of the change (the
+    approval could be added by the event in question).  It follows the
+    same syntax as the "approval" pipeline requirement below.
+
 
 **require**
   If this section is present, it established pre-requisites for any
