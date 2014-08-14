@@ -361,6 +361,10 @@ class Gerrit(object):
             change.is_current_patchset = False
 
         change.is_merged = self._isMerged(change)
+        change.approvals = data['currentPatchSet'].get('approvals', [])
+        change.open = data['open']
+        change.status = data['status']
+
         if change.is_merged:
             # This change is merged, so we don't need to look any further
             # for dependencies.
@@ -382,10 +386,6 @@ class Gerrit(object):
                 dep = self._getChange(dep_num, dep_ps)
                 if not dep.is_merged and dep.is_current_patchset:
                     change.needed_by_changes.append(dep)
-
-        change.approvals = data['currentPatchSet'].get('approvals', [])
-        change.open = data['open']
-        change.status = data['status']
 
         return change
 
