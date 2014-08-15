@@ -946,9 +946,6 @@ class ZuulTestCase(testtools.TestCase):
         self.config.read(os.path.join(FIXTURE_DIR, "zuul.conf"))
 
     def assertFinalState(self):
-        # Make sure that the change cache is cleared
-        self.assertEqual(len(self.gerrit._change_cache.keys()), 0,
-                         "Change cache should have been cleared")
         # Make sure that git.Repo objects have been garbage collected.
         repos = []
         gc.collect()
