@@ -16,6 +16,7 @@ import logging
 import threading
 import time
 import urllib2
+import voluptuous
 from zuul.lib import gerrit
 from zuul.model import TriggerEvent, Change
 
@@ -383,3 +384,14 @@ class Gerrit(object):
         if sha:
             url += ';a=commitdiff;h=' + sha
         return url
+
+
+def validate_trigger(trigger_data):
+    """Validates the layout's trigger data."""
+    events_with_ref = ('ref-updated', )
+    for event in trigger_data['gerrit']:
+        if event['event'] not in events_with_ref and event.get('ref', False):
+            raise voluptuous.Invalid(
+                "The event %s does not include ref information, Zuul cannot "
+                "use ref filter 'ref: %s'" % (event['event'], event['ref']))
+

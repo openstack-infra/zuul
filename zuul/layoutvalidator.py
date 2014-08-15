@@ -18,6 +18,7 @@
 import voluptuous as v
 import string
 
+from zuul.trigger import gerrit
 
 # Several forms accept either a single item or a list, this makes
 # specifying that in the schema easy (and explicit).
@@ -262,3 +263,7 @@ class LayoutValidator(object):
         if 'project-templates' in data:
             self.checkDuplicateNames(
                 data['project-templates'], ['project-templates'])
+        for pipeline in data['pipelines']:
+            if 'gerrit' in pipeline['trigger']:
+                gerrit.validate_trigger(pipeline['trigger'])
+
