@@ -87,6 +87,7 @@ class LayoutSchema(object):
 
     pipeline = {v.Required('name'): str,
                 v.Required('manager'): manager,
+                'source': v.Any('gerrit'),
                 'precedence': precedence,
                 'description': str,
                 'require': require,

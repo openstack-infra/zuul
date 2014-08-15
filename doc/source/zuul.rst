@@ -295,6 +295,7 @@ explanation of each of the parameters::
 
   - name: check
     manager: IndependentPipelineManager
+    source: gerrit
     trigger:
       gerrit:
         - event: patchset-created
@@ -310,6 +311,11 @@ explanation of each of the parameters::
 **description**
   This is an optional field that may be used to provide a textual
   description of the pipeline.
+
+**source**
+  A required field that specifies a trigger that provides access to
+  the change objects that this pipeline operates on.  Currently only
+  the value ``gerrit`` is supported.
 
 **success-message**
   An optional field that supplies the introductory text in message

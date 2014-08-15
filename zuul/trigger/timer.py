@@ -56,9 +56,9 @@ class Timer(object):
         for job in self.apsched.get_jobs():
             self.apsched.unschedule_job(job)
         for pipeline in self.sched.layout.pipelines.values():
-            if pipeline.trigger != self:
-                continue
             for ef in pipeline.manager.event_filters:
+                if ef.trigger != self:
+                    continue
                 for timespec in ef.timespecs:
                     parts = timespec.split()
                     if len(parts) < 5 or len(parts) > 6:
@@ -82,15 +82,11 @@ class Timer(object):
                                               args=(pipeline.name,
                                                     timespec,))
 
-    def getChange(self, number, patchset, refresh=False):
+    def getChange(self, event, project):
         raise Exception("Timer trigger does not support changes.")
 
     def getGitUrl(self, project):
-        # For the moment, the timer trigger requires gerrit.
-        return self.sched.triggers['gerrit'].getGitUrl(project)
+        raise Exception("Timer trigger does not support changes.")
 
     def getGitwebUrl(self, project, sha=None):
-        url = '%s/gitweb?p=%s.git' % (self.baseurl, project)
-        if sha:
-            url += ';a=commitdiff;h=' + sha
-        return url
+        raise Exception("Timer trigger does not support changes.")

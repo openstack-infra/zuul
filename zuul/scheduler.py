@@ -235,6 +235,8 @@ class Scheduler(threading.Thread):
         for conf_pipeline in data.get('pipelines', []):
             pipeline = Pipeline(conf_pipeline['name'])
             pipeline.description = conf_pipeline.get('description')
+            # TODO(jeblair): remove backwards compatibility:
+            pipeline.source = self.triggers[conf_pipeline.get('source', 'gerrit')]
             precedence = model.PRECEDENCE_MAP[conf_pipeline.get('precedence')]
             pipeline.precedence = precedence
             pipeline.failure_message = conf_pipeline.get('failure-message',
@@ -298,7 +300,6 @@ class Scheduler(threading.Thread):
             # TODO: move this into triggers (may require pluggable
             # configuration)
             if 'gerrit' in conf_pipeline['trigger']:
-                pipeline.trigger = self.triggers['gerrit']
                 for trigger in toList(conf_pipeline['trigger']['gerrit']):
                     approvals = {}
                     for approval_dict in toList(trigger.get('approval')):
@@ -314,7 +315,8 @@ class Scheduler(threading.Thread):
                     usernames = toList(trigger.get('username'))
                     if not usernames:
                         usernames = toList(trigger.get('username_filter'))
-                    f = EventFilter(types=toList(trigger['event']),
+                    f = EventFilter(trigger=self.triggers['gerrit'],
+                                    types=toList(trigger['event']),
                                     branches=toList(trigger.get('branch')),
                                     refs=toList(trigger.get('ref')),
                                     event_approvals=approvals,
@@ -325,9 +327,9 @@ class Scheduler(threading.Thread):
                                     toList(trigger.get('require-approval')))
                     manager.event_filters.append(f)
             elif 'timer' in conf_pipeline['trigger']:
-                pipeline.trigger = self.triggers['timer']
                 for trigger in toList(conf_pipeline['trigger']['timer']):
-                    f = EventFilter(types=['timer'],
+                    f = EventFilter(trigger=self.triggers['timer'],
+                                    types=['timer'],
                                     timespecs=toList(trigger['time']))
                     manager.event_filters.append(f)
 
@@ -714,8 +716,7 @@ class Scheduler(threading.Thread):
     def _doEnqueueEvent(self, event):
         project = self.layout.projects.get(event.project_name)
         pipeline = self.layout.pipelines[event.forced_pipeline]
-        trigger = self.triggers.get(event.trigger_name)
-        change = event.getChange(project, trigger)
+        change = pipeline.source.getChange(event, project)
         self.log.debug("Event %s for change %s was directly assigned "
                        "to pipeline %s" % (event, change, self))
         self.log.info("Adding %s, %s to %s" %
@@ -809,8 +810,7 @@ class Scheduler(threading.Thread):
                 return
 
             for pipeline in self.layout.pipelines.values():
-                change = event.getChange(project,
-                                         self.triggers.get(event.trigger_name))
+                change = pipeline.source.getChange(event, project)
                 if event.type == 'patchset-created':
                     pipeline.manager.removeOldVersionsOfChange(change)
                 elif event.type == 'change-abandoned':
@@ -944,6 +944,7 @@ class BasePipelineManager(object):
 
     def _postConfig(self, layout):
         self.log.info("Configured Pipeline Manager %s" % self.pipeline.name)
+        self.log.info("  Source: %s" % self.pipeline.source)
         self.log.info("  Requirements:")
         for f in self.changeish_filters:
             self.log.info("    %s" % f)
@@ -1188,7 +1189,7 @@ class BasePipelineManager(object):
             oldrev = item.change.oldrev
             newrev = item.change.newrev
         return dict(project=item.change.project.name,
-                    url=self.pipeline.trigger.getGitUrl(
+                    url=self.pipeline.source.getGitUrl(
                         item.change.project),
                     merge_mode=item.change.project.merge_mode,
                     refspec=item.change.refspec,
@@ -1220,7 +1221,7 @@ class BasePipelineManager(object):
                                            item.current_build_set)
         else:
             self.log.debug("Preparing update repo for: %s" % item.change)
-            url = self.pipeline.trigger.getGitUrl(item.change.project)
+            url = self.pipeline.source.getGitUrl(item.change.project)
             self.sched.merger.updateRepo(item.change.project.name,
                                          url, build_set)
         return False
@@ -1410,8 +1411,8 @@ class BasePipelineManager(object):
             succeeded = self.pipeline.didAllJobsSucceed(item)
             merged = item.reported
             if merged:
-                merged = self.pipeline.trigger.isMerged(item.change,
-                                                        item.change.branch)
+                merged = self.pipeline.source.isMerged(item.change,
+                                                       item.change.branch)
             self.log.info("Reported change %s status: all-succeeded: %s, "
                           "merged: %s" % (item.change, succeeded, merged))
             change_queue = self.pipeline.getQueue(item.change.project)
@@ -1737,8 +1738,8 @@ class DependentPipelineManager(BasePipelineManager):
         return new_change_queues
 
     def isChangeReadyToBeEnqueued(self, change):
-        if not self.pipeline.trigger.canMerge(change,
-                                              self.getSubmitAllowNeeds()):
+        if not self.pipeline.source.canMerge(change,
+                                             self.getSubmitAllowNeeds()):
             self.log.debug("Change %s can not merge, ignoring" % change)
             return False
         return True
@@ -1750,8 +1751,8 @@ class DependentPipelineManager(BasePipelineManager):
             self.log.debug("  Changeish does not support dependencies")
             return
         for needs in change.needed_by_changes:
-            if self.pipeline.trigger.canMerge(needs,
-                                              self.getSubmitAllowNeeds()):
+            if self.pipeline.source.canMerge(needs,
+                                             self.getSubmitAllowNeeds()):
                 self.log.debug("  Change %s needs %s and is ready to merge" %
                                (needs, change))
                 to_enqueue.append(needs)
@@ -1790,8 +1791,8 @@ class DependentPipelineManager(BasePipelineManager):
         if self.isChangeAlreadyInQueue(change.needs_change):
             self.log.debug("  Needed change is already ahead in the queue")
             return True
-        if self.pipeline.trigger.canMerge(change.needs_change,
-                                          self.getSubmitAllowNeeds()):
+        if self.pipeline.source.canMerge(change.needs_change,
+                                         self.getSubmitAllowNeeds()):
             self.log.debug("  Change %s is needed" %
                            change.needs_change)
             return change.needs_change
