@@ -1,4 +1,4 @@
-# Copyright 2012 Hewlett-Packard Development Company, L.P.
+# Copyright 2012-2014 Hewlett-Packard Development Company, L.P.
 # Copyright 2013 OpenStack Foundation
 # Copyright 2013 Antoine "hashar" Musso
 # Copyright 2013 Wikimedia Foundation Inc.
@@ -326,11 +326,19 @@ class Scheduler(threading.Thread):
                                     required_approvals=
                                     toList(trigger.get('require-approval')))
                     manager.event_filters.append(f)
-            elif 'timer' in conf_pipeline['trigger']:
+            if 'timer' in conf_pipeline['trigger']:
                 for trigger in toList(conf_pipeline['trigger']['timer']):
                     f = EventFilter(trigger=self.triggers['timer'],
                                     types=['timer'],
                                     timespecs=toList(trigger['time']))
+                    manager.event_filters.append(f)
+            if 'zuul' in conf_pipeline['trigger']:
+                for trigger in toList(conf_pipeline['trigger']['zuul']):
+                    f = EventFilter(trigger=self.triggers['zuul'],
+                                    types=toList(trigger['event']),
+                                    pipelines=toList(trigger.get('pipeline')),
+                                    required_approvals=
+                                    toList(trigger.get('require-approval')))
                     manager.event_filters.append(f)
 
         for project_template in data.get('project-templates', []):
@@ -1153,6 +1161,7 @@ class BasePipelineManager(object):
                 item.enqueue_time = enqueue_time
             self.reportStats(item)
             self.enqueueChangesBehind(change, quiet, ignore_requirements)
+            self.sched.triggers['zuul'].onChangeEnqueued(item.change, self.pipeline)
         else:
             self.log.error("Unable to find change queue for project %s" %
                            change.project)
@@ -1427,6 +1436,7 @@ class BasePipelineManager(object):
                 change_queue.increaseWindowSize()
                 self.log.debug("%s window size increased to %s" %
                                (change_queue, change_queue.window))
+                self.sched.triggers['zuul'].onChangeMerged(item.change)
 
     def _reportItem(self, item):
         self.log.debug("Reporting change %s" % item.change)

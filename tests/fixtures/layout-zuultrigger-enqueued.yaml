@@ -1,0 +1,53 @@
+pipelines:
+  - name: check
+    manager: IndependentPipelineManager
+    source: gerrit
+    require:
+      approval:
+        - verified: -1
+    trigger:
+      gerrit:
+        - event: patchset-created
+      zuul:
+        - event: parent-change-enqueued
+          pipeline: gate
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+  - name: gate
+    manager: DependentPipelineManager
+    failure-message: Build failed.  For information on how to proceed, see http://wiki.example.org/Test_Failures
+    source: gerrit
+    require:
+      approval:
+        - verified: 1
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - approved: 1
+      zuul:
+        - event: parent-change-enqueued
+          pipeline: gate
+    success:
+      gerrit:
+        verified: 2
+        submit: true
+    failure:
+      gerrit:
+        verified: -2
+    start:
+      gerrit:
+        verified: 0
+    precedence: high
+
+projects:
+  - name: org/project
+    check:
+      - project-check
+    gate:
+      - project-gate

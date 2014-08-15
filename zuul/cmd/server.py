@@ -87,6 +87,7 @@ class Server(zuul.cmd.ZuulApp):
         self.sched.registerReporter(None, 'smtp')
         self.sched.registerTrigger(None, 'gerrit')
         self.sched.registerTrigger(None, 'timer')
+        self.sched.registerTrigger(None, 'zuul')
         layout = self.sched.testConfig(self.config.get('zuul',
                                                        'layout_config'))
         if not job_list_path:
@@ -145,6 +146,7 @@ class Server(zuul.cmd.ZuulApp):
         import zuul.reporter.smtp
         import zuul.trigger.gerrit
         import zuul.trigger.timer
+        import zuul.trigger.zuultrigger
         import zuul.webapp
         import zuul.rpclistener
 
@@ -163,6 +165,7 @@ class Server(zuul.cmd.ZuulApp):
         merger = zuul.merger.client.MergeClient(self.config, self.sched)
         gerrit = zuul.trigger.gerrit.Gerrit(self.config, self.sched)
         timer = zuul.trigger.timer.Timer(self.config, self.sched)
+        zuultrigger = zuul.trigger.zuultrigger.ZuulTrigger(self.config, self.sched)
         if self.config.has_option('zuul', 'status_expiry'):
             cache_expiry = self.config.getint('zuul', 'status_expiry')
         else:
@@ -185,6 +188,7 @@ class Server(zuul.cmd.ZuulApp):
         self.sched.setMerger(merger)
         self.sched.registerTrigger(gerrit)
         self.sched.registerTrigger(timer)
+        self.sched.registerTrigger(zuultrigger)
         self.sched.registerReporter(gerrit_reporter)
         self.sched.registerReporter(smtp_reporter)
 

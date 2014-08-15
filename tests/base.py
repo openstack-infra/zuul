@@ -52,6 +52,7 @@ import zuul.reporter.gerrit
 import zuul.reporter.smtp
 import zuul.trigger.gerrit
 import zuul.trigger.timer
+import zuul.trigger.zuultrigger
 
 FIXTURE_DIR = os.path.join(os.path.dirname(__file__),
                            'fixtures')
@@ -400,6 +401,11 @@ class FakeGerrit(object):
         if change:
             return change.query()
         return {}
+
+    def simpleQuery(self, query):
+        # This is currently only used to return all open changes for a
+        # project
+        return [change.query() for change in self.changes.values()]
 
     def startWatching(self, *args, **kw):
         pass
@@ -906,6 +912,8 @@ class ZuulTestCase(testtools.TestCase):
         self.sched.registerTrigger(self.gerrit)
         self.timer = zuul.trigger.timer.Timer(self.config, self.sched)
         self.sched.registerTrigger(self.timer)
+        self.zuultrigger = zuul.trigger.zuultrigger.ZuulTrigger(self.config, self.sched)
+        self.sched.registerTrigger(self.zuultrigger)
 
         self.sched.registerReporter(
             zuul.reporter.gerrit.Reporter(self.gerrit))

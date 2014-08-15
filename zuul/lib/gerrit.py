@@ -144,6 +144,23 @@ class Gerrit(object):
                        (pprint.pformat(data)))
         return data
 
+    def simpleQuery(self, query):
+        args = '--current-patch-set'
+        cmd = 'gerrit query --format json %s %s' % (
+            args, query)
+        out, err = self._ssh(cmd)
+        if not out:
+            return False
+        lines = out.split('\n')
+        if not lines:
+            return False
+        data = [json.loads(line) for line in lines[:-1]]
+        if not data:
+            return False
+        self.log.debug("Received data from Gerrit query: \n%s" %
+                       (pprint.pformat(data)))
+        return data
+
     def _open(self):
         client = paramiko.SSHClient()
         client.load_system_host_keys()

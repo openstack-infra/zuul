@@ -1742,6 +1742,7 @@ class TestScheduler(ZuulTestCase):
         sched = zuul.scheduler.Scheduler()
         sched.registerTrigger(None, 'gerrit')
         sched.registerTrigger(None, 'timer')
+        sched.registerTrigger(None, 'zuul')
         sched.testConfig(self.config.get('zuul', 'layout_config'))
 
     def test_build_description(self):

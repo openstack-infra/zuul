@@ -947,6 +947,8 @@ class TriggerEvent(object):
         self.newrev = None
         # timer
         self.timespec = None
+        # zuultrigger
+        self.pipeline_name = None
         # For events that arrive with a destination pipeline (eg, from
         # an admin command, etc):
         self.forced_pipeline = None
@@ -1026,7 +1028,7 @@ class BaseFilter(object):
 class EventFilter(BaseFilter):
     def __init__(self, trigger, types=[], branches=[], refs=[],
                  event_approvals={}, comments=[], emails=[], usernames=[],
-                 timespecs=[], required_approvals=[]):
+                 timespecs=[], required_approvals=[], pipelines=[]):
         super(EventFilter, self).__init__(
             required_approvals=required_approvals)
         self.trigger = trigger
@@ -1036,12 +1038,14 @@ class EventFilter(BaseFilter):
         self._comments = comments
         self._emails = emails
         self._usernames = usernames
+        self._pipelines = pipelines
         self.types = [re.compile(x) for x in types]
         self.branches = [re.compile(x) for x in branches]
         self.refs = [re.compile(x) for x in refs]
         self.comments = [re.compile(x) for x in comments]
         self.emails = [re.compile(x) for x in emails]
         self.usernames = [re.compile(x) for x in usernames]
+        self.pipelines = [re.compile(x) for x in pipelines]
         self.event_approvals = event_approvals
         self.timespecs = timespecs
 
@@ -1050,6 +1054,8 @@ class EventFilter(BaseFilter):
 
         if self._types:
             ret += ' types: %s' % ', '.join(self._types)
+        if self._pipelines:
+            ret += ' pipelines: %s' % ', '.join(self._pipelines)
         if self._branches:
             ret += ' branches: %s' % ', '.join(self._branches)
         if self._refs:
@@ -1079,6 +1085,14 @@ class EventFilter(BaseFilter):
             if etype.match(event.type):
                 matches_type = True
         if self.types and not matches_type:
+            return False
+
+        # pipelines are ORed
+        matches_pipeline = False
+        for epipe in self.pipelines:
+            if epipe.match(event.pipeline_name):
+                matches_pipeline = True
+        if self.pipelines and not matches_pipeline:
             return False
 
         # branches are ORed
