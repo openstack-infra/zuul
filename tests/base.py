@@ -369,6 +369,7 @@ class FakeGerrit(object):
         self.fixture_dir = os.path.join(FIXTURE_DIR, 'gerrit')
         self.change_number = 0
         self.changes = {}
+        self.queries = []
 
     def addFakeChange(self, project, branch, subject, status='NEW'):
         self.change_number += 1
@@ -405,7 +406,10 @@ class FakeGerrit(object):
     def simpleQuery(self, query):
         # This is currently only used to return all open changes for a
         # project
-        return [change.query() for change in self.changes.values()]
+        self.queries.append(query)
+        l = [change.query() for change in self.changes.values()]
+        l.append({"type":"stats","rowCount":1,"runTimeMilliseconds":3})
+        return l
 
     def startWatching(self, *args, **kw):
         pass

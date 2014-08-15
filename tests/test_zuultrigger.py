@@ -102,3 +102,4 @@ class TestZuulTrigger(ZuulTestCase):
             "Merge Failed.\n\nThis change was unable to be automatically "
             "merged with the current state of the repository. Please rebase "
             "your change and upload a new patchset.")
+        self.assertEqual(self.fake_gerrit.queries[0], "project:org/project status:open")

@@ -324,11 +324,18 @@ class Gerrit(object):
         return change
 
     def getProjectOpenChanges(self, project):
-        data = self.gerrit.simpleQuery("project:%s status:open" % project.name)
+        # This is a best-effort function in case Gerrit is unable to return
+        # a particular change.  It happens.
+        query = "project:%s status:open" % (project.name,)
+        self.log.debug("Running query %s to get project open changes" % (query,))
+        data = self.gerrit.simpleQuery(query)
         changes = []
-        for record in data:
-            changes.append(self._getChange(record['number'],
-                                           record['currentPatchSet']['number']))
+        for record in data[:-1]:
+            try:
+                changes.append(self._getChange(record['number'],
+                                               record['currentPatchSet']['number']))
+            except Exception:
+                self.log.exception("Unable to query change %s" % (record.get('number'),))
         return changes
 
     def updateChange(self, change):
