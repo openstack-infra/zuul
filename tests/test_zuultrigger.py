@@ -84,11 +84,17 @@ class TestZuulTrigger(ZuulTestCase):
         # A, B, C;  B conflicts with A, but C does not.
         # When A is merged, B and C should be checked for conflicts,
         # and B should receive a -1.
+        # D and E are used to repeat the test in the second part, but
+        # are defined here to that they end up in the trigger cache.
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        D = self.fake_gerrit.addFakeChange('org/project', 'master', 'D')
+        E = self.fake_gerrit.addFakeChange('org/project', 'master', 'E')
         A.addPatchset(['conflict'])
         B.addPatchset(['conflict'])
+        D.addPatchset(['conflict2'])
+        E.addPatchset(['conflict2'])
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
@@ -98,8 +104,33 @@ class TestZuulTrigger(ZuulTestCase):
         self.assertEqual(A.reported, 2)
         self.assertEqual(B.reported, 1)
         self.assertEqual(C.reported, 0)
+        self.assertEqual(D.reported, 0)
+        self.assertEqual(E.reported, 0)
         self.assertEqual(B.messages[0],
             "Merge Failed.\n\nThis change was unable to be automatically "
             "merged with the current state of the repository. Please rebase "
             "your change and upload a new patchset.")
         self.assertEqual(self.fake_gerrit.queries[0], "project:org/project status:open")
+
+        # Reconfigure and run the test again.  This is a regression
+        # check to make sure that we don't end up with a stale trigger
+        # cache that has references to projects from the old
+        # configuration.
+        self.sched.reconfigure(self.config)
+
+        D.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(D.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.history), 2)
+        self.assertEqual(self.history[1].name, 'project-gate')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 1)
+        self.assertEqual(C.reported, 0)
+        self.assertEqual(D.reported, 2)
+        self.assertEqual(E.reported, 1)
+        self.assertEqual(E.messages[0],
+            "Merge Failed.\n\nThis change was unable to be automatically "
+            "merged with the current state of the repository. Please rebase "
+            "your change and upload a new patchset.")
+        self.assertEqual(self.fake_gerrit.queries[1], "project:org/project status:open")

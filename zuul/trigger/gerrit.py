@@ -280,8 +280,12 @@ class Gerrit(object):
         # This lets the user supply a list of change objects that are
         # still in use.  Anything in our cache that isn't in the supplied
         # list should be safe to remove from the cache.
-        # TODO(jeblair): consider removing this feature
-        return
+        remove = []
+        for key, change in self._change_cache.items():
+            if change not in relevant:
+                remove.append(key)
+        for key in remove:
+            del self._change_cache[key]
 
     def postConfig(self):
         pass
