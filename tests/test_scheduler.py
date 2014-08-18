@@ -2131,6 +2131,7 @@ class TestScheduler(ZuulTestCase):
                         'tests/fixtures/layout-no-timer.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
+        self.waitUntilSettled()
         self.worker.release('.*')
         self.waitUntilSettled()
 
