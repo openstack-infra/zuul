@@ -589,6 +589,12 @@ class BuildSet(object):
     PENDING = 2
     COMPLETE = 3
 
+    states_map = {
+        1: 'NEW',
+        2: 'PENDING',
+        3: 'COMPLETE',
+    }
+
     def __init__(self, item):
         self.item = item
         self.other_changes = []
@@ -603,6 +609,12 @@ class BuildSet(object):
         self.failing_reasons = []
         self.merge_state = self.NEW
 
+    def __repr__(self):
+        return '<BuildSet item: %s #builds: %s merge state: %s>' % (
+            self.item,
+            len(self.builds),
+            self.getStateName(self.merge_state))
+
     def setConfiguration(self):
         # The change isn't enqueued until after it's created
         # so we don't know what the other changes ahead will be
@@ -614,6 +626,10 @@ class BuildSet(object):
                 next_item = next_item.item_ahead
         if not self.ref:
             self.ref = 'Z' + uuid4().hex
+
+    def getStateName(self, state_num):
+        return self.states_map.get(
+            state_num, 'UNKNOWN (%s)' % state_num)
 
     def addBuild(self, build):
         self.builds[build.job.name] = build
