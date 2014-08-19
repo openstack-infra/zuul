@@ -47,8 +47,9 @@ class ZuulTrigger(object):
             try:
                 self._createProjectChangeMergedEvents(change)
             except Exception:
-                self.log.exception("Unable to create project-change-merged events for %s" %
-                                   (change,))
+                self.log.exception(
+                    "Unable to create project-change-merged events for "
+                    "%s" % (change,))
 
     def onChangeEnqueued(self, change, pipeline):
         # Called each time a change is enqueued in a pipeline
@@ -56,11 +57,13 @@ class ZuulTrigger(object):
             try:
                 self._createParentChangeEnqueuedEvents(change, pipeline)
             except Exception:
-                self.log.exception("Unable to create parent-change-enqueued events for %s in %s" %
-                                   (change, pipeline))
+                self.log.exception(
+                    "Unable to create parent-change-enqueued events for "
+                    "%s in %s" % (change, pipeline))
 
     def _createProjectChangeMergedEvents(self, change):
-        changes = self.sched.triggers['gerrit'].getProjectOpenChanges(change.project)
+        changes = self.sched.triggers['gerrit'].getProjectOpenChanges(
+            change.project)
         for open_change in changes:
             self._createProjectChangeMergedEvent(open_change)
 

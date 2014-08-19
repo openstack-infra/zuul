@@ -15,7 +15,6 @@
 # under the License.
 
 import logging
-import time
 
 from tests.base import ZuulTestCase
 
@@ -46,9 +45,9 @@ class TestZuulTrigger(ZuulTestCase):
         A.addApproval('CRVW', 2)
         B1.addApproval('CRVW', 2)
         B2.addApproval('CRVW', 2)
-        A.addApproval('VRFY', 1)  # required by gate
-        B1.addApproval('VRFY', -1) # should go to check
-        B2.addApproval('VRFY', 1)  # should go to gate
+        A.addApproval('VRFY', 1)    # required by gate
+        B1.addApproval('VRFY', -1)  # should go to check
+        B2.addApproval('VRFY', 1)   # should go to gate
         B1.addApproval('APRV', 1)
         B2.addApproval('APRV', 1)
         B1.setDependsOn(A, 1)
@@ -106,11 +105,14 @@ class TestZuulTrigger(ZuulTestCase):
         self.assertEqual(C.reported, 0)
         self.assertEqual(D.reported, 0)
         self.assertEqual(E.reported, 0)
-        self.assertEqual(B.messages[0],
+        self.assertEqual(
+            B.messages[0],
             "Merge Failed.\n\nThis change was unable to be automatically "
             "merged with the current state of the repository. Please rebase "
             "your change and upload a new patchset.")
-        self.assertEqual(self.fake_gerrit.queries[0], "project:org/project status:open")
+
+        self.assertEqual(self.fake_gerrit.queries[0],
+                         "project:org/project status:open")
 
         # Reconfigure and run the test again.  This is a regression
         # check to make sure that we don't end up with a stale trigger
@@ -129,8 +131,10 @@ class TestZuulTrigger(ZuulTestCase):
         self.assertEqual(C.reported, 0)
         self.assertEqual(D.reported, 2)
         self.assertEqual(E.reported, 1)
-        self.assertEqual(E.messages[0],
+        self.assertEqual(
+            E.messages[0],
             "Merge Failed.\n\nThis change was unable to be automatically "
             "merged with the current state of the repository. Please rebase "
             "your change and upload a new patchset.")
-        self.assertEqual(self.fake_gerrit.queries[1], "project:org/project status:open")
+        self.assertEqual(self.fake_gerrit.queries[1],
+                         "project:org/project status:open")

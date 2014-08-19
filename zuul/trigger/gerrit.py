@@ -250,7 +250,7 @@ class Gerrit(object):
         data = change._data
         if not data:
             return False
-        if not 'submitRecords' in data:
+        if 'submitRecords' not in data:
             return False
         try:
             for sr in data['submitRecords']:
@@ -328,15 +328,18 @@ class Gerrit(object):
         # This is a best-effort function in case Gerrit is unable to return
         # a particular change.  It happens.
         query = "project:%s status:open" % (project.name,)
-        self.log.debug("Running query %s to get project open changes" % (query,))
+        self.log.debug("Running query %s to get project open changes" %
+                       (query,))
         data = self.gerrit.simpleQuery(query)
         changes = []
         for record in data:
             try:
-                changes.append(self._getChange(record['number'],
-                                               record['currentPatchSet']['number']))
+                changes.append(
+                    self._getChange(record['number'],
+                                    record['currentPatchSet']['number']))
             except Exception:
-                self.log.exception("Unable to query change %s" % (record.get('number'),))
+                self.log.exception("Unable to query change %s" %
+                                   (record.get('number'),))
         return changes
 
     def updateChange(self, change):
@@ -423,4 +426,3 @@ def validate_trigger(trigger_data):
             raise voluptuous.Invalid(
                 "The event %s does not include ref information, Zuul cannot "
                 "use ref filter 'ref: %s'" % (event['event'], event['ref']))
-

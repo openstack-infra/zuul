@@ -165,7 +165,8 @@ class Server(zuul.cmd.ZuulApp):
         merger = zuul.merger.client.MergeClient(self.config, self.sched)
         gerrit = zuul.trigger.gerrit.Gerrit(self.config, self.sched)
         timer = zuul.trigger.timer.Timer(self.config, self.sched)
-        zuultrigger = zuul.trigger.zuultrigger.ZuulTrigger(self.config, self.sched)
+        zuultrigger = zuul.trigger.zuultrigger.ZuulTrigger(self.config,
+                                                           self.sched)
         if self.config.has_option('zuul', 'status_expiry'):
             cache_expiry = self.config.getint('zuul', 'status_expiry')
         else:

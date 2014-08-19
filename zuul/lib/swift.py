@@ -45,7 +45,8 @@ class Swift(object):
         try:
             if self.config.has_section('swift'):
                 if (not self.config.has_option('swift', 'Send-Temp-Url-Key')
-                    or self.config.getboolean('swift', 'Send-Temp-Url-Key')):
+                    or self.config.getboolean('swift',
+                                              'Send-Temp-Url-Key')):
                     self.connect()
 
                     # Tell swift of our key

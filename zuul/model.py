@@ -266,8 +266,8 @@ class Pipeline(object):
                     j_changes = []
                 j_changes.append(e.formatJSON())
                 if (len(j_changes) > 1 and
-                    (j_changes[-2]['remaining_time'] is not None) and
-                    (j_changes[-1]['remaining_time'] is not None)):
+                        (j_changes[-2]['remaining_time'] is not None) and
+                        (j_changes[-1]['remaining_time'] is not None)):
                     j_changes[-1]['remaining_time'] = max(
                         j_changes[-2]['remaining_time'],
                         j_changes[-1]['remaining_time'])
@@ -340,7 +340,7 @@ class ChangeQueue(object):
             for job in self._jobs:
                 if job.queue_name:
                     if (self.assigned_name and
-                        job.queue_name != self.assigned_name):
+                            job.queue_name != self.assigned_name):
                         raise Exception("More than one name assigned to "
                                         "change queue: %s != %s" %
                                         (self.assigned_name, job.queue_name))
@@ -1150,7 +1150,7 @@ class EventFilter(BaseFilter):
             matches_email_re = False
             for email_re in self.emails:
                 if (account_email is not None and
-                    email_re.search(account_email)):
+                        email_re.search(account_email)):
                     matches_email_re = True
             if self.emails and not matches_email_re:
                 return False

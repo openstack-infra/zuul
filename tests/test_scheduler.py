@@ -1427,10 +1427,10 @@ class TestScheduler(ZuulTestCase):
         self.waitUntilSettled()
 
         # For debugging purposes...
-        #for pipeline in self.sched.layout.pipelines.values():
-        #    for queue in pipeline.queues:
-        #        self.log.info("pipepline %s queue %s contents %s" % (
-        #            pipeline.name, queue.name, queue.queue))
+        # for pipeline in self.sched.layout.pipelines.values():
+        #     for queue in pipeline.queues:
+        #         self.log.info("pipepline %s queue %s contents %s" % (
+        #             pipeline.name, queue.name, queue.queue))
 
         self.worker.release('.*-merge')
         self.waitUntilSettled()

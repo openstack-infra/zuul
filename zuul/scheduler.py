@@ -235,7 +235,8 @@ class Scheduler(threading.Thread):
             pipeline = Pipeline(conf_pipeline['name'])
             pipeline.description = conf_pipeline.get('description')
             # TODO(jeblair): remove backwards compatibility:
-            pipeline.source = self.triggers[conf_pipeline.get('source', 'gerrit')]
+            pipeline.source = self.triggers[conf_pipeline.get('source',
+                                                              'gerrit')]
             precedence = model.PRECEDENCE_MAP[conf_pipeline.get('precedence')]
             pipeline.precedence = precedence
             pipeline.failure_message = conf_pipeline.get('failure-message',
@@ -314,16 +315,19 @@ class Scheduler(threading.Thread):
                     usernames = toList(trigger.get('username'))
                     if not usernames:
                         usernames = toList(trigger.get('username_filter'))
-                    f = EventFilter(trigger=self.triggers['gerrit'],
-                                    types=toList(trigger['event']),
-                                    branches=toList(trigger.get('branch')),
-                                    refs=toList(trigger.get('ref')),
-                                    event_approvals=approvals,
-                                    comments=comments,
-                                    emails=emails,
-                                    usernames=usernames,
-                                    required_approvals=
-                                    toList(trigger.get('require-approval')))
+                    f = EventFilter(
+                        trigger=self.triggers['gerrit'],
+                        types=toList(trigger['event']),
+                        branches=toList(trigger.get('branch')),
+                        refs=toList(trigger.get('ref')),
+                        event_approvals=approvals,
+                        comments=comments,
+                        emails=emails,
+                        usernames=usernames,
+                        required_approvals=toList(
+                            trigger.get('require-approval')
+                        )
+                    )
                     manager.event_filters.append(f)
             if 'timer' in conf_pipeline['trigger']:
                 for trigger in toList(conf_pipeline['trigger']['timer']):
@@ -333,11 +337,14 @@ class Scheduler(threading.Thread):
                     manager.event_filters.append(f)
             if 'zuul' in conf_pipeline['trigger']:
                 for trigger in toList(conf_pipeline['trigger']['zuul']):
-                    f = EventFilter(trigger=self.triggers['zuul'],
-                                    types=toList(trigger['event']),
-                                    pipelines=toList(trigger.get('pipeline')),
-                                    required_approvals=
-                                    toList(trigger.get('require-approval')))
+                    f = EventFilter(
+                        trigger=self.triggers['zuul'],
+                        types=toList(trigger['event']),
+                        pipelines=toList(trigger.get('pipeline')),
+                        required_approvals=toList(
+                            trigger.get('require-approval')
+                        )
+                    )
                     manager.event_filters.append(f)
 
         for project_template in data.get('project-templates', []):
@@ -692,7 +699,7 @@ class Scheduler(threading.Thread):
                 break
             for item in shared_queue.queue:
                 if (item.change.number == change_ids[0][0] and
-                    item.change.patchset == change_ids[0][1]):
+                        item.change.patchset == change_ids[0][1]):
                     change_queue = shared_queue
                     break
         if not change_queue:
@@ -702,7 +709,7 @@ class Scheduler(threading.Thread):
             found = False
             for item in change_queue.queue:
                 if (item.change.number == number and
-                    item.change.patchset == patchset):
+                        item.change.patchset == patchset):
                     found = True
                     items_to_enqueue.append(item)
                     break
@@ -1157,7 +1164,8 @@ class BasePipelineManager(object):
                 item.enqueue_time = enqueue_time
             self.reportStats(item)
             self.enqueueChangesBehind(change, quiet, ignore_requirements)
-            self.sched.triggers['zuul'].onChangeEnqueued(item.change, self.pipeline)
+            self.sched.triggers['zuul'].onChangeEnqueued(item.change,
+                                                         self.pipeline)
         else:
             self.log.error("Unable to find change queue for project %s" %
                            change.project)

@@ -65,20 +65,20 @@ class Cloner(zuul.cmd.ZuulApp):
 
         project_env = parser.add_argument_group(
             'project tuning'
-            )
+        )
         project_env.add_argument(
             '--branch',
             help=('branch to checkout instead of Zuul selected branch, '
                   'for example to specify an alternate branch to test '
                   'client library compatibility.')
-            )
+        )
         project_env.add_argument(
             '--project-branch', nargs=1, action='append',
             metavar='PROJECT=BRANCH',
             help=('project-specific branch to checkout which takes precedence '
                   'over --branch if it is provided; may be specified multiple '
                   'times.')
-            )
+        )
 
         zuul_env = parser.add_argument_group(
             'zuul environnement',

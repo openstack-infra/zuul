@@ -105,7 +105,7 @@ class Repo(object):
 
     def getCommitFromRef(self, refname):
         repo = self.createRepoObject()
-        if not refname in repo.refs:
+        if refname not in repo.refs:
             return None
         ref = repo.refs[refname]
         return ref.commit
