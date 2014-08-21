@@ -111,6 +111,7 @@
                     );
                 }
 
+                $job_line.append($('<div style="clear: both"></div>'));
                 return $job_line;
             },
 
