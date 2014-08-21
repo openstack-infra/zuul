@@ -41,13 +41,28 @@ class TestCloner(ZuulTestCase):
         self.workspace_root = os.path.join(self.test_root, 'workspace')
 
         self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-gating.yaml')
+                        'tests/fixtures/layout-cloner.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
-    def test_cloner(self):
+    def getWorkspaceRepos(self, projects):
+        repos = {}
+        for project in projects:
+            repos[project] = git.Repo(
+                os.path.join(self.workspace_root, project))
+        return repos
+
+    def getUpstreamRepos(self, projects):
+        repos = {}
+        for project in projects:
+            repos[project] = git.Repo(
+                os.path.join(self.upstream_root, project))
+        return repos
+
+    def test_one_branch(self):
         self.worker.hold_jobs_in_build = True
 
+        projects = ['org/project1', 'org/project2']
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
         A.addApproval('CRVW', 2)
@@ -59,34 +74,104 @@ class TestCloner(ZuulTestCase):
 
         self.assertEquals(2, len(self.builds), "Two builds are running")
 
-        for build in self.builds:
+        upstream = self.getUpstreamRepos(projects)
+        states = [
+            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
+             'org/project2': str(upstream['org/project2'].commit('master')),
+             },
+            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
+             'org/project2': self.builds[1].parameters['ZUUL_COMMIT'],
+             },
+            ]
+
+        for number, build in enumerate(self.builds):
             self.log.debug("Build parameters: %s", build.parameters)
-            change_number = int(build.parameters['ZUUL_CHANGE'])
             cloner = zuul.lib.cloner.Cloner(
                 git_base_url=self.upstream_root,
-                projects=['org/project1', 'org/project2'],
+                projects=projects,
                 workspace=self.workspace_root,
-                zuul_branch='master',
+                zuul_branch=build.parameters['ZUUL_BRANCH'],
                 zuul_ref=build.parameters['ZUUL_REF'],
                 zuul_url=self.git_root,
-                branch='master',
-            )
+                )
             cloner.execute()
-            work_repo1 = git.Repo(os.path.join(self.workspace_root,
-                                               'org/project1'))
-            work_repo2 = git.Repo(os.path.join(self.workspace_root,
-                                               'org/project2'))
-            if change_number >= 1:
-                self.assertEquals(
-                    self.builds[0].parameters['ZUUL_COMMIT'],
-                    str(work_repo1.commit('HEAD')))
-            if change_number >= 2:
-                self.assertEquals(
-                    self.builds[1].parameters['ZUUL_COMMIT'],
-                    str(work_repo2.commit('HEAD')))
-            else:
-                self.assertEquals(str(work_repo2.commit('master')),
-                                  str(work_repo2.commit('HEAD')))
+            work = self.getWorkspaceRepos(projects)
+            state = states[number]
+
+            for project in projects:
+                self.assertEquals(state[project],
+                                  str(work[project].commit('HEAD')),
+                                  'Project %s commit for build %s should '
+                                  'be correct' % (project, number))
+
+            shutil.rmtree(self.workspace_root)
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+    def test_multi_branch(self):
+        self.worker.hold_jobs_in_build = True
+        projects = ['org/project1', 'org/project2',
+                    'org/project3', 'org/project4']
+
+        self.create_branch('org/project2', 'stable/havana')
+        self.create_branch('org/project4', 'stable/havana')
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project2', 'stable/havana', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project3', 'master', 'C')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+
+        self.waitUntilSettled()
+
+        self.assertEquals(3, len(self.builds), "Three builds are running")
+
+        upstream = self.getUpstreamRepos(projects)
+        states = [
+            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
+             'org/project2': str(upstream['org/project2'].commit('master')),
+             'org/project3': str(upstream['org/project3'].commit('master')),
+             'org/project4': str(upstream['org/project4'].
+                                 commit('master')),
+             },
+            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
+             'org/project2': self.builds[1].parameters['ZUUL_COMMIT'],
+             'org/project3': str(upstream['org/project3'].commit('master')),
+             'org/project4': str(upstream['org/project4'].
+                                 commit('stable/havana')),
+             },
+            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
+             'org/project2': str(upstream['org/project2'].commit('master')),
+             'org/project3': self.builds[2].parameters['ZUUL_COMMIT'],
+             'org/project4': str(upstream['org/project4'].
+                                 commit('master')),
+             },
+            ]
+
+        for number, build in enumerate(self.builds):
+            self.log.debug("Build parameters: %s", build.parameters)
+            cloner = zuul.lib.cloner.Cloner(
+                git_base_url=self.upstream_root,
+                projects=projects,
+                workspace=self.workspace_root,
+                zuul_branch=build.parameters['ZUUL_BRANCH'],
+                zuul_ref=build.parameters['ZUUL_REF'],
+                zuul_url=self.git_root,
+                )
+            cloner.execute()
+            work = self.getWorkspaceRepos(projects)
+            state = states[number]
+
+            for project in projects:
+                self.assertEquals(state[project],
+                                  str(work[project].commit('HEAD')),
+                                  'Project %s commit for build %s should '
+                                  'be correct' % (project, number))
             shutil.rmtree(self.workspace_root)
 
         self.worker.hold_jobs_in_build = False

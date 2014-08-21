@@ -56,6 +56,7 @@ import zuul.trigger.zuultrigger
 
 FIXTURE_DIR = os.path.join(os.path.dirname(__file__),
                            'fixtures')
+USE_TEMPDIR = True
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-32s '
@@ -165,7 +166,7 @@ class FakeChange(object):
         if files:
             fn = files[0]
         else:
-            fn = '%s-%s' % (self.branch, self.number)
+            fn = '%s-%s' % (self.branch.replace('/', '_'), self.number)
         msg = self.subject + '-' + str(self.latest_patchset)
         c = self.add_fake_change_to_repo(msg, fn, large)
         ps_files = [{'file': '/COMMIT_MSG',
@@ -821,8 +822,11 @@ class ZuulTestCase(testtools.TestCase):
                 level=logging.DEBUG,
                 format='%(asctime)s %(name)-32s '
                 '%(levelname)-8s %(message)s'))
-        tmp_root = self.useFixture(fixtures.TempDir(
-            rootdir=os.environ.get("ZUUL_TEST_ROOT"))).path
+        if USE_TEMPDIR:
+            tmp_root = self.useFixture(fixtures.TempDir(
+                    rootdir=os.environ.get("ZUUL_TEST_ROOT"))).path
+        else:
+            tmp_root = os.environ.get("ZUUL_TEST_ROOT")
         self.test_root = os.path.join(tmp_root, "zuul-test")
         self.upstream_root = os.path.join(self.test_root, "upstream")
         self.git_root = os.path.join(self.test_root, "git")
@@ -844,6 +848,7 @@ class ZuulTestCase(testtools.TestCase):
         self.init_repo("org/project1")
         self.init_repo("org/project2")
         self.init_repo("org/project3")
+        self.init_repo("org/project4")
         self.init_repo("org/one-job-project")
         self.init_repo("org/nonvoting-project")
         self.init_repo("org/templated-project")
@@ -998,15 +1003,26 @@ class ZuulTestCase(testtools.TestCase):
         master = repo.create_head('master')
         repo.create_tag('init')
 
-        mp = repo.create_head('mp')
-        repo.head.reference = mp
+        repo.head.reference = master
+        repo.head.reset(index=True, working_tree=True)
+        repo.git.clean('-x', '-f', '-d')
+
+        self.create_branch(project, 'mp')
+
+    def create_branch(self, project, branch):
+        path = os.path.join(self.upstream_root, project)
+        repo = git.Repo.init(path)
+        fn = os.path.join(path, 'README')
+
+        branch_head = repo.create_head(branch)
+        repo.head.reference = branch_head
         f = open(fn, 'a')
-        f.write("test mp\n")
+        f.write("test %s\n" % branch)
         f.close()
         repo.index.add([fn])
-        repo.index.commit('mp commit')
+        repo.index.commit('%s commit' % branch)
 
-        repo.head.reference = master
+        repo.head.reference = repo.heads['master']
         repo.head.reset(index=True, working_tree=True)
         repo.git.clean('-x', '-f', '-d')
 

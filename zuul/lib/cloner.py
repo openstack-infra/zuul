@@ -106,22 +106,22 @@ class Cloner(object):
         # Ensure that we don't have stale remotes around
         repo.prune()
 
-        override_zuul_ref = self.zuul_ref
-        # FIXME should be origin HEAD branch which might not be 'master'
-        fallback_branch = 'master'
-        fallback_zuul_ref = re.sub(self.zuul_branch, fallback_branch,
+        indicated_branch = self.branch or self.zuul_branch
+
+        override_zuul_ref = re.sub(self.zuul_branch, indicated_branch,
                                    self.zuul_ref)
 
-        if self.branch:
-            override_zuul_ref = re.sub(self.zuul_branch, self.branch,
-                                       self.zuul_ref)
-            if repo.hasBranch(self.branch):
-                self.log.debug("upstream repo has branch %s", self.branch)
-                fallback_branch = self.branch
-                fallback_zuul_ref = self.zuul_ref
-            else:
-                self.log.exception("upstream repo is missing branch %s",
-                                   self.branch)
+        if repo.hasBranch(indicated_branch):
+            self.log.debug("upstream repo has branch %s", indicated_branch)
+            fallback_branch = indicated_branch
+        else:
+            self.log.debug("upstream repo is missing branch %s",
+                           self.branch)
+            # FIXME should be origin HEAD branch which might not be 'master'
+            fallback_branch = 'master'
+
+        fallback_zuul_ref = re.sub(self.zuul_branch, fallback_branch,
+                                   self.zuul_ref)
 
         if (self.fetchFromZuul(repo, project, override_zuul_ref)
             or (fallback_zuul_ref != override_zuul_ref and
