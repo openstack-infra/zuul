@@ -4,6 +4,7 @@ pipelines:
 
 projects:
   - name: foo
+  # gate pipeline is not defined.
     gate:
       - test
 

@@ -10,7 +10,7 @@ pipelines:
 project-templates:
   - name: template-generic
     check:
-     # Template uses the 'project' parameter' which must
+     # Template uses the 'project' parameter' which must be provided
      - '{project}-merge'
 
 projects:

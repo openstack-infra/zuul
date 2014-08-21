@@ -1,4 +1,5 @@
 pipelines:
+  # The pipeline must have a manager
   - name: check
 
 projects:

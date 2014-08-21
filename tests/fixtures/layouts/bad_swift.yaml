@@ -16,11 +16,10 @@ jobs:
     swift:
       - name: logs
   - name: ^.*-merge$
+    # swift requires a name
     swift:
         container: merge_assets
     failure-message: Unable to merge change
-  - name: test-test
-    swift:
 
 projects:
   - name: test-org/test

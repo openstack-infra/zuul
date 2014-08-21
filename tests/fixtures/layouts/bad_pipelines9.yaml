@@ -1,4 +1,5 @@
 pipelines:
+  # Names must be unique.
   - name: check
     manager: IndependentPipelineManager
   - name: check
