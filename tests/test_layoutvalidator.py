@@ -57,7 +57,7 @@ class TestLayoutValidator(testtools.TestCase):
                     error = str(e)
                     print '  ', error
                     if error in errors:
-                        raise Exception("Error has already beed tested: %s" %
+                        raise Exception("Error has already been tested: %s" %
                                         error)
                     else:
                         errors.append(error)
