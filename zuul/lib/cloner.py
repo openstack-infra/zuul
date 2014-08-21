@@ -28,7 +28,8 @@ class Cloner(object):
     log = logging.getLogger("zuul.Cloner")
 
     def __init__(self, git_base_url, projects, workspace, zuul_branch,
-                 zuul_ref, zuul_url, branch=None, clone_map_file=None):
+                 zuul_ref, zuul_url, branch=None, clone_map_file=None,
+                 project_branches=None):
 
         self.clone_map = []
         self.dests = None
@@ -40,6 +41,7 @@ class Cloner(object):
         self.zuul_branch = zuul_branch
         self.zuul_ref = zuul_ref
         self.zuul_url = zuul_url
+        self.project_branches = project_branches or {}
 
         if clone_map_file:
             self.readCloneMap(clone_map_file)
@@ -98,6 +100,12 @@ class Cloner(object):
          2) Zuul reference for the master branch
          3) The tip of the indicated branch
          4) The tip of the master branch
+
+        The "indicated branch" is one of the following:
+
+         A) The project-specific override branch (from project_branches arg)
+         B) The user specified branch (from the branch arg)
+         C) ZUUL_BRANCH (from the zuul_branch arg)
         """
 
         repo = self.cloneUpstream(project, dest)
@@ -107,6 +115,8 @@ class Cloner(object):
         repo.prune()
 
         indicated_branch = self.branch or self.zuul_branch
+        if project in self.project_branches:
+            indicated_branch = self.project_branches[project]
 
         override_zuul_ref = re.sub(self.zuul_branch, indicated_branch,
                                    self.zuul_ref)
