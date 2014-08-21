@@ -35,3 +35,11 @@ projects:
   - name: org/project4
     gate:
         - integration
+
+  - name: org/project5
+    gate:
+        - integration
+
+  - name: org/project6
+    gate:
+        - integration
