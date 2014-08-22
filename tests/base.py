@@ -976,7 +976,6 @@ class ZuulTestCase(testtools.TestCase):
         threads = threading.enumerate()
         if len(threads) > 1:
             self.log.error("More than one thread is running: %s" % threads)
-        super(ZuulTestCase, self).tearDown()
 
     def init_repo(self, project):
         parts = project.split('/')
