@@ -183,7 +183,6 @@ class Scheduler(threading.Thread):
         self.triggers = dict()
         self.reporters = dict()
         self.config = None
-        self._maintain_trigger_cache = False
 
         self.trigger_event_queue = Queue.Queue()
         self.result_event_queue = Queue.Queue()
@@ -667,6 +666,7 @@ class Scheduler(threading.Thread):
                             "Exception while canceling build %s "
                             "for change %s" % (build, item.change))
             self.layout = layout
+            self.maintainTriggerCache()
             for trigger in self.triggers.values():
                 trigger.postConfig()
             if statsd:
@@ -783,10 +783,6 @@ class Scheduler(threading.Thread):
                 for pipeline in self.layout.pipelines.values():
                     while pipeline.manager.processQueue():
                         pass
-
-                if self._maintain_trigger_cache:
-                    self.maintainTriggerCache()
-                    self._maintain_trigger_cache = False
 
             except Exception:
                 self.log.exception("Exception in run handler:")
@@ -1171,7 +1167,6 @@ class BasePipelineManager(object):
         self.log.debug("Removing change %s from queue" % item.change)
         change_queue = self.pipeline.getQueue(item.change.project)
         change_queue.dequeueItem(item)
-        self.sched._maintain_trigger_cache = True
 
     def removeChange(self, change):
         # Remove a change from the queue, probably because it has been
