@@ -75,3 +75,15 @@ cloner processes the clones in the order supplied, so you should swap the
 projects::
 
   zuul-cloner project project/plugins/plugin1
+
+Cached repositories
+-------------------
+
+The ``--cache-dir`` option can be used to reduce network traffic by
+cloning from a local repository which may not be up to date.
+
+If the ``--cache-dir`` option is supplied, zuul-cloner will start by
+cloning any projects it processes from those found in that directory.
+The URL of origin remote of the resulting clone will be reset to use
+the ``git_base_url`` and then the remote will be updated so that the
+repository has all the information in the upstream repository.

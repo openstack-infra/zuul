@@ -54,6 +54,10 @@ class Cloner(zuul.cmd.ZuulApp):
         parser.add_argument('--version', dest='version', action='version',
                             version=self._get_version(),
                             help='show zuul version')
+        parser.add_argument('--cache-dir', dest='cache_dir',
+                            help=('a directory that holds cached copies of '
+                                  'repos from which to make an initial clone.'
+                                  ))
         parser.add_argument('git_base_url',
                             help='reference repo to clone from')
         parser.add_argument('projects', nargs='+',
@@ -142,6 +146,7 @@ class Cloner(zuul.cmd.ZuulApp):
             branch=self.args.branch,
             clone_map_file=self.args.clone_map_file,
             project_branches=project_branches,
+            cache_dir=self.args.cache_dir,
         )
         cloner.execute()
 
