@@ -978,6 +978,10 @@ also be added::
      check:
       - foobar-extra-special-job
 
+Individual jobs may optionally be added to pipelines (e.g. check,
+gate, et cetera) for a project, in addtion to those provided by
+templates.
+
 The order of the jobs listed in the project (which only affects the
 order of jobs listed on the report) will be the jobs from each
 template in the order listed, followed by any jobs individually listed
