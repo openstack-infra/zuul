@@ -849,6 +849,8 @@ class ZuulTestCase(testtools.TestCase):
         self.init_repo("org/project2")
         self.init_repo("org/project3")
         self.init_repo("org/project4")
+        self.init_repo("org/project5")
+        self.init_repo("org/project6")
         self.init_repo("org/one-job-project")
         self.init_repo("org/nonvoting-project")
         self.init_repo("org/templated-project")

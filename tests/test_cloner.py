@@ -177,3 +177,165 @@ class TestCloner(ZuulTestCase):
         self.worker.hold_jobs_in_build = False
         self.worker.release()
         self.waitUntilSettled()
+
+    def test_upgrade(self):
+        # Simulates an upgrade test
+        self.worker.hold_jobs_in_build = True
+        projects = ['org/project1', 'org/project2', 'org/project3',
+                    'org/project4', 'org/project5', 'org/project6']
+
+        self.create_branch('org/project2', 'stable/havana')
+        self.create_branch('org/project3', 'stable/havana')
+        self.create_branch('org/project4', 'stable/havana')
+        self.create_branch('org/project5', 'stable/havana')
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project3', 'stable/havana', 'C')
+        D = self.fake_gerrit.addFakeChange('org/project3', 'master', 'D')
+        E = self.fake_gerrit.addFakeChange('org/project4', 'stable/havana', 'E')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+        D.addApproval('CRVW', 2)
+        E.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(D.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(E.addApproval('APRV', 1))
+
+        self.waitUntilSettled()
+
+        self.assertEquals(5, len(self.builds), "Five builds are running")
+
+        # Check the old side of the upgrade first
+        upstream = self.getUpstreamRepos(projects)
+        states = [
+            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
+             'org/project2': str(upstream['org/project2'].commit('stable/havana')),
+             'org/project3': str(upstream['org/project3'].commit('stable/havana')),
+             'org/project4': str(upstream['org/project4'].commit('stable/havana')),
+             'org/project5': str(upstream['org/project5'].commit('stable/havana')),
+             'org/project6': str(upstream['org/project6'].commit('master')),
+             },
+            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
+             'org/project2': str(upstream['org/project2'].commit('stable/havana')),
+             'org/project3': str(upstream['org/project3'].commit('stable/havana')),
+             'org/project4': str(upstream['org/project4'].commit('stable/havana')),
+             'org/project5': str(upstream['org/project5'].commit('stable/havana')),
+             'org/project6': str(upstream['org/project6'].commit('master')),
+             },
+            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
+             'org/project2': str(upstream['org/project2'].commit('stable/havana')),
+             'org/project3': self.builds[2].parameters['ZUUL_COMMIT'],
+             'org/project4': str(upstream['org/project4'].commit('stable/havana')),
+
+             'org/project5': str(upstream['org/project5'].commit('stable/havana')),
+             'org/project6': str(upstream['org/project6'].commit('master')),
+             },
+            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
+             'org/project2': str(upstream['org/project2'].commit('stable/havana')),
+             'org/project3': self.builds[2].parameters['ZUUL_COMMIT'],
+             'org/project4': str(upstream['org/project4'].commit('stable/havana')),
+             'org/project5': str(upstream['org/project5'].commit('stable/havana')),
+             'org/project6': str(upstream['org/project6'].commit('master')),
+             },
+            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
+             'org/project2': str(upstream['org/project2'].commit('stable/havana')),
+             'org/project3': self.builds[2].parameters['ZUUL_COMMIT'],
+             'org/project4': self.builds[4].parameters['ZUUL_COMMIT'],
+             'org/project5': str(upstream['org/project5'].commit('stable/havana')),
+             'org/project6': str(upstream['org/project6'].commit('master')),
+             },
+            ]
+
+        for number, build in enumerate(self.builds):
+            self.log.debug("Build parameters: %s", build.parameters)
+            change_number = int(build.parameters['ZUUL_CHANGE'])
+            cloner = zuul.lib.cloner.Cloner(
+                git_base_url=self.upstream_root,
+                projects=projects,
+                workspace=self.workspace_root,
+                zuul_branch=build.parameters['ZUUL_BRANCH'],
+                zuul_ref=build.parameters['ZUUL_REF'],
+                zuul_url=self.git_root,
+                branch='stable/havana', # Old branch for upgrade
+                )
+            cloner.execute()
+            work = self.getWorkspaceRepos(projects)
+            state = states[number]
+
+            for project in projects:
+                self.assertEquals(state[project],
+                                  str(work[project].commit('HEAD')),
+                                  'Project %s commit for build %s should '
+                                  'be correct on old side of upgrade' %
+                                  (project, number))
+            shutil.rmtree(self.workspace_root)
+
+        # Check the new side of the upgrade
+        states = [
+            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
+             'org/project2': str(upstream['org/project2'].commit('master')),
+             'org/project3': str(upstream['org/project3'].commit('master')),
+             'org/project4': str(upstream['org/project4'].commit('master')),
+             'org/project5': str(upstream['org/project5'].commit('master')),
+             'org/project6': str(upstream['org/project6'].commit('master')),
+             },
+            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
+             'org/project2': self.builds[1].parameters['ZUUL_COMMIT'],
+             'org/project3': str(upstream['org/project3'].commit('master')),
+             'org/project4': str(upstream['org/project4'].commit('master')),
+             'org/project5': str(upstream['org/project5'].commit('master')),
+             'org/project6': str(upstream['org/project6'].commit('master')),
+             },
+            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
+             'org/project2': self.builds[1].parameters['ZUUL_COMMIT'],
+             'org/project3': str(upstream['org/project3'].commit('master')),
+             'org/project4': str(upstream['org/project4'].commit('master')),
+             'org/project5': str(upstream['org/project5'].commit('master')),
+             'org/project6': str(upstream['org/project6'].commit('master')),
+             },
+            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
+             'org/project2': self.builds[1].parameters['ZUUL_COMMIT'],
+             'org/project3': self.builds[3].parameters['ZUUL_COMMIT'],
+             'org/project4': str(upstream['org/project4'].commit('master')),
+             'org/project5': str(upstream['org/project5'].commit('master')),
+             'org/project6': str(upstream['org/project6'].commit('master')),
+             },
+            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
+             'org/project2': self.builds[1].parameters['ZUUL_COMMIT'],
+             'org/project3': self.builds[3].parameters['ZUUL_COMMIT'],
+             'org/project4': str(upstream['org/project4'].commit('master')),
+             'org/project5': str(upstream['org/project5'].commit('master')),
+             'org/project6': str(upstream['org/project6'].commit('master')),
+             },
+            ]
+
+        for number, build in enumerate(self.builds):
+            self.log.debug("Build parameters: %s", build.parameters)
+            change_number = int(build.parameters['ZUUL_CHANGE'])
+            cloner = zuul.lib.cloner.Cloner(
+                git_base_url=self.upstream_root,
+                projects=projects,
+                workspace=self.workspace_root,
+                zuul_branch=build.parameters['ZUUL_BRANCH'],
+                zuul_ref=build.parameters['ZUUL_REF'],
+                zuul_url=self.git_root,
+                branch='master', # New branch for upgrade
+                )
+            cloner.execute()
+            work = self.getWorkspaceRepos(projects)
+            state = states[number]
+
+            for project in projects:
+                self.assertEquals(state[project],
+                                  str(work[project].commit('HEAD')),
+                                  'Project %s commit for build %s should '
+                                  'be correct on old side of upgrade' %
+                                  (project, number))
+            shutil.rmtree(self.workspace_root)
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
