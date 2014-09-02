@@ -22,8 +22,16 @@ projects:
 
   - name: org/project1
     gate:
-        - project1-project2-integration
+        - integration
 
   - name: org/project2
     gate:
-        - project1-project2-integration
+        - integration
+
+  - name: org/project3
+    gate:
+        - integration
+
+  - name: org/project4
+    gate:
+        - integration
