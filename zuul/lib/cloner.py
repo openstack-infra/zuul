@@ -29,13 +29,14 @@ class Cloner(object):
 
     def __init__(self, git_base_url, projects, workspace, zuul_branch,
                  zuul_ref, zuul_url, branch=None, clone_map_file=None,
-                 project_branches=None):
+                 project_branches=None, cache_dir=None):
 
         self.clone_map = []
         self.dests = None
 
         self.branch = branch
         self.git_url = git_base_url
+        self.cache_dir = cache_dir
         self.projects = projects
         self.workspace = workspace
         self.zuul_branch = zuul_branch
@@ -66,9 +67,24 @@ class Cloner(object):
         self.log.info("Prepared all repositories")
 
     def cloneUpstream(self, project, dest):
+        # Check for a cached git repo first
+        git_cache = '%s/%s' % (self.cache_dir, project)
         git_upstream = '%s/%s' % (self.git_url, project)
-        self.log.info("Creating repo %s from upstream %s",
-                      project, git_upstream)
+        if (self.cache_dir and
+            os.path.exists(git_cache) and
+            not os.path.exists(dest)):
+            # file:// tells git not to hard-link across repos
+            git_cache = 'file://%s' % git_cache
+            self.log.info("Creating repo %s from cache %s",
+                          project, git_cache)
+            new_repo = git.Repo.clone_from(git_cache, dest)
+            self.log.info("Updating origin remote in repo %s to %s",
+                          project, git_upstream)
+            origin = new_repo.remotes.origin.config_writer.set(
+                'url', git_upstream)
+        else:
+            self.log.info("Creating repo %s from upstream %s",
+                          project, git_upstream)
         repo = Repo(
             remote=git_upstream,
             local=dest,
