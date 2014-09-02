@@ -50,12 +50,6 @@ class TestCloner(ZuulTestCase):
 
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
-
-        A.addPatchset(['project_one.txt'])
-        B.addPatchset(['project_two.txt'])
-        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
-        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
-
         A.addApproval('CRVW', 2)
         B.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
@@ -65,39 +59,36 @@ class TestCloner(ZuulTestCase):
 
         self.assertEquals(2, len(self.builds), "Two builds are running")
 
-        a_zuul_ref = b_zuul_ref = None
         for build in self.builds:
             self.log.debug("Build parameters: %s", build.parameters)
-            if build.parameters['ZUUL_CHANGE'] == '1':
-                a_zuul_ref = build.parameters['ZUUL_REF']
-                a_zuul_commit = build.parameters['ZUUL_COMMIT']
-            if build.parameters['ZUUL_CHANGE'] == '2':
-                b_zuul_ref = build.parameters['ZUUL_REF']
-                b_zuul_commit = build.parameters['ZUUL_COMMIT']
-
-        self.worker.hold_jobs_in_build = False
-        self.worker.release()
-        self.waitUntilSettled()
-
-        # Repos setup, now test the cloner
-        for zuul_ref in [a_zuul_ref, b_zuul_ref]:
+            change_number = int(build.parameters['ZUUL_CHANGE'])
             cloner = zuul.lib.cloner.Cloner(
                 git_base_url=self.upstream_root,
                 projects=['org/project1', 'org/project2'],
                 workspace=self.workspace_root,
                 zuul_branch='master',
-                zuul_ref=zuul_ref,
+                zuul_ref=build.parameters['ZUUL_REF'],
                 zuul_url=self.git_root,
                 branch='master',
-                clone_map_file=os.path.join(FIXTURE_DIR, 'clonemap.yaml')
             )
             cloner.execute()
             work_repo1 = git.Repo(os.path.join(self.workspace_root,
                                                'org/project1'))
-            self.assertEquals(a_zuul_commit, str(work_repo1.commit('HEAD')))
-
             work_repo2 = git.Repo(os.path.join(self.workspace_root,
                                                'org/project2'))
-            self.assertEquals(b_zuul_commit, str(work_repo2.commit('HEAD')))
-
+            if change_number >= 1:
+                self.assertEquals(
+                    self.builds[0].parameters['ZUUL_COMMIT'],
+                    str(work_repo1.commit('HEAD')))
+            if change_number >= 2:
+                self.assertEquals(
+                    self.builds[1].parameters['ZUUL_COMMIT'],
+                    str(work_repo2.commit('HEAD')))
+            else:
+                self.assertEquals(str(work_repo2.commit('master')),
+                                  str(work_repo2.commit('HEAD')))
             shutil.rmtree(self.workspace_root)
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
