@@ -4,6 +4,7 @@ pipelines:
     trigger:
       gerrit:
         - event: comment-added
+          # approved is not a valid entry. Should be approval.
           approved: 1
 
 projects:

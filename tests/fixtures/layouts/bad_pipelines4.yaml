@@ -3,6 +3,7 @@ pipelines:
     manager: IndependentPipelineManager
     trigger:
       gerrit:
+        # non-event is not a valid gerrit event
         - event: non-event
 
 projects:

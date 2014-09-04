@@ -3,6 +3,7 @@ pipelines:
     manager: IndependentPipelineManager
     trigger:
       gerrit:
+        # event is a required item but it is missing.
         - approval:
             - approved: 1
 
