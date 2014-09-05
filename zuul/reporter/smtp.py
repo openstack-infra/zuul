@@ -17,8 +17,10 @@ import smtplib
 
 from email.mime.text import MIMEText
 
+from zuul.reporter import BaseReporter
 
-class Reporter(object):
+
+class SMTPReporter(BaseReporter):
     """Sends off reports to emails via SMTP."""
 
     name = 'smtp'
@@ -61,11 +63,3 @@ class Reporter(object):
         except:
             return "Could not send email via SMTP"
         return
-
-    def getSubmitAllowNeeds(self, params):
-        """Get a list of code review labels that are allowed to be
-        "needed" in the submit records for a change, with respect
-        to this queue.  In other words, the list of review labels
-        this reporter itself is likely to set before submitting.
-        """
-        return []

@@ -1041,8 +1041,8 @@ class ZuulTestCase(BaseTestCase):
     def register_reporters(self):
         # Register the available reporters
         self.sched.registerReporter(
-            zuul.reporter.gerrit.Reporter(self.fake_gerrit))
-        self.smtp_reporter = zuul.reporter.smtp.Reporter(
+            zuul.reporter.gerrit.GerritReporter(self.fake_gerrit))
+        self.smtp_reporter = zuul.reporter.smtp.SMTPReporter(
             self.config.get('smtp', 'default_from'),
             self.config.get('smtp', 'default_to'),
             self.config.get('smtp', 'server'))

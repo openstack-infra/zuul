@@ -175,8 +175,8 @@ class Server(zuul.cmd.ZuulApp):
         # See comment at top of file about zuul imports
         import zuul.reporter.gerrit
         import zuul.reporter.smtp
-        gerrit_reporter = zuul.reporter.gerrit.Reporter(self.gerrit)
-        smtp_reporter = zuul.reporter.smtp.Reporter(
+        gerrit_reporter = zuul.reporter.gerrit.GerritReporter(self.gerrit)
+        smtp_reporter = zuul.reporter.smtp.SMTPReporter(
             self.config.get('smtp', 'default_from')
             if self.config.has_option('smtp', 'default_from') else 'zuul',
             self.config.get('smtp', 'default_to')

@@ -15,7 +15,10 @@
 import logging
 
 
-class Reporter(object):
+from zuul.reporter import BaseReporter
+
+
+class GerritReporter(BaseReporter):
     """Sends off reports to Gerrit."""
 
     name = 'gerrit'

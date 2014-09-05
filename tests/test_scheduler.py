@@ -3361,23 +3361,23 @@ For CI problems and help debugging, contact ci@example.org"""
 
         self.assertTrue(isinstance(
             self.sched.layout.pipelines['check'].merge_failure_actions[0].
-            reporter, zuul.reporter.gerrit.Reporter))
+            reporter, zuul.reporter.gerrit.GerritReporter))
 
         self.assertTrue(
             (
                 isinstance(self.sched.layout.pipelines['gate'].
                            merge_failure_actions[0].reporter,
-                           zuul.reporter.smtp.Reporter) and
+                           zuul.reporter.smtp.SMTPReporter) and
                 isinstance(self.sched.layout.pipelines['gate'].
                            merge_failure_actions[1].reporter,
-                           zuul.reporter.gerrit.Reporter)
+                           zuul.reporter.gerrit.GerritReporter)
             ) or (
                 isinstance(self.sched.layout.pipelines['gate'].
                            merge_failure_actions[0].reporter,
-                           zuul.reporter.gerrit.Reporter) and
+                           zuul.reporter.gerrit.GerritReporter) and
                 isinstance(self.sched.layout.pipelines['gate'].
                            merge_failure_actions[1].reporter,
-                           zuul.reporter.smtp.Reporter)
+                           zuul.reporter.smtp.SMTPReporter)
             )
         )
 
