@@ -18,9 +18,10 @@ import time
 import urllib2
 from zuul.lib import gerrit
 from zuul.model import Change, Ref, NullChange
+from zuul.source import BaseSource
 
 
-class Gerrit(object):
+class GerritSource(BaseSource):
     name = 'gerrit'
     log = logging.getLogger("zuul.source.Gerrit")
     replication_timeout = 300
@@ -104,7 +105,7 @@ class Gerrit(object):
         sha = refs.get(ref, '')
         return sha
 
-    def waitForRefSha(self, project, ref, old_sha=''):
+    def _waitForRefSha(self, project, ref, old_sha=''):
         # Wait for the ref to show up in the repo
         start = time.time()
         while time.time() - start < self.replication_timeout:
@@ -132,7 +133,7 @@ class Gerrit(object):
 
         ref = 'refs/heads/' + change.branch
         self.log.debug("Waiting for %s to appear in git repo" % (change))
-        if self.waitForRefSha(change.project, ref, change._ref_sha):
+        if self._waitForRefSha(change.project, ref, change._ref_sha):
             self.log.debug("Change %s is in the git repo" %
                            (change))
             return True
@@ -210,7 +211,7 @@ class Gerrit(object):
             change.ref = event.ref
             change.oldrev = event.oldrev
             change.newrev = event.newrev
-            change.url = self.getGitwebUrl(project, sha=event.newrev)
+            change.url = self._getGitwebUrl(project, sha=event.newrev)
         else:
             change = NullChange(project)
         return change
@@ -229,7 +230,7 @@ class Gerrit(object):
         key = '%s,%s' % (change.number, change.patchset)
         self._change_cache[key] = change
         try:
-            self.updateChange(change, history)
+            self._updateChange(change, history)
         except Exception:
             del self._change_cache[key]
             raise
@@ -289,7 +290,7 @@ class Gerrit(object):
                 records.append(result)
         return records
 
-    def updateChange(self, change, history=None):
+    def _updateChange(self, change, history=None):
         self.log.info("Updating information for %s,%s" %
                       (change.number, change.patchset))
         data = self.gerrit.query(change.number)
@@ -401,7 +402,7 @@ class Gerrit(object):
         url = 'ssh://%s@%s:%s/%s' % (user, server, port, project.name)
         return url
 
-    def getGitwebUrl(self, project, sha=None):
+    def _getGitwebUrl(self, project, sha=None):
         url = '%s/gitweb?p=%s.git' % (self.baseurl, project)
         if sha:
             url += ';a=commitdiff;h=' + sha

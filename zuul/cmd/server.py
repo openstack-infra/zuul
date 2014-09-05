@@ -148,7 +148,8 @@ class Server(zuul.cmd.ZuulApp):
         # Register the available sources
         # See comment at top of file about zuul imports
         import zuul.source.gerrit
-        self.gerrit_source = zuul.source.gerrit.Gerrit(self.config, self.sched)
+        self.gerrit_source = zuul.source.gerrit.GerritSource(self.config,
+                                                             self.sched)
 
         self.sched.registerSource(self.gerrit_source)
 
