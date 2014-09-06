@@ -159,13 +159,11 @@ class Server(zuul.cmd.ZuulApp):
         import zuul.trigger.gerrit
         import zuul.trigger.timer
         import zuul.trigger.zuultrigger
-        self.gerrit_trigger = zuul.trigger.gerrit.Gerrit(self.gerrit,
-                                                         self.config,
-                                                         self.sched,
-                                                         self.gerrit_source)
-        timer = zuul.trigger.timer.Timer(self.config, self.sched)
-        zuultrigger = zuul.trigger.zuultrigger.ZuulTrigger(self.config,
-                                                           self.sched)
+        self.gerrit_trigger = zuul.trigger.gerrit.GerritTrigger(
+            self.gerrit, self.config, self.sched, self.gerrit_source)
+        timer = zuul.trigger.timer.TimerTrigger(self.config, self.sched)
+        zuultrigger = zuul.trigger.zuultrigger.ZuulTrigger(
+            self.config, self.sched)
 
         self.sched.registerTrigger(self.gerrit_trigger)
         self.sched.registerTrigger(timer)

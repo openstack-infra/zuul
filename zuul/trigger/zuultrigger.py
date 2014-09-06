@@ -15,9 +15,10 @@
 
 import logging
 from zuul.model import TriggerEvent
+from zuul.trigger import BaseTrigger
 
 
-class ZuulTrigger(object):
+class ZuulTrigger(BaseTrigger):
     name = 'zuul'
     log = logging.getLogger("zuul.ZuulTrigger")
 
@@ -26,9 +27,6 @@ class ZuulTrigger(object):
         self.config = config
         self._handle_parent_change_enqueued_events = False
         self._handle_project_change_merged_events = False
-
-    def stop(self):
-        pass
 
     def onChangeMerged(self, change):
         # Called each time zuul merges a change

@@ -1027,12 +1027,12 @@ class ZuulTestCase(BaseTestCase):
 
     def register_triggers(self):
         # Register the available triggers
-        self.gerrit_trigger = zuul.trigger.gerrit.Gerrit(
+        self.gerrit_trigger = zuul.trigger.gerrit.GerritTrigger(
             self.fake_gerrit, self.config, self.sched, self.gerrit_source)
         self.gerrit_trigger.gerrit_connector.delay = 0.0
 
         self.sched.registerTrigger(self.gerrit_trigger)
-        self.timer = zuul.trigger.timer.Timer(self.config, self.sched)
+        self.timer = zuul.trigger.timer.TimerTrigger(self.config, self.sched)
         self.sched.registerTrigger(self.timer)
         self.zuultrigger = zuul.trigger.zuultrigger.ZuulTrigger(self.config,
                                                                 self.sched)
