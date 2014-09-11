@@ -50,7 +50,7 @@
         }, options);
 
         var collapsed_exceptions = [];
-        var current_filter = read_cookie('zuul_filter_string', current_filter);
+        var current_filter = read_cookie('zuul_filter_string', '');
         var $jq;
 
         var xhr,
