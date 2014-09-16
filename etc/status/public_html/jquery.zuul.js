@@ -267,9 +267,21 @@
 
                 var $change_link = $('<small />');
                 if (change.url !== null) {
-                    $change_link.append(
-                        $('<a />').attr('href', change.url).text(change.id)
-                    );
+                    if (/^[0-9a-f]{40}$/.test(change.id)) {
+                        var change_id_short = change.id.slice(0, 7);
+                        $change_link.append(
+                            $('<a />').attr('href', change.url).append(
+                                $('<abbr />')
+                                    .attr('title', change.id)
+                                    .text(change_id_short)
+                            )
+                        );
+                    }
+                    else {
+                        $change_link.append(
+                            $('<a />').attr('href', change.url).text(change.id)
+                        );
+                    }
                 }
                 else {
                     $change_link.text(change_id);
