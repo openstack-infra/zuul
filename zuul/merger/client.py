@@ -18,6 +18,8 @@ from uuid import uuid4
 
 import gear
 
+import zuul.model
+
 
 def getJobData(job):
     if not len(job.data):
@@ -79,23 +81,26 @@ class MergeClient(object):
             return True
         return False
 
-    def submitJob(self, name, data, build_set):
+    def submitJob(self, name, data, build_set,
+                  precedence=zuul.model.PRECEDENCE_NORMAL):
         uuid = str(uuid4().hex)
         self.log.debug("Submitting job %s with data %s" % (name, data))
         job = gear.Job(name,
                        json.dumps(data),
                        unique=uuid)
         self.build_sets[uuid] = build_set
-        self.gearman.submitJob(job)
+        self.gearman.submitJob(job, precedence=precedence)
 
-    def mergeChanges(self, items, build_set):
+    def mergeChanges(self, items, build_set,
+                     precedence=zuul.model.PRECEDENCE_NORMAL):
         data = dict(items=items)
-        self.submitJob('merger:merge', data, build_set)
+        self.submitJob('merger:merge', data, build_set, precedence)
 
-    def updateRepo(self, project, url, build_set):
+    def updateRepo(self, project, url, build_set,
+                   precedence=zuul.model.PRECEDENCE_NORMAL):
         data = dict(project=project,
                     url=url)
-        self.submitJob('merger:update', data, build_set)
+        self.submitJob('merger:update', data, build_set, precedence)
 
     def onBuildCompleted(self, job):
         build_set = self.build_sets.get(job.unique)

@@ -1222,12 +1222,14 @@ class BasePipelineManager(object):
             all_items = dependent_items + [item]
             merger_items = map(self._makeMergerItem, all_items)
             self.sched.merger.mergeChanges(merger_items,
-                                           item.current_build_set)
+                                           item.current_build_set,
+                                           self.pipeline.precedence)
         else:
             self.log.debug("Preparing update repo for: %s" % item.change)
             url = self.pipeline.source.getGitUrl(item.change.project)
             self.sched.merger.updateRepo(item.change.project.name,
-                                         url, build_set)
+                                         url, build_set,
+                                         self.pipeline.precedence)
         return False
 
     def _launchJobs(self, item, jobs):
