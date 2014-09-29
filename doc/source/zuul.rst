@@ -36,7 +36,7 @@ server) are specified in a third section.
 The three sections of this config and their options are documented below.
 You can also find an example zuul.conf file in the git
 `repository
-<https://github.com/openstack-infra/zuul/blob/master/etc/zuul.conf-sample>`_
+<https://git.openstack.org/cgit/openstack-infra/zuul/tree/etc/zuul.conf-sample>`_
 
 gearman
 """""""
@@ -924,7 +924,7 @@ return ``SUCCESS`` immediately.  This can be useful if you require
 that all changes be processed by a pipeline but a project has no jobs
 that can be run on it.
 
-.. seealso:: The OpenStack Zuul configuration for a comprehensive example: https://github.com/openstack-infra/config/blob/master/modules/openstack_project/files/zuul/layout.yaml
+.. seealso:: The OpenStack Zuul configuration for a comprehensive example: https://git.openstack.org/cgit/openstack-infra/project-config/tree/zuul/layout.yaml
 
 Project Templates
 """""""""""""""""
