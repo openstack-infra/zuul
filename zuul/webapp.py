@@ -13,12 +13,31 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import copy
+import json
 import logging
+import re
 import threading
 import time
 from paste import httpserver
 import webob
 from webob import dec
+
+"""Zuul main web app.
+
+Zuul supports HTTP requests directly against it for determining the
+change status. These responses are provided as json data structures.
+
+The supported urls are:
+
+ - /status: return a complex data structure that represents the entire
+   queue / pipeline structure of the system
+ - /status.json (backwards compatibility): same as /status
+ - /status/change/X,Y: return status just for gerrit change X,Y
+
+When returning status for a single gerrit change you will get an
+array of changes, they will not include the queue structure.
+"""
 
 
 class WebApp(threading.Thread):
@@ -41,9 +60,44 @@ class WebApp(threading.Thread):
     def stop(self):
         self.server.server_close()
 
+    def _changes_by_func(self, func):
+        """Filter changes by a user provided function.
+
+        In order to support arbitrary collection of subsets of changes
+        we provide a low level filtering mechanism that takes a
+        function which applies to changes. The output of this function
+        is a flattened list of those collected changes.
+        """
+        status = []
+        jsonstruct = json.loads(self.cache)
+        for pipeline in jsonstruct['pipelines']:
+            for change_queue in pipeline['change_queues']:
+                for head in change_queue['heads']:
+                    for change in head:
+                        if func(change):
+                            status.append(copy.deepcopy(change))
+        return json.dumps(status)
+
+    def _status_for_change(self, rev):
+        """Return the statuses for a particular change id X,Y."""
+        def func(change):
+            return change['id'] == rev
+        return self._changes_by_func(func)
+
+    def _normalize_path(self, path):
+        # support legacy status.json as well as new /status
+        if path == '/status.json' or path == '/status':
+            return "status"
+        m = re.match('/status/change/(\d+,\d+)$', path)
+        if m:
+            return m.group(1)
+        return None
+
     def app(self, request):
-        if request.path != '/status.json':
+        path = self._normalize_path(request.path)
+        if path is None:
             raise webob.exc.HTTPNotFound()
+
         if (not self.cache or
             (time.time() - self.cache_time) > self.cache_expiry):
             try:
@@ -54,8 +108,18 @@ class WebApp(threading.Thread):
             except:
                 self.log.exception("Exception formatting status:")
                 raise
-        response = webob.Response(body=self.cache,
-                                  content_type='application/json')
+
+        if path == 'status':
+            response = webob.Response(body=self.cache,
+                                      content_type='application/json')
+        else:
+            status = self._status_for_change(path)
+            if status:
+                response = webob.Response(body=status,
+                                          content_type='application/json')
+            else:
+                raise webob.exc.HTTPNotFound()
+
         response.headers['Access-Control-Allow-Origin'] = '*'
         response.last_modified = self.cache_time
         return response
