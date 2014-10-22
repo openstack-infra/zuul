@@ -462,7 +462,8 @@ explanation of each of the parameters::
     This may be used for any event.  It requires that a certain kind
     of approval be present for the current patchset of the change (the
     approval could be added by the event in question).  It follows the
-    same syntax as the "approval" pipeline requirement below.
+    same syntax as the :ref:`"approval" pipeline requirement below
+    <pipeline-require-approval>`.
 
   **timer**
     This trigger will run based on a cron-style time specification.
@@ -497,7 +498,8 @@ explanation of each of the parameters::
     This may be used for any event.  It requires that a certain kind
     of approval be present for the current patchset of the change (the
     approval could be added by the event in question).  It follows the
-    same syntax as the "approval" pipeline requirement below.
+    same syntax as the :ref:`"approval" pipeline requirement below
+    <pipeline-require-approval>`.
 
 
 **require**
@@ -506,6 +508,8 @@ explanation of each of the parameters::
   to be enqueued (via any trigger or automatic dependency resolution),
   the conditions specified here must be met or the item will not be
   enqueued.
+
+.. _pipeline-require-approval:
 
   **approval**
   This requires that a certain kind of approval be present for the
