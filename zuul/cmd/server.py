@@ -150,6 +150,7 @@ class Server(zuul.cmd.ZuulApp):
         import zuul.webapp
         import zuul.rpclistener
 
+        signal.signal(signal.SIGUSR2, zuul.cmd.stack_dump_handler)
         if (self.config.has_option('gearman_server', 'start') and
             self.config.getboolean('gearman_server', 'start')):
             self.start_gear_server()
@@ -203,7 +204,6 @@ class Server(zuul.cmd.ZuulApp):
 
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
         signal.signal(signal.SIGUSR1, self.exit_handler)
-        signal.signal(signal.SIGUSR2, zuul.cmd.stack_dump_handler)
         signal.signal(signal.SIGTERM, self.term_handler)
         while True:
             try:
