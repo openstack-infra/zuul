@@ -34,6 +34,10 @@ want Zuul to gate.  For instance, you may want to grant ``Verified
 be added to Gerrit.  Zuul is very flexible and can take advantage of
 those.
 
+If using Gerrit 2.7 or later, make sure the user is a member of a group
+that is granted the ``Stream Events`` permission, otherwise it will not
+be able to invoke the ``gerrit stream-events`` command over SSH.
+
 Timer
 -----
 
