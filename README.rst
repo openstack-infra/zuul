@@ -9,7 +9,7 @@ Contributing
 To browse the latest code, see: https://git.openstack.org/cgit/openstack-infra/zuul/tree/
 To clone the latest code, use `git clone git://git.openstack.org/openstack-infra/zuul`
 
-Bugs are handled at: https://launchpad.net/zuul
+Bugs are handled at: https://storyboard.openstack.org/#!/project/679
 
 Code reviews are, as you might expect, handled by gerrit. The gerrit they
 use is http://review.openstack.org
