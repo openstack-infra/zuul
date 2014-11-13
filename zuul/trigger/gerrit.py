@@ -330,7 +330,7 @@ class Gerrit(object):
         self.log.debug("Running query %s to get project open changes" % (query,))
         data = self.gerrit.simpleQuery(query)
         changes = []
-        for record in data[:-1]:
+        for record in data:
             try:
                 changes.append(self._getChange(record['number'],
                                                record['currentPatchSet']['number']))
