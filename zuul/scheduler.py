@@ -226,7 +226,7 @@ class Scheduler(threading.Thread):
             if 'python-file' in include:
                 fn = include['python-file']
                 if not os.path.isabs(fn):
-                    base = os.path.dirname(config_path)
+                    base = os.path.dirname(os.path.realpath(config_path))
                     fn = os.path.join(base, fn)
                 fn = os.path.expanduser(fn)
                 execfile(fn, config_env)
