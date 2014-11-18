@@ -371,6 +371,7 @@ class Gerrit(object):
         change.approvals = data['currentPatchSet'].get('approvals', [])
         change.open = data['open']
         change.status = data['status']
+        change.owner = data['owner']
 
         if change.is_merged:
             # This change is merged, so we don't need to look any further
