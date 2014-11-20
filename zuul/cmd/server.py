@@ -119,6 +119,7 @@ class Server(zuul.cmd.ZuulApp):
             statsd_host = os.environ.get('STATSD_HOST')
             statsd_port = int(os.environ.get('STATSD_PORT', 8125))
             gear.Server(4730,
+                        host=self.config.get('gearman', 'server'),
                         statsd_host=statsd_host,
                         statsd_port=statsd_port,
                         statsd_prefix='zuul.geard')
