@@ -1,0 +1,13 @@
+pipelines:
+  - name: 'check'
+    manager: IndependentPipelineManager
+    trigger:
+      gerrit:
+        - event: patchset-created
+          ref: /some/ref/path
+
+projects:
+  - name: org/project
+    merge-mode: cherry-pick
+    check:
+      - project-check
