@@ -145,21 +145,33 @@ class Gerrit(object):
         return data
 
     def simpleQuery(self, query):
-        args = '--current-patch-set'
-        cmd = 'gerrit query --format json %s %s' % (
-            args, query)
-        out, err = self._ssh(cmd)
-        if not out:
-            return False
-        lines = out.split('\n')
-        if not lines:
-            return False
-        data = [json.loads(line) for line in lines[:-1]]
-        if not data:
-            return False
-        self.log.debug("Received data from Gerrit query: \n%s" %
-                       (pprint.pformat(data)))
-        return data
+        def _query_chunk(query):
+            args = '--current-patch-set'
+
+            cmd = 'gerrit query --format json %s %s' % (
+                args, query)
+            out, err = self._ssh(cmd)
+            if not out:
+                return False
+            lines = out.split('\n')
+            if not lines:
+                return False
+            data = [json.loads(line) for line in lines[:-1]]
+            if not data:
+                return False
+            self.log.debug("Received data from Gerrit query: \n%s" %
+                           (pprint.pformat(data)))
+            return data
+
+        # gerrit returns 500 results by default, so implement paging
+        # for large projects like nova
+        alldata = []
+        chunk = _query_chunk(query)
+        while(chunk):
+            alldata.extend(chunk)
+            sortkey = "resume_sortkey:'%s'" % chunk[-1]["sortKey"]
+            chunk = _query_chunk("%s %s" % (query, sortkey))
+        return alldata
 
     def _open(self):
         client = paramiko.SSHClient()
