@@ -52,6 +52,7 @@ import zuul.merger.merger
 import zuul.merger.server
 import zuul.reporter.gerrit
 import zuul.reporter.smtp
+import zuul.source.gerrit
 import zuul.trigger.gerrit
 import zuul.trigger.timer
 import zuul.trigger.zuultrigger
@@ -382,12 +383,12 @@ class FakeGerrit(object):
     log = logging.getLogger("zuul.test.FakeGerrit")
 
     def __init__(self, hostname, username, port=29418, keyfile=None,
-                 changes_dbs={}):
+                 changes_dbs={}, queues_dbs={}):
         self.hostname = hostname
         self.username = username
         self.port = port
         self.keyfile = keyfile
-        self.event_queue = Queue.Queue()
+        self.event_queue = queues_dbs.get(hostname, {})
         self.fixture_dir = os.path.join(FIXTURE_DIR, 'gerrit')
         self.change_number = 0
         self.changes = changes_dbs.get(hostname, {})
@@ -499,13 +500,14 @@ class FakeURLOpener(object):
         return ret
 
 
-class FakeGerritTrigger(zuul.trigger.gerrit.Gerrit):
+class FakeGerritSource(zuul.source.gerrit.Gerrit):
     name = 'gerrit'
 
     def __init__(self, upstream_root, *args):
-        super(FakeGerritTrigger, self).__init__(*args)
+        super(FakeGerritSource, self).__init__(*args)
         self.upstream_root = upstream_root
-        self.gerrit_connector.delay = 0.0
+        self.replication_timeout = 1.5
+        self.replication_retry_interval = 0.5
 
     def getGitUrl(self, project):
         return os.path.join(self.upstream_root, project.name)
@@ -958,11 +960,6 @@ class ZuulTestCase(BaseTestCase):
         old_urlopen = urllib2.urlopen
         urllib2.urlopen = URLOpenerFactory
 
-        self.launcher = zuul.launcher.gearman.Gearman(self.config, self.sched,
-                                                      self.swift)
-        self.merge_client = zuul.merger.client.MergeClient(
-            self.config, self.sched)
-
         self.smtp_messages = []
 
         def FakeSMTPFactory(*args, **kw):
@@ -971,12 +968,16 @@ class ZuulTestCase(BaseTestCase):
 
         # Set a changes database so multiple FakeGerrit's can report back to
         # a virtual canonical database given by the configured hostname
+        self.gerrit_queues_dbs = {
+            self.config.get('gerrit', 'server'): Queue.Queue()
+        }
         self.gerrit_changes_dbs = {
             self.config.get('gerrit', 'server'): {}
         }
 
         def FakeGerritFactory(*args, **kw):
             kw['changes_dbs'] = self.gerrit_changes_dbs
+            kw['queues_dbs'] = self.gerrit_queues_dbs
             return FakeGerrit(*args, **kw)
 
         self.useFixture(fixtures.MonkeyPatch('zuul.lib.gerrit.Gerrit',
@@ -984,32 +985,23 @@ class ZuulTestCase(BaseTestCase):
 
         self.useFixture(fixtures.MonkeyPatch('smtplib.SMTP', FakeSMTPFactory))
 
-        self.gerrit = FakeGerritTrigger(
-            self.upstream_root, self.config, self.sched)
-        self.gerrit.replication_timeout = 1.5
-        self.gerrit.replication_retry_interval = 0.5
-        self.fake_gerrit = self.gerrit.gerrit
-        self.fake_gerrit.upstream_root = self.upstream_root
-
-        self.webapp = zuul.webapp.WebApp(self.sched, port=0)
-        self.rpc = zuul.rpclistener.RPCListener(self.config, self.sched)
+        self.launcher = zuul.launcher.gearman.Gearman(self.config, self.sched,
+                                                      self.swift)
+        self.merge_client = zuul.merger.client.MergeClient(
+            self.config, self.sched)
 
         self.sched.setLauncher(self.launcher)
         self.sched.setMerger(self.merge_client)
-        self.sched.registerTrigger(self.gerrit)
-        self.timer = zuul.trigger.timer.Timer(self.config, self.sched)
-        self.sched.registerTrigger(self.timer)
-        self.zuultrigger = zuul.trigger.zuultrigger.ZuulTrigger(self.config,
-                                                                self.sched)
-        self.sched.registerTrigger(self.zuultrigger)
 
-        self.sched.registerReporter(
-            zuul.reporter.gerrit.Reporter(self.gerrit))
-        self.smtp_reporter = zuul.reporter.smtp.Reporter(
-            self.config.get('smtp', 'default_from'),
-            self.config.get('smtp', 'default_to'),
-            self.config.get('smtp', 'server'))
-        self.sched.registerReporter(self.smtp_reporter)
+        self.register_sources()
+        self.fake_gerrit = self.gerrit_source.gerrit
+        self.fake_gerrit.upstream_root = self.upstream_root
+
+        self.register_triggers()
+        self.register_reporters()
+
+        self.webapp = zuul.webapp.WebApp(self.sched, port=0)
+        self.rpc = zuul.rpclistener.RPCListener(self.config, self.sched)
 
         self.sched.start()
         self.sched.reconfigure(self.config)
@@ -1023,6 +1015,38 @@ class ZuulTestCase(BaseTestCase):
 
         self.addCleanup(self.assertFinalState)
         self.addCleanup(self.shutdown)
+
+    def register_sources(self):
+        # Register the available sources
+        self.gerrit_source = FakeGerritSource(
+            self.upstream_root, self.config, self.sched)
+        self.gerrit_source.replication_timeout = 1.5
+        self.gerrit_source.replication_retry_interval = 0.5
+
+        self.sched.registerSource(self.gerrit_source)
+
+    def register_triggers(self):
+        # Register the available triggers
+        self.gerrit_trigger = zuul.trigger.gerrit.Gerrit(
+            self.fake_gerrit, self.config, self.sched, self.gerrit_source)
+        self.gerrit_trigger.gerrit_connector.delay = 0.0
+
+        self.sched.registerTrigger(self.gerrit_trigger)
+        self.timer = zuul.trigger.timer.Timer(self.config, self.sched)
+        self.sched.registerTrigger(self.timer)
+        self.zuultrigger = zuul.trigger.zuultrigger.ZuulTrigger(self.config,
+                                                                self.sched)
+        self.sched.registerTrigger(self.zuultrigger)
+
+    def register_reporters(self):
+        # Register the available reporters
+        self.sched.registerReporter(
+            zuul.reporter.gerrit.Reporter(self.fake_gerrit))
+        self.smtp_reporter = zuul.reporter.smtp.Reporter(
+            self.config.get('smtp', 'default_from'),
+            self.config.get('smtp', 'default_to'),
+            self.config.get('smtp', 'server'))
+        self.sched.registerReporter(self.smtp_reporter)
 
     def setup_config(self):
         """Per test config object. Override to set different config."""
@@ -1050,7 +1074,7 @@ class ZuulTestCase(BaseTestCase):
         self.merge_server.join()
         self.merge_client.stop()
         self.worker.shutdown()
-        self.gerrit.stop()
+        self.gerrit_trigger.stop()
         self.timer.stop()
         self.sched.stop()
         self.sched.join()

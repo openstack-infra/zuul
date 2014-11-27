@@ -41,17 +41,6 @@ class Timer(object):
     def stop(self):
         self.apsched.shutdown()
 
-    def isMerged(self, change, head=None):
-        raise Exception("Timer trigger does not support checking if "
-                        "a change is merged.")
-
-    def canMerge(self, change, allow_needs):
-        raise Exception("Timer trigger does not support checking if "
-                        "a change can merge.")
-
-    def maintainCache(self, relevant):
-        return
-
     def postConfig(self):
         for job in self.apsched.get_jobs():
             self.apsched.unschedule_job(job)
@@ -81,12 +70,3 @@ class Timer(object):
                                               second=second,
                                               args=(pipeline.name,
                                                     timespec,))
-
-    def getChange(self, event, project):
-        raise Exception("Timer trigger does not support changes.")
-
-    def getGitUrl(self, project):
-        raise Exception("Timer trigger does not support changes.")
-
-    def getGitwebUrl(self, project, sha=None):
-        raise Exception("Timer trigger does not support changes.")

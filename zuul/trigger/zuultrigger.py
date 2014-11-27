@@ -30,17 +30,6 @@ class ZuulTrigger(object):
     def stop(self):
         pass
 
-    def isMerged(self, change, head=None):
-        raise Exception("Zuul trigger does not support checking if "
-                        "a change is merged.")
-
-    def canMerge(self, change, allow_needs):
-        raise Exception("Zuul trigger does not support checking if "
-                        "a change can merge.")
-
-    def maintainCache(self, relevant):
-        return
-
     def onChangeMerged(self, change):
         # Called each time zuul merges a change
         if self._handle_project_change_merged_events:
@@ -62,7 +51,7 @@ class ZuulTrigger(object):
                     "%s in %s" % (change, pipeline))
 
     def _createProjectChangeMergedEvents(self, change):
-        changes = self.sched.triggers['gerrit'].getProjectOpenChanges(
+        changes = self.sched.sources['gerrit'].getProjectOpenChanges(
             change.project)
         for open_change in changes:
             self._createProjectChangeMergedEvent(open_change)
@@ -111,12 +100,3 @@ class ZuulTrigger(object):
                     self._handle_parent_change_enqueued_events = True
                 elif 'project-change-merged' in ef._types:
                     self._handle_project_change_merged_events = True
-
-    def getChange(self, number, patchset, refresh=False):
-        raise Exception("Zuul trigger does not support changes.")
-
-    def getGitUrl(self, project):
-        raise Exception("Zuul trigger does not support changes.")
-
-    def getGitwebUrl(self, project, sha=None):
-        raise Exception("Zuul trigger does not support changes.")

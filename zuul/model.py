@@ -301,11 +301,11 @@ class ActionReporter(object):
         self.reporter = reporter
         self.params = params
 
-    def report(self, change, message):
+    def report(self, source, change, message):
         """Sends the built message off to the configured reporter.
         Takes the change and message and adds the configured parameters.
         """
-        return self.reporter.report(change, message, self.params)
+        return self.reporter.report(source, change, message, self.params)
 
     def getSubmitAllowNeeds(self):
         """Gets the submit allow needs from the reporter based off the

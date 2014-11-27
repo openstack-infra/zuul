@@ -144,17 +144,58 @@ class Server(zuul.cmd.ZuulApp):
         if self.gear_server_pid:
             os.kill(self.gear_server_pid, signal.SIGKILL)
 
+    def register_sources(self):
+        # Register the available sources
+        # See comment at top of file about zuul imports
+        import zuul.source.gerrit
+        self.gerrit_source = zuul.source.gerrit.Gerrit(self.config, self.sched)
+
+        self.sched.registerSource(self.gerrit_source)
+
+    def register_triggers(self):
+        # Register the available triggers
+        # See comment at top of file about zuul imports
+        import zuul.trigger.gerrit
+        import zuul.trigger.timer
+        import zuul.trigger.zuultrigger
+        self.gerrit_trigger = zuul.trigger.gerrit.Gerrit(self.gerrit,
+                                                         self.config,
+                                                         self.sched,
+                                                         self.gerrit_source)
+        timer = zuul.trigger.timer.Timer(self.config, self.sched)
+        zuultrigger = zuul.trigger.zuultrigger.ZuulTrigger(self.config,
+                                                           self.sched)
+
+        self.sched.registerTrigger(self.gerrit_trigger)
+        self.sched.registerTrigger(timer)
+        self.sched.registerTrigger(zuultrigger)
+
+    def register_reporters(self):
+        # Register the available reporters
+        # See comment at top of file about zuul imports
+        import zuul.reporter.gerrit
+        import zuul.reporter.smtp
+        gerrit_reporter = zuul.reporter.gerrit.Reporter(self.gerrit)
+        smtp_reporter = zuul.reporter.smtp.Reporter(
+            self.config.get('smtp', 'default_from')
+            if self.config.has_option('smtp', 'default_from') else 'zuul',
+            self.config.get('smtp', 'default_to')
+            if self.config.has_option('smtp', 'default_to') else 'zuul',
+            self.config.get('smtp', 'server')
+            if self.config.has_option('smtp', 'server') else 'localhost',
+            self.config.get('smtp', 'port')
+            if self.config.has_option('smtp', 'port') else 25
+        )
+
+        self.sched.registerReporter(gerrit_reporter)
+        self.sched.registerReporter(smtp_reporter)
+
     def main(self):
         # See comment at top of file about zuul imports
         import zuul.scheduler
         import zuul.launcher.gearman
         import zuul.merger.client
         import zuul.lib.swift
-        import zuul.reporter.gerrit
-        import zuul.reporter.smtp
-        import zuul.trigger.gerrit
-        import zuul.trigger.timer
-        import zuul.trigger.zuultrigger
         import zuul.webapp
         import zuul.rpclistener
 
@@ -172,35 +213,22 @@ class Server(zuul.cmd.ZuulApp):
         gearman = zuul.launcher.gearman.Gearman(self.config, self.sched,
                                                 self.swift)
         merger = zuul.merger.client.MergeClient(self.config, self.sched)
-        gerrit = zuul.trigger.gerrit.Gerrit(self.config, self.sched)
-        timer = zuul.trigger.timer.Timer(self.config, self.sched)
-        zuultrigger = zuul.trigger.zuultrigger.ZuulTrigger(self.config,
-                                                           self.sched)
+
         if self.config.has_option('zuul', 'status_expiry'):
             cache_expiry = self.config.getint('zuul', 'status_expiry')
         else:
             cache_expiry = 1
         webapp = zuul.webapp.WebApp(self.sched, cache_expiry=cache_expiry)
         rpc = zuul.rpclistener.RPCListener(self.config, self.sched)
-        gerrit_reporter = zuul.reporter.gerrit.Reporter(gerrit)
-        smtp_reporter = zuul.reporter.smtp.Reporter(
-            self.config.get('smtp', 'default_from')
-            if self.config.has_option('smtp', 'default_from') else 'zuul',
-            self.config.get('smtp', 'default_to')
-            if self.config.has_option('smtp', 'default_to') else 'zuul',
-            self.config.get('smtp', 'server')
-            if self.config.has_option('smtp', 'server') else 'localhost',
-            self.config.get('smtp', 'port')
-            if self.config.has_option('smtp', 'port') else 25
-        )
 
         self.sched.setLauncher(gearman)
         self.sched.setMerger(merger)
-        self.sched.registerTrigger(gerrit)
-        self.sched.registerTrigger(timer)
-        self.sched.registerTrigger(zuultrigger)
-        self.sched.registerReporter(gerrit_reporter)
-        self.sched.registerReporter(smtp_reporter)
+        self.register_sources()
+        # TODO(jhesketh): Use connections instead of grabbing the gerrit lib
+        #                 from the source
+        self.gerrit = self.gerrit_source.gerrit
+        self.register_triggers()
+        self.register_reporters()
 
         self.log.info('Starting scheduler')
         self.sched.start()

@@ -35,7 +35,7 @@ class Reporter(object):
         self.smtp_default_from = smtp_default_from
         self.smtp_default_to = smtp_default_to
 
-    def report(self, change, message, params):
+    def report(self, source, change, message, params):
         """Send the compiled report message via smtp."""
         self.log.debug("Report change %s, params %s, message: %s" %
                        (change, params, message))

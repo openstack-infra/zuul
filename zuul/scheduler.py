@@ -189,6 +189,7 @@ class Scheduler(threading.Thread):
         self._stopped = False
         self.launcher = None
         self.merger = None
+        self.sources = dict()
         self.triggers = dict()
         self.reporters = dict()
         self.config = None
@@ -265,8 +266,8 @@ class Scheduler(threading.Thread):
             pipeline = Pipeline(conf_pipeline['name'])
             pipeline.description = conf_pipeline.get('description')
             # TODO(jeblair): remove backwards compatibility:
-            pipeline.source = self.triggers[conf_pipeline.get('source',
-                                                              'gerrit')]
+            pipeline.source = self.sources[conf_pipeline.get('source',
+                                                             'gerrit')]
             precedence = model.PRECEDENCE_MAP[conf_pipeline.get('precedence')]
             pipeline.precedence = precedence
             pipeline.failure_message = conf_pipeline.get('failure-message',
@@ -513,6 +514,11 @@ class Scheduler(threading.Thread):
     def setMerger(self, merger):
         self.merger = merger
 
+    def registerSource(self, source, name=None):
+        if name is None:
+            name = source.name
+        self.sources[name] = source
+
     def registerTrigger(self, trigger, name=None):
         if name is None:
             name = trigger.name
@@ -756,6 +762,8 @@ class Scheduler(threading.Thread):
             self.maintainTriggerCache()
             for trigger in self.triggers.values():
                 trigger.postConfig()
+            for source in self.sources.values():
+                source.postConfig()
             if statsd:
                 try:
                     for pipeline in self.layout.pipelines.values():
@@ -887,8 +895,8 @@ class Scheduler(threading.Thread):
                 relevant.update(item.change.getRelatedChanges())
             self.log.debug("End maintain trigger cache for: %s" % pipeline)
         self.log.debug("Trigger cache size: %s" % len(relevant))
-        for trigger in self.triggers.values():
-            trigger.maintainCache(relevant)
+        for source in self.sources.values():
+            source.maintainCache(relevant)
 
     def process_event_queue(self):
         self.log.debug("Fetching trigger event")
@@ -1131,14 +1139,14 @@ class BasePipelineManager(object):
                 if self.sched.config.has_option('zuul', 'status_url'):
                     msg += "\n" + self.sched.config.get('zuul', 'status_url')
                 ret = self.sendReport(self.pipeline.start_actions,
-                                      change, msg)
+                                      self.pipeline.source, change, msg)
                 if ret:
                     self.log.error("Reporting change start %s received: %s" %
                                    (change, ret))
             except:
                 self.log.exception("Exception while reporting start:")
 
-    def sendReport(self, action_reporters, change, message):
+    def sendReport(self, action_reporters, source, change, message):
         """Sends the built message off to configured reporters.
 
         Takes the action_reporters, change, message and extra options and
@@ -1147,7 +1155,7 @@ class BasePipelineManager(object):
         report_errors = []
         if len(action_reporters) > 0:
             for action_reporter in action_reporters:
-                ret = action_reporter.report(change, message)
+                ret = action_reporter.report(source, change, message)
                 if ret:
                     report_errors.append(ret)
             if len(report_errors) == 0:
@@ -1604,7 +1612,8 @@ class BasePipelineManager(object):
             try:
                 self.log.info("Reporting change %s, actions: %s" %
                               (item.change, actions))
-                ret = self.sendReport(actions, item.change, report)
+                ret = self.sendReport(actions, self.pipeline.source,
+                                      item.change, report)
                 if ret:
                     self.log.error("Reporting change %s received: %s" %
                                    (item.change, ret))
