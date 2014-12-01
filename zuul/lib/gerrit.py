@@ -120,7 +120,7 @@ class Gerrit(object):
             if v is True:
                 cmd += ' --%s' % k
             else:
-                cmd += ' --%s %s' % (k, v)
+                cmd += ' --label %s=%s' % (k, v)
         cmd += ' %s' % change
         out, err = self._ssh(cmd)
         return err
