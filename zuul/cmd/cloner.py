@@ -97,7 +97,7 @@ class Cloner(zuul.cmd.ZuulApp):
         zuul_missing = [zuul_opt for zuul_opt, val in vars(args).items()
                         if zuul_opt.startswith('zuul') and val is None]
         if zuul_missing:
-            parser.error(("Some Zuul parameters are not properly set:\n\t%s\n"
+            parser.error(("Some Zuul parameters are not set:\n\t%s\n"
                           "Define them either via environment variables or "
                           "using options above." %
                           "\n\t".join(sorted(zuul_missing))))
