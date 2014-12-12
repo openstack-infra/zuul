@@ -38,7 +38,7 @@ class RPCClient(object):
         job = gear.Job(name,
                        json.dumps(data),
                        unique=str(time.time()))
-        self.gearman.submitJob(job)
+        self.gearman.submitJob(job, timeout=300)
 
         self.log.debug("Waiting for job completion")
         while not job.complete:

@@ -89,7 +89,8 @@ class MergeClient(object):
                        json.dumps(data),
                        unique=uuid)
         self.build_sets[uuid] = build_set
-        self.gearman.submitJob(job, precedence=precedence)
+        self.gearman.submitJob(job, precedence=precedence,
+                               timeout=300)
 
     def mergeChanges(self, items, build_set,
                      precedence=zuul.model.PRECEDENCE_NORMAL):

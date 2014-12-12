@@ -128,7 +128,7 @@ class ZuulGearmanClient(gear.Client):
             for connection in self.active_connections:
                 try:
                     req = gear.StatusAdminRequest()
-                    connection.sendAdminRequest(req)
+                    connection.sendAdminRequest(req, timeout=300)
                 except Exception:
                     self.log.exception("Exception while checking functions")
                     continue
@@ -203,7 +203,7 @@ class Gearman(object):
         for connection in self.gearman.active_connections:
             try:
                 req = gear.StatusAdminRequest()
-                connection.sendAdminRequest(req)
+                connection.sendAdminRequest(req, timeout=300)
             except Exception:
                 self.log.exception("Exception while checking functions")
                 continue
@@ -361,15 +361,16 @@ class Gearman(object):
             precedence = gear.PRECEDENCE_LOW
 
         try:
-            self.gearman.submitJob(gearman_job, precedence=precedence)
+            self.gearman.submitJob(gearman_job, precedence=precedence,
+                                   timeout=300)
         except Exception:
             self.log.exception("Unable to submit job to Gearman")
             self.onBuildCompleted(gearman_job, 'EXCEPTION')
             return build
 
         if not gearman_job.handle:
-            self.log.error("No job handle was received for %s after 30 seconds"
-                           " marking as lost." %
+            self.log.error("No job handle was received for %s after"
+                           " 300 seconds; marking as lost." %
                            gearman_job)
             self.onBuildCompleted(gearman_job, 'NO_HANDLE')
 
@@ -467,7 +468,7 @@ class Gearman(object):
         job = build.__gearman_job
 
         req = gear.CancelJobAdminRequest(job.handle)
-        job.connection.sendAdminRequest(req)
+        job.connection.sendAdminRequest(req, timeout=300)
         self.log.debug("Response to cancel build %s request: %s" %
                        (build, req.response.strip()))
         if req.response.startswith("OK"):
@@ -486,7 +487,8 @@ class Gearman(object):
                             json.dumps(data), unique=stop_uuid)
         self.meta_jobs[stop_uuid] = stop_job
         self.log.debug("Submitting stop job: %s", stop_job)
-        self.gearman.submitJob(stop_job, precedence=gear.PRECEDENCE_HIGH)
+        self.gearman.submitJob(stop_job, precedence=gear.PRECEDENCE_HIGH,
+                               timeout=300)
         return True
 
     def setBuildDescription(self, build, desc):
@@ -507,7 +509,8 @@ class Gearman(object):
         desc_job = gear.Job(name, json.dumps(data), unique=desc_uuid)
         self.meta_jobs[desc_uuid] = desc_job
         self.log.debug("Submitting describe job: %s", desc_job)
-        self.gearman.submitJob(desc_job, precedence=gear.PRECEDENCE_LOW)
+        self.gearman.submitJob(desc_job, precedence=gear.PRECEDENCE_LOW,
+                               timeout=300)
         return True
 
     def lookForLostBuilds(self):
