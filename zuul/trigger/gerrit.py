@@ -382,13 +382,13 @@ class Gerrit(object):
             # for dependencies.
             return change
 
-        change.needs_change = None
+        change.needs_changes = []
         if 'dependsOn' in data:
             parts = data['dependsOn'][0]['ref'].split('/')
             dep_num, dep_ps = parts[3], parts[4]
             dep = self._getChange(dep_num, dep_ps)
             if not dep.is_merged:
-                change.needs_change = dep
+                change.needs_changes.append(dep)
 
         change.needed_by_changes = []
         if 'neededBy' in data:

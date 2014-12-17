@@ -1073,7 +1073,7 @@ class BasePipelineManager(object):
     def checkForChangesNeededBy(self, change):
         return True
 
-    def getFailingDependentItem(self, item):
+    def getFailingDependentItems(self, item):
         return None
 
     def getDependentItems(self, item):
@@ -1300,11 +1300,11 @@ class BasePipelineManager(object):
             except MergeFailure:
                 pass
             return (True, nnfi, ready_ahead)
-        dep_item = self.getFailingDependentItem(item)
+        dep_items = self.getFailingDependentItems(item)
         actionable = change_queue.isActionable(item)
         item.active = actionable
         ready = False
-        if dep_item:
+        if dep_items:
             failing_reasons.append('a needed change is failing')
             self.cancelJobs(item, prime=False)
         else:
@@ -1784,46 +1784,63 @@ class DependentPipelineManager(BasePipelineManager):
             return ret
         self.log.debug("  Change %s must be merged ahead of %s" %
                        (ret, change))
-        return self.addChange(ret, quiet=quiet,
-                              ignore_requirements=ignore_requirements)
+        for needed_change in ret:
+            r = self.addChange(needed_change, quiet=quiet,
+                               ignore_requirements=ignore_requirements)
+            if not r:
+                return False
+        return True
 
     def checkForChangesNeededBy(self, change):
         self.log.debug("Checking for changes needed by %s:" % change)
         # Return true if okay to proceed enqueing this change,
         # false if the change should not be enqueued.
-        if not hasattr(change, 'needs_change'):
+        if not hasattr(change, 'needs_changes'):
             self.log.debug("  Changeish does not support dependencies")
             return True
-        if not change.needs_change:
+        if not change.needs_changes:
             self.log.debug("  No changes needed")
             return True
-        if change.needs_change.is_merged:
-            self.log.debug("  Needed change is merged")
-            return True
-        if not change.needs_change.is_current_patchset:
-            self.log.debug("  Needed change is not the current patchset")
+        changes_needed = []
+        # TODO (jeblair): this is only correct for a list of 1 element
+        for needed_change in change.needs_changes:
+            self.log.debug("  Change %s needs change %s:" % (
+                change, needed_change))
+            if needed_change.is_merged:
+                self.log.debug("  Needed change is merged")
+                continue
+            if not needed_change.is_current_patchset:
+                self.log.debug("  Needed change is not the current patchset")
+                return False
+            if self.isChangeAlreadyInQueue(needed_change):
+                self.log.debug("  Needed change is already ahead in the queue")
+                continue
+            if self.pipeline.source.canMerge(needed_change,
+                                             self.getSubmitAllowNeeds()):
+                self.log.debug("  Change %s is needed" % needed_change)
+                if needed_change not in changes_needed:
+                    changes_needed.append(needed_change)
+                    continue
+            # The needed change can't be merged.
+            self.log.debug("  Change %s is needed but can not be merged" %
+                           needed_change)
             return False
-        if self.isChangeAlreadyInQueue(change.needs_change):
-            self.log.debug("  Needed change is already ahead in the queue")
-            return True
-        if self.pipeline.source.canMerge(change.needs_change,
-                                         self.getSubmitAllowNeeds()):
-            self.log.debug("  Change %s is needed" %
-                           change.needs_change)
-            return change.needs_change
-        # The needed change can't be merged.
-        self.log.debug("  Change %s is needed but can not be merged" %
-                       change.needs_change)
-        return False
+        if changes_needed:
+            return changes_needed
+        return True
 
-    def getFailingDependentItem(self, item):
-        if not hasattr(item.change, 'needs_change'):
+    def getFailingDependentItems(self, item):
+        if not hasattr(item.change, 'needs_changes'):
             return None
-        if not item.change.needs_change:
+        if not item.change.needs_changes:
             return None
-        needs_item = self.getItemForChange(item.change.needs_change)
-        if not needs_item:
-            return None
-        if needs_item.current_build_set.failing_reasons:
-            return needs_item
+        failing_items = set()
+        for needed_change in item.change.needs_changes:
+            needed_item = self.getItemForChange(needed_change)
+            if not needed_item:
+                continue
+            if needed_item.current_build_set.failing_reasons:
+                failing_items.add(needed_item)
+        if failing_items:
+            return failing_items
         return None
