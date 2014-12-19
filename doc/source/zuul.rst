@@ -86,6 +86,8 @@ gerrit
 zuul
 """"
 
+.. _layout_config:
+
 **layout_config**
   Path to layout config file.  Used by zuul-server only.
   ``layout_config=/etc/zuul/layout.yaml``
@@ -272,10 +274,12 @@ include, and currently supports one type of inclusion, a python file::
     - python-file: local_functions.py
 
 **python-file**
-  The path to a python file.  The file will be loaded and objects that
-  it defines will be placed in a special environment which can be
-  referenced in the Zuul configuration.  Currently only the
-  parameter-function attribute of a Job uses this feature.
+  The path to a python file (either an absolute path or relative to the
+  directory name of :ref:`layout_config <layout_config>`).  The
+  file will be loaded and objects that it defines will be placed in a
+  special environment which can be referenced in the Zuul configuration.
+  Currently only the parameter-function attribute of a Job uses this
+  feature.
 
 Pipelines
 """""""""
