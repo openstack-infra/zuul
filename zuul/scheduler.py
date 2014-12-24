@@ -810,7 +810,7 @@ class Scheduler(threading.Thread):
         try:
             project = self.layout.projects.get(event.project_name)
             if not project:
-                self.log.warning("Project %s not found" % event.project_name)
+                self.log.debug("Project %s not found" % event.project_name)
                 return
 
             for pipeline in self.layout.pipelines.values():
