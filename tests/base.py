@@ -418,11 +418,15 @@ class FakeGerrit(object):
         return {}
 
     def simpleQuery(self, query):
-        # This is currently only used to return all open changes for a
-        # project
         self.queries.append(query)
-        l = [change.query() for change in self.changes.values()]
-        l.append({"type": "stats", "rowCount": 1, "runTimeMilliseconds": 3})
+        if query.startswith('change:'):
+            # Query a specific changeid
+            changeid = query[len('change:'):]
+            l = [change.query() for change in self.changes.values()
+                 if change.data['id'] == changeid]
+        else:
+            # Query all open changes
+            l = [change.query() for change in self.changes.values()]
         return l
 
     def startWatching(self, *args, **kw):
