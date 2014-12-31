@@ -111,6 +111,9 @@ class Pipeline(object):
                 return queue
         return None
 
+    def removeQueue(self, queue):
+        self.queues.remove(queue)
+
     def getJobTree(self, project):
         tree = self.job_trees.get(project)
         return tree
@@ -148,6 +151,8 @@ class Pipeline(object):
         return torun
 
     def findJobsToRun(self, item):
+        if not item.live:
+            return []
         tree = self.getJobTree(item.change.project)
         if not tree:
             return []
@@ -193,6 +198,8 @@ class Pipeline(object):
         return False
 
     def isHoldingFollowingChanges(self, item):
+        if not item.live:
+            return False
         for job in self.getJobs(item.change):
             if not job.hold_following_changes:
                 continue
@@ -256,7 +263,6 @@ class Pipeline(object):
             j_queues.append(j_queue)
             j_queue['heads'] = []
             j_queue['window'] = queue.window
-            j_queue['dependent'] = queue.dependent
 
             j_changes = []
             for e in queue.queue:
@@ -303,8 +309,8 @@ class ChangeQueue(object):
     different projects; this is one of them.  For instance, there may
     a queue shared by interrelated projects foo and bar, and a second
     queue for independent project baz.  Pipelines have one or more
-    PipelineQueues."""
-    def __init__(self, pipeline, dependent=True, window=0, window_floor=1,
+    ChangeQueues."""
+    def __init__(self, pipeline, window=0, window_floor=1,
                  window_increase_type='linear', window_increase_factor=1,
                  window_decrease_type='exponential', window_decrease_factor=2):
         self.pipeline = pipeline
@@ -314,7 +320,6 @@ class ChangeQueue(object):
         self.projects = []
         self._jobs = set()
         self.queue = []
-        self.dependent = dependent
         self.window = window
         self.window_floor = window_floor
         self.window_increase_type = window_increase_type
@@ -348,14 +353,15 @@ class ChangeQueue(object):
             self.name = self.assigned_name or self.generated_name
 
     def enqueueChange(self, change):
-        item = QueueItem(self.pipeline, change)
+        item = QueueItem(self, change)
         self.enqueueItem(item)
         item.enqueue_time = time.time()
         return item
 
     def enqueueItem(self, item):
         item.pipeline = self.pipeline
-        if self.dependent and self.queue:
+        item.queue = self
+        if self.queue:
             item.item_ahead = self.queue[-1]
             item.item_ahead.items_behind.append(item)
         self.queue.append(item)
@@ -374,8 +380,6 @@ class ChangeQueue(object):
         item.dequeue_time = time.time()
 
     def moveItem(self, item, item_ahead):
-        if not self.dependent:
-            return False
         if item.item_ahead == item_ahead:
             return False
         # Remove from current location
@@ -399,20 +403,20 @@ class ChangeQueue(object):
         # TODO merge semantics
 
     def isActionable(self, item):
-        if self.dependent and self.window:
+        if self.window:
             return item in self.queue[:self.window]
         else:
             return True
 
     def increaseWindowSize(self):
-        if self.dependent:
+        if self.window:
             if self.window_increase_type == 'linear':
                 self.window += self.window_increase_factor
             elif self.window_increase_type == 'exponential':
                 self.window *= self.window_increase_factor
 
     def decreaseWindowSize(self):
-        if self.dependent:
+        if self.window:
             if self.window_decrease_type == 'linear':
                 self.window = max(
                     self.window_floor,
@@ -650,8 +654,9 @@ class BuildSet(object):
 class QueueItem(object):
     """A changish inside of a Pipeline queue"""
 
-    def __init__(self, pipeline, change):
-        self.pipeline = pipeline
+    def __init__(self, queue, change):
+        self.pipeline = queue.pipeline
+        self.queue = queue
         self.change = change  # a changeish
         self.build_sets = []
         self.dequeued_needing_change = False
@@ -662,7 +667,8 @@ class QueueItem(object):
         self.enqueue_time = None
         self.dequeue_time = None
         self.reported = False
-        self.active = False
+        self.active = False  # Whether an item is within an active window
+        self.live = True  # Whether an item is intended to be processed at all
 
     def __repr__(self):
         if self.pipeline:
