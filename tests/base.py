@@ -79,6 +79,16 @@ def random_sha1():
     return hashlib.sha1(str(random.random())).hexdigest()
 
 
+def iterate_timeout(max_seconds, purpose):
+    start = time.time()
+    count = 0
+    while (time.time() < start + max_seconds):
+        count += 1
+        yield count
+        time.sleep(0)
+    raise Exception("Timeout waiting for %s" % purpose)
+
+
 class ChangeReference(git.Reference):
     _common_path_default = "refs/changes"
     _points_to_commits_only = True
