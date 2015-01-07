@@ -193,6 +193,9 @@ class LayoutSchema(object):
         return parameters
 
     def getSchema(self, data):
+        if not isinstance(data, dict):
+            raise Exception("Malformed layout configuration: top-level type "
+                            "should be a dictionary")
         pipelines = data.get('pipelines')
         if not pipelines:
             pipelines = []
