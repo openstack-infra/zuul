@@ -8,7 +8,7 @@ paramiko>=1.8.0
 GitPython>=0.3.2.1
 lockfile>=0.8
 ordereddict
-python-daemon
+python-daemon<2.0
 extras
 statsd>=1.0.0,<3.0
 voluptuous>=0.7
