@@ -451,6 +451,7 @@ class Job(object):
         self._branches = []
         self.files = []
         self._files = []
+        self.skip_if_matcher = None
         self.swift = {}
 
     def __str__(self):
@@ -476,6 +477,8 @@ class Job(object):
         if other.files:
             self.files = other.files[:]
             self._files = other._files[:]
+        if other.skip_if_matcher:
+            self.skip_if_matcher = other.skip_if_matcher.copy()
         if other.swift:
             self.swift.update(other.swift)
         self.hold_following_changes = other.hold_following_changes
@@ -498,6 +501,9 @@ class Job(object):
                     if f.match(cf):
                         matches_file = True
         if self.files and not matches_file:
+            return False
+
+        if self.skip_if_matcher and self.skip_if_matcher.matches(change):
             return False
 
         return True

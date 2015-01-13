@@ -807,11 +807,11 @@ class FakeSwiftClientConnection(swiftclient.client.Connection):
         return endpoint, ''
 
 
-class ZuulTestCase(testtools.TestCase):
+class BaseTestCase(testtools.TestCase):
     log = logging.getLogger("zuul.test")
 
     def setUp(self):
-        super(ZuulTestCase, self).setUp()
+        super(BaseTestCase, self).setUp()
         test_timeout = os.environ.get('OS_TEST_TIMEOUT', 0)
         try:
             test_timeout = int(test_timeout)
@@ -835,6 +835,12 @@ class ZuulTestCase(testtools.TestCase):
                 level=logging.DEBUG,
                 format='%(asctime)s %(name)-32s '
                 '%(levelname)-8s %(message)s'))
+
+
+class ZuulTestCase(BaseTestCase):
+
+    def setUp(self):
+        super(ZuulTestCase, self).setUp()
         if USE_TEMPDIR:
             tmp_root = self.useFixture(fixtures.TempDir(
                 rootdir=os.environ.get("ZUUL_TEST_ROOT"))
