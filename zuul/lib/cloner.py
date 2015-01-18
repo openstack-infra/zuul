@@ -126,7 +126,7 @@ class Cloner(object):
 
         repo = self.cloneUpstream(project, dest)
 
-        repo.update()
+        repo.reset()
         # Ensure that we don't have stale remotes around
         repo.prune()
 
