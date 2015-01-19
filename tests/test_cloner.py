@@ -18,6 +18,7 @@
 import logging
 import os
 import shutil
+import time
 
 import git
 
@@ -476,6 +477,70 @@ class TestCloner(ZuulTestCase):
                                   str(work[project].commit('HEAD')),
                                   'Project %s commit for build %s should '
                                   'be correct' % (project, number))
+            shutil.rmtree(self.workspace_root)
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+    def test_periodic(self):
+        self.worker.hold_jobs_in_build = True
+        self.create_branch('org/project', 'stable/havana')
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-timer.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+
+        # The pipeline triggers every second, so we should have seen
+        # several by now.
+        time.sleep(5)
+        self.waitUntilSettled()
+
+        builds = self.builds[:]
+
+        self.worker.hold_jobs_in_build = False
+        # Stop queuing timer triggered jobs so that the assertions
+        # below don't race against more jobs being queued.
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-no-timer.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+        self.worker.release()
+        self.waitUntilSettled()
+
+        projects = ['org/project']
+
+        self.assertEquals(2, len(builds), "Two builds are running")
+
+        upstream = self.getUpstreamRepos(projects)
+        states = [
+            {'org/project': str(upstream['org/project'].commit('stable/havana')),
+             },
+            {'org/project': str(upstream['org/project'].commit('stable/havana')),
+             },
+            ]
+
+        for number, build in enumerate(builds):
+            self.log.debug("Build parameters: %s", build.parameters)
+            cloner = zuul.lib.cloner.Cloner(
+                git_base_url=self.upstream_root,
+                projects=projects,
+                workspace=self.workspace_root,
+                zuul_branch=build.parameters.get('ZUUL_BRANCH', None),
+                zuul_ref=build.parameters.get('ZUUL_REF', None),
+                zuul_url=self.git_root,
+                branch='stable/havana',
+                )
+            cloner.execute()
+            work = self.getWorkspaceRepos(projects)
+            state = states[number]
+
+            for project in projects:
+                self.assertEquals(state[project],
+                                  str(work[project].commit('HEAD')),
+                                  'Project %s commit for build %s should '
+                                  'be correct' % (project, number))
+
             shutil.rmtree(self.workspace_root)
 
         self.worker.hold_jobs_in_build = False

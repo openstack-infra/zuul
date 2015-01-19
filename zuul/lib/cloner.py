@@ -39,8 +39,8 @@ class Cloner(object):
         self.cache_dir = cache_dir
         self.projects = projects
         self.workspace = workspace
-        self.zuul_branch = zuul_branch
-        self.zuul_ref = zuul_ref
+        self.zuul_branch = zuul_branch or ''
+        self.zuul_ref = zuul_ref or ''
         self.zuul_url = zuul_url
         self.project_branches = project_branches or {}
 
