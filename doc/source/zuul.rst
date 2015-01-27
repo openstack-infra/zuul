@@ -1046,9 +1046,9 @@ example, this would give you a list of Gerrit commands to reverify or
 recheck changes for the gate and check pipelines respectively::
 
   ./tools/zuul-changes.py --review-host=review.openstack.org \
-      http://zuul.openstack.org/ gate 'reverify no bug'
+      http://zuul.openstack.org/ gate 'reverify'
   ./tools/zuul-changes.py --review-host=review.openstack.org \
-      http://zuul.openstack.org/ check 'recheck no bug'
+      http://zuul.openstack.org/ check 'recheck'
 
 If you send a SIGUSR2 to the zuul-server process, Zuul will dump a stack
 trace for each running thread into its debug log. This is useful for
