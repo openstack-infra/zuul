@@ -1166,9 +1166,11 @@ class BasePipelineManager(object):
             self.enqueueChangesBehind(change, quiet, ignore_requirements)
             self.sched.triggers['zuul'].onChangeEnqueued(item.change,
                                                          self.pipeline)
+            return True
         else:
-            self.log.error("Unable to find change queue for project %s" %
-                           change.project)
+            self.log.debug("Unable to find change queue for "
+                           "change %s in project %s" %
+                           (change, change.project))
             return False
 
     def dequeueItem(self, item):
