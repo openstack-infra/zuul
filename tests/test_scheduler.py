@@ -2953,7 +2953,87 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(A.reported, 2)
         self.assertEqual(B.reported, 2)
 
-        self.assertEqual(self.history[-1].changes, '2,1 1,1')
+        self.assertEqual(self.getJobFromHistory('project1-merge').changes,
+                         '2,1 1,1')
+
+    def test_crd_branch(self):
+        "Test cross-repo dependencies in multiple branches"
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project2', 'mp', 'C')
+        C.data['id'] = B.data['id']
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+
+        # A Depends-On: B+C
+        A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            A.subject, B.data['id'])
+
+        self.worker.hold_jobs_in_build = True
+        B.addApproval('APRV', 1)
+        C.addApproval('APRV', 1)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.reported, 2)
+
+        self.assertEqual(self.getJobFromHistory('project1-merge').changes,
+                         '2,1 3,1 1,1')
+
+    def test_crd_multiline(self):
+        "Test multiple depends-on lines in commit"
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+
+        # A Depends-On: B+C
+        A.data['commitMessage'] = '%s\n\nDepends-On: %s\nDepends-On: %s\n' % (
+            A.subject, B.data['id'], C.data['id'])
+
+        self.worker.hold_jobs_in_build = True
+        B.addApproval('APRV', 1)
+        C.addApproval('APRV', 1)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.reported, 2)
+
+        self.assertEqual(self.getJobFromHistory('project1-merge').changes,
+                         '2,1 3,1 1,1')
 
     def test_crd_unshared_gate(self):
         "Test cross-repo dependencies in unshared gate queues"
@@ -3048,6 +3128,44 @@ For CI problems and help debugging, contact ci@example.org"""
         repo_messages.reverse()
         correct_messages = ['initial commit', 'B-1']
         self.assertEqual(repo_messages, correct_messages)
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.reported, 0)
+
+        self.assertEqual(self.history[0].changes, '2,1 1,1')
+        self.assertEqual(len(self.sched.layout.pipelines['check'].queues), 0)
+
+    def test_crd_check_reconfiguration(self):
+        "Test cross-repo dependencies re-enqueued in independent pipelines"
+
+        self.gearman_server.hold_jobs_in_queue = True
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+
+        # A Depends-On: B
+        A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            A.subject, B.data['id'])
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.sched.reconfigure(self.config)
+
+        # Make sure the items still share a change queue, and the
+        # first one is not live.
+        self.assertEqual(len(self.sched.layout.pipelines['check'].queues), 1)
+        queue = self.sched.layout.pipelines['check'].queues[0]
+        first_item = queue.queue[0]
+        for item in queue.queue:
+            self.assertEqual(item.queue, first_item.queue)
+        self.assertFalse(first_item.live)
+        self.assertTrue(queue.queue[1].live)
+
+        self.gearman_server.hold_jobs_in_queue = False
+        self.gearman_server.release()
+        self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(B.data['status'], 'NEW')
