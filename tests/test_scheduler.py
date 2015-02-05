@@ -601,6 +601,91 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
+    def test_needed_changes_enqueue(self):
+        "Test that a needed change is enqueued ahead"
+        #          A      Given a git tree like this, if we enqueue
+        #         / \     change C, we should walk up and down the tree
+        #        B   G    and enqueue changes in the order ABCDEFG.
+        #       /|\       This is also the order that you would get if
+        #     *C E F      you enqueued changes in the order ABCDEFG, so
+        #     /           the ordering is stable across re-enqueue events.
+        #    D
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        D = self.fake_gerrit.addFakeChange('org/project', 'master', 'D')
+        E = self.fake_gerrit.addFakeChange('org/project', 'master', 'E')
+        F = self.fake_gerrit.addFakeChange('org/project', 'master', 'F')
+        G = self.fake_gerrit.addFakeChange('org/project', 'master', 'G')
+        B.setDependsOn(A, 1)
+        C.setDependsOn(B, 1)
+        D.setDependsOn(C, 1)
+        E.setDependsOn(B, 1)
+        F.setDependsOn(B, 1)
+        G.setDependsOn(A, 1)
+
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        C.addApproval('CRVW', 2)
+        D.addApproval('CRVW', 2)
+        E.addApproval('CRVW', 2)
+        F.addApproval('CRVW', 2)
+        G.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(C.data['status'], 'NEW')
+        self.assertEqual(D.data['status'], 'NEW')
+        self.assertEqual(E.data['status'], 'NEW')
+        self.assertEqual(F.data['status'], 'NEW')
+        self.assertEqual(G.data['status'], 'NEW')
+
+        # We're about to add approvals to changes without adding the
+        # triggering events to Zuul, so that we can be sure that it is
+        # enqueing the changes based on dependencies, not because of
+        # triggering events.  Since it will have the changes cached
+        # already (without approvals), we need to clear the cache
+        # first.
+        source = self.sched.layout.pipelines['gate'].source
+        source.maintainCache([])
+
+        self.worker.hold_jobs_in_build = True
+        A.addApproval('APRV', 1)
+        B.addApproval('APRV', 1)
+        D.addApproval('APRV', 1)
+        E.addApproval('APRV', 1)
+        F.addApproval('APRV', 1)
+        G.addApproval('APRV', 1)
+        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+
+        for x in range(8):
+            self.worker.release('.*-merge')
+            self.waitUntilSettled()
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(D.data['status'], 'MERGED')
+        self.assertEqual(E.data['status'], 'MERGED')
+        self.assertEqual(F.data['status'], 'MERGED')
+        self.assertEqual(G.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.reported, 2)
+        self.assertEqual(D.reported, 2)
+        self.assertEqual(E.reported, 2)
+        self.assertEqual(F.reported, 2)
+        self.assertEqual(G.reported, 2)
+        self.assertEqual(self.history[6].changes,
+                         '1,1 2,1 3,1 4,1 5,1 6,1 7,1')
+
     def test_trigger_cache(self):
         "Test that the trigger cache operates correctly"
         self.worker.hold_jobs_in_build = True
