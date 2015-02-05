@@ -852,7 +852,7 @@ class Change(Changeish):
         self.refspec = None
 
         self.files = []
-        self.needs_change = None
+        self.needs_changes = []
         self.needed_by_changes = []
         self.is_current_patchset = True
         self.can_merge = False
@@ -885,8 +885,8 @@ class Change(Changeish):
 
     def getRelatedChanges(self):
         related = set()
-        if self.needs_change:
-            related.add(self.needs_change)
+        for c in self.needs_changes:
+            related.add(c)
         for c in self.needed_by_changes:
             related.add(c)
             related.update(c.getRelatedChanges())
