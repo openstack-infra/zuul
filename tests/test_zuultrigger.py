@@ -65,7 +65,7 @@ class TestZuulTrigger(ZuulTestCase):
         for job in self.history:
             if job.changes == '1,1':
                 self.assertEqual(job.name, 'project-gate')
-            elif job.changes == '2,1':
+            elif job.changes == '1,1 2,1':
                 self.assertEqual(job.name, 'project-check')
             elif job.changes == '1,1 3,1':
                 self.assertEqual(job.name, 'project-gate')

@@ -1921,7 +1921,7 @@ class TestScheduler(ZuulTestCase):
         status_jobs = set()
         for p in data['pipelines']:
             for q in p['change_queues']:
-                if q['dependent']:
+                if p['name'] in ['gate', 'conflict']:
                     self.assertEqual(q['window'], 20)
                 else:
                     self.assertEqual(q['window'], 0)
@@ -3014,3 +3014,45 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(B.reported, 0)
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(B.data['status'], 'NEW')
+
+    def test_crd_check(self):
+        "Test cross-repo dependencies in independent pipelines"
+
+        self.gearman_server.hold_jobs_in_queue = True
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+
+        # A Depends-On: B
+        A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            A.subject, B.data['id'])
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        queue = self.gearman_server.getQueue()
+        ref = self.getParameter(queue[-1], 'ZUUL_REF')
+        self.gearman_server.hold_jobs_in_queue = False
+        self.gearman_server.release()
+        self.waitUntilSettled()
+
+        path = os.path.join(self.git_root, "org/project1")
+        repo = git.Repo(path)
+        repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
+        repo_messages.reverse()
+        correct_messages = ['initial commit', 'A-1']
+        self.assertEqual(repo_messages, correct_messages)
+
+        path = os.path.join(self.git_root, "org/project2")
+        repo = git.Repo(path)
+        repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
+        repo_messages.reverse()
+        correct_messages = ['initial commit', 'B-1']
+        self.assertEqual(repo_messages, correct_messages)
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.reported, 0)
+
+        self.assertEqual(self.history[0].changes, '2,1 1,1')
+        self.assertEqual(len(self.sched.layout.pipelines['check'].queues), 0)
