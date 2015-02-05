@@ -1354,7 +1354,8 @@ class BasePipelineManager(object):
             failing_reasons.append("is a non-live item with no items behind")
             self.dequeueItem(item)
             changed = True
-        if (not item_ahead) and self.pipeline.areAllJobsComplete(item):
+        if ((not item_ahead) and self.pipeline.areAllJobsComplete(item)
+            and item.live):
             try:
                 self.reportItem(item)
             except MergeFailure:
