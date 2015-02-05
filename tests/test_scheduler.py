@@ -2890,3 +2890,127 @@ For CI problems and help debugging, contact ci@example.org"""
             self.getJobFromHistory('experimental-project-test').result,
             'SUCCESS')
         self.assertEqual(A.reported, 1)
+
+    def test_crd_gate(self):
+        "Test cross-repo dependencies"
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+
+        AM2 = self.fake_gerrit.addFakeChange('org/project1', 'master', 'AM2')
+        AM1 = self.fake_gerrit.addFakeChange('org/project1', 'master', 'AM1')
+        AM2.setMerged()
+        AM1.setMerged()
+
+        BM2 = self.fake_gerrit.addFakeChange('org/project2', 'master', 'BM2')
+        BM1 = self.fake_gerrit.addFakeChange('org/project2', 'master', 'BM1')
+        BM2.setMerged()
+        BM1.setMerged()
+
+        # A -> AM1 -> AM2
+        # B -> BM1 -> BM2
+        # A Depends-On: B
+        # M2 is here to make sure it is never queried.  If it is, it
+        # means zuul is walking down the entire history of merged
+        # changes.
+
+        B.setDependsOn(BM1, 1)
+        BM1.setDependsOn(BM2, 1)
+
+        A.setDependsOn(AM1, 1)
+        AM1.setDependsOn(AM2, 1)
+
+        A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            A.subject, B.data['id'])
+
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'NEW')
+
+        source = self.sched.layout.pipelines['gate'].source
+        source.maintainCache([])
+
+        self.worker.hold_jobs_in_build = True
+        B.addApproval('APRV', 1)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(AM2.queried, 0)
+        self.assertEqual(BM2.queried, 0)
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+
+        self.assertEqual(self.history[-1].changes, '2,1 1,1')
+
+    def test_crd_unshared_gate(self):
+        "Test cross-repo dependencies in unshared gate queues"
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+
+        # A Depends-On: B
+        A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            A.subject, B.data['id'])
+
+        # A and B do not share a queue, make sure that A is unable to
+        # enqueue B (and therefore, A is unable to be enqueued).
+        B.addApproval('APRV', 1)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(A.reported, 0)
+        self.assertEqual(B.reported, 0)
+        self.assertEqual(len(self.history), 0)
+
+        # Enqueue and merge B alone.
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(B.reported, 2)
+
+        # Now that B is merged, A should be able to be enqueued and
+        # merged.
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+
+    def test_crd_cycle(self):
+        "Test cross-repo dependency cycles"
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+
+        # A -> B -> A (via commit-depends)
+
+        A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            A.subject, B.data['id'])
+        B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            B.subject, A.data['id'])
+
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.reported, 0)
+        self.assertEqual(B.reported, 0)
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'NEW')
