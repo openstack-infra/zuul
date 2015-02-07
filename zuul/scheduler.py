@@ -1109,23 +1109,29 @@ class BasePipelineManager(object):
         return None
 
     def findOldVersionOfChangeAlreadyInQueue(self, change):
-        for c in self.pipeline.getChangesInQueue():
-            if change.isUpdateOf(c):
-                return c
+        for item in self.pipeline.getAllItems():
+            if not item.live:
+                continue
+            if change.isUpdateOf(item.change):
+                return item
         return None
 
     def removeOldVersionsOfChange(self, change):
         if not self.pipeline.dequeue_on_new_patchset:
             return
-        old_change = self.findOldVersionOfChangeAlreadyInQueue(change)
-        if old_change:
+        old_item = self.findOldVersionOfChangeAlreadyInQueue(change)
+        if old_item:
             self.log.debug("Change %s is a new version of %s, removing %s" %
-                           (change, old_change, old_change))
-            self.removeChange(old_change)
+                           (change, old_item.change, old_item))
+            self.removeItem(old_item)
 
     def removeAbandonedChange(self, change):
         self.log.debug("Change %s abandoned, removing." % change)
-        self.removeChange(change)
+        for item in self.pipeline.getAllItems():
+            if not item.live:
+                continue
+            if item.change.equals(change):
+                self.removeItem(item)
 
     def reEnqueueItem(self, item, last_head):
         if last_head.queue:
@@ -1205,16 +1211,14 @@ class BasePipelineManager(object):
         self.log.debug("Removing change %s from queue" % item.change)
         item.queue.dequeueItem(item)
 
-    def removeChange(self, change):
-        # Remove a change from the queue, probably because it has been
+    def removeItem(self, item):
+        # Remove an item from the queue, probably because it has been
         # superseded by another change.
-        for item in self.pipeline.getAllItems():
-            if item.change == change:
-                self.log.debug("Canceling builds behind change: %s "
-                               "because it is being removed." % item.change)
-                self.cancelJobs(item)
-                self.dequeueItem(item)
-                self.reportStats(item)
+        self.log.debug("Canceling builds behind change: %s "
+                       "because it is being removed." % item.change)
+        self.cancelJobs(item)
+        self.dequeueItem(item)
+        self.reportStats(item)
 
     def _makeMergerItem(self, item):
         # Create a dictionary with all info about the item needed by
