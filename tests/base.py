@@ -980,6 +980,10 @@ class ZuulTestCase(testtools.TestCase):
                 repos.append(obj)
         self.assertEqual(len(repos), 0)
         self.assertEmptyQueues()
+        for pipeline in self.sched.layout.pipelines.values():
+            if isinstance(pipeline.manager,
+                          zuul.scheduler.IndependentPipelineManager):
+                self.assertEqual(len(pipeline.queues), 0)
 
     def shutdown(self):
         self.log.debug("Shutting down after tests")
