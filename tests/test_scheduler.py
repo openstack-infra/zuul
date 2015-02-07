@@ -3137,6 +3137,79 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(self.history[0].changes, '2,1 1,1')
         self.assertEqual(len(self.sched.layout.pipelines['check'].queues), 0)
 
+    def test_crd_check_git_depends(self):
+        "Test single-repo dependencies in independent pipelines"
+        self.gearman_server.hold_jobs_in_queue = True
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
+
+        # Add two git-dependent changes and make sure they both report
+        # success.
+        B.setDependsOn(A, 1)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.gearman_server.hold_jobs_in_queue = False
+        self.gearman_server.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.reported, 1)
+
+        self.assertEqual(self.history[0].changes, '1,1')
+        self.assertEqual(self.history[-1].changes, '1,1 2,1')
+        self.assertEqual(len(self.sched.layout.pipelines['check'].queues), 0)
+
+        self.assertIn('Build succeeded', A.messages[0])
+        self.assertIn('Build succeeded', B.messages[0])
+
+    def test_crd_check_duplicate(self):
+        "Test duplicate check in independent pipelines"
+        self.gearman_server.hold_jobs_in_queue = True
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
+        check_pipeline = self.sched.layout.pipelines['check']
+
+        # Add two git-dependent changes...
+        B.setDependsOn(A, 1)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(len(check_pipeline.getAllItems()), 2)
+
+        # ...make sure the live one is not duplicated...
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(len(check_pipeline.getAllItems()), 2)
+
+        # ...but the non-live one is able to be.
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(len(check_pipeline.getAllItems()), 3)
+
+        self.gearman_server.hold_jobs_in_queue = False
+        self.gearman_server.release('.*-merge')
+        self.waitUntilSettled()
+        self.gearman_server.release('.*-merge')
+        self.waitUntilSettled()
+        self.gearman_server.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.reported, 1)
+
+        self.assertEqual(self.history[0].changes, '1,1 2,1')
+        self.assertEqual(self.history[1].changes, '1,1')
+        self.assertEqual(len(self.sched.layout.pipelines['check'].queues), 0)
+
+        self.assertIn('Build succeeded', A.messages[0])
+        self.assertIn('Build succeeded', B.messages[0])
+
     def test_crd_check_reconfiguration(self):
         "Test cross-repo dependencies re-enqueued in independent pipelines"
 

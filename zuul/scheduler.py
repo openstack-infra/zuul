@@ -1,4 +1,4 @@
-# Copyright 2012-2014 Hewlett-Packard Development Company, L.P.
+# Copyright 2012-2015 Hewlett-Packard Development Company, L.P.
 # Copyright 2013 OpenStack Foundation
 # Copyright 2013 Antoine "hashar" Musso
 # Copyright 2013 Wikimedia Foundation Inc.
@@ -1029,9 +1029,17 @@ class BasePipelineManager(object):
                 return True
         return False
 
-    def isChangeAlreadyInQueue(self, change):
-        for c in self.pipeline.getChangesInQueue():
-            if change.equals(c):
+    def isChangeAlreadyInPipeline(self, change):
+        # Checks live items in the pipeline
+        for item in self.pipeline.getAllItems():
+            if item.live and change.equals(item.change):
+                return True
+        return False
+
+    def isChangeAlreadyInQueue(self, change, change_queue):
+        # Checks any item in the specified change queue
+        for item in change_queue.queue:
+            if change.equals(item.change):
                 return True
         return False
 
@@ -1077,7 +1085,7 @@ class BasePipelineManager(object):
                              change_queue):
         return True
 
-    def checkForChangesNeededBy(self, change):
+    def checkForChangesNeededBy(self, change, change_queue):
         return True
 
     def getFailingDependentItems(self, item):
@@ -1139,8 +1147,13 @@ class BasePipelineManager(object):
                   ignore_requirements=False, live=True,
                   change_queue=None):
         self.log.debug("Considering adding change %s" % change)
-        if self.isChangeAlreadyInQueue(change):
-            self.log.debug("Change %s is already in queue, ignoring" % change)
+
+        # If we are adding a live change, check if it's a live item
+        # anywhere in the pipeline.  Otherwise, we will perform the
+        # duplicate check below on the specific change_queue.
+        if live and self.isChangeAlreadyInPipeline(change):
+            self.log.debug("Change %s is already in pipeline, "
+                           "ignoring" % change)
             return True
 
         if not self.isChangeReadyToBeEnqueued(change):
@@ -1168,7 +1181,7 @@ class BasePipelineManager(object):
             self.log.debug("Failed to enqueue changes ahead of %s" % change)
             return False
 
-        if self.isChangeAlreadyInQueue(change):
+        if self.isChangeAlreadyInQueue(change, change_queue):
             self.log.debug("Change %s is already in queue, ignoring" % change)
             return True
 
@@ -1306,7 +1319,7 @@ class BasePipelineManager(object):
         change_queue = item.queue
         failing_reasons = []  # Reasons this item is failing
 
-        if self.checkForChangesNeededBy(item.change) is not True:
+        if self.checkForChangesNeededBy(item.change, change_queue) is not True:
             # It's not okay to enqueue this change, we should remove it.
             self.log.info("Dequeuing change %s because "
                           "it can no longer merge" % item.change)
@@ -1719,7 +1732,7 @@ class IndependentPipelineManager(BasePipelineManager):
 
     def enqueueChangesAhead(self, change, quiet, ignore_requirements,
                             change_queue):
-        ret = self.checkForChangesNeededBy(change)
+        ret = self.checkForChangesNeededBy(change, change_queue)
         if ret in [True, False]:
             return ret
         self.log.debug("  Changes %s must be merged ahead of %s" %
@@ -1737,7 +1750,7 @@ class IndependentPipelineManager(BasePipelineManager):
                 return False
         return True
 
-    def checkForChangesNeededBy(self, change):
+    def checkForChangesNeededBy(self, change, change_queue):
         self.log.debug("Checking for changes needed by %s:" % change)
         # Return true if okay to proceed enqueing this change,
         # false if the change should not be enqueued.
@@ -1754,7 +1767,7 @@ class IndependentPipelineManager(BasePipelineManager):
             if needed_change.is_merged:
                 self.log.debug("  Needed change is merged")
                 continue
-            if self.isChangeAlreadyInQueue(needed_change):
+            if self.isChangeAlreadyInQueue(needed_change, change_queue):
                 self.log.debug("  Needed change is already ahead in the queue")
                 continue
             self.log.debug("  Change %s is needed" % needed_change)
@@ -1875,7 +1888,7 @@ class DependentPipelineManager(BasePipelineManager):
 
     def enqueueChangesAhead(self, change, quiet, ignore_requirements,
                             change_queue):
-        ret = self.checkForChangesNeededBy(change)
+        ret = self.checkForChangesNeededBy(change, change_queue)
         if ret in [True, False]:
             return ret
         self.log.debug("  Changes %s must be merged ahead of %s" %
@@ -1888,7 +1901,7 @@ class DependentPipelineManager(BasePipelineManager):
                 return False
         return True
 
-    def checkForChangesNeededBy(self, change):
+    def checkForChangesNeededBy(self, change, change_queue):
         self.log.debug("Checking for changes needed by %s:" % change)
         # Return true if okay to proceed enqueing this change,
         # false if the change should not be enqueued.
@@ -1916,7 +1929,7 @@ class DependentPipelineManager(BasePipelineManager):
             if not needed_change.is_current_patchset:
                 self.log.debug("  Needed change is not the current patchset")
                 return False
-            if self.isChangeAlreadyInQueue(needed_change):
+            if self.isChangeAlreadyInQueue(needed_change, change_queue):
                 self.log.debug("  Needed change is already ahead in the queue")
                 continue
             if self.pipeline.source.canMerge(needed_change,
