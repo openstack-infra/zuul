@@ -370,6 +370,11 @@
                     icon_title = 'Waiting until closer to head of queue to' +
                         ' start jobs';
                 }
+                else if (change.live !== true) {
+                    // Grey icon
+                    icon_name = 'grey.png';
+                    icon_title = 'Dependent change independently tested';
+                }
                 else if (change.failing_reasons &&
                          change.failing_reasons.length > 0) {
                     var reason = change.failing_reasons.join(', ');

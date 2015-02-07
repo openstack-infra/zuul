@@ -118,11 +118,13 @@ class Pipeline(object):
         tree = self.job_trees.get(project)
         return tree
 
-    def getJobs(self, changeish):
-        tree = self.getJobTree(changeish.project)
+    def getJobs(self, item):
+        if not item.live:
+            return []
+        tree = self.getJobTree(item.change.project)
         if not tree:
             return []
-        return changeish.filterJobs(tree.getJobs())
+        return item.change.filterJobs(tree.getJobs())
 
     def _findJobsToRun(self, job_trees, item):
         torun = []
@@ -159,21 +161,21 @@ class Pipeline(object):
         return self._findJobsToRun(tree.job_trees, item)
 
     def haveAllJobsStarted(self, item):
-        for job in self.getJobs(item.change):
+        for job in self.getJobs(item):
             build = item.current_build_set.getBuild(job.name)
             if not build or not build.start_time:
                 return False
         return True
 
     def areAllJobsComplete(self, item):
-        for job in self.getJobs(item.change):
+        for job in self.getJobs(item):
             build = item.current_build_set.getBuild(job.name)
             if not build or not build.result:
                 return False
         return True
 
     def didAllJobsSucceed(self, item):
-        for job in self.getJobs(item.change):
+        for job in self.getJobs(item):
             if not job.voting:
                 continue
             build = item.current_build_set.getBuild(job.name)
@@ -189,7 +191,7 @@ class Pipeline(object):
         return True
 
     def didAnyJobFail(self, item):
-        for job in self.getJobs(item.change):
+        for job in self.getJobs(item):
             if not job.voting:
                 continue
             build = item.current_build_set.getBuild(job.name)
@@ -200,7 +202,7 @@ class Pipeline(object):
     def isHoldingFollowingChanges(self, item):
         if not item.live:
             return False
-        for job in self.getJobs(item.change):
+        for job in self.getJobs(item):
             if not job.hold_following_changes:
                 continue
             build = item.current_build_set.getBuild(job.name)
@@ -700,6 +702,7 @@ class QueueItem(object):
         changeish = self.change
         ret = {}
         ret['active'] = self.active
+        ret['live'] = self.live
         if hasattr(changeish, 'url') and changeish.url is not None:
             ret['url'] = changeish.url
         else:
@@ -720,7 +723,7 @@ class QueueItem(object):
         else:
             ret['owner'] = None
         max_remaining = 0
-        for job in self.pipeline.getJobs(changeish):
+        for job in self.pipeline.getJobs(self):
             now = time.time()
             build = self.current_build_set.getBuild(job.name)
             elapsed = None
@@ -796,7 +799,7 @@ class QueueItem(object):
                 changeish.project.name,
                 changeish._id(),
                 self.item_ahead)
-        for job in self.pipeline.getJobs(changeish):
+        for job in self.pipeline.getJobs(self):
             build = self.current_build_set.getBuild(job.name)
             if build:
                 result = build.result

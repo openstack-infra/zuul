@@ -1521,7 +1521,7 @@ class BasePipelineManager(object):
         else:
             url_pattern = None
 
-        for job in self.pipeline.getJobs(item.change):
+        for job in self.pipeline.getJobs(item):
             build = item.current_build_set.getBuild(job.name)
             result = build.result
             pattern = url_pattern
