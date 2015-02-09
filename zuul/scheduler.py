@@ -251,6 +251,8 @@ class Scheduler(threading.Thread):
             pipeline.footer_message = conf_pipeline.get('footer-message', "")
             pipeline.dequeue_on_new_patchset = conf_pipeline.get(
                 'dequeue-on-new-patchset', True)
+            pipeline.ignore_dependencies = conf_pipeline.get(
+                'ignore-dependencies', False)
 
             action_reporters = {}
             for action in ['start', 'success', 'failure', 'merge-failure']:
@@ -1767,6 +1769,8 @@ class IndependentPipelineManager(BasePipelineManager):
         return True
 
     def checkForChangesNeededBy(self, change, change_queue):
+        if self.pipeline.ignore_dependencies:
+            return True
         self.log.debug("Checking for changes needed by %s:" % change)
         # Return true if okay to proceed enqueing this change,
         # false if the change should not be enqueued.

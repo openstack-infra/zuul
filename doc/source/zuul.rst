@@ -569,6 +569,15 @@ explanation of each of the parameters::
   well.  To suppress this behavior (and allow jobs to continue
   running), set this to ``false``.  Default: ``true``.
 
+**ignore-dependencies**
+  In any kind of pipeline (dependent or independent), Zuul will
+  attempt to enqueue all dependencies ahead of the current change so
+  that they are tested together (independent pipelines report the
+  results of each change regardless of the results of changes ahead).
+  To ignore dependencies completely in an independent pipeline, set
+  this to ``true``.  This option is ignored by dependent pipelines.
+  The default is: ``false``.
+
 **success**
   Describes where Zuul should report to if all the jobs complete
   successfully.

@@ -3390,3 +3390,48 @@ For CI problems and help debugging, contact ci@example.org"""
 
         self.assertEqual(self.history[0].changes, '2,1 1,1')
         self.assertEqual(len(self.sched.layout.pipelines['check'].queues), 0)
+
+    def test_crd_check_ignore_dependencies(self):
+        "Test cross-repo dependencies can be ignored"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-ignore-dependencies.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+
+        self.gearman_server.hold_jobs_in_queue = True
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
+
+        # A Depends-On: B
+        A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            A.subject, B.data['id'])
+        # C git-depends on B
+        C.setDependsOn(B, 1)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        # Make sure none of the items share a change queue, and all
+        # are live.
+        check_pipeline = self.sched.layout.pipelines['check']
+        self.assertEqual(len(check_pipeline.queues), 3)
+        self.assertEqual(len(check_pipeline.getAllItems()), 3)
+        for item in check_pipeline.getAllItems():
+            self.assertTrue(item.live)
+
+        self.gearman_server.hold_jobs_in_queue = False
+        self.gearman_server.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(C.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.reported, 1)
+        self.assertEqual(C.reported, 1)
+
+        # Each job should have tested exactly one change
+        for job in self.history:
+            self.assertEqual(len(job.changes.split()), 1)

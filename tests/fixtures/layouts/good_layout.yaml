@@ -43,6 +43,17 @@ pipelines:
         verified: -2
         workinprogress: true
 
+  - name: merge-check
+    manager: IndependentPipelineManager
+    source: gerrit
+    ignore-dependencies: true
+    trigger:
+      zuul:
+        - event: project-change-merged
+    merge-failure:
+      gerrit:
+        verified: -1
+
 jobs:
   - name: ^.*-merge$
     failure-message: Unable to merge change

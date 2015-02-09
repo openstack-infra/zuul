@@ -36,6 +36,7 @@ pipelines:
   - name: merge-check
     manager: IndependentPipelineManager
     source: gerrit
+    ignore-dependencies: true
     trigger:
       zuul:
         - event: project-change-merged
