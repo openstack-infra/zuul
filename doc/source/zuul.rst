@@ -603,6 +603,18 @@ explanation of each of the parameters::
   do when a change is added to the pipeline manager.  This can be used,
   for example, to reset the value of the Verified review category.
 
+**disabled**
+  Uses the same syntax as **success**, but describes what Zuul should
+  do when a pipeline is disabled.
+  See ``disable-after-consecutive-failures``.
+
+**disable-after-consecutive-failures**
+  If set, a pipeline can enter a ''disabled'' state if too many changes
+  in a row fail. When this value is exceeded the pipeline will stop
+  reporting to any of the ``success``, ``failure`` or ``merge-failure``
+  reporters and instead only report to the ``disabled`` reporters.
+  (No ``start`` reports are made when a pipeline is disabled).
+
 **precedence**
   Indicates how the build scheduler should prioritize jobs for
   different pipelines.  Each pipeline may have one precedence, jobs

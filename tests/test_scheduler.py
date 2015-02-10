@@ -3583,3 +3583,125 @@ For CI problems and help debugging, contact ci@example.org"""
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(2))
         self.waitUntilSettled()
         self.assertEqual(self.history[-1].changes, '3,2 2,1 1,2')
+
+    def test_disable_at(self):
+        "Test a pipeline will only report to the disabled trigger when failing"
+
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-disable-at.yaml')
+        self.sched.reconfigure(self.config)
+
+        self.assertEqual(3, self.sched.layout.pipelines['check'].disable_at)
+        self.assertEqual(
+            0, self.sched.layout.pipelines['check']._consecutive_failures)
+        self.assertFalse(self.sched.layout.pipelines['check']._disabled)
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        D = self.fake_gerrit.addFakeChange('org/project', 'master', 'D')
+        E = self.fake_gerrit.addFakeChange('org/project', 'master', 'E')
+        F = self.fake_gerrit.addFakeChange('org/project', 'master', 'F')
+        G = self.fake_gerrit.addFakeChange('org/project', 'master', 'G')
+        H = self.fake_gerrit.addFakeChange('org/project', 'master', 'H')
+        I = self.fake_gerrit.addFakeChange('org/project', 'master', 'I')
+        J = self.fake_gerrit.addFakeChange('org/project', 'master', 'J')
+        K = self.fake_gerrit.addFakeChange('org/project', 'master', 'K')
+
+        self.worker.addFailTest('project-test1', A)
+        self.worker.addFailTest('project-test1', B)
+        # Let C pass, resetting the counter
+        self.worker.addFailTest('project-test1', D)
+        self.worker.addFailTest('project-test1', E)
+        self.worker.addFailTest('project-test1', F)
+        self.worker.addFailTest('project-test1', G)
+        self.worker.addFailTest('project-test1', H)
+        # I also passes but should only report to the disabled reporters
+        self.worker.addFailTest('project-test1', J)
+        self.worker.addFailTest('project-test1', K)
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(
+            2, self.sched.layout.pipelines['check']._consecutive_failures)
+        self.assertFalse(self.sched.layout.pipelines['check']._disabled)
+
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(
+            0, self.sched.layout.pipelines['check']._consecutive_failures)
+        self.assertFalse(self.sched.layout.pipelines['check']._disabled)
+
+        self.fake_gerrit.addEvent(D.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(E.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(F.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        # We should be disabled now
+        self.assertEqual(
+            3, self.sched.layout.pipelines['check']._consecutive_failures)
+        self.assertTrue(self.sched.layout.pipelines['check']._disabled)
+
+        # We need to wait between each of these patches to make sure the
+        # smtp messages come back in an expected order
+        self.fake_gerrit.addEvent(G.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.fake_gerrit.addEvent(H.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.fake_gerrit.addEvent(I.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        # The first 6 (ABCDEF) jobs should have reported back to gerrt thus
+        # leaving a message on each change
+        self.assertEqual(1, len(A.messages))
+        self.assertIn('Build failed.', A.messages[0])
+        self.assertEqual(1, len(B.messages))
+        self.assertIn('Build failed.', B.messages[0])
+        self.assertEqual(1, len(C.messages))
+        self.assertIn('Build succeeded.', C.messages[0])
+        self.assertEqual(1, len(D.messages))
+        self.assertIn('Build failed.', D.messages[0])
+        self.assertEqual(1, len(E.messages))
+        self.assertIn('Build failed.', E.messages[0])
+        self.assertEqual(1, len(F.messages))
+        self.assertIn('Build failed.', F.messages[0])
+
+        # The last 3 (GHI) would have only reported via smtp.
+        self.assertEqual(3, len(self.smtp_messages))
+        self.assertEqual(0, len(G.messages))
+        self.assertIn('Build failed.', self.smtp_messages[0]['body'])
+        self.assertIn('/7/1/check', self.smtp_messages[0]['body'])
+        self.assertEqual(0, len(H.messages))
+        self.assertIn('Build failed.', self.smtp_messages[1]['body'])
+        self.assertIn('/8/1/check', self.smtp_messages[1]['body'])
+        self.assertEqual(0, len(I.messages))
+        self.assertIn('Build succeeded.', self.smtp_messages[2]['body'])
+        self.assertIn('/9/1/check', self.smtp_messages[2]['body'])
+
+        # Now reload the configuration (simulate a HUP) to check the pipeline
+        # comes out of disabled
+        self.sched.reconfigure(self.config)
+
+        self.assertEqual(3, self.sched.layout.pipelines['check'].disable_at)
+        self.assertEqual(
+            0, self.sched.layout.pipelines['check']._consecutive_failures)
+        self.assertFalse(self.sched.layout.pipelines['check']._disabled)
+
+        self.fake_gerrit.addEvent(J.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(K.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(
+            2, self.sched.layout.pipelines['check']._consecutive_failures)
+        self.assertFalse(self.sched.layout.pipelines['check']._disabled)
+
+        # J and K went back to gerrit
+        self.assertEqual(1, len(J.messages))
+        self.assertIn('Build failed.', J.messages[0])
+        self.assertEqual(1, len(K.messages))
+        self.assertIn('Build failed.', K.messages[0])
+        # No more messages reported via smtp
+        self.assertEqual(3, len(self.smtp_messages))

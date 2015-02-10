@@ -1,0 +1,21 @@
+pipelines:
+  - name: check
+    manager: IndependentPipelineManager
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+    disabled:
+      smtp:
+        to: you@example.com
+    disable-after-consecutive-failures: 3
+
+projects:
+  - name: org/project
+    check:
+      - project-test1
