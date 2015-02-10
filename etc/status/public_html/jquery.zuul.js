@@ -375,7 +375,7 @@
                 else if (change.live !== true) {
                     // Grey icon
                     icon_name = 'grey.png';
-                    icon_title = 'Dependent change independently tested';
+                    icon_title = 'Dependent change required for testing';
                 }
                 else if (change.failing_reasons &&
                          change.failing_reasons.length > 0) {
