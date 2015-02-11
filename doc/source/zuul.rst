@@ -809,6 +809,47 @@ each job as it builds a list from the project specification.
   file patterns listed here.  This field is treated as a regular
   expression and multiple expressions may be listed.
 
+**skip-if (optional)**
+
+  This job should not be run if all the patterns specified by the
+  optional fields listed below match on their targets.  When multiple
+  sets of parameters are provided, this job will be skipped if any set
+  matches.  For example: ::
+
+    jobs:
+      - name: check-tempest-dsvm-neutron
+        skip-if:
+          - project: ^openstack/neutron$
+            branch: ^stable/juno$
+            all-files-match-any:
+              - ^neutron/tests/.*$
+              - ^tools/.*$
+          - all-files-match-any:
+              - ^doc/.*$
+              - ^.*\.rst$
+
+  With this configuration, the job would be skipped for a neutron
+  patchset for the stable/juno branch provided that every file in the
+  change matched at least one of the specified file regexes.  The job
+  will also be skipped for any patchset that modified only the doc
+  tree or rst files.
+
+  *project* (optional)
+    The regular expression to match against the project of the change.
+
+  *branch* (optional)
+    The regular expression to match against the branch or ref of the
+    change.
+
+  *all-files-match-any* (optional)
+    A list of regular expressions intended to match the files involved
+    in the change.  This parameter will be considered matching a
+    change only if all files in a change match at least one of these
+    expressions.
+
+    The pattern for '/COMMIT_MSG' is always matched on and does not
+    have to be included.
+
 **voting (optional)**
   Boolean value (``true`` or ``false``) that indicates whatever
   a job is voting or not.  Default: ``true``.

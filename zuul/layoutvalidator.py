@@ -135,6 +135,11 @@ class LayoutSchema(object):
              'logserver-prefix': str,
              }
 
+    skip_if = {'project': str,
+               'branch': str,
+               'all-files-match-any': toList(str),
+               }
+
     job = {v.Required('name'): str,
            'queue-name': str,
            'failure-message': str,
@@ -147,6 +152,7 @@ class LayoutSchema(object):
            'branch': toList(str),
            'files': toList(str),
            'swift': toList(swift),
+           'skip-if': toList(skip_if),
            }
     jobs = [job]
 
