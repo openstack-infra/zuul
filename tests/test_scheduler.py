@@ -3072,7 +3072,6 @@ For CI problems and help debugging, contact ci@example.org"""
                 self.assertEqual('project-merge', job['name'])
                 self.assertEqual('gate', job['pipeline'])
                 self.assertEqual(False, job['retry'])
-                self.assertEqual(13, len(job['parameters']))
                 self.assertEqual('https://server/job/project-merge/0/',
                                  job['url'])
                 self.assertEqual(7, len(job['worker']))

@@ -232,9 +232,6 @@ class Client(zuul.cmd.ZuulApp):
             'number': {
                 'title': 'Number'
             },
-            'parameters': {
-                'title': 'Parameters'
-            },
             'worker.name': {
                 'title': 'Worker'
             },
