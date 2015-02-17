@@ -43,3 +43,22 @@ class TestJob(BaseTestCase):
         job = model.Job('job')
         job.copy(self.job)
         self.assertTrue(job.skip_if_matcher)
+
+    def _assert_job_booleans_are_not_none(self, job):
+        self.assertIsNotNone(job.voting)
+        self.assertIsNotNone(job.hold_following_changes)
+
+    def test_job_sets_defaults_for_boolean_attributes(self):
+        job = model.Job('job')
+        self._assert_job_booleans_are_not_none(job)
+
+    def test_metajob_does_not_set_defaults_for_boolean_attributes(self):
+        job = model.Job('^job')
+        self.assertIsNone(job.voting)
+        self.assertIsNone(job.hold_following_changes)
+
+    def test_metajob_copy_does_not_set_undefined_boolean_attributes(self):
+        job = model.Job('job')
+        metajob = model.Job('^job')
+        job.copy(metajob)
+        self._assert_job_booleans_are_not_none(job)
