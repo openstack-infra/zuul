@@ -231,6 +231,8 @@ class Gearman(object):
                 s_config = {}
                 s_config.update((k, v.format(item=item, job=job,
                                              change=item.change))
+                                if isinstance(v, basestring)
+                                else (k, v)
                                 for k, v in s.items())
 
                 (swift_instructions['URL'],
