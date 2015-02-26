@@ -793,7 +793,6 @@ class QueueItem(object):
                 'canceled': build.canceled if build else None,
                 'retry': build.retry if build else None,
                 'number': build.number if build else None,
-                'parameters': build.parameters if build else None,
                 'worker': worker
             })
 
