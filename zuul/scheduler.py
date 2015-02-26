@@ -1365,10 +1365,11 @@ class BasePipelineManager(object):
             self.cancelJobs(item)
             self.dequeueItem(item)
             self.pipeline.setDequeuedNeedingChange(item)
-            try:
-                self.reportItem(item)
-            except MergeFailure:
-                pass
+            if item.live:
+                try:
+                    self.reportItem(item)
+                except MergeFailure:
+                    pass
             return (True, nnfi, ready_ahead)
         dep_items = self.getFailingDependentItems(item)
         actionable = change_queue.isActionable(item)
