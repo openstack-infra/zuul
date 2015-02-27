@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # Copyright 2013 OpenStack Foundation
+# Copyright 2015 Hewlett-Packard Development Company, L.P.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -13,9 +14,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-# Print commands to leave gerrit comments for every change in one of
-# Zuul's pipelines.
-
 import urllib2
 import json
 import argparse
@@ -23,9 +21,6 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('url', help='The URL of the running Zuul instance')
 parser.add_argument('pipeline_name', help='The name of the Zuul pipeline')
-parser.add_argument('comment', help='The text of the Gerrit comment')
-parser.add_argument('--review-host', default='review',
-                    help='The Gerrit hostname')
 options = parser.parse_args()
 
 data = urllib2.urlopen('%s/status.json' % options.url).read()
@@ -37,7 +32,13 @@ for pipeline in data['pipelines']:
     for queue in pipeline['change_queues']:
         for head in queue['heads']:
             for change in head:
-                print 'ssh %s gerrit review %s --message \\"%s\\"' % (
-                    options.review_host,
-                    change['id'],
-                    options.comment)
+                if not change['live']:
+                    continue
+                cid, cps = change['id'].split(',')
+                print (
+                    "zuul enqueue --trigger gerrit --pipeline %s "
+                    "--project %s --change %s,%s" % (
+                        options.pipeline_name,
+                        change['project'],
+                        cid, cps)
+                )
