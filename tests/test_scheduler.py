@@ -3399,10 +3399,13 @@ For CI problems and help debugging, contact ci@example.org"""
         self.waitUntilSettled()
         self.assertEqual(len(check_pipeline.getAllItems()), 3)
 
-        self.gearman_server.hold_jobs_in_queue = False
+        # Release jobs in order to avoid races with change A jobs
+        # finishing before change B jobs.
         self.gearman_server.release('.*-merge')
+        self.gearman_server.release('project1-.*')
         self.waitUntilSettled()
         self.gearman_server.release('.*-merge')
+        self.gearman_server.release('project1-.*')
         self.waitUntilSettled()
         self.gearman_server.release()
         self.waitUntilSettled()
