@@ -147,8 +147,10 @@ class Swift(object):
                 settings[key] = kwargs[altkey]
             elif self.config.has_option('swift', 'default_' + key):
                 settings[key] = self.config.get('swift', 'default_' + key)
+            # TODO: these are always strings; some should be converted
+            # to ints.
 
-        expires = int(time() + settings['expiry'])
+        expires = int(time() + int(settings['expiry']))
         redirect = ''
 
         url = os.path.join(self.storage_url, settings['container'],
