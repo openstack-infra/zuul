@@ -90,10 +90,10 @@ class MergeServer(object):
                 job = self.worker.getJob()
                 try:
                     if job.name == 'merger:merge':
-                        self.log.debug("Got merge job.")
+                        self.log.debug("Got merge job: %s" % job.unique)
                         self.merge(job)
                     elif job.name == 'merger:update':
-                        self.log.debug("Got update job.")
+                        self.log.debug("Got update job: %s" % job.unique)
                         self.update(job)
                     else:
                         self.log.error("Unable to handle job %s" % job.name)
