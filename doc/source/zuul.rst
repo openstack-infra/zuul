@@ -1092,13 +1092,11 @@ read these saved events and act on them.
 If you need to abort Zuul and intend to manually requeue changes for
 jobs which were running in its pipelines, prior to terminating you can
 use the zuul-changes.py tool script to simplify the process. For
-example, this would give you a list of Gerrit commands to reverify or
-recheck changes for the gate and check pipelines respectively::
+example, this would give you a list of zuul-enqueue commands to requeue
+changes for the gate and check pipelines respectively::
 
-  ./tools/zuul-changes.py --review-host=review.openstack.org \
-      http://zuul.openstack.org/ gate 'reverify'
-  ./tools/zuul-changes.py --review-host=review.openstack.org \
-      http://zuul.openstack.org/ check 'recheck'
+  ./tools/zuul-changes.py http://zuul.openstack.org/ gate
+  ./tools/zuul-changes.py http://zuul.openstack.org/ check
 
 If you send a SIGUSR2 to the zuul-server process, or the forked process
 that runs the Gearman daemon, Zuul will dump a stack trace for each
