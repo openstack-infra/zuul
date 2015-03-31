@@ -1,0 +1,20 @@
+pipelines:
+  - name: check
+    manager: IndependentPipelineManager
+    source: review_gerrit
+    trigger:
+      review_gerrit:
+        - event: patchset-created
+    success:
+      review_gerrit:
+        VRFY: 1
+    failure:
+      alt_voting_gerrit:
+        VRFY: -1
+
+projects:
+  - name: org/project
+    check:
+      - project-merge:
+        - project-test1
+        - project-test2

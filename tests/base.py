@@ -884,7 +884,8 @@ class ZuulTestCase(BaseTestCase):
         # Make per test copy of Configuration.
         self.setup_config()
         self.config.set('zuul', 'layout_config',
-                        os.path.join(FIXTURE_DIR, "layout.yaml"))
+                        os.path.join(FIXTURE_DIR,
+                                     self.config.get('zuul', 'layout_config')))
         self.config.set('merger', 'git_dir', self.git_root)
 
         # For each project in config:
@@ -938,10 +939,8 @@ class ZuulTestCase(BaseTestCase):
             self.sched.trigger_event_queue
         ]
 
-        # Set up connections and give out the default gerrit for testing
         self.configure_connections()
         self.sched.registerConnections(self.connections)
-        self.fake_gerrit = self.connections['gerrit']
 
         def URLOpenerFactory(*args, **kw):
             if isinstance(args[0], urllib2.Request):
@@ -1011,15 +1010,20 @@ class ZuulTestCase(BaseTestCase):
 
             # TODO(jhesketh): load the required class automatically
             if con_driver == 'gerrit':
-                self.gerrit_changes_dbs[con_name] = {}
-                self.gerrit_queues_dbs[con_name] = Queue.Queue()
-                self.event_queues.append(self.gerrit_queues_dbs['gerrit'])
+                if con_config['server'] not in self.gerrit_changes_dbs.keys():
+                    self.gerrit_changes_dbs[con_config['server']] = {}
+                if con_config['server'] not in self.gerrit_queues_dbs.keys():
+                    self.gerrit_queues_dbs[con_config['server']] = \
+                        Queue.Queue()
+                    self.event_queues.append(
+                        self.gerrit_queues_dbs[con_config['server']])
                 self.connections[con_name] = FakeGerritConnection(
                     con_name, con_config,
-                    changes_db=self.gerrit_changes_dbs[con_name],
-                    queues_db=self.gerrit_queues_dbs[con_name],
+                    changes_db=self.gerrit_changes_dbs[con_config['server']],
+                    queues_db=self.gerrit_queues_dbs[con_config['server']],
                     upstream_root=self.upstream_root
                 )
+                setattr(self, 'fake_' + con_name, self.connections[con_name])
             elif con_driver == 'smtp':
                 self.connections[con_name] = \
                     zuul.connection.smtp.SMTPConnection(con_name, con_config)
@@ -1044,10 +1048,10 @@ class ZuulTestCase(BaseTestCase):
                 zuul.connection.smtp.SMTPConnection(
                     '_legacy_smtp', dict(self.config.items('smtp')))
 
-    def setup_config(self):
+    def setup_config(self, config_file='zuul.conf'):
         """Per test config object. Override to set different config."""
         self.config = ConfigParser.ConfigParser()
-        self.config.read(os.path.join(FIXTURE_DIR, "zuul.conf"))
+        self.config.read(os.path.join(FIXTURE_DIR, config_file))
 
     def assertFinalState(self):
         # Make sure that git.Repo objects have been garbage collected.
