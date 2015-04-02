@@ -1167,8 +1167,6 @@ class ZuulTestCase(BaseTestCase):
         return True
 
     def areAllBuildsWaiting(self):
-        ret = True
-
         builds = self.launcher.builds.values()
         for build in builds:
             client_job = None
@@ -1180,35 +1178,34 @@ class ZuulTestCase(BaseTestCase):
             if not client_job:
                 self.log.debug("%s is not known to the gearman client" %
                                build)
-                ret = False
-                continue
+                return False
             if not client_job.handle:
                 self.log.debug("%s has no handle" % client_job)
-                ret = False
-                continue
+                return False
             server_job = self.gearman_server.jobs.get(client_job.handle)
             if not server_job:
                 self.log.debug("%s is not known to the gearman server" %
                                client_job)
-                ret = False
-                continue
+                return False
             if not hasattr(server_job, 'waiting'):
                 self.log.debug("%s is being enqueued" % server_job)
-                ret = False
-                continue
+                return False
             if server_job.waiting:
                 continue
             worker_job = self.worker.gearman_jobs.get(server_job.unique)
             if worker_job:
+                if build.number is None:
+                    self.log.debug("%s has not reported start" % worker_job)
+                    return False
                 if worker_job.build.isWaiting():
                     continue
                 else:
                     self.log.debug("%s is running" % worker_job)
-                    ret = False
+                    return False
             else:
                 self.log.debug("%s is unassigned" % server_job)
-                ret = False
-        return ret
+                return False
+        return True
 
     def waitUntilSettled(self):
         self.log.debug("Waiting until settled...")
