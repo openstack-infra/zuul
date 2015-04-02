@@ -3282,6 +3282,45 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
+    def test_crd_gate_reverse(self):
+        "Test reverse cross-repo dependencies"
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+
+        # A Depends-On: B
+
+        A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            A.subject, B.data['id'])
+
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'NEW')
+
+        self.worker.hold_jobs_in_build = True
+        A.addApproval('APRV', 1)
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+
+        self.assertEqual(self.getJobFromHistory('project1-merge').changes,
+                         '2,1 1,1')
+
     def test_crd_cycle(self):
         "Test cross-repo dependency cycles"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -3501,3 +3540,43 @@ For CI problems and help debugging, contact ci@example.org"""
         # Each job should have tested exactly one change
         for job in self.history:
             self.assertEqual(len(job.changes.split()), 1)
+
+    def test_crd_check_transitive(self):
+        "Test transitive cross-repo dependencies"
+        # Specifically, if A -> B -> C, and C gets a new patchset and
+        # A gets a new patchset, ensure the test of A,2 includes B,1
+        # and C,2 (not C,1 which would indicate stale data in the
+        # cache for B).
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project3', 'master', 'C')
+
+        # A Depends-On: B
+        A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            A.subject, B.data['id'])
+
+        # B Depends-On: C
+        B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            B.subject, C.data['id'])
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(self.history[-1].changes, '3,1 2,1 1,1')
+
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(self.history[-1].changes, '3,1 2,1')
+
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(self.history[-1].changes, '3,1')
+
+        C.addPatchset()
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(2))
+        self.waitUntilSettled()
+        self.assertEqual(self.history[-1].changes, '3,2')
+
+        A.addPatchset()
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(2))
+        self.waitUntilSettled()
+        self.assertEqual(self.history[-1].changes, '3,2 2,1 1,2')

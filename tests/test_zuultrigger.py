@@ -111,8 +111,8 @@ class TestZuulTrigger(ZuulTestCase):
             "merged with the current state of the repository. Please rebase "
             "your change and upload a new patchset.")
 
-        self.assertEqual(self.fake_gerrit.queries[0],
-                         "project:org/project status:open")
+        self.assertTrue("project:org/project status:open" in
+                        self.fake_gerrit.queries)
 
         # Reconfigure and run the test again.  This is a regression
         # check to make sure that we don't end up with a stale trigger

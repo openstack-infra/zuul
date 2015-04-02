@@ -362,6 +362,27 @@ class Gerrit(object):
             records.extend(self.gerrit.simpleQuery(query))
         return records
 
+    def _getNeededByFromCommit(self, change_id):
+        records = []
+        seen = set()
+        query = 'message:%s' % change_id
+        self.log.debug("Running query %s to find changes needed-by" %
+                       (query,))
+        results = self.gerrit.simpleQuery(query)
+        for result in results:
+            for match in self.depends_on_re.findall(
+                result['commitMessage']):
+                if match != change_id:
+                    continue
+                key = (result['number'], result['currentPatchSet']['number'])
+                if key in seen:
+                    continue
+                self.log.debug("Found change %s,%s needs %s from commit" %
+                               (key[0], key[1], change_id))
+                seen.add(key)
+                records.append(result)
+        return records
+
     def updateChange(self, change, history=None):
         self.log.info("Updating information for %s,%s" %
                       (change.number, change.patchset))
@@ -441,6 +462,19 @@ class Gerrit(object):
                 dep = self._getChange(dep_num, dep_ps)
                 if (not dep.is_merged) and dep.is_current_patchset:
                     change.needed_by_changes.append(dep)
+
+        for record in self._getNeededByFromCommit(data['id']):
+            dep_num = record['number']
+            dep_ps = record['currentPatchSet']['number']
+            self.log.debug("Getting commit-needed change %s,%s" %
+                           (dep_num, dep_ps))
+            # Because a commit needed-by may be a cross-repo
+            # dependency, cause that change to refresh so that it will
+            # reference the latest patchset of its Depends-On (this
+            # change).
+            dep = self._getChange(dep_num, dep_ps, refresh=True)
+            if (not dep.is_merged) and dep.is_current_patchset:
+                change.needed_by_changes.append(dep)
 
         return change
 

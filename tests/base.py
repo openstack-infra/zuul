@@ -378,6 +378,8 @@ class FakeChange(object):
 
 
 class FakeGerrit(object):
+    log = logging.getLogger("zuul.test.FakeGerrit")
+
     def __init__(self, *args, **kw):
         self.event_queue = Queue.Queue()
         self.fixture_dir = os.path.join(FIXTURE_DIR, 'gerrit')
@@ -418,12 +420,18 @@ class FakeGerrit(object):
         return {}
 
     def simpleQuery(self, query):
+        self.log.debug("simpleQuery: %s" % query)
         self.queries.append(query)
         if query.startswith('change:'):
             # Query a specific changeid
             changeid = query[len('change:'):]
             l = [change.query() for change in self.changes.values()
                  if change.data['id'] == changeid]
+        elif query.startswith('message:'):
+            # Query the content of a commit message
+            msg = query[len('message:'):].strip()
+            l = [change.query() for change in self.changes.values()
+                 if msg in change.data['commitMessage']]
         else:
             # Query all open changes
             l = [change.query() for change in self.changes.values()]
