@@ -39,7 +39,7 @@ class GerritWatcher(threading.Thread):
         data = json.loads(l)
         self.log.debug("Received data from Gerrit event stream: \n%s" %
                        pprint.pformat(data))
-        self.gerrit.addEvent(data)
+        self.gerrit.addEvent((time.time(), data))
 
     def _listen(self, stdout, stderr):
         poll = select.poll()

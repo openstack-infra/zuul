@@ -396,7 +396,7 @@ class FakeGerrit(object):
         return c
 
     def addEvent(self, data):
-        return self.event_queue.put(data)
+        return self.event_queue.put((time.time(), data))
 
     def getEvent(self):
         return self.event_queue.get()
@@ -479,6 +479,7 @@ class FakeGerritTrigger(zuul.trigger.gerrit.Gerrit):
     def __init__(self, upstream_root, *args):
         super(FakeGerritTrigger, self).__init__(*args)
         self.upstream_root = upstream_root
+        self.gerrit_connector.delay = 0.0
 
     def getGitUrl(self, project):
         return os.path.join(self.upstream_root, project.name)

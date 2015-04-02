@@ -26,6 +26,7 @@ class GerritEventConnector(threading.Thread):
     """Move events from Gerrit to the scheduler."""
 
     log = logging.getLogger("zuul.GerritEventConnector")
+    delay = 5.0
 
     def __init__(self, gerrit, sched, trigger):
         super(GerritEventConnector, self).__init__()
@@ -37,12 +38,20 @@ class GerritEventConnector(threading.Thread):
 
     def stop(self):
         self._stopped = True
-        self.gerrit.addEvent(None)
+        self.gerrit.addEvent((None, None))
 
     def _handleEvent(self):
-        data = self.gerrit.getEvent()
+        ts, data = self.gerrit.getEvent()
         if self._stopped:
             return
+        # Gerrit can produce inconsistent data immediately after an
+        # event, So ensure that we do not deliver the event to Zuul
+        # until at least a certain amount of time has passed.  Note
+        # that if we receive several events in succession, we will
+        # only need to delay for the first event.  In essence, Zuul
+        # should always be a constant number of seconds behind Gerrit.
+        now = time.time()
+        time.sleep(max((ts + self.delay) - now, 0.0))
         event = TriggerEvent()
         event.type = data.get('type')
         event.trigger_name = self.trigger.name
