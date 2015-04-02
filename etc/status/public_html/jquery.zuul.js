@@ -16,9 +16,10 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
-'use strict';
 
 (function ($) {
+    'use strict';
+
     function set_cookie(name, value) {
         document.cookie = name + '=' + value + '; path=/';
     }
@@ -39,7 +40,7 @@
     }
 
     $.zuul = function(options) {
-        var options = $.extend({
+        options = $.extend({
             'enabled': true,
             'graphite_url': '',
             'source': 'status.json',
@@ -72,7 +73,7 @@
                         hideGrid: true,
                         target: [
                             "color(stats.gauges.zuul.pipeline." + pipeline_name
-                            + ".current_changes, '6b8182')"
+                                + ".current_changes, '6b8182')"
                         ]
                     });
                 }
@@ -616,7 +617,7 @@
 
         var app = {
             schedule: function (app) {
-                var app = app || this;
+                app = app || this;
                 if (!options.enabled) {
                     setTimeout(function() {app.schedule(app);}, 5000);
                     return;
@@ -642,7 +643,7 @@
                 this.emit('update-start');
                 var app = this;
 
-                var $msg = $(options.msg_id)
+                var $msg = $(options.msg_id);
                 xhr = $.getJSON(options.source)
                     .done(function (data) {
                         if ('message' in data) {
@@ -701,7 +702,7 @@
                     var newimg = new Image();
                     var parts = url.split('#');
                     newimg.src = parts[0] + '#' + new Date().getTime();
-                    $(newimg).load(function (x) {
+                    $(newimg).load(function () {
                         zuul_sparkline_urls[name] = newimg.src;
                     });
                 });
@@ -897,5 +898,5 @@
             app: app,
             jq: $jq
         };
-    }
+    };
 }(jQuery));
