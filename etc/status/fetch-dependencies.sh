@@ -1,6 +1,7 @@
 #!/bin/bash
 BASE_DIR=$(cd $(dirname $0); pwd)
-DEST_DIR=$BASE_DIR/public_html
+DEST_DIR=$BASE_DIR/public_html/lib
+mkdir -p $DEST_DIR
 echo "Destination: $DEST_DIR"
 
 echo "Fetching jquery.min.js..."
