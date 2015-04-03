@@ -39,6 +39,9 @@ function zuul_build_dom($, container) {
     });
 }
 
+/**
+ * @return The $.zuul instance
+ */
 function zuul_start($) {
     // Start the zuul app (expects default dom)
 
@@ -94,4 +97,6 @@ function zuul_start($) {
             }
         });
     });
+
+    return zuul;
 }
