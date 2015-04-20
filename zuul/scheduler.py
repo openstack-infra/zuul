@@ -1368,7 +1368,7 @@ class BasePipelineManager(object):
                 canceled = True
         return canceled
 
-    def _processOneItem(self, item, nnfi, ready_ahead):
+    def _processOneItem(self, item, nnfi):
         changed = False
         item_ahead = item.item_ahead
         if item_ahead and (not item_ahead.live):
@@ -1388,7 +1388,7 @@ class BasePipelineManager(object):
                     self.reportItem(item)
                 except MergeFailure:
                     pass
-            return (True, nnfi, ready_ahead)
+            return (True, nnfi)
         dep_items = self.getFailingDependentItems(item)
         actionable = change_queue.isActionable(item)
         item.active = actionable
@@ -1415,9 +1415,7 @@ class BasePipelineManager(object):
                 if item.current_build_set.unable_to_merge:
                     failing_reasons.append("it has a merge conflict")
                     ready = False
-        if not ready:
-            ready_ahead = False
-        if actionable and ready_ahead and self.launchJobs(item):
+        if actionable and ready and self.launchJobs(item):
             changed = True
         if self.pipeline.didAnyJobFail(item):
             failing_reasons.append("at least one job failed")
@@ -1444,7 +1442,7 @@ class BasePipelineManager(object):
         if failing_reasons:
             self.log.debug("%s is a failing item because %s" %
                            (item, failing_reasons))
-        return (changed, nnfi, ready_ahead)
+        return (changed, nnfi)
 
     def processQueue(self):
         # Do whatever needs to be done for each change in the queue
@@ -1453,10 +1451,9 @@ class BasePipelineManager(object):
         for queue in self.pipeline.queues:
             queue_changed = False
             nnfi = None  # Nearest non-failing item
-            ready_ahead = True  # All build sets ahead are ready
             for item in queue.queue[:]:
-                item_changed, nnfi, ready_ahhead = self._processOneItem(
-                    item, nnfi, ready_ahead)
+                item_changed, nnfi = self._processOneItem(
+                    item, nnfi)
                 if item_changed:
                     queue_changed = True
                 self.reportStats(item)
