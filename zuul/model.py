@@ -1822,7 +1822,7 @@ class Change(Ref):
     def getBasePath(self):
         if hasattr(self, 'refspec'):
             return "%s/%s/%s" % (
-                self.number[-2:], self.number, self.patchset)
+                str(self.number)[-2:], self.number, self.patchset)
         return super(Change, self).getBasePath()
 
     def equals(self, other):
@@ -1857,6 +1857,20 @@ class Change(Ref):
         return Attributes(project=self.project,
                           number=self.number,
                           patchset=self.patchset)
+
+
+class PullRequest(Change):
+    def __init__(self, project):
+        super(PullRequest, self).__init__(project)
+        self.updated_at = None
+
+    def isUpdateOf(self, other):
+        if (hasattr(other, 'number') and self.number == other.number and
+            hasattr(other, 'patchset') and self.patchset != other.patchset and
+            hasattr(other, 'updated_at') and
+            self.updated_at > other.updated_at):
+            return True
+        return False
 
 
 class TriggerEvent(object):
@@ -2008,7 +2022,7 @@ class EventFilter(BaseFilter):
     def __init__(self, trigger, types=[], branches=[], refs=[],
                  event_approvals={}, comments=[], emails=[], usernames=[],
                  timespecs=[], required_approvals=[], reject_approvals=[],
-                 pipelines=[], ignore_deletes=True):
+                 pipelines=[], actions=[], ignore_deletes=True):
         super(EventFilter, self).__init__(
             required_approvals=required_approvals,
             reject_approvals=reject_approvals)
@@ -2027,6 +2041,7 @@ class EventFilter(BaseFilter):
         self.emails = [re.compile(x) for x in emails]
         self.usernames = [re.compile(x) for x in usernames]
         self.pipelines = [re.compile(x) for x in pipelines]
+        self.actions = actions
         self.event_approvals = event_approvals
         self.timespecs = timespecs
         self.ignore_deletes = ignore_deletes
@@ -2061,6 +2076,8 @@ class EventFilter(BaseFilter):
             ret += ' username_filters: %s' % ', '.join(self._usernames)
         if self.timespecs:
             ret += ' timespecs: %s' % ', '.join(self.timespecs)
+        if self.actions:
+            ret += ' actions: %s' % ', '.join(self.actions)
         ret += '>'
 
         return ret
@@ -2155,6 +2172,14 @@ class EventFilter(BaseFilter):
             if (event.timespec == timespec):
                 matches_timespec = True
         if self.timespecs and not matches_timespec:
+            return False
+
+        # actions are ORed
+        matches_action = False
+        for action in self.actions:
+            if (event.action == action):
+                matches_action = True
+        if self.actions and not matches_action:
             return False
 
         return True

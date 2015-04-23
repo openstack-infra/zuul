@@ -45,7 +45,7 @@ array of changes, they will not include the queue structure.
 
 class WebApp(threading.Thread):
     log = logging.getLogger("zuul.WebApp")
-    change_path_regexp = '/status/change/(\d+,\d+)$'
+    change_path_regexp = '/status/change/(.*)$'
 
     def __init__(self, scheduler, port=8001, cache_expiry=1,
                  listen_address='0.0.0.0'):

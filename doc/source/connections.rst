@@ -65,6 +65,24 @@ want Zuul to gate.  For instance, you may want to grant ``Verified
 be added to Gerrit.  Zuul is very flexible and can take advantage of
 those.
 
+GitHub
+------
+
+Create a connection with GitHub.
+
+**driver=github**
+
+**api_token**
+  API token for accessing GitHub.
+  See `Creating an access token for command-line use
+  <https://help.github.com/articles/creating-an-access-token-for-command-line-use/>`_.
+
+**webhook_token**
+  Optional: Token for validating the webhook event payloads.
+  If not specified, payloads are not validated.
+  See `Securing your webhooks
+  <https://developer.github.com/webhooks/securing/>`_.
+
 SMTP
 ----
 
