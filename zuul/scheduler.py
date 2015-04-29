@@ -347,6 +347,7 @@ class Scheduler(threading.Thread):
                     usernames = toList(trigger.get('username'))
                     if not usernames:
                         usernames = toList(trigger.get('username_filter'))
+                    ignore_deletes = trigger.get('ignore-deletes', True)
                     f = EventFilter(
                         trigger=self.triggers['gerrit'],
                         types=toList(trigger['event']),
@@ -358,7 +359,8 @@ class Scheduler(threading.Thread):
                         usernames=usernames,
                         required_approvals=toList(
                             trigger.get('require-approval')
-                        )
+                        ),
+                        ignore_deletes=ignore_deletes
                     )
                     manager.event_filters.append(f)
             if 'timer' in conf_pipeline['trigger']:

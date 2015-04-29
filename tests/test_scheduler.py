@@ -891,6 +891,54 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.history), 1)
         self.assertIn('project-post', job_names)
 
+    def test_post_ignore_deletes(self):
+        "Test that deleting refs does not trigger post jobs"
+
+        e = {
+            "type": "ref-updated",
+            "submitter": {
+                "name": "User Name",
+            },
+            "refUpdate": {
+                "oldRev": "90f173846e3af9154517b88543ffbd1691f31366",
+                "newRev": "0000000000000000000000000000000000000000",
+                "refName": "master",
+                "project": "org/project",
+            }
+        }
+        self.fake_gerrit.addEvent(e)
+        self.waitUntilSettled()
+
+        job_names = [x.name for x in self.history]
+        self.assertEqual(len(self.history), 0)
+        self.assertNotIn('project-post', job_names)
+
+    def test_post_ignore_deletes_negative(self):
+        "Test that deleting refs does trigger post jobs"
+
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-dont-ignore-deletes.yaml')
+        self.sched.reconfigure(self.config)
+
+        e = {
+            "type": "ref-updated",
+            "submitter": {
+                "name": "User Name",
+            },
+            "refUpdate": {
+                "oldRev": "90f173846e3af9154517b88543ffbd1691f31366",
+                "newRev": "0000000000000000000000000000000000000000",
+                "refName": "master",
+                "project": "org/project",
+            }
+        }
+        self.fake_gerrit.addEvent(e)
+        self.waitUntilSettled()
+
+        job_names = [x.name for x in self.history]
+        self.assertEqual(len(self.history), 1)
+        self.assertIn('project-post', job_names)
+
     def test_build_configuration_branch(self):
         "Test that the right commits are on alternate branches"
 
