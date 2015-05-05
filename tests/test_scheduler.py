@@ -2089,9 +2089,7 @@ class TestScheduler(ZuulTestCase):
         self.waitUntilSettled()
 
         # Run one build at a time to ensure non-race order:
-        for x in range(6):
-            self.release(self.builds[0])
-            self.waitUntilSettled()
+        self.orderedRelease()
         self.worker.hold_jobs_in_build = False
         self.waitUntilSettled()
 
@@ -3387,7 +3385,7 @@ For CI problems and help debugging, contact ci@example.org"""
 
     def test_crd_check_git_depends(self):
         "Test single-repo dependencies in independent pipelines"
-        self.gearman_server.hold_jobs_in_queue = True
+        self.gearman_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
 
@@ -3399,8 +3397,8 @@ For CI problems and help debugging, contact ci@example.org"""
         self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
 
-        self.gearman_server.hold_jobs_in_queue = False
-        self.gearman_server.release()
+        self.orderedRelease()
+        self.gearman_server.hold_jobs_in_build = False
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')

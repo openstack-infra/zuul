@@ -1116,6 +1116,12 @@ class ZuulTestCase(BaseTestCase):
         while len(self.gearman_server.functions) < count:
             time.sleep(0)
 
+    def orderedRelease(self):
+        # Run one build at a time to ensure non-race order:
+        while len(self.builds):
+            self.release(self.builds[0])
+            self.waitUntilSettled()
+
     def release(self, job):
         if isinstance(job, FakeBuild):
             job.release()
