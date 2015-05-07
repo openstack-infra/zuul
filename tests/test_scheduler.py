@@ -2118,7 +2118,10 @@ class TestScheduler(ZuulTestCase):
         self.assertIn('Content-Type', headers)
         self.assertEqual(headers['Content-Type'],
                          'application/json; charset=UTF-8')
+        self.assertIn('Access-Control-Allow-Origin', headers)
+        self.assertIn('Cache-Control', headers)
         self.assertIn('Last-Modified', headers)
+        self.assertIn('Expires', headers)
         data = f.read()
 
         self.worker.hold_jobs_in_build = False

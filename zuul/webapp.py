@@ -121,5 +121,10 @@ class WebApp(threading.Thread):
                 raise webob.exc.HTTPNotFound()
 
         response.headers['Access-Control-Allow-Origin'] = '*'
+
+        response.cache_control.public = True
+        response.cache_control.max_age = self.cache_expiry
         response.last_modified = self.cache_time
-        return response
+        response.expires = self.cache_time + self.cache_expiry
+
+        return response.conditional_response_app
