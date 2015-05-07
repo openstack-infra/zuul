@@ -3476,12 +3476,7 @@ For CI problems and help debugging, contact ci@example.org"""
 
         # Release jobs in order to avoid races with change A jobs
         # finishing before change B jobs.
-        self.worker.release('.*-merge')
-        self.worker.release('project1-.*')
-        self.waitUntilSettled()
-        self.worker.release('.*-merge')
-        self.worker.release('project1-.*')
-        self.waitUntilSettled()
+        self.orderedRelease()
         self.worker.hold_jobs_in_build = False
         self.worker.release()
         self.waitUntilSettled()
