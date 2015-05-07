@@ -408,18 +408,19 @@ class Gerrit(object):
         change.branch = data['branch']
         change.url = data['url']
         max_ps = 0
-        change.files = []
+        files = []
         for ps in data['patchSets']:
             if ps['number'] == change.patchset:
                 change.refspec = ps['ref']
                 for f in ps.get('files', []):
-                    change.files.append(f['file'])
+                    files.append(f['file'])
             if int(ps['number']) > int(max_ps):
                 max_ps = ps['number']
         if max_ps == change.patchset:
             change.is_current_patchset = True
         else:
             change.is_current_patchset = False
+        change.files = files
 
         change.is_merged = self._isMerged(change)
         change.approvals = data['currentPatchSet'].get('approvals', [])
@@ -438,7 +439,7 @@ class Gerrit(object):
             history = history[:]
         history.append(change.number)
 
-        change.needs_changes = []
+        needs_changes = []
         if 'dependsOn' in data:
             parts = data['dependsOn'][0]['ref'].split('/')
             dep_num, dep_ps = parts[3], parts[4]
@@ -448,8 +449,8 @@ class Gerrit(object):
             self.log.debug("Getting git-dependent change %s,%s" %
                            (dep_num, dep_ps))
             dep = self._getChange(dep_num, dep_ps, history=history)
-            if (not dep.is_merged) and dep not in change.needs_changes:
-                change.needs_changes.append(dep)
+            if (not dep.is_merged) and dep not in needs_changes:
+                needs_changes.append(dep)
 
         for record in self._getDependsOnFromCommit(data['commitMessage']):
             dep_num = record['number']
@@ -460,17 +461,18 @@ class Gerrit(object):
             self.log.debug("Getting commit-dependent change %s,%s" %
                            (dep_num, dep_ps))
             dep = self._getChange(dep_num, dep_ps, history=history)
-            if (not dep.is_merged) and dep not in change.needs_changes:
-                change.needs_changes.append(dep)
+            if (not dep.is_merged) and dep not in needs_changes:
+                needs_changes.append(dep)
+        change.needs_changes = needs_changes
 
-        change.needed_by_changes = []
+        needed_by_changes = []
         if 'neededBy' in data:
             for needed in data['neededBy']:
                 parts = needed['ref'].split('/')
                 dep_num, dep_ps = parts[3], parts[4]
                 dep = self._getChange(dep_num, dep_ps)
                 if (not dep.is_merged) and dep.is_current_patchset:
-                    change.needed_by_changes.append(dep)
+                    needed_by_changes.append(dep)
 
         for record in self._getNeededByFromCommit(data['id']):
             dep_num = record['number']
@@ -483,7 +485,8 @@ class Gerrit(object):
             # change).
             dep = self._getChange(dep_num, dep_ps, refresh=True)
             if (not dep.is_merged) and dep.is_current_patchset:
-                change.needed_by_changes.append(dep)
+                needed_by_changes.append(dep)
+        change.needed_by_changes = needed_by_changes
 
         return change
 
