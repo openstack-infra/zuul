@@ -1710,6 +1710,41 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.reported, 0, "Abandoned change should not report")
         self.assertEqual(B.reported, 1, "Change should report")
 
+    def test_abandoned_not_timer(self):
+        "Test that an abandoned change does not cancel timer jobs"
+
+        self.worker.hold_jobs_in_build = True
+
+        # Start timer trigger - also org/project
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-idle.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+        # The pipeline triggers every second, so we should have seen
+        # several by now.
+        time.sleep(5)
+        self.waitUntilSettled()
+        # Stop queuing timer triggered jobs so that the assertions
+        # below don't race against more jobs being queued.
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-no-timer.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+        self.assertEqual(len(self.builds), 2, "Two timer jobs")
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 3, "One change plus two timer jobs")
+
+        self.fake_gerrit.addEvent(A.getChangeAbandonedEvent())
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 2, "Two timer jobs remain")
+
+        self.worker.release()
+        self.waitUntilSettled()
+
     def test_zuul_url_return(self):
         "Test if ZUUL_URL is returning when zuul_url is set in zuul.conf"
         self.assertTrue(self.sched.config.has_option('merger', 'zuul_url'))
