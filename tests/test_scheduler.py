@@ -3415,7 +3415,7 @@ For CI problems and help debugging, contact ci@example.org"""
 
     def test_crd_check_duplicate(self):
         "Test duplicate check in independent pipelines"
-        self.gearman_server.hold_jobs_in_queue = True
+        self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
         check_pipeline = self.sched.layout.pipelines['check']
@@ -3438,13 +3438,14 @@ For CI problems and help debugging, contact ci@example.org"""
 
         # Release jobs in order to avoid races with change A jobs
         # finishing before change B jobs.
-        self.gearman_server.release('.*-merge')
-        self.gearman_server.release('project1-.*')
+        self.worker.release('.*-merge')
+        self.worker.release('project1-.*')
         self.waitUntilSettled()
-        self.gearman_server.release('.*-merge')
-        self.gearman_server.release('project1-.*')
+        self.worker.release('.*-merge')
+        self.worker.release('project1-.*')
         self.waitUntilSettled()
-        self.gearman_server.release()
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
