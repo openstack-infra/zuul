@@ -25,10 +25,6 @@ import zuul.lib.cloner
 
 ZUUL_ENV_SUFFIXES = (
     'branch',
-    'change',
-    'patchset',
-    'pipeline',
-    'project',
     'ref',
     'url',
 )
@@ -93,10 +89,11 @@ class Cloner(zuul.cmd.ZuulApp):
 
         args = parser.parse_args()
 
-        # Validate ZUUL_* arguments
+        # Validate ZUUL_* arguments. If any ZUUL_* argument is set they
+        # must all be set, otherwise fallback to defaults.
         zuul_missing = [zuul_opt for zuul_opt, val in vars(args).items()
                         if zuul_opt.startswith('zuul') and val is None]
-        if zuul_missing:
+        if len(zuul_missing) < len(ZUUL_ENV_SUFFIXES):
             parser.error(("Some Zuul parameters are not set:\n\t%s\n"
                           "Define them either via environment variables or "
                           "using options above." %
