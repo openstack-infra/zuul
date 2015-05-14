@@ -125,9 +125,14 @@ class Cloner(object):
 
         repo = self.cloneUpstream(project, dest)
 
-        repo.reset()
         # Ensure that we don't have stale remotes around
         repo.prune()
+        # We must reset after pruning because reseting sets HEAD to point
+        # at refs/remotes/origin/master, but `git branch` which prune runs
+        # explodes if HEAD does not point at something in refs/heads.
+        # Later with repo.checkout() we set HEAD to something that
+        # `git branch` is happy with.
+        repo.reset()
 
         indicated_branch = self.branch or self.zuul_branch
         if project in self.project_branches:
