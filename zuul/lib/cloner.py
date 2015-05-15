@@ -141,22 +141,24 @@ class Cloner(object):
         override_zuul_ref = re.sub(self.zuul_branch, indicated_branch,
                                    self.zuul_ref)
 
-        if repo.hasBranch(indicated_branch):
-            self.log.debug("upstream repo has branch %s", indicated_branch)
+        if indicated_branch and repo.hasBranch(indicated_branch):
+            self.log.info("upstream repo has branch %s", indicated_branch)
             fallback_branch = indicated_branch
         else:
-            self.log.debug("upstream repo is missing branch %s",
-                           self.branch)
+            self.log.info("upstream repo is missing branch %s",
+                          self.branch)
             # FIXME should be origin HEAD branch which might not be 'master'
             fallback_branch = 'master'
 
         fallback_zuul_ref = re.sub(self.zuul_branch, fallback_branch,
                                    self.zuul_ref)
 
-        if (self.fetchFromZuul(repo, project, override_zuul_ref)
-            or (fallback_zuul_ref != override_zuul_ref and
-                self.fetchFromZuul(repo, project, fallback_zuul_ref))
-            ):
+        # If we have a non empty zuul_ref to use, use it. Otherwise we fall
+        # back to checking out the branch.
+        if ((override_zuul_ref and
+            self.fetchFromZuul(repo, project, override_zuul_ref)) or
+            (fallback_zuul_ref != override_zuul_ref and
+            self.fetchFromZuul(repo, project, fallback_zuul_ref))):
             # Work around a bug in GitPython which can not parse FETCH_HEAD
             gitcmd = git.Git(dest)
             fetch_head = gitcmd.rev_parse('FETCH_HEAD')
@@ -165,7 +167,7 @@ class Cloner(object):
                           project, fetch_head)
         else:
             # Checkout branch
-            self.log.debug("Falling back to branch %s", fallback_branch)
+            self.log.info("Falling back to branch %s", fallback_branch)
             try:
                 repo.checkout('remotes/origin/%s' % fallback_branch)
             except (ValueError, GitCommandError):
