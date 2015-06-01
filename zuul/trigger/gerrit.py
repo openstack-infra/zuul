@@ -272,7 +272,7 @@ class Gerrit(object):
                     return True
                 elif sr['status'] == 'NOT_READY':
                     for label in sr['labels']:
-                        if label['status'] == 'OK':
+                        if label['status'] in ['OK', 'MAY']:
                             continue
                         elif label['status'] in ['NEED', 'REJECT']:
                             # It may be our own rejection, so we ignore
