@@ -146,7 +146,7 @@ class Gerrit(object):
 
     def simpleQuery(self, query):
         def _query_chunk(query):
-            args = '--current-patch-set'
+            args = '--commit-message --current-patch-set'
 
             cmd = 'gerrit query --format json %s %s' % (
                 args, query)
