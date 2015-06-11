@@ -483,10 +483,6 @@ class Scheduler(threading.Thread):
                         config_project.update(
                             {pipeline.name: expanded[pipeline.name] +
                              config_project.get(pipeline.name, [])})
-            # TODO: future enhancement -- handle the case where
-            # duplicate jobs have different children and you want all
-            # of the children to run after a single run of the
-            # parent).
 
             layout.projects[config_project['name']] = project
             mode = config_project.get('merge-mode', 'merge-resolve')
