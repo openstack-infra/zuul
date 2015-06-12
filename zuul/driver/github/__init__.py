@@ -17,6 +17,7 @@ from zuul.driver import SourceInterface
 import githubconnection
 import githubtrigger
 import githubsource
+import githubreporter
 
 
 class GithubDriver(Driver, ConnectionInterface, TriggerInterface,
@@ -32,5 +33,11 @@ class GithubDriver(Driver, ConnectionInterface, TriggerInterface,
     def getSource(self, connection):
         return githubsource.GithubSource(self, connection)
 
+    def getReporter(self, connection, config=None):
+        return githubreporter.GithubReporter(self, connection)
+
     def getTriggerSchema(self):
         return githubtrigger.getSchema()
+
+    def getReporterSchema(self):
+        return githubreporter.getSchema()

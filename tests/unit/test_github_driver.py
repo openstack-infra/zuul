@@ -50,3 +50,4 @@ class TestGithubDriver(ZuulTestCase):
         zuulvars = job.parameters['vars']['zuul']
         self.assertEqual(pr.number, zuulvars['change'])
         self.assertEqual(pr.head_sha, zuulvars['patchset'])
+        self.assertEqual(1, len(pr.comments))

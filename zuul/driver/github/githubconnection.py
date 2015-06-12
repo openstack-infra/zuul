@@ -164,7 +164,7 @@ class GithubConnection(BaseConnection):
     def _authenticateGithubAPI(self):
         token = self.connection_config.get('api_token', None)
         if token is not None:
-            self.github = github3.login(token)
+            self.github = github3.login(token=token)
             self.log.info("Github API Authentication successful.")
         else:
             self.github = None
@@ -218,6 +218,12 @@ class GithubConnection(BaseConnection):
 
     def getPullUrl(self, project, number):
         return '%s/pull/%s' % (self.getGitwebUrl(project), number)
+
+    def report(self, project, pr_number, message):
+        owner, proj = project.name.split('/')
+        repository = self.github.repository(owner, proj)
+        pull_request = repository.issue(pr_number)
+        pull_request.create_comment(message)
 
     def _ghTimestampToDate(self, timestamp):
         return time.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
