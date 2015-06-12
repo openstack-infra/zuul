@@ -672,6 +672,22 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         self.pull_requests.append(pull_request)
         return pull_request
 
+    def getPushEvent(self, project, ref, old_rev=None, new_rev=None):
+        if not old_rev:
+            old_rev = '00000000000000000000000000000000'
+        if not new_rev:
+            new_rev = random_sha1()
+        name = 'push'
+        data = {
+            'ref': ref,
+            'before': old_rev,
+            'after': new_rev,
+            'repository': {
+                'full_name': project
+            }
+        }
+        return (name, data)
+
     def emitEvent(self, event):
         """Emulates sending the GitHub webhook event to the connection."""
         port = self.webapp.server.socket.getsockname()[1]

@@ -71,6 +71,27 @@ class GithubWebhookListener():
             self.log.debug('Scheduling github event: {0}'.format(event.type))
             self.connection.sched.addEvent(event)
 
+    def _event_push(self, request):
+        body = request.json_body
+        base_repo = body.get('repository')
+
+        event = TriggerEvent()
+        event.trigger_name = 'github'
+        event.project_name = base_repo.get('full_name')
+        event.type = 'push'
+
+        event.ref = body.get('ref')
+        event.oldrev = body.get('before')
+        event.newrev = body.get('after')
+
+        ref_parts = event.ref.split('/')  # ie, ['refs', 'heads', 'master']
+
+        if ref_parts[1] == "heads":
+            # necessary for the scheduler to match against particular branches
+            event.branch = ref_parts[2]
+
+        return event
+
     def _event_pull_request(self, request):
         body = request.json_body
         action = body.get('action')
@@ -180,17 +201,23 @@ class GithubConnection(BaseConnection):
     def getChange(self, event):
         """Get the change representing an event."""
 
+        project = self.source.getProject(event.project_name)
         if event.change_number:
             change = PullRequest(event.project_name)
-            change.project = self.source.getProject(event.project_name)
+            change.project = project
             change.number = event.change_number
             change.refspec = event.refspec
             change.branch = event.branch
             change.url = event.change_url
             change.updated_at = self._ghTimestampToDate(event.updated_at)
             change.patchset = event.patch_number
+        elif event.ref:
+            change = Ref(project)
+            change.ref = event.ref
+            change.oldrev = event.oldrev
+            change.newrev = event.newrev
+            change.url = self.getGitwebUrl(project, sha=event.newrev)
         else:
-            project = self.source.getProject(event.project_name)
             change = Ref(project)
         return change
 

@@ -1,0 +1,29 @@
+- pipeline:
+    name: post
+    manager: independent
+    trigger:
+      github:
+        - event: push
+          ref: ^refs/heads/.*$
+
+- pipeline:
+    name: tag
+    manager: independent
+    trigger:
+      github:
+        - event: push
+          ref: ^refs/tags/.*$
+
+- job:
+    name: project-post
+- job:
+    name: project-tag
+
+- project:
+    name: org/project
+    post:
+      jobs:
+        - project-post
+    tag:
+      jobs:
+        - project-tag
