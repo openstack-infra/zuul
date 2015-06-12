@@ -735,7 +735,13 @@ class QueueItem(object):
         ret['items_behind'] = [i.change._id() for i in self.items_behind]
         ret['failing_reasons'] = self.current_build_set.failing_reasons
         ret['zuul_ref'] = self.current_build_set.ref
-        ret['project'] = changeish.project.name
+        if changeish.project:
+            ret['project'] = changeish.project.name
+        else:
+            # For cross-project dependencies with the depends-on
+            # project not known to zuul, the project is None
+            # Set it to a static value
+            ret['project'] = "Unknown Project"
         ret['enqueue_time'] = int(self.enqueue_time * 1000)
         ret['jobs'] = []
         if hasattr(changeish, 'owner'):
