@@ -2951,9 +2951,10 @@ For CI problems and help debugging, contact ci@example.org"""
         self.registerJobs()
 
         self.assertEqual(
-            "Merge Failed.\n\nThis change was unable to be automatically "
-            "merged with the current state of the repository. Please rebase "
-            "your change and upload a new patchset.",
+            "Merge Failed.\n\nThis change or one of its cross-repo "
+            "dependencies was unable to be automatically merged with the "
+            "current state of its repository. Please rebase the change and "
+            "upload a new patchset.",
             self.sched.layout.pipelines['check'].merge_failure_message)
         self.assertEqual(
             "The merge failed! For more information...",

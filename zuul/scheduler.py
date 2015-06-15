@@ -272,9 +272,10 @@ class Scheduler(threading.Thread):
             pipeline.failure_message = conf_pipeline.get('failure-message',
                                                          "Build failed.")
             pipeline.merge_failure_message = conf_pipeline.get(
-                'merge-failure-message', "Merge Failed.\n\nThis change was "
-                "unable to be automatically merged with the current state of "
-                "the repository. Please rebase your change and upload a new "
+                'merge-failure-message', "Merge Failed.\n\nThis change or one "
+                "of its cross-repo dependencies was unable to be "
+                "automatically merged with the current state of its "
+                "repository. Please rebase the change and upload a new "
                 "patchset.")
             pipeline.success_message = conf_pipeline.get('success-message',
                                                          "Build succeeded.")

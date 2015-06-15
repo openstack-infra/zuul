@@ -107,9 +107,10 @@ class TestZuulTrigger(ZuulTestCase):
         self.assertEqual(E.reported, 0)
         self.assertEqual(
             B.messages[0],
-            "Merge Failed.\n\nThis change was unable to be automatically "
-            "merged with the current state of the repository. Please rebase "
-            "your change and upload a new patchset.")
+            "Merge Failed.\n\nThis change or one of its cross-repo "
+            "dependencies was unable to be automatically merged with the "
+            "current state of its repository. Please rebase the change and "
+            "upload a new patchset.")
 
         self.assertTrue("project:org/project status:open" in
                         self.fake_gerrit.queries)
@@ -133,8 +134,9 @@ class TestZuulTrigger(ZuulTestCase):
         self.assertEqual(E.reported, 1)
         self.assertEqual(
             E.messages[0],
-            "Merge Failed.\n\nThis change was unable to be automatically "
-            "merged with the current state of the repository. Please rebase "
-            "your change and upload a new patchset.")
+            "Merge Failed.\n\nThis change or one of its cross-repo "
+            "dependencies was unable to be automatically merged with the "
+            "current state of its repository. Please rebase the change and "
+            "upload a new patchset.")
         self.assertEqual(self.fake_gerrit.queries[1],
                          "project:org/project status:open")

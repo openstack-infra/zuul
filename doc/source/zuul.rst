@@ -924,9 +924,10 @@ Here is an example of setting the failure message for jobs that check
 whether a change merges cleanly::
 
   - name: ^.*-merge$
-    failure-message: This change was unable to be automatically merged
-    with the current state of the repository. Please rebase your
-    change and upload a new patchset.
+    failure-message: This change or one of its cross-repo dependencies
+    was unable to be automatically merged with the current state of
+    its repository. Please rebase the change and upload a new
+    patchset.
 
 Projects
 """"""""
