@@ -635,7 +635,7 @@ explanation of each of the parameters::
   Default: ``linear``.
 
 **window-increase-factor**
-  DependentPipelineManagers only. The value to be added or mulitplied
+  DependentPipelineManagers only. The value to be added or multiplied
   against the previous window value to determine the new window after
   successful change merges.
   Default: ``1``.
