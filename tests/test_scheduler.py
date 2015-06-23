@@ -1878,6 +1878,23 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
+    def test_no_job_project(self):
+        "Test that reports with no jobs don't get sent"
+        A = self.fake_gerrit.addFakeChange('org/no-jobs-project',
+                                           'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        # Change wasn't reported to
+        self.assertEqual(A.reported, False)
+
+        # Check queue is empty afterwards
+        check_pipeline = self.sched.layout.pipelines['check']
+        items = check_pipeline.getAllItems()
+        self.assertEqual(len(items), 0)
+
+        self.assertEqual(len(self.history), 0)
+
     def test_zuul_refs(self):
         "Test that zuul refs exist and have the right changes"
         self.worker.hold_jobs_in_build = True

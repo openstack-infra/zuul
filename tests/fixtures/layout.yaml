@@ -246,3 +246,7 @@ projects:
   - name: org/experimental-project
     experimental:
       - experimental-project-test
+
+  - name: org/no-jobs-project
+    check:
+      - project-testfile
