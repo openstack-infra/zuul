@@ -1521,7 +1521,13 @@ class BasePipelineManager(object):
     def _reportItem(self, item):
         self.log.debug("Reporting change %s" % item.change)
         ret = True  # Means error as returned by trigger.report
-        if self.pipeline.didAllJobsSucceed(item):
+        if not self.pipeline.getJobs(item):
+            # We don't send empty reports with +1,
+            # and the same for -1's (merge failures or transient errors)
+            # as they cannot be followed by +1's
+            self.log.debug("No jobs for change %s" % item.change)
+            actions = []
+        elif self.pipeline.didAllJobsSucceed(item):
             self.log.debug("success %s" % (self.pipeline.success_actions))
             actions = self.pipeline.success_actions
             item.setReportedResult('SUCCESS')
