@@ -138,8 +138,11 @@ class Cloner(object):
         if project in self.project_branches:
             indicated_branch = self.project_branches[project]
 
-        override_zuul_ref = re.sub(self.zuul_branch, indicated_branch,
-                                   self.zuul_ref)
+        if indicated_branch:
+            override_zuul_ref = re.sub(self.zuul_branch, indicated_branch,
+                                       self.zuul_ref)
+        else:
+            override_zuul_ref = None
 
         if indicated_branch and repo.hasBranch(indicated_branch):
             self.log.info("upstream repo has branch %s", indicated_branch)
@@ -150,14 +153,18 @@ class Cloner(object):
             # FIXME should be origin HEAD branch which might not be 'master'
             fallback_branch = 'master'
 
-        fallback_zuul_ref = re.sub(self.zuul_branch, fallback_branch,
-                                   self.zuul_ref)
+        if self.zuul_branch:
+            fallback_zuul_ref = re.sub(self.zuul_branch, fallback_branch,
+                                       self.zuul_ref)
+        else:
+            fallback_zuul_ref = None
 
         # If we have a non empty zuul_ref to use, use it. Otherwise we fall
         # back to checking out the branch.
         if ((override_zuul_ref and
             self.fetchFromZuul(repo, project, override_zuul_ref)) or
-            (fallback_zuul_ref != override_zuul_ref and
+            (fallback_zuul_ref and
+             fallback_zuul_ref != override_zuul_ref and
             self.fetchFromZuul(repo, project, fallback_zuul_ref))):
             # Work around a bug in GitPython which can not parse FETCH_HEAD
             gitcmd = git.Git(dest)
@@ -169,9 +176,9 @@ class Cloner(object):
             # Checkout branch
             self.log.info("Falling back to branch %s", fallback_branch)
             try:
-                repo.checkout('remotes/origin/%s' % fallback_branch)
+                commit = repo.checkout('remotes/origin/%s' % fallback_branch)
             except (ValueError, GitCommandError):
                 self.log.exception("Fallback branch not found: %s",
                                    fallback_branch)
-            self.log.info("Prepared %s repo with branch %s",
-                          project, fallback_branch)
+            self.log.info("Prepared %s repo with branch %s at commit %s",
+                          project, fallback_branch, commit)

@@ -130,6 +130,7 @@ class Repo(object):
         self.log.debug("Checking out %s" % ref)
         repo.head.reference = ref
         reset_repo_to_head(repo)
+        return repo.head.commit
 
     def cherryPick(self, ref):
         repo = self.createRepoObject()

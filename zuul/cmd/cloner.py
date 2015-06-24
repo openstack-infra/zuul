@@ -88,17 +88,14 @@ class Cloner(zuul.cmd.ZuulApp):
             )
 
         args = parser.parse_args()
+        # Validate ZUUL_* arguments. If ref is provided then URL is required.
+        zuul_args = [zuul_opt for zuul_opt, val in vars(args).items()
+                     if zuul_opt.startswith('zuul') and val is not None]
+        if 'zuul_ref' in zuul_args and 'zuul_url' not in zuul_args:
+            parser.error("Specifying a Zuul ref requires a Zuul url. "
+                         "Define Zuul arguments either via environment "
+                         "variables or using options above.")
 
-        # Validate ZUUL_* arguments. If any ZUUL_* argument is set they
-        # must all be set, otherwise fallback to defaults.
-        zuul_missing = [zuul_opt for zuul_opt, val in vars(args).items()
-                        if zuul_opt.startswith('zuul') and val is None]
-        if (len(zuul_missing) > 0 and
-            len(zuul_missing) < len(ZUUL_ENV_SUFFIXES)):
-            parser.error(("Some Zuul parameters are not set:\n\t%s\n"
-                          "Define them either via environment variables or "
-                          "using options above." %
-                          "\n\t".join(sorted(zuul_missing))))
         self.args = args
 
     def setup_logging(self, color=False, verbose=False):
