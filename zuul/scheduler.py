@@ -198,7 +198,7 @@ class Scheduler(threading.Thread):
         self.management_event_queue = Queue.Queue()
         self.layout = model.Layout()
 
-        self.zuul_version = zuul_version.version_info.version_string()
+        self.zuul_version = zuul_version.version_info.release_string()
         self.last_reconfigured = None
 
     def stop(self):
