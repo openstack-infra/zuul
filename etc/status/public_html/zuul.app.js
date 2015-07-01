@@ -17,9 +17,11 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
+/*exported zuul_build_dom, zuul_start */
+
 function zuul_build_dom($, container) {
     // Build a default-looking DOM
-    default_layout = '<div class="container">'
+    var default_layout = '<div class="container">'
         + '<h1>Zuul Status</h1>'
         + '<p>Real-time status monitor of Zuul, the pipeline manager between Gerrit and Workers.</p>'
         + '<div class="zuul-container" id="zuul-container">'
@@ -34,7 +36,7 @@ function zuul_build_dom($, container) {
 
     $(function ($) {
         // DOM ready
-        $container = $(container);
+        var $container = $(container);
         $container.html(default_layout);
     });
 }
