@@ -265,12 +265,14 @@ class Gearman(object):
                                                        params))
 
     def launch(self, job, item, pipeline, dependent_items=[]):
-        self.log.info("Launch job %s for change %s with dependent changes %s" %
-                      (job, item.change,
-                       [x.change for x in dependent_items]))
+        uuid = str(uuid4().hex)
+        self.log.info(
+            "Launch job %s (uuid: %s) for change %s with dependent "
+            "changes %s" % (
+                job, uuid, item.change,
+                [x.change for x in dependent_items]))
         dependent_items = dependent_items[:]
         dependent_items.reverse()
-        uuid = str(uuid4().hex)
         params = dict(ZUUL_UUID=uuid,
                       ZUUL_PROJECT=item.change.project.name)
         params['ZUUL_PIPELINE'] = pipeline.name
