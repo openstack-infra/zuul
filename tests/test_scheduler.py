@@ -2036,6 +2036,30 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.history[0].name, 'gate-noop')
         self.assertEqual(self.history[0].result, 'SUCCESS')
 
+    def test_file_head(self):
+        # This is a regression test for an observed bug.  A change
+        # with a file named "HEAD" in the root directory of the repo
+        # was processed by a merger.  It then was unable to reset the
+        # repo because of:
+        #   GitCommandError: 'git reset --hard HEAD' returned
+        #       with exit code 128
+        #   stderr: 'fatal: ambiguous argument 'HEAD': both revision
+        #       and filename
+        #   Use '--' to separate filenames from revisions'
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addPatchset(['HEAD'])
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(2))
+        self.waitUntilSettled()
+
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertIn('Build succeeded', A.messages[0])
+        self.assertIn('Build succeeded', B.messages[0])
+
     def test_file_jobs(self):
         "Test that file jobs run only when appropriate"
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')

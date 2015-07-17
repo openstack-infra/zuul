@@ -20,6 +20,21 @@ import logging
 import zuul.model
 
 
+def reset_repo_to_head(repo):
+    # This lets us reset the repo even if there is a file in the root
+    # directory named 'HEAD'.  Currently, GitPython does not allow us
+    # to instruct it to always include the '--' to disambiguate.  This
+    # should no longer be necessary if this PR merges:
+    #   https://github.com/gitpython-developers/GitPython/pull/319
+    try:
+        repo.git.reset('--hard', 'HEAD', '--')
+    except git.GitCommandError as e:
+        # git nowadays may use 1 as status to indicate there are still unstaged
+        # modifications after the reset
+        if e.status != 1:
+            raise
+
+
 class ZuulReference(git.Reference):
     _common_path_default = "refs/zuul"
     _points_to_commits_only = True
@@ -82,7 +97,7 @@ class Repo(object):
 
         # Reset to remote HEAD (usually origin/master)
         repo.head.reference = origin.refs['HEAD']
-        repo.head.reset(index=True, working_tree=True)
+        reset_repo_to_head(repo)
         repo.git.clean('-x', '-f', '-d')
 
     def prune(self):
@@ -114,7 +129,7 @@ class Repo(object):
         repo = self.createRepoObject()
         self.log.debug("Checking out %s" % ref)
         repo.head.reference = ref
-        repo.head.reset(index=True, working_tree=True)
+        reset_repo_to_head(repo)
 
     def cherryPick(self, ref):
         repo = self.createRepoObject()

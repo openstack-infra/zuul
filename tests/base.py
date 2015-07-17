@@ -47,8 +47,9 @@ import zuul.webapp
 import zuul.rpclistener
 import zuul.launcher.gearman
 import zuul.lib.swift
-import zuul.merger.server
 import zuul.merger.client
+import zuul.merger.merger
+import zuul.merger.server
 import zuul.reporter.gerrit
 import zuul.reporter.smtp
 import zuul.trigger.gerrit
@@ -145,7 +146,7 @@ class FakeChange(object):
                                                         self.latest_patchset),
                                      'refs/tags/init')
         repo.head.reference = ref
-        repo.head.reset(index=True, working_tree=True)
+        zuul.merger.merger.reset_repo_to_head(repo)
         repo.git.clean('-x', '-f', '-d')
 
         path = os.path.join(self.upstream_root, self.project)
@@ -167,7 +168,7 @@ class FakeChange(object):
 
         r = repo.index.commit(msg)
         repo.head.reference = 'master'
-        repo.head.reset(index=True, working_tree=True)
+        zuul.merger.merger.reset_repo_to_head(repo)
         repo.git.clean('-x', '-f', '-d')
         repo.heads['master'].checkout()
         return r
@@ -1045,7 +1046,7 @@ class ZuulTestCase(BaseTestCase):
         repo.create_tag('init')
 
         repo.head.reference = master
-        repo.head.reset(index=True, working_tree=True)
+        zuul.merger.merger.reset_repo_to_head(repo)
         repo.git.clean('-x', '-f', '-d')
 
         self.create_branch(project, 'mp')
@@ -1064,7 +1065,7 @@ class ZuulTestCase(BaseTestCase):
         repo.index.commit('%s commit' % branch)
 
         repo.head.reference = repo.heads['master']
-        repo.head.reset(index=True, working_tree=True)
+        zuul.merger.merger.reset_repo_to_head(repo)
         repo.git.clean('-x', '-f', '-d')
 
     def ref_has_change(self, ref, change):
