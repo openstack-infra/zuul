@@ -1176,6 +1176,18 @@ class BasePipelineManager(object):
                 self.log.debug("Re-enqueing change %s in queue %s" %
                                (item.change, change_queue))
                 change_queue.enqueueItem(item)
+
+                # Re-set build results in case any new jobs have been
+                # added to the tree.
+                for build in item.current_build_set.getBuilds():
+                    if build.result:
+                        self.pipeline.setResult(item, build)
+                # Similarly, reset the item state.
+                if item.current_build_set.unable_to_merge:
+                    self.pipeline.setUnableToMerge(item)
+                if item.dequeued_needing_change:
+                    self.pipeline.setDequeuedNeedingChange(item)
+
                 self.reportStats(item)
                 return True
             else:

@@ -2265,6 +2265,127 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
+    def test_live_reconfiguration_merge_conflict(self):
+        # A real-world bug: a change in a gate queue has a merge
+        # conflict and a job is added to its project while it's
+        # sitting in the queue.  The job gets added to the change and
+        # enqueued and the change gets stuck.
+        self.worker.registerFunction('build:project-test3')
+        self.worker.hold_jobs_in_build = True
+
+        # This change is fine.  It's here to stop the queue long
+        # enough for the next change to be subject to the
+        # reconfiguration, as well as to provide a conflict for the
+        # next change.  This change will succeed and merge.
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addPatchset(['conflict'])
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+
+        # This change will be in merge conflict.  During the
+        # reconfiguration, we will add a job.  We want to make sure
+        # that doesn't cause it to get stuck.
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        B.addPatchset(['conflict'])
+        B.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+
+        self.waitUntilSettled()
+
+        # No jobs have run yet
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(B.reported, 1)
+        self.assertEqual(len(self.history), 0)
+
+        # Add the "project-test3" job.
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-live-'
+                        'reconfiguration-add-job.yaml')
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test3').result,
+                         'SUCCESS')
+        self.assertEqual(len(self.history), 4)
+
+    def test_live_reconfiguration_failed_job(self):
+        # An extrapolation of test_live_reconfiguration_merge_conflict
+        # that tests a job added to a job tree with a failed root does
+        # not run.
+        self.worker.registerFunction('build:project-test3')
+        self.worker.hold_jobs_in_build = True
+
+        # This change is fine.  It's here to stop the queue long
+        # enough for the next change to be subject to the
+        # reconfiguration.  This change will succeed and merge.
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addPatchset(['conflict'])
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        self.worker.addFailTest('project-merge', B)
+        B.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+
+        # Both -merge jobs have run, but no others.
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(B.reported, 1)
+        self.assertEqual(self.history[0].result, 'SUCCESS')
+        self.assertEqual(self.history[0].name, 'project-merge')
+        self.assertEqual(self.history[1].result, 'FAILURE')
+        self.assertEqual(self.history[1].name, 'project-merge')
+        self.assertEqual(len(self.history), 2)
+
+        # Add the "project-test3" job.
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-live-'
+                        'reconfiguration-add-job.yaml')
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(self.history[0].result, 'SUCCESS')
+        self.assertEqual(self.history[0].name, 'project-merge')
+        self.assertEqual(self.history[1].result, 'FAILURE')
+        self.assertEqual(self.history[1].name, 'project-merge')
+        self.assertEqual(self.history[2].result, 'SUCCESS')
+        self.assertEqual(self.history[3].result, 'SUCCESS')
+        self.assertEqual(self.history[4].result, 'SUCCESS')
+        self.assertEqual(len(self.history), 5)
+
     def test_live_reconfiguration_functions(self):
         "Test live reconfiguration with a custom function"
         self.worker.registerFunction('build:node-project-test1:debian')
