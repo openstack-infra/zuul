@@ -4,7 +4,9 @@ pipelines:
     require:
       any-approval:
         - username: jenkins
-          older-than: 48h
+          verified: [1, 2]
+        - username: core-reviewer
+          code-review: "![-1, -2]"
     trigger:
       gerrit:
         - event: comment-added
@@ -22,7 +24,9 @@ pipelines:
         - event: comment-added
           require-any-approval:
             - username: jenkins
-              older-than: 48h
+              verified: [1, 2]
+            - username: core-reviewer
+              code-review: "![-1, -2]"
     success:
       gerrit:
         verified: 1

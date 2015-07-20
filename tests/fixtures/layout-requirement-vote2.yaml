@@ -2,7 +2,7 @@ pipelines:
   - name: pipeline
     manager: IndependentPipelineManager
     require:
-      approval:
+      any-approval:
         - username: jenkins
           verified: [1, 2]
     trigger:
@@ -20,7 +20,7 @@ pipelines:
     trigger:
       gerrit:
         - event: comment-added
-          require-approval:
+          require-any-approval:
             - username: jenkins
               verified: [1, 2]
     success:
