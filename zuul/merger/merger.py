@@ -86,9 +86,9 @@ class Repo(object):
         return repo
 
     def reset(self):
-        repo = self.createRepoObject()
         self.log.debug("Resetting repository %s" % self.local_path)
         self.update()
+        repo = self.createRepoObject()
         origin = repo.remotes.origin
         for ref in origin.refs:
             if ref.remote_head == 'HEAD':
