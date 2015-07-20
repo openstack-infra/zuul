@@ -52,13 +52,14 @@ class TestRequirements(ZuulTestCase):
         self.assertEqual(len(self.history), 0)
 
         # Add a too-old +1, should not be enqueued
-        A.addApproval('VRFY', 1, granted_on=time.time() - 72 * 60 * 60)
+        A.addApproval('VRFY', 1, username='jenkins',
+                      granted_on=time.time() - 72 * 60 * 60)
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # Add a recent +1
-        self.fake_gerrit.addEvent(A.addApproval('VRFY', 1))
+        self.fake_gerrit.addEvent(A.addApproval('VRFY', 1, username='jenkins'))
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
@@ -95,7 +96,8 @@ class TestRequirements(ZuulTestCase):
         self.assertEqual(len(self.history), 0)
 
         # Add an old +1 which should be enqueued
-        A.addApproval('VRFY', 1, granted_on=time.time() - 72 * 60 * 60)
+        A.addApproval('VRFY', 1, username='jenkins',
+                      granted_on=time.time() - 72 * 60 * 60)
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
@@ -126,7 +128,7 @@ class TestRequirements(ZuulTestCase):
         self.assertEqual(len(self.history), 0)
 
         # Add an approval from Jenkins
-        A.addApproval('VRFY', 1)
+        A.addApproval('VRFY', 1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
@@ -157,7 +159,7 @@ class TestRequirements(ZuulTestCase):
         self.assertEqual(len(self.history), 0)
 
         # Add an approval from Jenkins
-        A.addApproval('VRFY', 1)
+        A.addApproval('VRFY', 1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
@@ -188,13 +190,13 @@ class TestRequirements(ZuulTestCase):
         self.assertEqual(len(self.history), 0)
 
         # A -1 from jenkins should not cause it to be enqueued
-        A.addApproval('VRFY', -1)
+        A.addApproval('VRFY', -1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # A +1 should allow it to be enqueued
-        A.addApproval('VRFY', 1)
+        A.addApproval('VRFY', 1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
@@ -225,19 +227,19 @@ class TestRequirements(ZuulTestCase):
         self.assertEqual(len(self.history), 0)
 
         # A -1 from jenkins should not cause it to be enqueued
-        A.addApproval('VRFY', -1)
+        A.addApproval('VRFY', -1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # A -2 from jenkins should not cause it to be enqueued
-        A.addApproval('VRFY', -2)
+        A.addApproval('VRFY', -2, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
-        # A +1 should allow it to be enqueued
-        A.addApproval('VRFY', 1)
+        # A +1 from jenkins should allow it to be enqueued
+        A.addApproval('VRFY', 1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
@@ -251,7 +253,7 @@ class TestRequirements(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
 
-        B.addApproval('VRFY', 2)
+        B.addApproval('VRFY', 2, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 2)
