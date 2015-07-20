@@ -342,8 +342,7 @@ class Gearman(object):
         build.parameters = params
 
         if job.name == 'noop':
-            build.result = 'SUCCESS'
-            self.sched.onBuildCompleted(build)
+            self.sched.onBuildCompleted(build, 'SUCCESS')
             return build
 
         gearman_job = gear.Job(name, json.dumps(params),
@@ -431,8 +430,7 @@ class Gearman(object):
                     build.retry = True
                 self.log.info("Build %s complete, result %s" %
                               (job, result))
-                build.result = result
-                self.sched.onBuildCompleted(build)
+                self.sched.onBuildCompleted(build, result)
             # The test suite expects the build to be removed from the
             # internal dict after it's added to the report queue.
             del self.builds[job.unique]

@@ -550,9 +550,15 @@ class Scheduler(threading.Thread):
         self.wake_event.set()
         self.log.debug("Done adding start event for build: %s" % build)
 
-    def onBuildCompleted(self, build):
-        self.log.debug("Adding complete event for build: %s" % build)
+    def onBuildCompleted(self, build, result):
+        self.log.debug("Adding complete event for build: %s result: %s" % (
+            build, result))
         build.end_time = time.time()
+        # Note, as soon as the result is set, other threads may act
+        # upon this, even though the event hasn't been fully
+        # processed.  Ensure that any other data from the event (eg,
+        # timing) is recorded before setting the result.
+        build.result = result
         try:
             if statsd and build.pipeline:
                 jobname = build.job.name.replace('.', '_')
