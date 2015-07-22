@@ -56,6 +56,10 @@ gearman_server
   Whether to start the internal Gearman server (default: False).
   ``start=true``
 
+**listen_address**
+  IP address or domain name on which to listen (default: all addresses).
+  ``listen_address=127.0.0.1``
+
 **log_config**
   Path to log config file for internal Gearman server.
   ``log_config=/etc/zuul/gearman-logging.yaml``
