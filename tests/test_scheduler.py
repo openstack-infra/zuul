@@ -2280,7 +2280,6 @@ class TestScheduler(ZuulTestCase):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addPatchset(['conflict'])
         A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
 
         # This change will be in merge conflict.  During the
         # reconfiguration, we will add a job.  We want to make sure
@@ -2288,6 +2287,8 @@ class TestScheduler(ZuulTestCase):
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         B.addPatchset(['conflict'])
         B.addApproval('CRVW', 2)
+
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
 
         self.waitUntilSettled()
