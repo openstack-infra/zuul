@@ -62,7 +62,10 @@ class Server(zuul.cmd.ZuulApp):
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
         self.read_config()
         self.setup_logging('zuul', 'log_config')
-        self.sched.reconfigure(self.config)
+        try:
+            self.sched.reconfigure(self.config)
+        except Exception:
+            self.log.exception("Reconfiguration failed:")
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
 
     def exit_handler(self, signum, frame):
