@@ -2325,7 +2325,7 @@ class TestScheduler(ZuulTestCase):
                          'SUCCESS')
         self.assertEqual(len(self.history), 4)
 
-    def test_live_reconfiguration_failed_job(self):
+    def test_live_reconfiguration_failed_root(self):
         # An extrapolation of test_live_reconfiguration_merge_conflict
         # that tests a job added to a job tree with a failed root does
         # not run.
@@ -2386,6 +2386,59 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.history[3].result, 'SUCCESS')
         self.assertEqual(self.history[4].result, 'SUCCESS')
         self.assertEqual(len(self.history), 5)
+
+    def test_live_reconfiguration_failed_job(self):
+        # Test that a change with a removed failing job does not
+        # disrupt reconfiguration.  If a change has a failed job and
+        # that job is removed during a reconfiguration, we observed a
+        # bug where the code to re-set build statuses would run on
+        # that build and raise an exception because the job no longer
+        # existed.
+        self.worker.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+
+        # This change will fail and later be removed by the reconfiguration.
+        self.worker.addFailTest('project-test1', A)
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.release('project-test1')
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 0)
+
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'FAILURE')
+        self.assertEqual(len(self.history), 2)
+
+        # Remove the test1 job.
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-live-'
+                        'reconfiguration-failed-job.yaml')
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-testfile').result,
+                         'SUCCESS')
+        self.assertEqual(len(self.history), 4)
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1)
+        self.assertIn('Build succeeded', A.messages[0])
+        # Ensure the removed job was not included in the report.
+        self.assertNotIn('project-test1', A.messages[0])
 
     def test_live_reconfiguration_functions(self):
         "Test live reconfiguration with a custom function"

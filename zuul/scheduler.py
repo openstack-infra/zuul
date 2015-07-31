@@ -679,7 +679,7 @@ class Scheduler(threading.Thread):
                     continue
                 self.log.debug("Re-enqueueing changes for pipeline %s" % name)
                 items_to_remove = []
-                builds_to_remove = []
+                builds_to_cancel = []
                 last_head = None
                 for shared_queue in old_pipeline.queues:
                     for item in shared_queue.queue:
@@ -703,14 +703,15 @@ class Scheduler(threading.Thread):
                             if job:
                                 build.job = job
                             else:
-                                builds_to_remove.append(build)
+                                item.removeBuild(build)
+                                builds_to_cancel.append(build)
                         if not new_pipeline.manager.reEnqueueItem(item,
                                                                   last_head):
                             items_to_remove.append(item)
                 for item in items_to_remove:
                     for build in item.current_build_set.getBuilds():
-                        builds_to_remove.append(build)
-                for build in builds_to_remove:
+                        builds_to_cancel.append(build)
+                for build in builds_to_cancel:
                     self.log.warning(
                         "Canceling build %s during reconfiguration" % (build,))
                     try:
