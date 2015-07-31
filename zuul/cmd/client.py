@@ -56,6 +56,24 @@ class Client(zuul.cmd.ZuulApp):
                                  required=True)
         cmd_enqueue.set_defaults(func=self.enqueue)
 
+        cmd_enqueue = subparsers.add_parser('enqueue-ref',
+                                            help='enqueue a ref')
+        cmd_enqueue.add_argument('--trigger', help='trigger name',
+                                 required=True)
+        cmd_enqueue.add_argument('--pipeline', help='pipeline name',
+                                 required=True)
+        cmd_enqueue.add_argument('--project', help='project name',
+                                 required=True)
+        cmd_enqueue.add_argument('--ref', help='ref name',
+                                 required=True)
+        cmd_enqueue.add_argument(
+            '--oldrev', help='old revision',
+            default='0000000000000000000000000000000000000000')
+        cmd_enqueue.add_argument(
+            '--newrev', help='new revision',
+            default='0000000000000000000000000000000000000000')
+        cmd_enqueue.set_defaults(func=self.enqueue_ref)
+
         cmd_promote = subparsers.add_parser('promote',
                                             help='promote one or more changes')
         cmd_promote.add_argument('--pipeline', help='pipeline name',
@@ -82,6 +100,9 @@ class Client(zuul.cmd.ZuulApp):
         show_running_jobs.set_defaults(func=self.show_running_jobs)
 
         self.args = parser.parse_args()
+        if self.args.func == self.enqueue_ref:
+            if self.args.oldrev == self.args.newrev:
+                parser.error("The old and new revisions must not be the same.")
 
     def setup_logging(self):
         """Client logging does not rely on conf file"""
@@ -110,6 +131,16 @@ class Client(zuul.cmd.ZuulApp):
                            project=self.args.project,
                            trigger=self.args.trigger,
                            change=self.args.change)
+        return r
+
+    def enqueue_ref(self):
+        client = zuul.rpcclient.RPCClient(self.server, self.port)
+        r = client.enqueue_ref(pipeline=self.args.pipeline,
+                               project=self.args.project,
+                               trigger=self.args.trigger,
+                               ref=self.args.ref,
+                               oldrev=self.args.oldrev,
+                               newrev=self.args.newrev)
         return r
 
     def promote(self):

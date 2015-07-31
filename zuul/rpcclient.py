@@ -56,6 +56,16 @@ class RPCClient(object):
                 }
         return not self.submitJob('zuul:enqueue', data).failure
 
+    def enqueue_ref(self, pipeline, project, trigger, ref, oldrev, newrev):
+        data = {'pipeline': pipeline,
+                'project': project,
+                'trigger': trigger,
+                'ref': ref,
+                'oldrev': oldrev,
+                'newrev': newrev,
+                }
+        return not self.submitJob('zuul:enqueue_ref', data).failure
+
     def promote(self, pipeline, change_ids):
         data = {'pipeline': pipeline,
                 'change_ids': change_ids,

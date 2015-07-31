@@ -2682,7 +2682,7 @@ class TestScheduler(ZuulTestCase):
         self.worker.release('.*')
         self.waitUntilSettled()
 
-    def test_client_enqueue(self):
+    def test_client_enqueue_change(self):
         "Test that the RPC client can enqueue a change"
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('CRVW', 2)
@@ -2703,6 +2703,24 @@ class TestScheduler(ZuulTestCase):
                          'SUCCESS')
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
+        self.assertEqual(r, True)
+
+    def test_client_enqueue_ref(self):
+        "Test that the RPC client can enqueue a ref"
+
+        client = zuul.rpcclient.RPCClient('127.0.0.1',
+                                          self.gearman_server.port)
+        r = client.enqueue_ref(
+            pipeline='post',
+            project='org/project',
+            trigger='gerrit',
+            ref='master',
+            oldrev='90f173846e3af9154517b88543ffbd1691f31366',
+            newrev='d479a0bfcb34da57a31adb2a595c0cf687812543')
+        self.waitUntilSettled()
+        job_names = [x.name for x in self.history]
+        self.assertEqual(len(self.history), 1)
+        self.assertIn('project-post', job_names)
         self.assertEqual(r, True)
 
     def test_client_enqueue_negative(self):
