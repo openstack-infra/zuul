@@ -1362,6 +1362,7 @@ class BasePipelineManager(object):
                                    "for change %s" % (build, item.change))
             build.result = 'CANCELED'
             canceled = True
+        self.updateBuildDescriptions(old_build_set)
         for item_behind in item.items_behind:
             self.log.debug("Canceling jobs for change %s, behind change %s" %
                            (item_behind.change, item.change))
@@ -1485,7 +1486,6 @@ class BasePipelineManager(object):
 
     def onBuildStarted(self, build):
         self.log.debug("Build %s started" % build)
-        self.updateBuildDescriptions(build.build_set)
         return True
 
     def onBuildCompleted(self, build):
@@ -1495,7 +1495,6 @@ class BasePipelineManager(object):
         self.pipeline.setResult(item, build)
         self.log.debug("Item %s status is now:\n %s" %
                        (item, item.formatStatus()))
-        self.updateBuildDescriptions(build.build_set)
         return True
 
     def onMergeCompleted(self, event):
