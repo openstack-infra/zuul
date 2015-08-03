@@ -2494,6 +2494,57 @@ class TestScheduler(ZuulTestCase):
         # Ensure the removed job was not included in the report.
         self.assertNotIn('project1-project2-integration', A.messages[0])
 
+    def test_live_reconfiguration_del_project(self):
+        # Test project deletion from layout
+        # while changes are enqueued
+
+        self.worker.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project1', 'master', 'C')
+
+        # A Depends-On: B
+        A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            A.subject, B.data['id'])
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 5)
+
+        # This layout defines only org/project, not org/project1
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-live-'
+                        'reconfiguration-del-project.yaml')
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        # Builds for C aborted, builds for A succeed,
+        # and have change B applied ahead
+        job_c = self.getJobFromHistory('project1-test1')
+        self.assertEqual(job_c.changes, '3,1')
+        self.assertEqual(job_c.result, 'ABORTED')
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(self.getJobFromHistory('project-test1').changes,
+                         '2,1 1,1')
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(C.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.reported, 0)
+        self.assertEqual(C.reported, 0)
+
+        self.assertEqual(len(self.sched.layout.pipelines['check'].queues), 0)
+        self.assertIn('Build succeeded', A.messages[0])
+
     def test_live_reconfiguration_functions(self):
         "Test live reconfiguration with a custom function"
         self.worker.registerFunction('build:node-project-test1:debian')
@@ -3668,6 +3719,48 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(B.data['status'], 'NEW')
 
+    def test_crd_gate_unknown(self):
+        "Test unknown projects in dependent pipeline"
+        self.init_repo("org/unknown")
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/unknown', 'master', 'B')
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+
+        # A Depends-On: B
+        A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            A.subject, B.data['id'])
+
+        B.addApproval('APRV', 1)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        # Unknown projects cannot share a queue with any other
+        # since they don't have common jobs with any other (they have no jobs).
+        # Changes which depend on unknown project changes
+        # should not be processed in dependent pipeline
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(A.reported, 0)
+        self.assertEqual(B.reported, 0)
+        self.assertEqual(len(self.history), 0)
+
+        # Simulate change B being gated outside this layout
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        B.setMerged()
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+
+        # Now that B is merged, A should be able to be enqueued and
+        # merged.
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(B.reported, 0)
+
     def test_crd_check(self):
         "Test cross-repo dependencies in independent pipelines"
 
@@ -3782,12 +3875,12 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertIn('Build succeeded', A.messages[0])
         self.assertIn('Build succeeded', B.messages[0])
 
-    def test_crd_check_reconfiguration(self):
+    def _test_crd_check_reconfiguration(self, project1, project2):
         "Test cross-repo dependencies re-enqueued in independent pipelines"
 
         self.gearman_server.hold_jobs_in_queue = True
-        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
-        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        A = self.fake_gerrit.addFakeChange(project1, 'master', 'A')
+        B = self.fake_gerrit.addFakeChange(project2, 'master', 'B')
 
         # A Depends-On: B
         A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
@@ -3819,6 +3912,17 @@ For CI problems and help debugging, contact ci@example.org"""
 
         self.assertEqual(self.history[0].changes, '2,1 1,1')
         self.assertEqual(len(self.sched.layout.pipelines['check'].queues), 0)
+
+    def test_crd_check_reconfiguration(self):
+        self._test_crd_check_reconfiguration('org/project1', 'org/project2')
+
+    def test_crd_undefined_project(self):
+        """Test that undefined projects in dependencies are handled for
+        independent pipelines"""
+        # It's a hack for fake gerrit,
+        # as it implies repo creation upon the creation of any change
+        self.init_repo("org/unknown")
+        self._test_crd_check_reconfiguration('org/project1', 'org/unknown')
 
     def test_crd_check_ignore_dependencies(self):
         "Test cross-repo dependencies can be ignored"

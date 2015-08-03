@@ -431,9 +431,13 @@ class ChangeQueue(object):
 
 
 class Project(object):
-    def __init__(self, name):
+    def __init__(self, name, foreign=False):
         self.name = name
         self.merge_mode = MERGER_MERGE_RESOLVE
+        # foreign projects are those referenced in dependencies
+        # of layout projects, this should matter
+        # when deciding whether to enqueue their changes
+        self.foreign = foreign
 
     def __str__(self):
         return self.name
