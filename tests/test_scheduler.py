@@ -2440,6 +2440,60 @@ class TestScheduler(ZuulTestCase):
         # Ensure the removed job was not included in the report.
         self.assertNotIn('project-test1', A.messages[0])
 
+    def test_live_reconfiguration_shared_queue(self):
+        # Test that a change with a failing job which was removed from
+        # this project but otherwise still exists in the system does
+        # not disrupt reconfiguration.
+
+        self.worker.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+
+        self.worker.addFailTest('project1-project2-integration', A)
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+        self.worker.release('project1-project2-integration')
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 0)
+
+        self.assertEqual(self.getJobFromHistory('project1-merge').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory(
+            'project1-project2-integration').result, 'FAILURE')
+        self.assertEqual(len(self.history), 2)
+
+        # Remove the integration job.
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-live-'
+                        'reconfiguration-shared-queue.yaml')
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(self.getJobFromHistory('project1-merge').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project1-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project1-test2').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory(
+            'project1-project2-integration').result, 'FAILURE')
+        self.assertEqual(len(self.history), 4)
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1)
+        self.assertIn('Build succeeded', A.messages[0])
+        # Ensure the removed job was not included in the report.
+        self.assertNotIn('project1-project2-integration', A.messages[0])
+
     def test_live_reconfiguration_functions(self):
         "Test live reconfiguration with a custom function"
         self.worker.registerFunction('build:node-project-test1:debian')

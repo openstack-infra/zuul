@@ -698,9 +698,10 @@ class Scheduler(threading.Thread):
                             items_to_remove.append(item)
                             continue
                         item.change.project = project
+                        item_jobs = new_pipeline.getJobs(item)
                         for build in item.current_build_set.getBuilds():
                             job = layout.jobs.get(build.job.name)
-                            if job:
+                            if job and job in item_jobs:
                                 build.job = job
                             else:
                                 item.removeBuild(build)
