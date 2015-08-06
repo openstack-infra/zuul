@@ -168,7 +168,7 @@ class Repo(object):
 
     def createZuulRef(self, ref, commit='HEAD'):
         repo = self.createRepoObject()
-        self.log.debug("CreateZuulRef %s at %s" % (ref, commit))
+        self.log.debug("CreateZuulRef %s at %s on %s" % (ref, commit, repo))
         ref = ZuulReference.create(repo, ref, commit)
         return ref.commit
 
