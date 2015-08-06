@@ -156,22 +156,42 @@ class Gerrit(object):
             lines = out.split('\n')
             if not lines:
                 return False
+
+            # filter out blank lines
             data = [json.loads(line) for line in lines
-                    if "sortKey" in line]
+                    if line.startswith('{')]
+
+            # check last entry for more changes
+            more_changes = None
+            if 'moreChanges' in data[-1]:
+                more_changes = data[-1]['moreChanges']
+
+            # we have to remove the statistics line
+            del data[-1]
+
             if not data:
-                return False
+                return False, more_changes
             self.log.debug("Received data from Gerrit query: \n%s" %
                            (pprint.pformat(data)))
-            return data
+            return data, more_changes
 
         # gerrit returns 500 results by default, so implement paging
         # for large projects like nova
         alldata = []
-        chunk = _query_chunk(query)
+        chunk, more_changes = _query_chunk(query)
         while(chunk):
             alldata.extend(chunk)
-            sortkey = "resume_sortkey:'%s'" % chunk[-1]["sortKey"]
-            chunk = _query_chunk("%s %s" % (query, sortkey))
+            if more_changes is None:
+                # continue sortKey based (before Gerrit 2.9)
+                resume = "resume_sortkey:'%s'" % chunk[-1]["sortKey"]
+            elif more_changes:
+                # continue moreChanges based (since Gerrit 2.9)
+                resume = "-S %d" % len(alldata)
+            else:
+                # no more changes
+                break
+
+            chunk, more_changes = _query_chunk("%s %s" % (query, resume))
         return alldata
 
     def _open(self):

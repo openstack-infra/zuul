@@ -1,0 +1,2 @@
+gerrit query --format json --commit-message --current-patch-set project:openstack-infra/zuul resume_sortkey:'0037629b00034a5a'
+{"type":"stats","rowCount":0,"runTimeMilliseconds":12}
