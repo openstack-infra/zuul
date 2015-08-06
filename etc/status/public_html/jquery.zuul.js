@@ -289,10 +289,10 @@
                 }
 
                 var $change_progress_row_left = $('<div />')
-                    .addClass('col-xs-3')
+                    .addClass('col-xs-4')
                     .append($change_link);
                 var $change_progress_row_right = $('<div />')
-                    .addClass('col-xs-9')
+                    .addClass('col-xs-8')
                     .append(this.change_total_progress_bar(change));
 
                 var $change_progress_row = $('<div />')
