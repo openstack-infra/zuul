@@ -16,7 +16,9 @@
 .zuul-change-total-result {
     height: 10px;
     width: 100px;
-    margin: 5px 0 0 0;
+    margin: 0;
+    display: inline-block;
+    vertical-align: middle;
 }
 
 .zuul-spinner,
