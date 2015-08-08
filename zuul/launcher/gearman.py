@@ -423,9 +423,11 @@ class Gearman(object):
 
         build = self.builds.get(job.unique)
         if build:
+            data = getJobData(job)
+            build.node_labels = data.get('node_labels')
+            build.node_name = data.get('node_name')
             if not build.canceled:
                 if result is None:
-                    data = getJobData(job)
                     result = data.get('result')
                 if result is None:
                     build.retry = True
