@@ -77,7 +77,7 @@ class Cloner(zuul.cmd.ZuulApp):
         )
 
         zuul_env = parser.add_argument_group(
-            'zuul environnement',
+            'zuul environment',
             'Let you override $ZUUL_* environment variables.'
         )
         for zuul_suffix in ZUUL_ENV_SUFFIXES:
