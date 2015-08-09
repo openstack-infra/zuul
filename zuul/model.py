@@ -543,6 +543,9 @@ class JobTree(object):
             t = JobTree(job)
             self.job_trees.append(t)
             return t
+        for tree in self.job_trees:
+            if tree.job == job:
+                return tree
 
     def getJobs(self):
         jobs = []
