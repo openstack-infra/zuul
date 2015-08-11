@@ -13,6 +13,7 @@
 # under the License.
 
 import logging
+import voluptuous as v
 
 
 from zuul.reporter import BaseReporter
@@ -24,25 +25,26 @@ class GerritReporter(BaseReporter):
     name = 'gerrit'
     log = logging.getLogger("zuul.reporter.gerrit.Reporter")
 
-    def __init__(self, gerrit):
-        """Set up the reporter."""
-        # TODO: make default_gerrit come from a connection
-        self.default_gerrit = gerrit
-
-    def report(self, source, change, message, params):
+    def report(self, source, change, message):
         """Send a message to gerrit."""
         self.log.debug("Report change %s, params %s, message: %s" %
-                       (change, params, message))
+                       (change, self.reporter_config, message))
         changeid = '%s,%s' % (change.number, change.patchset)
         change._ref_sha = source.getRefSha(change.project.name,
                                            'refs/heads/' + change.branch)
-        return self.default_gerrit.review(
-            change.project.name, changeid, message, params)
 
-    def getSubmitAllowNeeds(self, params):
+        return self.connection.review(change.project.name, changeid, message,
+                                      self.reporter_config)
+
+    def getSubmitAllowNeeds(self):
         """Get a list of code review labels that are allowed to be
         "needed" in the submit records for a change, with respect
         to this queue.  In other words, the list of review labels
         this reporter itself is likely to set before submitting.
         """
-        return params
+        return self.reporter_config
+
+
+def getSchema():
+    gerrit_reporter = v.Any(str, v.Schema({}, extra=True))
+    return gerrit_reporter

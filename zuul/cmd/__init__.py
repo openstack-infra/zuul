@@ -26,7 +26,9 @@ import traceback
 
 yappi = extras.try_import('yappi')
 
-# No zuul imports here because they pull in paramiko which must not be
+import zuul.lib.connections
+
+# Do not import modules that will pull in paramiko which must not be
 # imported until after the daemonization.
 # https://github.com/paramiko/paramiko/issues/59
 # Similar situation with gear and statsd.
@@ -59,6 +61,7 @@ class ZuulApp(object):
     def __init__(self):
         self.args = None
         self.config = None
+        self.connections = {}
 
     def _get_version(self):
         from zuul.version import version_info as zuul_version_info
@@ -86,3 +89,7 @@ class ZuulApp(object):
             logging.config.fileConfig(fp)
         else:
             logging.basicConfig(level=logging.DEBUG)
+
+    def configure_connections(self):
+        self.connections = zuul.lib.connections.configure_connections(
+            self.config)

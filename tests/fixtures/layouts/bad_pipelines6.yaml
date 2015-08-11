@@ -2,7 +2,7 @@ pipelines:
   - name: check
     manager: IndependentPipelineManager
     trigger:
-      gerrit:
+      review_gerrit:
         - event: comment-added
           # approved is not a valid entry. Should be approval.
           approved: 1

@@ -18,8 +18,6 @@
 import voluptuous as v
 import string
 
-from zuul.trigger import gerrit
-
 
 # Several forms accept either a single item or a list, this makes
 # specifying that in the schema easy (and explicit).
@@ -36,57 +34,12 @@ class LayoutSchema(object):
 
     precedence = v.Any('normal', 'low', 'high')
 
-    variable_dict = v.Schema({}, extra=True)
-
     approval = v.Schema({'username': str,
                          'email-filter': str,
                          'email': str,
                          'older-than': str,
                          'newer-than': str,
                          }, extra=True)
-
-    gerrit_trigger = {v.Required('event'):
-                      toList(v.Any('patchset-created',
-                                   'draft-published',
-                                   'change-abandoned',
-                                   'change-restored',
-                                   'change-merged',
-                                   'comment-added',
-                                   'ref-updated')),
-                      'comment_filter': toList(str),
-                      'comment': toList(str),
-                      'email_filter': toList(str),
-                      'email': toList(str),
-                      'username_filter': toList(str),
-                      'username': toList(str),
-                      'branch': toList(str),
-                      'ref': toList(str),
-                      'ignore-deletes': bool,
-                      'approval': toList(variable_dict),
-                      'require-approval': toList(approval),
-                      'reject-approval': toList(approval),
-                      }
-
-    timer_trigger = {v.Required('time'): str}
-
-    zuul_trigger = {v.Required('event'):
-                    toList(v.Any('parent-change-enqueued',
-                                 'project-change-merged')),
-                    'pipeline': toList(str),
-                    'require-approval': toList(approval),
-                    'reject-approval': toList(approval),
-                    }
-
-    trigger = v.Required({'gerrit': toList(gerrit_trigger),
-                          'timer': toList(timer_trigger),
-                          'zuul': toList(zuul_trigger)})
-
-    report_actions = {'gerrit': variable_dict,
-                      'smtp': {'to': str,
-                               'from': str,
-                               'subject': str,
-                               },
-                      }
 
     require = {'approval': toList(approval),
                'open': bool,
@@ -102,7 +55,7 @@ class LayoutSchema(object):
 
     pipeline = {v.Required('name'): str,
                 v.Required('manager'): manager,
-                'source': v.Any('gerrit'),
+                'source': str,
                 'precedence': precedence,
                 'description': str,
                 'require': require,
@@ -113,12 +66,6 @@ class LayoutSchema(object):
                 'footer-message': str,
                 'dequeue-on-new-patchset': bool,
                 'ignore-dependencies': bool,
-                'trigger': trigger,
-                'success': report_actions,
-                'failure': report_actions,
-                'merge-failure': report_actions,
-                'start': report_actions,
-                'disabled': report_actions,
                 'disable-after-consecutive-failures':
                     v.All(int, v.Range(min=1)),
                 'window': window,
@@ -128,7 +75,6 @@ class LayoutSchema(object):
                 'window-decrease-type': window_type,
                 'window-decrease-factor': window_factor,
                 }
-    pipelines = [pipeline]
 
     project_template = {v.Required('name'): str}
     project_templates = [project_template]
@@ -209,7 +155,42 @@ class LayoutSchema(object):
 
         return parameters
 
-    def getSchema(self, data):
+    def getDriverSchema(self, dtype, connections):
+        # TODO(jhesketh): Make the driver discovery dynamic
+        connection_drivers = {
+            'trigger': {
+                'gerrit': 'zuul.trigger.gerrit',
+            },
+            'reporter': {
+                'gerrit': 'zuul.reporter.gerrit',
+                'smtp': 'zuul.reporter.smtp',
+            },
+        }
+        standard_drivers = {
+            'trigger': {
+                'timer': 'zuul.trigger.timer',
+                'zuul': 'zuul.trigger.zuultrigger',
+            }
+        }
+
+        schema = {}
+        # Add the configured connections as available layout options
+        for connection_name, connection in connections.items():
+            for dname, dmod in connection_drivers.get(dtype, {}).items():
+                if connection.driver_name == dname:
+                    schema[connection_name] = toList(__import__(
+                        connection_drivers[dtype][dname],
+                        fromlist=['']).getSchema())
+
+        # Standard drivers are always available and don't require a unique
+        # (connection) name
+        for dname, dmod in standard_drivers.get(dtype, {}).items():
+            schema[dname] = toList(__import__(
+                standard_drivers[dtype][dname], fromlist=['']).getSchema())
+
+        return schema
+
+    def getSchema(self, data, connections=None):
         if not isinstance(data, dict):
             raise Exception("Malformed layout configuration: top-level type "
                             "should be a dictionary")
@@ -263,9 +244,31 @@ class LayoutSchema(object):
         for p in pipelines:
             project_template[p] = self.validateJob
         project_templates = [project_template]
+
+        # TODO(jhesketh): source schema is still defined above as sources
+        # currently aren't key/value so there is nothing to validate. Need to
+        # revisit this and figure out how to allow drivers with and without
+        # params. eg support all:
+        #   source: gerrit
+        # and
+        #   source:
+        #     gerrit:
+        #       - val
+        #       - val2
+        # and
+        #   source:
+        #     gerrit: something
+        # etc...
+        self.pipeline['trigger'] = v.Required(
+            self.getDriverSchema('trigger', connections))
+        for action in ['start', 'success', 'failure', 'merge-failure',
+                       'disabled']:
+            self.pipeline[action] = self.getDriverSchema('reporter',
+                                                         connections)
+
         # Gather our sub schemas
         schema = v.Schema({'includes': self.includes,
-                           v.Required('pipelines'): self.pipelines,
+                           v.Required('pipelines'): [self.pipeline],
                            'jobs': self.jobs,
                            'project-templates': project_templates,
                            v.Required('projects'): projects,
@@ -282,8 +285,45 @@ class LayoutValidator(object):
                                 path + [i])
             items.append(item['name'])
 
-    def validate(self, data):
-        schema = LayoutSchema().getSchema(data)
+    def extraDriverValidation(self, dtype, driver_data, connections=None):
+        # Some drivers may have extra validation to run on the layout
+        # TODO(jhesketh): Make the driver discovery dynamic
+        connection_drivers = {
+            'trigger': {
+                'gerrit': 'zuul.trigger.gerrit',
+            },
+            'reporter': {
+                'gerrit': 'zuul.reporter.gerrit',
+                'smtp': 'zuul.reporter.smtp',
+            },
+        }
+        standard_drivers = {
+            'trigger': {
+                'timer': 'zuul.trigger.timer',
+                'zuul': 'zuul.trigger.zuultrigger',
+            }
+        }
+
+        for dname, d_conf in driver_data.items():
+            for connection_name, connection in connections.items():
+                if connection_name == dname:
+                    if (connection.driver_name in
+                        connection_drivers.get(dtype, {}).keys()):
+                        module = __import__(
+                            connection_drivers[dtype][connection.driver_name],
+                            fromlist=['']
+                        )
+                        if 'validate_conf' in dir(module):
+                            module.validate_conf(d_conf)
+                    break
+            if dname in standard_drivers.get(dtype, {}).keys():
+                module = __import__(standard_drivers[dtype][dname],
+                                    fromlist=[''])
+                if 'validate_conf' in dir(module):
+                    module.validate_conf(d_conf)
+
+    def validate(self, data, connections=None):
+        schema = LayoutSchema().getSchema(data, connections)
         schema(data)
         self.checkDuplicateNames(data['pipelines'], ['pipelines'])
         if 'jobs' in data:
@@ -292,6 +332,11 @@ class LayoutValidator(object):
         if 'project-templates' in data:
             self.checkDuplicateNames(
                 data['project-templates'], ['project-templates'])
+
         for pipeline in data['pipelines']:
-            if 'gerrit' in pipeline['trigger']:
-                gerrit.validate_trigger(pipeline['trigger'])
+            self.extraDriverValidation('trigger', pipeline['trigger'],
+                                       connections)
+            for action in ['start', 'success', 'failure', 'merge-failure']:
+                if action in pipeline:
+                    self.extraDriverValidation('reporter', pipeline[action],
+                                               connections)

@@ -2,13 +2,13 @@ pipelines:
   - name: check
     manager: IndependentPipelineManager
     trigger:
-      gerrit:
+      review_gerrit:
         - event: patchset-created
     success:
-      gerrit:
+      review_gerrit:
         verified: 1
     failure:
-      gerrit:
+      review_gerrit:
         verified: -1
 
 jobs:

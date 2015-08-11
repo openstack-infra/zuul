@@ -23,8 +23,7 @@ class TestGerritTrigger(testtools.TestCase):
 
     def test_trigger_abc(self):
         # We only need to instantiate a class for this
-        trigger = zuul.trigger.gerrit.GerritTrigger(None, None, None,  # noqa
-                                                    None)
+        zuul.trigger.gerrit.GerritTrigger({})
 
     def test_trigger_name(self):
         self.assertEqual('gerrit', zuul.trigger.gerrit.GerritTrigger.name)
@@ -35,7 +34,7 @@ class TestTimerTrigger(testtools.TestCase):
 
     def test_trigger_abc(self):
         # We only need to instantiate a class for this
-        trigger = zuul.trigger.timer.TimerTrigger(None, None)  # noqa
+        zuul.trigger.timer.TimerTrigger({})
 
     def test_trigger_name(self):
         self.assertEqual('timer', zuul.trigger.timer.TimerTrigger.name)
@@ -46,7 +45,7 @@ class TestZuulTrigger(testtools.TestCase):
 
     def test_trigger_abc(self):
         # We only need to instantiate a class for this
-        trigger = zuul.trigger.zuultrigger.ZuulTrigger(None, None)  # noqa
+        zuul.trigger.zuultrigger.ZuulTrigger({})
 
     def test_trigger_name(self):
         self.assertEqual('zuul', zuul.trigger.zuultrigger.ZuulTrigger.name)

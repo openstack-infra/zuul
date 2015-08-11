@@ -8,7 +8,7 @@ pipelines:
       open: True
       current-patchset: True
     trigger:
-      gerrit:
+      review_gerrit:
         - event: patchset-created
         - event: comment-added
           require-approval:
@@ -17,16 +17,16 @@ pipelines:
           approval:
             - workflow: 1
     success:
-      gerrit:
+      review_gerrit:
         verified: 1
     failure:
-      gerrit:
+      review_gerrit:
         verified: -1
 
   - name: post
     manager: IndependentPipelineManager
     trigger:
-      gerrit:
+      review_gerrit:
         - event: ref-updated
           ref: ^(?!refs/).*$
           ignore-deletes: True
@@ -46,32 +46,32 @@ pipelines:
       approval:
         - code-review: [-1, -2]
     trigger:
-      gerrit:
+      review_gerrit:
         - event: comment-added
           approval:
             - approved: 1
     start:
-      gerrit:
+      review_gerrit:
         verified: 0
     success:
-      gerrit:
+      review_gerrit:
         verified: 2
         code-review: 1
         submit: true
     failure:
-      gerrit:
+      review_gerrit:
         verified: -2
         workinprogress: true
 
   - name: merge-check
     manager: IndependentPipelineManager
-    source: gerrit
+    source: review_gerrit
     ignore-dependencies: true
     trigger:
       zuul:
         - event: project-change-merged
     merge-failure:
-      gerrit:
+      review_gerrit:
         verified: -1
 
 jobs:

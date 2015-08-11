@@ -2,7 +2,7 @@ pipelines:
   - name: check
     manager: IndependentPipelineManager
     trigger:
-      review_gerrit:
+      not_gerrit:
         - event: patchset-created
     success:
       review_gerrit:
@@ -10,20 +10,6 @@ pipelines:
     failure:
       review_gerrit:
         verified: -1
-
-jobs:
-  - name: ^.*$
-    swift:
-      - name: logs
-  - name: ^.*-merge$
-    swift:
-      - name: assets
-        container: merge_assets
-    failure-message: Unable to merge change
-  - name: test-test
-    swift:
-      - name: mostly
-        container: stash
 
 projects:
   - name: test-org/test

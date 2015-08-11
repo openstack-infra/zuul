@@ -5,7 +5,7 @@ pipelines:
   - name: check
     manager: IndependentPipelineManager
     trigger:
-      gerrit:
+      review_gerrit:
         - event: comment-added
           require-approval:
             - username: jenkins
@@ -23,10 +23,10 @@ pipelines:
               username: jenkins
               email: jenkins@example.com
     success:
-      gerrit:
+      review_gerrit:
         verified: 1
     failure:
-      gerrit:
+      review_gerrit:
         verified: -1
 
 projects:

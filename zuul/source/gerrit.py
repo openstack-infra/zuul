@@ -15,8 +15,7 @@
 import logging
 import re
 import time
-import urllib2
-from zuul.lib import gerrit
+from zuul import exceptions
 from zuul.model import Change, Ref, NullChange
 from zuul.source import BaseSource
 
@@ -30,75 +29,10 @@ class GerritSource(BaseSource):
     depends_on_re = re.compile(r"^Depends-On: (I[0-9a-f]{40})\s*$",
                                re.MULTILINE | re.IGNORECASE)
 
-    def __init__(self, config, sched):
-        self._change_cache = {}
-        self.sched = sched
-        self.config = config
-        self.server = config.get('gerrit', 'server')
-        if config.has_option('gerrit', 'baseurl'):
-            self.baseurl = config.get('gerrit', 'baseurl')
-        else:
-            self.baseurl = 'https://%s' % self.server
-        user = config.get('gerrit', 'user')
-        if config.has_option('gerrit', 'sshkey'):
-            sshkey = config.get('gerrit', 'sshkey')
-        else:
-            sshkey = None
-        if config.has_option('gerrit', 'port'):
-            port = int(config.get('gerrit', 'port'))
-        else:
-            port = 29418
-        self.gerrit = gerrit.Gerrit(self.server, user, port, sshkey)
-        self.gerrit.startWatching()
-
-    def _getInfoRefs(self, project):
-        url = "%s/p/%s/info/refs?service=git-upload-pack" % (
-            self.baseurl, project)
-        try:
-            data = urllib2.urlopen(url).read()
-        except:
-            self.log.error("Cannot get references from %s" % url)
-            raise  # keeps urllib2 error informations
-        ret = {}
-        read_headers = False
-        read_advertisement = False
-        if data[4] != '#':
-            raise Exception("Gerrit repository does not support "
-                            "git-upload-pack")
-        i = 0
-        while i < len(data):
-            if len(data) - i < 4:
-                raise Exception("Invalid length in info/refs")
-            plen = int(data[i:i + 4], 16)
-            i += 4
-            # It's the length of the packet, including the 4 bytes of the
-            # length itself, unless it's null, in which case the length is
-            # not included.
-            if plen > 0:
-                plen -= 4
-            if len(data) - i < plen:
-                raise Exception("Invalid data in info/refs")
-            line = data[i:i + plen]
-            i += plen
-            if not read_headers:
-                if plen == 0:
-                    read_headers = True
-                continue
-            if not read_advertisement:
-                read_advertisement = True
-                continue
-            if plen == 0:
-                # The terminating null
-                continue
-            line = line.strip()
-            revision, ref = line.split()
-            ret[ref] = revision
-        return ret
-
     def getRefSha(self, project, ref):
         refs = {}
         try:
-            refs = self._getInfoRefs(project)
+            refs = self.connection.getInfoRefs(project)
         except:
             self.log.exception("Exception looking for ref %s" %
                                ref)
@@ -123,7 +57,7 @@ class GerritSource(BaseSource):
             # means it's merged.
             return True
 
-        data = self.gerrit.query(change.number)
+        data = self.connection.query(change.number)
         change._data = data
         change.is_merged = self._isMerged(change)
         if not head:
@@ -189,23 +123,17 @@ class GerritSource(BaseSource):
             return False
         return True
 
-    def maintainCache(self, relevant):
-        # This lets the user supply a list of change objects that are
-        # still in use.  Anything in our cache that isn't in the supplied
-        # list should be safe to remove from the cache.
-        remove = []
-        for key, change in self._change_cache.items():
-            if change not in relevant:
-                remove.append(key)
-        for key in remove:
-            del self._change_cache[key]
-
     def postConfig(self):
         pass
 
     def getChange(self, event, project):
         if event.change_number:
-            change = self._getChange(event.change_number, event.patch_number)
+            refresh = False
+            if event._needs_refresh:
+                refresh = True
+                event._needs_refresh = False
+            change = self._getChange(event.change_number, event.patch_number,
+                                     refresh=refresh)
         elif event.ref:
             change = Ref(project)
             change.ref = event.ref
@@ -218,21 +146,19 @@ class GerritSource(BaseSource):
 
     def _getChange(self, number, patchset, refresh=False, history=None):
         key = '%s,%s' % (number, patchset)
-        change = None
-        if key in self._change_cache:
-            change = self._change_cache.get(key)
-            if not refresh:
-                return change
+        change = self.connection.getCachedChange(key)
+        if change and not refresh:
+            return change
         if not change:
             change = Change(None)
             change.number = number
             change.patchset = patchset
         key = '%s,%s' % (change.number, change.patchset)
-        self._change_cache[key] = change
+        self.connection.updateChangeCache(key, change)
         try:
             self._updateChange(change, history)
         except Exception:
-            del self._change_cache[key]
+            self.connection.deleteCachedChange(key)
             raise
         return change
 
@@ -242,7 +168,7 @@ class GerritSource(BaseSource):
         query = "project:%s status:open" % (project.name,)
         self.log.debug("Running query %s to get project open changes" %
                        (query,))
-        data = self.gerrit.simpleQuery(query)
+        data = self.connection.simpleQuery(query)
         changes = []
         for record in data:
             try:
@@ -266,7 +192,7 @@ class GerritSource(BaseSource):
             query = "change:%s" % (match,)
             self.log.debug("Running query %s to find needed changes" %
                            (query,))
-            records.extend(self.gerrit.simpleQuery(query))
+            records.extend(self.connection.simpleQuery(query))
         return records
 
     def _getNeededByFromCommit(self, change_id):
@@ -275,7 +201,7 @@ class GerritSource(BaseSource):
         query = 'message:%s' % change_id
         self.log.debug("Running query %s to find changes needed-by" %
                        (query,))
-        results = self.gerrit.simpleQuery(query)
+        results = self.connection.simpleQuery(query)
         for result in results:
             for match in self.depends_on_re.findall(
                 result['commitMessage']):
@@ -293,15 +219,14 @@ class GerritSource(BaseSource):
     def _updateChange(self, change, history=None):
         self.log.info("Updating information for %s,%s" %
                       (change.number, change.patchset))
-        data = self.gerrit.query(change.number)
+        data = self.connection.query(change.number)
         change._data = data
 
         if change.patchset is None:
             change.patchset = data['currentPatchSet']['number']
 
         if 'project' not in data:
-            raise Exception("Change %s,%s not found" % (change.number,
-                                                        change.patchset))
+            raise exceptions.ChangeNotFound(change.number, change.patchset)
         # If updated changed came as a dependent on
         # and its project is not defined,
         # then create a 'foreign' project for it in layout
@@ -393,17 +318,10 @@ class GerritSource(BaseSource):
         return change
 
     def getGitUrl(self, project):
-        server = self.config.get('gerrit', 'server')
-        user = self.config.get('gerrit', 'user')
-        if self.config.has_option('gerrit', 'port'):
-            port = int(self.config.get('gerrit', 'port'))
-        else:
-            port = 29418
-        url = 'ssh://%s@%s:%s/%s' % (user, server, port, project.name)
-        return url
+        return self.connection.getGitUrl(project)
 
     def _getGitwebUrl(self, project, sha=None):
-        url = '%s/gitweb?p=%s.git' % (self.baseurl, project)
-        if sha:
-            url += ';a=commitdiff;h=' + sha
-        return url
+        return self.connection.getGitwebUrl(project, sha)
+
+    def maintainCache(self, relevant):
+        self.connection.maintainCache(relevant)

@@ -15,6 +15,7 @@
 
 import apscheduler.scheduler
 import logging
+import voluptuous as v
 from zuul.model import EventFilter, TriggerEvent
 from zuul.trigger import BaseTrigger
 
@@ -23,9 +24,8 @@ class TimerTrigger(BaseTrigger):
     name = 'timer'
     log = logging.getLogger("zuul.Timer")
 
-    def __init__(self, config, sched):
-        self.sched = sched
-        self.config = config
+    def __init__(self, trigger_config={}, sched=None, connection=None):
+        super(TimerTrigger, self).__init__(trigger_config, sched, connection)
         self.apsched = apscheduler.scheduler.Scheduler()
         self.apsched.start()
 
@@ -39,8 +39,8 @@ class TimerTrigger(BaseTrigger):
             self.log.debug("Adding event %s" % event)
             self.sched.addEvent(event)
 
-    def stop(self):
-        self.apsched.shutdown()
+    def _shutdown(self):
+        self.apsched.stop()
 
     def getEventFilters(self, trigger_conf):
         def toList(item):
@@ -51,13 +51,12 @@ class TimerTrigger(BaseTrigger):
             return [item]
 
         efilters = []
-        if 'timer' in trigger_conf:
-            for trigger in toList(trigger_conf['timer']):
-                f = EventFilter(trigger=self,
-                                types=['timer'],
-                                timespecs=toList(trigger['time']))
+        for trigger in toList(trigger_conf):
+            f = EventFilter(trigger=self,
+                            types=['timer'],
+                            timespecs=toList(trigger['time']))
 
-                efilters.append(f)
+            efilters.append(f)
 
         return efilters
 
@@ -90,3 +89,8 @@ class TimerTrigger(BaseTrigger):
                                               second=second,
                                               args=(pipeline.name,
                                                     timespec,))
+
+
+def getSchema():
+    timer_trigger = {v.Required('time'): str}
+    return timer_trigger

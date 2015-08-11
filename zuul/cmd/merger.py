@@ -58,7 +58,8 @@ class Merger(zuul.cmd.ZuulApp):
 
         self.setup_logging('merger', 'log_config')
 
-        self.merger = zuul.merger.server.MergeServer(self.config)
+        self.merger = zuul.merger.server.MergeServer(self.config,
+                                                     self.connections)
         self.merger.start()
 
         signal.signal(signal.SIGUSR1, self.exit_handler)
@@ -76,6 +77,7 @@ def main():
     server.parse_arguments()
 
     server.read_config()
+    server.configure_connections()
 
     if server.config.has_option('zuul', 'state_dir'):
         state_dir = os.path.expanduser(server.config.get('zuul', 'state_dir'))

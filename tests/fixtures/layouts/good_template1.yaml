@@ -2,7 +2,7 @@ pipelines:
   - name: 'check'
     manager: IndependentPipelineManager
     trigger:
-      gerrit:
+      review_gerrit:
         - event: patchset-created
 
 project-templates:

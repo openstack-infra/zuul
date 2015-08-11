@@ -26,7 +26,7 @@ class TestSMTPReporter(testtools.TestCase):
 
     def test_reporter_abc(self):
         # We only need to instantiate a class for this
-        reporter = zuul.reporter.smtp.SMTPReporter('', '')  # noqa
+        reporter = zuul.reporter.smtp.SMTPReporter({})  # noqa
 
     def test_reporter_name(self):
         self.assertEqual('smtp', zuul.reporter.smtp.SMTPReporter.name)

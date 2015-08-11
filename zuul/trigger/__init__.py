@@ -23,9 +23,10 @@ class BaseTrigger(object):
 
     Defines the exact public methods that must be supplied."""
 
-    @abc.abstractmethod
-    def __init__(self, *args, **kwargs):
-        """Constructor."""
+    def __init__(self, trigger_config={}, sched=None, connection=None):
+        self.trigger_config = trigger_config
+        self.sched = sched
+        self.connection = connection
 
     def stop(self):
         """Stop the trigger."""
@@ -38,7 +39,7 @@ class BaseTrigger(object):
     def postConfig(self):
         """Called after config is loaded."""
 
-    def onChangeMerged(self, change):
+    def onChangeMerged(self, change, source):
         """Called when a change has been merged."""
 
     def onChangeEnqueued(self, change, pipeline):

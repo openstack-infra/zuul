@@ -27,9 +27,13 @@ class BaseSource(object):
 
     Defines the exact public methods that must be supplied."""
 
-    @abc.abstractmethod
-    def __init__(self, config, sched):
-        """Constructor."""
+    def __init__(self, source_config={}, sched=None, connection=None):
+        self.source_config = source_config
+        self.sched = sched
+        self.connection = connection
+
+    def stop(self):
+        """Stop the source."""
 
     @abc.abstractmethod
     def getRefSha(self, project, ref):

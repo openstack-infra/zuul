@@ -17,5 +17,5 @@ pipelines:
         - code-review: [-1, -2]
           username: core-person
     trigger:
-      gerrit:
+      review_gerrit:
         - event: patchset-created

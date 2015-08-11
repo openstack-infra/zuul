@@ -13,128 +13,14 @@
 # under the License.
 
 import logging
-import threading
-import time
-import voluptuous
-from zuul.model import EventFilter, TriggerEvent
+import voluptuous as v
+from zuul.model import EventFilter
 from zuul.trigger import BaseTrigger
-
-
-class GerritEventConnector(threading.Thread):
-    """Move events from Gerrit to the scheduler."""
-
-    log = logging.getLogger("zuul.GerritEventConnector")
-    delay = 5.0
-
-    def __init__(self, gerrit, sched, trigger, source):
-        super(GerritEventConnector, self).__init__()
-        self.daemon = True
-        self.gerrit = gerrit
-        self.sched = sched
-        self.trigger = trigger
-        self.source = source
-        self._stopped = False
-
-    def stop(self):
-        self._stopped = True
-        self.gerrit.addEvent((None, None))
-
-    def _handleEvent(self):
-        ts, data = self.gerrit.getEvent()
-        if self._stopped:
-            return
-        # Gerrit can produce inconsistent data immediately after an
-        # event, So ensure that we do not deliver the event to Zuul
-        # until at least a certain amount of time has passed.  Note
-        # that if we receive several events in succession, we will
-        # only need to delay for the first event.  In essence, Zuul
-        # should always be a constant number of seconds behind Gerrit.
-        now = time.time()
-        time.sleep(max((ts + self.delay) - now, 0.0))
-        event = TriggerEvent()
-        event.type = data.get('type')
-        event.trigger_name = self.trigger.name
-        change = data.get('change')
-        if change:
-            event.project_name = change.get('project')
-            event.branch = change.get('branch')
-            event.change_number = change.get('number')
-            event.change_url = change.get('url')
-            patchset = data.get('patchSet')
-            if patchset:
-                event.patch_number = patchset.get('number')
-                event.refspec = patchset.get('ref')
-            event.approvals = data.get('approvals', [])
-            event.comment = data.get('comment')
-        refupdate = data.get('refUpdate')
-        if refupdate:
-            event.project_name = refupdate.get('project')
-            event.ref = refupdate.get('refName')
-            event.oldrev = refupdate.get('oldRev')
-            event.newrev = refupdate.get('newRev')
-        # Map the event types to a field name holding a Gerrit
-        # account attribute. See Gerrit stream-event documentation
-        # in cmd-stream-events.html
-        accountfield_from_type = {
-            'patchset-created': 'uploader',
-            'draft-published': 'uploader',  # Gerrit 2.5/2.6
-            'change-abandoned': 'abandoner',
-            'change-restored': 'restorer',
-            'change-merged': 'submitter',
-            'merge-failed': 'submitter',  # Gerrit 2.5/2.6
-            'comment-added': 'author',
-            'ref-updated': 'submitter',
-            'reviewer-added': 'reviewer',  # Gerrit 2.5/2.6
-        }
-        try:
-            event.account = data.get(accountfield_from_type[event.type])
-        except KeyError:
-            self.log.error("Received unrecognized event type '%s' from Gerrit.\
-                    Can not get account information." % event.type)
-            event.account = None
-
-        if event.change_number and self.sched.getProject(event.project_name):
-            # Call _getChange for the side effect of updating the
-            # cache.  Note that this modifies Change objects outside
-            # the main thread.
-            self.source._getChange(event.change_number,
-                                   event.patch_number,
-                                   refresh=True)
-
-        self.sched.addEvent(event)
-
-    def run(self):
-        while True:
-            if self._stopped:
-                return
-            try:
-                self._handleEvent()
-            except:
-                self.log.exception("Exception moving Gerrit event:")
-            finally:
-                self.gerrit.eventDone()
 
 
 class GerritTrigger(BaseTrigger):
     name = 'gerrit'
     log = logging.getLogger("zuul.trigger.Gerrit")
-
-    def __init__(self, gerrit, config, sched, source):
-        self.sched = sched
-        # TODO(jhesketh): Make 'gerrit' come from a connection (rather than the
-        #                 source)
-        # TODO(jhesketh): Remove the requirement for a gerrit source (currently
-        #                 it is needed so on a trigger event the cache is
-        #                 updated. However if we share a connection object the
-        #                 cache could be stored there)
-        self.config = config
-        self.gerrit_connector = GerritEventConnector(gerrit, sched, self,
-                                                     source)
-        self.gerrit_connector.start()
-
-    def stop(self):
-        self.gerrit_connector.stop()
-        self.gerrit_connector.join()
 
     def getEventFilters(self, trigger_conf):
         def toList(item):
@@ -145,50 +31,87 @@ class GerritTrigger(BaseTrigger):
             return [item]
 
         efilters = []
-        if 'gerrit' in trigger_conf:
-            for trigger in toList(trigger_conf['gerrit']):
-                approvals = {}
-                for approval_dict in toList(trigger.get('approval')):
-                    for k, v in approval_dict.items():
-                        approvals[k] = v
-                # Backwards compat for *_filter versions of these args
-                comments = toList(trigger.get('comment'))
-                if not comments:
-                    comments = toList(trigger.get('comment_filter'))
-                emails = toList(trigger.get('email'))
-                if not emails:
-                    emails = toList(trigger.get('email_filter'))
-                usernames = toList(trigger.get('username'))
-                if not usernames:
-                    usernames = toList(trigger.get('username_filter'))
-                ignore_deletes = trigger.get('ignore-deletes', True)
-                f = EventFilter(
-                    trigger=self,
-                    types=toList(trigger['event']),
-                    branches=toList(trigger.get('branch')),
-                    refs=toList(trigger.get('ref')),
-                    event_approvals=approvals,
-                    comments=comments,
-                    emails=emails,
-                    usernames=usernames,
-                    required_approvals=(
-                        toList(trigger.get('require-approval'))
-                    ),
-                    reject_approvals=toList(
-                        trigger.get('reject-approval')
-                    ),
-                    ignore_deletes=ignore_deletes
-                )
-                efilters.append(f)
+        for trigger in toList(trigger_conf):
+            approvals = {}
+            for approval_dict in toList(trigger.get('approval')):
+                for key, val in approval_dict.items():
+                    approvals[key] = val
+            # Backwards compat for *_filter versions of these args
+            comments = toList(trigger.get('comment'))
+            if not comments:
+                comments = toList(trigger.get('comment_filter'))
+            emails = toList(trigger.get('email'))
+            if not emails:
+                emails = toList(trigger.get('email_filter'))
+            usernames = toList(trigger.get('username'))
+            if not usernames:
+                usernames = toList(trigger.get('username_filter'))
+            ignore_deletes = trigger.get('ignore-deletes', True)
+            f = EventFilter(
+                trigger=self,
+                types=toList(trigger['event']),
+                branches=toList(trigger.get('branch')),
+                refs=toList(trigger.get('ref')),
+                event_approvals=approvals,
+                comments=comments,
+                emails=emails,
+                usernames=usernames,
+                required_approvals=(
+                    toList(trigger.get('require-approval'))
+                ),
+                reject_approvals=toList(
+                    trigger.get('reject-approval')
+                ),
+                ignore_deletes=ignore_deletes
+            )
+            efilters.append(f)
 
         return efilters
 
 
-def validate_trigger(trigger_data):
+def validate_conf(trigger_conf):
     """Validates the layout's trigger data."""
     events_with_ref = ('ref-updated', )
-    for event in trigger_data['gerrit']:
+    for event in trigger_conf:
         if event['event'] not in events_with_ref and event.get('ref', False):
-            raise voluptuous.Invalid(
+            raise v.Invalid(
                 "The event %s does not include ref information, Zuul cannot "
                 "use ref filter 'ref: %s'" % (event['event'], event['ref']))
+
+
+def getSchema():
+    def toList(x):
+        return v.Any([x], x)
+    variable_dict = v.Schema({}, extra=True)
+
+    approval = v.Schema({'username': str,
+                         'email-filter': str,
+                         'email': str,
+                         'older-than': str,
+                         'newer-than': str,
+                         }, extra=True)
+
+    gerrit_trigger = {
+        v.Required('event'):
+            toList(v.Any('patchset-created',
+                         'draft-published',
+                         'change-abandoned',
+                         'change-restored',
+                         'change-merged',
+                         'comment-added',
+                         'ref-updated')),
+        'comment_filter': toList(str),
+        'comment': toList(str),
+        'email_filter': toList(str),
+        'email': toList(str),
+        'username_filter': toList(str),
+        'username': toList(str),
+        'branch': toList(str),
+        'ref': toList(str),
+        'ignore-deletes': bool,
+        'approval': toList(variable_dict),
+        'require-approval': toList(approval),
+        'reject-approval': toList(approval),
+    }
+
+    return gerrit_trigger

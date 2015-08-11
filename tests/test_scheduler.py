@@ -61,7 +61,7 @@ jobs:
     """.strip()
         data = yaml.load(job_yaml)
         config_job = data.get('jobs')[0]
-        sched = zuul.scheduler.Scheduler()
+        sched = zuul.scheduler.Scheduler({})
         cm = zuul.change_matcher
         expected = cm.MatchAny([
             cm.MatchAll([
@@ -762,9 +762,9 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
         self.waitUntilSettled()
 
-        self.log.debug("len %s" % self.gerrit_source._change_cache.keys())
+        self.log.debug("len %s" % self.fake_gerrit._change_cache.keys())
         # there should still be changes in the cache
-        self.assertNotEqual(len(self.gerrit_source._change_cache.keys()), 0)
+        self.assertNotEqual(len(self.fake_gerrit._change_cache.keys()), 0)
 
         self.worker.hold_jobs_in_build = False
         self.worker.release()
@@ -1469,7 +1469,7 @@ class TestScheduler(ZuulTestCase):
         "Test that the merger works with large changes after a repack"
         # https://bugs.launchpad.net/zuul/+bug/1078946
         # This test assumes the repo is already cloned; make sure it is
-        url = self.sched.sources['gerrit'].getGitUrl(
+        url = self.fake_gerrit.getGitUrl(
             self.sched.layout.projects['org/project1'])
         self.merge_server.merger.addProject('org/project1', url)
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -2164,7 +2164,8 @@ class TestScheduler(ZuulTestCase):
 
     def test_test_config(self):
         "Test that we can test the config"
-        self.sched.testConfig(self.config.get('zuul', 'layout_config'))
+        self.sched.testConfig(self.config.get('zuul', 'layout_config'),
+                              self.connections)
 
     def test_build_description(self):
         "Test that build descriptions update"

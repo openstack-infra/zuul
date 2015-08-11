@@ -25,7 +25,7 @@ import merger
 class MergeServer(object):
     log = logging.getLogger("zuul.MergeServer")
 
-    def __init__(self, config):
+    def __init__(self, config, connections={}):
         self.config = config
         self.zuul_url = config.get('merger', 'zuul_url')
 
@@ -44,13 +44,8 @@ class MergeServer(object):
         else:
             merge_name = None
 
-        if self.config.has_option('gerrit', 'sshkey'):
-            sshkey = self.config.get('gerrit', 'sshkey')
-        else:
-            sshkey = None
-
-        self.merger = merger.Merger(merge_root, sshkey,
-                                    merge_email, merge_name)
+        self.merger = merger.Merger(merge_root, connections, merge_email,
+                                    merge_name)
 
     def start(self):
         self._running = True
