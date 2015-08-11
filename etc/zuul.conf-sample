@@ -4,12 +4,6 @@ server=127.0.0.1
 [gearman_server]
 start=true
 
-[gerrit]
-server=review.example.com
-;baseurl=https://review.example.com/r
-user=jenkins
-sshkey=/home/jenkins/.ssh/id_rsa
-
 [zuul]
 layout_config=/etc/zuul/layout.yaml
 log_config=/etc/zuul/logging.conf
@@ -32,7 +26,15 @@ default_container=logs
 region_name=EXP
 logserver_prefix=http://logs.example.org/server.app/
 
-[smtp]
+[connection gerrit]
+driver=gerrit
+server=review.example.com
+;baseurl=https://review.example.com/r
+user=jenkins
+sshkey=/home/jenkins/.ssh/id_rsa
+
+[connection smtp]
+driver=smtp
 server=localhost
 port=25
 default_from=zuul@example.com

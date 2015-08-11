@@ -25,16 +25,16 @@ with a value. For example, ``verified: 1`` becomes ``gerrit review
 --verified 1`` and ``submit: true`` becomes ``gerrit review
 --submit``.
 
-Gerrit Configuration
-~~~~~~~~~~~~~~~~~~~~
-
-The configuration for posting back to Gerrit is shared with the Gerrit
-trigger in zuul.conf as described in :ref:`zuulconf`.
+A :ref:`connection` that uses the gerrit driver must be supplied to the
+trigger.
 
 SMTP
 ----
 
 A simple email reporter is also available.
+
+A :ref:`connection` that uses the smtp driver must be supplied to the
+trigger.
 
 SMTP Configuration
 ~~~~~~~~~~~~~~~~~~
@@ -48,13 +48,15 @@ providing alternatives as arguments to the reporter. For example, ::
   pipelines:
     - name: post-merge
       manager: IndependentPipelineManager
+      source: my_gerrit
       trigger:
-        - event: change-merged
+        my_gerrit:
+          - event: change-merged
       success:
-        smtp:
+        outgoing_smtp:
           to: you@example.com
       failure:
-        smtp:
+        internal_smtp:
           to: you@example.com
           from: alternative@example.com
           subject: Change {change} failed

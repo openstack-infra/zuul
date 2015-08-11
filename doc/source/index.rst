@@ -14,14 +14,15 @@ Contents:
    :maxdepth: 2
 
    gating
+   connections
    triggers
-   merger
-   launchers
    reporters
    zuul
-   client
+   merger
    cloner
+   launchers
    statsd
+   client
 
 Indices and tables
 ==================

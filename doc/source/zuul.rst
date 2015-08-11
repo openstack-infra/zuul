@@ -64,29 +64,6 @@ gearman_server
   Path to log config file for internal Gearman server.
   ``log_config=/etc/zuul/gearman-logging.yaml``
 
-gerrit
-""""""
-
-**server**
-  FQDN of Gerrit server.
-  ``server=review.example.com``
-
-**port**
-  Optional: Gerrit server port.
-  ``port=29418``
-
-**baseurl**
-  Optional: path to Gerrit web interface. Defaults to ``https://<value
-  of server>/``. ``baseurl=https://review.example.com/review_site/``
-
-**user**
-  User name to use when logging into above server via ssh.
-  ``user=zuul``
-
-**sshkey**
-  Path to SSH key to use when logging into above server.
-  ``sshkey=/home/zuul/.ssh/id_rsa``
-
 zuul
 """"
 
@@ -166,27 +143,6 @@ merger
   Path to PID lock file for the merger process.
   ``pidfile=/var/run/zuul-merger/merger.pid``
 
-smtp
-""""
-
-**server**
-  SMTP server hostname or address to use.
-  ``server=localhost``
-
-**port**
-  Optional: SMTP server port.
-  ``port=25``
-
-**default_from**
-  Who the email should appear to be sent from when emailing the report.
-  This can be overridden by individual pipelines.
-  ``default_from=zuul@example.com``
-
-**default_to**
-  Who the report should be emailed to by default.
-  This can be overridden by individual pipelines.
-  ``default_to=you@example.com``
-
 .. _swift:
 
 swift
@@ -257,6 +213,17 @@ default values that it may overwrite.
   url and the object path.
   ``For example: http://logs.example.org/server.app?obj=``
 
+.. _connection:
+
+connection ArbitraryName
+""""""""""""""""""""""""
+
+A connection can be listed with any arbitrary name. The required
+parameters are specified in the :ref:`connections` documentation
+depending on what driver you are using.
+
+.. _layoutyaml:
+
 layout.yaml
 ~~~~~~~~~~~
 
@@ -303,14 +270,16 @@ explanation of each of the parameters::
 
   - name: check
     manager: IndependentPipelineManager
-    source: gerrit
+    source: my_gerrit
     trigger:
-      gerrit:
+      my_gerrit:
         - event: patchset-created
     success:
-      verified: 1
+      my_gerrit:
+        verified: 1
     failure:
-      verified: -1
+      my_gerrit
+        verified: -1
 
 **name**
   This is used later in the project definition to indicate what jobs
@@ -321,9 +290,11 @@ explanation of each of the parameters::
   description of the pipeline.
 
 **source**
-  A required field that specifies a trigger that provides access to
-  the change objects that this pipeline operates on.  Currently only
-  the value ``gerrit`` is supported.
+  A required field that specifies a connection that provides access to
+  the change objects that this pipeline operates on. The name of the
+  connection as per the zuul.conf should be specified. The driver used
+  for the connection named will be the source. Currently only ``gerrit``
+  drivers are supported.
 
 **success-message**
   An optional field that supplies the introductory text in message
@@ -400,133 +371,11 @@ explanation of each of the parameters::
   At least one trigger source must be supplied for each pipeline.
   Triggers are not exclusive -- matching events may be placed in
   multiple pipelines, and they will behave independently in each of
-  the pipelines they match.  You may select from the following:
+  the pipelines they match.
 
-  **gerrit**
-    This describes what Gerrit events should be placed in the
-    pipeline.  Multiple gerrit triggers may be listed.  Further
-    parameters describe the kind of events that match:
-
-    *event*
-    The event name from gerrit.  Examples: ``patchset-created``,
-    ``comment-added``, ``ref-updated``.  This field is treated as a
-    regular expression.
-
-    *branch*
-    The branch associated with the event.  Example: ``master``.  This
-    field is treated as a regular expression, and multiple branches may
-    be listed.
-
-    *ref*
-    On ref-updated events, the branch parameter is not used, instead the
-    ref is provided.  Currently Gerrit has the somewhat idiosyncratic
-    behavior of specifying bare refs for branch names (e.g., ``master``),
-    but full ref names for other kinds of refs (e.g., ``refs/tags/foo``).
-    Zuul matches what you put here exactly against what Gerrit
-    provides.  This field is treated as a regular expression, and
-    multiple refs may be listed.
-
-    *ignore-deletes*
-    When a branch is deleted, a ref-updated event is emitted with a newrev
-    of all zeros specified. The ``ignore-deletes`` field is a boolean value
-    that describes whether or not these newrevs trigger ref-updated events.
-    The default is True, which will not trigger ref-updated events.
-
-    *approval*
-    This is only used for ``comment-added`` events.  It only matches if
-    the event has a matching approval associated with it.  Example:
-    ``code-review: 2`` matches a ``+2`` vote on the code review category.
-    Multiple approvals may be listed.
-
-    *email*
-    This is used for any event.  It takes a regex applied on the performer
-    email, i.e. Gerrit account email address.  If you want to specify
-    several email filters, you must use a YAML list.  Make sure to use non
-    greedy matchers and to escapes dots!
-    Example: ``email: ^.*?@example\.org$``.
-
-    *email_filter* (deprecated)
-    A deprecated alternate spelling of *email*.  Only one of *email* or
-    *email_filter* should be used.
-
-    *username*
-    This is used for any event.  It takes a regex applied on the performer
-    username, i.e. Gerrit account name.  If you want to specify several
-    username filters, you must use a YAML list.  Make sure to use non greedy
-    matchers and to escapes dots!
-    Example: ``username: ^jenkins$``.
-
-    *username_filter* (deprecated)
-    A deprecated alternate spelling of *username*.  Only one of *username* or
-    *username_filter* should be used.
-
-    *comment*
-    This is only used for ``comment-added`` events.  It accepts a list of
-    regexes that are searched for in the comment string. If any of these
-    regexes matches a portion of the comment string the trigger is
-    matched. ``comment: retrigger`` will match when comments
-    containing 'retrigger' somewhere in the comment text are added to a
-    change.
-
-    *comment_filter* (deprecated)
-    A deprecated alternate spelling of *comment*.  Only one of *comment* or
-    *comment_filter* should be used.
-
-    *require-approval*
-    This may be used for any event.  It requires that a certain kind
-    of approval be present for the current patchset of the change (the
-    approval could be added by the event in question).  It follows the
-    same syntax as the :ref:`"approval" pipeline requirement below
-    <pipeline-require-approval>`. For each specified criteria there must
-    exist a matching approval.
-
-    *reject-approval*
-    This takes a list of approvals in the same format as
-    *require-approval* but will fail to enter the pipeline if there is
-    a matching approval.
-
-  **timer**
-    This trigger will run based on a cron-style time specification.
-    It will enqueue an event into its pipeline for every project
-    defined in the configuration.  Any job associated with the
-    pipeline will run in response to that event.
-
-    *time*
-    The time specification in cron syntax.  Only the 5 part syntax is
-    supported, not the symbolic names.  Example: ``0 0 * * *`` runs
-    at midnight.
-
-  **zuul**
-    This trigger supplies events generated internally by Zuul.
-    Multiple events may be listed.
-
-    *event*
-    The event name.  Currently supported:
-
-      *project-change-merged* when Zuul merges a change to a project,
-      it generates this event for every open change in the project.
-
-      *parent-change-enqueued* when Zuul enqueues a change into any
-      pipeline, it generates this event for every child of that
-      change.
-
-    *pipeline*
-    Only available for ``parent-change-enqueued`` events.  This is the
-    name of the pipeline in which the parent change was enqueued.
-
-    *require-approval*
-    This may be used for any event.  It requires that a certain kind
-    of approval be present for the current patchset of the change (the
-    approval could be added by the event in question).  It follows the
-    same syntax as the :ref:`"approval" pipeline requirement below
-    <pipeline-require-approval>`. For each specified criteria there must
-    exist a matching approval.
-
-    *reject-approval*
-    This takes a list of approvals in the same format as
-    *require-approval* but will fail to enter the pipeline if there is
-    a matching approval.
-
+  Triggers are loaded from their connection name. The driver type of
+  the connection will dictate which options are available.
+  See :doc:`triggers`.
 
 **require**
   If this section is present, it established pre-requisites for any
@@ -624,8 +473,9 @@ explanation of each of the parameters::
   do nothing on success; it will not even report a message to Gerrit.
   If the section is present, the listed reporter plugins will be
   asked to report on the jobs.
-  Each reporter's value dictionary is handled by the reporter. See
-  reporters for more details.
+  The reporters are listed by their connection name. The options
+  available depend on the driver for the supplied connection.
+  See :doc:`reporters` for more details.
 
 **failure**
   Uses the same syntax as **success**, but describes what Zuul should
@@ -712,13 +562,14 @@ file.  The first is called a *check* pipeline::
   - name: check
     manager: IndependentPipelineManager
     trigger:
-      - event: patchset-created
+      my_gerrit:
+        - event: patchset-created
     success:
-      gerrit:
+      my_gerrit:
         verified: 1
     failure:
       gerrit:
-        verified: -1
+        my_gerrit: -1
 
 This will trigger jobs each time a new patchset (or change) is
 uploaded to Gerrit, and report +/-1 values to Gerrit in the
@@ -727,15 +578,16 @@ uploaded to Gerrit, and report +/-1 values to Gerrit in the
   - name: gate
     manager: DependentPipelineManager
     trigger:
-      - event: comment-added
-        approval:
-          - approved: 1
+      my_gerrit:
+        - event: comment-added
+          approval:
+            - approved: 1
     success:
-      gerrit:
+      my_gerrit:
         verified: 2
         submit: true
     failure:
-      gerrit:
+      my_gerrit:
         verified: -2
 
 This will trigger jobs whenever a reviewer leaves a vote of ``1`` in the
@@ -748,8 +600,9 @@ speculative execution of jobs. ::
   - name: post
     manager: IndependentPipelineManager
     trigger:
-      - event: ref-updated
-        ref: ^(?!refs/).*$
+      my_gerrit:
+        - event: ref-updated
+          ref: ^(?!refs/).*$
 
 This will trigger jobs whenever a change is merged to a named branch
 (e.g., ``master``).  No output will be reported to Gerrit.  This is
@@ -758,7 +611,8 @@ useful for side effects such as creating per-commit tarballs. ::
   - name: silent
     manager: IndependentPipelineManager
     trigger:
-      - event: patchset-created
+      my_gerrit:
+        - event: patchset-created
 
 This also triggers jobs when changes are uploaded to Gerrit, but no
 results are reported to Gerrit.  This is useful for jobs that are in
@@ -768,12 +622,13 @@ development and not yet ready to be presented to developers. ::
     - name: post-merge
       manager: IndependentPipelineManager
       trigger:
-        - event: change-merged
+        my_gerrit:
+          - event: change-merged
       success:
-        gerrit:
+        my_gerrit:
           force-message: True
       failure:
-        gerrit:
+        my_gerrit:
           force-message: True
 
 The ``change-merged`` events happen when a change has been merged in the git
