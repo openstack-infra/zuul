@@ -30,7 +30,7 @@ import yaml
 import layoutvalidator
 import model
 from model import ActionReporter, Pipeline, Project, ChangeQueue
-from model import EventFilter, ChangeishFilter, NullChange
+from model import ChangeishFilter, NullChange
 from zuul import change_matcher
 from zuul import version as zuul_version
 
@@ -339,63 +339,10 @@ class Scheduler(threading.Thread):
                 )
                 manager.changeish_filters.append(f)
 
-            # TODO: move this into triggers (may require pluggable
-            # configuration)
-            if 'gerrit' in conf_pipeline['trigger']:
-                for trigger in toList(conf_pipeline['trigger']['gerrit']):
-                    approvals = {}
-                    for approval_dict in toList(trigger.get('approval')):
-                        for k, v in approval_dict.items():
-                            approvals[k] = v
-                    # Backwards compat for *_filter versions of these args
-                    comments = toList(trigger.get('comment'))
-                    if not comments:
-                        comments = toList(trigger.get('comment_filter'))
-                    emails = toList(trigger.get('email'))
-                    if not emails:
-                        emails = toList(trigger.get('email_filter'))
-                    usernames = toList(trigger.get('username'))
-                    if not usernames:
-                        usernames = toList(trigger.get('username_filter'))
-                    ignore_deletes = trigger.get('ignore-deletes', True)
-                    f = EventFilter(
-                        trigger=self.triggers['gerrit'],
-                        types=toList(trigger['event']),
-                        branches=toList(trigger.get('branch')),
-                        refs=toList(trigger.get('ref')),
-                        event_approvals=approvals,
-                        comments=comments,
-                        emails=emails,
-                        usernames=usernames,
-                        required_approvals=(
-                            toList(trigger.get('require-approval'))
-                        ),
-                        reject_approvals=toList(
-                            trigger.get('reject-approval')
-                        ),
-                        ignore_deletes=ignore_deletes
-                    )
-                    manager.event_filters.append(f)
-            if 'timer' in conf_pipeline['trigger']:
-                for trigger in toList(conf_pipeline['trigger']['timer']):
-                    f = EventFilter(trigger=self.triggers['timer'],
-                                    types=['timer'],
-                                    timespecs=toList(trigger['time']))
-                    manager.event_filters.append(f)
-            if 'zuul' in conf_pipeline['trigger']:
-                for trigger in toList(conf_pipeline['trigger']['zuul']):
-                    f = EventFilter(
-                        trigger=self.triggers['zuul'],
-                        types=toList(trigger['event']),
-                        pipelines=toList(trigger.get('pipeline')),
-                        required_approvals=(
-                            toList(trigger.get('require-approval'))
-                        ),
-                        reject_approvals=toList(
-                            trigger.get('reject-approval')
-                        ),
-                    )
-                    manager.event_filters.append(f)
+            # TODO(jhesketh): Allow multiple triggers per pipeline
+            for trigger in self.triggers.values():
+                manager.event_filters += \
+                    trigger.getEventFilters(conf_pipeline['trigger'])
 
         for project_template in data.get('project-templates', []):
             # Make sure the template only contains valid pipelines

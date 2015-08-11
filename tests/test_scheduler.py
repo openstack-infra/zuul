@@ -2164,12 +2164,7 @@ class TestScheduler(ZuulTestCase):
 
     def test_test_config(self):
         "Test that we can test the config"
-        sched = zuul.scheduler.Scheduler()
-        sched.registerSource(None, 'gerrit')
-        sched.registerTrigger(None, 'gerrit')
-        sched.registerTrigger(None, 'timer')
-        sched.registerTrigger(None, 'zuul')
-        sched.testConfig(self.config.get('zuul', 'layout_config'))
+        self.sched.testConfig(self.config.get('zuul', 'layout_config'))
 
     def test_build_description(self):
         "Test that build descriptions update"

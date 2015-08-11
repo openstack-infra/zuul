@@ -14,7 +14,7 @@
 # under the License.
 
 import logging
-from zuul.model import TriggerEvent
+from zuul.model import EventFilter, TriggerEvent
 from zuul.trigger import BaseTrigger
 
 
@@ -27,6 +27,32 @@ class ZuulTrigger(BaseTrigger):
         self.config = config
         self._handle_parent_change_enqueued_events = False
         self._handle_project_change_merged_events = False
+
+    def getEventFilters(self, trigger_conf):
+        def toList(item):
+            if not item:
+                return []
+            if isinstance(item, list):
+                return item
+            return [item]
+
+        efilters = []
+        if 'zuul' in trigger_conf:
+            for trigger in toList(trigger_conf['zuul']):
+                f = EventFilter(
+                    trigger=self,
+                    types=toList(trigger['event']),
+                    pipelines=toList(trigger.get('pipeline')),
+                    required_approvals=(
+                        toList(trigger.get('require-approval'))
+                    ),
+                    reject_approvals=toList(
+                        trigger.get('reject-approval')
+                    ),
+                )
+                efilters.append(f)
+
+        return efilters
 
     def onChangeMerged(self, change):
         # Called each time zuul merges a change

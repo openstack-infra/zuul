@@ -15,7 +15,7 @@
 
 import apscheduler.scheduler
 import logging
-from zuul.model import TriggerEvent
+from zuul.model import EventFilter, TriggerEvent
 from zuul.trigger import BaseTrigger
 
 
@@ -41,6 +41,25 @@ class TimerTrigger(BaseTrigger):
 
     def stop(self):
         self.apsched.shutdown()
+
+    def getEventFilters(self, trigger_conf):
+        def toList(item):
+            if not item:
+                return []
+            if isinstance(item, list):
+                return item
+            return [item]
+
+        efilters = []
+        if 'timer' in trigger_conf:
+            for trigger in toList(trigger_conf['timer']):
+                f = EventFilter(trigger=self,
+                                types=['timer'],
+                                timespecs=toList(trigger['time']))
+
+                efilters.append(f)
+
+        return efilters
 
     def postConfig(self):
         for job in self.apsched.get_jobs():

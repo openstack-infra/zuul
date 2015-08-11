@@ -16,7 +16,7 @@ import logging
 import threading
 import time
 import voluptuous
-from zuul.model import TriggerEvent
+from zuul.model import EventFilter, TriggerEvent
 from zuul.trigger import BaseTrigger
 
 
@@ -135,6 +135,53 @@ class GerritTrigger(BaseTrigger):
     def stop(self):
         self.gerrit_connector.stop()
         self.gerrit_connector.join()
+
+    def getEventFilters(self, trigger_conf):
+        def toList(item):
+            if not item:
+                return []
+            if isinstance(item, list):
+                return item
+            return [item]
+
+        efilters = []
+        if 'gerrit' in trigger_conf:
+            for trigger in toList(trigger_conf['gerrit']):
+                approvals = {}
+                for approval_dict in toList(trigger.get('approval')):
+                    for k, v in approval_dict.items():
+                        approvals[k] = v
+                # Backwards compat for *_filter versions of these args
+                comments = toList(trigger.get('comment'))
+                if not comments:
+                    comments = toList(trigger.get('comment_filter'))
+                emails = toList(trigger.get('email'))
+                if not emails:
+                    emails = toList(trigger.get('email_filter'))
+                usernames = toList(trigger.get('username'))
+                if not usernames:
+                    usernames = toList(trigger.get('username_filter'))
+                ignore_deletes = trigger.get('ignore-deletes', True)
+                f = EventFilter(
+                    trigger=self,
+                    types=toList(trigger['event']),
+                    branches=toList(trigger.get('branch')),
+                    refs=toList(trigger.get('ref')),
+                    event_approvals=approvals,
+                    comments=comments,
+                    emails=emails,
+                    usernames=usernames,
+                    required_approvals=(
+                        toList(trigger.get('require-approval'))
+                    ),
+                    reject_approvals=toList(
+                        trigger.get('reject-approval')
+                    ),
+                    ignore_deletes=ignore_deletes
+                )
+                efilters.append(f)
+
+        return efilters
 
 
 def validate_trigger(trigger_data):
