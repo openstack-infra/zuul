@@ -1042,7 +1042,7 @@ also be added::
       - foobar-extra-special-job
 
 Individual jobs may optionally be added to pipelines (e.g. check,
-gate, et cetera) for a project, in addtion to those provided by
+gate, et cetera) for a project, in addition to those provided by
 templates.
 
 The order of the jobs listed in the project (which only affects the
