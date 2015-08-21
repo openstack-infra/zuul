@@ -19,6 +19,7 @@ import os
 import json
 
 from six.moves import urllib
+import webob
 
 from tests.base import ZuulTestCase, FIXTURE_DIR
 
@@ -96,3 +97,16 @@ class TestWebapp(ZuulTestCase):
             self.port)
         f = urllib.request.urlopen(req)
         self.assertEqual(f.read(), public_pem)
+
+    def test_webapp_custom_handler(self):
+        def custom_handler(path, tenant_name, request):
+            return webob.Response(body='ok')
+
+        self.webapp.register_path('/custom', custom_handler)
+        req = urllib.request.Request(
+            "http://localhost:%s/custom" % self.port)
+        f = urllib.request.urlopen(req)
+        self.assertEqual('ok', f.read())
+
+        self.webapp.unregister_path('/custom')
+        self.assertRaises(urllib.error.HTTPError, urllib.request.urlopen, req)
