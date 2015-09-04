@@ -87,3 +87,7 @@ cloning any projects it processes from those found in that directory.
 The URL of origin remote of the resulting clone will be reset to use
 the ``git_base_url`` and then the remote will be updated so that the
 repository has all the information in the upstream repository.
+
+The default for ``--cache-dir`` is taken from the environment variable
+``ZUUL_CACHE_DIR``. A value provided explicitly on the command line
+overrides the environment variable setting.
