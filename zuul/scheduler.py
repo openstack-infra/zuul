@@ -359,6 +359,7 @@ class Scheduler(threading.Thread):
             'reporter': {
                 'gerrit': 'zuul.reporter.gerrit:GerritReporter',
                 'smtp': 'zuul.reporter.smtp:SMTPReporter',
+                'sql': 'zuul.reporter.sql:SQLReporter',
             },
         }
 

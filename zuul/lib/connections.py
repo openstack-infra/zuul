@@ -16,6 +16,7 @@ import re
 
 import zuul.connection.gerrit
 import zuul.connection.smtp
+import zuul.connection.sql
 
 
 def configure_connections(config):
@@ -46,6 +47,9 @@ def configure_connections(config):
         elif con_driver == 'smtp':
             connections[con_name] = \
                 zuul.connection.smtp.SMTPConnection(con_name, con_config)
+        elif con_driver == 'sql':
+            connections[con_name] = \
+                zuul.connection.sql.SQLConnection(con_name, con_config)
         else:
             raise Exception("Unknown driver, %s, for connection %s"
                             % (con_config['driver'], con_name))

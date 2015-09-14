@@ -64,40 +64,43 @@ class BaseReporter(object):
         }
         return format_methods[self._action]
 
-    def _formatItemReport(self, pipeline, item):
+    def _formatItemReport(self, pipeline, item, with_jobs=True):
         """Format a report from the given items. Usually to provide results to
         a reporter taking free-form text."""
-        ret = self._getFormatter()(pipeline, item)
+        ret = self._getFormatter()(pipeline, item, with_jobs)
 
         if pipeline.footer_message:
             ret += '\n' + pipeline.footer_message
 
         return ret
 
-    def _formatItemReportStart(self, pipeline, item):
+    def _formatItemReportStart(self, pipeline, item, with_jobs=True):
         msg = "Starting %s jobs." % pipeline.name
         if self.sched.config.has_option('zuul', 'status_url'):
             msg += "\n" + self.sched.config.get('zuul', 'status_url')
         return msg
 
-    def _formatItemReportSuccess(self, pipeline, item):
-        return (pipeline.success_message + '\n\n' +
-                self._formatItemReportJobs(pipeline, item))
+    def _formatItemReportSuccess(self, pipeline, item, with_jobs=True):
+        msg = pipeline.success_message
+        if with_jobs:
+            msg += '\n\n' + self._formatItemReportJobs(pipeline, item)
+        return msg
 
-    def _formatItemReportFailure(self, pipeline, item):
+    def _formatItemReportFailure(self, pipeline, item, with_jobs=True):
         if item.dequeued_needing_change:
             msg = 'This change depends on a change that failed to merge.\n'
         elif not pipeline.didMergerSucceed(item):
             msg = pipeline.merge_failure_message
         else:
-            msg = (pipeline.failure_message + '\n\n' +
-                   self._formatItemReportJobs(pipeline, item))
+            msg = pipeline.failure_message
+            if with_jobs:
+                msg += '\n\n' + self._formatItemReportJobs(pipeline, item)
         return msg
 
-    def _formatItemReportMergeFailure(self, pipeline, item):
+    def _formatItemReportMergeFailure(self, pipeline, item, with_jobs=True):
         return pipeline.merge_failure_message
 
-    def _formatItemReportDisabled(self, pipeline, item):
+    def _formatItemReportDisabled(self, pipeline, item, with_jobs=True):
         if item.current_build_set.result == 'SUCCESS':
             return self._formatItemReportSuccess(pipeline, item)
         elif item.current_build_set.result == 'FAILURE':

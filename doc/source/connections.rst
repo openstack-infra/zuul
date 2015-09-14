@@ -77,3 +77,15 @@ SMTP
   Who the report should be emailed to by default.
   This can be overridden by individual pipelines.
   ``default_to=you@example.com``
+
+SQL
+----
+
+  Only one connection per a database is permitted.
+
+  **driver=sql**
+
+  **dburi**
+    Database connection information in the form of a URI understood by
+    sqlalchemy. eg http://docs.sqlalchemy.org/en/rel_1_0/core/engines.html#database-urls
+    ``dburi=mysql://user:pass@localhost/db``
