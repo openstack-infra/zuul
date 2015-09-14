@@ -374,6 +374,7 @@ class Scheduler(threading.Thread):
                         in conf_pipeline.get(conf_key).items():
                         reporter = self._getReporterDriver(reporter_name,
                                                            params)
+                        reporter.setAction(conf_key)
                         reporter_set.append(reporter)
                 setattr(pipeline, action, reporter_set)
 
@@ -1054,12 +1055,6 @@ class BasePipelineManager(object):
         self.pipeline = pipeline
         self.event_filters = []
         self.changeish_filters = []
-        if self.sched.config and self.sched.config.has_option(
-            'zuul', 'report_times'):
-            self.report_times = self.sched.config.getboolean(
-                'zuul', 'report_times')
-        else:
-            self.report_times = True
 
     def __str__(self):
         return "<%s %s>" % (self.__class__.__name__, self.pipeline.name)
@@ -1153,32 +1148,30 @@ class BasePipelineManager(object):
                 return True
         return False
 
-    def reportStart(self, change):
+    def reportStart(self, item):
         if not self.pipeline._disabled:
             try:
-                self.log.info("Reporting start, action %s change %s" %
-                              (self.pipeline.start_actions, change))
-                msg = "Starting %s jobs." % self.pipeline.name
-                if self.sched.config.has_option('zuul', 'status_url'):
-                    msg += "\n" + self.sched.config.get('zuul', 'status_url')
+                self.log.info("Reporting start, action %s item %s" %
+                              (self.pipeline.start_actions, item))
                 ret = self.sendReport(self.pipeline.start_actions,
-                                      self.pipeline.source, change, msg)
+                                      self.pipeline.source, item)
                 if ret:
-                    self.log.error("Reporting change start %s received: %s" %
-                                   (change, ret))
+                    self.log.error("Reporting item start %s received: %s" %
+                                   (item, ret))
             except:
                 self.log.exception("Exception while reporting start:")
 
-    def sendReport(self, action_reporters, source, change, message):
+    def sendReport(self, action_reporters, source, item,
+                   message=None):
         """Sends the built message off to configured reporters.
 
-        Takes the action_reporters, change, message and extra options and
+        Takes the action_reporters, item, message and extra options and
         sends them to the pluggable reporters.
         """
         report_errors = []
         if len(action_reporters) > 0:
             for reporter in action_reporters:
-                ret = reporter.report(source, change, message)
+                ret = reporter.report(source, self.pipeline, item)
                 if ret:
                     report_errors.append(ret)
             if len(report_errors) == 0:
@@ -1314,14 +1307,14 @@ class BasePipelineManager(object):
 
             self.log.debug("Adding change %s to queue %s" %
                            (change, change_queue))
-            if not quiet:
-                if len(self.pipeline.start_actions) > 0:
-                    self.reportStart(change)
             item = change_queue.enqueueChange(change)
             if enqueue_time:
                 item.enqueue_time = enqueue_time
             item.live = live
             self.reportStats(item)
+            if not quiet:
+                if len(self.pipeline.start_actions) > 0:
+                    self.reportStart(item)
             self.enqueueChangesBehind(change, quiet, ignore_requirements,
                                       change_queue)
             for trigger in self.sched.triggers.values():
@@ -1636,93 +1629,17 @@ class BasePipelineManager(object):
             self.pipeline._consecutive_failures >= self.pipeline.disable_at):
             self.pipeline._disabled = True
         if actions:
-            report = self.formatReport(item)
             try:
-                self.log.info("Reporting change %s, actions: %s" %
-                              (item.change, actions))
-                ret = self.sendReport(actions, self.pipeline.source,
-                                      item.change, report)
+                self.log.info("Reporting item %s, actions: %s" %
+                              (item, actions))
+                ret = self.sendReport(actions, self.pipeline.source, item)
                 if ret:
-                    self.log.error("Reporting change %s received: %s" %
-                                   (item.change, ret))
+                    self.log.error("Reporting item %s received: %s" %
+                                   (item, ret))
             except:
                 self.log.exception("Exception while reporting:")
                 item.setReportedResult('ERROR')
         self.updateBuildDescriptions(item.current_build_set)
-        return ret
-
-    def formatReport(self, item):
-        ret = ''
-
-        if item.dequeued_needing_change:
-            ret += 'This change depends on a change that failed to merge.\n'
-        elif not self.pipeline.didMergerSucceed(item):
-            ret += self.pipeline.merge_failure_message
-        else:
-            if self.pipeline.didAllJobsSucceed(item):
-                ret += self.pipeline.success_message + '\n\n'
-            else:
-                ret += self.pipeline.failure_message + '\n\n'
-            ret += self._formatReportJobs(item)
-
-        if self.pipeline.footer_message:
-            ret += '\n' + self.pipeline.footer_message
-
-        return ret
-
-    def _formatReportJobs(self, item):
-        # Return the list of jobs portion of the report
-        ret = ''
-
-        if self.sched.config.has_option('zuul', 'url_pattern'):
-            url_pattern = self.sched.config.get('zuul', 'url_pattern')
-        else:
-            url_pattern = None
-
-        for job in self.pipeline.getJobs(item):
-            build = item.current_build_set.getBuild(job.name)
-            result = build.result
-            pattern = url_pattern
-            if result == 'SUCCESS':
-                if job.success_message:
-                    result = job.success_message
-                if job.success_pattern:
-                    pattern = job.success_pattern
-            elif result == 'FAILURE':
-                if job.failure_message:
-                    result = job.failure_message
-                if job.failure_pattern:
-                    pattern = job.failure_pattern
-            if pattern:
-                url = pattern.format(change=item.change,
-                                     pipeline=self.pipeline,
-                                     job=job,
-                                     build=build)
-            else:
-                url = build.url or job.name
-            if not job.voting:
-                voting = ' (non-voting)'
-            else:
-                voting = ''
-            if self.report_times and build.end_time and build.start_time:
-                dt = int(build.end_time - build.start_time)
-                m, s = divmod(dt, 60)
-                h, m = divmod(m, 60)
-                if h:
-                    elapsed = ' in %dh %02dm %02ds' % (h, m, s)
-                elif m:
-                    elapsed = ' in %dm %02ds' % (m, s)
-                else:
-                    elapsed = ' in %ds' % (s)
-            else:
-                elapsed = ''
-            name = ''
-            if self.sched.config.has_option('zuul', 'job_name_in_report'):
-                if self.sched.config.getboolean('zuul',
-                                                'job_name_in_report'):
-                    name = job.name + ' '
-            ret += '- %s%s : %s%s%s\n' % (name, url, result, elapsed,
-                                          voting)
         return ret
 
     def formatDescription(self, build):
