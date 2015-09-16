@@ -22,7 +22,7 @@ from zuul.trigger import BaseTrigger
 
 class TimerTrigger(BaseTrigger):
     name = 'timer'
-    log = logging.getLogger("zuul.Timer")
+    log = logging.getLogger("zuul.TimerTrigger")
 
     def __init__(self, trigger_config={}, sched=None, connection=None):
         super(TimerTrigger, self).__init__(trigger_config, sched, connection)

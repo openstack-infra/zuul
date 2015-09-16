@@ -194,7 +194,7 @@ class GerritWatcher(threading.Thread):
 
 class GerritConnection(BaseConnection):
     driver_name = 'gerrit'
-    log = logging.getLogger("connection.gerrit")
+    log = logging.getLogger("zuul.GerritConnection")
 
     def __init__(self, connection_name, connection_config):
         super(GerritConnection, self).__init__(connection_name,

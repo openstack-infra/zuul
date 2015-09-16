@@ -23,7 +23,7 @@ from zuul.connection import BaseConnection
 
 class SMTPConnection(BaseConnection):
     driver_name = 'smtp'
-    log = logging.getLogger("connection.smtp")
+    log = logging.getLogger("zuul.SMTPConnection")
 
     def __init__(self, connection_name, connection_config):
 

@@ -24,7 +24,7 @@ import urlparse
 
 
 class Swift(object):
-    log = logging.getLogger("zuul.lib.swift")
+    log = logging.getLogger("zuul.Swift")
 
     def __init__(self, config):
         self.config = config
