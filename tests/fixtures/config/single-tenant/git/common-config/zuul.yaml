@@ -1,8 +1,7 @@
 - pipeline:
     name: check
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: patchset-created
@@ -17,8 +16,7 @@
     name: gate
     manager: dependent
     success-message: Build succeeded (gate).
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: comment-added
@@ -39,8 +37,7 @@
 - pipeline:
     name: post
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: ref-updated
@@ -49,8 +46,7 @@
 - pipeline:
     name: experimental
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: patchset-created
@@ -107,23 +103,26 @@
 - job:
     name: project-testfile
     files:
-      - '.*-requires'
+      - .*-requires
 
 - project:
     name: org/project
     check:
       jobs:
-        - project-merge:
-            jobs:
-              - project-test1
-              - project-test2
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
     gate:
       jobs:
-        - project-merge:
-            jobs:
-              - project-test1
-              - project-test2
-              - project-testfile
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
+        - project-testfile:
+            dependencies: project-merge
     post:
       jobs:
         - project-post
@@ -132,48 +131,58 @@
     name: org/project1
     check:
       jobs:
-        - project-merge:
-            jobs:
-              - project-test1
-              - project-test2
-              - project1-project2-integration
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
+        - project1-project2-integration:
+            dependencies: project-merge
     gate:
       queue: integrated
       jobs:
-        - project-merge:
-            jobs:
-              - project-test1
-              - project-test2
-              - project1-project2-integration
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
+        - project1-project2-integration:
+            dependencies: project-merge
 
 - project:
     name: org/project2
     gate:
       queue: integrated
       jobs:
-        - project-merge:
-            jobs:
-              - project-test1
-              - project-test2
-              - project1-project2-integration
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
+        - project1-project2-integration:
+            dependencies: project-merge
 
 - project:
     name: org/project3
     check:
       jobs:
-        - project-merge:
-            jobs:
-              - project-test1
-              - project-test2
-              - project1-project2-integration
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
+        - project1-project2-integration:
+            dependencies: project-merge
     gate:
       queue: integrated
       jobs:
-        - project-merge:
-            jobs:
-              - project-test1
-              - project-test2
-              - project1-project2-integration
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
+        - project1-project2-integration:
+            dependencies: project-merge
     post:
       jobs:
         - project-post
@@ -182,9 +191,9 @@
     name: org/experimental-project
     experimental:
       jobs:
-        - project-merge:
-            jobs:
-              - experimental-project-test
+        - project-merge
+        - experimental-project-test:
+            dependencies: project-merge
 
 - project:
     name: org/noop-project
@@ -199,16 +208,18 @@
     name: org/nonvoting-project
     check:
       jobs:
-        - nonvoting-project-merge:
-            jobs:
-              - nonvoting-project-test1
-              - nonvoting-project-test2
+        - nonvoting-project-merge
+        - nonvoting-project-test1:
+            dependencies: nonvoting-project-merge
+        - nonvoting-project-test2:
+            dependencies: nonvoting-project-merge
     gate:
       jobs:
-        - nonvoting-project-merge:
-            jobs:
-              - nonvoting-project-test1
-              - nonvoting-project-test2
+        - nonvoting-project-merge
+        - nonvoting-project-test1:
+            dependencies: nonvoting-project-merge
+        - nonvoting-project-test2:
+            dependencies: nonvoting-project-merge
 
 - project:
     name: org/no-jobs-project

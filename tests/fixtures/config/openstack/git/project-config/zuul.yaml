@@ -1,11 +1,8 @@
-# Pipeline definitions
-
 - pipeline:
     name: check
     manager: independent
     success-message: Build succeeded (check).
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: patchset-created
@@ -20,8 +17,7 @@
     name: gate
     manager: dependent
     success-message: Build succeeded (gate).
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: comment-added
@@ -38,8 +34,6 @@
       gerrit:
         verified: 0
     precedence: high
-
-# Job definitions
 
 - job:
     name: base
@@ -77,8 +71,6 @@
     repos:
       - openstack/keystone
       - openstack/nova
-
-# Project definitions
 
 - project:
     name: openstack/nova

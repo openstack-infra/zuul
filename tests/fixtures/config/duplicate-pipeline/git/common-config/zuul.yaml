@@ -2,8 +2,7 @@
     name: dup1
     manager: independent
     success-message: Build succeeded (dup1).
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: change-restored
@@ -18,8 +17,7 @@
     name: dup2
     manager: independent
     success-message: Build succeeded (dup2).
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: change-restored
@@ -39,7 +37,6 @@
       queue: integrated
       jobs:
         - project-test1
-
     dup2:
       queue: integrated
       jobs:

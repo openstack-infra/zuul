@@ -771,8 +771,11 @@ given pipeline.  Within the pipeline section, the jobs that should be
 executed are listed.  If a job is entered as a dictionary key, then
 jobs contained within that key are only executed if the key job
 succeeds.  In the above example, project-unittest, project-pep8, and
-project-pyflakes are only executed if project-merge succeeds.  This
-can help avoid running unnecessary jobs.
+project-pyflakes are only executed if project-merge succeeds.
+Furthermore, project-finaltest is executed only if project-unittest,
+project-pep8 and project-pyflakes all succeed. This can help avoid
+running unnecessary jobs while maximizing parallelism. It is also
+useful when distributing results between jobs.
 
 The special job named ``noop`` is internal to Zuul and will always
 return ``SUCCESS`` immediately.  This can be useful if you require

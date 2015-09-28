@@ -1,8 +1,7 @@
 - pipeline:
     name: check
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: patchset-created
@@ -12,7 +11,6 @@
     failure:
       gerrit:
         verified: -1
-
 
 - job:
     name: project-test-irrelevant-files

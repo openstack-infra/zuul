@@ -1,8 +1,7 @@
 - pipeline:
     name: check
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: patchset-created
@@ -17,8 +16,7 @@
     name: tenant-one-gate
     manager: dependent
     success-message: Build succeeded (tenant-one-gate).
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: comment-added

@@ -1,8 +1,7 @@
 - pipeline:
     name: periodic
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     trigger:
       timer:
         - time: '* * * * * */1'
@@ -10,7 +9,7 @@
       smtp:
         to: alternative_me@example.com
         from: zuul_from@example.com
-        subject: 'Periodic check for {change.project} succeeded'
+        subject: Periodic check for {change.project} succeeded
 
 - job:
     name: project-bitrot-stable-old

@@ -675,6 +675,7 @@ class Job(object):
             file_matcher=None,
             irrelevant_file_matcher=None,  # skip-if
             tags=frozenset(),
+            dependencies=frozenset(),
         )
 
         # These attributes affect how the job is actually run and more
@@ -851,60 +852,100 @@ class Job(object):
         return True
 
 
-class JobTree(object):
-    """A JobTree holds one or more Jobs to represent Job dependencies.
+class JobList(object):
+    """ A list of jobs in a project's pipeline. """
 
-    If Job foo should only execute if Job bar succeeds, then there will
-    be a JobTree for foo, which will contain a JobTree for bar. A JobTree
-    can hold more than one dependent JobTrees, such that jobs bar and bang
-    both depend on job foo being successful.
-
-    A root node of a JobTree will have no associated Job."""
-
-    def __init__(self, job):
-        self.job = job
-        self.job_trees = []
-
-    def __repr__(self):
-        return '<JobTree %s %s>' % (self.job, self.job_trees)
+    def __init__(self):
+        self.jobs = OrderedDict()  # job.name -> [job, ...]
 
     def addJob(self, job):
-        if job not in [x.job for x in self.job_trees]:
-            t = JobTree(job)
-            self.job_trees.append(t)
-            return t
-        for tree in self.job_trees:
-            if tree.job == job:
-                return tree
-
-    def getJobs(self):
-        jobs = []
-        for x in self.job_trees:
-            jobs.append(x.job)
-            jobs.extend(x.getJobs())
-        return jobs
-
-    def getJobTreeForJob(self, job):
-        if self.job == job:
-            return self
-        for tree in self.job_trees:
-            ret = tree.getJobTreeForJob(job)
-            if ret:
-                return ret
-        return None
+        if job.name in self.jobs:
+            self.jobs[job.name].append(job)
+        else:
+            self.jobs[job.name] = [job]
 
     def inheritFrom(self, other):
-        if other.job:
-            if not self.job:
-                self.job = other.job.copy()
+        for jobname, jobs in other.jobs.items():
+            if jobname in self.jobs:
+                self.jobs[jobname].append(jobs)
             else:
-                self.job.applyVariant(other.job)
-        for other_tree in other.job_trees:
-            this_tree = self.getJobTreeForJob(other_tree.job)
-            if not this_tree:
-                this_tree = JobTree(None)
-                self.job_trees.append(this_tree)
-            this_tree.inheritFrom(other_tree)
+                self.jobs[jobname] = jobs
+
+
+class JobGraph(object):
+    """ A JobGraph represents the dependency graph between Job."""
+
+    def __init__(self):
+        self.jobs = OrderedDict()  # job_name -> Job
+        self._dependencies = {}  # dependent_job_name -> set(parent_job_names)
+
+    def __repr__(self):
+        return '<JobGraph %s>' % (self.jobs)
+
+    def addJob(self, job):
+        # A graph must be created after the job list is frozen,
+        # therefore we should only get one job with the same name.
+        if job.name in self.jobs:
+            raise Exception("Job %s already added" % (job.name,))
+        self.jobs[job.name] = job
+        # Append the dependency information
+        self._dependencies.setdefault(job.name, set())
+        try:
+            for dependency in job.dependencies:
+                # Make sure a circular dependency is never created
+                ancestor_jobs = self._getParentJobNamesRecursively(
+                    dependency, soft=True)
+                ancestor_jobs.add(dependency)
+                if any((job.name == anc_job) for anc_job in ancestor_jobs):
+                    raise Exception("Dependency cycle detected in job %s" %
+                                    (job.name,))
+                self._dependencies[job.name].add(dependency)
+        except Exception:
+            del self.jobs[job.name]
+            del self._dependencies[job.name]
+            raise
+
+    def getJobs(self):
+        return self.jobs.values()  # Report in the order of the layout config
+
+    def _getDirectDependentJobs(self, parent_job):
+        ret = set()
+        for dependent_name, parent_names in self._dependencies.items():
+            if parent_job in parent_names:
+                ret.add(dependent_name)
+        return ret
+
+    def getDependentJobsRecursively(self, parent_job):
+        all_dependent_jobs = set()
+        jobs_to_iterate = set([parent_job])
+        while len(jobs_to_iterate) > 0:
+            current_job = jobs_to_iterate.pop()
+            current_dependent_jobs = self._getDirectDependentJobs(current_job)
+            new_dependent_jobs = current_dependent_jobs - all_dependent_jobs
+            jobs_to_iterate |= new_dependent_jobs
+            all_dependent_jobs |= new_dependent_jobs
+        return [self.jobs[name] for name in all_dependent_jobs]
+
+    def getParentJobsRecursively(self, dependent_job):
+        return [self.jobs[name] for name in
+                self._getParentJobNamesRecursively(dependent_job)]
+
+    def _getParentJobNamesRecursively(self, dependent_job, soft=False):
+        all_parent_jobs = set()
+        jobs_to_iterate = set([dependent_job])
+        while len(jobs_to_iterate) > 0:
+            current_job = jobs_to_iterate.pop()
+            current_parent_jobs = self._dependencies.get(current_job)
+            if current_parent_jobs is None:
+                if soft:
+                    current_parent_jobs = set()
+                else:
+                    raise Exception("Dependent job %s not found: " %
+                                    (dependent_job,))
+            new_parent_jobs = current_parent_jobs - all_parent_jobs
+            jobs_to_iterate |= new_parent_jobs
+            all_parent_jobs |= new_parent_jobs
+        return all_parent_jobs
 
 
 class Build(object):
@@ -1137,7 +1178,7 @@ class QueueItem(object):
         self.active = False  # Whether an item is within an active window
         self.live = True  # Whether an item is intended to be processed at all
         self.layout = None  # This item's shadow layout
-        self.job_tree = None
+        self.job_graph = None
 
     def __repr__(self):
         if self.pipeline:
@@ -1165,23 +1206,33 @@ class QueueItem(object):
     def setReportedResult(self, result):
         self.current_build_set.result = result
 
-    def freezeJobTree(self):
+    def freezeJobGraph(self):
         """Find or create actual matching jobs for this item's change and
         store the resulting job tree."""
         layout = self.current_build_set.layout
-        self.job_tree = layout.createJobTree(self)
+        job_graph = layout.createJobGraph(self)
+        for job in job_graph.getJobs():
+            # Ensure that each jobs's dependencies are fully
+            # accessible.  This will raise an exception if not.
+            job_graph.getParentJobsRecursively(job.name)
+        self.job_graph = job_graph
 
-    def hasJobTree(self):
-        """Returns True if the item has a job tree."""
-        return self.job_tree is not None
+    def hasJobGraph(self):
+        """Returns True if the item has a job graph."""
+        return self.job_graph is not None
 
     def getJobs(self):
-        if not self.live or not self.job_tree:
+        if not self.live or not self.job_graph:
             return []
-        return self.job_tree.getJobs()
+        return self.job_graph.getJobs()
+
+    def getJob(self, name):
+        if not self.job_graph:
+            return None
+        return self.job_graph.jobs.get(name)
 
     def haveAllJobsStarted(self):
-        if not self.hasJobTree():
+        if not self.hasJobGraph():
             return False
         for job in self.getJobs():
             build = self.current_build_set.getBuild(job.name)
@@ -1193,7 +1244,7 @@ class QueueItem(object):
         if (self.current_build_set.config_error or
             self.current_build_set.unable_to_merge):
             return True
-        if not self.hasJobTree():
+        if not self.hasJobGraph():
             return False
         for job in self.getJobs():
             build = self.current_build_set.getBuild(job.name)
@@ -1202,7 +1253,7 @@ class QueueItem(object):
         return True
 
     def didAllJobsSucceed(self):
-        if not self.hasJobTree():
+        if not self.hasJobGraph():
             return False
         for job in self.getJobs():
             if not job.voting:
@@ -1215,7 +1266,7 @@ class QueueItem(object):
         return True
 
     def didAnyJobFail(self):
-        if not self.hasJobTree():
+        if not self.hasJobGraph():
             return False
         for job in self.getJobs():
             if not job.voting:
@@ -1234,7 +1285,7 @@ class QueueItem(object):
     def isHoldingFollowingChanges(self):
         if not self.live:
             return False
-        if not self.hasJobTree():
+        if not self.hasJobGraph():
             return False
         for job in self.getJobs():
             if not job.hold_following_changes:
@@ -1249,88 +1300,96 @@ class QueueItem(object):
             return False
         return self.item_ahead.isHoldingFollowingChanges()
 
-    def _findJobsToRun(self, job_trees, mutex):
+    def findJobsToRun(self, mutex):
         torun = []
+        if not self.live:
+            return []
+        if not self.job_graph:
+            return []
         if self.item_ahead:
             # Only run jobs if any 'hold' jobs on the change ahead
             # have completed successfully.
             if self.item_ahead.isHoldingFollowingChanges():
                 return []
-        for tree in job_trees:
-            job = tree.job
-            result = None
-            if job:
-                if not job.changeMatches(self.change):
+
+        successful_job_names = set()
+        jobs_not_started = set()
+        for job in self.job_graph.getJobs():
+            build = self.current_build_set.getBuild(job.name)
+            if build:
+                if build.result == 'SUCCESS':
+                    successful_job_names.add(job.name)
+            else:
+                jobs_not_started.add(job)
+
+        # Attempt to request nodes for jobs in the order jobs appear
+        # in configuration.
+        for job in self.job_graph.getJobs():
+            if job not in jobs_not_started:
+                continue
+            all_parent_jobs_successful = True
+            for parent_job in self.job_graph.getParentJobsRecursively(
+                    job.name):
+                if parent_job.name not in successful_job_names:
+                    all_parent_jobs_successful = False
+                    break
+            if all_parent_jobs_successful:
+                nodeset = self.current_build_set.getJobNodeSet(job.name)
+                if nodeset is None:
+                    # The nodes for this job are not ready, skip
+                    # it for now.
                     continue
-                build = self.current_build_set.getBuild(job.name)
-                if build:
-                    result = build.result
-                else:
-                    # There is no build for the root of this job tree,
-                    # so it has not run yet.
-                    nodeset = self.current_build_set.getJobNodeSet(job.name)
-                    if nodeset is None:
-                        # The nodes for this job are not ready, skip
-                        # it for now.
-                        continue
-                    if mutex.acquire(self, job):
-                        # If this job needs a mutex, either acquire it or make
-                        # sure that we have it before running the job.
-                        torun.append(job)
-            # If there is no job, this is a null job tree, and we should
-            # run all of its jobs.
-            if result == 'SUCCESS' or not job:
-                torun.extend(self._findJobsToRun(tree.job_trees, mutex))
+                if mutex.acquire(self, job):
+                    # If this job needs a mutex, either acquire it or make
+                    # sure that we have it before running the job.
+                    torun.append(job)
         return torun
 
-    def findJobsToRun(self, mutex):
-        if not self.live:
-            return []
-        tree = self.job_tree
-        if not tree:
-            return []
-        return self._findJobsToRun(tree.job_trees, mutex)
-
-    def _findJobsToRequest(self, job_trees):
+    def findJobsToRequest(self):
         build_set = self.current_build_set
         toreq = []
+        if not self.live:
+            return []
+        if not self.job_graph:
+            return []
         if self.item_ahead:
             if self.item_ahead.isHoldingFollowingChanges():
                 return []
-        for tree in job_trees:
-            job = tree.job
-            result = None
-            if job:
-                if not job.changeMatches(self.change):
-                    continue
-                build = build_set.getBuild(job.name)
-                if build:
-                    result = build.result
-                else:
-                    nodeset = build_set.getJobNodeSet(job.name)
-                    if nodeset is None:
-                        req = build_set.getJobNodeRequest(job.name)
-                        if req is None:
-                            toreq.append(job)
-            if result == 'SUCCESS' or not job:
-                toreq.extend(self._findJobsToRequest(tree.job_trees))
-        return toreq
 
-    def findJobsToRequest(self):
-        if not self.live:
-            return []
-        tree = self.job_tree
-        if not tree:
-            return []
-        return self._findJobsToRequest(tree.job_trees)
+        successful_job_names = set()
+        jobs_not_requested = set()
+        for job in self.job_graph.getJobs():
+            build = build_set.getBuild(job.name)
+            if build and build.result == 'SUCCESS':
+                successful_job_names.add(job.name)
+            else:
+                nodeset = build_set.getJobNodeSet(job.name)
+                if nodeset is None:
+                    req = build_set.getJobNodeRequest(job.name)
+                    if req is None:
+                        jobs_not_requested.add(job)
+
+        # Attempt to request nodes for jobs in the order jobs appear
+        # in configuration.
+        for job in self.job_graph.getJobs():
+            if job not in jobs_not_requested:
+                continue
+            all_parent_jobs_successful = True
+            for parent_job in self.job_graph.getParentJobsRecursively(
+                    job.name):
+                if parent_job.name not in successful_job_names:
+                    all_parent_jobs_successful = False
+                    break
+            if all_parent_jobs_successful:
+                toreq.append(job)
+        return toreq
 
     def setResult(self, build):
         if build.retry:
             self.removeBuild(build)
         elif build.result != 'SUCCESS':
-            # Get a JobTree from a Job so we can find only its dependent jobs
-            tree = self.job_tree.getJobTreeForJob(build.job)
-            for job in tree.getJobs():
+            for job in self.job_graph.getDependentJobsRecursively(
+                    build.job.name):
                 fakebuild = Build(job, None)
                 fakebuild.result = 'SKIPPED'
                 self.addBuild(fakebuild)
@@ -2014,7 +2073,7 @@ class ChangeishFilter(BaseFilter):
 class ProjectPipelineConfig(object):
     # Represents a project cofiguration in the context of a pipeline
     def __init__(self):
-        self.job_tree = None
+        self.job_list = JobList()
         self.queue_name = None
         self.merge_mode = None
 
@@ -2182,14 +2241,13 @@ class Layout(object):
     def addProjectConfig(self, project_config):
         self.project_configs[project_config.name] = project_config
 
-    def _createJobTree(self, change, job_trees, parent):
-        for tree in job_trees:
-            job = tree.job
-            if not job.changeMatches(change):
-                continue
+    def _createJobGraph(self, change, job_list, job_graph):
+        for jobname in job_list.jobs:
+            # This is the final job we are constructing
             frozen_job = None
+            # Whether the change matches any globally defined variant
             matched = False
-            for variant in self.getJobs(job.name):
+            for variant in self.getJobs(jobname):
                 if variant.changeMatches(change):
                     if frozen_job is None:
                         frozen_job = variant.copy()
@@ -2203,25 +2261,33 @@ class Layout(object):
                 # the job that is defined in the tree).
                 continue
             # If the job does not allow auth inheritance, do not allow
-            # the project-pipeline variant to update its execution
+            # the project-pipeline variants to update its execution
             # attributes.
             if frozen_job.auth and not frozen_job.auth.get('inherit'):
                 frozen_job.final = True
-            frozen_job.applyVariant(job)
-            frozen_tree = JobTree(frozen_job)
-            parent.job_trees.append(frozen_tree)
-            self._createJobTree(change, tree.job_trees, frozen_tree)
+            # Whether the change matches any of the project pipeline
+            # variants
+            matched = False
+            for variant in job_list.jobs[jobname]:
+                if variant.changeMatches(change):
+                    frozen_job.applyVariant(variant)
+                    matched = True
+            if not matched:
+                # A change must match at least one project pipeline
+                # job variant.
+                continue
+            job_graph.addJob(frozen_job)
 
-    def createJobTree(self, item):
+    def createJobGraph(self, item):
         project_config = self.project_configs.get(
             item.change.project.name, None)
-        ret = JobTree(None)
+        ret = JobGraph()
         # NOTE(pabelanger): It is possible for a foreign project not to have a
-        # configured pipeline, if so return an empty JobTree.
+        # configured pipeline, if so return an empty JobGraph.
         if project_config and item.pipeline.name in project_config.pipelines:
-            project_tree = \
-                project_config.pipelines[item.pipeline.name].job_tree
-            self._createJobTree(item.change, project_tree.job_trees, ret)
+            project_job_list = \
+                project_config.pipelines[item.pipeline.name].job_list
+            self._createJobGraph(item.change, project_job_list, ret)
         return ret
 
 

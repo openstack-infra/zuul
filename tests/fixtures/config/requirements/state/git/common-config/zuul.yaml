@@ -1,10 +1,9 @@
 - pipeline:
     name: current-check
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     require:
-      current-patchset: True
+      current-patchset: true
     trigger:
       gerrit:
         - event: patchset-created
@@ -19,10 +18,9 @@
 - pipeline:
     name: open-check
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     require:
-      open: True
+      open: true
     trigger:
       gerrit:
         - event: patchset-created
@@ -37,8 +35,7 @@
 - pipeline:
     name: status-check
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     require:
       status: NEW
     trigger:

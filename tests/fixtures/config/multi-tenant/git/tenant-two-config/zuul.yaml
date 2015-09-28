@@ -2,8 +2,7 @@
     name: tenant-two-gate
     manager: dependent
     success-message: Build succeeded (tenant-two-gate).
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: comment-added
@@ -28,8 +27,7 @@
         image: controller-image
 
 - job:
-    name:
-      project2-test1
+    name: project2-test1
 
 - project:
     name: org/project2

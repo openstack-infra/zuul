@@ -4,9 +4,10 @@
     require:
       approval:
         - username: jenkins
-          verified: [1, 2]
-    source:
-      gerrit
+          verified:
+            - 1
+            - 2
+    source: gerrit
     trigger:
       gerrit:
         - event: comment-added
@@ -20,14 +21,15 @@
 - pipeline:
     name: trigger
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: comment-added
           require-approval:
             - username: jenkins
-              verified: [1, 2]
+              verified:
+                - 1
+                - 2
     success:
       gerrit:
         verified: 1

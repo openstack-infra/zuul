@@ -1,15 +1,18 @@
 - pipeline:
     name: pipeline
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     require:
       approval:
         - username: jenkins
-          verified: [1, 2]
+          verified:
+            - 1
+            - 2
     reject:
       approval:
-        - verified: [-1, -2]
+        - verified:
+            - -1
+            - -2
     trigger:
       gerrit:
         - event: comment-added
@@ -23,16 +26,19 @@
 - pipeline:
     name: trigger
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: comment-added
           require-approval:
             - username: jenkins
-              verified: [1, 2]
+              verified:
+                - 1
+                - 2
           reject-approval:
-            - verified: [-1, -2]
+            - verified:
+                - -1
+                - -2
     success:
       gerrit:
         verified: 1

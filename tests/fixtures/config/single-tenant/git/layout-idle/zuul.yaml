@@ -1,8 +1,7 @@
 - pipeline:
     name: periodic
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     trigger:
       timer:
         - time: '* * * * * */1'

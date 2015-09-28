@@ -1,8 +1,7 @@
 - pipeline:
     name: check
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: patchset-created
@@ -34,19 +33,23 @@
     check:
       jobs:
         - merge:
-            jobs:
-              - test1
-              - test2
-              - integration
             tags:
               - extratag
+        - test1:
+            dependencies: merge
+        - test2:
+            dependencies: merge
+        - integration:
+            dependencies: merge
 
 - project:
     name: org/project2
     check:
       jobs:
-        - merge:
-            jobs:
-              - test1
-              - test2
-              - integration
+        - merge
+        - test1:
+            dependencies: merge
+        - test2:
+            dependencies: merge
+        - integration:
+            dependencies: merge

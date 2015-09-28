@@ -193,6 +193,7 @@ class JobParser(object):
                'roles': to_list(role),
                'repos': to_list(str),
                'vars': dict,
+               'dependencies': to_list(str),
                }
 
         return vs.Schema(job)
@@ -275,6 +276,8 @@ class JobParser(object):
             # destructive copy because they are intended to
             # accumulate onto any previously applied tags.
             job.tags = job.tags.union(set(tags))
+
+        job.dependencies = frozenset(as_list(conf.get('dependencies')))
 
         roles = []
         for role in conf.get('roles', []):
@@ -364,45 +367,33 @@ class ProjectTemplateParser(object):
             project_pipeline = model.ProjectPipelineConfig()
             project_template.pipelines[pipeline.name] = project_pipeline
             project_pipeline.queue_name = conf_pipeline.get('queue')
-            project_pipeline.job_tree = ProjectTemplateParser._parseJobTree(
+            ProjectTemplateParser._parseJobList(
                 tenant, layout, conf_pipeline.get('jobs', []),
-                source_context, start_mark)
+                source_context, start_mark, project_pipeline.job_list)
         return project_template
 
     @staticmethod
-    def _parseJobTree(tenant, layout, conf, source_context,
-                      start_mark, tree=None):
-        if not tree:
-            tree = model.JobTree(None)
+    def _parseJobList(tenant, layout, conf, source_context,
+                      start_mark, job_list):
         for conf_job in conf:
             if isinstance(conf_job, six.string_types):
                 job = model.Job(conf_job)
-                tree.addJob(job)
+                job_list.addJob(job)
             elif isinstance(conf_job, dict):
-                # A dictionary in a job tree may override params, or
-                # be the root of a sub job tree, or both.
+                # A dictionary in a job tree may override params
                 jobname, attrs = conf_job.items()[0]
-                jobs = attrs.pop('jobs', None)
                 if attrs:
                     # We are overriding params, so make a new job def
                     attrs['name'] = jobname
                     attrs['_source_context'] = source_context
                     attrs['_start_mark'] = start_mark
-                    subtree = tree.addJob(JobParser.fromYaml(
-                        tenant, layout, attrs))
+                    job_list.addJob(JobParser.fromYaml(tenant, layout, attrs))
                 else:
                     # Not overriding, so add a blank job
                     job = model.Job(jobname)
-                    subtree = tree.addJob(job)
-
-                if jobs:
-                    # This is the root of a sub tree
-                    ProjectTemplateParser._parseJobTree(
-                        tenant, layout, jobs, source_context,
-                        start_mark, subtree)
+                    job_list.addJob(job)
             else:
                 raise Exception("Job must be a string or dictionary")
-        return tree
 
 
 class ProjectParser(object):
@@ -455,7 +446,6 @@ class ProjectParser(object):
             project.merge_mode = model.MERGER_MAP['merge-resolve']
         for pipeline in layout.pipelines.values():
             project_pipeline = model.ProjectPipelineConfig()
-            project_pipeline.job_tree = model.JobTree(None)
             queue_name = None
             # For every template, iterate over the job tree and replace or
             # create the jobs in the final definition as needed.
@@ -467,8 +457,8 @@ class ProjectParser(object):
                         (template.name, pipeline.name))
                     pipeline_defined = True
                     template_pipeline = template.pipelines[pipeline.name]
-                    project_pipeline.job_tree.inheritFrom(
-                        template_pipeline.job_tree)
+                    project_pipeline.job_list.inheritFrom(
+                        template_pipeline.job_list)
                     if template_pipeline.queue_name:
                         queue_name = template_pipeline.queue_name
             if queue_name:

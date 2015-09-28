@@ -1,8 +1,7 @@
 - pipeline:
     name: check
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: patchset-created
@@ -14,8 +13,7 @@
         verified: -1
 
 - job:
-    name:
-      python27
+    name: python27
     nodes:
       - name: controller
         image: ubuntu-trusty

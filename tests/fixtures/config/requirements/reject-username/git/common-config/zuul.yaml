@@ -1,11 +1,10 @@
 - pipeline:
     name: pipeline
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     reject:
       approval:
-        - username: 'jenkins'
+        - username: jenkins
     trigger:
       gerrit:
         - event: comment-added
@@ -19,13 +18,12 @@
 - pipeline:
     name: trigger
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: comment-added
           reject-approval:
-            - username: 'jenkins'
+            - username: jenkins
     success:
       gerrit:
         verified: 1

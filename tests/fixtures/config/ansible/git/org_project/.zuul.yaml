@@ -4,7 +4,6 @@
 
 - project:
     name: org/project
-
     check:
       jobs:
         - python27

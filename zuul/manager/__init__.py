@@ -64,31 +64,29 @@ class PipelineManager(object):
             self.log.info("    %s" % e)
         self.log.info("  Projects:")
 
-        def log_jobs(tree, indent=0):
-            istr = '    ' + ' ' * indent
-            if tree.job:
-                # TODOv3(jeblair): represent matchers
-                efilters = ''
-                # for b in tree.job._branches:
-                #     efilters += str(b)
-                # for f in tree.job._files:
-                #     efilters += str(f)
-                # if tree.job.skip_if_matcher:
-                #     efilters += str(tree.job.skip_if_matcher)
-                # if efilters:
-                #     efilters = ' ' + efilters
-                tags = []
-                if tree.job.hold_following_changes:
-                    tags.append('[hold]')
-                if not tree.job.voting:
-                    tags.append('[nonvoting]')
-                if tree.job.mutex:
-                    tags.append('[mutex: %s]' % tree.job.mutex)
-                tags = ' '.join(tags)
-                self.log.info("%s%s%s %s" % (istr, repr(tree.job),
-                                             efilters, tags))
-            for x in tree.job_trees:
-                log_jobs(x, indent + 2)
+        def log_jobs(job_list):
+            for job_name, job_variants in job_list.jobs.items():
+                for variant in job_variants:
+                    # TODOv3(jeblair): represent matchers
+                    efilters = ''
+                    # for b in tree.job._branches:
+                    #     efilters += str(b)
+                    # for f in tree.job._files:
+                    #     efilters += str(f)
+                    # if tree.job.skip_if_matcher:
+                    #     efilters += str(tree.job.skip_if_matcher)
+                    # if efilters:
+                    #     efilters = ' ' + efilters
+                    tags = []
+                    if variant.hold_following_changes:
+                        tags.append('[hold]')
+                    if not variant.voting:
+                        tags.append('[nonvoting]')
+                    if variant.mutex:
+                        tags.append('[mutex: %s]' % variant.mutex)
+                    tags = ' '.join(tags)
+                    self.log.info("      %s%s %s" % (repr(variant),
+                                                     efilters, tags))
 
         for project_name in layout.project_configs.keys():
             project_config = layout.project_configs.get(project_name)
@@ -97,7 +95,7 @@ class PipelineManager(object):
                     self.pipeline.name)
                 if project_pipeline_config:
                     self.log.info("    %s" % project_name)
-                    log_jobs(project_pipeline_config.job_tree)
+                    log_jobs(project_pipeline_config.job_list)
         self.log.info("  On start:")
         self.log.info("    %s" % self.pipeline.start_actions)
         self.log.info("  On success:")
@@ -257,7 +255,7 @@ class PipelineManager(object):
                 # Rebuild the frozen job tree from the new layout, if
                 # we have one.  If not, it will be built later.
                 if item.current_build_set.layout:
-                    item.freezeJobTree()
+                    item.freezeJobGraph()
 
                 # Re-set build results in case any new jobs have been
                 # added to the tree.
@@ -540,8 +538,18 @@ class PipelineManager(object):
             item.current_build_set.layout = self.getLayout(item)
         if not item.current_build_set.layout:
             return False
-        if not item.job_tree:
-            item.freezeJobTree()
+        if item.current_build_set.config_error:
+            return False
+        if not item.job_graph:
+            try:
+                item.freezeJobGraph()
+            except Exception as e:
+                # TODOv3(jeblair): nicify this exception as it will be reported
+                self.log.exception("Error freezing job graph for %s" %
+                                   item)
+                item.setConfigError("Unable to freeze job graph: %s" %
+                                    (str(e)))
+                return False
         return True
 
     def _processOneItem(self, item, nnfi):

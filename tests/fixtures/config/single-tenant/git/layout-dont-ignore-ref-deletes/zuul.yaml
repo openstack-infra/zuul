@@ -1,13 +1,12 @@
 - pipeline:
     name: post
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: ref-updated
           ref: ^(?!refs/).*$
-          ignore-deletes: False
+          ignore-deletes: false
 
 - job:
     name: project-post
@@ -20,4 +19,3 @@
     post:
       jobs:
         - project-post
-

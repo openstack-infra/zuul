@@ -555,11 +555,10 @@ class Scheduler(threading.Thread):
                         project_name)
                     if new_pipeline.manager.reEnqueueItem(item,
                                                           last_head):
-                        new_jobs = item.getJobs()
                         for build in item.current_build_set.getBuilds():
-                            jobtree = item.job_tree.getJobTreeForJob(build.job)
-                            if jobtree and jobtree.job in new_jobs:
-                                build.job = jobtree.job
+                            new_job = item.getJob(build.job.name)
+                            if new_job:
+                                build.job = new_job
                             else:
                                 item.removeBuild(build)
                                 builds_to_cancel.append(build)

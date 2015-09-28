@@ -1,8 +1,7 @@
 - pipeline:
     name: pipeline
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: comment-added
@@ -20,8 +19,7 @@
 - pipeline:
     name: trigger
     manager: independent
-    source:
-      gerrit
+    source: gerrit
     trigger:
       gerrit:
         - event: comment-added
