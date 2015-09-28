@@ -212,19 +212,20 @@ starts the process again testing *D* against the tip of the branch, and
   }
 
 
-Cross projects dependencies
----------------------------
+Cross Project Testing
+---------------------
 
 When your projects are closely coupled together, you want to make sure
 changes entering the gate are going to be tested with the version of
 other projects currently enqueued in the gate (since they will
 eventually be merged and might introduce breaking features).
 
-Such dependencies can be defined in Zuul configuration by registering a job
-in a DependentPipeline of several projects. Whenever a change enters such a
-pipeline, it will create references for the other projects as well.  As an
-example, given a main project ``acme`` and a plugin ``plugin`` you can
-define a job ``acme-tests`` which should be run for both projects:
+Such relationships can be defined in Zuul configuration by registering
+a job in a DependentPipeline of several projects. Whenever a change
+enters such a pipeline, it will create references for the other
+projects as well.  As an example, given a main project ``acme`` and a
+plugin ``plugin`` you can define a job ``acme-tests`` which should be
+run for both projects:
 
 .. code-block:: yaml
 
@@ -280,3 +281,82 @@ change 1 applied as the expected state for when Change 3 would merge.
 When your job fetches several repositories without changes ahead in the
 queue, they may not have a Z reference in which case you can just check
 out the branch.
+
+
+Cross Repository Dependencies
+-----------------------------
+
+Zuul permits users to specify dependencies across repositories.  Using
+a special header in Git commit messages, Users may specify that a
+change depends on another change in any repository known to Zuul.
+
+Zuul's cross-repository dependencies (CRD) behave like a directed
+acyclic graph (DAG), like git itself, to indicate a one-way dependency
+relationship between changes in different git repositories.  Change A
+may depend on B, but B may not depend on A.
+
+To use them, include "Depends-On: <gerrit-change-id>" in the footer of
+a commit message.  Use the full Change-ID ('I' + 40 characters).
+
+
+Gate Pipeline
+~~~~~~~~~~~~~
+
+When Zuul sees CRD changes, it serializes them in the usual manner when
+enqueuing them into a pipeline.  This means that if change A depends on
+B, then when they are added to the gate pipeline, B will appear first
+and A will follow.  If tests for B fail, both B and A will be removed
+from the pipeline, and it will not be possible for A to merge until B
+does.
+
+Note that if changes with CRD do not share a change queue then Zuul
+is unable to enqueue them together, and the first will be required to
+merge before the second is enqueued.
+
+Check Pipeline
+~~~~~~~~~~~~~~
+
+When changes are enqueued into the check pipeline, all of the related
+dependencies (both normal git-dependencies that come from parent commits
+as well as CRD changes) appear in a dependency graph, as in gate.  This
+means that even in the check pipeline, your change will be tested with
+its dependency.  So changes that were previously unable to be fully
+tested until a related change landed in a different repo may now be
+tested together from the start.
+
+All of the changes are still independent (so you will note that the
+whole pipeline does not share a graph as in gate), but for each change
+tested, all of its dependencies are visually connected to it, and they
+are used to construct the git references that Zuul uses when testing.
+When looking at this graph on the status page, you will note that the
+dependencies show up as grey dots, while the actual change tested shows
+up as red or green.  This is to indicate that the grey changes are only
+there to establish dependencies.  Even if one of the dependencies is
+also being tested, it will show up as a grey dot when used as a
+dependency, but separately and additionally will appear as its own red
+or green dot for its test.
+
+Multiple Changes
+~~~~~~~~~~~~~~~~
+
+A Gerrit change ID may refer to multiple changes (on multiple branches
+of the same project, or even multiple projects).  In these cases, Zuul
+will treat all of the changes with that change ID as dependencies.  So
+if you say that change in project A Depends-On a change ID that has
+changes in two branches of project B, then when testing the change to
+project A, both project B changes will be applied, and when deciding
+whether the project A change can merge, both changes must merge ahead
+of it.
+
+A change may depend on more than one Gerrit change ID as well.  So it
+is possible for a change in project A to depend on a change in project
+B and a change in project C.  Simply add more "Depends-On:" lines to
+the footer.
+
+Cycles
+~~~~~~
+
+If a cycle is created by use of CRD, Zuul will abort its work very
+early.  There will be no message in Gerrit and no changes that are part
+of the cycle will be enqueued into any pipeline.  This is to protect
+Zuul from infinite loops.
