@@ -923,7 +923,9 @@ class ZuulTestCase(BaseTestCase):
         self.init_repo("org/no-jobs-project")
 
         self.statsd = FakeStatsd()
-        os.environ['STATSD_HOST'] = 'localhost'
+        # note, use 127.0.0.1 rather than localhost to avoid getting ipv6
+        # see: https://github.com/jsocol/pystatsd/issues/61
+        os.environ['STATSD_HOST'] = '127.0.0.1'
         os.environ['STATSD_PORT'] = str(self.statsd.port)
         self.statsd.start()
         # the statsd client object is configured in the statsd module import
