@@ -224,6 +224,19 @@ class Gearman(object):
         # NOTE(jhesketh): The params need to stay in a key=value data pair
         # as workers cannot necessarily handle lists.
 
+        if callable(job.parameter_function):
+            pargs = inspect.getargspec(job.parameter_function)
+            if len(pargs.args) == 2:
+                job.parameter_function(item, params)
+            else:
+                job.parameter_function(item, job, params)
+            self.log.debug("Custom parameter function used for job %s, "
+                           "change: %s, params: %s" % (job, item.change,
+                                                       params))
+
+        # NOTE(mmedvede): Swift parameter creation should remain after the call
+        # to job.parameter_function to make it possible to update LOG_PATH for
+        # swift upload url using parameter_function mechanism.
         if job.swift and self.swift.connection:
 
             for name, s in job.swift.items():
@@ -253,16 +266,6 @@ class Gearman(object):
                 # given  in the form of NAME_PARAMETER=VALUE
                 for key, value in swift_instructions.items():
                     params['_'.join(['SWIFT', name, key])] = value
-
-        if callable(job.parameter_function):
-            pargs = inspect.getargspec(job.parameter_function)
-            if len(pargs.args) == 2:
-                job.parameter_function(item, params)
-            else:
-                job.parameter_function(item, job, params)
-            self.log.debug("Custom parameter function used for job %s, "
-                           "change: %s, params: %s" % (job, item.change,
-                                                       params))
 
     def launch(self, job, item, pipeline, dependent_items=[]):
         uuid = str(uuid4().hex)
