@@ -66,6 +66,11 @@ Common parameters
 **LOG_PATH**
   zuul also suggests a unique path for logs to the worker. This is
   "BASE_LOG_PATH/pipeline-name/job-name/uuid"
+**ZUUL_VOTING**
+  Whether Zuul considers this job voting or not.  Note that if Zuul is
+  reconfigured during the run, the voting status of a job may change
+  and this value will be out of date.  Values are '1' if voting, '0'
+  otherwise.
 
 Change related parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~
