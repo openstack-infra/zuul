@@ -120,6 +120,15 @@ following options.
 
     *reopened* - pull request reopened
 
+    *comment* - comment added on pull request
+
+  **comment**
+  This is only used for ``pull_request`` ``comment`` events.  It accepts a list
+  of regexes that are searched for in the comment string. If any of these
+  regexes matches a portion of the comment string the trigger is matched.
+  ``comment: retrigger`` will match when comments containing 'retrigger'
+  somewhere in the comment text are added to a pull request.
+
   Additionally a ``push`` event can be configured, with an
   associated ``ref`` represented as a regex to match branches or tags.
 

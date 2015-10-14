@@ -588,6 +588,22 @@ class FakeGithubPullRequest(object):
         self.comments.append(message)
         self._updateTimeStamp()
 
+    def getCommentAddedEvent(self, text):
+        name = 'issue_comment'
+        data = {
+            'action': 'created',
+            'issue': {
+                'number': self.number
+            },
+            'comment': {
+                'body': text
+            },
+            'repository': {
+                'full_name': self.project
+            }
+        }
+        return (name, data)
+
     def _getRepo(self):
         repo_path = os.path.join(self.upstream_root, self.project)
         return git.Repo(repo_path)
@@ -699,6 +715,23 @@ class FakeGithubConnection(githubconnection.GithubConnection):
             % (port, self.connection_name),
             data=payload, headers=headers)
         urllib.request.urlopen(req)
+
+    def getPull(self, project, number):
+        pr = self.pull_requests[number - 1]
+        data = {
+            'number': number,
+            'updated_at': pr.updated_at,
+            'base': {
+                'repo': {
+                    'full_name': pr.project
+                },
+                'ref': pr.branch,
+            },
+            'head': {
+                'sha': pr.head_sha
+            }
+        }
+        return data
 
     def getGitUrl(self, project):
         return os.path.join(self.upstream_root, str(project))

@@ -52,6 +52,19 @@ class TestGithubDriver(ZuulTestCase):
         self.assertEqual(pr.head_sha, zuulvars['patchset'])
         self.assertEqual(1, len(pr.comments))
 
+    @simple_layout('layouts/basic-github.yaml', driver='github')
+    def test_comment_event(self):
+        pr = self.fake_github.openFakePullRequest('org/project', 'master')
+        self.fake_github.emitEvent(pr.getCommentAddedEvent('test me'))
+        self.waitUntilSettled()
+        self.assertEqual(2, len(self.history))
+
+        # Test an unmatched comment, history should remain the same
+        pr = self.fake_github.openFakePullRequest('org/project', 'master')
+        self.fake_github.emitEvent(pr.getCommentAddedEvent('casual comment'))
+        self.waitUntilSettled()
+        self.assertEqual(2, len(self.history))
+
     @simple_layout('layouts/push-tag-github.yaml', driver='github')
     def test_tag_event(self):
         self.executor_server.hold_jobs_in_build = True

@@ -113,6 +113,26 @@ class GithubWebhookListener():
 
         return event
 
+    def _event_issue_comment(self, request):
+        """Handles pull request comments"""
+        body = request.json_body
+        action = body.get('action')
+        if action != 'created':
+            return
+        number = body.get('issue').get('number')
+        project_name = body.get('repository').get('full_name')
+        pr_body = self.connection.getPull(project_name, number)
+        if pr_body is None:
+            self.log.debug('Pull request #%s not found in project %s' %
+                           (number, project_name))
+            return
+
+        event = self._pull_request_to_event(pr_body)
+        event.comment = body.get('comment').get('body')
+        event.type = 'pull_request'
+        event.action = 'comment'
+        return event
+
     def _validate_signature(self, request):
         secret = self.connection.connection_config.get('webhook_token', None)
         if secret is None:
@@ -245,6 +265,10 @@ class GithubConnection(BaseConnection):
 
     def getPullUrl(self, project, number):
         return '%s/pull/%s' % (self.getGitwebUrl(project), number)
+
+    def getPull(self, project_name, number):
+        owner, proj = project_name.split('/')
+        return self.github.pull_request(owner, proj, number).as_dict()
 
     def report(self, project, pr_number, message):
         owner, proj = project.name.split('/')

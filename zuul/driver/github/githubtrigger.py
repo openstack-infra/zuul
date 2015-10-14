@@ -35,10 +35,12 @@ class GithubTrigger(BaseTrigger):
             types = trigger.get('event', None)
             actions = trigger.get('action')
             refs = trigger.get('refs')
+            comments = self._toList(trigger.get('comment'))
             f = EventFilter(trigger=self,
                             types=self._toList(types),
                             actions=self._toList(actions),
-                            refs=self._toList(refs))
+                            refs=self._toList(refs),
+                            comments=self._toList(comments))
             efilters.append(f)
 
         return efilters
@@ -57,6 +59,7 @@ def getSchema():
                          'push')),
         'action': toList(str),
         'ref': toList(str),
+        'comment': toList(str),
     }
 
     return github_trigger
