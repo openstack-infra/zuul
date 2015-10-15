@@ -558,6 +558,7 @@ class Scheduler(threading.Thread):
             if statsd and build.pipeline:
                 jobname = build.job.name.replace('.', '_')
                 key = 'zuul.pipeline.%s.all_jobs' % build.pipeline.name
+                statsd.incr(key)
                 for label in build.node_labels:
                     # Jenkins includes the node name in its list of labels, so
                     # we filter it out here, since that is not statistically
