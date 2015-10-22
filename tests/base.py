@@ -385,7 +385,7 @@ class FakeGerritConnection(zuul.connection.gerrit.GerritConnection):
     log = logging.getLogger("zuul.test.FakeGerritConnection")
 
     def __init__(self, connection_name, connection_config,
-                 changes_db=None, queues_db=None):
+                 changes_db=None, queues_db=None, upstream_root=None):
         super(FakeGerritConnection, self).__init__(connection_name,
                                                    connection_config)
 
@@ -394,7 +394,7 @@ class FakeGerritConnection(zuul.connection.gerrit.GerritConnection):
         self.change_number = 0
         self.changes = changes_db
         self.queries = []
-        self.upstream_root = None
+        self.upstream_root = upstream_root
 
     def addFakeChange(self, project, branch, subject, status='NEW'):
         self.change_number += 1
@@ -474,9 +474,8 @@ class BuildHistory(object):
 
 
 class FakeURLOpener(object):
-    def __init__(self, upstream_root, fake_gerrit, url):
+    def __init__(self, upstream_root, url):
         self.upstream_root = upstream_root
-        self.fake_gerrit = fake_gerrit
         self.url = url
 
     def read(self):
@@ -934,16 +933,19 @@ class ZuulTestCase(BaseTestCase):
                                              FakeSwiftClientConnection))
         self.swift = zuul.lib.swift.Swift(self.config)
 
+        self.event_queues = [
+            self.sched.result_event_queue,
+            self.sched.trigger_event_queue
+        ]
+
         # Set up connections and give out the default gerrit for testing
         self.configure_connections()
         self.sched.registerConnections(self.connections)
         self.fake_gerrit = self.connections['gerrit']
-        self.fake_gerrit.upstream_root = self.upstream_root
 
         def URLOpenerFactory(*args, **kw):
             if isinstance(args[0], urllib2.Request):
                 return old_urlopen(*args, **kw)
-            args = [self.fake_gerrit] + list(args)
             return FakeURLOpener(self.upstream_root, *args, **kw)
 
         old_urlopen = urllib2.urlopen
@@ -1011,10 +1013,12 @@ class ZuulTestCase(BaseTestCase):
             if con_driver == 'gerrit':
                 self.gerrit_changes_dbs[con_name] = {}
                 self.gerrit_queues_dbs[con_name] = Queue.Queue()
+                self.event_queues.append(self.gerrit_queues_dbs['gerrit'])
                 self.connections[con_name] = FakeGerritConnection(
                     con_name, con_config,
                     changes_db=self.gerrit_changes_dbs[con_name],
-                    queues_db=self.gerrit_queues_dbs[con_name]
+                    queues_db=self.gerrit_queues_dbs[con_name],
+                    upstream_root=self.upstream_root
                 )
             elif con_driver == 'smtp':
                 self.connections[con_name] = \
@@ -1029,6 +1033,7 @@ class ZuulTestCase(BaseTestCase):
         if 'gerrit' in self.config.sections():
             self.gerrit_changes_dbs['gerrit'] = {}
             self.gerrit_queues_dbs['gerrit'] = Queue.Queue()
+            self.event_queues.append(self.gerrit_queues_dbs['gerrit'])
             self.connections['gerrit'] = FakeGerritConnection(
                 '_legacy_gerrit', dict(self.config.items('gerrit')),
                 changes_db=self.gerrit_changes_dbs['gerrit'],
@@ -1270,15 +1275,21 @@ class ZuulTestCase(BaseTestCase):
                 return False
         return True
 
+    def eventQueuesEmpty(self):
+        for queue in self.event_queues:
+            yield queue.empty()
+
+    def eventQueuesJoin(self):
+        for queue in self.event_queues:
+            queue.join()
+
     def waitUntilSettled(self):
         self.log.debug("Waiting until settled...")
         start = time.time()
         while True:
             if time.time() - start > 10:
                 print 'queue status:',
-                print self.sched.trigger_event_queue.empty(),
-                print self.sched.result_event_queue.empty(),
-                print self.fake_gerrit.event_queue.empty(),
+                print ' '.join(self.eventQueuesEmpty())
                 print self.areAllBuildsWaiting()
                 raise Exception("Timeout waiting for Zuul to settle")
             # Make sure no new events show up while we're checking
@@ -1287,14 +1298,10 @@ class ZuulTestCase(BaseTestCase):
             if self.haveAllBuildsReported():
                 # Join ensures that the queue is empty _and_ events have been
                 # processed
-                self.fake_gerrit.event_queue.join()
-                self.sched.trigger_event_queue.join()
-                self.sched.result_event_queue.join()
+                self.eventQueuesJoin()
                 self.sched.run_handler_lock.acquire()
                 if (not self.merge_client.build_sets and
-                    self.sched.trigger_event_queue.empty() and
-                    self.sched.result_event_queue.empty() and
-                    self.fake_gerrit.event_queue.empty() and
+                    all(self.eventQueuesEmpty()) and
                     self.haveAllBuildsReported() and
                     self.areAllBuildsWaiting()):
                     self.sched.run_handler_lock.release()
