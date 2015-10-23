@@ -38,6 +38,9 @@ Create a connection with gerrit.
   Path to SSH key to use when logging into above server.
   ``sshkey=/home/zuul/.ssh/id_rsa``
 
+**keepalive**
+  Optional: Keepalive timeout, 0 means no keepalive.
+  ``keepalive=60``
 
 Gerrit Configuration
 ~~~~~~~~~~~~~~~~~~~~
