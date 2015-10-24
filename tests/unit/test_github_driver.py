@@ -110,3 +110,15 @@ class TestGithubDriver(ZuulTestCase):
 
         self.assertEqual('SUCCESS',
                          self.getJobFromHistory('project-post').result)
+
+    @simple_layout('layouts/basic-github.yaml', driver='github')
+    def test_git_https_url(self):
+        """Test that git_ssh option gives git url with ssh"""
+        url = self.fake_github.real_getGitUrl('org/project')
+        self.assertEqual('https://github.com/org/project', url)
+
+    @simple_layout('layouts/basic-github.yaml', driver='github')
+    def test_git_ssh_url(self):
+        """Test that git_ssh option gives git url with ssh"""
+        url = self.fake_github_ssh.real_getGitUrl('org/project')
+        self.assertEqual('ssh://git@github.com/org/project.git', url)
