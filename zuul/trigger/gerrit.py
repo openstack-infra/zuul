@@ -94,7 +94,7 @@ class GerritEventConnector(threading.Thread):
                     Can not get account information." % event.type)
             event.account = None
 
-        if event.change_number:
+        if event.change_number and self.sched.getProject(event.project_name):
             # Call _getChange for the side effect of updating the
             # cache.  Note that this modifies Change objects outside
             # the main thread.
@@ -404,7 +404,11 @@ class Gerrit(object):
         if 'project' not in data:
             raise Exception("Change %s,%s not found" % (change.number,
                                                         change.patchset))
-        change.project = self.sched.getProject(data['project'])
+        # If updated changed came as a dependent on
+        # and its project is not defined,
+        # then create a 'foreign' project for it in layout
+        change.project = self.sched.getProject(data['project'],
+                                               create_foreign=bool(history))
         change.branch = data['branch']
         change.url = data['url']
         max_ps = 0
