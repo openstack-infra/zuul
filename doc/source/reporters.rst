@@ -50,6 +50,11 @@ reporter. It has the following options:
   to ``true``.
   ``comment: false``
 
+  **merge**
+  Boolean value (``true`` or ``false``) that determines if the reporter should
+  merge the pull reqeust. Defaults to ``false``.
+  ``merge=true``
+
 SMTP
 ----
 
