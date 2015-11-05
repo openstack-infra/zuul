@@ -15,6 +15,7 @@
 import logging
 import re
 from testtools.matchers import MatchesRegex
+import time
 
 from tests.base import ZuulTestCase, simple_layout, random_sha1
 
@@ -137,6 +138,47 @@ class TestGithubDriver(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(2, len(self.history))
         self.assertEqual(['other label'], C.labels)
+
+    @simple_layout('layouts/dequeue-github.yaml', driver='github')
+    def test_dequeue_pull_synchronized(self):
+        self.executor_server.hold_jobs_in_build = True
+
+        pr = self.fake_github.openFakePullRequest(
+            'org/one-job-project', 'master')
+        self.fake_github.emitEvent(pr.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+
+        # event update stamp has resolution one second, wait so the latter
+        # one has newer timestamp
+        time.sleep(1)
+        pr.addCommit()
+        self.fake_github.emitEvent(pr.getPullRequestSynchronizeEvent())
+        self.waitUntilSettled()
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(2, len(self.history))
+        self.assertEqual(1, self.countJobResults(self.history, 'ABORTED'))
+
+    @simple_layout('layouts/dequeue-github.yaml', driver='github')
+    def test_dequeue_pull_abandoned(self):
+        self.executor_server.hold_jobs_in_build = True
+
+        pr = self.fake_github.openFakePullRequest(
+            'org/one-job-project', 'master')
+        self.fake_github.emitEvent(pr.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+        self.fake_github.emitEvent(pr.getPullRequestClosedEvent())
+        self.waitUntilSettled()
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(1, len(self.history))
+        self.assertEqual(1, self.countJobResults(self.history, 'ABORTED'))
 
     @simple_layout('layouts/basic-github.yaml', driver='github')
     def test_git_https_url(self):

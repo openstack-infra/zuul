@@ -1926,6 +1926,25 @@ class TriggerEvent(object):
 
         return ret
 
+    def isPatchsetCreated(self):
+        return 'patchset-created' == self.type
+
+    def isChangeAbandoned(self):
+        return 'change-abandoned' == self.type
+
+
+class GithubTriggerEvent(TriggerEvent):
+
+    def isPatchsetCreated(self):
+        if self.type == 'pull_request':
+            return self.action in ['opened', 'changed']
+        return False
+
+    def isChangeAbandoned(self):
+        if self.type == 'pull_request':
+            return 'closed' == self.action
+        return False
+
 
 class BaseFilter(object):
     """Base Class for filtering which Changes and Events to process."""
