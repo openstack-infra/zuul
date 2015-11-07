@@ -557,6 +557,7 @@ class FakeGithubPullRequest(object):
         self.branch = branch
         self.upstream_root = upstream_root
         self.comments = []
+        self.labels = []
         self.statuses = {}
         self.updated_at = None
         self.head_sha = None
@@ -605,6 +606,64 @@ class FakeGithubPullRequest(object):
             },
             'repository': {
                 'full_name': self.project
+            }
+        }
+        return (name, data)
+
+    def addLabel(self, name):
+        if name not in self.labels:
+            self.labels.append(name)
+            self._updateTimeStamp()
+            return self._getLabelEvent(name)
+
+    def removeLabel(self, name):
+        if name in self.labels:
+            self.labels.remove(name)
+            self._updateTimeStamp()
+            return self._getUnlabelEvent(name)
+
+    def _getLabelEvent(self, label):
+        name = 'pull_request'
+        data = {
+            'action': 'labeled',
+            'pull_request': {
+                'number': self.number,
+                'updated_at': self.updated_at,
+                'base': {
+                    'ref': self.branch,
+                    'repo': {
+                        'full_name': self.project
+                    }
+                },
+                'head': {
+                    'sha': self.head_sha
+                }
+            },
+            'label': {
+                'name': label
+            }
+        }
+        return (name, data)
+
+    def _getUnlabelEvent(self, label):
+        name = 'pull_request'
+        data = {
+            'action': 'unlabeled',
+            'pull_request': {
+                'number': self.number,
+                'updated_at': self.updated_at,
+                'base': {
+                    'ref': self.branch,
+                    'repo': {
+                        'full_name': self.project
+                    }
+                },
+                'head': {
+                    'sha': self.head_sha
+                }
+            },
+            'label': {
+                'name': label
             }
         }
         return (name, data)
@@ -784,6 +843,14 @@ class FakeGithubConnection(githubconnection.GithubConnection):
             if (pr_owner == owner and pr_project == proj and
                 pr.head_sha == sha):
                 pr.setStatus(state, url, description, context)
+
+    def labelPull(self, project, pr_number, label):
+        pull_request = self.pull_requests[pr_number - 1]
+        pull_request.addLabel(label)
+
+    def unlabelPull(self, project, pr_number, label):
+        pull_request = self.pull_requests[pr_number - 1]
+        pull_request.removeLabel(label)
 
 
 class BuildHistory(object):

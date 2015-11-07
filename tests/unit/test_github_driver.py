@@ -113,6 +113,31 @@ class TestGithubDriver(ZuulTestCase):
         self.assertEqual('SUCCESS',
                          self.getJobFromHistory('project-post').result)
 
+    @simple_layout('layouts/labeling-github.yaml', driver='github')
+    def test_labels(self):
+        A = self.fake_github.openFakePullRequest('org/project', 'master')
+        self.fake_github.emitEvent(A.addLabel('test'))
+        self.waitUntilSettled()
+        self.assertEqual(1, len(self.history))
+        self.assertEqual('project-labels', self.history[0].name)
+        self.assertEqual(['tests passed'], A.labels)
+
+        # test label removed
+        B = self.fake_github.openFakePullRequest('org/project', 'master')
+        B.addLabel('do not test')
+        self.fake_github.emitEvent(B.removeLabel('do not test'))
+        self.waitUntilSettled()
+        self.assertEqual(2, len(self.history))
+        self.assertEqual('project-labels', self.history[1].name)
+        self.assertEqual(['tests passed'], B.labels)
+
+        # test unmatched label
+        C = self.fake_github.openFakePullRequest('org/project', 'master')
+        self.fake_github.emitEvent(C.addLabel('other label'))
+        self.waitUntilSettled()
+        self.assertEqual(2, len(self.history))
+        self.assertEqual(['other label'], C.labels)
+
     @simple_layout('layouts/basic-github.yaml', driver='github')
     def test_git_https_url(self):
         """Test that git_ssh option gives git url with ssh"""

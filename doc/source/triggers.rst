@@ -122,12 +122,26 @@ following options.
 
     *comment* - comment added on pull request
 
+    *labeled* - label added on pull request
+
+    *unlabeled* - label removed from pull request
+
+    *push* - head reference updated (pushed to branch)
+
   **comment**
   This is only used for ``pull_request`` ``comment`` events.  It accepts a list
   of regexes that are searched for in the comment string. If any of these
   regexes matches a portion of the comment string the trigger is matched.
   ``comment: retrigger`` will match when comments containing 'retrigger'
   somewhere in the comment text are added to a pull request.
+
+  **label**
+  This is only used for ``labeled`` and ``unlabeled`` actions. It accepts a list
+  of strings each of which matches the label name in the event literally.
+  ``label: recheck`` will match a ``labeled`` action when pull request is
+  labeled with a ``recheck`` label. ``label: 'do not test'`` will match a
+  ``unlabeled`` action when a label with name ``do not test`` is removed from
+  the pull request.
 
   Additionally a ``push`` event can be configured, with an
   associated ``ref`` represented as a regex to match branches or tags.
