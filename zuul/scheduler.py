@@ -29,7 +29,7 @@ import yaml
 
 import layoutvalidator
 import model
-from model import ActionReporter, Pipeline, Project, ChangeQueue
+from model import Pipeline, Project, ChangeQueue
 from model import ChangeishFilter, NullChange
 from zuul import change_matcher, exceptions
 from zuul import version as zuul_version
@@ -202,6 +202,15 @@ class Scheduler(threading.Thread):
         self.zuul_version = zuul_version.version_info.release_string()
         self.last_reconfigured = None
 
+        # A set of reporter configuration keys to action mapping
+        self._reporter_actions = {
+            'start': 'start_actions',
+            'success': 'success_actions',
+            'failure': 'failure_actions',
+            'merge-failure': 'merge_failure_actions',
+            'disabled': 'disabled_actions',
+        }
+
     def stop(self):
         self._stopped = True
         self._unloadDrivers()
@@ -256,10 +265,9 @@ class Scheduler(threading.Thread):
             trigger.stop()
         for pipeline in self.layout.pipelines.values():
             pipeline.source.stop()
-            for action in ['start_actions', 'success_actions',
-                           'failure_actions', 'merge_failure_actions']:
-                for action_reporter in pipeline.__getattribute__(action):
-                    action_reporter.reporter.stop()
+            for action in self._reporter_actions.values():
+                for reporter in pipeline.__getattribute__(action):
+                    reporter.stop()
 
     def _getDriver(self, dtype, connection_name, driver_config={}):
         # Instantiate a driver such as a trigger, source or reporter
@@ -359,26 +367,19 @@ class Scheduler(threading.Thread):
             pipeline.ignore_dependencies = conf_pipeline.get(
                 'ignore-dependencies', False)
 
-            action_reporters = {}
-            for action in ['start', 'success', 'failure', 'merge-failure',
-                           'disabled']:
-                action_reporters[action] = []
-                if conf_pipeline.get(action):
+            for conf_key, action in self._reporter_actions.items():
+                reporter_set = []
+                if conf_pipeline.get(conf_key):
                     for reporter_name, params \
-                        in conf_pipeline.get(action).items():
+                        in conf_pipeline.get(conf_key).items():
                         reporter = self._getReporterDriver(reporter_name,
                                                            params)
-                        action_reporters[action].append(ActionReporter(
-                            reporter))
-            pipeline.start_actions = action_reporters['start']
-            pipeline.success_actions = action_reporters['success']
-            pipeline.failure_actions = action_reporters['failure']
-            pipeline.disabled_actions = action_reporters['disabled']
-            if len(action_reporters['merge-failure']) > 0:
-                pipeline.merge_failure_actions = \
-                    action_reporters['merge-failure']
-            else:
-                pipeline.merge_failure_actions = action_reporters['failure']
+                        reporter_set.append(reporter)
+                setattr(pipeline, action, reporter_set)
+
+            # If merge-failure actions aren't explicit, use the failure actions
+            if not pipeline.merge_failure_actions:
+                pipeline.merge_failure_actions = pipeline.failure_actions
 
             pipeline.disable_at = conf_pipeline.get(
                 'disable-after-consecutive-failures', None)
@@ -774,10 +775,9 @@ class Scheduler(threading.Thread):
                 trigger.postConfig()
             for pipeline in self.layout.pipelines.values():
                 pipeline.source.postConfig()
-                for action in ['start_actions', 'success_actions',
-                               'failure_actions', 'merge_failure_actions']:
-                    for action_reporter in pipeline.__getattribute__(action):
-                        action_reporter.reporter.postConfig()
+                for action in self._reporter_actions.values():
+                    for reporter in pipeline.__getattribute__(action):
+                        reporter.postConfig()
             if statsd:
                 try:
                     for pipeline in self.layout.pipelines.values():
@@ -1177,8 +1177,8 @@ class BasePipelineManager(object):
         """
         report_errors = []
         if len(action_reporters) > 0:
-            for action_reporter in action_reporters:
-                ret = action_reporter.report(source, change, message)
+            for reporter in action_reporters:
+                ret = reporter.report(source, change, message)
                 if ret:
                     report_errors.append(ret)
             if len(report_errors) == 0:

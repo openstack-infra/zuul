@@ -292,27 +292,6 @@ class Pipeline(object):
         return j_pipeline
 
 
-class ActionReporter(object):
-    """An ActionReporter has a reporter and its configured parameters"""
-
-    def __repr__(self):
-        return '<ActionReporter %s>' % (self.reporter)
-
-    def __init__(self, reporter):
-        self.reporter = reporter
-
-    def report(self, source, change, message):
-        """Sends the built message off to the configured reporter.
-        Takes the change and message and adds the configured parameters.
-        """
-        return self.reporter.report(source, change, message)
-
-    def getSubmitAllowNeeds(self):
-        """Gets the submit allow needs from the reporter based off the
-        parameters."""
-        return self.reporter.getSubmitAllowNeeds()
-
-
 class ChangeQueue(object):
     """DependentPipelines have multiple parallel queues shared by
     different projects; this is one of them.  For instance, there may
