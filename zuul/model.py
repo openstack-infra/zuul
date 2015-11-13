@@ -82,6 +82,10 @@ class Pipeline(object):
         self.start_actions = None
         self.success_actions = None
         self.failure_actions = None
+        self.disabled_actions = None
+        self.disable_at = None
+        self._consecutive_failures = 0
+        self._disabled = False
         self.window = None
         self.window_floor = None
         self.window_increase_type = None

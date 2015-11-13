@@ -286,7 +286,8 @@ class Scheduler(threading.Thread):
                 'ignore-dependencies', False)
 
             action_reporters = {}
-            for action in ['start', 'success', 'failure', 'merge-failure']:
+            for action in ['start', 'success', 'failure', 'merge-failure',
+                           'disabled']:
                 action_reporters[action] = []
                 if conf_pipeline.get(action):
                     for reporter_name, params \
@@ -300,11 +301,15 @@ class Scheduler(threading.Thread):
             pipeline.start_actions = action_reporters['start']
             pipeline.success_actions = action_reporters['success']
             pipeline.failure_actions = action_reporters['failure']
+            pipeline.disabled_actions = action_reporters['disabled']
             if len(action_reporters['merge-failure']) > 0:
                 pipeline.merge_failure_actions = \
                     action_reporters['merge-failure']
             else:
                 pipeline.merge_failure_actions = action_reporters['failure']
+
+            pipeline.disable_at = conf_pipeline.get(
+                'disable-after-consecutive-failures', None)
 
             pipeline.window = conf_pipeline.get('window', 20)
             pipeline.window_floor = conf_pipeline.get('window-floor', 3)
@@ -1070,6 +1075,8 @@ class BasePipelineManager(object):
         self.log.info("    %s" % self.pipeline.failure_actions)
         self.log.info("  On merge-failure:")
         self.log.info("    %s" % self.pipeline.merge_failure_actions)
+        self.log.info("  When disabled:")
+        self.log.info("    %s" % self.pipeline.disabled_actions)
 
     def getSubmitAllowNeeds(self):
         # Get a list of code review labels that are allowed to be
@@ -1111,19 +1118,20 @@ class BasePipelineManager(object):
         return False
 
     def reportStart(self, change):
-        try:
-            self.log.info("Reporting start, action %s change %s" %
-                          (self.pipeline.start_actions, change))
-            msg = "Starting %s jobs." % self.pipeline.name
-            if self.sched.config.has_option('zuul', 'status_url'):
-                msg += "\n" + self.sched.config.get('zuul', 'status_url')
-            ret = self.sendReport(self.pipeline.start_actions,
-                                  change, msg)
-            if ret:
-                self.log.error("Reporting change start %s received: %s" %
-                               (change, ret))
-        except:
-            self.log.exception("Exception while reporting start:")
+        if not self.pipeline._disabled:
+            try:
+                self.log.info("Reporting start, action %s change %s" %
+                              (self.pipeline.start_actions, change))
+                msg = "Starting %s jobs." % self.pipeline.name
+                if self.sched.config.has_option('zuul', 'status_url'):
+                    msg += "\n" + self.sched.config.get('zuul', 'status_url')
+                ret = self.sendReport(self.pipeline.start_actions,
+                                      change, msg)
+                if ret:
+                    self.log.error("Reporting change start %s received: %s" %
+                                   (change, ret))
+            except:
+                self.log.exception("Exception while reporting start:")
 
     def sendReport(self, action_reporters, change, message):
         """Sends the built message off to configured reporters.
@@ -1569,12 +1577,22 @@ class BasePipelineManager(object):
             self.log.debug("success %s" % (self.pipeline.success_actions))
             actions = self.pipeline.success_actions
             item.setReportedResult('SUCCESS')
+            self.pipeline._consecutive_failures = 0
         elif not self.pipeline.didMergerSucceed(item):
             actions = self.pipeline.merge_failure_actions
             item.setReportedResult('MERGER_FAILURE')
         else:
             actions = self.pipeline.failure_actions
             item.setReportedResult('FAILURE')
+            self.pipeline._consecutive_failures += 1
+        if self.pipeline._disabled:
+            actions = self.pipeline.disabled_actions
+        # Check here if we should disable so that we only use the disabled
+        # reporters /after/ the last disable_at failure is still reported as
+        # normal.
+        if (self.pipeline.disable_at and not self.pipeline._disabled and
+            self.pipeline._consecutive_failures >= self.pipeline.disable_at):
+            self.pipeline._disabled = True
         if actions:
             report = self.formatReport(item)
             try:

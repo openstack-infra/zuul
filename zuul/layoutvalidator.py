@@ -112,6 +112,9 @@ class LayoutSchema(object):
                 'failure': report_actions,
                 'merge-failure': report_actions,
                 'start': report_actions,
+                'disabled': report_actions,
+                'disable-after-consecutive-failures':
+                    v.All(int, v.Range(min=1)),
                 'window': window,
                 'window-floor': window_floor,
                 'window-increase-type': window_type,
