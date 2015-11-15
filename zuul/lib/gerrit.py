@@ -184,7 +184,7 @@ class Gerrit(object):
                        key_filename=self.keyfile)
         self.client = client
 
-    def _ssh(self, command):
+    def _ssh(self, command, stdin_data=None):
         if not self.client:
             self._open()
 
@@ -194,6 +194,9 @@ class Gerrit(object):
         except:
             self._open()
             stdin, stdout, stderr = self.client.exec_command(command)
+
+        if stdin_data:
+            stdin.write(stdin_data)
 
         out = stdout.read()
         self.log.debug("SSH received stdout:\n%s" % out)
