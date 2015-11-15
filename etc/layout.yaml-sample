@@ -30,6 +30,7 @@ pipelines:
       gerrit:
         - event: ref-updated
           ref: ^(?!refs/).*$
+          ignore-deletes: False
 
   - name: gate
     manager: DependentPipelineManager

@@ -61,6 +61,7 @@ class LayoutSchema(object):
                       'username': toList(str),
                       'branch': toList(str),
                       'ref': toList(str),
+                      'ignore-deletes': bool,
                       'approval': toList(variable_dict),
                       'require-approval': toList(require_approval),
                       }
