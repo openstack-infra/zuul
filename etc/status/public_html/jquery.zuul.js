@@ -145,6 +145,9 @@
                     case 'unstable':
                         $status.addClass('label-warning');
                         break;
+                    case 'skipped':
+                        $status.addClass('label-info');
+                        break;
                     case 'in progress':
                     case 'queued':
                     case 'lost':
