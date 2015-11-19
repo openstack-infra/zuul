@@ -759,7 +759,10 @@ each job as it builds a list from the project specification.
     expressions.
 
     The pattern for '/COMMIT_MSG' is always matched on and does not
-    have to be included.
+    have to be included. Exception is merge commits (without modified
+    files), in this case '/COMMIT_MSG' is not matched, and job is not
+    skipped. In case of merge commits it's assumed that list of modified
+    files isn't predictible and CI should be run.
 
 **voting (optional)**
   Boolean value (``true`` or ``false``) that indicates whatever
