@@ -547,7 +547,7 @@ class GithubChangeReference(git.Reference):
 class FakeGithubPullRequest(object):
 
     def __init__(self, github, number, project, branch,
-                 upstream_root, number_of_commits=1):
+                 subject, upstream_root, number_of_commits=1):
         """Creates a new PR with several commits.
         Sends an event about opened PR."""
         self.github = github
@@ -555,6 +555,8 @@ class FakeGithubPullRequest(object):
         self.number = number
         self.project = project
         self.branch = branch
+        self.subject = subject
+        self.number_of_commits = 0
         self.upstream_root = upstream_root
         self.comments = []
         self.labels = []
@@ -681,13 +683,15 @@ class FakeGithubPullRequest(object):
         repo = self._getRepo()
         ref = repo.references[self._getPRReference()]
         if reset:
+            self.number_of_commits = 0
             ref.set_object('refs/tags/init')
+        self.number_of_commits += 1
         repo.head.reference = ref
         zuul.merger.merger.reset_repo_to_head(repo)
         repo.git.clean('-x', '-f', '-d')
 
         fn = '%s-%s' % (self.branch.replace('/', '_'), self.number)
-        msg = 'test-%s' % self.number
+        msg = self.subject + '-' + str(self.number_of_commits)
         fn = os.path.join(repo.working_dir, fn)
         f = open(fn, 'w')
         with open(fn, 'w') as f:
@@ -757,10 +761,10 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         self.merge_failure = False
         self.merge_not_allowed_count = 0
 
-    def openFakePullRequest(self, project, branch):
+    def openFakePullRequest(self, project, branch, subject):
         self.pr_number += 1
         pull_request = FakeGithubPullRequest(
-            self, self.pr_number, project, branch, self.upstream_root)
+            self, self.pr_number, project, branch, subject, self.upstream_root)
         self.pull_requests.append(pull_request)
         return pull_request
 
@@ -803,6 +807,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
                 },
                 'ref': pr.branch,
             },
+            'mergeable': True,
             'head': {
                 'sha': pr.head_sha
             }
