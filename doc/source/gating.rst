@@ -295,46 +295,93 @@ acyclic graph (DAG), like git itself, to indicate a one-way dependency
 relationship between changes in different git repositories.  Change A
 may depend on B, but B may not depend on A.
 
-To use them, include "Depends-On: <gerrit-change-id>" in the footer of
+To use them, include ``Depends-On: <gerrit-change-id>`` in the footer of
 a commit message.  Use the full Change-ID ('I' + 40 characters).
 
 
-Gate Pipeline
-~~~~~~~~~~~~~
+Dependent Pipeline
+~~~~~~~~~~~~~~~~~~
 
 When Zuul sees CRD changes, it serializes them in the usual manner when
 enqueuing them into a pipeline.  This means that if change A depends on
-B, then when they are added to the gate pipeline, B will appear first
-and A will follow.  If tests for B fail, both B and A will be removed
-from the pipeline, and it will not be possible for A to merge until B
-does.
+B, then when they are added to a dependent pipeline, B will appear first
+and A will follow:
 
-Note that if changes with CRD do not share a change queue then Zuul
-is unable to enqueue them together, and the first will be required to
-merge before the second is enqueued.
+.. blockdiag::
+  :align: center
 
-Check Pipeline
-~~~~~~~~~~~~~~
+  blockdiag crd {
+    orientation = portrait
+    span_width = 30
+    class greendot [
+        label = "",
+        shape = circle,
+        color = green,
+        width = 20, height = 20
+    ]
 
-When changes are enqueued into the check pipeline, all of the related
-dependencies (both normal git-dependencies that come from parent commits
-as well as CRD changes) appear in a dependency graph, as in gate.  This
-means that even in the check pipeline, your change will be tested with
-its dependency.  So changes that were previously unable to be fully
-tested until a related change landed in a different repo may now be
-tested together from the start.
+    A_status [ class = greendot ]
+    B_status [ class = greendot ]
+    B_status -- A_status
+
+    'Change B\nChange-Id: Iabc' <- 'Change A\nDepends-On: Iabc'
+  }
+
+If tests for B fail, both B and A will be removed from the pipeline, and
+it will not be possible for A to merge until B does.
+
+
+.. note::
+
+   If changes with CRD do not share a change queue then Zuul is unable
+   to enqueue them together, and the first will be required to merge
+   before the second is enqueued.
+
+Independent Pipeline
+~~~~~~~~~~~~~~~~~~~~
+
+When changes are enqueued into an independent pipeline, all of the
+related dependencies (both normal git-dependencies that come from parent
+commits as well as CRD changes) appear in a dependency graph, as in a
+dependent pipeline. This means that even in an independent pipeline,
+your change will be tested with its dependencies.  So changes that were
+previously unable to be fully tested until a related change landed in a
+different repository may now be tested together from the start.
 
 All of the changes are still independent (so you will note that the
-whole pipeline does not share a graph as in gate), but for each change
-tested, all of its dependencies are visually connected to it, and they
-are used to construct the git references that Zuul uses when testing.
+whole pipeline does not share a graph as in a dependent pipeline), but
+for each change tested, all of its dependencies are visually connected
+to it, and they are used to construct the git references that Zuul uses
+when testing.
+
 When looking at this graph on the status page, you will note that the
 dependencies show up as grey dots, while the actual change tested shows
-up as red or green.  This is to indicate that the grey changes are only
-there to establish dependencies.  Even if one of the dependencies is
-also being tested, it will show up as a grey dot when used as a
-dependency, but separately and additionally will appear as its own red
-or green dot for its test.
+up as red or green (depending on the jobs results):
+
+.. blockdiag::
+  :align: center
+
+  blockdiag crdgrey {
+    orientation = portrait
+    span_width = 30
+    class dot [
+        label = "",
+        shape = circle,
+        width = 20, height = 20
+    ]
+
+    A_status [class = "dot", color = green]
+    B_status [class = "dot", color = grey]
+    B_status -- A_status
+
+    "Change B" <- "Change A\nDepends-On: B"
+  }
+
+This is to indicate that the grey changes are only there to establish
+dependencies.  Even if one of the dependencies is also being tested, it
+will show up as a grey dot when used as a dependency, but separately and
+additionally will appear as its own red or green dot for its test.
+
 
 Multiple Changes
 ~~~~~~~~~~~~~~~~
@@ -348,10 +395,72 @@ project A, both project B changes will be applied, and when deciding
 whether the project A change can merge, both changes must merge ahead
 of it.
 
+.. blockdiag::
+  :align: center
+
+  blockdiag crdmultirepos {
+    orientation = portrait
+    span_width = 30
+    class greendot [
+        label = "",
+        shape = circle,
+        color = green,
+        width = 20, height = 20
+    ]
+
+    B_stable_status [ class = "greendot" ]
+    B_master_status [ class = "greendot" ]
+    A_status [ class = "greendot" ]
+    B_stable_status -- B_master_status -- A_status
+
+    A [ label = "Repo A\nDepends-On: I123" ]
+    group {
+        orientation = portrait
+        label = "Dependencies"
+        color = "lightgray"
+
+        B_stable [ label = "Repo B\nChange-Id: I123\nBranch: stable" ]
+        B_master [ label = "Repo B\nChange-Id: I123\nBranch: master" ]
+    }
+    B_master <- A
+    B_stable <- A
+
+  }
+
 A change may depend on more than one Gerrit change ID as well.  So it
 is possible for a change in project A to depend on a change in project
-B and a change in project C.  Simply add more "Depends-On:" lines to
-the footer.
+B and a change in project C.  Simply add more ``Depends-On:`` lines to
+the commit message footer.
+
+.. blockdiag::
+  :align: center
+
+  blockdiag crdmultichanges {
+    orientation = portrait
+    span_width = 30
+    class greendot [
+        label = "",
+        shape = circle,
+        color = green,
+        width = 20, height = 20
+    ]
+
+    C_status [ class = "greendot" ]
+    B_status [ class = "greendot" ]
+    A_status [ class = "greendot" ]
+    C_status -- B_status -- A_status
+
+    A [ label = "Repo A\nDepends-On: I123\nDepends-On: Iabc" ]
+    group {
+        orientation = portrait
+        label = "Dependencies"
+        color = "lightgray"
+
+        B [ label = "Repo B\nChange-Id: I123" ]
+        C [ label = "Repo C\nChange-Id: Iabc" ]
+    }
+    B, C <- A
+  }
 
 Cycles
 ~~~~~~
