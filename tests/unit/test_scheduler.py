@@ -92,43 +92,52 @@ class TestScheduler(ZuulTestCase):
             self.log.debug('stat %s:%s', k, v)
         # TODOv3(jeblair): we may want to report stats by tenant (also?).
         # Per-driver
-        self.assertReportedStat('zuul.event.gerrit.comment-added', value='1|c')
+        self.assertReportedStat('zuul.event.gerrit.comment-added', value='1',
+                                kind='c')
         # Per-driver per-connection
         self.assertReportedStat('zuul.event.gerrit.gerrit.comment-added',
-                                value='1|c')
+                                value='1', kind='c')
         self.assertReportedStat(
             'zuul.tenant.tenant-one.pipeline.gate.current_changes',
-            value='1|g')
+            value='1', kind='g')
         self.assertReportedStat(
             'zuul.tenant.tenant-one.pipeline.gate.project.review_example_com.'
             'org_project.master.job.project-merge.SUCCESS', kind='ms')
         self.assertReportedStat(
             'zuul.tenant.tenant-one.pipeline.gate.project.review_example_com.'
-            'org_project.master.job.project-merge.SUCCESS', value='1|c')
+            'org_project.master.job.project-merge.SUCCESS', value='1',
+            kind='c')
         self.assertReportedStat(
             'zuul.tenant.tenant-one.pipeline.gate.resident_time', kind='ms')
         self.assertReportedStat(
-            'zuul.tenant.tenant-one.pipeline.gate.total_changes', value='1|c')
+            'zuul.tenant.tenant-one.pipeline.gate.total_changes', value='1',
+            kind='c')
         self.assertReportedStat(
             'zuul.tenant.tenant-one.pipeline.gate.project.review_example_com.'
             'org_project.master.resident_time', kind='ms')
         self.assertReportedStat(
             'zuul.tenant.tenant-one.pipeline.gate.project.review_example_com.'
-            'org_project.master.total_changes', value='1|c')
+            'org_project.master.total_changes', value='1', kind='c')
         exec_key = 'zuul.executor.%s' % self.executor_server.hostname.replace(
             '.', '_')
-        self.assertReportedStat(exec_key + '.builds', value='1|c')
-        self.assertReportedStat('zuul.nodepool.requested', value='1|c')
+        self.assertReportedStat(exec_key + '.builds', value='1', kind='c')
+        self.assertReportedStat('zuul.nodepool.requested', value='1', kind='c')
         self.assertReportedStat('zuul.nodepool.requested.label.label1',
-                                value='1|c')
+                                value='1', kind='c')
         self.assertReportedStat('zuul.nodepool.fulfilled.label.label1',
-                                value='1|c')
-        self.assertReportedStat('zuul.nodepool.requested.size.1', value='1|c')
-        self.assertReportedStat('zuul.nodepool.fulfilled.size.1', value='1|c')
-        self.assertReportedStat('zuul.nodepool.current_requests', value='1|g')
-        self.assertReportedStat('zuul.executors.online', value='1|g')
-        self.assertReportedStat('zuul.executors.accepting', value='1|g')
-        self.assertReportedStat('zuul.mergers.online', value='1|g')
+                                value='1', kind='c')
+        self.assertReportedStat('zuul.nodepool.requested.size.1', value='1',
+                                kind='c')
+        self.assertReportedStat('zuul.nodepool.fulfilled.size.1', value='1',
+                                kind='c')
+        self.assertReportedStat('zuul.nodepool.current_requests', value='1',
+                                kind='g')
+        self.assertReportedStat('zuul.executors.online', value='1',
+                                kind='g')
+        self.assertReportedStat('zuul.executors.accepting', value='1',
+                                kind='g')
+        self.assertReportedStat('zuul.mergers.online', value='1',
+                                kind='g')
 
         for build in self.history:
             self.assertTrue(build.parameters['zuul']['voting'])
@@ -137,10 +146,10 @@ class TestScheduler(ZuulTestCase):
         "Test that each pipeline reported its length on start"
         self.assertReportedStat('zuul.tenant.tenant-one.pipeline.gate.'
                                 'current_changes',
-                                value='0|g')
+                                value='0', kind='g')
         self.assertReportedStat('zuul.tenant.tenant-one.pipeline.check.'
                                 'current_changes',
-                                value='0|g')
+                                value='0', kind='g')
 
     def test_job_branch(self):
         "Test the correct variant of a job runs on a branch"
@@ -2434,9 +2443,9 @@ class TestScheduler(ZuulTestCase):
         statsd.incr('test-incr')
         statsd.timing('test-timing', 3)
         statsd.gauge('test-gauge', 12)
-        self.assertReportedStat('test-incr', '1|c')
-        self.assertReportedStat('test-timing', '3|ms')
-        self.assertReportedStat('test-gauge', '12|g')
+        self.assertReportedStat('test-incr', '1', 'c')
+        self.assertReportedStat('test-timing', '3', 'ms')
+        self.assertReportedStat('test-gauge', '12', 'g')
 
         # test key normalization
         statsd.extra_keys = {'hostname': '1_2_3_4'}
@@ -2444,9 +2453,9 @@ class TestScheduler(ZuulTestCase):
         statsd.incr('test-incr.{hostname}.{fake}', fake='1:2')
         statsd.timing('test-timing.{hostname}.{fake}', 3, fake='1:2')
         statsd.gauge('test-gauge.{hostname}.{fake}', 12, fake='1:2')
-        self.assertReportedStat('test-incr.1_2_3_4.1_2', '1|c')
-        self.assertReportedStat('test-timing.1_2_3_4.1_2', '3|ms')
-        self.assertReportedStat('test-gauge.1_2_3_4.1_2', '12|g')
+        self.assertReportedStat('test-incr.1_2_3_4.1_2', '1', 'c')
+        self.assertReportedStat('test-timing.1_2_3_4.1_2', '3', 'ms')
+        self.assertReportedStat('test-gauge.1_2_3_4.1_2', '12', 'g')
 
     def test_stuck_job_cleanup(self):
         "Test that pending jobs are cleaned up if removed from layout"
