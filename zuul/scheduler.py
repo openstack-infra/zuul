@@ -30,7 +30,7 @@ import yaml
 import layoutvalidator
 import model
 from model import ActionReporter, Pipeline, Project, ChangeQueue
-from model import EventFilter, ChangeishFilter
+from model import EventFilter, ChangeishFilter, NullChange
 from zuul import change_matcher
 from zuul import version as zuul_version
 
@@ -1529,7 +1529,8 @@ class BasePipelineManager(object):
         if event.merged:
             build_set.commit = event.commit
         elif event.updated:
-            build_set.commit = item.change.newrev
+            if not isinstance(item, NullChange):
+                build_set.commit = item.change.newrev
         if not build_set.commit:
             self.log.info("Unable to merge change %s" % item.change)
             self.pipeline.setUnableToMerge(item)
