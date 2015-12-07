@@ -47,7 +47,6 @@ class GerritEventConnector(threading.Thread):
     def _handleEvent(self):
         ts, data = self.connection.getEvent()
         if self._stopped:
-            self.connection.eventDone()
             return
         # Gerrit can produce inconsistent data immediately after an
         # event, So ensure that we do not deliver the event to Zuul
@@ -101,11 +100,23 @@ class GerritEventConnector(threading.Thread):
 
         if (event.change_number and
             self.connection.sched.getProject(event.project_name)):
-            # Mark the change as needing a refresh in the cache
-            event._needs_refresh = True
-
+            # Call _getChange for the side effect of updating the
+            # cache.  Note that this modifies Change objects outside
+            # the main thread.
+            # NOTE(jhesketh): Ideally we'd just remove the change from the
+            # cache to denote that it needs updating. However the change
+            # object is already used by Item's and hence BuildSet's etc. and
+            # we need to update those objects by reference so that they have
+            # the correct/new information and also avoid hitting gerrit
+            # multiple times.
+            if self.connection.attached_to['source']:
+                self.connection.attached_to['source'][0]._getChange(
+                    event.change_number, event.patch_number, refresh=True)
+                # We only need to do this once since the connection maintains
+                # the cache (which is shared between all the sources)
+                # NOTE(jhesketh): We may couple sources and connections again
+                # at which point this becomes more sensible.
         self.connection.sched.addEvent(event)
-        self.connection.eventDone()
 
     def run(self):
         while True:
@@ -115,6 +126,8 @@ class GerritEventConnector(threading.Thread):
                 self._handleEvent()
             except:
                 self.log.exception("Exception moving Gerrit event:")
+            finally:
+                self.connection.eventDone()
 
 
 class GerritWatcher(threading.Thread):
