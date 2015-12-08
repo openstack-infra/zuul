@@ -295,6 +295,9 @@ class GerritSource(BaseSource):
             # cycle, we won't detect it.  By explicitly performing a
             # walk of the dependency tree, we will.
             detect_cycle(dep, history)
+            # This is a git commit dependency. So we only ignore it if it is
+            # already merged. So even if it is "ABANDONED", we should not
+            # ignore it.
             if (not dep.is_merged) and dep not in needs_changes:
                 needs_changes.append(dep)
 
@@ -315,7 +318,7 @@ class GerritSource(BaseSource):
             # cycle, we won't detect it.  By explicitly performing a
             # walk of the dependency tree, we will.
             detect_cycle(dep, history)
-            if (not dep.is_merged) and dep not in needs_changes:
+            if dep.open and dep not in needs_changes:
                 needs_changes.append(dep)
         change.needs_changes = needs_changes
 
@@ -327,7 +330,7 @@ class GerritSource(BaseSource):
                 self.log.debug("Updating %s: Getting git-needed change %s,%s" %
                                (change, dep_num, dep_ps))
                 dep = self._getChange(dep_num, dep_ps)
-                if (not dep.is_merged) and dep.is_current_patchset:
+                if dep.open and dep.is_current_patchset:
                     needed_by_changes.append(dep)
 
         for record in self._getNeededByFromCommit(data['id'], change):
@@ -340,7 +343,7 @@ class GerritSource(BaseSource):
             # reference the latest patchset of its Depends-On (this
             # change).
             dep = self._getChange(dep_num, dep_ps, refresh=True)
-            if (not dep.is_merged) and dep.is_current_patchset:
+            if dep.open and dep.is_current_patchset:
                 needed_by_changes.append(dep)
         change.needed_by_changes = needed_by_changes
 
