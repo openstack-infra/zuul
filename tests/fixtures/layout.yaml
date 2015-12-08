@@ -4,6 +4,8 @@ includes:
 pipelines:
   - name: check
     manager: IndependentPipelineManager
+    source:
+      gerrit
     trigger:
       gerrit:
         - event: patchset-created
@@ -16,6 +18,8 @@ pipelines:
 
   - name: post
     manager: IndependentPipelineManager
+    source:
+      gerrit
     trigger:
       gerrit:
         - event: ref-updated
@@ -24,6 +28,8 @@ pipelines:
   - name: gate
     manager: DependentPipelineManager
     failure-message: Build failed.  For information on how to proceed, see http://wiki.example.org/Test_Failures
+    source:
+      gerrit
     trigger:
       gerrit:
         - event: comment-added
@@ -44,6 +50,8 @@ pipelines:
   - name: unused
     manager: IndependentPipelineManager
     dequeue-on-new-patchset: false
+    source:
+      gerrit
     trigger:
       gerrit:
         - event: comment-added
@@ -52,6 +60,8 @@ pipelines:
 
   - name: dup1
     manager: IndependentPipelineManager
+    source:
+      gerrit
     trigger:
       gerrit:
         - event: change-restored
@@ -64,6 +74,8 @@ pipelines:
 
   - name: dup2
     manager: IndependentPipelineManager
+    source:
+      gerrit
     trigger:
       gerrit:
         - event: change-restored
@@ -77,6 +89,8 @@ pipelines:
   - name: conflict
     manager: DependentPipelineManager
     failure-message: Build failed.  For information on how to proceed, see http://wiki.example.org/Test_Failures
+    source:
+      gerrit
     trigger:
       gerrit:
         - event: comment-added
@@ -95,6 +109,8 @@ pipelines:
 
   - name: experimental
     manager: IndependentPipelineManager
+    source:
+      gerrit
     trigger:
       gerrit:
         - event: patchset-created

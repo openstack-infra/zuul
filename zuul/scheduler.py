@@ -186,6 +186,8 @@ class Scheduler(threading.Thread):
         self.launcher = None
         self.merger = None
         self.connections = dict()
+        # These may be very similar to connections
+        self.sources = dict()
         # Despite triggers being part of the pipeline, there is one trigger set
         # per scheduler. The pipeline handles the trigger filters but since
         # the events are handled by the scheduler itself it needs to handle
@@ -197,7 +199,7 @@ class Scheduler(threading.Thread):
         self.trigger_event_queue = Queue.Queue()
         self.result_event_queue = Queue.Queue()
         self.management_event_queue = Queue.Queue()
-        self.layout = model.Layout()
+        self.abide = model.Abide()
 
         self.zuul_version = zuul_version.version_info.release_string()
         self.last_reconfigured = None
@@ -263,11 +265,12 @@ class Scheduler(threading.Thread):
     def _unloadDrivers(self):
         for trigger in self.triggers.values():
             trigger.stop()
-        for pipeline in self.layout.pipelines.values():
-            pipeline.source.stop()
-            for action in self._reporter_actions.values():
-                for reporter in pipeline.__getattribute__(action):
-                    reporter.stop()
+        for tenant in self.abide.tenants.values():
+            for pipeline in tenant.layout.pipelines.values():
+                pipeline.source.stop()
+                for action in self._reporter_actions.values():
+                    for reporter in pipeline.__getattribute__(action):
+                        reporter.stop()
 
     def _getDriver(self, dtype, connection_name, driver_config={}):
         # Instantiate a driver such as a trigger, source or reporter
@@ -318,7 +321,32 @@ class Scheduler(threading.Thread):
     def _getTriggerDriver(self, connection_name, driver_config={}):
         return self._getDriver('trigger', connection_name, driver_config)
 
-    def _parseConfig(self, config_path, connections):
+    def _parseAbide(self, config_path, connections):
+        abide = model.Abide()
+
+        if config_path:
+            config_path = os.path.expanduser(config_path)
+            if not os.path.exists(config_path):
+                raise Exception("Unable to read tenant config file at %s" %
+                                config_path)
+        with open(config_path) as config_file:
+            data = yaml.load(config_file)
+
+        validator = layoutvalidator.ConfigValidator()
+        validator.validate(data, connections)
+
+        for conf_tenant in data['tenants']:
+            tenant = model.Tenant(conf_tenant['name'])
+            abide.tenants[tenant.name] = tenant
+            for fn in conf_tenant.get('include', []):
+                if not os.path.isabs(fn):
+                    base = os.path.dirname(os.path.realpath(config_path))
+                    fn = os.path.join(base, fn)
+                fn = os.path.expanduser(fn)
+                tenant.layout = self._parseLayout(fn, connections)
+        return abide
+
+    def _parseLayout(self, config_path, connections):
         layout = model.Layout()
         project_templates = {}
 
@@ -346,9 +374,12 @@ class Scheduler(threading.Thread):
         for conf_pipeline in data.get('pipelines', []):
             pipeline = Pipeline(conf_pipeline['name'])
             pipeline.description = conf_pipeline.get('description')
-            # TODO(jeblair): remove backwards compatibility:
-            pipeline.source = self._getSourceDriver(
-                conf_pipeline.get('source', 'gerrit'))
+
+            source_name = conf_pipeline['source']
+            if source_name not in self.sources:
+                self.sources[source_name] = self._getSourceDriver(source_name)
+            pipeline.source = self.sources.get(source_name)
+
             precedence = model.PRECEDENCE_MAP[conf_pipeline.get('precedence')]
             pipeline.precedence = precedence
             pipeline.failure_message = conf_pipeline.get('failure-message',
@@ -492,7 +523,6 @@ class Scheduler(threading.Thread):
                     job_tree.addJob(layout.getJob(job))
 
         for config_project in data.get('projects', []):
-            project = Project(config_project['name'])
             shortname = config_project['name'].split('/')[-1]
 
             # This is reversed due to the prepend operation below, so
@@ -516,11 +546,12 @@ class Scheduler(threading.Thread):
                             {pipeline.name: expanded[pipeline.name] +
                              config_project.get(pipeline.name, [])})
 
-            layout.projects[config_project['name']] = project
             mode = config_project.get('merge-mode', 'merge-resolve')
-            project.merge_mode = model.MERGER_MAP[mode]
             for pipeline in layout.pipelines.values():
                 if pipeline.name in config_project:
+                    project = pipeline.source.getProject(
+                        config_project['name'])
+                    project.merge_mode = model.MERGER_MAP[mode]
                     job_tree = pipeline.addProject(project)
                     config_jobs = config_project[pipeline.name]
                     add_jobs(job_tree, config_jobs)
@@ -716,81 +747,83 @@ class Scheduler(threading.Thread):
         try:
             self.log.debug("Performing reconfiguration")
             self._unloadDrivers()
-            layout = self._parseConfig(
-                self.config.get('zuul', 'layout_config'), self.connections)
-            for name, new_pipeline in layout.pipelines.items():
-                old_pipeline = self.layout.pipelines.get(name)
-                if not old_pipeline:
-                    if self.layout.pipelines:
-                        # Don't emit this warning on startup
-                        self.log.warning("No old pipeline matching %s found "
-                                         "when reconfiguring" % name)
-                    continue
-                self.log.debug("Re-enqueueing changes for pipeline %s" % name)
-                items_to_remove = []
-                builds_to_cancel = []
-                last_head = None
-                for shared_queue in old_pipeline.queues:
-                    for item in shared_queue.queue:
-                        if not item.item_ahead:
-                            last_head = item
-                        item.item_ahead = None
-                        item.items_behind = []
-                        item.pipeline = None
-                        item.queue = None
-                        project_name = item.change.project.name
-                        item.change.project = layout.projects.get(project_name)
-                        if not item.change.project:
-                            self.log.debug("Project %s not defined, "
-                                           "re-instantiating as foreign" %
-                                           project_name)
-                            project = Project(project_name, foreign=True)
-                            layout.projects[project_name] = project
-                            item.change.project = project
-                        item_jobs = new_pipeline.getJobs(item)
-                        for build in item.current_build_set.getBuilds():
-                            job = layout.jobs.get(build.job.name)
-                            if job and job in item_jobs:
-                                build.job = job
-                            else:
-                                item.removeBuild(build)
-                                builds_to_cancel.append(build)
-                        if not new_pipeline.manager.reEnqueueItem(item,
-                                                                  last_head):
-                            items_to_remove.append(item)
-                for item in items_to_remove:
-                    for build in item.current_build_set.getBuilds():
-                        builds_to_cancel.append(build)
-                for build in builds_to_cancel:
-                    self.log.warning(
-                        "Canceling build %s during reconfiguration" % (build,))
-                    try:
-                        self.launcher.cancel(build)
-                    except Exception:
-                        self.log.exception(
-                            "Exception while canceling build %s "
-                            "for change %s" % (build, item.change))
-            self.layout = layout
-            self.maintainTriggerCache()
-            for trigger in self.triggers.values():
-                trigger.postConfig()
-            for pipeline in self.layout.pipelines.values():
-                pipeline.source.postConfig()
-                for action in self._reporter_actions.values():
-                    for reporter in pipeline.__getattribute__(action):
-                        reporter.postConfig()
-            if statsd:
-                try:
-                    for pipeline in self.layout.pipelines.values():
-                        items = len(pipeline.getAllItems())
-                        # stats.gauges.zuul.pipeline.NAME.current_changes
-                        key = 'zuul.pipeline.%s' % pipeline.name
-                        statsd.gauge(key + '.current_changes', items)
-                except Exception:
-                    self.log.exception("Exception reporting initial "
-                                       "pipeline stats:")
+            abide = self._parseAbide(
+                self.config.get('zuul', 'tenant_config'), self.connections)
+            for tenant in abide.tenants.values():
+                self._reconfigureTenant(tenant)
+            self.abide = abide
         finally:
             self.layout_lock.release()
+
+    def _reconfigureTenant(self, tenant):
+        # This is called from _doReconfigureEvent while holding the
+        # layout lock
+        old_tenant = self.abide.tenants.get(tenant.name)
+        if not old_tenant:
+            return
+        for name, new_pipeline in tenant.layout.pipelines.items():
+            old_pipeline = old_tenant.layout.pipelines.get(name)
+            if not old_pipeline:
+                self.log.warning("No old pipeline matching %s found "
+                                 "when reconfiguring" % name)
+                continue
+            self.log.debug("Re-enqueueing changes for pipeline %s" % name)
+            items_to_remove = []
+            builds_to_cancel = []
+            last_head = None
+            for shared_queue in old_pipeline.queues:
+                for item in shared_queue.queue:
+                    if not item.item_ahead:
+                        last_head = item
+                    item.item_ahead = None
+                    item.items_behind = []
+                    item.pipeline = None
+                    item.queue = None
+                    project_name = item.change.project.name
+                    item.change.project = new_pipeline.source.getProject(
+                        project_name)
+                    item_jobs = new_pipeline.getJobs(item)
+                    for build in item.current_build_set.getBuilds():
+                        job = tenant.layout.jobs.get(build.job.name)
+                        if job and job in item_jobs:
+                            build.job = job
+                        else:
+                            item.removeBuild(build)
+                            builds_to_cancel.append(build)
+                    if not new_pipeline.manager.reEnqueueItem(item,
+                                                              last_head):
+                        items_to_remove.append(item)
+            for item in items_to_remove:
+                for build in item.current_build_set.getBuilds():
+                    builds_to_cancel.append(build)
+            for build in builds_to_cancel:
+                self.log.warning(
+                    "Canceling build %s during reconfiguration" % (build,))
+                try:
+                    self.launcher.cancel(build)
+                except Exception:
+                    self.log.exception(
+                        "Exception while canceling build %s "
+                        "for change %s" % (build, item.change))
+        # TODOv3(jeblair): update for tenants
+        self.maintainTriggerCache()
+        for trigger in self.triggers.values():
+            trigger.postConfig()
+        for pipeline in tenant.layout.pipelines.values():
+            pipeline.source.postConfig()
+            for action in self._reporter_actions.values():
+                for reporter in pipeline.__getattribute__(action):
+                    reporter.postConfig()
+        if statsd:
+            try:
+                for pipeline in self.layout.pipelines.values():
+                    items = len(pipeline.getAllItems())
+                    # stats.gauges.zuul.pipeline.NAME.current_changes
+                    key = 'zuul.pipeline.%s' % pipeline.name
+                    statsd.gauge(key + '.current_changes', items)
+            except Exception:
+                self.log.exception("Exception reporting initial "
+                                   "pipeline stats:")
 
     def _doPromoteEvent(self, event):
         pipeline = self.layout.pipelines[event.pipeline_name]
@@ -837,7 +870,7 @@ class Scheduler(threading.Thread):
         change = pipeline.source.getChange(event, project)
         self.log.debug("Event %s for change %s was directly assigned "
                        "to pipeline %s" % (event, change, self))
-        self.log.info("Adding %s, %s to %s" %
+        self.log.info("Adding %s %s to %s" %
                       (project, change, pipeline))
         pipeline.manager.addChange(change, ignore_requirements=True)
 
@@ -879,7 +912,7 @@ class Scheduler(threading.Thread):
                     self.process_management_queue()
 
                 # Give result events priority -- they let us stop builds,
-                # whereas trigger evensts cause us to launch builds.
+                # whereas trigger events cause us to launch builds.
                 while not self.result_event_queue.empty():
                     self.process_result_queue()
 
@@ -890,9 +923,10 @@ class Scheduler(threading.Thread):
                 if self._pause and self._areAllBuildsComplete():
                     self._doPauseEvent()
 
-                for pipeline in self.layout.pipelines.values():
-                    while pipeline.manager.processQueue():
-                        pass
+                for tenant in self.abide.tenants.values():
+                    for pipeline in tenant.layout.pipelines.values():
+                        while pipeline.manager.processQueue():
+                            pass
 
             except Exception:
                 self.log.exception("Exception in run handler:")
@@ -902,14 +936,17 @@ class Scheduler(threading.Thread):
                 self.run_handler_lock.release()
 
     def maintainTriggerCache(self):
+        # TODOv3(jeblair): update for tenants
         relevant = set()
-        for pipeline in self.layout.pipelines.values():
-            self.log.debug("Start maintain trigger cache for: %s" % pipeline)
-            for item in pipeline.getAllItems():
-                relevant.add(item.change)
-                relevant.update(item.change.getRelatedChanges())
-            pipeline.source.maintainCache(relevant)
-            self.log.debug("End maintain trigger cache for: %s" % pipeline)
+        for tenant in self.abide.tenants.values():
+            for pipeline in tenant.layout.pipelines.values():
+                self.log.debug("Start maintain trigger cache for: %s" %
+                               pipeline)
+                for item in pipeline.getAllItems():
+                    relevant.add(item.change)
+                    relevant.update(item.change.getRelatedChanges())
+                pipeline.source.maintainCache(relevant)
+                self.log.debug("End maintain trigger cache for: %s" % pipeline)
         self.log.debug("Trigger cache size: %s" % len(relevant))
 
     def process_event_queue(self):
@@ -917,31 +954,28 @@ class Scheduler(threading.Thread):
         event = self.trigger_event_queue.get()
         self.log.debug("Processing trigger event %s" % event)
         try:
-            project = self.layout.projects.get(event.project_name)
-
-            for pipeline in self.layout.pipelines.values():
-                # Get the change even if the project is unknown to us for the
-                # use of updating the cache if there is another change
-                # depending on this foreign one.
-                try:
-                    change = pipeline.source.getChange(event, project)
-                except exceptions.ChangeNotFound as e:
-                    self.log.debug("Unable to get change %s from source %s. "
-                                   "(most likely looking for a change from "
-                                   "another connection trigger)",
-                                   e.change, pipeline.source)
-                    continue
-                if not project or project.foreign:
-                    self.log.debug("Project %s not found" % event.project_name)
-                    continue
-                if event.type == 'patchset-created':
-                    pipeline.manager.removeOldVersionsOfChange(change)
-                elif event.type == 'change-abandoned':
-                    pipeline.manager.removeAbandonedChange(change)
-                if pipeline.manager.eventMatches(event, change):
-                    self.log.info("Adding %s, %s to %s" %
-                                  (project, change, pipeline))
-                    pipeline.manager.addChange(change)
+            for tenant in self.abide.tenants.values():
+                for pipeline in tenant.layout.pipelines.values():
+                    # Get the change even if the project is unknown to
+                    # us for the use of updating the cache if there is
+                    # another change depending on this foreign one.
+                    try:
+                        change = pipeline.source.getChange(event)
+                    except exceptions.ChangeNotFound as e:
+                        self.log.debug("Unable to get change %s from "
+                                       "source %s (most likely looking "
+                                       "for a change from another "
+                                       "connection trigger)",
+                                       e.change, pipeline.source)
+                        continue
+                    if event.type == 'patchset-created':
+                        pipeline.manager.removeOldVersionsOfChange(change)
+                    elif event.type == 'change-abandoned':
+                        pipeline.manager.removeAbandonedChange(change)
+                    if pipeline.manager.eventMatches(event, change):
+                        self.log.info("Adding %s %s to %s" %
+                                      (change.project, change, pipeline))
+                        pipeline.manager.addChange(change)
         finally:
             self.trigger_event_queue.task_done()
 
@@ -1018,6 +1052,7 @@ class Scheduler(threading.Thread):
         pipeline.manager.onMergeCompleted(event)
 
     def formatStatusJSON(self):
+        # TODOv3(jeblair): use tenants
         data = {}
 
         data['zuul_version'] = self.zuul_version

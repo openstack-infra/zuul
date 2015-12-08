@@ -25,6 +25,30 @@ def toList(x):
     return v.Any([x], x)
 
 
+class ConfigSchema(object):
+    tenant_source = v.Schema({'repos': [str]})
+
+    def validateTenantSources(self, value, path=[]):
+        if isinstance(value, dict):
+            for k, val in value.items():
+                self.validateTenantSource(val, path + [k])
+        else:
+            raise v.Invalid("Invalid tenant source", path)
+
+    def validateTenantSource(self, value, path=[]):
+        # TODOv3(jeblair): validate against connections
+        self.tenant_source.schema(value)
+
+    def getSchema(self, data, connections=None):
+        tenant = {v.Required('name'): str,
+                  'include': toList(str),
+                  'source': self.validateTenantSources}
+
+        schema = v.Schema({'tenants': [tenant]})
+
+        return schema
+
+
 class LayoutSchema(object):
     include = {'python-file': str}
     includes = [include]
@@ -340,3 +364,9 @@ class LayoutValidator(object):
                 if action in pipeline:
                     self.extraDriverValidation('reporter', pipeline[action],
                                                connections)
+
+
+class ConfigValidator(object):
+    def validate(self, data, connections=None):
+        schema = ConfigSchema().getSchema(data, connections)
+        schema(data)

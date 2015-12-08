@@ -31,6 +31,7 @@ class BaseSource(object):
         self.source_config = source_config
         self.sched = sched
         self.connection = connection
+        self.projects = {}
 
     def stop(self):
         """Stop the source."""
@@ -60,7 +61,7 @@ class BaseSource(object):
         """Called after configuration has been processed."""
 
     @abc.abstractmethod
-    def getChange(self, event, project):
+    def getChange(self, event):
         """Get the change representing an event."""
 
     @abc.abstractmethod
@@ -70,3 +71,7 @@ class BaseSource(object):
     @abc.abstractmethod
     def getGitUrl(self, project):
         """Get the git url for a project."""
+
+    @abc.abstractmethod
+    def getProject(self, name):
+        """Get a project."""

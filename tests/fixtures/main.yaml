@@ -1,0 +1,4 @@
+tenants:
+  - name: openstack
+    include:
+      - layout.yaml

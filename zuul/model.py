@@ -1341,3 +1341,14 @@ class Layout(object):
                     job.copy(metajob)
             self.jobs[name] = job
         return job
+
+
+class Tenant(object):
+    def __init__(self, name):
+        self.name = name
+        self.layout = None
+
+
+class Abide(object):
+    def __init__(self):
+        self.tenants = OrderedDict()

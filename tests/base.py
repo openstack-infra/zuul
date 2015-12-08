@@ -883,9 +883,9 @@ class ZuulTestCase(BaseTestCase):
 
         # Make per test copy of Configuration.
         self.setup_config()
-        self.config.set('zuul', 'layout_config',
+        self.config.set('zuul', 'tenant_config',
                         os.path.join(FIXTURE_DIR,
-                                     self.config.get('zuul', 'layout_config')))
+                                     self.config.get('zuul', 'tenant_config')))
         self.config.set('merger', 'git_dir', self.git_root)
 
         # For each project in config:
@@ -1062,10 +1062,11 @@ class ZuulTestCase(BaseTestCase):
                 repos.append(obj)
         self.assertEqual(len(repos), 0)
         self.assertEmptyQueues()
-        for pipeline in self.sched.layout.pipelines.values():
-            if isinstance(pipeline.manager,
-                          zuul.scheduler.IndependentPipelineManager):
-                self.assertEqual(len(pipeline.queues), 0)
+        for tenant in self.sched.abide.tenants.values():
+            for pipeline in tenant.layout.pipelines.values():
+                if isinstance(pipeline.manager,
+                              zuul.scheduler.IndependentPipelineManager):
+                    self.assertEqual(len(pipeline.queues), 0)
 
     def shutdown(self):
         self.log.debug("Shutting down after tests")
@@ -1172,9 +1173,10 @@ class ZuulTestCase(BaseTestCase):
 
     def registerJobs(self):
         count = 0
-        for job in self.sched.layout.jobs.keys():
-            self.worker.registerFunction('build:' + job)
-            count += 1
+        for tenant in self.sched.abide.tenants.values():
+            for job in tenant.layout.jobs.keys():
+                self.worker.registerFunction('build:' + job)
+                count += 1
         self.worker.registerFunction('stop:' + self.worker.worker_id)
         count += 1
 
@@ -1329,13 +1331,14 @@ class ZuulTestCase(BaseTestCase):
 
     def assertEmptyQueues(self):
         # Make sure there are no orphaned jobs
-        for pipeline in self.sched.layout.pipelines.values():
-            for queue in pipeline.queues:
-                if len(queue.queue) != 0:
-                    print 'pipeline %s queue %s contents %s' % (
-                        pipeline.name, queue.name, queue.queue)
-                self.assertEqual(len(queue.queue), 0,
-                                 "Pipelines queues should be empty")
+        for tenant in self.sched.abide.tenants.values():
+            for pipeline in tenant.layout.pipelines.values():
+                for queue in pipeline.queues:
+                    if len(queue.queue) != 0:
+                        print 'pipeline %s queue %s contents %s' % (
+                            pipeline.name, queue.name, queue.queue)
+                    self.assertEqual(len(queue.queue), 0,
+                                     "Pipelines queues should be empty")
 
     def assertReportedStat(self, key, value=None, kind=None):
         start = time.time()
@@ -1356,3 +1359,6 @@ class ZuulTestCase(BaseTestCase):
 
         pprint.pprint(self.statsd.stats)
         raise Exception("Key %s not found in reported stats" % key)
+
+    def getPipeline(self, name):
+        return self.sched.abide.tenants[0].layout.pipelines.get(name)
