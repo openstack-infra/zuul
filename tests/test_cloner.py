@@ -37,6 +37,8 @@ class TestCloner(ZuulTestCase):
     workspace_root = None
 
     def setUp(self):
+        self.skip("Disabled for early v3 development")
+
         super(TestCloner, self).setUp()
         self.workspace_root = os.path.join(self.test_root, 'workspace')
 

@@ -80,6 +80,9 @@ jobs:
 
 class TestScheduler(ZuulTestCase):
 
+    def setUp(self):
+        self.skip("Disabled for early v3 development")
+
     def test_jobs_launched(self):
         "Test that jobs are launched and a change is merged"
 

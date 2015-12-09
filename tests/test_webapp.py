@@ -29,6 +29,8 @@ class TestWebapp(ZuulTestCase):
         self.waitUntilSettled()
 
     def setUp(self):
+        self.skip("Disabled for early v3 development")
+
         super(TestWebapp, self).setUp()
         self.addCleanup(self._cleanup)
         self.worker.hold_jobs_in_build = True
