@@ -30,6 +30,7 @@ import socket
 import string
 import subprocess
 import swiftclient
+import tempfile
 import threading
 import time
 import urllib2
@@ -1361,4 +1362,17 @@ class ZuulTestCase(BaseTestCase):
         raise Exception("Key %s not found in reported stats" % key)
 
     def getPipeline(self, name):
-        return self.sched.abide.tenants[0].layout.pipelines.get(name)
+        return self.sched.abide.tenants.values()[0].layout.pipelines.get(name)
+
+    def updateConfigLayout(self, path):
+        root = os.path.join(self.test_root, "config")
+        os.makedirs(root)
+        f = tempfile.NamedTemporaryFile(dir=root, delete=False)
+        f.write("""
+tenants:
+  - name: openstack
+    include:
+      - %s
+        """ % os.path.abspath(path))
+        f.close()
+        self.config.set('zuul', 'tenant_config', f.name)

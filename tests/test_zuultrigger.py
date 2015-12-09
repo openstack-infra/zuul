@@ -31,8 +31,8 @@ class TestZuulTrigger(ZuulTestCase):
 
     def test_zuul_trigger_parent_change_enqueued(self):
         "Test Zuul trigger event: parent-change-enqueued"
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-zuultrigger-enqueued.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-zuultrigger-enqueued.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -77,8 +77,8 @@ class TestZuulTrigger(ZuulTestCase):
 
     def test_zuul_trigger_project_change_merged(self):
         "Test Zuul trigger event: project-change-merged"
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-zuultrigger-merged.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-zuultrigger-merged.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 

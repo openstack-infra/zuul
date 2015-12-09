@@ -72,8 +72,7 @@ class TestMultipleGerrits(ZuulTestCase):
     def setup_config(self,
                      config_file='zuul-connections-multiple-gerrits.conf'):
         super(TestMultipleGerrits, self).setup_config(config_file)
-        self.config.set(
-            'zuul', 'layout_config',
+        self.self.updateConfigLayout(
             'layout-connections-multiple-gerrits.yaml')
 
     def test_multiple_project_separate_gerrits(self):

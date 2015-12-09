@@ -42,8 +42,8 @@ class TestCloner(ZuulTestCase):
         super(TestCloner, self).setUp()
         self.workspace_root = os.path.join(self.test_root, 'workspace')
 
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-cloner.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-cloner.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -506,8 +506,8 @@ class TestCloner(ZuulTestCase):
     def test_periodic(self):
         self.worker.hold_jobs_in_build = True
         self.create_branch('org/project', 'stable/havana')
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-timer.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-timer.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -521,8 +521,8 @@ class TestCloner(ZuulTestCase):
         self.worker.hold_jobs_in_build = False
         # Stop queuing timer triggered jobs so that the assertions
         # below don't race against more jobs being queued.
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-no-timer.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-no-timer.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
         self.worker.release()

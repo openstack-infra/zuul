@@ -41,8 +41,8 @@ class TestRequirements(ZuulTestCase):
                                                       'project2-trigger')
 
     def _test_require_approval_newer_than(self, project, job):
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-requirement-newer-than.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-requirement-newer-than.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -79,8 +79,8 @@ class TestRequirements(ZuulTestCase):
                                                       'project2-trigger')
 
     def _test_require_approval_older_than(self, project, job):
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-requirement-older-than.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-requirement-older-than.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -117,8 +117,8 @@ class TestRequirements(ZuulTestCase):
                                                     'project2-trigger')
 
     def _test_require_approval_username(self, project, job):
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-requirement-username.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-requirement-username.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -148,8 +148,8 @@ class TestRequirements(ZuulTestCase):
                                                  'project2-trigger')
 
     def _test_require_approval_email(self, project, job):
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-requirement-email.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-requirement-email.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -179,8 +179,8 @@ class TestRequirements(ZuulTestCase):
                                                  'project2-trigger')
 
     def _test_require_approval_vote1(self, project, job):
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-requirement-vote1.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-requirement-vote1.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -216,8 +216,8 @@ class TestRequirements(ZuulTestCase):
                                                  'project2-trigger')
 
     def _test_require_approval_vote2(self, project, job):
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-requirement-vote2.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-requirement-vote2.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -264,9 +264,8 @@ class TestRequirements(ZuulTestCase):
 
     def test_pipeline_require_current_patchset(self):
         "Test pipeline requirement: current-patchset"
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-requirement-'
-                        'current-patchset.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-requirement-current-patchset.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
         # Create two patchsets and let their tests settle out. Then
@@ -293,8 +292,8 @@ class TestRequirements(ZuulTestCase):
 
     def test_pipeline_require_open(self):
         "Test pipeline requirement: open"
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-requirement-open.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-requirement-open.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -311,8 +310,8 @@ class TestRequirements(ZuulTestCase):
 
     def test_pipeline_require_status(self):
         "Test pipeline requirement: status"
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-requirement-status.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-requirement-status.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -330,8 +329,7 @@ class TestRequirements(ZuulTestCase):
     def _test_require_reject_username(self, project, job):
         "Test negative username's match"
         # Should only trigger if Jenkins hasn't voted.
-        self.config.set(
-            'zuul', 'layout_config',
+        self.updateConfigLayout(
             'tests/fixtures/layout-requirement-reject-username.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
@@ -372,8 +370,7 @@ class TestRequirements(ZuulTestCase):
 
     def _test_require_reject(self, project, job):
         "Test no approval matches a reject param"
-        self.config.set(
-            'zuul', 'layout_config',
+        self.updateConfigLayout(
             'tests/fixtures/layout-requirement-reject.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()

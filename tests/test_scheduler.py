@@ -922,8 +922,8 @@ class TestScheduler(ZuulTestCase):
     def test_post_ignore_deletes_negative(self):
         "Test that deleting refs does trigger post jobs"
 
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-dont-ignore-deletes.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-dont-ignore-deletes.yaml')
         self.sched.reconfigure(self.config)
 
         e = {
@@ -1773,8 +1773,8 @@ class TestScheduler(ZuulTestCase):
         self.worker.hold_jobs_in_build = True
 
         # Start timer trigger - also org/project
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-idle.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-idle.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
         # The pipeline triggers every second, so we should have seen
@@ -1783,8 +1783,8 @@ class TestScheduler(ZuulTestCase):
         self.waitUntilSettled()
         # Stop queuing timer triggered jobs so that the assertions
         # below don't race against more jobs being queued.
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-no-timer.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-no-timer.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
         self.assertEqual(len(self.builds), 2, "Two timer jobs")
@@ -2079,8 +2079,8 @@ class TestScheduler(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(len(self.gearman_server.getQueue()), 1)
 
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-no-jobs.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-no-jobs.yaml')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
@@ -2140,8 +2140,8 @@ class TestScheduler(ZuulTestCase):
 
     def _test_skip_if_jobs(self, branch, should_skip):
         "Test that jobs with a skip-if filter run only when appropriate"
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-skip-if.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-skip-if.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -2167,7 +2167,7 @@ class TestScheduler(ZuulTestCase):
 
     def test_test_config(self):
         "Test that we can test the config"
-        self.sched.testConfig(self.config.get('zuul', 'layout_config'),
+        self.sched.testConfig(self.config.get('zuul', 'tenant_config'),
                               self.connections)
 
     def test_build_description(self):
@@ -2197,8 +2197,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(q1.name, 'integration')
         self.assertEqual(q2.name, 'integration')
 
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-bad-queue.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-bad-queue.yaml')
         with testtools.ExpectedException(
             Exception, "More than one name assigned to change queue"):
             self.sched.reconfigure(self.config)
@@ -2278,8 +2278,8 @@ class TestScheduler(ZuulTestCase):
 
     def test_merging_queues(self):
         "Test that transitively-connected change queues are merged"
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-merge-queues.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-merge-queues.yaml')
         self.sched.reconfigure(self.config)
         self.assertEqual(len(self.sched.layout.pipelines['gate'].queues), 1)
 
@@ -2355,9 +2355,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.history), 0)
 
         # Add the "project-test3" job.
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-live-'
-                        'reconfiguration-add-job.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-live-reconfiguration-add-job.yaml')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
@@ -2418,9 +2417,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.history), 2)
 
         # Add the "project-test3" job.
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-live-'
-                        'reconfiguration-add-job.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-live-reconfiguration-add-job.yaml')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
@@ -2472,9 +2470,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.history), 2)
 
         # Remove the test1 job.
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-live-'
-                        'reconfiguration-failed-job.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-live-reconfiguration-failed-job.yaml')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
@@ -2522,9 +2519,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.history), 2)
 
         # Remove the integration job.
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-live-'
-                        'reconfiguration-shared-queue.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-live-reconfiguration-shared-queue.yaml')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
@@ -2570,9 +2566,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.builds), 5)
 
         # This layout defines only org/project, not org/project1
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-live-'
-                        'reconfiguration-del-project.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-live-reconfiguration-del-project.yaml')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
@@ -2613,9 +2608,8 @@ class TestScheduler(ZuulTestCase):
                          'debian')
         self.assertIsNone(self.getJobFromHistory('node-project-test2').node)
 
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-live-'
-                        'reconfiguration-functions.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-live-reconfiguration-functions.yaml')
         self.sched.reconfigure(self.config)
         self.worker.build_history = []
 
@@ -2630,8 +2624,8 @@ class TestScheduler(ZuulTestCase):
         self.assertIsNone(self.getJobFromHistory('node-project-test2').node)
 
     def test_delayed_repo_init(self):
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-delayed-repo-init.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-delayed-repo-init.yaml')
         self.sched.reconfigure(self.config)
 
         self.init_repo("org/new-project")
@@ -2650,8 +2644,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.reported, 2)
 
     def test_repo_deleted(self):
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-repo-deleted.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-repo-deleted.yaml')
         self.sched.reconfigure(self.config)
 
         self.init_repo("org/delete-project")
@@ -2689,8 +2683,8 @@ class TestScheduler(ZuulTestCase):
     def test_timer(self):
         "Test that a periodic job is triggered"
         self.worker.hold_jobs_in_build = True
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-timer.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-timer.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -2709,8 +2703,8 @@ class TestScheduler(ZuulTestCase):
         self.worker.hold_jobs_in_build = False
         # Stop queuing timer triggered jobs so that the assertions
         # below don't race against more jobs being queued.
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-no-timer.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-no-timer.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
         self.worker.release()
@@ -2741,8 +2735,8 @@ class TestScheduler(ZuulTestCase):
             # Test that timer triggers periodic jobs even across
             # layout config reloads.
             # Start timer trigger
-            self.config.set('zuul', 'layout_config',
-                            'tests/fixtures/layout-idle.yaml')
+            self.updateConfigLayout(
+                'tests/fixtures/layout-idle.yaml')
             self.sched.reconfigure(self.config)
             self.registerJobs()
 
@@ -2753,8 +2747,8 @@ class TestScheduler(ZuulTestCase):
 
             # Stop queuing timer triggered jobs so that the assertions
             # below don't race against more jobs being queued.
-            self.config.set('zuul', 'layout_config',
-                            'tests/fixtures/layout-no-timer.yaml')
+            self.updateConfigLayout(
+                'tests/fixtures/layout-no-timer.yaml')
             self.sched.reconfigure(self.config)
             self.registerJobs()
 
@@ -2765,8 +2759,8 @@ class TestScheduler(ZuulTestCase):
             self.assertEqual(len(self.history), x * 2)
 
     def test_check_smtp_pool(self):
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-smtp.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-smtp.yaml')
         self.sched.reconfigure(self.config)
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -2798,8 +2792,8 @@ class TestScheduler(ZuulTestCase):
     def test_timer_smtp(self):
         "Test that a periodic job is triggered"
         self.worker.hold_jobs_in_build = True
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-timer-smtp.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-timer-smtp.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -2833,8 +2827,8 @@ class TestScheduler(ZuulTestCase):
 
         # Stop queuing timer triggered jobs and let any that may have
         # queued through so that end of test assertions pass.
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-no-timer.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-no-timer.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
         self.waitUntilSettled()
@@ -3095,8 +3089,8 @@ class TestScheduler(ZuulTestCase):
 
     def test_queue_rate_limiting(self):
         "Test that DependentPipelines are rate limited with dep across window"
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-rate-limit.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-rate-limit.yaml')
         self.sched.reconfigure(self.config)
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -3186,8 +3180,8 @@ class TestScheduler(ZuulTestCase):
 
     def test_queue_rate_limiting_dependent(self):
         "Test that DependentPipelines are rate limited with dep in window"
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-rate-limit.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-rate-limit.yaml')
         self.sched.reconfigure(self.config)
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -3297,8 +3291,8 @@ class TestScheduler(ZuulTestCase):
 
     def test_footer_message(self):
         "Test a pipeline's footer message is correctly added to the report."
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-footer-message.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-footer-message.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -3338,8 +3332,8 @@ For CI problems and help debugging, contact ci@example.org"""
     def test_merge_failure_reporters(self):
         """Check that the config is set up correctly"""
 
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-merge-failure.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-merge-failure.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -3383,8 +3377,8 @@ For CI problems and help debugging, contact ci@example.org"""
     def test_merge_failure_reports(self):
         """Check that when a change fails to merge the correct message is sent
         to the correct reporter"""
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-merge-failure.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-merge-failure.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -3417,8 +3411,8 @@ For CI problems and help debugging, contact ci@example.org"""
 
     def test_swift_instructions(self):
         "Test that the correct swift instructions are sent to the workers"
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-swift.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-swift.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -3980,8 +3974,8 @@ For CI problems and help debugging, contact ci@example.org"""
 
     def test_crd_check_ignore_dependencies(self):
         "Test cross-repo dependencies can be ignored"
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-ignore-dependencies.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-ignore-dependencies.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
 
@@ -4066,8 +4060,8 @@ For CI problems and help debugging, contact ci@example.org"""
     def test_disable_at(self):
         "Test a pipeline will only report to the disabled trigger when failing"
 
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-disable-at.yaml')
+        self.updateConfigLayout(
+            'tests/fixtures/layout-disable-at.yaml')
         self.sched.reconfigure(self.config)
 
         self.assertEqual(3, self.sched.layout.pipelines['check'].disable_at)
