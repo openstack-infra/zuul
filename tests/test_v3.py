@@ -28,36 +28,37 @@ logging.basicConfig(level=logging.DEBUG,
 class TestV3(ZuulTestCase):
     # A temporary class to hold new tests while others are disabled
 
-    def test_jobs_launched(self):
-        "Test that jobs are launched and a change is merged"
+    def test_multiple_tenants(self):
+        self.setup_config('config/multi-tenant/zuul.conf')
+        self.sched.reconfigure(self.config)
 
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
-        self.assertEqual(self.getJobFromHistory('project-merge').result,
-                         'SUCCESS')
-        self.assertEqual(self.getJobFromHistory('project-test1').result,
-                         'SUCCESS')
-        self.assertEqual(self.getJobFromHistory('project-test2').result,
+        self.assertEqual(self.getJobFromHistory('project1-test1').result,
                          'SUCCESS')
         self.assertEqual(A.data['status'], 'MERGED')
-        self.assertEqual(A.reported, 2)
+        self.assertEqual(A.reported, 2,
+                         "A should report start and success")
+        self.assertIn('tenant-one-gate', A.messages[1],
+                      "A should transit tenant-one gate")
+        self.assertNotIn('tenant-two-gate', A.messages[1],
+                         "A should *not* transit tenant-two gate")
 
-        self.assertReportedStat('gerrit.event.comment-added', value='1|c')
-        self.assertReportedStat('zuul.pipeline.gate.current_changes',
-                                value='1|g')
-        self.assertReportedStat('zuul.pipeline.gate.job.project-merge.SUCCESS',
-                                kind='ms')
-        self.assertReportedStat('zuul.pipeline.gate.job.project-merge.SUCCESS',
-                                value='1|c')
-        self.assertReportedStat('zuul.pipeline.gate.resident_time', kind='ms')
-        self.assertReportedStat('zuul.pipeline.gate.total_changes',
-                                value='1|c')
-        self.assertReportedStat(
-            'zuul.pipeline.gate.org.project.resident_time', kind='ms')
-        self.assertReportedStat(
-            'zuul.pipeline.gate.org.project.total_changes', value='1|c')
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        B.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('project2-test1').result,
+                         'SUCCESS')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(B.reported, 2,
+                         "B should report start and success")
+        self.assertIn('tenant-two-gate', B.messages[1],
+                      "B should transit tenant-two gate")
+        self.assertNotIn('tenant-one-gate', B.messages[1],
+                         "B should *not* transit tenant-one gate")
 
-        for build in self.builds:
-            self.assertEqual(build.parameters['ZUUL_VOTING'], '1')
+        self.assertEqual(A.reported, 2, "Activity in tenant two should"
+                         "not affect tenant one")

@@ -59,6 +59,29 @@ def deep_format(obj, paramdict):
     return ret
 
 
+def extend_dict(a, b):
+    """Extend dictionary a (which will be modified in place) with the
+       contents of b.  This is designed for Zuul yaml files which are
+       typically dictionaries of lists of dictionaries, e.g.,
+       {'pipelines': ['name': 'gate']}.  If two such dictionaries each
+       define a pipeline, the result will be a single dictionary with
+       a pipelines entry whose value is a two-element list."""
+
+    for k, v in b.items():
+        if k not in a:
+            a[k] = v
+        elif isinstance(v, dict) and isinstance(a[k], dict):
+            extend_dict(a[k], v)
+        elif isinstance(v, list) and isinstance(a[k], list):
+            a[k] += v
+        elif isinstance(v, list):
+            a[k] = [a[k]] + v
+        elif isinstance(a[k], list):
+            a[k] += [v]
+        else:
+            raise Exception("Unhandled case in extend_dict at %s" % (k,))
+
+
 class ManagementEvent(object):
     """An event that should be processed within the main queue run loop"""
     def __init__(self):
@@ -331,6 +354,7 @@ class Scheduler(threading.Thread):
                                 config_path)
         with open(config_path) as config_file:
             data = yaml.load(config_file)
+        base = os.path.dirname(os.path.realpath(config_path))
 
         validator = layoutvalidator.ConfigValidator()
         validator.validate(data, connections)
@@ -338,25 +362,20 @@ class Scheduler(threading.Thread):
         for conf_tenant in data['tenants']:
             tenant = model.Tenant(conf_tenant['name'])
             abide.tenants[tenant.name] = tenant
+            tenant_config = {}
             for fn in conf_tenant.get('include', []):
                 if not os.path.isabs(fn):
-                    base = os.path.dirname(os.path.realpath(config_path))
                     fn = os.path.join(base, fn)
                 fn = os.path.expanduser(fn)
-                tenant.layout = self._parseLayout(fn, connections)
+                with open(fn) as config_file:
+                    incdata = yaml.load(config_file)
+                    extend_dict(tenant_config, incdata)
+            tenant.layout = self._parseLayout(base, tenant_config, connections)
         return abide
 
-    def _parseLayout(self, config_path, connections):
+    def _parseLayout(self, base, data, connections):
         layout = model.Layout()
         project_templates = {}
-
-        if config_path:
-            config_path = os.path.expanduser(config_path)
-            if not os.path.exists(config_path):
-                raise Exception("Unable to read layout config file at %s" %
-                                config_path)
-        with open(config_path) as config_file:
-            data = yaml.load(config_file)
 
         validator = layoutvalidator.LayoutValidator()
         validator.validate(data, connections)
@@ -366,7 +385,6 @@ class Scheduler(threading.Thread):
             if 'python-file' in include:
                 fn = include['python-file']
                 if not os.path.isabs(fn):
-                    base = os.path.dirname(os.path.realpath(config_path))
                     fn = os.path.join(base, fn)
                 fn = os.path.expanduser(fn)
                 execfile(fn, config_env)

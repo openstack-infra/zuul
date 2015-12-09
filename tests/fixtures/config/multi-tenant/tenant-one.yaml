@@ -1,0 +1,29 @@
+pipelines:
+  - name: tenant-one-gate
+    manager: DependentPipelineManager
+    success-message: Build succeeded (tenant-one-gate).
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - approved: 1
+    success:
+      gerrit:
+        verified: 2
+        submit: true
+    failure:
+      gerrit:
+        verified: -2
+    start:
+      gerrit:
+        verified: 0
+    precedence: high
+
+projects:
+  - name: org/project1
+    check:
+      - project1-test1
+    tenant-one-gate:
+      - project1-test1
