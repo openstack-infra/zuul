@@ -68,6 +68,7 @@ class MergeServer(object):
     def register(self):
         self.worker.registerFunction("merger:merge")
         self.worker.registerFunction("merger:update")
+        self.worker.registerFunction("merger:cat")
 
     def stop(self):
         self.log.debug("Stopping")
@@ -90,6 +91,9 @@ class MergeServer(object):
                     elif job.name == 'merger:update':
                         self.log.debug("Got update job: %s" % job.unique)
                         self.update(job)
+                    elif job.name == 'merger:cat':
+                        self.log.debug("Got cat job: %s" % job.unique)
+                        self.cat(job)
                     else:
                         self.log.error("Unable to handle job %s" % job.name)
                         job.sendWorkFail()
@@ -111,5 +115,15 @@ class MergeServer(object):
         args = json.loads(job.arguments)
         self.merger.updateRepo(args['project'], args['url'])
         result = dict(updated=True,
+                      zuul_url=self.zuul_url)
+        job.sendWorkComplete(json.dumps(result))
+
+    def cat(self, job):
+        args = json.loads(job.arguments)
+        self.merger.updateRepo(args['project'], args['url'])
+        files = self.merger.getFiles(args['project'], args['url'],
+                                     args['branch'], args['files'])
+        result = dict(updated=True,
+                      files=files,
                       zuul_url=self.zuul_url)
         job.sendWorkComplete(json.dumps(result))

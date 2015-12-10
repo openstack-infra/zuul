@@ -184,6 +184,17 @@ class Repo(object):
         origin = repo.remotes.origin
         origin.update()
 
+    def getFiles(self, branch, files):
+        ret = {}
+        repo = self.createRepoObject()
+        for fn in files:
+            tree = repo.heads[branch].commit.tree
+            if fn in tree:
+                ret[fn] = tree[fn].data_stream.read()
+            else:
+                ret[fn] = None
+        return ret
+
 
 class Merger(object):
     log = logging.getLogger("zuul.Merger")
@@ -342,3 +353,7 @@ class Merger(object):
             if not commit:
                 return None
         return commit.hexsha
+
+    def getFiles(self, project, url, branch, files):
+        repo = self.getRepo(project, url)
+        return repo.getFiles(branch, files)

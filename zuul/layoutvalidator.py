@@ -37,7 +37,7 @@ class ConfigSchema(object):
 
     def validateTenantSource(self, value, path=[]):
         # TODOv3(jeblair): validate against connections
-        self.tenant_source.schema(value)
+        self.tenant_source(value)
 
     def getSchema(self, data, connections=None):
         tenant = {v.Required('name'): str,

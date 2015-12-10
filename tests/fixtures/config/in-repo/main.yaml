@@ -1,0 +1,8 @@
+tenants:
+  - name: tenant-one
+    include:
+      - common.yaml
+    source:
+      gerrit:
+        repos:
+          - org/project

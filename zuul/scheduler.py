@@ -353,6 +353,7 @@ class Scheduler(threading.Thread):
                 raise Exception("Unable to read tenant config file at %s" %
                                 config_path)
         with open(config_path) as config_file:
+            self.log.info("Loading configuration from %s" % (config_path,))
             data = yaml.load(config_file)
         base = os.path.dirname(os.path.realpath(config_path))
 
@@ -368,8 +369,11 @@ class Scheduler(threading.Thread):
                     fn = os.path.join(base, fn)
                 fn = os.path.expanduser(fn)
                 with open(fn) as config_file:
+                    self.log.info("Loading configuration from %s" % (fn,))
                     incdata = yaml.load(config_file)
                     extend_dict(tenant_config, incdata)
+            incdata = self._parseTenantInRepoLayouts(conf_tenant)
+            extend_dict(tenant_config, incdata)
             tenant.layout = self._parseLayout(base, tenant_config, connections)
         return abide
 
@@ -582,6 +586,39 @@ class Scheduler(threading.Thread):
             pipeline.manager._postConfig(layout)
 
         return layout
+
+    def _parseTenantInRepoLayouts(self, conf_tenant):
+        config = {}
+        jobs = []
+        for source_name, conf_source in conf_tenant.get('source', {}).items():
+            # TODOv3(jeblair,jhesketh): sources should just be
+            # set up at the start of the zuul.conf parsing
+            if source_name not in self.sources:
+                self.sources[source_name] = self._getSourceDriver(
+                    source_name)
+            for conf_repo in conf_source.get('repos'):
+                source = self.sources[source_name]
+                project = source.getProject(conf_repo)
+                url = source.getGitUrl(project)
+                # TODOv3(jeblair): config should be branch specific
+                job = self.merger.getFiles(project.name, url, 'master',
+                                           files=['.zuul.yaml'])
+                job.project = project
+                jobs.append(job)
+        for job in jobs:
+            self.log.debug("Waiting for cat job %s" % (job,))
+            job.wait()
+            if job.files.get('.zuul.yaml'):
+                self.log.info("Loading configuration from %s/.zuul.yaml" %
+                              (job.project,))
+                incdata = self._parseInRepoLayout(job.files['.zuul.yaml'])
+                extend_dict(config, incdata)
+        return config
+
+    def _parseInRepoLayout(self, data):
+        # TODOv3(jeblair): this should implement some rules to protect
+        # aspects of the config that should not be changed in-repo
+        return yaml.load(data)
 
     def setLauncher(self, launcher):
         self.launcher = launcher

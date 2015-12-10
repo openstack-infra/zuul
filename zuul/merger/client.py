@@ -14,6 +14,7 @@
 
 import json
 import logging
+import threading
 from uuid import uuid4
 
 import gear
@@ -55,6 +56,18 @@ class MergeGearmanClient(gear.Client):
         self.__merge_client.onBuildCompleted(job)
 
 
+class MergeJob(gear.Job):
+    def __init__(self, *args, **kw):
+        super(MergeJob, self).__init__(*args, **kw)
+        self.__event = threading.Event()
+
+    def setComplete(self):
+        self.__event.set()
+
+    def wait(self, timeout=300):
+        return self.__event.wait(timeout)
+
+
 class MergeClient(object):
     log = logging.getLogger("zuul.MergeClient")
 
@@ -71,26 +84,28 @@ class MergeClient(object):
         self.gearman.addServer(server, port)
         self.log.debug("Waiting for gearman")
         self.gearman.waitForServer()
-        self.build_sets = {}
+        self.jobs = set()
 
     def stop(self):
         self.gearman.shutdown()
 
     def areMergesOutstanding(self):
-        if self.build_sets:
+        if self.jobs:
             return True
         return False
 
     def submitJob(self, name, data, build_set,
                   precedence=zuul.model.PRECEDENCE_NORMAL):
         uuid = str(uuid4().hex)
-        job = gear.Job(name,
+        job = MergeJob(name,
                        json.dumps(data),
                        unique=uuid)
+        job.build_set = build_set
         self.log.debug("Submitting job %s with data %s" % (job, data))
-        self.build_sets[uuid] = build_set
+        self.jobs.add(job)
         self.gearman.submitJob(job, precedence=precedence,
                                timeout=300)
+        return job
 
     def mergeChanges(self, items, build_set,
                      precedence=zuul.model.PRECEDENCE_NORMAL):
@@ -103,21 +118,29 @@ class MergeClient(object):
                     url=url)
         self.submitJob('merger:update', data, build_set, precedence)
 
+    def getFiles(self, project, url, branch, files,
+                 precedence=zuul.model.PRECEDENCE_HIGH):
+        data = dict(project=project,
+                    url=url,
+                    branch=branch,
+                    files=files)
+        job = self.submitJob('merger:cat', data, None, precedence)
+        return job
+
     def onBuildCompleted(self, job):
-        build_set = self.build_sets.get(job.unique)
-        if build_set:
-            data = getJobData(job)
-            zuul_url = data.get('zuul_url')
-            merged = data.get('merged', False)
-            updated = data.get('updated', False)
-            commit = data.get('commit')
-            self.log.info("Merge %s complete, merged: %s, updated: %s, "
-                          "commit: %s" %
-                          (job, merged, updated, build_set.commit))
-            self.sched.onMergeCompleted(build_set, zuul_url,
+        data = getJobData(job)
+        zuul_url = data.get('zuul_url')
+        merged = data.get('merged', False)
+        updated = data.get('updated', False)
+        commit = data.get('commit')
+        job.files = data.get('files', {})
+        self.log.info("Merge %s complete, merged: %s, updated: %s, "
+                      "commit: %s" %
+                      (job, merged, updated, commit))
+        job.setComplete()
+        if job.build_set:
+            self.sched.onMergeCompleted(job.build_set, zuul_url,
                                         merged, updated, commit)
-            # The test suite expects the build_set to be removed from
-            # the internal dict after the wake flag is set.
-            del self.build_sets[job.unique]
-        else:
-            self.log.error("Unable to find build set for uuid %s" % job.unique)
+        # The test suite expects the job to be removed from the
+        # internal account after the wake flag is set.
+        self.jobs.remove(job)

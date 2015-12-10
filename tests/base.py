@@ -1307,7 +1307,7 @@ class ZuulTestCase(BaseTestCase):
                 # processed
                 self.eventQueuesJoin()
                 self.sched.run_handler_lock.acquire()
-                if (not self.merge_client.build_sets and
+                if (not self.merge_client.jobs and
                     all(self.eventQueuesEmpty()) and
                     self.haveAllBuildsReported() and
                     self.areAllBuildsWaiting()):
@@ -1376,3 +1376,19 @@ tenants:
         """ % os.path.abspath(path))
         f.close()
         self.config.set('zuul', 'tenant_config', f.name)
+
+    def addCommitToRepo(self, project, message, files, branch='master'):
+        path = os.path.join(self.upstream_root, project)
+        repo = git.Repo(path)
+        repo.head.reference = branch
+        zuul.merger.merger.reset_repo_to_head(repo)
+        for fn, content in files.items():
+            fn = os.path.join(path, fn)
+            with open(fn, 'w') as f:
+                f.write(content)
+            repo.index.add([fn])
+        commit = repo.index.commit(message)
+        repo.heads[branch].commit = commit
+        repo.head.reference = branch
+        repo.git.clean('-x', '-f', '-d')
+        repo.heads[branch].checkout()

@@ -15,6 +15,7 @@
 # under the License.
 
 import logging
+import textwrap
 
 from tests.base import (
     ZuulTestCase,
@@ -62,3 +63,30 @@ class TestV3(ZuulTestCase):
 
         self.assertEqual(A.reported, 2, "Activity in tenant two should"
                          "not affect tenant one")
+
+    def test_in_repo_config(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            projects:
+              - name: org/project
+                tenant-one-gate:
+                  - project-test1
+            """)
+
+        self.addCommitToRepo('org/project', 'add zuul conf',
+                             {'.zuul.yaml': in_repo_conf})
+
+        self.setup_config('config/in-repo/zuul.conf')
+        self.sched.reconfigure(self.config)
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2,
+                         "A should report start and success")
+        self.assertIn('tenant-one-gate', A.messages[1],
+                      "A should transit tenant-one gate")
