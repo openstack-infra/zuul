@@ -238,7 +238,6 @@ class Scheduler(threading.Thread):
 
     def stop(self):
         self._stopped = True
-        self._unloadDrivers()
         self.stopConnections()
         self.wake_event.set()
 
@@ -284,16 +283,6 @@ class Scheduler(threading.Thread):
     def stopConnections(self):
         for connection_name, connection in self.connections.items():
             connection.onStop()
-
-    def _unloadDrivers(self):
-        for trigger in self.triggers.values():
-            trigger.stop()
-        for tenant in self.abide.tenants.values():
-            for pipeline in tenant.layout.pipelines.values():
-                pipeline.source.stop()
-                for action in self._reporter_actions.values():
-                    for reporter in pipeline.__getattribute__(action):
-                        reporter.stop()
 
     def _getDriver(self, dtype, connection_name, driver_config={}):
         # Instantiate a driver such as a trigger, source or reporter
@@ -801,7 +790,6 @@ class Scheduler(threading.Thread):
         self.config = event.config
         try:
             self.log.debug("Performing reconfiguration")
-            self._unloadDrivers()
             abide = self._parseAbide(
                 self.config.get('zuul', 'tenant_config'), self.connections)
             for tenant in abide.tenants.values():

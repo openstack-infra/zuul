@@ -28,9 +28,6 @@ class BaseTrigger(object):
         self.sched = sched
         self.connection = connection
 
-    def stop(self):
-        """Stop the trigger."""
-
     @abc.abstractmethod
     def getEventFilters(self, trigger_conf):
         """Return a list of EventFilter's for the scheduler to match against.

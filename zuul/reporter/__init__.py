@@ -33,9 +33,6 @@ class BaseReporter(object):
     def setAction(self, action):
         self._action = action
 
-    def stop(self):
-        """Stop the reporter."""
-
     @abc.abstractmethod
     def report(self, source, pipeline, item):
         """Send the compiled report message."""

@@ -33,9 +33,6 @@ class BaseSource(object):
         self.connection = connection
         self.projects = {}
 
-    def stop(self):
-        """Stop the source."""
-
     @abc.abstractmethod
     def getRefSha(self, project, ref):
         """Return a sha for a given project ref."""
