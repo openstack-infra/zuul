@@ -568,8 +568,8 @@ file.  The first is called a *check* pipeline::
       my_gerrit:
         verified: 1
     failure:
-      gerrit:
-        my_gerrit: -1
+      my_gerrit:
+        verified: -1
 
 This will trigger jobs each time a new patchset (or change) is
 uploaded to Gerrit, and report +/-1 values to Gerrit in the
