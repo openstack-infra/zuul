@@ -567,10 +567,6 @@ class Scheduler(threading.Thread):
                     config_jobs = config_project[pipeline.name]
                     add_jobs(job_tree, config_jobs)
 
-        # All jobs should be defined at this point, get rid of
-        # metajobs so that getJob isn't doing anything weird.
-        layout.metajobs = []
-
         for pipeline in layout.pipelines.values():
             pipeline.manager._postConfig(layout)
 

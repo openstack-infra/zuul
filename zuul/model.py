@@ -433,7 +433,6 @@ class Project(object):
 
 class Job(object):
     def __init__(self, name):
-        # If you add attributes here, be sure to add them to the copy method.
         self.name = name
         self.queue_name = None
         self.failure_message = None
@@ -441,57 +440,21 @@ class Job(object):
         self.failure_pattern = None
         self.success_pattern = None
         self.parameter_function = None
-        # A metajob should only supply values for attributes that have
-        # been explicitly provided, so avoid setting boolean defaults.
-        if self.is_metajob:
-            self.hold_following_changes = None
-            self.voting = None
-        else:
-            self.hold_following_changes = False
-            self.voting = True
+        self.hold_following_changes = False
+        self.voting = True
         self.branches = []
         self._branches = []
         self.files = []
         self._files = []
         self.skip_if_matcher = None
         self.swift = {}
+        self.parent = None
 
     def __str__(self):
         return self.name
 
     def __repr__(self):
         return '<Job %s>' % (self.name)
-
-    @property
-    def is_metajob(self):
-        return self.name.startswith('^')
-
-    def copy(self, other):
-        if other.failure_message:
-            self.failure_message = other.failure_message
-        if other.success_message:
-            self.success_message = other.success_message
-        if other.failure_pattern:
-            self.failure_pattern = other.failure_pattern
-        if other.success_pattern:
-            self.success_pattern = other.success_pattern
-        if other.parameter_function:
-            self.parameter_function = other.parameter_function
-        if other.branches:
-            self.branches = other.branches[:]
-            self._branches = other._branches[:]
-        if other.files:
-            self.files = other.files[:]
-            self._files = other._files[:]
-        if other.skip_if_matcher:
-            self.skip_if_matcher = other.skip_if_matcher.copy()
-        if other.swift:
-            self.swift.update(other.swift)
-        # Only non-None values should be copied for boolean attributes.
-        if other.hold_following_changes is not None:
-            self.hold_following_changes = other.hold_following_changes
-        if other.voting is not None:
-            self.voting = other.voting
 
     def changeMatches(self, change):
         matches_branch = False
@@ -1325,21 +1288,12 @@ class Layout(object):
         self.projects = {}
         self.pipelines = OrderedDict()
         self.jobs = {}
-        self.metajobs = []
 
     def getJob(self, name):
         if name in self.jobs:
             return self.jobs[name]
         job = Job(name)
-        if job.is_metajob:
-            regex = re.compile(name)
-            self.metajobs.append((regex, job))
-        else:
-            # Apply attributes from matching meta-jobs
-            for regex, metajob in self.metajobs:
-                if regex.match(name):
-                    job.copy(metajob)
-            self.jobs[name] = job
+        self.jobs[name] = job
         return job
 
 
