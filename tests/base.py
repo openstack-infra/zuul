@@ -50,6 +50,7 @@ import zuul.webapp
 import zuul.rpclistener
 import zuul.launcher.gearman
 import zuul.lib.swift
+import zuul.lib.connections
 import zuul.merger.client
 import zuul.merger.merger
 import zuul.merger.server
@@ -864,6 +865,7 @@ class BaseTestCase(testtools.TestCase):
 
 
 class ZuulTestCase(BaseTestCase):
+    config_file = 'zuul.conf'
 
     def setUp(self):
         super(ZuulTestCase, self).setUp()
@@ -907,6 +909,8 @@ class ZuulTestCase(BaseTestCase):
         self.init_repo("org/experimental-project")
         self.init_repo("org/no-jobs-project")
 
+        self.setup_repos()
+
         self.statsd = FakeStatsd()
         # note, use 127.0.0.1 rather than localhost to avoid getting ipv6
         # see: https://github.com/jsocol/pystatsd/issues/61
@@ -940,7 +944,7 @@ class ZuulTestCase(BaseTestCase):
             self.sched.trigger_event_queue
         ]
 
-        self.configure_connections()
+        self.configure_connections(self.sched)
         self.sched.registerConnections(self.connections)
 
         def URLOpenerFactory(*args, **kw):
@@ -979,7 +983,7 @@ class ZuulTestCase(BaseTestCase):
         self.addCleanup(self.assertFinalState)
         self.addCleanup(self.shutdown)
 
-    def configure_connections(self):
+    def configure_connections(self, sched):
         # Register connections from the config
         self.smtp_messages = []
 
@@ -993,7 +997,7 @@ class ZuulTestCase(BaseTestCase):
         # a virtual canonical database given by the configured hostname
         self.gerrit_changes_dbs = {}
         self.gerrit_queues_dbs = {}
-        self.connections = {}
+        self.connections = zuul.lib.connections.ConnectionRegistry(sched)
 
         for section_name in self.config.sections():
             con_match = re.match(r'^connection ([\'\"]?)(.*)(\1)$',
@@ -1018,15 +1022,16 @@ class ZuulTestCase(BaseTestCase):
                         Queue.Queue()
                     self.event_queues.append(
                         self.gerrit_queues_dbs[con_config['server']])
-                self.connections[con_name] = FakeGerritConnection(
+                self.connections.connections[con_name] = FakeGerritConnection(
                     con_name, con_config,
                     changes_db=self.gerrit_changes_dbs[con_config['server']],
                     queues_db=self.gerrit_queues_dbs[con_config['server']],
                     upstream_root=self.upstream_root
                 )
-                setattr(self, 'fake_' + con_name, self.connections[con_name])
+                setattr(self, 'fake_' + con_name,
+                        self.connections.connections[con_name])
             elif con_driver == 'smtp':
-                self.connections[con_name] = \
+                self.connections.connections[con_name] = \
                     zuul.connection.smtp.SMTPConnection(con_name, con_config)
             else:
                 raise Exception("Unknown driver, %s, for connection %s"
@@ -1039,20 +1044,24 @@ class ZuulTestCase(BaseTestCase):
             self.gerrit_changes_dbs['gerrit'] = {}
             self.gerrit_queues_dbs['gerrit'] = Queue.Queue()
             self.event_queues.append(self.gerrit_queues_dbs['gerrit'])
-            self.connections['gerrit'] = FakeGerritConnection(
+            self.connections.connections['gerrit'] = FakeGerritConnection(
                 '_legacy_gerrit', dict(self.config.items('gerrit')),
                 changes_db=self.gerrit_changes_dbs['gerrit'],
                 queues_db=self.gerrit_queues_dbs['gerrit'])
 
         if 'smtp' in self.config.sections():
-            self.connections['smtp'] = \
+            self.connections.connections['smtp'] = \
                 zuul.connection.smtp.SMTPConnection(
                     '_legacy_smtp', dict(self.config.items('smtp')))
 
-    def setup_config(self, config_file='zuul.conf'):
+    def setup_config(self):
         """Per test config object. Override to set different config."""
         self.config = ConfigParser.ConfigParser()
-        self.config.read(os.path.join(FIXTURE_DIR, config_file))
+        self.config.read(os.path.join(FIXTURE_DIR, self.config_file))
+
+    def setup_repos(self):
+        """Subclasses can override to manipulate repos before tests"""
+        pass
 
     def assertFinalState(self):
         # Make sure that git.Repo objects have been garbage collected.
@@ -1063,10 +1072,10 @@ class ZuulTestCase(BaseTestCase):
                 repos.append(obj)
         self.assertEqual(len(repos), 0)
         self.assertEmptyQueues()
+        ipm = zuul.manager.independent.IndependentPipelineManager
         for tenant in self.sched.abide.tenants.values():
             for pipeline in tenant.layout.pipelines.values():
-                if isinstance(pipeline.manager,
-                              zuul.scheduler.IndependentPipelineManager):
+                if isinstance(pipeline.manager, ipm):
                     self.assertEqual(len(pipeline.queues), 0)
 
     def shutdown(self):

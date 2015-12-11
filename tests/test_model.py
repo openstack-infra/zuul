@@ -12,8 +12,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from zuul import change_matcher as cm
 from zuul import model
+from zuul import configloader
 
 from tests.base import BaseTestCase
 
@@ -22,11 +22,12 @@ class TestJob(BaseTestCase):
 
     @property
     def job(self):
-        job = model.Job('job')
-        job.skip_if_matcher = cm.MatchAll([
-            cm.ProjectMatcher('^project$'),
-            cm.MatchAllFiles([cm.FileMatcher('^docs/.*$')]),
-        ])
+        layout = model.Layout()
+        job = configloader.JobParser.fromYaml(layout, {
+            'name': 'job',
+            'irrelevant-files': [
+                '^docs/.*$'
+            ]})
         return job
 
     def test_change_matches_returns_false_for_matched_skip_if(self):
@@ -39,10 +40,61 @@ class TestJob(BaseTestCase):
         change.files = ['foo']
         self.assertTrue(self.job.changeMatches(change))
 
-    def _assert_job_booleans_are_not_none(self, job):
-        self.assertIsNotNone(job.voting)
-        self.assertIsNotNone(job.hold_following_changes)
-
     def test_job_sets_defaults_for_boolean_attributes(self):
-        job = model.Job('job')
-        self._assert_job_booleans_are_not_none(job)
+        self.assertIsNotNone(self.job.voting)
+
+    def test_job_inheritance(self):
+        layout = model.Layout()
+        base = configloader.JobParser.fromYaml(layout, {
+            'name': 'base',
+            'timeout': 30,
+        })
+        layout.addJob(base)
+        python27 = configloader.JobParser.fromYaml(layout, {
+            'name': 'python27',
+            'parent': 'base',
+            'timeout': 40,
+        })
+        layout.addJob(python27)
+        python27diablo = configloader.JobParser.fromYaml(layout, {
+            'name': 'python27',
+            'branches': [
+                'stable/diablo'
+            ],
+            'timeout': 50,
+        })
+        layout.addJob(python27diablo)
+
+        pipeline = model.Pipeline('gate', layout)
+        layout.addPipeline(pipeline)
+        queue = model.ChangeQueue(pipeline)
+
+        project = model.Project('project')
+        tree = pipeline.addProject(project)
+        tree.addJob(layout.getJob('python27'))
+
+        change = model.Change(project)
+        change.branch = 'master'
+        item = queue.enqueueChange(change)
+
+        self.assertTrue(base.changeMatches(change))
+        self.assertTrue(python27.changeMatches(change))
+        self.assertFalse(python27diablo.changeMatches(change))
+
+        item.freezeJobTree()
+        self.assertEqual(len(item.getJobs()), 1)
+        job = item.getJobs()[0]
+        self.assertEqual(job.name, 'python27')
+        self.assertEqual(job.timeout, 40)
+
+        change.branch = 'stable/diablo'
+
+        self.assertTrue(base.changeMatches(change))
+        self.assertTrue(python27.changeMatches(change))
+        self.assertTrue(python27diablo.changeMatches(change))
+
+        item.freezeJobTree()
+        self.assertEqual(len(item.getJobs()), 1)
+        job = item.getJobs()[0]
+        self.assertEqual(job.name, 'python27')
+        self.assertEqual(job.timeout, 50)

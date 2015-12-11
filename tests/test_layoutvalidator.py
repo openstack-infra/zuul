@@ -31,6 +31,9 @@ LAYOUT_RE = re.compile(r'^(good|bad)_.*\.yaml$')
 
 
 class TestLayoutValidator(testtools.TestCase):
+    def setUp(self):
+        self.skip("Disabled for early v3 development")
+
     def test_layouts(self):
         """Test layout file validation"""
         print

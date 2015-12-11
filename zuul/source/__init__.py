@@ -31,7 +31,6 @@ class BaseSource(object):
         self.source_config = source_config
         self.sched = sched
         self.connection = connection
-        self.projects = {}
 
     @abc.abstractmethod
     def getRefSha(self, project, ref):

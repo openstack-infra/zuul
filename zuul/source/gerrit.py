@@ -16,7 +16,7 @@ import logging
 import re
 import time
 from zuul import exceptions
-from zuul.model import Change, Ref, NullChange, Project
+from zuul.model import Change, Ref, NullChange
 from zuul.source import BaseSource
 
 
@@ -127,9 +127,7 @@ class GerritSource(BaseSource):
         pass
 
     def getProject(self, name):
-        if name not in self.projects:
-            self.projects[name] = Project(name)
-        return self.projects[name]
+        return self.connection.getProject(name)
 
     def getChange(self, event):
         if event.change_number:

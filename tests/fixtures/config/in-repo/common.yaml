@@ -1,6 +1,6 @@
 pipelines:
   - name: check
-    manager: IndependentPipelineManager
+    manager: independent
     source:
       gerrit
     trigger:
@@ -14,7 +14,7 @@ pipelines:
         verified: -1
 
   - name: tenant-one-gate
-    manager: DependentPipelineManager
+    manager: dependent
     success-message: Build succeeded (tenant-one-gate).
     source:
       gerrit

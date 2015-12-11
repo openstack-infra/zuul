@@ -67,8 +67,9 @@ def normalizeCategory(name):
 
 class Pipeline(object):
     """A top-level pipeline such as check, gate, post, etc."""
-    def __init__(self, name):
+    def __init__(self, name, layout):
         self.name = name
+        self.layout = layout
         self.description = None
         self.failure_message = None
         self.merge_failure_message = None
@@ -81,6 +82,7 @@ class Pipeline(object):
         self.queues = []
         self.precedence = PRECEDENCE_NORMAL
         self.source = None
+        self.triggers = []
         self.start_actions = []
         self.success_actions = []
         self.failure_actions = []
@@ -95,6 +97,16 @@ class Pipeline(object):
         self.window_increase_factor = None
         self.window_decrease_type = None
         self.window_decrease_factor = None
+
+    @property
+    def actions(self):
+        return (
+            self.start_actions +
+            self.success_actions +
+            self.failure_actions +
+            self.merge_failure_actions +
+            self.disabled_actions
+        )
 
     def __repr__(self):
         return '<Pipeline %s>' % self.name
@@ -136,11 +148,6 @@ class Pipeline(object):
 
     def _findJobsToRun(self, job_trees, item):
         torun = []
-        if item.item_ahead:
-            # Only run jobs if any 'hold' jobs on the change ahead
-            # have completed successfully.
-            if self.isHoldingFollowingChanges(item.item_ahead):
-                return []
         for tree in job_trees:
             job = tree.job
             result = None
@@ -163,7 +170,7 @@ class Pipeline(object):
     def findJobsToRun(self, item):
         if not item.live:
             return []
-        tree = self.getJobTree(item.change.project)
+        tree = item.job_tree
         if not tree:
             return []
         return self._findJobsToRun(tree.job_trees, item)
@@ -324,24 +331,15 @@ class ChangeQueue(object):
     def addProject(self, project):
         if project not in self.projects:
             self.projects.append(project)
-            self._jobs |= set(self.pipeline.getJobTree(project).getJobs())
 
             names = [x.name for x in self.projects]
             names.sort()
             self.generated_name = ', '.join(names)
-
-            for job in self._jobs:
-                if job.queue_name:
-                    if (self.assigned_name and
-                            job.queue_name != self.assigned_name):
-                        raise Exception("More than one name assigned to "
-                                        "change queue: %s != %s" %
-                                        (self.assigned_name, job.queue_name))
-                    self.assigned_name = job.queue_name
             self.name = self.assigned_name or self.generated_name
 
     def enqueueChange(self, change):
         item = QueueItem(self, change)
+        item.freezeJobTree()
         self.enqueueItem(item)
         item.enqueue_time = time.time()
         return item
@@ -431,51 +429,88 @@ class Project(object):
         return '<Project %s>' % (self.name)
 
 
+class Inheritable(object):
+    def __init__(self, parent=None):
+        self.parent = parent
+
+    def __getattribute__(self, name):
+        parent = object.__getattribute__(self, 'parent')
+        try:
+            return object.__getattribute__(self, name)
+        except AttributeError:
+            if parent:
+                return getattr(parent, name)
+            raise
+
+
 class Job(object):
+    attributes = dict(
+        timeout=None,
+        # variables={},
+        # nodes=[],
+        # auth={},
+        workspace=None,
+        pre_run=None,
+        post_run=None,
+        voting=None,
+        failure_message=None,
+        success_message=None,
+        failure_url=None,
+        success_url=None,
+        # Matchers.  These are separate so they can be individually
+        # overidden.
+        branch_matcher=None,
+        file_matcher=None,
+        irrelevant_file_matcher=None,  # skip-if
+        swift=None,  # TODOv3(jeblair): move to auth
+        parameter_function=None,  # TODOv3(jeblair): remove
+        success_pattern=None,  # TODOv3(jeblair): remove
+    )
+
     def __init__(self, name):
         self.name = name
-        self.queue_name = None
-        self.failure_message = None
-        self.success_message = None
-        self.failure_pattern = None
-        self.success_pattern = None
-        self.parameter_function = None
-        self.hold_following_changes = False
-        self.voting = True
-        self.branches = []
-        self._branches = []
-        self.files = []
-        self._files = []
-        self.skip_if_matcher = None
-        self.swift = {}
-        self.parent = None
+        for k, v in self.attributes.items():
+            setattr(self, k, v)
+
+    def __equals__(self, other):
+        # Compare the name and all inheritable attributes to determine
+        # whether two jobs with the same name are identically
+        # configured.  Useful upon reconfiguration.
+        if not isinstance(other, Job):
+            return False
+        if self.name != other.name:
+            return False
+        for k, v in self.attributes.items():
+            if getattr(self, k) != getattr(other, k):
+                return False
+        return True
 
     def __str__(self):
         return self.name
 
     def __repr__(self):
-        return '<Job %s>' % (self.name)
+        return '<Job %s>' % (self.name,)
+
+    def inheritFrom(self, other):
+        """Copy the inheritable attributes which have been set on the other
+        job to this job."""
+
+        if not isinstance(other, Job):
+            raise Exception("Job unable to inherit from %s" % (other,))
+        for k, v in self.attributes.items():
+            if getattr(other, k) != v:
+                setattr(self, k, getattr(other, k))
 
     def changeMatches(self, change):
-        matches_branch = False
-        for branch in self.branches:
-            if hasattr(change, 'branch') and branch.match(change.branch):
-                matches_branch = True
-            if hasattr(change, 'ref') and branch.match(change.ref):
-                matches_branch = True
-        if self.branches and not matches_branch:
+        if self.branch_matcher and not self.branch_matcher.matches(change):
             return False
 
-        matches_file = False
-        for f in self.files:
-            if hasattr(change, 'files'):
-                for cf in change.files:
-                    if f.match(cf):
-                        matches_file = True
-        if self.files and not matches_file:
+        if self.file_matcher and not self.file_matcher.matches(change):
             return False
 
-        if self.skip_if_matcher and self.skip_if_matcher.matches(change):
+        # NB: This is a negative match.
+        if (self.irrelevant_file_matcher and
+            self.irrelevant_file_matcher.matches(change)):
             return False
 
         return True
@@ -648,6 +683,7 @@ class QueueItem(object):
         self.reported = False
         self.active = False  # Whether an item is within an active window
         self.live = True  # Whether an item is intended to be processed at all
+        self.job_tree = None
 
     def __repr__(self):
         if self.pipeline:
@@ -674,6 +710,43 @@ class QueueItem(object):
 
     def setReportedResult(self, result):
         self.current_build_set.result = result
+
+    def _createJobTree(self, job_trees, parent):
+        for tree in job_trees:
+            job = tree.job
+            if not job.changeMatches(self.change):
+                continue
+            frozen_job = Job(job.name)
+            frozen_tree = JobTree(frozen_job)
+            inherited = set()
+            for variant in self.pipeline.layout.getJobs(job.name):
+                if variant.changeMatches(self.change):
+                    if variant not in inherited:
+                        frozen_job.inheritFrom(variant)
+                        inherited.add(variant)
+            if job not in inherited:
+                # Only update from the job in the tree if it is
+                # unique, otherwise we might unset an attribute we
+                # have overloaded.
+                frozen_job.inheritFrom(job)
+            parent.job_trees.append(frozen_tree)
+            self._createJobTree(tree.job_trees, frozen_tree)
+
+    def createJobTree(self):
+        project_tree = self.pipeline.getJobTree(self.change.project)
+        ret = JobTree(None)
+        self._createJobTree(project_tree.job_trees, ret)
+        return ret
+
+    def freezeJobTree(self):
+        """Find or create actual matching jobs for this item's change and
+        store the resulting job tree."""
+        self.job_tree = self.createJobTree()
+
+    def getJobs(self):
+        if not self.live or not self.job_tree:
+            return []
+        return self.job_tree.getJobs()
 
     def formatJSON(self):
         changeish = self.change
@@ -1287,14 +1360,30 @@ class Layout(object):
     def __init__(self):
         self.projects = {}
         self.pipelines = OrderedDict()
+        # This is a dictionary of name -> [jobs].  The first element
+        # of the list is the first job added with that name.  It is
+        # the reference definition for a given job.  Subsequent
+        # elements are aspects of that job with different matchers
+        # that override some attribute of the job.  These aspects all
+        # inherit from the reference definition.
         self.jobs = {}
 
     def getJob(self, name):
         if name in self.jobs:
-            return self.jobs[name]
-        job = Job(name)
-        self.jobs[name] = job
-        return job
+            return self.jobs[name][0]
+        return None
+
+    def getJobs(self, name):
+        return self.jobs.get(name, [])
+
+    def addJob(self, job):
+        if job.name in self.jobs:
+            self.jobs[job.name].append(job)
+        else:
+            self.jobs[job.name] = [job]
+
+    def addPipeline(self, pipeline):
+        self.pipelines[pipeline.name] = pipeline
 
 
 class Tenant(object):

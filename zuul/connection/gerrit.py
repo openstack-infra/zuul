@@ -25,7 +25,7 @@ import voluptuous as v
 import urllib2
 
 from zuul.connection import BaseConnection
-from zuul.model import TriggerEvent
+from zuul.model import TriggerEvent, Project
 
 
 class GerritEventConnector(threading.Thread):
@@ -221,7 +221,13 @@ class GerritConnection(BaseConnection):
                                                   'https://%s' % self.server)
 
         self._change_cache = {}
+        self.projects = {}
         self.gerrit_event_connector = None
+
+    def getProject(self, name):
+        if name not in self.projects:
+            self.projects[name] = Project(name)
+        return self.projects[name]
 
     def getCachedChange(self, key):
         if key in self._change_cache:

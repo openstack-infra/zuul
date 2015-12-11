@@ -26,13 +26,12 @@ logging.basicConfig(level=logging.DEBUG,
                     '%(levelname)-8s %(message)s')
 
 
-class TestV3(ZuulTestCase):
+class TestMultipleTenants(ZuulTestCase):
     # A temporary class to hold new tests while others are disabled
 
-    def test_multiple_tenants(self):
-        self.setup_config('config/multi-tenant/zuul.conf')
-        self.sched.reconfigure(self.config)
+    config_file = 'config/multi-tenant/zuul.conf'
 
+    def test_multiple_tenants(self):
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
@@ -64,9 +63,18 @@ class TestV3(ZuulTestCase):
         self.assertEqual(A.reported, 2, "Activity in tenant two should"
                          "not affect tenant one")
 
-    def test_in_repo_config(self):
+
+class TestInRepoConfig(ZuulTestCase):
+    # A temporary class to hold new tests while others are disabled
+
+    config_file = 'config/in-repo/zuul.conf'
+
+    def setup_repos(self):
         in_repo_conf = textwrap.dedent(
             """
+            jobs:
+              - name: project-test1
+
             projects:
               - name: org/project
                 tenant-one-gate:
@@ -76,9 +84,7 @@ class TestV3(ZuulTestCase):
         self.addCommitToRepo('org/project', 'add zuul conf',
                              {'.zuul.yaml': in_repo_conf})
 
-        self.setup_config('config/in-repo/zuul.conf')
-        self.sched.reconfigure(self.config)
-
+    def test_in_repo_config(self):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))

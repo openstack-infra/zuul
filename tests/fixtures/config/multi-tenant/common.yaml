@@ -1,6 +1,6 @@
 pipelines:
   - name: check
-    manager: IndependentPipelineManager
+    manager: independent
     source:
       gerrit
     trigger:

@@ -209,7 +209,7 @@ class Merger(object):
         self.username = username
 
     def _makeSSHWrappers(self, working_root, connections):
-        for connection_name, connection in connections.items():
+        for connection_name, connection in connections.connections.items():
             sshkey = connection.connection_config.get('sshkey')
             if sshkey:
                 self._makeSSHWrapper(sshkey, working_root, connection_name)

@@ -1,6 +1,6 @@
 pipelines:
   - name: tenant-two-gate
-    manager: DependentPipelineManager
+    manager: dependent
     success-message: Build succeeded (tenant-two-gate).
     source:
       gerrit
@@ -20,6 +20,10 @@ pipelines:
       gerrit:
         verified: 0
     precedence: high
+
+jobs:
+  - name:
+      project2-test1
 
 projects:
   - name: org/project2
