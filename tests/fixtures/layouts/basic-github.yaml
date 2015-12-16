@@ -8,6 +8,7 @@
             - opened
             - changed
             - reopened
+          branch: '^master$'
         - event: pull_request
           action: comment
           comment: 'test me'

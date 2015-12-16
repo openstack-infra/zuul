@@ -54,6 +54,16 @@ class TestGithubDriver(ZuulTestCase):
         self.assertEqual(A.number, zuulvars['change'])
         self.assertEqual(A.head_sha, zuulvars['patchset'])
         self.assertEqual(1, len(A.comments))
+        self.assertEqual(2, len(self.history))
+
+        # test_pull_unmatched_branch_event(self):
+        self.create_branch('org/project', 'unmatched_branch')
+        B = self.fake_github.openFakePullRequest(
+            'org/project', 'unmatched_branch', 'B')
+        self.fake_github.emitEvent(B.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+
+        self.assertEqual(2, len(self.history))
 
     @simple_layout('layouts/basic-github.yaml', driver='github')
     def test_comment_event(self):
@@ -113,6 +123,18 @@ class TestGithubDriver(ZuulTestCase):
 
         self.assertEqual('SUCCESS',
                          self.getJobFromHistory('project-post').result)
+        self.assertEqual(1, len(self.history))
+
+        # test unmatched push event
+        old_sha = random_sha1()
+        new_sha = random_sha1()
+        self.fake_github.emitEvent(
+            self.fake_github.getPushEvent('org/project',
+                                          'refs/heads/unmatched_branch',
+                                          old_sha, new_sha))
+        self.waitUntilSettled()
+
+        self.assertEqual(1, len(self.history))
 
     @simple_layout('layouts/labeling-github.yaml', driver='github')
     def test_labels(self):
