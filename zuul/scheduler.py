@@ -1535,13 +1535,23 @@ class BasePipelineManager(object):
 
     def updateBuildDescriptions(self, build_set):
         for build in build_set.getBuilds():
-            desc = self.formatDescription(build)
-            self.sched.launcher.setBuildDescription(build, desc)
+            try:
+                desc = self.formatDescription(build)
+                self.sched.launcher.setBuildDescription(build, desc)
+            except:
+                # Log the failure and let loop continue
+                self.log.error("Failed to update description for build %s" %
+                               (build))
 
         if build_set.previous_build_set:
             for build in build_set.previous_build_set.getBuilds():
-                desc = self.formatDescription(build)
-                self.sched.launcher.setBuildDescription(build, desc)
+                try:
+                    desc = self.formatDescription(build)
+                    self.sched.launcher.setBuildDescription(build, desc)
+                except:
+                    # Log the failure and let loop continue
+                    self.log.error("Failed to update description for "
+                                   "build %s in previous build set" % (build))
 
     def onBuildStarted(self, build):
         self.log.debug("Build %s started" % build)
