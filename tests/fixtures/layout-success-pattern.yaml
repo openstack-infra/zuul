@@ -1,0 +1,21 @@
+pipelines:
+  - name: check
+    manager: IndependentPipelineManager
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      smtp:
+        to: me@example.org
+
+jobs:
+  - name: docs-draft-test
+    success-pattern: http://docs-draft.example.org/{build.parameters[LOG_PATH]}/publish-docs/
+  - name: docs-draft-test2
+    success-pattern: http://docs-draft.example.org/{NOPE}/{build.parameters[BAD]}/publish-docs/
+
+projects:
+  - name: org/docs
+    check:
+      - docs-draft-test:
+        - docs-draft-test2

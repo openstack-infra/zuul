@@ -13,6 +13,7 @@
 # under the License.
 
 import abc
+import logging
 
 import six
 
@@ -23,6 +24,8 @@ class BaseReporter(object):
 
     Defines the exact public methods that must be supplied.
     """
+
+    log = logging.getLogger("zuul.reporter.BaseReporter")
 
     def __init__(self, reporter_config={}, sched=None, connection=None):
         self.reporter_config = reporter_config
