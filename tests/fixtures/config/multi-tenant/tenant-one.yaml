@@ -28,6 +28,8 @@ jobs:
 projects:
   - name: org/project1
     check:
-      - project1-test1
+      jobs:
+        - project1-test1
     tenant-one-gate:
-      - project1-test1
+      jobs:
+        - project1-test1

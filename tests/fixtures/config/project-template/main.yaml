@@ -1,0 +1,4 @@
+tenants:
+  - name: tenant-one
+    include:
+      - common.yaml

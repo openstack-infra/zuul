@@ -150,6 +150,107 @@ class JobParser(object):
         return job
 
 
+class ProjectTemplateParser(object):
+    log = logging.getLogger("zuul.ProjectTemplateParser")
+
+    @staticmethod
+    def getSchema(layout):
+        project_template = {vs.Required('name'): str}
+        for p in layout.pipelines.values():
+            project_template[p.name] = {'queue': str,
+                                        'jobs': [vs.Any(str, dict)]}
+        return vs.Schema(project_template)
+
+    @staticmethod
+    def fromYaml(layout, conf):
+        ProjectTemplateParser.getSchema(layout)(conf)
+        project_template = model.ProjectConfig(conf['name'])
+        for pipeline in layout.pipelines.values():
+            conf_pipeline = conf.get(pipeline.name)
+            if not conf_pipeline:
+                continue
+            project_pipeline = model.ProjectPipelineConfig()
+            project_template.pipelines[pipeline.name] = project_pipeline
+            project_pipeline.queue_name = conf.get('queue')
+            project_pipeline.job_tree = ProjectTemplateParser._parseJobTree(
+                layout, conf_pipeline.get('jobs'))
+        return project_template
+
+    @staticmethod
+    def _parseJobTree(layout, conf, tree=None):
+        if not tree:
+            tree = model.JobTree(None)
+        for conf_job in conf:
+            if isinstance(conf_job, basestring):
+                tree.addJob(layout.getJob(conf_job))
+            elif isinstance(conf_job, dict):
+                # A dictionary in a job tree may override params, or
+                # be the root of a sub job tree, or both.
+                jobname, attrs = dict.items()[0]
+                jobs = attrs.pop('jobs')
+                if attrs:
+                    # We are overriding params, so make a new job def
+                    attrs['name'] = jobname
+                    subtree = tree.addJob(JobParser.fromYaml(layout, attrs))
+                else:
+                    # Not overriding, so get existing job
+                    subtree = tree.addJob(layout.getJob(jobname))
+
+                if jobs:
+                    # This is the root of a sub tree
+                    ProjectTemplateParser._parseJobTree(layout, jobs, subtree)
+            else:
+                raise Exception("Job must be a string or dictionary")
+        return tree
+
+
+class ProjectParser(object):
+    log = logging.getLogger("zuul.ProjectParser")
+
+    @staticmethod
+    def getSchema(layout):
+        project = {vs.Required('name'): str,
+                   'templates': [str]}
+        for p in layout.pipelines.values():
+            project[p.name] = {'queue': str,
+                               'jobs': [vs.Any(str, dict)]}
+        return vs.Schema(project)
+
+    @staticmethod
+    def fromYaml(layout, conf):
+        ProjectParser.getSchema(layout)(conf)
+        conf_templates = conf.pop('templates', [])
+        # The way we construct a project definition is by parsing the
+        # definition as a template, then applying all of the
+        # templates, including the newly parsed one, in order.
+        project_template = ProjectTemplateParser.fromYaml(layout, conf)
+        configs = [layout.project_templates[name] for name in conf_templates]
+        configs.append(project_template)
+        project = model.ProjectConfig(conf['name'])
+        for pipeline in layout.pipelines.values():
+            project_pipeline = model.ProjectPipelineConfig()
+            project_pipeline.job_tree = model.JobTree(None)
+            queue_name = None
+            # For every template, iterate over the job tree and replace or
+            # create the jobs in the final definition as needed.
+            pipeline_defined = False
+            for template in configs:
+                ProjectParser.log.debug("Applying template %s to pipeline %s" %
+                                        (template.name, pipeline.name))
+                if pipeline.name in template.pipelines:
+                    pipeline_defined = True
+                    template_pipeline = template.pipelines[pipeline.name]
+                    project_pipeline.job_tree.inheritFrom(
+                        template_pipeline.job_tree)
+                    if template_pipeline.queue_name:
+                        queue_name = template_pipeline.queue_name
+            if queue_name:
+                project_pipeline.queue_name = queue_name
+            if pipeline_defined:
+                project.pipelines[pipeline.name] = project_pipeline
+        return project
+
+
 class AbideValidator(object):
     tenant_source = vs.Schema({'repos': [str]})
 
@@ -229,7 +330,6 @@ class ConfigLoader(object):
 
     def _parseLayout(self, base, data, scheduler, connections):
         layout = model.Layout()
-        project_templates = {}
 
         # TODOv3(jeblair): add validation
         # validator = layoutvalidator.LayoutValidator()
@@ -329,63 +429,16 @@ class ConfigLoader(object):
                 manager.event_filters += trigger.getEventFilters(
                     conf_pipeline['trigger'][trigger_name])
 
-        for project_template in data.get('project-templates', []):
-            # Make sure the template only contains valid pipelines
-            tpl = dict(
-                (pipe_name, project_template.get(pipe_name))
-                for pipe_name in layout.pipelines.keys()
-                if pipe_name in project_template
-            )
-            project_templates[project_template.get('name')] = tpl
-
         for config_job in data.get('jobs', []):
             layout.addJob(JobParser.fromYaml(layout, config_job))
 
-        def add_jobs(job_tree, config_jobs):
-            for job in config_jobs:
-                if isinstance(job, list):
-                    for x in job:
-                        add_jobs(job_tree, x)
-                if isinstance(job, dict):
-                    for parent, children in job.items():
-                        parent_tree = job_tree.addJob(layout.getJob(parent))
-                        add_jobs(parent_tree, children)
-                if isinstance(job, str):
-                    job_tree.addJob(layout.getJob(job))
+        for config_template in data.get('project-templates', []):
+            layout.addProjectTemplate(ProjectTemplateParser.fromYaml(
+                layout, config_template))
 
         for config_project in data.get('projects', []):
-            shortname = config_project['name'].split('/')[-1]
-
-            # This is reversed due to the prepend operation below, so
-            # the ultimate order is templates (in order) followed by
-            # statically defined jobs.
-            for requested_template in reversed(
-                config_project.get('template', [])):
-                # Fetch the template from 'project-templates'
-                tpl = project_templates.get(
-                    requested_template.get('name'))
-                # Expand it with the project context
-                requested_template['name'] = shortname
-                expanded = deep_format(tpl, requested_template)
-                # Finally merge the expansion with whatever has been
-                # already defined for this project.  Prepend our new
-                # jobs to existing ones (which may have been
-                # statically defined or defined by other templates).
-                for pipeline in layout.pipelines.values():
-                    if pipeline.name in expanded:
-                        config_project.update(
-                            {pipeline.name: expanded[pipeline.name] +
-                             config_project.get(pipeline.name, [])})
-
-            mode = config_project.get('merge-mode', 'merge-resolve')
-            for pipeline in layout.pipelines.values():
-                if pipeline.name in config_project:
-                    project = pipeline.source.getProject(
-                        config_project['name'])
-                    project.merge_mode = model.MERGER_MAP[mode]
-                    job_tree = pipeline.addProject(project)
-                    config_jobs = config_project[pipeline.name]
-                    add_jobs(job_tree, config_jobs)
+            layout.addProjectConfig(ProjectParser.fromYaml(
+                layout, config_project))
 
         for pipeline in layout.pipelines.values():
             pipeline.manager._postConfig(layout)
@@ -419,31 +472,3 @@ class ConfigLoader(object):
         # TODOv3(jeblair): this should implement some rules to protect
         # aspects of the config that should not be changed in-repo
         return yaml.load(data)
-
-    def _parseSkipIf(self, config_job):
-        cm = change_matcher
-        skip_matchers = []
-
-        for config_skip in config_job.get('skip-if', []):
-            nested_matchers = []
-
-            project_regex = config_skip.get('project')
-            if project_regex:
-                nested_matchers.append(cm.ProjectMatcher(project_regex))
-
-            branch_regex = config_skip.get('branch')
-            if branch_regex:
-                nested_matchers.append(cm.BranchMatcher(branch_regex))
-
-            file_regexes = to_list(config_skip.get('all-files-match-any'))
-            if file_regexes:
-                file_matchers = [cm.FileMatcher(x) for x in file_regexes]
-                all_files_matcher = cm.MatchAllFiles(file_matchers)
-                nested_matchers.append(all_files_matcher)
-
-            # All patterns need to match a given skip-if predicate
-            skip_matchers.append(cm.MatchAll(nested_matchers))
-
-        if skip_matchers:
-            # Any skip-if predicate can be matched to trigger a skip
-            return cm.MatchAny(skip_matchers)

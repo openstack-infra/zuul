@@ -1,0 +1,56 @@
+pipelines:
+  - name: check
+    manager: independent
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+  - name: gate
+    manager: dependent
+    success-message: Build succeeded (gate).
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - approved: 1
+    success:
+      gerrit:
+        verified: 2
+        submit: true
+    failure:
+      gerrit:
+        verified: -2
+    start:
+      gerrit:
+        verified: 0
+    precedence: high
+
+jobs:
+  - name:
+      project-test1
+  - name:
+      project-test2
+
+project-templates:
+  - name: test-template
+    gate:
+      jobs:
+        - project-test2
+
+projects:
+  - name: org/project
+    templates:
+      - test-template
+    gate:
+      jobs:
+        - project-test1

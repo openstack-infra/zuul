@@ -550,6 +550,17 @@ class JobTree(object):
                 return ret
         return None
 
+    def inheritFrom(self, other):
+        if other.job:
+            self.job = Job(other.job.name)
+            self.job.inheritFrom(other.job)
+        for other_tree in other.job_trees:
+            this_tree = self.getJobTreeForJob(other_tree.job)
+            if not this_tree:
+                this_tree = JobTree(None)
+                self.job_trees.append(this_tree)
+            this_tree.inheritFrom(other_tree)
+
 
 class Build(object):
     def __init__(self, job, uuid):
@@ -1356,9 +1367,26 @@ class ChangeishFilter(BaseFilter):
         return True
 
 
+class ProjectPipelineConfig(object):
+    # Represents a project cofiguration in the context of a pipeline
+    def __init__(self):
+        self.job_tree = None
+        self.queue_name = None
+        # TODOv3(jeblair): add merge mode
+
+
+class ProjectConfig(object):
+    # Represents a project cofiguration
+    def __init__(self, name):
+        self.name = name
+        self.pipelines = {}
+
+
 class Layout(object):
     def __init__(self):
         self.projects = {}
+        self.project_configs = {}
+        self.project_templates = {}
         self.pipelines = OrderedDict()
         # This is a dictionary of name -> [jobs].  The first element
         # of the list is the first job added with that name.  It is
@@ -1371,7 +1399,7 @@ class Layout(object):
     def getJob(self, name):
         if name in self.jobs:
             return self.jobs[name][0]
-        return None
+        raise Exception("Job %s not defined" % (name,))
 
     def getJobs(self, name):
         return self.jobs.get(name, [])
@@ -1384,6 +1412,18 @@ class Layout(object):
 
     def addPipeline(self, pipeline):
         self.pipelines[pipeline.name] = pipeline
+
+    def addProjectTemplate(self, project_template):
+        self.project_templates[project_template.name] = project_template
+
+    def addProjectConfig(self, project_config):
+        self.project_configs[project_config.name] = project_config
+        # TODOv3(jeblair): tidy up the relationship between pipelines
+        # and projects and projectconfigs
+        for pipeline_name, pipeline_config in project_config.pipelines.items():
+            pipeline = self.pipelines[pipeline_name]
+            project = pipeline.source.getProject(project_config.name)
+            pipeline.job_trees[project] = pipeline_config.job_tree
 
 
 class Tenant(object):
