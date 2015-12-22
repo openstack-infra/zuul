@@ -1058,6 +1058,8 @@ class ZuulTestCase(BaseTestCase):
         """Per test config object. Override to set different config."""
         self.config = ConfigParser.ConfigParser()
         self.config.read(os.path.join(FIXTURE_DIR, self.config_file))
+        if hasattr(self, 'tenant_config_file'):
+            self.config.set('zuul', 'tenant_config', self.tenant_config_file)
 
     def setup_repos(self):
         """Subclasses can override to manipulate repos before tests"""

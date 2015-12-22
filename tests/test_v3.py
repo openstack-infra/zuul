@@ -29,7 +29,7 @@ logging.basicConfig(level=logging.DEBUG,
 class TestMultipleTenants(ZuulTestCase):
     # A temporary class to hold new tests while others are disabled
 
-    config_file = 'config/multi-tenant/zuul.conf'
+    tenant_config_file = 'config/multi-tenant/main.yaml'
 
     def test_multiple_tenants(self):
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -67,7 +67,7 @@ class TestMultipleTenants(ZuulTestCase):
 class TestInRepoConfig(ZuulTestCase):
     # A temporary class to hold new tests while others are disabled
 
-    config_file = 'config/in-repo/zuul.conf'
+    tenant_config_file = 'config/in-repo/main.yaml'
 
     def setup_repos(self):
         in_repo_conf = textwrap.dedent(
@@ -100,7 +100,7 @@ class TestInRepoConfig(ZuulTestCase):
 
 
 class TestProjectTemplate(ZuulTestCase):
-    config_file = 'config/project-template/zuul.conf'
+    tenant_config_file = 'config/project-template/main.yaml'
 
     def test(self):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
