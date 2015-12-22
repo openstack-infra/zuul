@@ -1,5 +1,5 @@
-pipelines:
-  - name: check
+- pipeline:
+    name: check
     manager: independent
     source:
       gerrit
@@ -13,7 +13,8 @@ pipelines:
       gerrit:
         verified: -1
 
-  - name: tenant-one-gate
+- pipeline:
+    name: tenant-one-gate
     manager: dependent
     success-message: Build succeeded (tenant-one-gate).
     source:

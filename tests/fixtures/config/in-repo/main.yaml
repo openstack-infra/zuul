@@ -1,5 +1,5 @@
-tenants:
-  - name: tenant-one
+- tenant:
+    name: tenant-one
     include:
       - common.yaml
     source:

@@ -1,9 +1,11 @@
-tenants:
-  - name: tenant-one
+- tenant:
+    name: tenant-one
     include:
       - common.yaml
       - tenant-one.yaml
-  - name: tenant-two
+
+- tenant:
+    name: tenant-two
     include:
       - common.yaml
       - tenant-two.yaml

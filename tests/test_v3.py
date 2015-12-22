@@ -72,11 +72,11 @@ class TestInRepoConfig(ZuulTestCase):
     def setup_repos(self):
         in_repo_conf = textwrap.dedent(
             """
-            jobs:
-              - name: project-test1
+            - job:
+                name: project-test1
 
-            projects:
-              - name: org/project
+            - project:
+                name: org/project
                 tenant-one-gate:
                   jobs:
                     - project-test1

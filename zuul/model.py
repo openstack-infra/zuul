@@ -1382,6 +1382,84 @@ class ProjectConfig(object):
         self.pipelines = {}
 
 
+class UnparsedAbideConfig(object):
+    # A collection of yaml lists that has not yet been parsed into
+    # objects.
+    def __init__(self):
+        self.tenants = []
+
+    def extend(self, conf):
+        if isinstance(conf, UnparsedAbideConfig):
+            self.tenants.extend(conf.tenants)
+            return
+
+        if not isinstance(conf, list):
+            raise Exception("Configuration items must be in the form of "
+                            "a list of dictionaries (when parsing %s)" %
+                            (conf,))
+        for item in conf:
+            if not isinstance(item, dict):
+                raise Exception("Configuration items must be in the form of "
+                                "a list of dictionaries (when parsing %s)" %
+                                (conf,))
+            if len(item.keys()) > 1:
+                raise Exception("Configuration item dictionaries must have "
+                                "a single key (when parsing %s)" %
+                                (conf,))
+            key, value = item.items()[0]
+            if key == 'tenant':
+                self.tenants.append(value)
+            else:
+                raise Exception("Configuration item not recognized "
+                                "(when parsing %s)" %
+                                (conf,))
+
+
+class UnparsedTenantConfig(object):
+    # A collection of yaml lists that has not yet been parsed into
+    # objects.
+    def __init__(self):
+        self.pipelines = []
+        self.jobs = []
+        self.project_templates = []
+        self.projects = []
+
+    def extend(self, conf):
+        if isinstance(conf, UnparsedTenantConfig):
+            self.pipelines.extend(conf.pipelines)
+            self.jobs.extend(conf.jobs)
+            self.project_templates.extend(conf.project_templates)
+            self.projects.extend(conf.projects)
+            return
+
+        if not isinstance(conf, list):
+            raise Exception("Configuration items must be in the form of "
+                            "a list of dictionaries (when parsing %s)" %
+                            (conf,))
+        for item in conf:
+            if not isinstance(item, dict):
+                raise Exception("Configuration items must be in the form of "
+                                "a list of dictionaries (when parsing %s)" %
+                                (conf,))
+            if len(item.keys()) > 1:
+                raise Exception("Configuration item dictionaries must have "
+                                "a single key (when parsing %s)" %
+                                (conf,))
+            key, value = item.items()[0]
+            if key == 'project':
+                self.projects.append(value)
+            elif key == 'job':
+                self.jobs.append(value)
+            elif key == 'project-template':
+                self.project_templates.append(value)
+            elif key == 'pipeline':
+                self.pipelines.append(value)
+            else:
+                raise Exception("Configuration item not recognized "
+                                "(when parsing %s)" %
+                                (conf,))
+
+
 class Layout(object):
     def __init__(self):
         self.projects = {}

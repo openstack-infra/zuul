@@ -37,51 +37,6 @@ def as_list(item):
     return [item]
 
 
-def extend_dict(a, b):
-    """Extend dictionary a (which will be modified in place) with the
-       contents of b.  This is designed for Zuul yaml files which are
-       typically dictionaries of lists of dictionaries, e.g.,
-       {'pipelines': ['name': 'gate']}.  If two such dictionaries each
-       define a pipeline, the result will be a single dictionary with
-       a pipelines entry whose value is a two-element list."""
-
-    for k, v in b.items():
-        if k not in a:
-            a[k] = v
-        elif isinstance(v, dict) and isinstance(a[k], dict):
-            extend_dict(a[k], v)
-        elif isinstance(v, list) and isinstance(a[k], list):
-            a[k] += v
-        elif isinstance(v, list):
-            a[k] = [a[k]] + v
-        elif isinstance(a[k], list):
-            a[k] += [v]
-        else:
-            raise Exception("Unhandled case in extend_dict at %s" % (k,))
-
-
-def deep_format(obj, paramdict):
-    """Apply the paramdict via str.format() to all string objects found within
-       the supplied obj. Lists and dicts are traversed recursively.
-
-       Borrowed from Jenkins Job Builder project"""
-    if isinstance(obj, str):
-        ret = obj.format(**paramdict)
-    elif isinstance(obj, list):
-        ret = []
-        for item in obj:
-            ret.append(deep_format(item, paramdict))
-    elif isinstance(obj, dict):
-        ret = {}
-        for item in obj:
-            exp_item = item.format(**paramdict)
-
-            ret[exp_item] = deep_format(obj[item], paramdict)
-    else:
-        ret = obj
-    return ret
-
-
 class JobParser(object):
     @staticmethod
     def getSchema():
@@ -445,34 +400,109 @@ class PipelineParser(object):
         return pipeline
 
 
-class AbideValidator(object):
+class TenantParser(object):
+    log = logging.getLogger("zuul.TenantParser")
+
     tenant_source = vs.Schema({'repos': [str]})
 
-    def validateTenantSources(self, connections):
+    @staticmethod
+    def validateTenantSources(connections):
         def v(value, path=[]):
             if isinstance(value, dict):
                 for k, val in value.items():
                     connections.getSource(k)
-                    self.validateTenantSource(val, path + [k])
+                    TenantParser.validateTenantSource(val, path + [k])
             else:
                 raise vs.Invalid("Invalid tenant source", path)
         return v
 
-    def validateTenantSource(self, value, path=[]):
-        self.tenant_source(value)
+    @staticmethod
+    def validateTenantSource(value, path=[]):
+        TenantParser.tenant_source(value)
 
-    def getSchema(self, connections=None):
+    @staticmethod
+    def getSchema(connections=None):
         tenant = {vs.Required('name'): str,
                   'include': to_list(str),
-                  'source': self.validateTenantSources(connections)}
+                  'source': TenantParser.validateTenantSources(connections)}
+        return vs.Schema(tenant)
 
-        schema = vs.Schema({'tenants': [tenant]})
+    @staticmethod
+    def fromYaml(base, connections, scheduler, merger, conf):
+        TenantParser.getSchema(connections)(conf)
+        tenant = model.Tenant(conf['name'])
+        tenant_config = model.UnparsedTenantConfig()
+        for fn in conf.get('include', []):
+            if not os.path.isabs(fn):
+                fn = os.path.join(base, fn)
+            fn = os.path.expanduser(fn)
+            with open(fn) as config_file:
+                TenantParser.log.info("Loading configuration from %s" % (fn,))
+                incdata = yaml.load(config_file)
+                tenant_config.extend(incdata)
+        incdata = TenantParser._loadTenantInRepoLayouts(merger, connections,
+                                                        conf)
+        tenant_config.extend(incdata)
+        tenant.layout = TenantParser._parseLayout(base, tenant_config,
+                                                  scheduler, connections)
+        return tenant
 
-        return schema
+    @staticmethod
+    def _loadTenantInRepoLayouts(merger, connections, conf_tenant):
+        config = model.UnparsedTenantConfig()
+        jobs = []
+        for source_name, conf_source in conf_tenant.get('source', {}).items():
+            source = connections.getSource(source_name)
+            for conf_repo in conf_source.get('repos'):
+                project = source.getProject(conf_repo)
+                url = source.getGitUrl(project)
+                # TODOv3(jeblair): config should be branch specific
+                job = merger.getFiles(project.name, url, 'master',
+                                      files=['.zuul.yaml'])
+                job.project = project
+                jobs.append(job)
+        for job in jobs:
+            TenantParser.log.debug("Waiting for cat job %s" % (job,))
+            job.wait()
+            if job.files.get('.zuul.yaml'):
+                TenantParser.log.info(
+                    "Loading configuration from %s/.zuul.yaml" %
+                    (job.project,))
+                incdata = TenantParser._parseInRepoLayout(
+                    job.files['.zuul.yaml'])
+                config.extend(incdata)
+        return config
 
-    def validate(self, data, connections=None):
-        schema = self.getSchema(connections)
-        schema(data)
+    @staticmethod
+    def _parseInRepoLayout(data):
+        # TODOv3(jeblair): this should implement some rules to protect
+        # aspects of the config that should not be changed in-repo
+        return yaml.load(data)
+
+    @staticmethod
+    def _parseLayout(base, data, scheduler, connections):
+        layout = model.Layout()
+
+        for config_pipeline in data.pipelines:
+            layout.addPipeline(PipelineParser.fromYaml(layout, connections,
+                                                       scheduler,
+                                                       config_pipeline))
+
+        for config_job in data.jobs:
+            layout.addJob(JobParser.fromYaml(layout, config_job))
+
+        for config_template in data.project_templates:
+            layout.addProjectTemplate(ProjectTemplateParser.fromYaml(
+                layout, config_template))
+
+        for config_project in data.projects:
+            layout.addProjectConfig(ProjectParser.fromYaml(
+                layout, config_project))
+
+        for pipeline in layout.pipelines.values():
+            pipeline.manager._postConfig(layout)
+
+        return layout
 
 
 class ConfigLoader(object):
@@ -489,78 +519,12 @@ class ConfigLoader(object):
         with open(config_path) as config_file:
             self.log.info("Loading configuration from %s" % (config_path,))
             data = yaml.load(config_file)
+        config = model.UnparsedAbideConfig()
+        config.extend(data)
         base = os.path.dirname(os.path.realpath(config_path))
 
-        validator = AbideValidator()
-        validator.validate(data, connections)
-
-        for conf_tenant in data['tenants']:
-            tenant = model.Tenant(conf_tenant['name'])
+        for conf_tenant in config.tenants:
+            tenant = TenantParser.fromYaml(base, connections, scheduler,
+                                           merger, conf_tenant)
             abide.tenants[tenant.name] = tenant
-            tenant_config = {}
-            for fn in conf_tenant.get('include', []):
-                if not os.path.isabs(fn):
-                    fn = os.path.join(base, fn)
-                fn = os.path.expanduser(fn)
-                with open(fn) as config_file:
-                    self.log.info("Loading configuration from %s" % (fn,))
-                    incdata = yaml.load(config_file)
-                    extend_dict(tenant_config, incdata)
-            incdata = self._loadTenantInRepoLayouts(merger, connections,
-                                                    conf_tenant)
-            extend_dict(tenant_config, incdata)
-            tenant.layout = self._parseLayout(base, tenant_config,
-                                              scheduler, connections)
         return abide
-
-    def _parseLayout(self, base, data, scheduler, connections):
-        layout = model.Layout()
-
-        for config_pipeline in data.get('pipelines', []):
-            layout.addPipeline(PipelineParser.fromYaml(layout, connections,
-                                                       scheduler,
-                                                       config_pipeline))
-
-        for config_job in data.get('jobs', []):
-            layout.addJob(JobParser.fromYaml(layout, config_job))
-
-        for config_template in data.get('project-templates', []):
-            layout.addProjectTemplate(ProjectTemplateParser.fromYaml(
-                layout, config_template))
-
-        for config_project in data.get('projects', []):
-            layout.addProjectConfig(ProjectParser.fromYaml(
-                layout, config_project))
-
-        for pipeline in layout.pipelines.values():
-            pipeline.manager._postConfig(layout)
-
-        return layout
-
-    def _loadTenantInRepoLayouts(self, merger, connections, conf_tenant):
-        config = {}
-        jobs = []
-        for source_name, conf_source in conf_tenant.get('source', {}).items():
-            source = connections.getSource(source_name)
-            for conf_repo in conf_source.get('repos'):
-                project = source.getProject(conf_repo)
-                url = source.getGitUrl(project)
-                # TODOv3(jeblair): config should be branch specific
-                job = merger.getFiles(project.name, url, 'master',
-                                      files=['.zuul.yaml'])
-                job.project = project
-                jobs.append(job)
-        for job in jobs:
-            self.log.debug("Waiting for cat job %s" % (job,))
-            job.wait()
-            if job.files.get('.zuul.yaml'):
-                self.log.info("Loading configuration from %s/.zuul.yaml" %
-                              (job.project,))
-                incdata = self._parseInRepoLayout(job.files['.zuul.yaml'])
-                extend_dict(config, incdata)
-        return config
-
-    def _parseInRepoLayout(self, data):
-        # TODOv3(jeblair): this should implement some rules to protect
-        # aspects of the config that should not be changed in-repo
-        return yaml.load(data)

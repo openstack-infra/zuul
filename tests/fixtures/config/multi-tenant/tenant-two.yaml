@@ -1,5 +1,5 @@
-pipelines:
-  - name: tenant-two-gate
+- pipeline:
+    name: tenant-two-gate
     manager: dependent
     success-message: Build succeeded (tenant-two-gate).
     source:
@@ -21,12 +21,12 @@ pipelines:
         verified: 0
     precedence: high
 
-jobs:
-  - name:
+- job:
+    name:
       project2-test1
 
-projects:
-  - name: org/project2
+- project:
+    name: org/project2
     check:
       jobs:
         - project2-test1
