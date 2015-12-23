@@ -962,7 +962,8 @@ class ZuulTestCase(BaseTestCase):
         self.sched.setLauncher(self.launcher)
         self.sched.setMerger(self.merge_client)
 
-        self.webapp = zuul.webapp.WebApp(self.sched, port=0)
+        self.webapp = zuul.webapp.WebApp(
+            self.sched, port=0, listen_address='127.0.0.1')
         self.rpc = zuul.rpclistener.RPCListener(self.config, self.sched)
 
         self.sched.start()

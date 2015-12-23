@@ -174,7 +174,20 @@ class Server(zuul.cmd.ZuulApp):
             cache_expiry = self.config.getint('zuul', 'status_expiry')
         else:
             cache_expiry = 1
-        webapp = zuul.webapp.WebApp(self.sched, cache_expiry=cache_expiry)
+
+        if self.config.has_option('webapp', 'listen_address'):
+            listen_address = self.config.get('webapp', 'listen_address')
+        else:
+            listen_address = '0.0.0.0'
+
+        if self.config.has_option('webapp', 'port'):
+            port = self.config.getint('webapp', 'port')
+        else:
+            port = 8001
+
+        webapp = zuul.webapp.WebApp(
+            self.sched, port=port, cache_expiry=cache_expiry,
+            listen_address=listen_address)
         rpc = zuul.rpclistener.RPCListener(self.config, self.sched)
 
         self.configure_connections()
