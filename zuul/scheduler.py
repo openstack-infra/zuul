@@ -507,8 +507,6 @@ class Scheduler(threading.Thread):
     def _areAllBuildsComplete(self):
         self.log.debug("Checking if all builds are complete")
         waiting = False
-        if self.merger.areMergesOutstanding():
-            waiting = True
         for pipeline in self.layout.pipelines.values():
             for item in pipeline.getAllItems():
                 for build in item.current_build_set.getBuilds():

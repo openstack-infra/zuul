@@ -25,6 +25,35 @@ import zuul.model
 from zuul.model import Build
 
 
+def make_merger_item(item):
+    # Create a dictionary with all info about the item needed by
+    # the merger.
+    number = None
+    patchset = None
+    oldrev = None
+    newrev = None
+    if hasattr(item.change, 'number'):
+        number = item.change.number
+        patchset = item.change.patchset
+    elif hasattr(item.change, 'newrev'):
+        oldrev = item.change.oldrev
+        newrev = item.change.newrev
+    connection_name = item.pipeline.source.connection.connection_name
+    return dict(project=item.change.project.name,
+                url=item.pipeline.source.getGitUrl(
+                    item.change.project),
+                connection_name=connection_name,
+                merge_mode=item.change.project.merge_mode,
+                refspec=item.change.refspec,
+                branch=item.change.branch,
+                ref=item.current_build_set.ref,
+                number=number,
+                patchset=patchset,
+                oldrev=oldrev,
+                newrev=newrev,
+                )
+
+
 class GearmanCleanup(threading.Thread):
     """ A thread that checks to see if outstanding builds have
     completed without reporting back. """
@@ -304,7 +333,7 @@ class Gearman(object):
             params['ZUUL_REF'] = item.change.ref
             params['ZUUL_COMMIT'] = item.change.newrev
 
-        # The destination_path is a unqiue path for this build request
+        # The destination_path is a unique path for this build request
         # and generally where the logs are expected to be placed
         destination_path = os.path.join(item.change.getBasePath(),
                                         pipeline.name, job.name, uuid[:7])
@@ -335,10 +364,21 @@ class Gearman(object):
         # ZUUL_OLDREV
         # ZUUL_NEWREV
 
-        if 'ZUUL_NODE' in params:
-            name = "build:%s:%s" % (job.name, params['ZUUL_NODE'])
-        else:
-            name = "build:%s" % job.name
+        all_items = dependent_items + [item]
+        merger_items = map(make_merger_item, all_items)
+
+        params['job'] = job.name
+        params['items'] = merger_items
+        params['projects'] = []
+        projects = set()
+        for item in all_items:
+            if item.change.project not in projects:
+                params['projects'].append(
+                    dict(name=item.change.project.name,
+                         url=item.pipeline.source.getGitUrl(
+                             item.change.project)))
+                projects.add(item.change.project)
+
         build = Build(job, uuid)
         build.parameters = params
 
@@ -346,7 +386,7 @@ class Gearman(object):
             self.sched.onBuildCompleted(build, 'SUCCESS')
             return build
 
-        gearman_job = gear.Job(name, json.dumps(params),
+        gearman_job = gear.Job('launcher:launch', json.dumps(params),
                                unique=uuid)
         build.__gearman_job = gearman_job
         self.builds[uuid] = build

@@ -329,61 +329,6 @@ class BasePipelineManager(object):
         self.dequeueItem(item)
         self.reportStats(item)
 
-    def _makeMergerItem(self, item):
-        # Create a dictionary with all info about the item needed by
-        # the merger.
-        number = None
-        patchset = None
-        oldrev = None
-        newrev = None
-        if hasattr(item.change, 'number'):
-            number = item.change.number
-            patchset = item.change.patchset
-        elif hasattr(item.change, 'newrev'):
-            oldrev = item.change.oldrev
-            newrev = item.change.newrev
-        connection_name = self.pipeline.source.connection.connection_name
-        return dict(project=item.change.project.name,
-                    url=self.pipeline.source.getGitUrl(
-                        item.change.project),
-                    connection_name=connection_name,
-                    merge_mode=item.change.project.merge_mode,
-                    refspec=item.change.refspec,
-                    branch=item.change.branch,
-                    ref=item.current_build_set.ref,
-                    number=number,
-                    patchset=patchset,
-                    oldrev=oldrev,
-                    newrev=newrev,
-                    )
-
-    def prepareRef(self, item):
-        # Returns True if the ref is ready, false otherwise
-        build_set = item.current_build_set
-        if build_set.merge_state == build_set.COMPLETE:
-            return True
-        if build_set.merge_state == build_set.PENDING:
-            return False
-        build_set.merge_state = build_set.PENDING
-        ref = build_set.ref
-        if hasattr(item.change, 'refspec') and not ref:
-            self.log.debug("Preparing ref for: %s" % item.change)
-            item.current_build_set.setConfiguration()
-            dependent_items = self.getDependentItems(item)
-            dependent_items.reverse()
-            all_items = dependent_items + [item]
-            merger_items = map(self._makeMergerItem, all_items)
-            self.sched.merger.mergeChanges(merger_items,
-                                           item.current_build_set,
-                                           self.pipeline.precedence)
-        else:
-            self.log.debug("Preparing update repo for: %s" % item.change)
-            url = self.pipeline.source.getGitUrl(item.change.project)
-            self.sched.merger.updateRepo(item.change.project.name,
-                                         url, build_set,
-                                         self.pipeline.precedence)
-        return False
-
     def _launchJobs(self, item, jobs):
         self.log.debug("Launching jobs for change %s" % item.change)
         dependent_items = self.getDependentItems(item)
@@ -453,7 +398,6 @@ class BasePipelineManager(object):
         dep_items = self.getFailingDependentItems(item)
         actionable = change_queue.isActionable(item)
         item.active = actionable
-        ready = False
         if dep_items:
             failing_reasons.append('a needed change is failing')
             self.cancelJobs(item, prime=False)
@@ -471,12 +415,10 @@ class BasePipelineManager(object):
                 change_queue.moveItem(item, nnfi)
                 changed = True
                 self.cancelJobs(item)
-            if actionable:
-                ready = self.prepareRef(item)
-                if item.current_build_set.unable_to_merge:
-                    failing_reasons.append("it has a merge conflict")
-                    ready = False
-        if actionable and ready and self.launchJobs(item):
+        if actionable:
+            if not item.current_build_set.ref:
+                item.current_build_set.setConfiguration()
+        if actionable and self.launchJobs(item):
             changed = True
         if self.pipeline.didAnyJobFail(item):
             failing_reasons.append("at least one job failed")
@@ -610,9 +552,6 @@ class BasePipelineManager(object):
             actions = self.pipeline.success_actions
             item.setReportedResult('SUCCESS')
             self.pipeline._consecutive_failures = 0
-        elif not self.pipeline.didMergerSucceed(item):
-            actions = self.pipeline.merge_failure_actions
-            item.setReportedResult('MERGER_FAILURE')
         else:
             actions = self.pipeline.failure_actions
             item.setReportedResult('FAILURE')

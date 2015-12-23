@@ -235,8 +235,7 @@ class Pipeline(object):
             item.removeBuild(build)
         elif build.result != 'SUCCESS':
             # Get a JobTree from a Job so we can find only its dependent jobs
-            root = self.getJobTree(item.change.project)
-            tree = root.getJobTreeForJob(build.job)
+            tree = item.job_tree.getJobTreeForJob(build.job)
             for job in tree.getJobs():
                 fakebuild = Build(job, None)
                 fakebuild.result = 'SKIPPED'
