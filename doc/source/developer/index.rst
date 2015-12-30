@@ -17,3 +17,4 @@ Zuul, though advanced users may find it interesting.
    docs
    ansible
    javascript
+   releasenotes

@@ -34,6 +34,7 @@ extensions = [
     'zuul_sphinx',
     'zuul.sphinx.ansible',
     'zuul.sphinx.zuul',
+    'reno.sphinxext',
 ]
 #extensions = ['sphinx.ext.intersphinx']
 #intersphinx_mapping = {'python': ('http://docs.python.org/2.7', None)}
