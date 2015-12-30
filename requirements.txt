@@ -1,4 +1,4 @@
-pbr>=0.5.21,<1.0
+pbr>=1.1.0
 
 argparse
 PyYAML>=3.1.0
