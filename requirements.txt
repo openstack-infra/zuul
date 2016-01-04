@@ -3,7 +3,7 @@ pbr>=1.1.0
 argparse
 PyYAML>=3.1.0
 Paste
-WebOb>=1.2.3,<1.3
+WebOb>=1.2.3
 paramiko>=1.8.0
 GitPython>=0.3.3
 ordereddict
