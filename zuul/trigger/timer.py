@@ -13,7 +13,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import apscheduler.scheduler
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 import logging
 import voluptuous as v
 from zuul.model import EventFilter, TriggerEvent
@@ -26,7 +27,7 @@ class TimerTrigger(BaseTrigger):
 
     def __init__(self, trigger_config={}, sched=None, connection=None):
         super(TimerTrigger, self).__init__(trigger_config, sched, connection)
-        self.apsched = apscheduler.scheduler.Scheduler()
+        self.apsched = BackgroundScheduler()
         self.apsched.start()
 
     def _onTrigger(self, pipeline_name, timespec):
@@ -62,7 +63,7 @@ class TimerTrigger(BaseTrigger):
 
     def postConfig(self):
         for job in self.apsched.get_jobs():
-            self.apsched.unschedule_job(job)
+            job.remove()
         for pipeline in self.sched.layout.pipelines.values():
             for ef in pipeline.manager.event_filters:
                 if ef.trigger != self:
@@ -81,14 +82,11 @@ class TimerTrigger(BaseTrigger):
                         second = parts[5]
                     else:
                         second = None
-                    self.apsched.add_cron_job(self._onTrigger,
-                                              day=dom,
-                                              day_of_week=dow,
-                                              hour=hour,
-                                              minute=minute,
-                                              second=second,
-                                              args=(pipeline.name,
-                                                    timespec,))
+                    trigger = CronTrigger(day=dom, day_of_week=dow, hour=hour,
+                                          minute=minute, second=second)
+
+                    self.apsched.add_job(self._onTrigger, trigger=trigger,
+                                         args=(pipeline.name, timespec,))
 
 
 def getSchema():
