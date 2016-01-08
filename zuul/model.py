@@ -1005,9 +1005,6 @@ class TriggerEvent(object):
         # an admin command, etc):
         self.forced_pipeline = None
 
-        # Internal mechanism to track if the change needs a refresh from cache
-        self._needs_refresh = False
-
     def __repr__(self):
         ret = '<TriggerEvent %s %s' % (self.type, self.project_name)
 

@@ -129,9 +129,6 @@ class GerritSource(BaseSource):
     def getChange(self, event, project):
         if event.change_number:
             refresh = False
-            if event._needs_refresh:
-                refresh = True
-                event._needs_refresh = False
             change = self._getChange(event.change_number, event.patch_number,
                                      refresh=refresh)
         elif event.ref:

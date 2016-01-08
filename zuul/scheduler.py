@@ -307,6 +307,9 @@ class Scheduler(threading.Thread):
                 driver_config, self, connection
         )
 
+        if connection:
+            connection.registerUse(dtype, driver_instance)
+
         return driver_instance
 
     def _getSourceDriver(self, connection_name):
