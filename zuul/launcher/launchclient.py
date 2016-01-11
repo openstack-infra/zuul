@@ -177,8 +177,8 @@ class ZuulGearmanClient(gear.Client):
         self.log.info("Done waiting for Gearman server")
 
 
-class Gearman(object):
-    log = logging.getLogger("zuul.Gearman")
+class LaunchClient(object):
+    log = logging.getLogger("zuul.LaunchClient")
     negative_function_cache_ttl = 5
 
     def __init__(self, config, sched, swift):

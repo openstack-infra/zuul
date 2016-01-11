@@ -15,25 +15,35 @@
 import collections
 import json
 import logging
+import os
 import shutil
+import subprocess
 import tempfile
 import threading
 import traceback
 
 import gear
+import yaml
 
 import zuul.merger
 
 
-class TempDir(object):
+class JobDir(object):
     def __init__(self):
-        self.tmpdir = tempfile.mkdtemp()
+        self.root = tempfile.mkdtemp()
+        self.git_root = os.path.join(self.root, 'git')
+        os.makedirs(self.git_root)
+        self.ansible_root = os.path.join(self.root, 'ansible')
+        os.makedirs(self.ansible_root)
+        self.inventory = os.path.join(self.ansible_root, 'inventory')
+        self.playbook = os.path.join(self.ansible_root, 'playbook')
+        self.config = os.path.join(self.ansible_root, 'ansible.cfg')
 
     def __enter__(self):
-        return self.tmpdir
+        return self
 
     def __exit__(self, etype, value, tb):
-        shutil.rmtree(self.tmpdir)
+        shutil.rmtree(self.root)
 
 
 class UpdateTask(object):
@@ -207,8 +217,9 @@ class LaunchServer(object):
 
     def _launch(self, job):
         self.log.debug("Job %s: beginning" % (job.unique,))
-        with TempDir() as root:
-            self.log.debug("Job %s: git root at %s" % (job.unique, root))
+        with JobDir() as jobdir:
+            self.log.debug("Job %s: job root at %s" %
+                           (job.unique, jobdir.root))
             args = json.loads(job.arguments)
             tasks = []
             for project in args['projects']:
@@ -218,9 +229,12 @@ class LaunchServer(object):
             for task in tasks:
                 task.wait()
             self.log.debug("Job %s: git updates complete" % (job.unique,))
-            merger = self._getMerger(root)
+            merger = self._getMerger(jobdir.git_root)
             commit = merger.mergeChanges(args['items'])  # noqa
+
             # TODOv3: Ansible the ansible thing here.
+            self.prepareAnsibleFiles(jobdir, args)
+            result = self.runAnsible(jobdir)
 
             data = {
                 'url': 'https://server/job',
@@ -229,8 +243,46 @@ class LaunchServer(object):
             job.sendWorkData(json.dumps(data))
             job.sendWorkStatus(0, 100)
 
-            result = dict(result='SUCCESS')
+            result = dict(result=result)
             job.sendWorkComplete(json.dumps(result))
+
+    def getHostList(self, args):
+        # TODOv3: This should get the appropriate nodes from nodepool,
+        # or in the unit tests, be overriden to return localhost.
+        return [('localhost', dict(ansible_connection='local'))]
+
+    def prepareAnsibleFiles(self, jobdir, args):
+        with open(jobdir.inventory, 'w') as inventory:
+            for host_name, host_vars in self.getHostList(args):
+                inventory.write(host_name)
+                inventory.write(' ')
+                for k, v in host_vars.items():
+                    inventory.write('%s=%s' % (k, v))
+                inventory.write('\n')
+        with open(jobdir.playbook, 'w') as playbook:
+            play = dict(hosts='localhost',
+                        tasks=[dict(name='test',
+                                    shell='echo Hello world')])
+            playbook.write(yaml.dump([play]))
+        with open(jobdir.config, 'w') as config:
+            config.write('[defaults]\n')
+            config.write('hostfile = %s\n' % jobdir.inventory)
+
+    def runAnsible(self, jobdir):
+        proc = subprocess.Popen(
+            ['ansible-playbook', jobdir.playbook],
+            cwd=jobdir.ansible_root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        (out, err) = proc.communicate()
+        ret = proc.wait()
+        print out
+        print err
+        if ret == 0:
+            return 'SUCCESS'
+        else:
+            return 'FAILURE'
 
     def cat(self, job):
         args = json.loads(job.arguments)

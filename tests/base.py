@@ -48,8 +48,8 @@ import zuul.connection.smtp
 import zuul.scheduler
 import zuul.webapp
 import zuul.rpclistener
-import zuul.launcher.ansible
-import zuul.launcher.gearman
+import zuul.launcher.ansiblelaunchserver
+import zuul.launcher.launchclient
 import zuul.lib.swift
 import zuul.lib.connections
 import zuul.merger.client
@@ -636,7 +636,7 @@ class FakeBuild(threading.Thread):
         self.worker.lock.release()
 
 
-class RecordingLaunchServer(zuul.launcher.ansible.LaunchServer):
+class RecordingLaunchServer(zuul.launcher.ansiblelaunchserver.LaunchServer):
     def __init__(self, *args, **kw):
         super(RecordingLaunchServer, self).__init__(*args, **kw)
         self.job_history = []
@@ -977,8 +977,8 @@ class ZuulTestCase(BaseTestCase):
                                                            self.connections)
         self.merge_server.start()
 
-        self.launcher = zuul.launcher.gearman.Gearman(self.config, self.sched,
-                                                      self.swift)
+        self.launcher = zuul.launcher.launchclient.LaunchClient(
+            self.config, self.sched, self.swift)
         self.merge_client = zuul.merger.client.MergeClient(
             self.config, self.sched)
 
@@ -1280,7 +1280,8 @@ class ZuulTestCase(BaseTestCase):
                 return False
             if server_job.waiting:
                 continue
-            worker_job = self.worker.gearman_jobs.get(server_job.unique)
+            worker_job = self.ansible_server.worker.gearman_jobs.get(
+                server_job.unique)
             if worker_job:
                 if build.number is None:
                     self.log.debug("%s has not reported start" % worker_job)
