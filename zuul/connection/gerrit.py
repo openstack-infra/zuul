@@ -94,7 +94,7 @@ class GerritEventConnector(threading.Thread):
         try:
             event.account = data.get(accountfield_from_type[event.type])
         except KeyError:
-            self.log.error("Received unrecognized event type '%s' from Gerrit.\
+            self.log.warning("Received unrecognized event type '%s' from Gerrit.\
                     Can not get account information." % event.type)
             event.account = None
 
