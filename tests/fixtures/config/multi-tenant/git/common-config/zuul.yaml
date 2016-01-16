@@ -12,3 +12,7 @@
     failure:
       gerrit:
         verified: -1
+
+- job:
+    name:
+      python27

@@ -77,12 +77,8 @@ class Repo(object):
         return self._initialized
 
     def createRepoObject(self):
-        try:
-            self._ensure_cloned()
-            repo = git.Repo(self.local_path)
-        except:
-            self.log.exception("Unable to initialize repo for %s" %
-                               self.local_path)
+        self._ensure_cloned()
+        repo = git.Repo(self.local_path)
         return repo
 
     def reset(self):

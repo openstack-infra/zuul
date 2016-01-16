@@ -1,7 +1,7 @@
 - pipeline:
-    name: tenant-one-gate
+    name: tenant-two-gate
     manager: dependent
-    success-message: Build succeeded (tenant-one-gate).
+    success-message: Build succeeded (tenant-two-gate).
     source:
       gerrit
     trigger:
@@ -23,13 +23,15 @@
 
 - job:
     name:
-      project1-test1
+      project2-test1
 
 - project:
-    name: org/project1
+    name: org/project2
     check:
       jobs:
-        - project1-test1
-    tenant-one-gate:
+        - python27
+        - project2-test1
+    tenant-two-gate:
       jobs:
-        - project1-test1
+        - python27
+        - project2-test1

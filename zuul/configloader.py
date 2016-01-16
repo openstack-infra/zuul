@@ -67,6 +67,8 @@ class JobParser(object):
                'swift': to_list(swift),
                'irrelevant-files': to_list(str),
                'timeout': int,
+               '_project_source': str,  # used internally
+               '_project_name': str,  # used internally
                }
 
         return vs.Schema(job)
@@ -91,11 +93,17 @@ class JobParser(object):
             # accumulate onto any previously applied tags from
             # metajobs.
             job.tags = job.tags.union(set(tags))
-
+        if not job.project_source:
+            # Thes attributes may not be overidden -- the first
+            # reference definition of a job is in the repo where it is
+            # first defined.
+            job.project_source = conf.get('_project_source')
+            job.project_name = conf.get('_project_name')
         job.failure_message = conf.get('failure-message', job.failure_message)
         job.success_message = conf.get('success-message', job.success_message)
         job.failure_url = conf.get('failure-url', job.failure_url)
         job.success_url = conf.get('success-url', job.success_url)
+
         if 'branches' in conf:
             matchers = []
             for branch in as_list(conf['branches']):
@@ -413,7 +421,8 @@ class PipelineParser(object):
 class TenantParser(object):
     log = logging.getLogger("zuul.TenantParser")
 
-    tenant_source = vs.Schema({'repos': [str]})
+    tenant_source = vs.Schema({'config-repos': [str],
+                               'project-repos': [str]})
 
     @staticmethod
     def validateTenantSources(connections):
@@ -433,7 +442,6 @@ class TenantParser(object):
     @staticmethod
     def getSchema(connections=None):
         tenant = {vs.Required('name'): str,
-                  'include': to_list(str),
                   'source': TenantParser.validateTenantSources(connections)}
         return vs.Schema(tenant)
 
@@ -442,14 +450,6 @@ class TenantParser(object):
         TenantParser.getSchema(connections)(conf)
         tenant = model.Tenant(conf['name'])
         tenant_config = model.UnparsedTenantConfig()
-        for fn in conf.get('include', []):
-            if not os.path.isabs(fn):
-                fn = os.path.join(base, fn)
-            fn = os.path.expanduser(fn)
-            with open(fn) as config_file:
-                TenantParser.log.info("Loading configuration from %s" % (fn,))
-                incdata = yaml.load(config_file)
-                tenant_config.extend(incdata)
         incdata = TenantParser._loadTenantInRepoLayouts(merger, connections,
                                                         conf)
         tenant_config.extend(incdata)
@@ -463,31 +463,77 @@ class TenantParser(object):
         jobs = []
         for source_name, conf_source in conf_tenant.get('source', {}).items():
             source = connections.getSource(source_name)
-            for conf_repo in conf_source.get('repos'):
+
+            # Get main config files.  These files are permitted the
+            # full range of configuration.
+            for conf_repo in conf_source.get('config-repos', []):
+                project = source.getProject(conf_repo)
+                url = source.getGitUrl(project)
+                job = merger.getFiles(project.name, url, 'master',
+                                      files=['zuul.yaml', '.zuul.yaml'])
+                job.project = project
+                job.config_repo = True
+                jobs.append(job)
+
+            # Get in-project-repo config files which have a restricted
+            # set of options.
+            for conf_repo in conf_source.get('project-repos', []):
                 project = source.getProject(conf_repo)
                 url = source.getGitUrl(project)
                 # TODOv3(jeblair): config should be branch specific
                 job = merger.getFiles(project.name, url, 'master',
                                       files=['.zuul.yaml'])
                 job.project = project
+                job.config_repo = False
                 jobs.append(job)
+
         for job in jobs:
+            # Note: this is an ordered list -- we wait for cat jobs to
+            # complete in the order they were launched which is the
+            # same order they were defined in the main config file.
+            # This is important for correct inheritence.
             TenantParser.log.debug("Waiting for cat job %s" % (job,))
             job.wait()
-            if job.files.get('.zuul.yaml'):
-                TenantParser.log.info(
-                    "Loading configuration from %s/.zuul.yaml" %
-                    (job.project,))
-                incdata = TenantParser._parseInRepoLayout(
-                    job.files['.zuul.yaml'])
-                config.extend(incdata)
+            for fn in ['zuul.yaml', '.zuul.yaml']:
+                if job.files.get(fn):
+                    TenantParser.log.info(
+                        "Loading configuration from %s/%s" %
+                        (job.project, fn))
+                    if job.config_repo:
+                        incdata = TenantParser._parseConfigRepoLayout(
+                            job.files[fn], source_name, job.project.name)
+                    else:
+                        incdata = TenantParser._parseProjectRepoLayout(
+                            job.files[fn], source_name, job.project.name)
+                    config.extend(incdata)
         return config
 
     @staticmethod
-    def _parseInRepoLayout(data):
+    def _parseConfigRepoLayout(data, source_name, project_name):
+        # This is the top-level configuration for a tenant.
+        config = model.UnparsedTenantConfig()
+        config.extend(yaml.load(data))
+
+        # Remember where this job was defined
+        for conf_job in config.jobs:
+            conf_job['_project_source'] = source_name
+            conf_job['_project_name'] = project_name
+
+        return config
+
+    @staticmethod
+    def _parseProjectRepoLayout(data, source_name, project_name):
         # TODOv3(jeblair): this should implement some rules to protect
         # aspects of the config that should not be changed in-repo
-        return yaml.load(data)
+        config = model.UnparsedTenantConfig()
+        config.extend(yaml.load(data))
+
+        # Remember where this job was defined
+        for conf_job in config.jobs:
+            conf_job['_project_source'] = source_name
+            conf_job['_project_name'] = project_name
+
+        return config
 
     @staticmethod
     def _parseLayout(base, data, scheduler, connections):

@@ -974,10 +974,6 @@ class ZuulTestCase(BaseTestCase):
         old_urlopen = urllib2.urlopen
         urllib2.urlopen = URLOpenerFactory
 
-        self.merge_server = zuul.merger.server.MergeServer(self.config,
-                                                           self.connections)
-        self.merge_server.start()
-
         self.launcher = zuul.launcher.launchclient.LaunchClient(
             self.config, self.sched, self.swift)
         self.merge_client = zuul.merger.client.MergeClient(
@@ -1076,6 +1072,32 @@ class ZuulTestCase(BaseTestCase):
         self.config.read(os.path.join(FIXTURE_DIR, self.config_file))
         if hasattr(self, 'tenant_config_file'):
             self.config.set('zuul', 'tenant_config', self.tenant_config_file)
+            git_path = os.path.join(
+                os.path.dirname(
+                    os.path.join(FIXTURE_DIR, self.tenant_config_file)),
+                'git')
+            if os.path.exists(git_path):
+                for reponame in os.listdir(git_path):
+                    self.copyDirToRepo(reponame,
+                                       os.path.join(git_path, reponame))
+
+    def copyDirToRepo(self, project, source_path):
+        repo_path = os.path.join(self.upstream_root, project)
+        if not os.path.exists(repo_path):
+            self.init_repo(project)
+
+        files = {}
+        for (dirpath, dirnames, filenames) in os.walk(source_path):
+            for filename in filenames:
+                test_tree_filepath = os.path.join(dirpath, filename)
+                common_path = os.path.commonprefix([test_tree_filepath,
+                                                    source_path])
+                relative_filepath = test_tree_filepath[len(common_path) + 1:]
+                with open(test_tree_filepath, 'r') as f:
+                    content = f.read()
+                files[relative_filepath] = content
+        self.addCommitToRepo(project, 'add content from fixture',
+                             files, branch='master')
 
     def setup_repos(self):
         """Subclasses can override to manipulate repos before tests"""
@@ -1099,8 +1121,6 @@ class ZuulTestCase(BaseTestCase):
     def shutdown(self):
         self.log.debug("Shutting down after tests")
         self.launcher.stop()
-        self.merge_server.stop()
-        self.merge_server.join()
         self.merge_client.stop()
         self.sched.stop()
         self.sched.join()
@@ -1233,7 +1253,6 @@ class ZuulTestCase(BaseTestCase):
             time.sleep(0)
         self.gearman_server.functions = set()
         self.rpc.register()
-        self.merge_server.register()
 
     def haveAllBuildsReported(self):
         # See if Zuul is waiting on a meta job to complete
@@ -1331,13 +1350,13 @@ class ZuulTestCase(BaseTestCase):
         jobs = filter(lambda x: x.result == result, jobs)
         return len(jobs)
 
-    def getJobFromHistory(self, name):
+    def getJobFromHistory(self, name, project=None):
         history = self.ansible_server.job_history
         for job in history:
             params = json.loads(job.arguments)
-            if params['job'] == name:
+            if (params['job'] == name and
+                (project is None or params['ZUUL_PROJECT'] == project)):
                 result = json.loads(job.data[-1])
-                print result
                 ret = BuildHistory(job=job,
                                    name=params['job'],
                                    result=result['result'])

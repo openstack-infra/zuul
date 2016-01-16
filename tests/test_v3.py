@@ -38,6 +38,8 @@ class TestMultipleTenants(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project1-test1').result,
                          'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('python27').result,
+                         'SUCCESS')
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2,
                          "A should report start and success")
@@ -50,6 +52,9 @@ class TestMultipleTenants(ZuulTestCase):
         B.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
         self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('python27',
+                                                'org/project2').result,
+                         'SUCCESS')
         self.assertEqual(self.getJobFromHistory('project2-test1').result,
                          'SUCCESS')
         self.assertEqual(B.data['status'], 'MERGED')

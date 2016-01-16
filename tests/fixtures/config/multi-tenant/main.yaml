@@ -1,11 +1,15 @@
 - tenant:
     name: tenant-one
-    include:
-      - common.yaml
-      - tenant-one.yaml
+    source:
+      gerrit:
+        config-repos:
+          - common-config
+          - tenant-one-config
 
 - tenant:
     name: tenant-two
-    include:
-      - common.yaml
-      - tenant-two.yaml
+    source:
+      gerrit:
+        config-repos:
+          - common-config
+          - tenant-two-config
