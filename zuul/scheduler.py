@@ -1577,9 +1577,9 @@ class BasePipelineManager(object):
         if event.merged:
             build_set.commit = event.commit
         elif event.updated:
-            if not isinstance(item, NullChange):
+            if not isinstance(item.change, NullChange):
                 build_set.commit = item.change.newrev
-        if not build_set.commit:
+        if not build_set.commit and not isinstance(item.change, NullChange):
             self.log.info("Unable to merge change %s" % item.change)
             self.pipeline.setUnableToMerge(item)
 
