@@ -107,7 +107,7 @@ class Server(zuul.cmd.ZuulApp):
                 jobs.add(v)
         for job in sorted(layout.jobs):
             if job not in jobs:
-                print("Job %s not defined" % job)
+                print("FAILURE: Job %s not defined" % job)
                 failure = True
         return failure
 
