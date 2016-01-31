@@ -132,6 +132,7 @@ class GerritEventConnector(threading.Thread):
 
 class GerritWatcher(threading.Thread):
     log = logging.getLogger("gerrit.GerritWatcher")
+    poll_timeout = 500
 
     def __init__(self, gerrit_connection, username, hostname, port=29418,
                  keyfile=None):
@@ -154,7 +155,7 @@ class GerritWatcher(threading.Thread):
         poll = select.poll()
         poll.register(stdout.channel)
         while not self._stopped:
-            ret = poll.poll()
+            ret = poll.poll(self.poll_timeout)
             for (fd, event) in ret:
                 if fd == stdout.channel.fileno():
                     if event == select.POLLIN:
