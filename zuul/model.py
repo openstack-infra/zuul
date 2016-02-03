@@ -134,7 +134,7 @@ class Pipeline(object):
             return []
         return item.change.filterJobs(tree.getJobs())
 
-    def _findJobsToRun(self, job_trees, item):
+    def _findJobsToRun(self, job_trees, item, mutex):
         torun = []
         if item.item_ahead:
             # Only run jobs if any 'hold' jobs on the change ahead
@@ -153,20 +153,23 @@ class Pipeline(object):
                 else:
                     # There is no build for the root of this job tree,
                     # so we should run it.
-                    torun.append(job)
+                    if mutex.acquire(item, job):
+                        # If this job needs a mutex, either acquire it or make
+                        # sure that we have it before running the job.
+                        torun.append(job)
             # If there is no job, this is a null job tree, and we should
             # run all of its jobs.
             if result == 'SUCCESS' or not job:
-                torun.extend(self._findJobsToRun(tree.job_trees, item))
+                torun.extend(self._findJobsToRun(tree.job_trees, item, mutex))
         return torun
 
-    def findJobsToRun(self, item):
+    def findJobsToRun(self, item, mutex):
         if not item.live:
             return []
         tree = self.getJobTree(item.change.project)
         if not tree:
             return []
-        return self._findJobsToRun(tree.job_trees, item)
+        return self._findJobsToRun(tree.job_trees, item, mutex)
 
     def haveAllJobsStarted(self, item):
         for job in self.getJobs(item):
@@ -441,6 +444,7 @@ class Job(object):
         self.failure_pattern = None
         self.success_pattern = None
         self.parameter_function = None
+        self.mutex = None
         # A metajob should only supply values for attributes that have
         # been explicitly provided, so avoid setting boolean defaults.
         if self.is_metajob:
@@ -487,6 +491,8 @@ class Job(object):
             self.skip_if_matcher = other.skip_if_matcher.copy()
         if other.swift:
             self.swift.update(other.swift)
+        if other.mutex:
+            self.mutex = other.mutex
         # Only non-None values should be copied for boolean attributes.
         if other.hold_following_changes is not None:
             self.hold_following_changes = other.hold_following_changes

@@ -116,6 +116,10 @@ jobs:
     parameter-function: select_debian_node
   - name: project1-project2-integration
     queue-name: integration
+  - name: mutex-one
+    mutex: test-mutex
+  - name: mutex-two
+    mutex: test-mutex
 
 project-templates:
   - name: test-one-and-two

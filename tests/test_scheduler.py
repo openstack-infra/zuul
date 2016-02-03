@@ -2280,6 +2280,70 @@ class TestScheduler(ZuulTestCase):
         self.sched.reconfigure(self.config)
         self.assertEqual(len(self.sched.layout.pipelines['gate'].queues), 1)
 
+    def test_mutex(self):
+        "Test job mutexes"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-mutex.yaml')
+        self.sched.reconfigure(self.config)
+
+        self.worker.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        self.assertFalse('test-mutex' in self.sched.mutex.mutexes)
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 3)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'mutex-one')
+        self.assertEqual(self.builds[2].name, 'project-test1')
+
+        self.worker.release('mutex-one')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 3)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test1')
+        self.assertEqual(self.builds[2].name, 'mutex-two')
+        self.assertTrue('test-mutex' in self.sched.mutex.mutexes)
+
+        self.worker.release('mutex-two')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 3)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test1')
+        self.assertEqual(self.builds[2].name, 'mutex-one')
+        self.assertTrue('test-mutex' in self.sched.mutex.mutexes)
+
+        self.worker.release('mutex-one')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 3)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test1')
+        self.assertEqual(self.builds[2].name, 'mutex-two')
+        self.assertTrue('test-mutex' in self.sched.mutex.mutexes)
+
+        self.worker.release('mutex-two')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 2)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test1')
+        self.assertFalse('test-mutex' in self.sched.mutex.mutexes)
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 0)
+
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.reported, 1)
+        self.assertFalse('test-mutex' in self.sched.mutex.mutexes)
+
     def test_node_label(self):
         "Test that a job runs on a specific node label"
         self.worker.registerFunction('build:node-project-test1:debian')

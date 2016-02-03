@@ -704,6 +704,11 @@ each job as it builds a list from the project specification.
   would largely defeat the parallelization of dependent change testing
   that is the main feature of Zuul.  Default: ``false``.
 
+**mutex (optional)**
+  This is a string that names a mutex that should be observed by this
+  job.  Only one build of any job that references the same named mutex
+  will be enqueued at a time.  This applies across all pipelines.
+
 **branch (optional)**
   This job should only be run on matching branches.  This field is
   treated as a regular expression and multiple branches may be
