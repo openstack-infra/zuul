@@ -263,6 +263,7 @@ class Scheduler(threading.Thread):
     def _unloadDrivers(self):
         for trigger in self.triggers.values():
             trigger.stop()
+        self.triggers = {}
         for pipeline in self.layout.pipelines.values():
             pipeline.source.stop()
             for action in self._reporter_actions.values():
