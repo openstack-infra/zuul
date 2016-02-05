@@ -2742,11 +2742,11 @@ class TestScheduler(ZuulTestCase):
                             'tests/fixtures/layout-idle.yaml')
             self.sched.reconfigure(self.config)
             self.registerJobs()
+            self.waitUntilSettled()
 
             # The pipeline triggers every second, so we should have seen
             # several by now.
             time.sleep(5)
-            self.waitUntilSettled()
 
             # Stop queuing timer triggered jobs so that the assertions
             # below don't race against more jobs being queued.
@@ -2754,6 +2754,7 @@ class TestScheduler(ZuulTestCase):
                             'tests/fixtures/layout-no-timer.yaml')
             self.sched.reconfigure(self.config)
             self.registerJobs()
+            self.waitUntilSettled()
 
             self.assertEqual(len(self.builds), 2)
             self.worker.release('.*')
