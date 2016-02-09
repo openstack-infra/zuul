@@ -84,6 +84,8 @@ class BaseReporter(object):
     def _formatItemReportFailure(self, pipeline, item):
         if item.dequeued_needing_change:
             msg = 'This change depends on a change that failed to merge.\n'
+        elif not pipeline.didMergerSucceed(item):
+            msg = pipeline.merge_failure_message
         else:
             msg = (pipeline.failure_message + '\n\n' +
                    self._formatItemReportJobs(pipeline, item))

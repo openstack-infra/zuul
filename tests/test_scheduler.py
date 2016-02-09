@@ -3477,6 +3477,31 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual('The merge failed! For more information...',
                          self.smtp_messages[0]['body'])
 
+    def test_default_merge_failure_reports(self):
+        """Check that the default merge failure reports are correct."""
+
+        # A should report success, B should report merge failure.
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addPatchset(['conflict'])
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        B.addPatchset(['conflict'])
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(3, len(self.history))  # A jobs
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertIn('Build succeeded', A.messages[1])
+        self.assertIn('Merge Failed', B.messages[1])
+        self.assertIn('automatically merged', B.messages[1])
+        self.assertNotIn('logs.example.com', B.messages[1])
+        self.assertNotIn('SKIPPED', B.messages[1])
+
     def test_swift_instructions(self):
         "Test that the correct swift instructions are sent to the workers"
         self.config.set('zuul', 'layout_config',
