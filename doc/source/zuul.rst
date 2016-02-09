@@ -765,6 +765,12 @@ each job as it builds a list from the project specification.
   Boolean value (``true`` or ``false``) that indicates whatever
   a job is voting or not.  Default: ``true``.
 
+**tags (optional)**
+  A list of arbitrary strings which will be associated with the job.
+  Can be used by the parameter-function to alter behavior based on
+  their presence on a job.  If the job name is a regular expression,
+  tags will accumulate on jobs that match.
+
 **parameter-function (optional)**
   Specifies a function that should be applied to the parameters before
   the job is launched.  The function should be defined in a python file

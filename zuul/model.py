@@ -444,6 +444,7 @@ class Job(object):
         self.failure_pattern = None
         self.success_pattern = None
         self.parameter_function = None
+        self.tags = set()
         self.mutex = None
         # A metajob should only supply values for attributes that have
         # been explicitly provided, so avoid setting boolean defaults.
@@ -493,6 +494,11 @@ class Job(object):
             self.swift.update(other.swift)
         if other.mutex:
             self.mutex = other.mutex
+        # Tags are merged via a union rather than a destructive copy
+        # because they are intended to accumulate as metajobs are
+        # applied.
+        if other.tags:
+            self.tags = self.tags.union(other.tags)
         # Only non-None values should be copied for boolean attributes.
         if other.hold_following_changes is not None:
             self.hold_following_changes = other.hold_following_changes
