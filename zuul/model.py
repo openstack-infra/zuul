@@ -146,7 +146,7 @@ class Pipeline(object):
             return []
         return item.change.filterJobs(tree.getJobs())
 
-    def _findJobsToRun(self, job_trees, item):
+    def _findJobsToRun(self, job_trees, item, mutex):
         torun = []
         for tree in job_trees:
             job = tree.job
@@ -160,20 +160,23 @@ class Pipeline(object):
                 else:
                     # There is no build for the root of this job tree,
                     # so we should run it.
-                    torun.append(job)
+                    if mutex.acquire(item, job):
+                        # If this job needs a mutex, either acquire it or make
+                        # sure that we have it before running the job.
+                        torun.append(job)
             # If there is no job, this is a null job tree, and we should
             # run all of its jobs.
             if result == 'SUCCESS' or not job:
-                torun.extend(self._findJobsToRun(tree.job_trees, item))
+                torun.extend(self._findJobsToRun(tree.job_trees, item, mutex))
         return torun
 
-    def findJobsToRun(self, item):
+    def findJobsToRun(self, item, mutex):
         if not item.live:
             return []
         tree = item.job_tree
         if not tree:
             return []
-        return self._findJobsToRun(tree.job_trees, item)
+        return self._findJobsToRun(tree.job_trees, item, mutex)
 
     def haveAllJobsStarted(self, item):
         for job in self.getJobs(item):
@@ -464,6 +467,7 @@ class Job(object):
         swift=None,  # TODOv3(jeblair): move to auth
         parameter_function=None,  # TODOv3(jeblair): remove
         success_pattern=None,  # TODOv3(jeblair): remove
+        mutex=None,
     )
 
     def __init__(self, name):
@@ -1050,9 +1054,6 @@ class TriggerEvent(object):
         # For events that arrive with a destination pipeline (eg, from
         # an admin command, etc):
         self.forced_pipeline = None
-
-        # Internal mechanism to track if the change needs a refresh from cache
-        self._needs_refresh = False
 
     def __repr__(self):
         ret = '<TriggerEvent %s %s' % (self.type, self.project_name)

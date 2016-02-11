@@ -60,6 +60,7 @@ class JobParser(object):
                'failure-url': str,
                'success-url': str,
                'voting': bool,
+               'mutex': str,
                'branches': to_list(str),
                'files': to_list(str),
                'swift': to_list(swift),
@@ -81,6 +82,7 @@ class JobParser(object):
         job.pre_run = as_list(conf.get('pre-run', job.pre_run))
         job.post_run = as_list(conf.get('post-run', job.post_run))
         job.voting = conf.get('voting', True)
+        job.mutex = conf.get('mutex', None)
 
         job.failure_message = conf.get('failure-message', job.failure_message)
         job.success_message = conf.get('success-message', job.success_message)
