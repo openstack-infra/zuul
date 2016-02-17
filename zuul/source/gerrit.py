@@ -319,6 +319,3 @@ class GerritSource(BaseSource):
 
     def _getGitwebUrl(self, project, sha=None):
         return self.connection.getGitwebUrl(project, sha)
-
-    def maintainCache(self, relevant):
-        self.connection.maintainCache(relevant)

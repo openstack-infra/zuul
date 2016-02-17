@@ -49,13 +49,6 @@ class BaseSource(object):
     def canMerge(self, change, allow_needs):
         """Determine if change can merge."""
 
-    def maintainCache(self, relevant):
-        """Make cache contain relevant changes.
-
-        This lets the user supply a list of change objects that are
-        still in use.  Anything in our cache that isn't in the supplied
-        list should be safe to remove from the cache."""
-
     def postConfig(self):
         """Called after configuration has been processed."""
 

@@ -693,8 +693,8 @@ class TestScheduler(ZuulTestCase):
         # triggering events.  Since it will have the changes cached
         # already (without approvals), we need to clear the cache
         # first.
-        source = self.sched.layout.pipelines['gate'].source
-        source.maintainCache([])
+        for connection in self.connections.values():
+            connection.maintainCache([])
 
         self.worker.hold_jobs_in_build = True
         A.addApproval('APRV', 1)
@@ -791,7 +791,6 @@ class TestScheduler(ZuulTestCase):
         A.addApproval('APRV', 1)
         a = source._getChange(1, 2, refresh=True)
         self.assertTrue(source.canMerge(a, mgr.getSubmitAllowNeeds()))
-        source.maintainCache([])
 
     def test_build_configuration(self):
         "Test that zuul merges the right commits for testing"
@@ -2609,6 +2608,53 @@ class TestScheduler(ZuulTestCase):
         # Ensure the removed job was not included in the report.
         self.assertNotIn('project1-project2-integration', A.messages[0])
 
+    def test_double_live_reconfiguration_shared_queue(self):
+        # This was a real-world regression.  A change is added to
+        # gate; a reconfigure happens, a second change which depends
+        # on the first is added, and a second reconfiguration happens.
+        # Ensure that both changes merge.
+
+        # A failure may indicate incorrect caching or cleaning up of
+        # references during a reconfiguration.
+        self.worker.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
+        B.setDependsOn(A, 1)
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+
+        # Add the parent change.
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+
+        # Reconfigure (with only one change in the pipeline).
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        # Add the child change.
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        self.worker.release('.*-merge')
+        self.waitUntilSettled()
+
+        # Reconfigure (with both in the pipeline).
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.history), 8)
+
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(B.reported, 2)
+
     def test_live_reconfiguration_del_project(self):
         # Test project deletion from layout
         # while changes are enqueued
@@ -3656,8 +3702,8 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(B.data['status'], 'NEW')
 
-        source = self.sched.layout.pipelines['gate'].source
-        source.maintainCache([])
+        for connection in self.connections.values():
+            connection.maintainCache([])
 
         self.worker.hold_jobs_in_build = True
         B.addApproval('APRV', 1)
