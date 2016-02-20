@@ -70,9 +70,10 @@ class Cloner(object):
         # Check for a cached git repo first
         git_cache = '%s/%s' % (self.cache_dir, project)
         git_upstream = '%s/%s' % (self.git_url, project)
+        repo_is_cloned = os.path.exists(os.path.join(dest, '.git'))
         if (self.cache_dir and
             os.path.exists(git_cache) and
-            not os.path.exists(dest)):
+            not repo_is_cloned):
             # file:// tells git not to hard-link across repos
             git_cache = 'file://%s' % git_cache
             self.log.info("Creating repo %s from cache %s",
