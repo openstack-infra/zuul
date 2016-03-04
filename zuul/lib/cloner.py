@@ -103,7 +103,14 @@ class Cloner(object):
             repo.fetchFrom(zuul_remote, ref)
             self.log.debug("Fetched ref %s from %s", ref, project)
             return True
-        except (ValueError, GitCommandError):
+        except ValueError:
+            self.log.debug("Project %s in Zuul does not have ref %s",
+                           project, ref)
+            return False
+        except GitCommandError as error:
+            # Bail out if fetch fails due to infrastructure reasons
+            if error.stderr.startswith('fatal: unable to access'):
+                raise
             self.log.debug("Project %s in Zuul does not have ref %s",
                            project, ref)
             return False
