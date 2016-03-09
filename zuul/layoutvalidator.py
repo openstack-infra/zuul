@@ -104,6 +104,7 @@ class LayoutSchema(object):
            'hold-following-changes': bool,
            'voting': bool,
            'mutex': str,
+           'tags': toList(str),
            'parameter-function': str,
            'branch': toList(str),
            'files': toList(str),

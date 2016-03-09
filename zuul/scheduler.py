@@ -527,6 +527,13 @@ class Scheduler(threading.Thread):
             m = config_job.get('mutex', None)
             if m is not None:
                 job.mutex = m
+            tags = toList(config_job.get('tags'))
+            if tags:
+                # Tags are merged via a union rather than a
+                # destructive copy because they are intended to
+                # accumulate onto any previously applied tags from
+                # metajobs.
+                job.tags = job.tags.union(set(tags))
             fname = config_job.get('parameter-function', None)
             if fname:
                 func = config_env.get(fname, None)
