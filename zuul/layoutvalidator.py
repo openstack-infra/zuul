@@ -127,6 +127,7 @@ class LayoutSchema(object):
            'success-pattern': str,
            'hold-following-changes': bool,
            'voting': bool,
+           'mutex': str,
            'parameter-function': str,
            'branch': toList(str),
            'files': toList(str),

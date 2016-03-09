@@ -77,14 +77,16 @@ class BasePipelineManager(object):
                     efilters += str(tree.job.skip_if_matcher)
                 if efilters:
                     efilters = ' ' + efilters
-                hold = ''
+                tags = []
                 if tree.job.hold_following_changes:
-                    hold = ' [hold]'
-                voting = ''
+                    tags.append('[hold]')
                 if not tree.job.voting:
-                    voting = ' [nonvoting]'
-                self.log.info("%s%s%s%s%s" % (istr, repr(tree.job),
-                                              efilters, hold, voting))
+                    tags.append('[nonvoting]')
+                if tree.job.mutex:
+                    tags.append('[mutex: %s]' % tree.job.mutex)
+                tags = ' '.join(tags)
+                self.log.info("%s%s%s %s" % (istr, repr(tree.job),
+                                             efilters, tags))
             for x in tree.job_trees:
                 log_jobs(x, indent + 2)
 
@@ -348,7 +350,7 @@ class BasePipelineManager(object):
     def launchJobs(self, item):
         # TODO(jeblair): This should return a value indicating a job
         # was launched.  Appears to be a longstanding bug.
-        jobs = self.pipeline.findJobsToRun(item)
+        jobs = self.pipeline.findJobsToRun(item, self.sched.mutex)
         if jobs:
             self._launchJobs(item, jobs)
 
@@ -474,13 +476,23 @@ class BasePipelineManager(object):
 
     def updateBuildDescriptions(self, build_set):
         for build in build_set.getBuilds():
-            desc = self.formatDescription(build)
-            self.sched.launcher.setBuildDescription(build, desc)
+            try:
+                desc = self.formatDescription(build)
+                self.sched.launcher.setBuildDescription(build, desc)
+            except:
+                # Log the failure and let loop continue
+                self.log.error("Failed to update description for build %s" %
+                               (build))
 
         if build_set.previous_build_set:
             for build in build_set.previous_build_set.getBuilds():
-                desc = self.formatDescription(build)
-                self.sched.launcher.setBuildDescription(build, desc)
+                try:
+                    desc = self.formatDescription(build)
+                    self.sched.launcher.setBuildDescription(build, desc)
+                except:
+                    # Log the failure and let loop continue
+                    self.log.error("Failed to update description for "
+                                   "build %s in previous build set" % (build))
 
     def onBuildStarted(self, build):
         self.log.debug("Build %s started" % build)
@@ -491,6 +503,7 @@ class BasePipelineManager(object):
         item = build.build_set.item
 
         self.pipeline.setResult(item, build)
+        self.sched.mutex.release(item, build.job)
         self.log.debug("Item %s status is now:\n %s" %
                        (item, item.formatStatus()))
         return True
@@ -503,9 +516,9 @@ class BasePipelineManager(object):
         if event.merged:
             build_set.commit = event.commit
         elif event.updated:
-            if not isinstance(item, NullChange):
+            if not isinstance(item.change, NullChange):
                 build_set.commit = item.change.newrev
-        if not build_set.commit:
+        if not build_set.commit and not isinstance(item.change, NullChange):
             self.log.info("Unable to merge change %s" % item.change)
             self.pipeline.setUnableToMerge(item)
 

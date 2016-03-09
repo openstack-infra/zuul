@@ -2286,6 +2286,70 @@ class TestScheduler(ZuulTestCase):
         self.sched.reconfigure(self.config)
         self.assertEqual(len(self.sched.layout.pipelines['gate'].queues), 1)
 
+    def test_mutex(self):
+        "Test job mutexes"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-mutex.yaml')
+        self.sched.reconfigure(self.config)
+
+        self.worker.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        self.assertFalse('test-mutex' in self.sched.mutex.mutexes)
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 3)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'mutex-one')
+        self.assertEqual(self.builds[2].name, 'project-test1')
+
+        self.worker.release('mutex-one')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 3)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test1')
+        self.assertEqual(self.builds[2].name, 'mutex-two')
+        self.assertTrue('test-mutex' in self.sched.mutex.mutexes)
+
+        self.worker.release('mutex-two')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 3)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test1')
+        self.assertEqual(self.builds[2].name, 'mutex-one')
+        self.assertTrue('test-mutex' in self.sched.mutex.mutexes)
+
+        self.worker.release('mutex-one')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 3)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test1')
+        self.assertEqual(self.builds[2].name, 'mutex-two')
+        self.assertTrue('test-mutex' in self.sched.mutex.mutexes)
+
+        self.worker.release('mutex-two')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 2)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test1')
+        self.assertFalse('test-mutex' in self.sched.mutex.mutexes)
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 0)
+
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.reported, 1)
+        self.assertFalse('test-mutex' in self.sched.mutex.mutexes)
+
     def test_node_label(self):
         "Test that a job runs on a specific node label"
         self.worker.registerFunction('build:node-project-test1:debian')
@@ -2742,11 +2806,11 @@ class TestScheduler(ZuulTestCase):
                 'tests/fixtures/layout-idle.yaml')
             self.sched.reconfigure(self.config)
             self.registerJobs()
+            self.waitUntilSettled()
 
             # The pipeline triggers every second, so we should have seen
             # several by now.
             time.sleep(5)
-            self.waitUntilSettled()
 
             # Stop queuing timer triggered jobs so that the assertions
             # below don't race against more jobs being queued.
@@ -2754,6 +2818,7 @@ class TestScheduler(ZuulTestCase):
                 'tests/fixtures/layout-no-timer.yaml')
             self.sched.reconfigure(self.config)
             self.registerJobs()
+            self.waitUntilSettled()
 
             self.assertEqual(len(self.builds), 2)
             self.worker.release('.*')
@@ -3411,6 +3476,31 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(1, len(self.smtp_messages))
         self.assertEqual('The merge failed! For more information...',
                          self.smtp_messages[0]['body'])
+
+    def test_default_merge_failure_reports(self):
+        """Check that the default merge failure reports are correct."""
+
+        # A should report success, B should report merge failure.
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addPatchset(['conflict'])
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        B.addPatchset(['conflict'])
+        A.addApproval('CRVW', 2)
+        B.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(3, len(self.history))  # A jobs
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertIn('Build succeeded', A.messages[1])
+        self.assertIn('Merge Failed', B.messages[1])
+        self.assertIn('automatically merged', B.messages[1])
+        self.assertNotIn('logs.example.com', B.messages[1])
+        self.assertNotIn('SKIPPED', B.messages[1])
 
     def test_swift_instructions(self):
         "Test that the correct swift instructions are sent to the workers"

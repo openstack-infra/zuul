@@ -568,8 +568,8 @@ file.  The first is called a *check* pipeline::
       my_gerrit:
         verified: 1
     failure:
-      gerrit:
-        my_gerrit: -1
+      my_gerrit:
+        verified: -1
 
 This will trigger jobs each time a new patchset (or change) is
 uploaded to Gerrit, and report +/-1 values to Gerrit in the
@@ -703,6 +703,11 @@ each job as it builds a list from the project specification.
   resources.  On the other hand, to apply this to a long running job
   would largely defeat the parallelization of dependent change testing
   that is the main feature of Zuul.  Default: ``false``.
+
+**mutex (optional)**
+  This is a string that names a mutex that should be observed by this
+  job.  Only one build of any job that references the same named mutex
+  will be enqueued at a time.  This applies across all pipelines.
 
 **branch (optional)**
   This job should only be run on matching branches.  This field is

@@ -239,7 +239,7 @@ the Git plugin to prepare them, or you may chose to use a shell script
 instead.  As an example, the OpenStack project uses the following
 script to prepare the workspace for its integration testing:
 
-  https://github.com/openstack-infra/devstack-gate/blob/master/devstack-vm-gate-wrap.sh
+  https://git.openstack.org/cgit/openstack-infra/devstack-gate/tree/devstack-vm-gate-wrap.sh
 
 Turbo Hipster Worker
 ~~~~~~~~~~~~~~~~~~~~

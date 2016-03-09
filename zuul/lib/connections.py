@@ -71,12 +71,12 @@ class ConnectionRegistry(object):
         if 'gerrit' in config.sections():
             connections['gerrit'] = \
                 zuul.connection.gerrit.GerritConnection(
-                    '_legacy_gerrit', dict(config.items('gerrit')))
+                    'gerrit', dict(config.items('gerrit')))
 
         if 'smtp' in config.sections():
             connections['smtp'] = \
                 zuul.connection.smtp.SMTPConnection(
-                    '_legacy_smtp', dict(config.items('smtp')))
+                    'smtp', dict(config.items('smtp')))
 
         self.connections = connections
 
@@ -117,6 +117,9 @@ class ConnectionRegistry(object):
             __import__(driver[0], fromlist=['']), driver[1])(
                 driver_config, self.sched, connection
         )
+
+        if connection:
+            connection.registerUse(dtype, driver_instance)
 
         return driver_instance
 
