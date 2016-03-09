@@ -1281,19 +1281,15 @@ class ZuulTestCase(BaseTestCase):
                 return False
             if server_job.waiting:
                 continue
-            worker_job = self.ansible_server.worker.gearman_jobs.get(
-                server_job.unique)
-            if worker_job:
-                if build.number is None:
-                    self.log.debug("%s has not reported start" % worker_job)
-                    return False
-                if worker_job.build.isWaiting():
-                    continue
-                else:
-                    self.log.debug("%s is running" % worker_job)
-                    return False
+            if build.number is None:
+                self.log.debug("%s has not reported start" % build)
+                return False
+            if False:  # worker_job.build.isWaiting():
+                # TODOv3: when we grow the ability to have fake
+                # ansible jobs wait, check for that here.
+                continue
             else:
-                self.log.debug("%s is unassigned" % server_job)
+                self.log.debug("%s is running" % build)
                 return False
         return True
 
