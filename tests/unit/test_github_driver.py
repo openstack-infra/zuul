@@ -65,6 +65,22 @@ class TestGithubDriver(ZuulTestCase):
 
         self.assertEqual(2, len(self.history))
 
+    @simple_layout('layouts/files-github.yaml', driver='github')
+    def test_pull_matched_file_event(self):
+        A = self.fake_github.openFakePullRequest(
+            'org/project', 'master', 'A',
+            files=['random.txt', 'build-requires'])
+        self.fake_github.emitEvent(A.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+        self.assertEqual(1, len(self.history))
+
+        # test_pull_unmatched_file_event
+        B = self.fake_github.openFakePullRequest('org/project', 'master', 'B',
+                                                 files=['random.txt'])
+        self.fake_github.emitEvent(B.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+        self.assertEqual(1, len(self.history))
+
     @simple_layout('layouts/basic-github.yaml', driver='github')
     def test_comment_event(self):
         A = self.fake_github.openFakePullRequest('org/project', 'master', 'A')
