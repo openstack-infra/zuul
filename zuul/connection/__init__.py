@@ -62,3 +62,10 @@ class BaseConnection(object):
 
     def registerUse(self, what, instance):
         self.attached_to[what].append(instance)
+
+    def maintainCache(self, relevant):
+        """Make cache contain relevant changes.
+
+        This lets the user supply a list of change objects that are
+        still in use.  Anything in our cache that isn't in the supplied
+        list should be safe to remove from the cache."""
