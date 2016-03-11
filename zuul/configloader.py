@@ -61,6 +61,7 @@ class JobParser(object):
                'success-url': str,
                'voting': bool,
                'mutex': str,
+               'tags': to_list(str),
                'branches': to_list(str),
                'files': to_list(str),
                'swift': to_list(swift),
@@ -83,6 +84,13 @@ class JobParser(object):
         job.post_run = as_list(conf.get('post-run', job.post_run))
         job.voting = conf.get('voting', True)
         job.mutex = conf.get('mutex', None)
+        tags = conf.get('tags')
+        if tags:
+            # Tags are merged via a union rather than a
+            # destructive copy because they are intended to
+            # accumulate onto any previously applied tags from
+            # metajobs.
+            job.tags = job.tags.union(set(tags))
 
         job.failure_message = conf.get('failure-message', job.failure_message)
         job.success_message = conf.get('success-message', job.success_message)

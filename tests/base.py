@@ -623,6 +623,7 @@ class FakeBuild(threading.Thread):
             BuildHistory(name=self.name, number=self.number,
                          result=result, changes=changes, node=self.node,
                          uuid=self.unique, description=self.description,
+                         parameters=self.parameters,
                          pipeline=self.parameters['ZUUL_PIPELINE'])
         )
 

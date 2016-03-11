@@ -1,6 +1,5 @@
 pbr>=1.1.0
 
-argparse
 PyYAML>=3.1.0
 Paste
 WebOb>=1.2.3

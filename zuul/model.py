@@ -467,6 +467,7 @@ class Job(object):
         swift=None,  # TODOv3(jeblair): move to auth
         parameter_function=None,  # TODOv3(jeblair): remove
         success_pattern=None,  # TODOv3(jeblair): remove
+        tags=set(),
         mutex=None,
     )
 

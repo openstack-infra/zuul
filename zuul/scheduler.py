@@ -501,7 +501,7 @@ class Scheduler(threading.Thread):
                         "Exception while canceling build %s "
                         "for change %s" % (build, item.change))
         # TODOv3(jeblair): update for tenants
-        self.maintainTriggerCache()
+        self.maintainConnectionCache()
         for pipeline in tenant.layout.pipelines.values():
             pipeline.source.postConfig()
             pipeline.trigger.postConfig()
@@ -626,19 +626,22 @@ class Scheduler(threading.Thread):
             finally:
                 self.run_handler_lock.release()
 
-    def maintainTriggerCache(self):
+    def maintainConnectionCache(self):
         # TODOv3(jeblair): update for tenants
         relevant = set()
         for tenant in self.abide.tenants.values():
             for pipeline in tenant.layout.pipelines.values():
-                self.log.debug("Start maintain trigger cache for: %s" %
+                self.log.debug("Gather relevant cache items for: %s" %
                                pipeline)
+
                 for item in pipeline.getAllItems():
                     relevant.add(item.change)
                     relevant.update(item.change.getRelatedChanges())
-                pipeline.source.maintainCache(relevant)
-                self.log.debug("End maintain trigger cache for: %s" % pipeline)
-        self.log.debug("Trigger cache size: %s" % len(relevant))
+        for connection in self.connections.values():
+            connection.maintainCache(relevant)
+            self.log.debug(
+                "End maintain connection cache for: %s" % connection)
+        self.log.debug("Connection cache size: %s" % len(relevant))
 
     def process_event_queue(self):
         self.log.debug("Fetching trigger event")
