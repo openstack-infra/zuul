@@ -118,9 +118,6 @@ class ConnectionRegistry(object):
                 driver_config, self.sched, connection
         )
 
-        if connection:
-            connection.registerUse(dtype, driver_instance)
-
         return driver_instance
 
     def getSource(self, connection_name):
