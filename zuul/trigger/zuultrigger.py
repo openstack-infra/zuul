@@ -23,8 +23,8 @@ class ZuulTrigger(BaseTrigger):
     name = 'zuul'
     log = logging.getLogger("zuul.ZuulTrigger")
 
-    def __init__(self, trigger_config={}, sched=None, connection=None):
-        super(ZuulTrigger, self).__init__(trigger_config, sched, connection)
+    def __init__(self, trigger_config={}, connection=None):
+        super(ZuulTrigger, self).__init__(trigger_config, connection)
         self._handle_parent_change_enqueued_events = False
         self._handle_project_change_merged_events = False
 
@@ -89,7 +89,7 @@ class ZuulTrigger(BaseTrigger):
         event.change_url = change.url
         event.patch_number = change.patchset
         event.refspec = change.refspec
-        self.sched.addEvent(event)
+        self.connection.sched.addEvent(event)
 
     def _createParentChangeEnqueuedEvents(self, change, pipeline):
         self.log.debug("Checking for changes needing %s:" % change)
@@ -110,19 +110,18 @@ class ZuulTrigger(BaseTrigger):
         event.change_url = change.url
         event.patch_number = change.patchset
         event.refspec = change.refspec
-        self.sched.addEvent(event)
+        self.connection.sched.addEvent(event)
 
-    def postConfig(self):
+    def postConfig(self, pipeline):
         self._handle_parent_change_enqueued_events = False
         self._handle_project_change_merged_events = False
-        for pipeline in self.sched.layout.pipelines.values():
-            for ef in pipeline.manager.event_filters:
-                if ef.trigger != self:
-                    continue
-                if 'parent-change-enqueued' in ef._types:
-                    self._handle_parent_change_enqueued_events = True
-                elif 'project-change-merged' in ef._types:
-                    self._handle_project_change_merged_events = True
+        for ef in pipeline.manager.event_filters:
+            if ef.trigger != self:
+                continue
+            if 'parent-change-enqueued' in ef._types:
+                self._handle_parent_change_enqueued_events = True
+            elif 'project-change-merged' in ef._types:
+                self._handle_project_change_merged_events = True
 
 
 def getSchema():

@@ -959,7 +959,7 @@ class ZuulTestCase(BaseTestCase):
             self.sched.trigger_event_queue
         ]
 
-        self.configure_connections(self.sched)
+        self.configure_connections()
         self.sched.registerConnections(self.connections)
 
         self.ansible_server = RecordingLaunchServer(
@@ -995,7 +995,7 @@ class ZuulTestCase(BaseTestCase):
         self.addCleanup(self.assertFinalState)
         self.addCleanup(self.shutdown)
 
-    def configure_connections(self, sched):
+    def configure_connections(self):
         # Register connections from the config
         self.smtp_messages = []
 
@@ -1009,7 +1009,7 @@ class ZuulTestCase(BaseTestCase):
         # a virtual canonical database given by the configured hostname
         self.gerrit_changes_dbs = {}
         self.gerrit_queues_dbs = {}
-        self.connections = zuul.lib.connections.ConnectionRegistry(sched)
+        self.connections = zuul.lib.connections.ConnectionRegistry()
 
         for section_name in self.config.sections():
             con_match = re.match(r'^connection ([\'\"]?)(.*)(\1)$',

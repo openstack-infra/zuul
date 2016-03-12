@@ -25,8 +25,8 @@ class TimerTrigger(BaseTrigger):
     name = 'timer'
     log = logging.getLogger("zuul.Timer")
 
-    def __init__(self, trigger_config={}, sched=None, connection=None):
-        super(TimerTrigger, self).__init__(trigger_config, sched, connection)
+    def __init__(self, trigger_config={}, connection=None):
+        super(TimerTrigger, self).__init__(trigger_config, connection)
         self.apsched = BackgroundScheduler()
         self.apsched.start()
 
@@ -38,7 +38,7 @@ class TimerTrigger(BaseTrigger):
             event.forced_pipeline = pipeline_name
             event.project_name = project.name
             self.log.debug("Adding event %s" % event)
-            self.sched.addEvent(event)
+            self.connection.sched.addEvent(event)
 
     def _shutdown(self):
         self.apsched.stop()
@@ -61,32 +61,31 @@ class TimerTrigger(BaseTrigger):
 
         return efilters
 
-    def postConfig(self):
+    def postConfig(self, pipeline):
         for job in self.apsched.get_jobs():
             job.remove()
-        for pipeline in self.sched.layout.pipelines.values():
-            for ef in pipeline.manager.event_filters:
-                if ef.trigger != self:
+        for ef in pipeline.manager.event_filters:
+            if ef.trigger != self:
+                continue
+            for timespec in ef.timespecs:
+                parts = timespec.split()
+                if len(parts) < 5 or len(parts) > 6:
+                    self.log.error(
+                        "Unable to parse time value '%s' "
+                        "defined in pipeline %s" % (
+                            timespec,
+                            pipeline.name))
                     continue
-                for timespec in ef.timespecs:
-                    parts = timespec.split()
-                    if len(parts) < 5 or len(parts) > 6:
-                        self.log.error(
-                            "Unable to parse time value '%s' "
-                            "defined in pipeline %s" % (
-                                timespec,
-                                pipeline.name))
-                        continue
-                    minute, hour, dom, month, dow = parts[:5]
-                    if len(parts) > 5:
-                        second = parts[5]
-                    else:
-                        second = None
-                    trigger = CronTrigger(day=dom, day_of_week=dow, hour=hour,
-                                          minute=minute, second=second)
+                minute, hour, dom, month, dow = parts[:5]
+                if len(parts) > 5:
+                    second = parts[5]
+                else:
+                    second = None
+                trigger = CronTrigger(day=dom, day_of_week=dow, hour=hour,
+                                      minute=minute, second=second)
 
-                    self.apsched.add_job(self._onTrigger, trigger=trigger,
-                                         args=(pipeline.name, timespec,))
+                self.apsched.add_job(self._onTrigger, trigger=trigger,
+                                     args=(pipeline.name, timespec,))
 
 
 def getSchema():

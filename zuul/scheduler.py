@@ -504,7 +504,7 @@ class Scheduler(threading.Thread):
         self.maintainConnectionCache()
         for pipeline in tenant.layout.pipelines.values():
             pipeline.source.postConfig()
-            pipeline.trigger.postConfig()
+            pipeline.trigger.postConfig(pipeline)
             for reporter in pipeline.actions:
                 reporter.postConfig()
         if statsd:

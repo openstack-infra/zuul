@@ -23,9 +23,8 @@ class BaseTrigger(object):
 
     Defines the exact public methods that must be supplied."""
 
-    def __init__(self, trigger_config={}, sched=None, connection=None):
+    def __init__(self, trigger_config={}, connection=None):
         self.trigger_config = trigger_config
-        self.sched = sched
         self.connection = connection
 
     @abc.abstractmethod
@@ -33,7 +32,7 @@ class BaseTrigger(object):
         """Return a list of EventFilter's for the scheduler to match against.
         """
 
-    def postConfig(self):
+    def postConfig(self, pipeline):
         """Called after config is loaded."""
 
     def onChangeMerged(self, change, source):

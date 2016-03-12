@@ -177,7 +177,7 @@ class Server(zuul.cmd.ZuulApp):
         webapp = zuul.webapp.WebApp(self.sched, cache_expiry=cache_expiry)
         rpc = zuul.rpclistener.RPCListener(self.config, self.sched)
 
-        self.configure_connections(self.sched)
+        self.configure_connections()
         self.sched.setLauncher(gearman)
         self.sched.setMerger(merger)
 

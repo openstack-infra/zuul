@@ -24,9 +24,8 @@ class BaseReporter(object):
     Defines the exact public methods that must be supplied.
     """
 
-    def __init__(self, reporter_config={}, sched=None, connection=None):
+    def __init__(self, reporter_config={}, connection=None):
         self.reporter_config = reporter_config
-        self.sched = sched
         self.connection = connection
         self._action = None
 
@@ -100,8 +99,9 @@ class BaseReporter(object):
         # Return the list of jobs portion of the report
         ret = ''
 
-        if self.sched.config.has_option('zuul', 'url_pattern'):
-            url_pattern = self.sched.config.get('zuul', 'url_pattern')
+        config = self.connection.sched.config
+        if config.has_option('zuul', 'url_pattern'):
+            url_pattern = config.get('zuul', 'url_pattern')
         else:
             url_pattern = None
 
@@ -131,9 +131,9 @@ class BaseReporter(object):
             else:
                 voting = ''
 
-            if self.sched.config and self.sched.config.has_option(
+            if config and config.has_option(
                 'zuul', 'report_times'):
-                report_times = self.sched.config.getboolean(
+                report_times = config.getboolean(
                     'zuul', 'report_times')
             else:
                 report_times = True
@@ -151,9 +151,9 @@ class BaseReporter(object):
             else:
                 elapsed = ''
             name = ''
-            if self.sched.config.has_option('zuul', 'job_name_in_report'):
-                if self.sched.config.getboolean('zuul',
-                                                'job_name_in_report'):
+            if config.has_option('zuul', 'job_name_in_report'):
+                if config.getboolean('zuul',
+                                     'job_name_in_report'):
                     name = job.name + ' '
             ret += '- %s%s : %s%s%s\n' % (name, url, result, elapsed,
                                           voting)

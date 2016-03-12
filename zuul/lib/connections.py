@@ -21,9 +21,8 @@ import zuul.connection.smtp
 class ConnectionRegistry(object):
     """A registry of connections"""
 
-    def __init__(self, sched):
+    def __init__(self):
         self.connections = {}
-        self.sched = sched  # TODOv3(jeblair): remove (abstraction violation)
 
     def registerScheduler(self, sched):
         for connection_name, connection in self.connections.items():
@@ -115,7 +114,7 @@ class ConnectionRegistry(object):
         driver = drivers[dtype][driver_name].split(':')
         driver_instance = getattr(
             __import__(driver[0], fromlist=['']), driver[1])(
-                driver_config, self.sched, connection
+                driver_config, connection
         )
 
         return driver_instance

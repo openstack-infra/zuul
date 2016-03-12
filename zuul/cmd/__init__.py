@@ -90,6 +90,6 @@ class ZuulApp(object):
         else:
             logging.basicConfig(level=logging.DEBUG)
 
-    def configure_connections(self, sched):
+    def configure_connections(self):
         self.connections = zuul.lib.connections.ConnectionRegistry()
-        self.connections.configure(self.config, sched)
+        self.connections.configure(self.config)
