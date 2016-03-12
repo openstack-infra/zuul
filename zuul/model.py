@@ -75,6 +75,7 @@ class Pipeline(object):
         self.merge_failure_message = None
         self.success_message = None
         self.footer_message = None
+        self.start_message = None
         self.dequeue_on_new_patchset = True
         self.ignore_dependencies = False
         self.job_trees = {}  # project -> JobTree

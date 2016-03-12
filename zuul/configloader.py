@@ -349,6 +349,8 @@ class PipelineParser(object):
         pipeline.success_message = conf.get('success-message',
                                             "Build succeeded.")
         pipeline.footer_message = conf.get('footer-message', "")
+        pipeline.start_message = conf.get('start-message',
+                                          "Starting {pipeline.name} jobs.")
         pipeline.dequeue_on_new_patchset = conf.get(
             'dequeue-on-new-patchset', True)
         pipeline.ignore_dependencies = conf.get(

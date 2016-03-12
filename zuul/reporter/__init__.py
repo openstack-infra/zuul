@@ -69,10 +69,7 @@ class BaseReporter(object):
         return ret
 
     def _formatItemReportStart(self, pipeline, item):
-        msg = "Starting %s jobs." % pipeline.name
-        if self.sched.config.has_option('zuul', 'status_url'):
-            msg += "\n" + self.sched.config.get('zuul', 'status_url')
-        return msg
+        return pipeline.start_message.format(pipeline=pipeline)
 
     def _formatItemReportSuccess(self, pipeline, item):
         return (pipeline.success_message + '\n\n' +
