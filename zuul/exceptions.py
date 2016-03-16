@@ -22,5 +22,14 @@ class ChangeNotFound(Exception):
         super(ChangeNotFound, self).__init__(message)
 
 
+class RevNotFound(Exception):
+    def __init__(self, project, rev):
+        self.project = project
+        self.revision = rev
+        message = ("Failed to checkout project '%s' at revision '%s'"
+                   % (self.project, self.revision))
+        super(RevNotFound, self).__init__(message)
+
+
 class MergeFailure(Exception):
     pass

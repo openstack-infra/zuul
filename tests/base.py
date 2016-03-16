@@ -1132,6 +1132,17 @@ class ZuulTestCase(BaseTestCase):
         zuul.merger.merger.reset_repo_to_head(repo)
         repo.git.clean('-x', '-f', '-d')
 
+    def create_commit(self, project):
+        path = os.path.join(self.upstream_root, project)
+        repo = git.Repo(path)
+        repo.head.reference = repo.heads['master']
+        file_name = os.path.join(path, 'README')
+        with open(file_name, 'a') as f:
+            f.write('creating fake commit\n')
+        repo.index.add([file_name])
+        commit = repo.index.commit('Creating a fake commit')
+        return commit.hexsha
+
     def ref_has_change(self, ref, change):
         path = os.path.join(self.git_root, change.project)
         repo = git.Repo(path)

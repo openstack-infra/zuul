@@ -566,3 +566,57 @@ class TestCloner(ZuulTestCase):
         self.worker.hold_jobs_in_build = False
         self.worker.release()
         self.waitUntilSettled()
+
+    def test_post_checkout(self):
+        project = "org/project"
+        path = os.path.join(self.upstream_root, project)
+        repo = git.Repo(path)
+        repo.head.reference = repo.heads['master']
+        commits = []
+        for i in range(0, 3):
+            commits.append(self.create_commit(project))
+        newRev = commits[1]
+
+        cloner = zuul.lib.cloner.Cloner(
+            git_base_url=self.upstream_root,
+            projects=[project],
+            workspace=self.workspace_root,
+            zuul_branch=None,
+            zuul_ref='master',
+            zuul_url=self.git_root,
+            zuul_project=project,
+            zuul_newrev=newRev,
+        )
+        cloner.execute()
+        repos = self.getWorkspaceRepos([project])
+        cloned_sha = repos[project].rev_parse('HEAD').hexsha
+        self.assertEqual(newRev, cloned_sha)
+
+    def test_post_and_master_checkout(self):
+        project = "org/project1"
+        master_project = "org/project2"
+        path = os.path.join(self.upstream_root, project)
+        repo = git.Repo(path)
+        repo.head.reference = repo.heads['master']
+        commits = []
+        for i in range(0, 3):
+            commits.append(self.create_commit(project))
+        newRev = commits[1]
+
+        cloner = zuul.lib.cloner.Cloner(
+            git_base_url=self.upstream_root,
+            projects=[project, master_project],
+            workspace=self.workspace_root,
+            zuul_branch=None,
+            zuul_ref='master',
+            zuul_url=self.git_root,
+            zuul_project=project,
+            zuul_newrev=newRev
+        )
+        cloner.execute()
+        repos = self.getWorkspaceRepos([project, master_project])
+        cloned_sha = repos[project].rev_parse('HEAD').hexsha
+        self.assertEqual(newRev, cloned_sha)
+        self.assertEqual(
+            repos[master_project].rev_parse('HEAD').hexsha,
+            repos[master_project].rev_parse('master').hexsha)
