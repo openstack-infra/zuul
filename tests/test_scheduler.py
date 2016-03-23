@@ -2242,8 +2242,8 @@ class TestScheduler(ZuulTestCase):
         headers = f.info()
         self.assertIn('Content-Length', headers)
         self.assertIn('Content-Type', headers)
-        self.assertEqual(headers['Content-Type'],
-                         'application/json; charset=UTF-8')
+        self.assertIsNotNone(re.match('^application/json(; charset=UTF-8)?$',
+                                      headers['Content-Type']))
         self.assertIn('Access-Control-Allow-Origin', headers)
         self.assertIn('Cache-Control', headers)
         self.assertIn('Last-Modified', headers)
