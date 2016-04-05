@@ -20,6 +20,20 @@ from zuul.model import Change, Ref, NullChange
 from zuul.source import BaseSource
 
 
+# Walk the change dependency tree to find a cycle
+def detect_cycle(change, history=None):
+    if history is None:
+        history = []
+    else:
+        history = history[:]
+    history.append(change.number)
+    for dep in change.needs_changes:
+        if dep.number in history:
+            raise Exception("Dependency cycle detected: %s in %s" % (
+                dep.number, history))
+        detect_cycle(dep, history)
+
+
 class GerritSource(BaseSource):
     name = 'gerrit'
     log = logging.getLogger("zuul.source.Gerrit")
@@ -60,6 +74,10 @@ class GerritSource(BaseSource):
         data = self.connection.query(change.number)
         change._data = data
         change.is_merged = self._isMerged(change)
+        if change.is_merged:
+            self.log.debug("Change %s is merged" % (change,))
+        else:
+            self.log.debug("Change %s is not merged" % (change,))
         if not head:
             return change.is_merged
         if not change.is_merged:
@@ -82,7 +100,6 @@ class GerritSource(BaseSource):
         status = data.get('status')
         if not status:
             return False
-        self.log.debug("Change %s status: %s" % (change, status))
         if status == 'MERGED':
             return True
         return False
@@ -177,7 +194,7 @@ class GerritSource(BaseSource):
                                    (record.get('number'),))
         return changes
 
-    def _getDependsOnFromCommit(self, message):
+    def _getDependsOnFromCommit(self, message, change):
         records = []
         seen = set()
         for match in self.depends_on_re.findall(message):
@@ -187,17 +204,19 @@ class GerritSource(BaseSource):
                 continue
             seen.add(match)
             query = "change:%s" % (match,)
-            self.log.debug("Running query %s to find needed changes" %
-                           (query,))
+            self.log.debug("Updating %s: Running query %s "
+                           "to find needed changes" %
+                           (change, query,))
             records.extend(self.connection.simpleQuery(query))
         return records
 
-    def _getNeededByFromCommit(self, change_id):
+    def _getNeededByFromCommit(self, change_id, change):
         records = []
         seen = set()
         query = 'message:%s' % change_id
-        self.log.debug("Running query %s to find changes needed-by" %
-                       (query,))
+        self.log.debug("Updating %s: Running query %s "
+                       "to find changes needed-by" %
+                       (change, query,))
         results = self.connection.simpleQuery(query)
         for result in results:
             for match in self.depends_on_re.findall(
@@ -207,15 +226,15 @@ class GerritSource(BaseSource):
                 key = (result['number'], result['currentPatchSet']['number'])
                 if key in seen:
                     continue
-                self.log.debug("Found change %s,%s needs %s from commit" %
-                               (key[0], key[1], change_id))
+                self.log.debug("Updating %s: Found change %s,%s "
+                               "needs %s from commit" %
+                               (change, key[0], key[1], change_id))
                 seen.add(key)
                 records.append(result)
         return records
 
     def _updateChange(self, change, history=None):
-        self.log.info("Updating information for %s,%s" %
-                      (change.number, change.patchset))
+        self.log.info("Updating %s" % (change,))
         data = self.connection.query(change.number)
         change._data = data
 
@@ -255,6 +274,7 @@ class GerritSource(BaseSource):
         if change.is_merged:
             # This change is merged, so we don't need to look any further
             # for dependencies.
+            self.log.debug("Updating %s: change is merged" % (change,))
             return change
 
         if history is None:
@@ -270,21 +290,35 @@ class GerritSource(BaseSource):
             if dep_num in history:
                 raise Exception("Dependency cycle detected: %s in %s" % (
                     dep_num, history))
-            self.log.debug("Getting git-dependent change %s,%s" %
-                           (dep_num, dep_ps))
+            self.log.debug("Updating %s: Getting git-dependent change %s,%s" %
+                           (change, dep_num, dep_ps))
             dep = self._getChange(dep_num, dep_ps, history=history)
+            # Because we are not forcing a refresh in _getChange, it
+            # may return without executing this code, so if we are
+            # updating our change to add ourselves to a dependency
+            # cycle, we won't detect it.  By explicitly performing a
+            # walk of the dependency tree, we will.
+            detect_cycle(dep, history)
             if (not dep.is_merged) and dep not in needs_changes:
                 needs_changes.append(dep)
 
-        for record in self._getDependsOnFromCommit(data['commitMessage']):
+        for record in self._getDependsOnFromCommit(data['commitMessage'],
+                                                   change):
             dep_num = record['number']
             dep_ps = record['currentPatchSet']['number']
             if dep_num in history:
                 raise Exception("Dependency cycle detected: %s in %s" % (
                     dep_num, history))
-            self.log.debug("Getting commit-dependent change %s,%s" %
-                           (dep_num, dep_ps))
+            self.log.debug("Updating %s: Getting commit-dependent "
+                           "change %s,%s" %
+                           (change, dep_num, dep_ps))
             dep = self._getChange(dep_num, dep_ps, history=history)
+            # Because we are not forcing a refresh in _getChange, it
+            # may return without executing this code, so if we are
+            # updating our change to add ourselves to a dependency
+            # cycle, we won't detect it.  By explicitly performing a
+            # walk of the dependency tree, we will.
+            detect_cycle(dep, history)
             if (not dep.is_merged) and dep not in needs_changes:
                 needs_changes.append(dep)
         change.needs_changes = needs_changes
@@ -294,15 +328,17 @@ class GerritSource(BaseSource):
             for needed in data['neededBy']:
                 parts = needed['ref'].split('/')
                 dep_num, dep_ps = parts[3], parts[4]
+                self.log.debug("Updating %s: Getting git-needed change %s,%s" %
+                               (change, dep_num, dep_ps))
                 dep = self._getChange(dep_num, dep_ps)
                 if (not dep.is_merged) and dep.is_current_patchset:
                     needed_by_changes.append(dep)
 
-        for record in self._getNeededByFromCommit(data['id']):
+        for record in self._getNeededByFromCommit(data['id'], change):
             dep_num = record['number']
             dep_ps = record['currentPatchSet']['number']
-            self.log.debug("Getting commit-needed change %s,%s" %
-                           (dep_num, dep_ps))
+            self.log.debug("Updating %s: Getting commit-needed change %s,%s" %
+                           (change, dep_num, dep_ps))
             # Because a commit needed-by may be a cross-repo
             # dependency, cause that change to refresh so that it will
             # reference the latest patchset of its Depends-On (this
