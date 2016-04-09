@@ -16,3 +16,6 @@
 - job:
     name:
       python27
+    nodes:
+      - name: controller
+        image: ubuntu-trusty

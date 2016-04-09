@@ -53,6 +53,10 @@ class JobParser(object):
                  'logserver-prefix': str,
                  }
 
+        node = {vs.Required('name'): str,
+                vs.Required('image'): str,
+                }
+
         job = {vs.Required('name'): str,
                'parent': str,
                'queue-name': str,
@@ -67,6 +71,7 @@ class JobParser(object):
                'files': to_list(str),
                'swift': to_list(swift),
                'irrelevant-files': to_list(str),
+               'nodes': [node],
                'timeout': int,
                '_project_source': str,  # used internally
                '_project_name': str,  # used internally
@@ -494,7 +499,7 @@ class TenantParser(object):
             # Note: this is an ordered list -- we wait for cat jobs to
             # complete in the order they were launched which is the
             # same order they were defined in the main config file.
-            # This is important for correct inheritence.
+            # This is important for correct inheritance.
             TenantParser.log.debug("Waiting for cat job %s" % (job,))
             job.wait()
             for fn in ['zuul.yaml', '.zuul.yaml']:

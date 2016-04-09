@@ -331,6 +331,19 @@ class BasePipelineManager(object):
         self.dequeueItem(item)
         self.reportStats(item)
 
+    def provisionNodes(self, item):
+        jobs = self.pipeline.findJobsToRequest(item)
+        if not jobs:
+            return False
+        build_set = item.current_build_set
+        self.log.debug("Requesting nodes for change %s" % item.change)
+        for job in jobs:
+            req = self.sched.nodepool.requestNodes(build_set, job)
+            self.log.debug("Adding node request %s for job %s to item %s" %
+                           (req, job, item))
+            build_set.setJobNodeRequest(job.name, req)
+        return True
+
     def _launchJobs(self, item, jobs):
         self.log.debug("Launching jobs for change %s" % item.change)
         dependent_items = self.getDependentItems(item)
@@ -360,6 +373,9 @@ class BasePipelineManager(object):
         old_build_set = item.current_build_set
         if prime and item.current_build_set.ref:
             item.resetAllBuilds()
+        for req in old_build_set.node_requests.values():
+            self.sched.nodepool.cancelRequest(req)
+        old_build_set.node_requests = {}
         for build in old_build_set.getBuilds():
             try:
                 self.sched.launcher.cancel(build)
@@ -420,8 +436,10 @@ class BasePipelineManager(object):
         if actionable:
             if not item.current_build_set.ref:
                 item.current_build_set.setConfiguration()
-        if actionable and self.launchJobs(item):
-            changed = True
+            if self.provisionNodes(item):
+                changed = True
+            if self.launchJobs(item):
+                changed = True
         if self.pipeline.didAnyJobFail(item):
             failing_reasons.append("at least one job failed")
         if (not item.live) and (not item.items_behind):
@@ -521,6 +539,14 @@ class BasePipelineManager(object):
         if not build_set.commit and not isinstance(item.change, NullChange):
             self.log.info("Unable to merge change %s" % item.change)
             self.pipeline.setUnableToMerge(item)
+
+    def onNodesProvisioned(self, event):
+        request = event.request
+        build_set = request.build_set
+        build_set.jobNodeRequestComplete(request.job.name, request,
+                                         request.nodes)
+        self.log.info("Completed node request %s for job %s of item %s" %
+                      (request, request.job.name, build_set.item))
 
     def reportItem(self, item):
         if not item.reported:

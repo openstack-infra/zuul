@@ -185,6 +185,33 @@ class Pipeline(object):
             return []
         return self._findJobsToRun(tree.job_trees, item, mutex)
 
+    def _findJobsToRequest(self, job_trees, item):
+        toreq = []
+        for tree in job_trees:
+            job = tree.job
+            if job:
+                if not job.changeMatches(item.change):
+                    continue
+                nodes = item.current_build_set.getJobNodes(job.name)
+                if nodes is None:
+                    req = item.current_build_set.getJobNodeRequest(job.name)
+                    if req is None:
+                        toreq.append(job)
+            # If there is no job, this is a null job tree, and we should
+            # run all of its jobs.
+            if not job:
+                toreq.extend(self._findJobsToRequest(
+                    tree.job_trees, item))
+        return toreq
+
+    def findJobsToRequest(self, item):
+        if not item.live:
+            return []
+        tree = item.job_tree
+        if not tree:
+            return []
+        return self._findJobsToRequest(tree.job_trees, item)
+
     def haveAllJobsStarted(self, item):
         for job in self.getJobs(item):
             build = item.current_build_set.getBuild(job.name)
@@ -456,7 +483,7 @@ class Job(object):
     attributes = dict(
         timeout=None,
         # variables={},
-        # nodes=[],
+        nodes=[],
         # auth={},
         workspace=None,
         pre_run=None,
@@ -650,6 +677,8 @@ class BuildSet(object):
         self.unable_to_merge = False
         self.failing_reasons = []
         self.merge_state = self.NEW
+        self.nodes = {}  # job -> nodes
+        self.node_requests = {}  # job -> reqs
 
     def __repr__(self):
         return '<BuildSet item: %s #builds: %s merge state: %s>' % (
@@ -687,6 +716,24 @@ class BuildSet(object):
         keys = self.builds.keys()
         keys.sort()
         return [self.builds.get(x) for x in keys]
+
+    def getJobNodes(self, job_name):
+        # Return None if not provisioned; [] if no nodes required
+        return self.nodes.get(job_name)
+
+    def setJobNodeRequest(self, job_name, req):
+        if job_name in self.node_requests:
+            raise Exception("Prior node request for %s" % (job_name))
+        self.node_requests[job_name] = req
+
+    def getJobNodeRequest(self, job_name):
+        return self.node_requests.get(job_name)
+
+    def jobNodeRequestComplete(self, job_name, req, nodes):
+        if job_name in self.nodes:
+            raise Exception("Prior node request for %s" % (job_name))
+        self.nodes[job_name] = nodes
+        del self.node_requests[job_name]
 
 
 class QueueItem(object):
