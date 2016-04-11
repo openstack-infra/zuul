@@ -148,7 +148,7 @@ class Server(zuul.cmd.ZuulApp):
     def main(self):
         # See comment at top of file about zuul imports
         import zuul.scheduler
-        import zuul.launcher.gearman
+        import zuul.launcher.client
         import zuul.merger.client
         import zuul.lib.swift
         import zuul.webapp
@@ -166,8 +166,8 @@ class Server(zuul.cmd.ZuulApp):
         # TODO(jhesketh): Move swift into a connection?
         self.swift = zuul.lib.swift.Swift(self.config)
 
-        gearman = zuul.launcher.gearman.Gearman(self.config, self.sched,
-                                                self.swift)
+        gearman = zuul.launcher.client.LaunchClient(self.config, self.sched,
+                                                    self.swift)
         merger = zuul.merger.client.MergeClient(self.config, self.sched)
 
         if self.config.has_option('zuul', 'status_expiry'):
