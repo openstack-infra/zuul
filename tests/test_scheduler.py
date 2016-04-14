@@ -4215,6 +4215,45 @@ For CI problems and help debugging, contact ci@example.org"""
         self.waitUntilSettled()
         self.assertEqual(self.history[-1].changes, '3,2 2,1 1,2')
 
+    def test_crd_cycle_join(self):
+        "Test an updated change creates a cycle"
+        A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A')
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        # Create B->A
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
+        B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            B.subject, A.data['id'])
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        # Update A to add A->B (a cycle).
+        A.addPatchset()
+        A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            A.subject, B.data['id'])
+        # Normally we would submit the patchset-created event for
+        # processing here, however, we have no way of noting whether
+        # the dependency cycle detection correctly raised an
+        # exception, so instead, we reach into the source driver and
+        # call the method that would ultimately be called by the event
+        # processing.
+
+        source = self.sched.layout.pipelines['gate'].source
+        with testtools.ExpectedException(
+            Exception, "Dependency cycle detected"):
+            source._getChange(u'1', u'2', True)
+        self.log.debug("Got expected dependency cycle exception")
+
+        # Now if we update B to remove the depends-on, everything
+        # should be okay.  B; A->B
+
+        B.addPatchset()
+        B.data['commitMessage'] = '%s\n' % (B.subject,)
+        source._getChange(u'1', u'2', True)
+        source._getChange(u'2', u'2', True)
+
     def test_disable_at(self):
         "Test a pipeline will only report to the disabled trigger when failing"
 
