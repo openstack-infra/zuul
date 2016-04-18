@@ -22,6 +22,7 @@ import extras
 # instead it depends on lockfile-0.9.1 which uses pidfile.
 pid_file_module = extras.try_imports(['daemon.pidlockfile', 'daemon.pidfile'])
 
+import logging
 import os
 import sys
 import signal
@@ -47,6 +48,17 @@ class Launcher(zuul.cmd.ZuulApp):
                             help='show zuul version')
         self.args = parser.parse_args()
 
+    def reconfigure_handler(self, signum, frame):
+        signal.signal(signal.SIGHUP, signal.SIG_IGN)
+        self.log.debug("Reconfiguration triggered")
+        self.read_config()
+        self.setup_logging('launcher', 'log_config')
+        try:
+            self.launcher.reconfigure(self.config)
+        except Exception:
+            self.log.exception("Reconfiguration failed:")
+        signal.signal(signal.SIGHUP, self.reconfigure_handler)
+
     def exit_handler(self, signum, frame):
         signal.signal(signal.SIGUSR1, signal.SIG_IGN)
         self.launcher.stop()
@@ -58,10 +70,13 @@ class Launcher(zuul.cmd.ZuulApp):
 
         self.setup_logging('launcher', 'log_config')
 
+        self.log = logging.getLogger("zuul.Launcher")
+
         LaunchServer = zuul.launcher.ansiblelaunchserver.LaunchServer
         self.launcher = LaunchServer(self.config)
         self.launcher.start()
 
+        signal.signal(signal.SIGHUP, self.reconfigure_handler)
         signal.signal(signal.SIGUSR1, self.exit_handler)
         signal.signal(signal.SIGUSR2, zuul.cmd.stack_dump_handler)
         while True:
