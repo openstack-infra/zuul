@@ -266,7 +266,7 @@ class Pipeline(object):
             items.extend(shared_queue.queue)
         return items
 
-    def formatStatusJSON(self):
+    def formatStatusJSON(self, url_pattern=None):
         j_pipeline = dict(name=self.name,
                           description=self.description)
         j_queues = []
@@ -283,7 +283,7 @@ class Pipeline(object):
                     if j_changes:
                         j_queue['heads'].append(j_changes)
                     j_changes = []
-                j_changes.append(e.formatJSON())
+                j_changes.append(e.formatJSON(url_pattern))
                 if (len(j_changes) > 1 and
                         (j_changes[-2]['remaining_time'] is not None) and
                         (j_changes[-1]['remaining_time'] is not None)):
@@ -724,7 +724,34 @@ class QueueItem(object):
     def setReportedResult(self, result):
         self.current_build_set.result = result
 
-    def formatJSON(self):
+    def formatJobResult(self, job, url_pattern=None):
+        build = self.current_build_set.getBuild(job.name)
+        result = build.result
+        pattern = url_pattern
+        if result == 'SUCCESS':
+            if job.success_message:
+                result = job.success_message
+            if job.success_pattern:
+                pattern = job.success_pattern
+        elif result == 'FAILURE':
+            if job.failure_message:
+                result = job.failure_message
+            if job.failure_pattern:
+                pattern = job.failure_pattern
+        url = None
+        if pattern:
+            try:
+                url = pattern.format(change=self.change,
+                                     pipeline=self.pipeline,
+                                     job=job,
+                                     build=build)
+            except Exception:
+                pass  # FIXME: log this or something?
+        if not url:
+            url = build.url or job.name
+        return (result, url)
+
+    def formatJSON(self, url_pattern=None):
         changeish = self.change
         ret = {}
         ret['active'] = self.active
@@ -761,11 +788,13 @@ class QueueItem(object):
             elapsed = None
             remaining = None
             result = None
-            url = None
+            build_url = None
+            report_url = None
             worker = None
             if build:
                 result = build.result
-                url = build.url
+                build_url = build.url
+                (unused, report_url) = self.formatJobResult(job, url_pattern)
                 if build.start_time:
                     if build.end_time:
                         elapsed = int((build.end_time -
@@ -793,7 +822,8 @@ class QueueItem(object):
                 'name': job.name,
                 'elapsed_time': elapsed,
                 'remaining_time': remaining,
-                'url': url,
+                'url': build_url,
+                'report_url': report_url,
                 'result': result,
                 'voting': job.voting,
                 'uuid': build.uuid if build else None,

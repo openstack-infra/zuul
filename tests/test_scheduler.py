@@ -2235,6 +2235,9 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
 
+        self.worker.release('project-merge')
+        self.waitUntilSettled()
+
         port = self.webapp.server.socket.getsockname()[1]
 
         req = urllib2.Request("http://localhost:%s/status.json" % port)
@@ -2255,7 +2258,7 @@ class TestScheduler(ZuulTestCase):
         self.waitUntilSettled()
 
         data = json.loads(data)
-        status_jobs = set()
+        status_jobs = []
         for p in data['pipelines']:
             for q in p['change_queues']:
                 if p['name'] in ['gate', 'conflict']:
@@ -2267,10 +2270,24 @@ class TestScheduler(ZuulTestCase):
                         self.assertTrue(change['active'])
                         self.assertEqual(change['id'], '1,1')
                         for job in change['jobs']:
-                            status_jobs.add(job['name'])
-        self.assertIn('project-merge', status_jobs)
-        self.assertIn('project-test1', status_jobs)
-        self.assertIn('project-test2', status_jobs)
+                            status_jobs.append(job)
+        self.assertEqual('project-merge', status_jobs[0]['name'])
+        self.assertEqual('https://server/job/project-merge/0/',
+                         status_jobs[0]['url'])
+        self.assertEqual('http://logs.example.com/1/1/gate/project-merge/0',
+                         status_jobs[0]['report_url'])
+
+        self.assertEqual('project-test1', status_jobs[1]['name'])
+        self.assertEqual('https://server/job/project-test1/1/',
+                         status_jobs[1]['url'])
+        self.assertEqual('http://logs.example.com/1/1/gate/project-test1/1',
+                         status_jobs[1]['report_url'])
+
+        self.assertEqual('project-test2', status_jobs[2]['name'])
+        self.assertEqual('https://server/job/project-test2/2/',
+                         status_jobs[2]['url'])
+        self.assertEqual('http://logs.example.com/1/1/gate/project-test2/2',
+                         status_jobs[2]['report_url'])
 
     def test_merging_queues(self):
         "Test that transitively-connected change queues are merged"
