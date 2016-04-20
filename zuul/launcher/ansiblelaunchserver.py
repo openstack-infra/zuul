@@ -161,6 +161,7 @@ class LaunchServer(object):
 
     def assignNode(self, job):
         args = json.loads(job.arguments)
+        self.log.debug("Assigned node with arguments: %s" % (args,))
         worker = NodeWorker(self.config, self.jobs,
                             args['name'], args['host'],
                             args['description'], args['labels'],
@@ -196,6 +197,7 @@ class NodeWorker(object):
         self.zmq_send_queue = zmq_send_queue
         self.running_job_lock = threading.Lock()
         self._running_job = False
+        self._sent_complete_event = False
 
     def run(self):
         signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -324,6 +326,7 @@ class NodeWorker(object):
         # Initialize the result so we have something regardless of
         # whether the job actually runs
         result = None
+        self._sent_complete_event = False
 
         try:
             self.sendStartEvent(job_name, args)
@@ -331,12 +334,16 @@ class NodeWorker(object):
             self.log.exception("Exception while sending job start event")
 
         try:
-            result = self.runJob()
+            result = self.runJob(job)
         except Exception:
             self.log.exception("Exception while launching job thread")
 
+        self._running_job = False
+        if not result:
+            result = b''
+
         try:
-            job.sendWorkComplete()
+            job.sendWorkComplete(result)
         except Exception:
             self.log.exception("Exception while sending job completion packet")
 
@@ -372,27 +379,30 @@ class NodeWorker(object):
         item = "onFinalized %s" % json.dumps(event)
         self.log.debug("Sending over ZMQ: %s" % (item,))
         self.zmq_send_queue.put(item)
+        self._sent_complete_event = True
 
     def sendFakeCompleteEvent(self):
+        if self._sent_complete_event:
+            return
         self.sendCompleteEvent('zuul:launcher-shutdown',
                                'SUCCESS', {})
 
     def runJob(self, job):
         self.ansible_proc = None
+        result = None
         with self.running_job_lock:
             if not self._running:
-                return
+                return result
             self._running_job = True
 
         self.log.debug("Job %s: beginning" % (job.unique,))
-        return 'SUCCESS'  # TODO
         with JobDir() as jobdir:
             self.log.debug("Job %s: job root at %s" %
                            (job.unique, jobdir.root))
             args = json.loads(job.arguments)
 
             self.prepareAnsibleFiles(jobdir, args)
-            result = self.runAnsible(jobdir)
+            status = self.runAnsible(jobdir)
 
             data = {
                 'url': 'https://server/job',
@@ -401,13 +411,12 @@ class NodeWorker(object):
             job.sendWorkData(json.dumps(data))
             job.sendWorkStatus(0, 100)
 
-            result = dict(result=result)
-            job.sendWorkComplete(json.dumps(result))
+            result = json.dumps(dict(result=status))
+
+        return result
 
     def getHostList(self, args):
-        # TODOv3: This should get the appropriate nodes from nodepool,
-        # or in the unit tests, be overriden to return localhost.
-        return [('localhost', dict(ansible_connection='local'))]
+        return [('node', dict(ansible_host=self.host))]
 
     def prepareAnsibleFiles(self, jobdir, args):
         with open(jobdir.inventory, 'w') as inventory:
@@ -418,13 +427,14 @@ class NodeWorker(object):
                     inventory.write('%s=%s' % (k, v))
                 inventory.write('\n')
         with open(jobdir.playbook, 'w') as playbook:
-            play = dict(hosts='localhost',
+            play = dict(hosts='node',
                         tasks=[dict(name='test',
                                     shell='echo Hello world')])
             playbook.write(yaml.dump([play]))
         with open(jobdir.config, 'w') as config:
             config.write('[defaults]\n')
             config.write('hostfile = %s\n' % jobdir.inventory)
+            config.write('host_key_checking = False\n')
 
     def runAnsible(self, jobdir):
         self.ansible_proc = subprocess.Popen(
