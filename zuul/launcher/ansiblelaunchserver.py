@@ -42,6 +42,7 @@ class JobDir(object):
         os.makedirs(self.ansible_root)
         self.inventory = os.path.join(self.ansible_root, 'inventory')
         self.playbook = os.path.join(self.ansible_root, 'playbook')
+        self.post_playbook = os.path.join(self.ansible_root, 'post_playbook')
         self.config = os.path.join(self.ansible_root, 'ansible.cfg')
         self.script_root = os.path.join(self.ansible_root, 'scripts')
         os.makedirs(self.script_root)
@@ -488,7 +489,6 @@ class NodeWorker(object):
             self.prepareAnsibleFiles(jobdir, job)
 
             self._job_start_time = time.time()
-            status = self.runAnsible(jobdir)
 
             data = {
                 'url': 'https://server/job',
@@ -496,6 +496,13 @@ class NodeWorker(object):
             }
             job.sendWorkData(json.dumps(data))
             job.sendWorkStatus(0, 100)
+
+            job_status = self.runAnsiblePlaybook(jobdir)
+            post_status = self.runAnsiblePostPlaybook(jobdir, job_status)
+            if job_status and post_status:
+                status = 'SUCCESS'
+            else:
+                status = 'FAILURE'
 
             result = json.dumps(dict(result=status))
 
@@ -536,12 +543,33 @@ class NodeWorker(object):
             play = dict(hosts='node', name='Job body',
                         tasks=tasks)
             playbook.write(yaml.dump([play]))
+
+        with open(jobdir.post_playbook, 'w') as playbook:
+            tasks = []
+            for publisher in jjb_job.get('publishers', []):
+                if 'scp' in publisher:
+                    for scpfile in publisher['scp']['files']:
+                        if scpfile.get('copy-console'):
+                            src = '/tmp/console.log'
+                        else:
+                            src = scpfile['source']
+                        syncargs = dict(src=src,
+                                        dest=scpfile['target'])
+                        task = dict(synchronize=syncargs,
+                                    delegate_to=publisher['scp']['site'])
+                        if not scpfile.get('copy-after-failure'):
+                            task['when'] = 'success'
+                        tasks.append(task)
+            play = dict(hosts='node', name='Publishers',
+                        tasks=tasks)
+            playbook.write(yaml.dump([play]))
+
         with open(jobdir.config, 'w') as config:
             config.write('[defaults]\n')
             config.write('hostfile = %s\n' % jobdir.inventory)
             config.write('host_key_checking = False\n')
 
-    def runAnsible(self, jobdir):
+    def runAnsiblePlaybook(self, jobdir):
         self.ansible_proc = subprocess.Popen(
             ['ansible-playbook', jobdir.playbook],
             cwd=jobdir.ansible_root,
@@ -552,10 +580,19 @@ class NodeWorker(object):
         (out, err) = self.ansible_proc.communicate()
         ret = self.ansible_proc.wait()
         self.ansible_proc = None
-        if ret == 0:
-            return 'SUCCESS'
-        else:
-            return 'FAILURE'
+        return ret == 0
+
+    def runAnsiblePostPlaybook(self, jobdir, success):
+        proc = subprocess.Popen(
+            ['ansible-playbook', jobdir.post_playbook,
+             '-e', 'success=%s' % success],
+            cwd=jobdir.ansible_root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            preexec_fn=os.setsid,
+        )
+        (out, err) = proc.communicate()
+        return proc.wait() == 0
 
 
 class JJB(jenkins_jobs.builder.Builder):
