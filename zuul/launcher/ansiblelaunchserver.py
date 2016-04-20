@@ -23,6 +23,7 @@ import subprocess
 import tempfile
 import threading
 import traceback
+import uuid
 
 import gear
 import yaml
@@ -40,6 +41,8 @@ class JobDir(object):
         self.inventory = os.path.join(self.ansible_root, 'inventory')
         self.playbook = os.path.join(self.ansible_root, 'playbook')
         self.config = os.path.join(self.ansible_root, 'ansible.cfg')
+        self.script_root = os.path.join(self.ansible_root, 'scripts')
+        os.makedirs(self.script_root)
 
     def __enter__(self):
         return self
@@ -399,9 +402,8 @@ class NodeWorker(object):
         with JobDir() as jobdir:
             self.log.debug("Job %s: job root at %s" %
                            (job.unique, jobdir.root))
-            args = json.loads(job.arguments)
 
-            self.prepareAnsibleFiles(jobdir, args)
+            self.prepareAnsibleFiles(jobdir, job)
             status = self.runAnsible(jobdir)
 
             data = {
@@ -415,21 +417,31 @@ class NodeWorker(object):
 
         return result
 
-    def getHostList(self, args):
+    def getHostList(self):
         return [('node', dict(ansible_host=self.host))]
 
-    def prepareAnsibleFiles(self, jobdir, args):
+    def prepareAnsibleFiles(self, jobdir, gearman_job):
         with open(jobdir.inventory, 'w') as inventory:
-            for host_name, host_vars in self.getHostList(args):
+            for host_name, host_vars in self.getHostList():
                 inventory.write(host_name)
                 inventory.write(' ')
                 for k, v in host_vars.items():
                     inventory.write('%s=%s' % (k, v))
                 inventory.write('\n')
+        job_name = gearman_job.name.split(':')[1]
+        jjb_job = self.jobs[job_name]
         with open(jobdir.playbook, 'w') as playbook:
-            play = dict(hosts='node',
-                        tasks=[dict(name='test',
-                                    shell='echo Hello world')])
+            tasks = []
+            for builder in jjb_job.get('builders', []):
+                if 'shell' in builder:
+                    script_fn = '%s.sh' % str(uuid.uuid4().hex)
+                    script_fn = os.path.join(jobdir.script_root, script_fn)
+                    with open(script_fn, 'w') as script:
+                        script.write(builder['shell'])
+                    tasks.append(dict(script='%s >> /tmp/console.log 2>&1' %
+                                      script_fn))
+            play = dict(hosts='node', name='Job body',
+                        tasks=tasks)
             playbook.write(yaml.dump([play]))
         with open(jobdir.config, 'w') as config:
             config.write('[defaults]\n')
