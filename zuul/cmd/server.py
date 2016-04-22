@@ -61,12 +61,9 @@ class Server(zuul.cmd.ZuulApp):
     def reconfigure_handler(self, signum, frame):
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
         self.log.debug("Reconfiguration triggered")
-        self.sched.stopConnections()
         self.read_config()
         self.setup_logging('zuul', 'log_config')
         try:
-            self.configure_connections()
-            self.sched.registerConnections(self.connections)
             self.sched.reconfigure(self.config)
         except Exception:
             self.log.exception("Reconfiguration failed:")

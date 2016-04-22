@@ -997,9 +997,8 @@ normal operation, omit ``-d`` and let Zuul run as a daemon.
 
 If you send signal 1 (SIGHUP) to the zuul-server process, Zuul will
 stop executing new jobs, wait until all executing jobs are finished,
-reload its configuration, and resume.  Any values in any of the
-configuration files may be changed, except the location of Zuul's PID
-file (a change to that will be ignored until Zuul is restarted).
+reload its layout.yaml, and resume. Changes to any connections or
+the PID  file will be ignored until Zuul is restarted.
 
 If you send a SIGUSR1 to the zuul-server process, Zuul will stop
 executing new jobs, wait until all executing jobs are finished,
