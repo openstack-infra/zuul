@@ -297,6 +297,10 @@ class NodeWorker(object):
         self._running_job = False
         self._sent_complete_event = False
         self.workspace_root = config.get('launcher', 'workspace_root')
+        if self.config.has_option('launcher', 'private_key_file'):
+            self.private_key_file = config.get('launcher', 'private_key_file')
+        else:
+            self.private_key_file = '~/.ssh/id_rsa'
 
     def isAlive(self):
         # Meant to be called from the manager
@@ -695,6 +699,7 @@ class NodeWorker(object):
             config.write('[defaults]\n')
             config.write('hostfile = %s\n' % jobdir.inventory)
             config.write('host_key_checking = False\n')
+            config.write('private_key_file = %s\n' % self.private_key_file)
 
             callback_path = zuul.ansible.plugins.callback_plugins.__file__
             callback_path = os.path.abspath(callback_path)
