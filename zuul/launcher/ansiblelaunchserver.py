@@ -301,6 +301,10 @@ class NodeWorker(object):
             self.private_key_file = config.get('launcher', 'private_key_file')
         else:
             self.private_key_file = '~/.ssh/id_rsa'
+        if self.config.has_option('launcher', 'username'):
+            self.username = config.get('launcher', 'username')
+        else:
+            self.username = 'zuul'
 
     def isAlive(self):
         # Meant to be called from the manager
@@ -551,7 +555,8 @@ class NodeWorker(object):
         return result
 
     def getHostList(self):
-        return [('node', dict(ansible_host=self.host))]
+        return [('node', dict(
+            ansible_host=self.host, ansible_user=self.username))]
 
     def _makeSCPTask(self, publisher):
         tasks = []
@@ -649,9 +654,8 @@ class NodeWorker(object):
         with open(jobdir.inventory, 'w') as inventory:
             for host_name, host_vars in self.getHostList():
                 inventory.write(host_name)
-                inventory.write(' ')
                 for k, v in host_vars.items():
-                    inventory.write('%s=%s' % (k, v))
+                    inventory.write(' %s=%s' % (k, v))
                 inventory.write('\n')
 
         timeout = None
