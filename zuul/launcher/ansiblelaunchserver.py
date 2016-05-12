@@ -80,7 +80,8 @@ class LaunchServer(object):
                 d = {}
                 d['host'] = config.get(section, 'host')
                 d['user'] = config.get(section, 'user')
-                d['pass'] = config.get(section, 'pass')
+                d['pass'] = config.get(section, 'pass', '')
+                d['root'] = config.get(section, 'root', '/')
                 self.sites[sitename] = d
 
     def start(self):
@@ -569,8 +570,13 @@ class NodeWorker(object):
                 src = '/tmp/console.log'
             else:
                 src = scpfile['source']
+            dest = os.path.join(site['root'], scpfile['target'])
+            dest = os.path.normpath(dest)
+            if not dest.startswith(site['root']):
+                raise Exception("Target path %s is not below site root" %
+                                (dest,))
             syncargs = dict(src=src,
-                            dest=scpfile['target'])
+                            dest=dest)
             task = dict(synchronize=syncargs,
                         delegate_to=site['host'])
             if not scpfile.get('copy-after-failure'):
@@ -602,6 +608,11 @@ class NodeWorker(object):
         while ftpsource[-1] == '/':
             ftpsource = ftpsource[:-1]
         ftptarget = ftp['target']
+        ftptarget = os.path.join(site['root'], ftp['target'])
+        ftptarget = os.path.normpath(ftptarget)
+        if not ftptarget.startswith(site['root']):
+            raise Exception("Target path %s is not below site root" %
+                            (ftptarget,))
         while ftptarget[-1] == '/':
             ftptarget = ftptarget[:-1]
         with open(ftpscript, 'w') as script:
