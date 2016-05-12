@@ -40,8 +40,8 @@ class TimerTrigger(BaseTrigger):
             self.log.debug("Adding event %s" % event)
             self.sched.addEvent(event)
 
-    def _shutdown(self):
-        self.apsched.stop()
+    def stop(self):
+        self.apsched.shutdown()
 
     def getEventFilters(self, trigger_conf):
         def toList(item):
