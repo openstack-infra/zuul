@@ -71,4 +71,5 @@ def main():
 
 from ansible.module_utils.basic import *  # noqa
 
-main()
+if __name__ == '__main__':
+    main()
