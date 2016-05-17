@@ -697,7 +697,7 @@ class NodeWorker(object):
                                                        parameters, timeout))
             play = dict(hosts='node', name='Job body',
                         tasks=tasks)
-            playbook.write(yaml.dump([play]))
+            playbook.write(yaml.dump([play], default_flow_style=False))
 
         with open(jobdir.post_playbook, 'w') as playbook:
             tasks = []
@@ -708,7 +708,7 @@ class NodeWorker(object):
                     tasks.extend(self._makeFTPTask(jobdir, publisher))
             play = dict(hosts='node', name='Publishers',
                         tasks=tasks)
-            playbook.write(yaml.dump([play]))
+            playbook.write(yaml.dump([play], default_flow_style=False))
 
         with open(jobdir.config, 'w') as config:
             config.write('[defaults]\n')
