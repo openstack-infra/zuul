@@ -572,6 +572,30 @@ class NodeWorker(object):
             return variables.get(match.group(1), '')
         return re.sub('\$([A-Za-z0-9_]+)', lookup, text)
 
+    def _getRsyncOptions(self, source, parameters):
+        # Treat the publisher source as a filter; ant and rsync behave
+        # fairly close in this manner, except for leading directories.
+        source = self._substituteVariables(source, parameters)
+        # If the source starts with ** then we want to match any
+        # number of directories, so don't anchor the include filter.
+        # If it does not start with **, then the intent is likely to
+        # at least start by matching an immediate file or subdirectory
+        # (even if later we have a ** in the middle), so in this case,
+        # anchor it to the root of the transfer (the workspace).
+        if ((not source.startswith('**')) and
+            (not source.startswith('/'))):
+            source = '/' + source
+        # These options mean: include the thing we want, include any
+        # directories (so that we continue to search for the thing we
+        # want no matter how deep it is), exclude anything that
+        # doesn't match the thing we want or is a directory, then get
+        # rid of empty directories left over at the end.
+        rsync_opts = ['--include="%s"' % source,
+                      '--include="*/"',
+                      '--exclude="*"',
+                      '--prune-empty-dirs']
+        return rsync_opts
+
     def _makeSCPTask(self, jobdir, publisher, parameters):
         tasks = []
         for scpfile in publisher['scp']['files']:
@@ -581,15 +605,21 @@ class NodeWorker(object):
             site = self.sites[site]
             if scpfile.get('copy-console'):
                 src = '/tmp/console.txt'
+                rsync_opts = []
             else:
-                src = scpfile['source']
-                src = self._substituteVariables(src, parameters)
-                src = os.path.join(parameters['WORKSPACE'], src)
+                src = parameters['WORKSPACE']
+                if not src.endswith('/'):
+                    src = src + '/'
+                rsync_opts = self._getRsyncOptions(scpfile['source'],
+                                                   parameters)
+
             scproot = tempfile.mkdtemp(dir=jobdir.ansible_root)
             os.chmod(scproot, 0o755)
             syncargs = dict(src=src,
                             dest=scproot,
                             mode='pull')
+            if rsync_opts:
+                syncargs['rsync_opts'] = rsync_opts
             task = dict(synchronize=syncargs)
             if not scpfile.get('copy-after-failure'):
                 task['when'] = 'success'
@@ -634,11 +664,16 @@ class NodeWorker(object):
         ftpcontent = os.path.join(ftproot, 'content')
         os.makedirs(ftpcontent)
         ftpscript = os.path.join(ftproot, 'script')
-        src = ftp['source']
-        src = self._substituteVariables(src, parameters)
-        src = os.path.join(parameters['WORKSPACE'], src)
+
+        src = parameters['WORKSPACE']
+        if not src.endswith('/'):
+            src = src + '/'
+        rsync_opts = self._getRsyncOptions(ftp['source'],
+                                           parameters)
         syncargs = dict(src=src,
                         dest=ftpcontent)
+        if rsync_opts:
+            syncargs['rsync_opts'] = rsync_opts
         task = dict(synchronize=syncargs,
                     when='success')
         tasks.append(task)
