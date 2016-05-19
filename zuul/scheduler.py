@@ -262,6 +262,9 @@ class Scheduler(threading.Thread):
         self.management_event_queue = Queue.Queue()
         self.layout = model.Layout()
 
+        time_dir = self._get_time_database_dir()
+        self.time_database = model.TimeDataBase(time_dir)
+
         self.zuul_version = zuul_version.version_info.release_string()
         self.last_reconfigured = None
 
@@ -740,6 +743,17 @@ class Scheduler(threading.Thread):
             state_dir = '/var/lib/zuul'
         return os.path.join(state_dir, 'queue.pickle')
 
+    def _get_time_database_dir(self):
+        if self.config.has_option('zuul', 'state_dir'):
+            state_dir = os.path.expanduser(self.config.get('zuul',
+                                                           'state_dir'))
+        else:
+            state_dir = '/var/lib/zuul'
+        d = os.path.join(state_dir, 'times')
+        if not os.path.exists(d):
+            os.mkdir(d)
+        return d
+
     def _save_queue(self):
         pickle_file = self._get_queue_pickle_file()
         events = []
@@ -1069,6 +1083,11 @@ class Scheduler(threading.Thread):
             self.log.warning("Build %s is not associated with a pipeline" %
                              (build,))
             return
+        try:
+            build.estimated_time = float(self.time_database.getEstimatedTime(
+                build.job.name))
+        except Exception:
+            self.log.exception("Exception estimating build time:")
         pipeline.manager.onBuildStarted(event.build)
 
     def _doBuildCompletedEvent(self, event):
@@ -1082,6 +1101,12 @@ class Scheduler(threading.Thread):
             self.log.warning("Build %s is not associated with a pipeline" %
                              (build,))
             return
+        if build.end_time and build.start_time and build.result:
+            duration = build.end_time - build.start_time
+        try:
+            self.time_database.update(build.job.name, duration, build.result)
+        except Exception:
+            self.log.exception("Exception recording build time:")
         pipeline.manager.onBuildCompleted(event.build)
 
     def _doMergeCompletedEvent(self, event):

@@ -456,9 +456,6 @@ class Gearman(object):
                 build.number = data.get('number')
                 build.__gearman_manager = data.get('manager')
                 self.sched.onBuildStarted(build)
-
-            if job.denominator:
-                build.estimated_time = float(job.denominator) / 1000
         else:
             self.log.error("Unable to find build %s" % job.unique)
 

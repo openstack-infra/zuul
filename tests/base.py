@@ -876,11 +876,13 @@ class ZuulTestCase(BaseTestCase):
         self.test_root = os.path.join(tmp_root, "zuul-test")
         self.upstream_root = os.path.join(self.test_root, "upstream")
         self.git_root = os.path.join(self.test_root, "git")
+        self.state_root = os.path.join(self.test_root, "lib")
 
         if os.path.exists(self.test_root):
             shutil.rmtree(self.test_root)
         os.makedirs(self.test_root)
         os.makedirs(self.upstream_root)
+        os.makedirs(self.state_root)
 
         # Make per test copy of Configuration.
         self.setup_config()
@@ -888,6 +890,7 @@ class ZuulTestCase(BaseTestCase):
                         os.path.join(FIXTURE_DIR,
                                      self.config.get('zuul', 'layout_config')))
         self.config.set('merger', 'git_dir', self.git_root)
+        self.config.set('zuul', 'state_dir', self.state_root)
 
         # For each project in config:
         self.init_repo("org/project")
