@@ -638,7 +638,7 @@ class NodeWorker(object):
                 '--compress', '-rt', '--safe-links',
                 '--rsync-path="mkdir -p {dest} && rsync"',
                 '--rsh="/usr/bin/ssh -i {private_key_file} -S none '
-                '-o StrictHostKeyChecking=no"',
+                '-o StrictHostKeyChecking=no -q"',
                 '--out-format="<<CHANGED>>%i %n%L"',
                 '"{source}/"', '"{user}@{host}:{dest}"'
             ]
