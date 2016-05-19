@@ -109,12 +109,20 @@ class Server(object):
 
     def followConsole(self, console, conn):
         while True:
-            r = [console.file, conn]
-            e = [console.file, conn]
-            r, w, e = select.select(r, [], e)
+            # As long as we have unread data, keep reading/sending
+            while True:
+                chunk = console.file.read(4096)
+                if chunk:
+                    conn.send(chunk)
+                else:
+                    break
 
-            if console.file in e:
-                return True
+            # At this point, we are waiting for more data to be written
+            time.sleep(0.5)
+
+            # Check to see if the remote end has sent any data, if so,
+            # discard
+            r, w, e = select.select([conn], [], [conn], 0)
             if conn in e:
                 return False
             if conn in r:
@@ -124,19 +132,15 @@ class Server(object):
                 if not ret:
                     return False
 
-            if console.file in r:
-                line = console.file.readline()
-                if line:
-                    conn.send(line)
-                time.sleep(0.5)
-                try:
-                    st = os.stat(console.path)
-                    if (st.st_ino != console.stat.st_ino or
-                        st.st_size < console.size):
-                        return True
-                except Exception:
+            # See if the file has been truncated
+            try:
+                st = os.stat(console.path)
+                if (st.st_ino != console.stat.st_ino or
+                    st.st_size < console.size):
                     return True
-                console.size = st.st_size
+            except Exception:
+                return True
+            console.size = st.st_size
 
     def handleOneConnection(self, conn):
         # FIXME: this won't notice disconnects until it tries to send
@@ -166,14 +170,14 @@ class Server(object):
 
 
 def test():
-    s = Server('/tmp/console.log', 8088)
+    s = Server('/tmp/console.txt', 8088)
     s.run()
 
 
 def main():
     module = AnsibleModule(
         argument_spec=dict(
-            path=dict(default='/tmp/console.log'),
+            path=dict(default='/tmp/console.txt'),
             port=dict(default=8088, type='int'),
         )
     )

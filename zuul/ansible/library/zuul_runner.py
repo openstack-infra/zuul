@@ -21,7 +21,7 @@ import subprocess
 
 class Console(object):
     def __enter__(self):
-        self.logfile = open('/tmp/console.log', 'w+')
+        self.logfile = open('/tmp/console.txt', 'w+', 0)
         return self
 
     def __exit__(self, etype, value, tb):
