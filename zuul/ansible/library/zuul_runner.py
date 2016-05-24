@@ -16,6 +16,7 @@
 # along with this software.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
+import getpass
 import os
 import subprocess
 
@@ -34,13 +35,30 @@ class Console(object):
         self.logfile.write(outln)
 
 
+def get_env():
+    env = {}
+    env['HOME'] = os.path.expanduser('~')
+    env['USER'] = getpass.getuser()
+
+    # Known locations for PAM mod_env sources
+    for fn in ['/etc/environment', '/etc/default/locale']:
+        if os.path.exists(fn):
+            with open(fn) as f:
+                for line in f:
+                    k, v = line.strip().split('=')
+                    env[k] = v
+    return env
+
+
 def run(cwd, cmd, args):
+    env = get_env()
+    env.update(args)
     proc = subprocess.Popen(
-        [cmd],
+        ['/bin/bash', '-l', '-c', cmd],
         cwd=cwd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        env=args,
+        env=env,
     )
 
     with Console() as console:
@@ -65,7 +83,6 @@ def main():
 
     p = module.params
     env = p['parameters'].copy()
-    env['HOME'] = os.path.expanduser('~')
     ret = run(p['cwd'], p['command'], env)
     if ret == 0:
         module.exit_json(changed=True, rc=ret)

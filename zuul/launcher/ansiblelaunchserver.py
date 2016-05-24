@@ -746,7 +746,6 @@ class NodeWorker(object):
 
         parameters = args.copy()
         parameters['WORKSPACE'] = os.path.join(self.workspace_root, job_name)
-        parameters['PATH'] = '/usr/local/bin:/usr/bin:/bin'
 
         with open(jobdir.inventory, 'w') as inventory:
             for host_name, host_vars in self.getHostList():
