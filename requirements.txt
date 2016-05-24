@@ -24,3 +24,5 @@ cryptography>=1.6
 cachecontrol
 pyjwt
 iso8601
+aiohttp
+uvloop;python_version>='3.5'

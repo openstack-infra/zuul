@@ -29,6 +29,10 @@ default_username=zuul
 trusted_ro_dirs=/opt/zuul-scripts:/var/cache
 trusted_rw_dirs=/opt/zuul-logs
 
+[web]
+listen_address=127.0.0.1
+port=9000
+
 [webapp]
 listen_address=0.0.0.0
 port=8001

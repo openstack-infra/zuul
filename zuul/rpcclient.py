@@ -86,3 +86,11 @@ class RPCClient(object):
 
     def shutdown(self):
         self.gearman.shutdown()
+
+    def get_job_log_stream_address(self, uuid, logfile='console.log'):
+        data = {'uuid': uuid, 'logfile': logfile}
+        job = self.submitJob('zuul:get_job_log_stream_address', data)
+        if job.failure:
+            return False
+        else:
+            return json.loads(job.data[0])

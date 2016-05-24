@@ -121,7 +121,8 @@ class TestSQLConnection(ZuulDBTestCase):
         self.assertEqual('project-merge', buildset0_builds[0]['job_name'])
         self.assertEqual("SUCCESS", buildset0_builds[0]['result'])
         self.assertEqual(
-            'finger://zl.example.com/{uuid}'.format(
+            'finger://{hostname}/{uuid}'.format(
+                hostname=self.executor_server.hostname,
                 uuid=buildset0_builds[0]['uuid']),
             buildset0_builds[0]['log_url'])
         self.assertEqual('check', buildset1['pipeline'])
@@ -144,7 +145,8 @@ class TestSQLConnection(ZuulDBTestCase):
         self.assertEqual('project-test1', buildset1_builds[-2]['job_name'])
         self.assertEqual("FAILURE", buildset1_builds[-2]['result'])
         self.assertEqual(
-            'finger://zl.example.com/{uuid}'.format(
+            'finger://{hostname}/{uuid}'.format(
+                hostname=self.executor_server.hostname,
                 uuid=buildset1_builds[-2]['uuid']),
             buildset1_builds[-2]['log_url'])
 
