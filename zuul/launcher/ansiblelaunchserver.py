@@ -617,6 +617,7 @@ class NodeWorker(object):
             os.chmod(scproot, 0o755)
             syncargs = dict(src=src,
                             dest=scproot,
+                            copy_links='yes',
                             mode='pull')
             if rsync_opts:
                 syncargs['rsync_opts'] = rsync_opts
@@ -673,7 +674,8 @@ class NodeWorker(object):
         rsync_opts = self._getRsyncOptions(ftp['source'],
                                            parameters)
         syncargs = dict(src=src,
-                        dest=ftpcontent)
+                        dest=ftpcontent,
+                        copy_links='yes')
         if rsync_opts:
             syncargs['rsync_opts'] = rsync_opts
         task = dict(synchronize=syncargs,
