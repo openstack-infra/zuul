@@ -846,8 +846,10 @@ class NodeWorker(object):
             preexec_fn=os.setsid,
         )
         (out, err) = self.ansible_proc.communicate()
-        self.log.debug("Ansible stdout:\n%s" % out)
-        self.log.debug("Ansible stderr:\n%s" % err)
+        for line in out.split('\n'):
+            self.log.debug("Ansible stdout:\n%s" % line)
+        for line in err.split('\n'):
+            self.log.debug("Ansible stderr:\n%s" % line)
         ret = self.ansible_proc.wait()
         self.ansible_proc = None
         return ret == 0
@@ -862,8 +864,10 @@ class NodeWorker(object):
             preexec_fn=os.setsid,
         )
         (out, err) = proc.communicate()
-        self.log.debug("Ansible post stdout:\n%s" % out)
-        self.log.debug("Ansible post stderr:\n%s" % err)
+        for line in out.split('\n'):
+            self.log.debug("Ansible post stdout:\n%s" % line)
+        for line in err.split('\n'):
+            self.log.debug("Ansible post stderr:\n%s" % line)
         return proc.wait() == 0
 
 
