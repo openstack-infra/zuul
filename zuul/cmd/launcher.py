@@ -46,6 +46,9 @@ class Launcher(zuul.cmd.ZuulApp):
         parser.add_argument('--version', dest='version', action='version',
                             version=self._get_version(),
                             help='show zuul version')
+        parser.add_argument('--keep-jobdir', dest='keep_jobdir',
+                            action='store_true',
+                            help='keep local jobdirs after run completes')
         self.args = parser.parse_args()
 
     def reconfigure_handler(self, signum, frame):
@@ -73,7 +76,8 @@ class Launcher(zuul.cmd.ZuulApp):
         self.log = logging.getLogger("zuul.Launcher")
 
         LaunchServer = zuul.launcher.ansiblelaunchserver.LaunchServer
-        self.launcher = LaunchServer(self.config)
+        self.launcher = LaunchServer(self.config,
+                                     keep_jobdir=self.args.keep_jobdir)
         self.launcher.start()
 
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
