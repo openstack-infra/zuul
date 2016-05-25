@@ -86,7 +86,8 @@ class Server(zuul.cmd.ZuulApp):
         import zuul.trigger.gerrit
 
         logging.basicConfig(level=logging.DEBUG)
-        self.sched = zuul.scheduler.Scheduler(self.config)
+        self.sched = zuul.scheduler.Scheduler(self.config,
+                                              testonly=True)
         self.configure_connections()
         layout = self.sched.testConfig(self.config.get('zuul',
                                                        'layout_config'),

@@ -236,7 +236,7 @@ def toList(item):
 class Scheduler(threading.Thread):
     log = logging.getLogger("zuul.Scheduler")
 
-    def __init__(self, config):
+    def __init__(self, config, testonly=False):
         threading.Thread.__init__(self)
         self.daemon = True
         self.wake_event = threading.Event()
@@ -262,8 +262,9 @@ class Scheduler(threading.Thread):
         self.management_event_queue = Queue.Queue()
         self.layout = model.Layout()
 
-        time_dir = self._get_time_database_dir()
-        self.time_database = model.TimeDataBase(time_dir)
+        if not testonly:
+            time_dir = self._get_time_database_dir()
+            self.time_database = model.TimeDataBase(time_dir)
 
         self.zuul_version = zuul_version.version_info.release_string()
         self.last_reconfigured = None
