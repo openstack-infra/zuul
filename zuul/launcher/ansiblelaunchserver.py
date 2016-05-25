@@ -158,6 +158,7 @@ class LaunchServer(object):
             except Exception:
                 self.log.exception("Exception sending reconfigure command "
                                    "to worker:")
+        self.log.debug("Reconfiguration complete")
 
     def stop(self):
         self.log.debug("Stopping")
