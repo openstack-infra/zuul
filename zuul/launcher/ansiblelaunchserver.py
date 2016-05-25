@@ -770,26 +770,38 @@ class NodeWorker(object):
 
         with open(jobdir.playbook, 'w') as playbook:
             tasks = []
+            main_block = []
+            error_block = []
+            tasks.append(dict(block=main_block,
+                              rescue=error_block))
 
             task = dict(file=dict(path='/tmp/console.txt', state='absent'))
-            tasks.append(task)
+            main_block.append(task)
 
             task = dict(zuul_console=dict(path='/tmp/console.txt', port=8088))
-            tasks.append(task)
+            main_block.append(task)
 
             task = dict(file=dict(path=parameters['WORKSPACE'],
                                   state='directory'))
-            tasks.append(task)
+            main_block.append(task)
 
             # TODO: remove once zuul-worker DIB element has landed
-            tasks.append(dict(shell="[ -f /usr/bin/yum ] && "
-                              "sudo /usr/bin/yum install libselinux-python || "
-                              "/bin/true"))
+            main_block.append(dict(shell="[ -f /usr/bin/yum ] && "
+                                   "sudo /usr/bin/yum install "
+                                   "libselinux-python || "
+                                   "/bin/true"))
 
             for builder in jjb_job.get('builders', []):
                 if 'shell' in builder:
-                    tasks.extend(self._makeBuilderTask(jobdir, builder,
-                                                       parameters, timeout))
+                    main_block.extend(
+                        self._makeBuilderTask(jobdir, builder,
+                                              parameters, timeout))
+            task = dict(zuul_log=dict(msg="Job complete, result: SUCCESS"))
+            main_block.append(task)
+
+            task = dict(zuul_log=dict(msg="Job complete, result: FAILURE"))
+            error_block.append(task)
+
             play = dict(hosts='node', name='Job body',
                         tasks=tasks)
             playbook.write(yaml.dump([play]))

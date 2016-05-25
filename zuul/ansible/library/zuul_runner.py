@@ -69,7 +69,7 @@ def run(cwd, cmd, args):
             console.addLine(line)
 
         ret = proc.wait()
-        console.addLine("[Zuul] Exit code: %s\n" % ret)
+        console.addLine("[Zuul] Task exit code: %s\n" % ret)
     return ret
 
 
