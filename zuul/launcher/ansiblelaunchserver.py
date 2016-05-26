@@ -632,10 +632,12 @@ class NodeWorker(object):
             if not dest.startswith(site['root']):
                 raise Exception("Target path %s is not below site root" %
                                 (dest,))
+
             local_args = [
                 'command', '/usr/bin/rsync', '--delay-updates', '-F',
-                '--compress', '-rt', '--safe-links', '--rsh',
-                '"/usr/bin/ssh -i {private_key_file} -S none '
+                '--compress', '-rt', '--safe-links',
+                '--rsync-path="mkdir -p {dest} && rsync"',
+                '--rsh="/usr/bin/ssh -i {private_key_file} -S none '
                 '-o StrictHostKeyChecking=no"',
                 '--out-format="<<CHANGED>>%i %n%L"',
                 '"{source}/"', '"{user}@{host}:{dest}"'
