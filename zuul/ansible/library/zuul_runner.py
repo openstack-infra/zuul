@@ -23,7 +23,7 @@ import subprocess
 
 class Console(object):
     def __enter__(self):
-        self.logfile = open('/tmp/console.txt', 'a', 0)
+        self.logfile = open('/tmp/console.html', 'a', 0)
         return self
 
     def __exit__(self, etype, value, tb):

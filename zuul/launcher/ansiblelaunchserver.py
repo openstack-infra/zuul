@@ -608,7 +608,7 @@ class NodeWorker(object):
                 raise Exception("Undefined SCP site: %s" % (site,))
             site = self.sites[site]
             if scpfile.get('copy-console'):
-                src = '/tmp/console.txt'
+                src = '/tmp/console.html'
                 rsync_opts = []
             else:
                 src = parameters['WORKSPACE']
@@ -774,10 +774,10 @@ class NodeWorker(object):
             tasks.append(dict(block=main_block,
                               rescue=error_block))
 
-            task = dict(file=dict(path='/tmp/console.txt', state='absent'))
+            task = dict(file=dict(path='/tmp/console.html', state='absent'))
             main_block.append(task)
 
-            task = dict(zuul_console=dict(path='/tmp/console.txt', port=8088))
+            task = dict(zuul_console=dict(path='/tmp/console.html', port=8088))
             main_block.append(task)
 
             task = dict(file=dict(path=parameters['WORKSPACE'],

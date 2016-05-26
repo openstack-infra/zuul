@@ -170,14 +170,14 @@ class Server(object):
 
 
 def test():
-    s = Server('/tmp/console.txt', 8088)
+    s = Server('/tmp/console.html', 8088)
     s.run()
 
 
 def main():
     module = AnsibleModule(
         argument_spec=dict(
-            path=dict(default='/tmp/console.txt'),
+            path=dict(default='/tmp/console.html'),
             port=dict(default=8088, type='int'),
         )
     )
