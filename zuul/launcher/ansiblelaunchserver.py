@@ -847,8 +847,10 @@ class NodeWorker(object):
         )
         (out, err) = self.ansible_proc.communicate()
         for line in out.split('\n'):
+            line = line[:1024]
             self.log.debug("Ansible stdout: %s" % line)
         for line in err.split('\n'):
+            line = line[:1024]
             self.log.debug("Ansible stderr: %s" % line)
         ret = self.ansible_proc.wait()
         self.ansible_proc = None
@@ -865,8 +867,10 @@ class NodeWorker(object):
         )
         (out, err) = proc.communicate()
         for line in out.split('\n'):
+            line = line[:1024]
             self.log.debug("Ansible post stdout: %s" % line)
         for line in err.split('\n'):
+            line = line[:1024]
             self.log.debug("Ansible post stderr: %s" % line)
         return proc.wait() == 0
 
