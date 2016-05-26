@@ -587,9 +587,8 @@ class NodeWorker(object):
         # at least start by matching an immediate file or subdirectory
         # (even if later we have a ** in the middle), so in this case,
         # anchor it to the root of the transfer (the workspace).
-        if ((not source.startswith('**')) and
-            (not source.startswith('/'))):
-            source = '/' + source
+        if not source.startswith('**'):
+            source = os.path.join('/', source)
         # These options mean: include the thing we want, include any
         # directories (so that we continue to search for the thing we
         # want no matter how deep it is), exclude anything that
