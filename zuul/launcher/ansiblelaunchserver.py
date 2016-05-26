@@ -37,7 +37,8 @@ import zuul.ansible.plugins.callback_plugins
 
 
 class JobDir(object):
-    def __init__(self):
+    def __init__(self, keep=False):
+        self.keep = keep
         self.root = tempfile.mkdtemp()
         self.git_root = os.path.join(self.root, 'git')
         os.makedirs(self.git_root)
@@ -56,15 +57,17 @@ class JobDir(object):
         return self
 
     def __exit__(self, etype, value, tb):
-        shutil.rmtree(self.root)
+        if not self.keep:
+            shutil.rmtree(self.root)
 
 
 class LaunchServer(object):
     log = logging.getLogger("zuul.LaunchServer")
     section_re = re.compile('site "(.*?)"')
 
-    def __init__(self, config):
+    def __init__(self, config, keep_jobdir=False):
         self.config = config
+        self.keep_jobdir = keep_jobdir
         self.hostname = socket.gethostname()
         self.node_workers = {}
         self.mpmanager = multiprocessing.Manager()
@@ -221,7 +224,7 @@ class LaunchServer(object):
                             self.sites, args['name'], args['host'],
                             args['description'], args['labels'],
                             self.hostname, self.zmq_send_queue,
-                            self.termination_queue)
+                            self.termination_queue, self.keep_jobdir)
         self.node_workers[worker.name] = worker
 
         worker.process = multiprocessing.Process(target=worker.run)
@@ -279,7 +282,7 @@ class LaunchServer(object):
 class NodeWorker(object):
     def __init__(self, config, jobs, builds, sites, name, host,
                  description, labels, manager_name, zmq_send_queue,
-                 termination_queue):
+                 termination_queue, keep_jobdir):
         self.log = logging.getLogger("zuul.NodeWorker.%s" % (name,))
         self.log.debug("Creating node worker %s" % (name,))
         self.config = config
@@ -299,6 +302,7 @@ class NodeWorker(object):
         self.manager_name = manager_name
         self.zmq_send_queue = zmq_send_queue
         self.termination_queue = termination_queue
+        self.keep_jobdir = keep_jobdir
         self.running_job_lock = threading.Lock()
         self._job_complete_event = threading.Event()
         self._running_job = False
@@ -540,7 +544,7 @@ class NodeWorker(object):
 
         self.log.debug("Job %s: beginning" % (job.unique,))
         self.builds[job.unique] = self.name
-        with JobDir() as jobdir:
+        with JobDir(self.keep_jobdir) as jobdir:
             self.log.debug("Job %s: job root at %s" %
                            (job.unique, jobdir.root))
             timeout = self.prepareAnsibleFiles(jobdir, job, args)
