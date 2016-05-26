@@ -16,6 +16,7 @@
 # along with this software.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
+import os
 import subprocess
 
 
@@ -63,7 +64,9 @@ def main():
     )
 
     p = module.params
-    ret = run(p['cwd'], p['command'], p['parameters'])
+    env = p['parameters'].copy()
+    env['HOME'] = os.path.expanduser('~')
+    ret = run(p['cwd'], p['command'], env)
     if ret == 0:
         module.exit_json(changed=True, rc=ret)
     else:
