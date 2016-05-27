@@ -24,6 +24,7 @@ pid_file_module = extras.try_imports(['daemon.pidlockfile', 'daemon.pidfile'])
 
 import logging
 import os
+import socket
 import sys
 import signal
 
@@ -49,25 +50,35 @@ class Launcher(zuul.cmd.ZuulApp):
         parser.add_argument('--keep-jobdir', dest='keep_jobdir',
                             action='store_true',
                             help='keep local jobdirs after run completes')
+        parser.add_argument('command', choices=['reconfigure', 'stop'],
+                            nargs='?')
+
         self.args = parser.parse_args()
 
-    def reconfigure_handler(self, signum, frame):
-        signal.signal(signal.SIGHUP, signal.SIG_IGN)
-        self.log.debug("Reconfiguration triggered")
-        self.read_config()
-        self.setup_logging('launcher', 'log_config')
-        try:
-            self.launcher.reconfigure(self.config)
-        except Exception:
-            self.log.exception("Reconfiguration failed:")
-        signal.signal(signal.SIGHUP, self.reconfigure_handler)
+    def send_command(self, cmd):
+        if self.config.has_option('zuul', 'state_dir'):
+            state_dir = os.path.expanduser(
+                self.config.get('zuul', 'state_dir'))
+        else:
+            state_dir = '/var/lib/zuul'
+        path = os.path.join(state_dir, 'launcher.socket')
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.connect(path)
+        s.sendall('%s\n' % cmd)
 
-    def exit_handler(self, signum, frame):
-        signal.signal(signal.SIGUSR1, signal.SIG_IGN)
+    def send_reconfigure(self):
+        self.send_command('reconfigure')
+        sys.exit(0)
+
+    def send_stop(self):
+        self.send_command('stop')
+        sys.exit(0)
+
+    def exit_handler(self):
         self.launcher.stop()
         self.launcher.join()
 
-    def main(self):
+    def main(self, daemon=True):
         # See comment at top of file about zuul imports
         import zuul.launcher.ansiblelaunchserver
 
@@ -80,23 +91,31 @@ class Launcher(zuul.cmd.ZuulApp):
                                      keep_jobdir=self.args.keep_jobdir)
         self.launcher.start()
 
-        signal.signal(signal.SIGHUP, self.reconfigure_handler)
-        signal.signal(signal.SIGUSR1, self.exit_handler)
         signal.signal(signal.SIGUSR2, zuul.cmd.stack_dump_handler)
-        while True:
-            try:
-                signal.pause()
-            except KeyboardInterrupt:
-                print "Ctrl + C: asking launcher to exit nicely...\n"
-                self.exit_handler(signal.SIGINT, None)
-                sys.exit(0)
+        if daemon:
+            self.launcher.join()
+        else:
+            while True:
+                try:
+                    signal.pause()
+                except KeyboardInterrupt:
+                    print "Ctrl + C: asking launcher to exit nicely...\n"
+                    self.exit_handler()
+                    sys.exit(0)
 
 
 def main():
     server = Launcher()
     server.parse_arguments()
-
     server.read_config()
+
+    if server.args.command == 'reconfigure':
+        server.send_reconfigure()
+        sys.exit(0)
+    elif server.args.command == 'stop':
+        server.send_stop()
+        sys.exit(0)
+
     server.configure_connections()
 
     if server.config.has_option('launcher', 'pidfile'):
@@ -106,10 +125,10 @@ def main():
     pid = pid_file_module.TimeoutPIDLockFile(pid_fn, 10)
 
     if server.args.nodaemon:
-        server.main()
+        server.main(False)
     else:
         with daemon.DaemonContext(pidfile=pid):
-            server.main()
+            server.main(True)
 
 
 if __name__ == "__main__":
