@@ -939,7 +939,7 @@ class JJB(jenkins_jobs.builder.Builder):
             name = component
             component_data = {}
 
-        new_component = self.parser.data[component_type].get(name)
+        new_component = self.parser.data.get(component_type, {}).get(name)
         if new_component:
             for new_sub_component in new_component[component_list_type]:
                 new_components.extend(
