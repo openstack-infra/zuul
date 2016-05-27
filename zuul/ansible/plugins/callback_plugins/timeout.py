@@ -49,7 +49,7 @@ class CallbackModule(CallbackBase):
             facts = dict(elapsed_time=self._elapsed_time)
 
             overall_timeout = manager.extra_vars.get('timeout')
-            if overall_timeout is not None:
+            if str(overall_timeout) != 'None':
                 timeout = int(overall_timeout) - int(self._elapsed_time)
                 facts['timeout'] = timeout
 

@@ -41,13 +41,13 @@ def log(msg):
 def main():
     module = AnsibleModule(
         argument_spec=dict(
-            msg=dict(required=True, default=''),
+            msg=dict(required=True),
         )
     )
 
     p = module.params
-    ret = log(p['msg'])
-    module.exit_json(changed=True, rc=ret)
+    log(p['msg'])
+    module.exit_json(changed=True)
 
 from ansible.module_utils.basic import *  # noqa
 
