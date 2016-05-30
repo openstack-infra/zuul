@@ -21,7 +21,7 @@ import traceback
 import gear
 import six
 
-import model
+from zuul import model
 
 
 class RPCListener(object):

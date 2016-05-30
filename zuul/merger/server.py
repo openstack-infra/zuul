@@ -19,7 +19,7 @@ import traceback
 
 import gear
 
-import merger
+from zuul.merger import merger
 
 
 class MergeServer(object):
