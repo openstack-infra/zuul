@@ -20,11 +20,10 @@ import os
 import re
 import shutil
 import time
-import urllib
-import urllib2
 import yaml
 
 import git
+from six.moves import urllib
 import testtools
 
 import zuul.change_matcher
@@ -2275,8 +2274,8 @@ jobs:
 
         port = self.webapp.server.socket.getsockname()[1]
 
-        req = urllib2.Request("http://localhost:%s/status.json" % port)
-        f = urllib2.urlopen(req)
+        req = urllib.request.Request("http://localhost:%s/status.json" % port)
+        f = urllib.request.urlopen(req)
         headers = f.info()
         self.assertIn('Content-Length', headers)
         self.assertIn('Content-Type', headers)
@@ -2881,7 +2880,8 @@ jobs:
 
         port = self.webapp.server.socket.getsockname()[1]
 
-        f = urllib.urlopen("http://localhost:%s/status.json" % port)
+        req = urllib.request.Request("http://localhost:%s/status.json" % port)
+        f = urllib.request.urlopen(req)
         data = f.read()
 
         self.worker.hold_jobs_in_build = False

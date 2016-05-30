@@ -18,11 +18,11 @@ import select
 import json
 import time
 from six.moves import queue as Queue
+from six.moves import urllib
 import paramiko
 import logging
 import pprint
 import voluptuous as v
-import urllib2
 
 from zuul.connection import BaseConnection
 from zuul.model import TriggerEvent
@@ -388,10 +388,10 @@ class GerritConnection(BaseConnection):
         url = "%s/p/%s/info/refs?service=git-upload-pack" % (
             self.baseurl, project)
         try:
-            data = urllib2.urlopen(url).read()
+            data = urllib.request.urlopen(url).read()
         except:
             self.log.error("Cannot get references from %s" % url)
-            raise  # keeps urllib2 error informations
+            raise  # keeps urllib error informations
         ret = {}
         read_headers = False
         read_advertisement = False
