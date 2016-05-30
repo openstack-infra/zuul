@@ -210,7 +210,7 @@ class Merger(object):
         fd.write('#!/bin/bash\n')
         fd.write('ssh -i %s $@\n' % key)
         fd.close()
-        os.chmod(name, 0755)
+        os.chmod(name, 0o755)
 
     def addProject(self, project, url):
         repo = None
