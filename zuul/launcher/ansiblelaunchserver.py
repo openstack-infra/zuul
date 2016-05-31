@@ -145,7 +145,7 @@ class LaunchServer(object):
         # Setup ZMQ
         self.zcontext = zmq.Context()
         self.zsocket = self.zcontext.socket(zmq.PUB)
-        self.zsocket.bind("tcp://*:8881")
+        self.zsocket.bind("tcp://*:8888")
 
         # Setup Gearman
         server = self.config.get('gearman', 'server')
