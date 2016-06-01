@@ -37,7 +37,7 @@ import zuul.ansible.plugins.callback_plugins
 from zuul.lib import commandsocket
 
 
-COMMANDS = ['reconfigure', 'stop', 'pause', 'unpause']
+COMMANDS = ['reconfigure', 'stop', 'pause', 'unpause', 'release']
 
 
 def boolify(x):
@@ -256,6 +256,19 @@ class LaunchServer(object):
                                    "to worker:")
         self.log.debug("Unpaused")
 
+    def release(self):
+        self.log.debug("Releasing idle nodes")
+        for node in self.node_workers.values():
+            if node.name in self.static_nodes:
+                continue
+            try:
+                if node.isAlive():
+                    node.queue.put(dict(action='release'))
+            except Exception:
+                self.log.exception("Exception sending release command "
+                                   "to worker:")
+        self.log.debug("Finished releasing idle nodes")
+
     def stop(self):
         self.log.debug("Stopping")
         # First, stop accepting new jobs
@@ -297,6 +310,8 @@ class LaunchServer(object):
                     self.pause()
                 elif command == 'unpause':
                     self.unpause()
+                elif command == 'release':
+                    self.release()
             except Exception:
                 self.log.exception("Exception while processing command")
 
@@ -428,6 +443,8 @@ class NodeWorker(object):
         self.termination_queue = termination_queue
         self.keep_jobdir = keep_jobdir
         self.running_job_lock = threading.Lock()
+        self._get_job_lock = threading.Lock()
+        self._got_job = False
         self._job_complete_event = threading.Event()
         self._running_job = False
         self._sent_complete_event = False
@@ -490,6 +507,20 @@ class NodeWorker(object):
     def unpause(self):
         self.unpaused.set()
 
+    def release(self):
+        # If this node is idle, stop it.
+        old_unpaused = self.unpaused.is_set()
+        if old_unpaused:
+            self.pause()
+        with self._get_job_lock:
+            if self._got_job:
+                self.log.debug("This worker is not idle")
+                if old_unpaused:
+                    self.unpause()
+                return
+        self.log.debug("Stopping due to release command")
+        self.queue.put(dict(action='stop'))
+
     def _runQueue(self):
         item = self.queue.get()
         try:
@@ -508,6 +539,9 @@ class NodeWorker(object):
             if item['action'] == 'unpause':
                 self.log.debug("Received unpause request")
                 self.unpause()
+            if item['action'] == 'release':
+                self.log.debug("Received release request")
+                self.release()
             elif item['action'] == 'reconfigure':
                 self.log.debug("Received reconfigure request")
                 self.register()
@@ -525,12 +559,16 @@ class NodeWorker(object):
                     self._runGearman()
             except Exception:
                 self.log.exception("Exception in gearman manager:")
+            with self._get_job_lock:
+                self._got_job = False
 
     def _runGearman(self):
-        try:
-            job = self.worker.getJob()
-        except gear.InterruptedError:
-            return
+        with self._get_job_lock:
+            try:
+                job = self.worker.getJob()
+                self._got_job = True
+            except gear.InterruptedError:
+                return
         self.log.debug("Node worker %s got job %s" % (self.name, job.name))
         try:
             if job.name not in self.registered_functions:
