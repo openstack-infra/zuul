@@ -29,8 +29,9 @@ import sys
 import signal
 
 import zuul.cmd
+import zuul.launcher.ansiblelaunchserver
 
-# No zuul imports here because they pull in paramiko which must not be
+# No zuul imports that pull in paramiko here; it must not be
 # imported until after the daemonization.
 # https://github.com/paramiko/paramiko/issues/59
 # Similar situation with gear and statsd.
@@ -50,7 +51,8 @@ class Launcher(zuul.cmd.ZuulApp):
         parser.add_argument('--keep-jobdir', dest='keep_jobdir',
                             action='store_true',
                             help='keep local jobdirs after run completes')
-        parser.add_argument('command', choices=['reconfigure', 'stop'],
+        parser.add_argument('command',
+                            choices=zuul.launcher.ansiblelaunchserver.COMMANDS,
                             nargs='?')
 
         self.args = parser.parse_args()
@@ -66,21 +68,12 @@ class Launcher(zuul.cmd.ZuulApp):
         s.connect(path)
         s.sendall('%s\n' % cmd)
 
-    def send_reconfigure(self):
-        self.send_command('reconfigure')
-        sys.exit(0)
-
-    def send_stop(self):
-        self.send_command('stop')
-        sys.exit(0)
-
     def exit_handler(self):
         self.launcher.stop()
         self.launcher.join()
 
     def main(self, daemon=True):
         # See comment at top of file about zuul imports
-        import zuul.launcher.ansiblelaunchserver
 
         self.setup_logging('launcher', 'log_config')
 
@@ -109,11 +102,8 @@ def main():
     server.parse_arguments()
     server.read_config()
 
-    if server.args.command == 'reconfigure':
-        server.send_reconfigure()
-        sys.exit(0)
-    elif server.args.command == 'stop':
-        server.send_stop()
+    if server.args.command in zuul.launcher.ansiblelaunchserver.COMMANDS:
+        server.send_command(server.args.command)
         sys.exit(0)
 
     server.configure_connections()
