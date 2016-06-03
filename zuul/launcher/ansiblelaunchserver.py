@@ -715,16 +715,20 @@ class NodeWorker(object):
                                 (dest,))
 
             local_args = [
-                'command', '/usr/bin/rsync', '--delay-updates', '-F',
+                'shell', '/usr/bin/rsync', '--delay-updates', '-F',
                 '--compress', '-rt', '--safe-links',
                 '--rsync-path="mkdir -p {dest} && rsync"',
                 '--rsh="/usr/bin/ssh -i {private_key_file} -S none '
                 '-o StrictHostKeyChecking=no -q"',
                 '--out-format="<<CHANGED>>%i %n%L"',
-                '"{source}/"', '"{user}@{host}:{dest}"'
+                '{source}', '"{user}@{host}:{dest}"'
             ]
+            if scpfile.get('keep-hierarchy'):
+                source = '"%s/"' % scproot
+            else:
+                source = '`/usr/bin/find "%s" -type f`' % scproot
             local_action = ' '.join(local_args).format(
-                source=scproot,
+                source=source,
                 dest=dest,
                 private_key_file=self.private_key_file,
                 host=site['host'],
