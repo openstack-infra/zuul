@@ -19,6 +19,7 @@ import datetime
 import getpass
 import os
 import subprocess
+import threading
 
 
 class Console(object):
@@ -50,6 +51,21 @@ def get_env():
     return env
 
 
+def follow(fd):
+    newline_warning = False
+    with Console() as console:
+        while True:
+            line = fd.readline()
+            if not line:
+                break
+            if not line.endswith('\n'):
+                line += '\n'
+                newline_warning = True
+            console.addLine(line)
+        if newline_warning:
+            console.addLine('[Zuul] No trailing newline\n')
+
+
 def run(cwd, cmd, args):
     env = get_env()
     env.update(args)
@@ -61,14 +77,20 @@ def run(cwd, cmd, args):
         env=env,
     )
 
-    with Console() as console:
-        while True:
-            line = proc.stdout.readline()
-            if not line:
-                break
-            console.addLine(line)
+    t = threading.Thread(target=follow, args=(proc.stdout,))
+    t.daemon = True
+    t.start()
 
-        ret = proc.wait()
+    ret = proc.wait()
+    # Give the thread that is writing the console log up to 10 seconds
+    # to catch up and exit.  If it hasn't done so by then, it is very
+    # likely stuck in readline() because it spawed a child that is
+    # holding stdout or stderr open.
+    t.join(10)
+    with Console() as console:
+        if t.isAlive():
+            console.addLine("[Zuul] standard output/error still open "
+                            "after child exited")
         console.addLine("[Zuul] Task exit code: %s\n" % ret)
     return ret
 
