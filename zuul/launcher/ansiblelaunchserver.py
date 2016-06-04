@@ -851,9 +851,6 @@ class NodeWorker(object):
         tasks = []
         for scpfile in publisher['scp']['files']:
             site = publisher['scp']['site']
-            if site not in self.sites:
-                raise Exception("Undefined SCP site: %s" % (site,))
-            site = self.sites[site]
             if scpfile.get('copy-console'):
                 src = '/tmp/console.html'
                 rsync_opts = []
@@ -877,39 +874,48 @@ class NodeWorker(object):
                 task['when'] = 'success'
             tasks.append(task)
 
-            dest = scpfile['target']
-            dest = self._substituteVariables(dest, parameters)
-            dest = os.path.join(site['root'], dest)
-            dest = os.path.normpath(dest)
-            if not dest.startswith(site['root']):
-                raise Exception("Target path %s is not below site root" %
-                                (dest,))
-
-            rsync_cmd = [
-                '/usr/bin/rsync', '--delay-updates', '-F',
-                '--compress', '-rt', '--safe-links',
-                '--rsync-path="mkdir -p {dest} && rsync"',
-                '--rsh="/usr/bin/ssh -i {private_key_file} -S none '
-                '-o StrictHostKeyChecking=no -q"',
-                '--out-format="<<CHANGED>>%i %n%L"',
-                '{source}', '"{user}@{host}:{dest}"'
-            ]
-            if scpfile.get('keep-hierarchy'):
-                source = '"%s/"' % scproot
-            else:
-                source = '`/usr/bin/find "%s" -type f`' % scproot
-            shellargs = ' '.join(rsync_cmd).format(
-                source=source,
-                dest=dest,
-                private_key_file=self.private_key_file,
-                host=site['host'],
-                user=site['user'])
-            task = dict(shell=shellargs,
-                        delegate_to='127.0.0.1')
-            if not scpfile.get('copy-after-failure'):
-                task['when'] = 'success'
+            task = self._makeSCPTaskLocalAction(
+                site, scpfile, scproot, parameters)
             tasks.append(task)
         return tasks
+
+    def _makeSCPTaskLocalAction(self, site, scpfile, scproot, parameters):
+        if site not in self.sites:
+            raise Exception("Undefined SCP site: %s" % (site,))
+        site = self.sites[site]
+        dest = scpfile['target']
+        dest = self._substituteVariables(dest, parameters)
+        dest = os.path.join(site['root'], dest)
+        dest = os.path.normpath(dest)
+        if not dest.startswith(site['root']):
+            raise Exception("Target path %s is not below site root" %
+                            (dest,))
+
+        rsync_cmd = [
+            '/usr/bin/rsync', '--delay-updates', '-F',
+            '--compress', '-rt', '--safe-links',
+            '--rsync-path="mkdir -p {dest} && rsync"',
+            '--rsh="/usr/bin/ssh -i {private_key_file} -S none '
+            '-o StrictHostKeyChecking=no -q"',
+            '--out-format="<<CHANGED>>%i %n%L"',
+            '{source}', '"{user}@{host}:{dest}"'
+        ]
+        if scpfile.get('keep-hierarchy'):
+            source = '"%s/"' % scproot
+        else:
+            source = '`/usr/bin/find "%s" -type f`' % scproot
+        shellargs = ' '.join(rsync_cmd).format(
+            source=source,
+            dest=dest,
+            private_key_file=self.private_key_file,
+            host=site['host'],
+            user=site['user'])
+        task = dict(shell=shellargs,
+                    delegate_to='127.0.0.1')
+        if not scpfile.get('copy-after-failure'):
+            task['when'] = 'success'
+
+        return task
 
     def _makeFTPTask(self, jobdir, publisher, parameters):
         tasks = []
