@@ -42,6 +42,9 @@ ANSIBLE_DEFAULT_TIMEOUT = 2 * 60 * 60
 ANSIBLE_DEFAULT_POST_TIMEOUT = 10 * 60
 
 
+COMMANDS = ['reconfigure', 'stop', 'pause', 'unpause']
+
+
 def boolify(x):
     if isinstance(x, str):
         return bool(int(x))
@@ -105,6 +108,7 @@ class LaunchServer(object):
         self.config = config
         self.keep_jobdir = keep_jobdir
         self.hostname = socket.gethostname()
+        self.registered_functions = set()
         self.node_workers = {}
         self.jobs = {}
         self.builds = {}
@@ -231,9 +235,16 @@ class LaunchServer(object):
             del self.jobs[name]
 
     def register(self):
+        new_functions = set()
         if self.accept_nodes:
-            self.worker.registerFunction("node-assign:zuul")
-        self.worker.registerFunction("stop:%s" % self.hostname)
+            new_functions.add("node-assign:zuul")
+        new_functions.add("stop:%s" % self.hostname)
+
+        for function in new_functions - self.registered_functions:
+            self.worker.registerFunction(function)
+        for function in self.registered_functions - new_functions:
+            self.worker.unRegisterFunction(function)
+        self.registered_functions = new_functions
 
     def reconfigure(self):
         self.log.debug("Reconfiguring")
@@ -246,6 +257,32 @@ class LaunchServer(object):
                 self.log.exception("Exception sending reconfigure command "
                                    "to worker:")
         self.log.debug("Reconfiguration complete")
+
+    def pause(self):
+        self.log.debug("Pausing")
+        self.accept_nodes = False
+        self.register()
+        for node in self.node_workers.values():
+            try:
+                if node.isAlive():
+                    node.queue.put(dict(action='pause'))
+            except Exception:
+                self.log.exception("Exception sending pause command "
+                                   "to worker:")
+        self.log.debug("Paused")
+
+    def unpause(self):
+        self.log.debug("Unpausing")
+        self.accept_nodes = True
+        self.register()
+        for node in self.node_workers.values():
+            try:
+                if node.isAlive():
+                    node.queue.put(dict(action='unpause'))
+            except Exception:
+                self.log.exception("Exception sending unpause command "
+                                   "to worker:")
+        self.log.debug("Unpaused")
 
     def stop(self):
         self.log.debug("Stopping")
@@ -282,8 +319,12 @@ class LaunchServer(object):
                 command = self.command_socket.get()
                 if command == 'reconfigure':
                     self.reconfigure()
-                if command == 'stop':
+                elif command == 'stop':
                     self.stop()
+                elif command == 'pause':
+                    self.pause()
+                elif command == 'unpause':
+                    self.unpause()
             except Exception:
                 self.log.exception("Exception while processing command")
 
@@ -404,6 +445,10 @@ class NodeWorker(object):
         self.labels = labels
         self.thread = None
         self.registered_functions = set()
+        # If the unpaused Event is set, that means we should run jobs.
+        # If it is clear, then we are paused and should not run jobs.
+        self.unpaused = threading.Event()
+        self.unpaused.set()
         self._running = True
         self.queue = Queue.Queue()
         self.manager_name = manager_name
@@ -462,8 +507,16 @@ class NodeWorker(object):
         # will be set by the queue thread.
         self.log.debug("Submitting stop request")
         self._running = False
+        self.unpaused.set()
         self.queue.put(dict(action='stop'))
         self.queue.join()
+
+    def pause(self):
+        self.unpaused.clear()
+        self.worker.stopWaitingForJobs()
+
+    def unpause(self):
+        self.unpaused.set()
 
     def _runQueue(self):
         item = self.queue.get()
@@ -477,6 +530,12 @@ class NodeWorker(object):
                 else:
                     self._job_complete_event.wait()
                 self.worker.shutdown()
+            if item['action'] == 'pause':
+                self.log.debug("Received pause request")
+                self.pause()
+            if item['action'] == 'unpause':
+                self.log.debug("Received unpause request")
+                self.unpause()
             elif item['action'] == 'reconfigure':
                 self.log.debug("Received reconfigure request")
                 self.register()
@@ -489,7 +548,9 @@ class NodeWorker(object):
     def runGearman(self):
         while self._running:
             try:
-                self._runGearman()
+                self.unpaused.wait()
+                if self._running:
+                    self._runGearman()
             except Exception:
                 self.log.exception("Exception in gearman manager:")
 
