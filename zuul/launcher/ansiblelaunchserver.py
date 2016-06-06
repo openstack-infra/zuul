@@ -78,8 +78,6 @@ class JobDir(object):
     def __init__(self, keep=False):
         self.keep = keep
         self.root = tempfile.mkdtemp()
-        self.git_root = os.path.join(self.root, 'git')
-        os.makedirs(self.git_root)
         self.ansible_root = os.path.join(self.root, 'ansible')
         os.makedirs(self.ansible_root)
         self.plugins_root = os.path.join(self.ansible_root, 'plugins')
