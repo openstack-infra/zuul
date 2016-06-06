@@ -92,7 +92,7 @@ class Launcher(zuul.cmd.ZuulApp):
                 try:
                     signal.pause()
                 except KeyboardInterrupt:
-                    print "Ctrl + C: asking launcher to exit nicely...\n"
+                    print("Ctrl + C: asking launcher to exit nicely...\n")
                     self.exit_handler()
                     sys.exit(0)
 

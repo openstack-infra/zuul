@@ -107,7 +107,7 @@ class Server(zuul.cmd.ZuulApp):
                 jobs.add(v)
         for job in sorted(layout.jobs):
             if job not in jobs:
-                print "Job %s not defined" % job
+                print("Job %s not defined" % job)
                 failure = True
         return failure
 
@@ -196,7 +196,7 @@ class Server(zuul.cmd.ZuulApp):
             try:
                 signal.pause()
             except KeyboardInterrupt:
-                print "Ctrl + C: asking scheduler to exit nicely...\n"
+                print("Ctrl + C: asking scheduler to exit nicely...\n")
                 self.exit_handler(signal.SIGINT, None)
 
 

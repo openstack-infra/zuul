@@ -1484,7 +1484,7 @@ jobs:
         self.worker.build_history = []
 
         path = os.path.join(self.git_root, "org/project")
-        print repack_repo(path)
+        print(repack_repo(path))
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('CRVW', 2)
@@ -1509,9 +1509,9 @@ jobs:
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         A.addPatchset(large=True)
         path = os.path.join(self.upstream_root, "org/project1")
-        print repack_repo(path)
+        print(repack_repo(path))
         path = os.path.join(self.git_root, "org/project1")
-        print repack_repo(path)
+        print(repack_repo(path))
 
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))

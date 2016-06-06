@@ -1296,9 +1296,8 @@ class ZuulTestCase(BaseTestCase):
         start = time.time()
         while True:
             if time.time() - start > 10:
-                print 'queue status:',
-                print ' '.join(self.eventQueuesEmpty())
-                print self.areAllBuildsWaiting()
+                print('queue status:', ''.join(self.eventQueuesEmpty()))
+                print(self.areAllBuildsWaiting())
                 raise Exception("Timeout waiting for Zuul to settle")
             # Make sure no new events show up while we're checking
             self.worker.lock.acquire()
@@ -1336,8 +1335,8 @@ class ZuulTestCase(BaseTestCase):
         for pipeline in self.sched.layout.pipelines.values():
             for queue in pipeline.queues:
                 if len(queue.queue) != 0:
-                    print 'pipeline %s queue %s contents %s' % (
-                        pipeline.name, queue.name, queue.queue)
+                    print('pipeline %s queue %s contents %s' % (
+                        pipeline.name, queue.name, queue.queue))
                 self.assertEqual(len(queue.queue), 0,
                                  "Pipelines queues should be empty")
 
