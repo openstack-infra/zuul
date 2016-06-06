@@ -6,7 +6,7 @@
    https://wiki.jenkins-ci.org/display/JENKINS/Gearman+Plugin
 
 .. _`Turbo-Hipster`:
-   http://git.openstack.org/cgit/stackforge/turbo-hipster/
+   https://git.openstack.org/cgit/openstack/turbo-hipster/
 
 .. _`Turbo-Hipster Documentation`:
    http://turbo-hipster.rtfd.org/
