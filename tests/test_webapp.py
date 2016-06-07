@@ -16,7 +16,8 @@
 # under the License.
 
 import json
-import urllib2
+
+from six.moves import urllib
 
 from tests.base import ZuulTestCase
 
@@ -44,41 +45,41 @@ class TestWebapp(ZuulTestCase):
     def test_webapp_status(self):
         "Test that we can filter to only certain changes in the webapp."
 
-        req = urllib2.Request(
+        req = urllib.request.Request(
             "http://localhost:%s/status" % self.port)
-        f = urllib2.urlopen(req)
+        f = urllib.request.urlopen(req)
         data = json.loads(f.read())
 
         self.assertIn('pipelines', data)
 
     def test_webapp_status_compat(self):
         # testing compat with status.json
-        req = urllib2.Request(
+        req = urllib.request.Request(
             "http://localhost:%s/status.json" % self.port)
-        f = urllib2.urlopen(req)
+        f = urllib.request.urlopen(req)
         data = json.loads(f.read())
 
         self.assertIn('pipelines', data)
 
     def test_webapp_bad_url(self):
         # do we 404 correctly
-        req = urllib2.Request(
+        req = urllib.request.Request(
             "http://localhost:%s/status/foo" % self.port)
-        self.assertRaises(urllib2.HTTPError, urllib2.urlopen, req)
+        self.assertRaises(urllib.error.HTTPError, urllib.request.urlopen, req)
 
     def test_webapp_find_change(self):
         # can we filter by change id
-        req = urllib2.Request(
+        req = urllib.request.Request(
             "http://localhost:%s/status/change/1,1" % self.port)
-        f = urllib2.urlopen(req)
+        f = urllib.request.urlopen(req)
         data = json.loads(f.read())
 
         self.assertEqual(1, len(data), data)
         self.assertEqual("org/project", data[0]['project'])
 
-        req = urllib2.Request(
+        req = urllib.request.Request(
             "http://localhost:%s/status/change/2,1" % self.port)
-        f = urllib2.urlopen(req)
+        f = urllib.request.urlopen(req)
         data = json.loads(f.read())
 
         self.assertEqual(1, len(data), data)
