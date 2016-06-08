@@ -1103,10 +1103,11 @@ class Scheduler(threading.Thread):
             return
         if build.end_time and build.start_time and build.result:
             duration = build.end_time - build.start_time
-        try:
-            self.time_database.update(build.job.name, duration, build.result)
-        except Exception:
-            self.log.exception("Exception recording build time:")
+            try:
+                self.time_database.update(
+                    build.job.name, duration, build.result)
+            except Exception:
+                self.log.exception("Exception recording build time:")
         pipeline.manager.onBuildCompleted(event.build)
 
     def _doMergeCompletedEvent(self, event):
