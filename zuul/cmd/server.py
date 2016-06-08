@@ -117,18 +117,18 @@ class Server(zuul.cmd.ZuulApp):
         if child_pid == 0:
             os.close(pipe_write)
             self.setup_logging('gearman_server', 'log_config')
-            import gear
+            import zuul.lib.gearserver
             statsd_host = os.environ.get('STATSD_HOST')
             statsd_port = int(os.environ.get('STATSD_PORT', 8125))
             if self.config.has_option('gearman_server', 'listen_address'):
                 host = self.config.get('gearman_server', 'listen_address')
             else:
                 host = None
-            gear.Server(4730,
-                        host=host,
-                        statsd_host=statsd_host,
-                        statsd_port=statsd_port,
-                        statsd_prefix='zuul.geard')
+            zuul.lib.gearserver.GearServer(4730,
+                                           host=host,
+                                           statsd_host=statsd_host,
+                                           statsd_port=statsd_port,
+                                           statsd_prefix='zuul.geard')
 
             # Keep running until the parent dies:
             pipe_read = os.fdopen(pipe_read)

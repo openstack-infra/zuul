@@ -51,6 +51,19 @@ def boolify(x):
     return bool(x)
 
 
+class GearWorker(gear.Worker):
+    MASS_DO = 101
+
+    def sendMassDo(self, functions):
+        data = b'\x00'.join([gear.convert_to_bytes(x) for x in functions])
+        self.broadcast_lock.acquire()
+        try:
+            p = gear.Packet(gear.constants.REQ, self.MASS_DO, data)
+            self.broadcast(p)
+        finally:
+            self.broadcast_lock.release()
+
+
 class Watchdog(object):
     def __init__(self, timeout, function, args):
         self.timeout = timeout
@@ -518,7 +531,7 @@ class NodeWorker(object):
             port = self.config.get('gearman', 'port')
         else:
             port = 4730
-        self.worker = gear.Worker(self.name)
+        self.worker = GearWorker(self.name)
         self.worker.addServer(server, port)
         self.log.debug("Waiting for server")
         self.worker.waitForServer()
@@ -648,10 +661,7 @@ class NodeWorker(object):
         new_functions = set()
         for job in self.jobs.values():
             new_functions |= self.generateFunctionNames(job)
-        for function in new_functions - self.registered_functions:
-            self.worker.registerFunction(function)
-        for function in self.registered_functions - new_functions:
-            self.worker.unRegisterFunction(function)
+        self.worker.sendMassDo(new_functions)
         self.registered_functions = new_functions
 
     def abortRunningJob(self):
