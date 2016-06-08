@@ -237,6 +237,7 @@ class LaunchServer(object):
         if self.accept_nodes:
             new_functions.add("node-assign:zuul")
         new_functions.add("stop:%s" % self.hostname)
+        new_functions.add("set_description:%s" % self.hostname)
 
         for function in new_functions - self.registered_functions:
             self.worker.registerFunction(function)
@@ -365,6 +366,10 @@ class LaunchServer(object):
                     elif job.name.startswith('stop:'):
                         self.log.debug("Got stop job: %s" % job.unique)
                         self.stopJob(job)
+                    elif job.name.startswith('set_description:'):
+                        self.log.debug("Got set_description job: %s" %
+                                       job.unique)
+                        job.sendWorkComplete()
                     else:
                         self.log.error("Unable to handle job %s" % job.name)
                         job.sendWorkFail()
