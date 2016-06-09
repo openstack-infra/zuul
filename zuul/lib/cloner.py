@@ -19,6 +19,8 @@ import os
 import re
 import yaml
 
+import six
+
 from git import GitCommandError
 from zuul.lib.clonemapper import CloneMapper
 from zuul.merger.merger import Repo
@@ -62,7 +64,7 @@ class Cloner(object):
         dests = mapper.expand(workspace=self.workspace)
 
         self.log.info("Preparing %s repositories", len(dests))
-        for project, dest in dests.iteritems():
+        for project, dest in six.iteritems(dests):
             self.prepareRepo(project, dest)
         self.log.info("Prepared all repositories")
 
