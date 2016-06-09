@@ -934,7 +934,7 @@ class NodeWorker(object):
         remote_path = os.path.join('/tmp', script_fn)
         copy = dict(src=script_path,
                     dest=remote_path,
-                    mode=0555)
+                    mode=0o555)
         task = dict(copy=copy)
         tasks.append(task)
 
