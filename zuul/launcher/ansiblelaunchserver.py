@@ -490,6 +490,7 @@ class NodeWorker(object):
         self._got_job = False
         self._job_complete_event = threading.Event()
         self._running_job = False
+        self._aborted_job = False
         self._sent_complete_event = False
         self.workspace_root = config.get('launcher', 'workspace_root')
         if self.config.has_option('launcher', 'private_key_file'):
@@ -651,6 +652,7 @@ class NodeWorker(object):
         self.registered_functions = new_functions
 
     def abortRunningJob(self):
+        self._aborted_job = True
         return self.abortRunningProc(self.ansible_job_proc)
 
     def abortRunningProc(self, proc):
@@ -687,6 +689,7 @@ class NodeWorker(object):
         # whether the job actually runs
         result = None
         self._sent_complete_event = False
+        self._aborted_job = False
 
         try:
             self.sendStartEvent(job_name, args)
@@ -785,7 +788,10 @@ class NodeWorker(object):
             else:
                 status = 'FAILURE'
 
-            result = json.dumps(dict(result=status))
+            if not self._aborted_job:
+                # A Null result will cause zuul to relaunch the job if
+                # it needs to.
+                result = json.dumps(dict(result=status))
 
         return result
 
