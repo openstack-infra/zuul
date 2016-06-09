@@ -492,6 +492,8 @@ class NodeWorker(object):
         self._running_job = False
         self._aborted_job = False
         self._sent_complete_event = False
+        self.ansible_job_proc = None
+        self.ansible_post_proc = None
         self.workspace_root = config.get('launcher', 'workspace_root')
         if self.config.has_option('launcher', 'private_key_file'):
             self.private_key_file = config.get('launcher', 'private_key_file')
