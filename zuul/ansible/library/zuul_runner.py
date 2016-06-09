@@ -18,6 +18,7 @@
 import datetime
 import getpass
 import os
+import re
 import subprocess
 import threading
 
@@ -46,7 +47,12 @@ def get_env():
         if os.path.exists(fn):
             with open(fn) as f:
                 for line in f:
-                    k, v = line.strip().split('=')
+                    line = re.sub('#.*', '', line).strip()
+                    if not line:
+                        continue
+                    if '=' not in line:
+                        continue
+                    k, v = line.split('=')
                     env[k] = v
     return env
 
