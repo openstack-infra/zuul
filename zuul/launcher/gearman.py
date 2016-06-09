@@ -17,6 +17,7 @@ import inspect
 import json
 import logging
 import os
+import six
 import time
 import threading
 from uuid import uuid4
@@ -236,7 +237,7 @@ class Gearman(object):
                 s_config = {}
                 s_config.update((k, v.format(item=item, job=job,
                                              change=item.change))
-                                if isinstance(v, basestring)
+                                if isinstance(v, six.string_types)
                                 else (k, v)
                                 for k, v in s.items())
 
