@@ -42,7 +42,7 @@ ANSIBLE_DEFAULT_TIMEOUT = 2 * 60 * 60
 ANSIBLE_DEFAULT_POST_TIMEOUT = 10 * 60
 
 
-COMMANDS = ['reconfigure', 'stop', 'pause', 'unpause', 'release']
+COMMANDS = ['reconfigure', 'stop', 'pause', 'unpause', 'release', 'graceful']
 
 
 def boolify(x):
@@ -114,6 +114,15 @@ class LaunchServer(object):
         self.termination_queue = Queue.Queue()
         self.sites = {}
         self.static_nodes = {}
+        self.command_map = dict(
+            reconfigure=self.reconfigure,
+            stop=self.stop,
+            pause=self.pause,
+            unpause=self.unpause,
+            release=self.release,
+            graceful=self.graceful,
+        )
+
         if config.has_option('launcher', 'accept_nodes'):
             self.accept_nodes = config.getboolean('launcher',
                                                   'accept_nodes')
@@ -304,6 +313,18 @@ class LaunchServer(object):
                                    "to worker:")
         self.log.debug("Finished releasing idle nodes")
 
+    def graceful(self):
+        # Note: this is run in the command processing thread; no more
+        # external commands will be processed after this.
+        self.log.debug("Gracefully stopping")
+        self.pause()
+        self.release()
+        self.log.debug("Waiting for all builds to finish")
+        while self.builds:
+            time.sleep(5)
+        self.log.debug("All builds are finished")
+        self.stop()
+
     def stop(self):
         self.log.debug("Stopping")
         # First, stop accepting new jobs
@@ -337,16 +358,7 @@ class LaunchServer(object):
         while self._command_running:
             try:
                 command = self.command_socket.get()
-                if command == 'reconfigure':
-                    self.reconfigure()
-                elif command == 'stop':
-                    self.stop()
-                elif command == 'pause':
-                    self.pause()
-                elif command == 'unpause':
-                    self.unpause()
-                elif command == 'release':
-                    self.release()
+                self.command_map[command]()
             except Exception:
                 self.log.exception("Exception while processing command")
 
