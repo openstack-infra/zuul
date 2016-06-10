@@ -1000,10 +1000,10 @@ class NodeWorker(object):
         timeout_var = None
         for wrapper in jjb_job.get('wrappers', []):
             if isinstance(wrapper, dict):
-                timeout = wrapper.get('build-timeout', {})
-                if isinstance(timeout, dict):
-                    timeout = timeout.get('timeout')
-                    timeout_var = timeout.get('timeout-var', None)
+                build_timeout = wrapper.get('build-timeout', {})
+                if isinstance(build_timeout, dict):
+                    timeout_var = build_timeout.get('timeout-var', None)
+                    timeout = build_timeout.get('timeout')
                     if timeout:
                         timeout = timeout * 60
         if not timeout:
