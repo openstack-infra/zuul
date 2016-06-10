@@ -990,15 +990,19 @@ class NodeWorker(object):
                 inventory.write('\n')
 
         timeout = None
+        timeout_var = None
         for wrapper in jjb_job.get('wrappers', []):
             if isinstance(wrapper, dict):
                 timeout = wrapper.get('build-timeout', {})
                 if isinstance(timeout, dict):
                     timeout = timeout.get('timeout')
+                    timeout_var = timeout.get('timeout-var', None)
                     if timeout:
                         timeout = timeout * 60
         if not timeout:
             timeout = ANSIBLE_DEFAULT_TIMEOUT
+        if timeout_var:
+            parameters[timeout_var] = timeout
 
         with open(jobdir.playbook, 'w') as playbook:
             tasks = []
