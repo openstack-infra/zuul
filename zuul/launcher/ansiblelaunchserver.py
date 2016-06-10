@@ -913,7 +913,8 @@ class NodeWorker(object):
                                            parameters)
         syncargs = dict(src=src,
                         dest=ftpcontent,
-                        copy_links='yes')
+                        copy_links='yes',
+                        mode='pull')
         if rsync_opts:
             syncargs['rsync_opts'] = rsync_opts
         task = dict(synchronize=syncargs,
