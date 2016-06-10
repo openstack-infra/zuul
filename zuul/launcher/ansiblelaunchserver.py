@@ -785,6 +785,12 @@ class NodeWorker(object):
             job.sendWorkStatus(0, 100)
 
             job_status = self.runAnsiblePlaybook(jobdir, timeout)
+            if job_status == 3:
+                # AnsibleHostUnreachable: We had a network issue connecting to
+                # our zuul-worker. Rather then contiune, have zuul requeue the
+                # job.
+                return result
+
             post_status = self.runAnsiblePostPlaybook(jobdir, job_status)
             if job_status and post_status:
                 status = 'SUCCESS'
