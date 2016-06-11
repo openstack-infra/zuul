@@ -927,7 +927,8 @@ class NodeWorker(object):
                     when='success')
         tasks.append(task)
         task = dict(shell='lftp -f %s' % ftpscript,
-                    when='success')
+                    when='success',
+                    delegate_to='127.0.0.1')
         ftpsource = ftpcontent
         if ftp.get('remove-prefix'):
             ftpsource = os.path.join(ftpcontent, ftp['remove-prefix'])
