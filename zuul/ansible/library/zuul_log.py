@@ -34,14 +34,17 @@ class Console(object):
 
 
 def log(msg):
+    if not isinstance(msg, list):
+        msg = [msg]
     with Console() as console:
-        console.addLine("[Zuul] %s\n" % msg)
+        for line in msg:
+            console.addLine("[Zuul] %s\n" % line)
 
 
 def main():
     module = AnsibleModule(
         argument_spec=dict(
-            msg=dict(required=True),
+            msg=dict(required=True, type='raw'),
         )
     )
 
