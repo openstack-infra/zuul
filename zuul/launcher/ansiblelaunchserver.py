@@ -1066,6 +1066,7 @@ class NodeWorker(object):
             config.write('hostfile = %s\n' % jobdir.inventory)
             config.write('host_key_checking = False\n')
             config.write('private_key_file = %s\n' % self.private_key_file)
+            config.write('retry_files_enabled = False\n')
 
             callback_path = zuul.ansible.plugins.callback_plugins.__file__
             callback_path = os.path.abspath(callback_path)
