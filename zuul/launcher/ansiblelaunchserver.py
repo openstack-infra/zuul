@@ -876,8 +876,8 @@ class NodeWorker(object):
                 raise Exception("Target path %s is not below site root" %
                                 (dest,))
 
-            local_args = [
-                'shell', '/usr/bin/rsync', '--delay-updates', '-F',
+            rsync_cmd = [
+                '/usr/bin/rsync', '--delay-updates', '-F',
                 '--compress', '-rt', '--safe-links',
                 '--rsync-path="mkdir -p {dest} && rsync"',
                 '--rsh="/usr/bin/ssh -i {private_key_file} -S none '
@@ -889,13 +889,14 @@ class NodeWorker(object):
                 source = '"%s/"' % scproot
             else:
                 source = '`/usr/bin/find "%s" -type f`' % scproot
-            local_action = ' '.join(local_args).format(
+            shellargs = ' '.join(rsync_cmd).format(
                 source=source,
                 dest=dest,
                 private_key_file=self.private_key_file,
                 host=site['host'],
                 user=site['user'])
-            task = dict(local_action=local_action)
+            task = dict(shell=shellargs,
+                        delegate_to='127.0.0.1')
             if not scpfile.get('copy-after-failure'):
                 task['when'] = 'success'
             tasks.append(task)
