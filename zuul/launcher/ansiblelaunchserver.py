@@ -792,7 +792,9 @@ class NodeWorker(object):
                 return result
 
             post_status = self.runAnsiblePostPlaybook(jobdir, job_status)
-            if job_status and post_status:
+            if not post_status:
+                status = 'POST_FAILURE'
+            elif job_status:
                 status = 'SUCCESS'
             else:
                 status = 'FAILURE'
