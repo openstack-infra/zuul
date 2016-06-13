@@ -795,10 +795,9 @@ class NodeWorker(object):
             job.sendWorkStatus(0, 100)
 
             job_status = self.runAnsiblePlaybook(jobdir, timeout)
-            if job_status == 3:
-                # AnsibleHostUnreachable: We had a network issue connecting to
-                # our zuul-worker. Rather then contiune, have zuul requeue the
-                # job.
+            if job_status is None:
+                # The result of the job is indeterminate.  Zuul will
+                # run it again.
                 return result
 
             post_status = self.runAnsiblePostPlaybook(jobdir, job_status)
@@ -1125,6 +1124,10 @@ class NodeWorker(object):
             watchdog.stop()
         self.log.debug("Ansible exit code: %s" % (ret,))
         self.ansible_job_proc = None
+        if ret == 3:
+            # AnsibleHostUnreachable: We had a network issue connecting to
+            # our zuul-worker.
+            return None
         return ret == 0
 
     def runAnsiblePostPlaybook(self, jobdir, success):
