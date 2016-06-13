@@ -1114,7 +1114,7 @@ class NodeWorker(object):
         finally:
             watchdog.stop()
         self.log.debug("Ansible exit code: %s" % (ret,))
-        self.ansible_proc = None
+        self.ansible_job_proc = None
         return ret == 0
 
     def runAnsiblePostPlaybook(self, jobdir, success):
