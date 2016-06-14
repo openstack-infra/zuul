@@ -99,6 +99,8 @@ class JobDir(object):
         self.config = os.path.join(self.ansible_root, 'ansible.cfg')
         self.script_root = os.path.join(self.ansible_root, 'scripts')
         os.makedirs(self.script_root)
+        self.logs = os.path.join(self.ansible_root, 'logs')
+        os.makedirs(self.logs)
 
     def __enter__(self):
         return self
@@ -1087,6 +1089,8 @@ class NodeWorker(object):
             config.write('host_key_checking = False\n')
             config.write('private_key_file = %s\n' % self.private_key_file)
             config.write('retry_files_enabled = False\n')
+            config.write('log_path = %s\n' % os.path.join(
+                jobdir.logs, 'ansible.log'))
 
             callback_path = zuul.ansible.plugins.callback_plugins.__file__
             callback_path = os.path.abspath(callback_path)
