@@ -1038,7 +1038,7 @@ class NodeWorker(object):
         publishers = early_publishers + late_publishers
         if old_publishers != publishers:
             self.log.debug("Transformed job publishers")
-        return publishers
+        return early_publishers, late_publishers
 
     def prepareAnsibleFiles(self, jobdir, gearman_job, args):
         job_name = gearman_job.name.split(':')[1]
@@ -1109,17 +1109,29 @@ class NodeWorker(object):
                         tasks=tasks)
             playbook.write(yaml.dump([play], default_flow_style=False))
 
-        publishers = self._transformPublishers(jjb_job)
+        early_publishers, late_publishers = self._transformPublishers(jjb_job)
 
         with open(jobdir.post_playbook, 'w') as playbook:
+            blocks = []
+            for publishers in [early_publishers, late_publishers]:
+                block = []
+                for publisher in publishers:
+                    if 'scp' in publisher:
+                        block.extend(self._makeSCPTask(jobdir, publisher,
+                                                       parameters))
+                    if 'ftp' in publisher:
+                        block.extend(self._makeFTPTask(jobdir, publisher,
+                                                       parameters))
+                blocks.append(block)
+
+            # The 'always' section contains the log publishing tasks,
+            # the 'block' contains all the other publishers.  This way
+            # we run the log publisher regardless of whether the rest
+            # of the publishers succeed.
             tasks = []
-            for publisher in publishers:
-                if 'scp' in publisher:
-                    tasks.extend(self._makeSCPTask(jobdir, publisher,
-                                                   parameters))
-                if 'ftp' in publisher:
-                    tasks.extend(self._makeFTPTask(jobdir, publisher,
-                                                   parameters))
+            tasks.append(dict(block=blocks[0],
+                              always=blocks[1]))
+
             play = dict(hosts='node', name='Publishers',
                         tasks=tasks)
             playbook.write(yaml.dump([play], default_flow_style=False))
