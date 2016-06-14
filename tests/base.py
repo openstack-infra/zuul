@@ -1318,8 +1318,11 @@ class ZuulTestCase(BaseTestCase):
         start = time.time()
         while True:
             if time.time() - start > 10:
-                print('queue status:', ''.join(self.eventQueuesEmpty()))
-                print(self.areAllBuildsWaiting())
+                self.log.debug("Queue status:")
+                for queue in self.event_queues:
+                    self.log.debug("  %s: %s" % (queue, queue.empty()))
+                self.log.debug("All builds waiting: %s" %
+                               (self.areAllBuildsWaiting(),))
                 raise Exception("Timeout waiting for Zuul to settle")
             # Make sure no new events show up while we're checking
             self.worker.lock.acquire()
