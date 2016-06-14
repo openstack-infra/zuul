@@ -1145,6 +1145,7 @@ class NodeWorker(object):
             config.write('retry_files_enabled = False\n')
             config.write('log_path = %s\n' % os.path.join(
                 jobdir.logs, 'ansible.log'))
+            config.write('gathering = explicit\n')
 
             callback_path = zuul.ansible.plugins.callback_plugins.__file__
             callback_path = os.path.abspath(callback_path)
