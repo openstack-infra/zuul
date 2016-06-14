@@ -852,8 +852,20 @@ class NodeWorker(object):
     def _makeSCPTask(self, jobdir, publisher, parameters):
         tasks = []
         for scpfile in publisher['scp']['files']:
+            scproot = tempfile.mkdtemp(dir=jobdir.staging_root)
+            os.chmod(scproot, 0o755)
+
             site = publisher['scp']['site']
             if scpfile.get('copy-console'):
+                # Include the local ansible directory in the console
+                # upload.  This uploads the playbook and ansible logs.
+                copyargs = dict(src=jobdir.ansible_root + '/',
+                                dest=os.path.join(scproot, '_zuul_ansible'))
+                task = dict(copy=copyargs,
+                            delegate_to='127.0.0.1')
+                tasks.append(task)
+
+                # Fetch the console log from the remote host.
                 src = '/tmp/console.html'
                 rsync_opts = []
             else:
@@ -863,8 +875,6 @@ class NodeWorker(object):
                 rsync_opts = self._getRsyncOptions(scpfile['source'],
                                                    parameters)
 
-            scproot = tempfile.mkdtemp(dir=jobdir.staging_root)
-            os.chmod(scproot, 0o755)
             syncargs = dict(src=src,
                             dest=scproot,
                             copy_links='yes',
