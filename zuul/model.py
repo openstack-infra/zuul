@@ -421,7 +421,7 @@ class ChangeQueue(object):
             elif self.window_decrease_type == 'exponential':
                 self.window = max(
                     self.window_floor,
-                    self.window / self.window_decrease_factor)
+                    int(self.window / self.window_decrease_factor))
 
 
 class Project(object):
