@@ -1026,6 +1026,7 @@ class NodeWorker(object):
             copy_console = False
             for scpfile in publisher['scp']['files']:
                 if scpfile.get('copy-console'):
+                    scpfile['keep-hierarchy'] = True
                     late_scpfiles.append(scpfile)
                     copy_console = True
                 else:
