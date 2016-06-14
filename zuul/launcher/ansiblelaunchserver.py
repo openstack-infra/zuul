@@ -1128,6 +1128,9 @@ class NodeWorker(object):
             # AnsibleHostUnreachable: We had a network issue connecting to
             # our zuul-worker.
             return None
+        elif ret == -9:
+            # Received abort request.
+            return None
         return ret == 0
 
     def runAnsiblePostPlaybook(self, jobdir, success):
