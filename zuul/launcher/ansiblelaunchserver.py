@@ -101,6 +101,8 @@ class JobDir(object):
         os.makedirs(self.script_root)
         self.logs = os.path.join(self.ansible_root, 'logs')
         os.makedirs(self.logs)
+        self.staging_root = os.path.join(self.root, 'staging')
+        os.makedirs(self.staging_root)
 
     def __enter__(self):
         return self
@@ -861,7 +863,7 @@ class NodeWorker(object):
                 rsync_opts = self._getRsyncOptions(scpfile['source'],
                                                    parameters)
 
-            scproot = tempfile.mkdtemp(dir=jobdir.ansible_root)
+            scproot = tempfile.mkdtemp(dir=jobdir.staging_root)
             os.chmod(scproot, 0o755)
             syncargs = dict(src=src,
                             dest=scproot,
@@ -925,7 +927,7 @@ class NodeWorker(object):
             raise Exception("Undefined FTP site: %s" % site)
         site = self.sites[site]
 
-        ftproot = tempfile.mkdtemp(dir=jobdir.ansible_root)
+        ftproot = tempfile.mkdtemp(dir=jobdir.staging_root)
         ftpcontent = os.path.join(ftproot, 'content')
         os.makedirs(ftpcontent)
         ftpscript = os.path.join(ftproot, 'script')
