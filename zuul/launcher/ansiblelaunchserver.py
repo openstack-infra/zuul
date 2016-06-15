@@ -895,7 +895,7 @@ class NodeWorker(object):
         if site not in self.sites:
             raise Exception("Undefined SCP site: %s" % (site,))
         site = self.sites[site]
-        dest = scpfile['target']
+        dest = scpfile['target'].lstrip('/')
         dest = self._substituteVariables(dest, parameters)
         dest = os.path.join(site['root'], dest)
         dest = os.path.normpath(dest)
@@ -964,7 +964,7 @@ class NodeWorker(object):
             ftpsource = os.path.join(ftpcontent, ftp['remove-prefix'])
         while ftpsource[-1] == '/':
             ftpsource = ftpsource[:-1]
-        ftptarget = ftp['target']
+        ftptarget = ftp['target'].lstrip('/')
         ftptarget = self._substituteVariables(ftptarget, parameters)
         ftptarget = os.path.join(site['root'], ftp['target'])
         ftptarget = os.path.normpath(ftptarget)
