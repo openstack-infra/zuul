@@ -1144,7 +1144,7 @@ class NodeWorker(object):
             config.write('private_key_file = %s\n' % self.private_key_file)
             config.write('retry_files_enabled = False\n')
             config.write('log_path = %s\n' % os.path.join(
-                jobdir.logs, 'ansible.log'))
+                jobdir.logs, 'ansible.txt'))
             config.write('gathering = explicit\n')
 
             callback_path = zuul.ansible.plugins.callback_plugins.__file__
