@@ -51,7 +51,19 @@ def boolify(x):
     return bool(x)
 
 
-class GearWorker(gear.Worker):
+class LaunchGearWorker(gear.Worker):
+    def __init__(self, *args, **kw):
+        self.__launch_server = kw.pop('launch_server')
+        super(LaunchGearWorker, self).__init__(*args, **kw)
+
+    def handleNoop(self, packet):
+        workers = len(self.__launch_server.node_workers)
+        delay = (workers ** 2) / 1000.0
+        time.sleep(delay)
+        return super(LaunchGearWorker, self).handleNoop(packet)
+
+
+class NodeGearWorker(gear.Worker):
     MASS_DO = 101
 
     def sendMassDo(self, functions):
@@ -203,7 +215,8 @@ class LaunchServer(object):
             port = self.config.get('gearman', 'port')
         else:
             port = 4730
-        self.worker = gear.Worker('Zuul Launch Server')
+        self.worker = LaunchGearWorker('Zuul Launch Server',
+                                       launch_server=self)
         self.worker.addServer(server, port)
         self.log.debug("Waiting for server")
         self.worker.waitForServer()
@@ -533,7 +546,7 @@ class NodeWorker(object):
             port = self.config.get('gearman', 'port')
         else:
             port = 4730
-        self.worker = GearWorker(self.name)
+        self.worker = NodeGearWorker(self.name)
         self.worker.addServer(server, port)
         self.log.debug("Waiting for server")
         self.worker.waitForServer()
