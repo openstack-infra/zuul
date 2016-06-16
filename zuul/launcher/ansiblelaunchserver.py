@@ -502,6 +502,8 @@ class NodeWorker(object):
         self.termination_queue = termination_queue
         self.keep_jobdir = keep_jobdir
         self.running_job_lock = threading.Lock()
+        self.pending_registration = False
+        self.registration_lock = threading.Lock()
         self._get_job_lock = threading.Lock()
         self._got_job = False
         self._job_complete_event = threading.Event()
@@ -625,6 +627,8 @@ class NodeWorker(object):
                 self._got_job = False
 
     def _runGearman(self):
+        if self.pending_registration:
+            self.register()
         with self._get_job_lock:
             try:
                 job = self.worker.getJob()
@@ -658,13 +662,23 @@ class NodeWorker(object):
         return ret
 
     def register(self):
-        if self._running_job:
+        if not self.registration_lock.acquire(False):
+            self.log.debug("Registration already in progress")
             return
-        new_functions = set()
-        for job in self.jobs.values():
-            new_functions |= self.generateFunctionNames(job)
-        self.worker.sendMassDo(new_functions)
-        self.registered_functions = new_functions
+        try:
+            if self._running_job:
+                self.pending_registration = True
+                self.log.debug("Ignoring registration due to running job")
+                return
+            self.log.debug("Updating registration")
+            self.pending_registration = False
+            new_functions = set()
+            for job in self.jobs.values():
+                new_functions |= self.generateFunctionNames(job)
+            self.worker.sendMassDo(new_functions)
+            self.registered_functions = new_functions
+        finally:
+            self.registration_lock.release()
 
     def abortRunningJob(self):
         self._aborted_job = True
