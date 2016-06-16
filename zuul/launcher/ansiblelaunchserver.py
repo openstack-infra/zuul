@@ -1122,7 +1122,7 @@ class NodeWorker(object):
 
             play = dict(hosts='node', name='Job body',
                         tasks=tasks)
-            playbook.write(yaml.dump([play], default_flow_style=False))
+            playbook.write(yaml.safe_dump([play], default_flow_style=False))
 
         early_publishers, late_publishers = self._transformPublishers(jjb_job)
 
@@ -1149,7 +1149,7 @@ class NodeWorker(object):
 
             play = dict(hosts='node', name='Publishers',
                         tasks=tasks)
-            playbook.write(yaml.dump([play], default_flow_style=False))
+            playbook.write(yaml.safe_dump([play], default_flow_style=False))
 
         with open(jobdir.config, 'w') as config:
             config.write('[defaults]\n')
