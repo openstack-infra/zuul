@@ -399,11 +399,12 @@ explanation of each of the parameters::
   approval matching all specified requirements.
 
     *username*
-    If present, an approval from this username is required.
+    If present, an approval from this username is required.  It is
+    treated as a regular expression.
 
     *email*
     If present, an approval with this email address is required.  It
-    is treated as a regular expression as above.
+    is treated as a regular expression.
 
     *email-filter* (deprecated)
     A deprecated alternate spelling of *email*.  Only one of *email* or

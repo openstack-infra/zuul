@@ -1079,7 +1079,7 @@ class BaseFilter(object):
         for a in approvals:
             for k, v in a.items():
                 if k == 'username':
-                    pass
+                    a['username'] = re.compile(v)
                 elif k in ['email', 'email-filter']:
                     a['email'] = re.compile(v)
                 elif k == 'newer-than':
@@ -1098,7 +1098,7 @@ class BaseFilter(object):
         by = approval.get('by', {})
         for k, v in rapproval.items():
             if k == 'username':
-                if (by.get('username', '') != v):
+                if (not v.search(by.get('username', ''))):
                         return False
             elif k == 'email':
                 if (not v.search(by.get('email', ''))):
