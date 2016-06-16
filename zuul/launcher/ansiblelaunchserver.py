@@ -1178,6 +1178,11 @@ class NodeWorker(object):
         self.abortRunningProc(proc)
 
     def runAnsiblePlaybook(self, jobdir, timeout):
+        # Set LOGNAME env variable so Ansible log_path log reports
+        # the correct user.
+        env_copy = os.environ.copy()
+        env_copy['LOGNAME'] = 'zuul'
+
         self.ansible_job_proc = subprocess.Popen(
             ['ansible-playbook', jobdir.playbook,
              '-e', 'timeout=%s' % timeout, '-v'],
@@ -1185,6 +1190,7 @@ class NodeWorker(object):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             preexec_fn=os.setsid,
+            env=env_copy,
         )
         ret = None
         watchdog = Watchdog(timeout + ANSIBLE_WATCHDOG_GRACE,
@@ -1208,6 +1214,11 @@ class NodeWorker(object):
         return ret == 0
 
     def runAnsiblePostPlaybook(self, jobdir, success):
+        # Set LOGNAME env variable so Ansible log_path log reports
+        # the correct user.
+        env_copy = os.environ.copy()
+        env_copy['LOGNAME'] = 'zuul'
+
         self.ansible_post_proc = subprocess.Popen(
             ['ansible-playbook', jobdir.post_playbook,
              '-e', 'success=%s' % success, '-v'],
@@ -1215,6 +1226,7 @@ class NodeWorker(object):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             preexec_fn=os.setsid,
+            env=env_copy,
         )
         ret = None
         watchdog = Watchdog(ANSIBLE_DEFAULT_POST_TIMEOUT,
