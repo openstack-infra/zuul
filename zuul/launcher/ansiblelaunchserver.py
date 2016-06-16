@@ -1183,9 +1183,12 @@ class NodeWorker(object):
         env_copy = os.environ.copy()
         env_copy['LOGNAME'] = 'zuul'
 
+        cmd = ['ansible-playbook', jobdir.playbook,
+               '-e', 'timeout=%s' % timeout, '-v']
+        self.log.debug("Ansible command: %s" % (cmd,))
+
         self.ansible_job_proc = subprocess.Popen(
-            ['ansible-playbook', jobdir.playbook,
-             '-e', 'timeout=%s' % timeout, '-v'],
+            cmd,
             cwd=jobdir.ansible_root,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -1219,9 +1222,12 @@ class NodeWorker(object):
         env_copy = os.environ.copy()
         env_copy['LOGNAME'] = 'zuul'
 
+        cmd = ['ansible-playbook', jobdir.post_playbook,
+               '-e', 'success=%s' % success, '-v']
+        self.log.debug("Ansible post command: %s" % (cmd,))
+
         self.ansible_post_proc = subprocess.Popen(
-            ['ansible-playbook', jobdir.post_playbook,
-             '-e', 'success=%s' % success, '-v'],
+            cmd,
             cwd=jobdir.ansible_root,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
