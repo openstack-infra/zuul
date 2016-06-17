@@ -294,6 +294,7 @@ class LaunchServer(object):
             new_functions.add("node_assign:zuul")
         new_functions.add("stop:%s" % self.hostname)
         new_functions.add("set_description:%s" % self.hostname)
+        new_functions.add("node_revoke:%s" % self.hostname)
 
         for function in new_functions - self.registered_functions:
             self.worker.registerFunction(function)
@@ -429,6 +430,9 @@ class LaunchServer(object):
                         self.log.debug("Got set_description job: %s" %
                                        job.unique)
                         job.sendWorkComplete()
+                    elif job.name.startswith('node_revoke:'):
+                        self.log.debug("Got node_revoke job: %s" % job.unique)
+                        self.revokeNode(job)
                     else:
                         self.log.error("Unable to handle job %s" % job.name)
                         job.sendWorkFail()
@@ -459,6 +463,27 @@ class LaunchServer(object):
 
         worker.thread = threading.Thread(target=worker.run)
         worker.thread.start()
+
+    def revokeNode(self, job):
+        try:
+            args = json.loads(job.arguments)
+            self.log.debug("Revoke job with arguments: %s" % (args,))
+            name = args['name']
+            node = self.node_workers.get(name)
+            if not node:
+                self.log.debug("Unable to find worker %s" % (name,))
+                return
+            try:
+                if node.isAlive():
+                    node.queue.put(dict(action='stop'))
+                else:
+                    self.log.debug("Node %s is not alive while revoking node" %
+                                   (node.name,))
+            except Exception:
+                self.log.exception("Exception sending stop command "
+                                   "to worker:")
+        finally:
+            job.sendWorkComplete()
 
     def stopJob(self, job):
         try:
