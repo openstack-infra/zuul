@@ -1086,16 +1086,16 @@ class NodeWorker(object):
         timeout_var = None
         for wrapper in jjb_job.get('wrappers', []):
             if isinstance(wrapper, dict):
-                build_timeout = wrapper.get('build-timeout', {})
+                build_timeout = wrapper.get('timeout')
                 if isinstance(build_timeout, dict):
-                    timeout_var = build_timeout.get('timeout-var', None)
+                    timeout_var = build_timeout.get('timeout-var')
                     timeout = build_timeout.get('timeout')
-                    if timeout:
-                        timeout = timeout * 60
+                    if timeout is not None:
+                        timeout = int(timeout) * 60
         if not timeout:
             timeout = ANSIBLE_DEFAULT_TIMEOUT
         if timeout_var:
-            parameters[timeout_var] = timeout * 1000
+            parameters[timeout_var] = str(timeout * 1000)
 
         with open(jobdir.playbook, 'w') as playbook:
             tasks = []
@@ -1293,7 +1293,7 @@ class JJB(jenkins_jobs.builder.Builder):
         return new_components
 
     def expandMacros(self, job):
-        for component_type in ['builder', 'publisher']:
+        for component_type in ['builder', 'publisher', 'wrapper']:
             component_list_type = component_type + 's'
             new_components = []
             for new_component in job.get(component_list_type, []):
