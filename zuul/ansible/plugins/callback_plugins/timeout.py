@@ -46,12 +46,7 @@ class CallbackModule(CallbackBase):
             self._elapsed_time += task_time
         if self._play and result._host:
             manager = self._play.get_variable_manager()
-            facts = dict(elapsed_time=self._elapsed_time)
-
-            overall_timeout = manager.extra_vars.get('timeout')
-            if str(overall_timeout) != 'None':
-                timeout = int(overall_timeout) - int(self._elapsed_time)
-                facts['timeout'] = timeout
+            facts = dict(elapsed_time=int(self._elapsed_time))
 
             manager.set_nonpersistent_facts(result._host, facts)
         self._task_start_time = None
