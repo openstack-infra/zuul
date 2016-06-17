@@ -1095,7 +1095,7 @@ class NodeWorker(object):
         if not timeout:
             timeout = ANSIBLE_DEFAULT_TIMEOUT
         if timeout_var:
-            parameters[timeout_var] = timeout
+            parameters[timeout_var] = timeout * 1000
 
         with open(jobdir.playbook, 'w') as playbook:
             tasks = []
