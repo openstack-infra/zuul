@@ -105,6 +105,7 @@ class JobDir(object):
         self.root = tempfile.mkdtemp()
         self.ansible_root = os.path.join(self.root, 'ansible')
         os.makedirs(self.ansible_root)
+        self.known_hosts = os.path.join(self.ansible_root, 'known_hosts')
         self.inventory = os.path.join(self.ansible_root, 'inventory')
         self.playbook = os.path.join(self.ansible_root, 'playbook')
         self.post_playbook = os.path.join(self.ansible_root, 'post_playbook')
@@ -1098,9 +1099,16 @@ class NodeWorker(object):
             parameters[timeout_var] = str(timeout * 1000)
 
         with open(jobdir.playbook, 'w') as playbook:
+            pre_tasks = []
             tasks = []
             main_block = []
             error_block = []
+
+            shellargs = "ssh-keyscan %s > %s" % (
+                self.host, jobdir.known_hosts)
+            pre_tasks.append(dict(shell=shellargs,
+                             delegate_to='127.0.0.1'))
+
             tasks.append(dict(block=main_block,
                               rescue=error_block))
 
@@ -1134,7 +1142,7 @@ class NodeWorker(object):
             error_block.append(dict(fail=dict(msg='FAILURE')))
 
             play = dict(hosts='node', name='Job body',
-                        tasks=tasks)
+                        pre_tasks=pre_tasks, tasks=tasks)
             playbook.write(yaml.safe_dump([play], default_flow_style=False))
 
         early_publishers, late_publishers = self._transformPublishers(jjb_job)
@@ -1167,7 +1175,6 @@ class NodeWorker(object):
         with open(jobdir.config, 'w') as config:
             config.write('[defaults]\n')
             config.write('hostfile = %s\n' % jobdir.inventory)
-            config.write('host_key_checking = False\n')
             config.write('private_key_file = %s\n' % self.private_key_file)
             config.write('retry_files_enabled = False\n')
             config.write('log_path = %s\n' % os.path.join(
@@ -1182,7 +1189,12 @@ class NodeWorker(object):
             library_path = zuul.ansible.library.__file__
             library_path = os.path.abspath(library_path)
             library_path = os.path.dirname(library_path)
-            config.write('library = %s\n' % library_path)
+            config.write('library = %s\n\n' % library_path)
+
+            config.write('[ssh_connection]\n')
+            ssh_args = "-o ControlMaster=auto -o ControlPersist=60s " \
+                "-o UserKnownHostsFile=%s" % jobdir.known_hosts
+            config.write('ssh_args = %s\n' % ssh_args)
 
         return timeout
 
