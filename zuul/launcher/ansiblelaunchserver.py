@@ -994,7 +994,7 @@ class NodeWorker(object):
             ftpsource = ftpsource[:-1]
         ftptarget = ftp['target'].lstrip('/')
         ftptarget = self._substituteVariables(ftptarget, parameters)
-        ftptarget = os.path.join(site['root'], ftp['target'])
+        ftptarget = os.path.join(site['root'], ftptarget)
         ftptarget = os.path.normpath(ftptarget)
         if not ftptarget.startswith(site['root']):
             raise Exception("Target path %s is not below site root" %
