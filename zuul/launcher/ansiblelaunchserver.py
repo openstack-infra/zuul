@@ -1192,6 +1192,7 @@ class NodeWorker(object):
             config.write('[defaults]\n')
             config.write('hostfile = %s\n' % jobdir.inventory)
             config.write('host_key_checking = False\n')
+            config.write('keep_remote_files = True\n')
             config.write('local_tmp = %s/.ansible/tmp\n' % jobdir.root)
             config.write('private_key_file = %s\n' % self.private_key_file)
             config.write('retry_files_enabled = False\n')
