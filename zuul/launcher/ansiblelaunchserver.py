@@ -1479,6 +1479,7 @@ class NodeWorker(object):
             config.write('timeout = 30\n')
 
             config.write('[ssh_connection]\n')
+            config.write('pipelining = True\n')
             ssh_args = "-o ControlMaster=auto -o ControlPersist=60s " \
                 "-o UserKnownHostsFile=%s" % jobdir.known_hosts
             config.write('ssh_args = %s\n' % ssh_args)
