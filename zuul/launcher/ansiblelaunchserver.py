@@ -1054,7 +1054,7 @@ class NodeWorker(object):
         tasks.append(task)
         return tasks
 
-    def _makeBuilderTask(self, jobdir, builder, parameters, timeout):
+    def _makeBuilderTask(self, jobdir, builder, parameters):
         tasks = []
         script_fn = '%s.sh' % str(uuid.uuid4().hex)
         script_path = os.path.join(jobdir.script_root, script_fn)
@@ -1175,8 +1175,7 @@ class NodeWorker(object):
             for builder in jjb_job.get('builders', []):
                 if 'shell' in builder:
                     main_block.extend(
-                        self._makeBuilderTask(jobdir, builder,
-                                              parameters, timeout))
+                        self._makeBuilderTask(jobdir, builder, parameters))
             task = dict(zuul_log=dict(msg="Job complete, result: SUCCESS"))
             main_block.append(task)
 
