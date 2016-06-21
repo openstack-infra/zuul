@@ -163,6 +163,24 @@ class LaunchServer(object):
             state_dir = '/var/lib/zuul'
         path = os.path.join(state_dir, 'launcher.socket')
         self.command_socket = commandsocket.CommandSocket(path)
+        ansible_dir = os.path.join(state_dir, 'ansible')
+        plugins_dir = os.path.join(ansible_dir, 'plugins')
+        self.callback_dir = os.path.join(plugins_dir, 'callback_plugins')
+        if not os.path.exists(self.callback_dir):
+            os.makedirs(self.callback_dir)
+        self.library_dir = os.path.join(ansible_dir, 'library')
+        if not os.path.exists(self.library_dir):
+            os.makedirs(self.library_dir)
+
+        callback_path = os.path.dirname(os.path.abspath(
+            zuul.ansible.plugins.callback_plugins.__file__))
+        for fn in os.listdir(callback_path):
+            shutil.copy(os.path.join(callback_path, fn), self.callback_dir)
+
+        library_path = os.path.dirname(os.path.abspath(
+            zuul.ansible.library.__file__))
+        for fn in os.listdir(library_path):
+            shutil.copy(os.path.join(library_path, fn), self.library_dir)
 
         for section in config.sections():
             m = self.site_section_re.match(section)
@@ -435,7 +453,8 @@ class LaunchServer(object):
                             self.sites, args['name'], args['host'],
                             args['description'], args['labels'],
                             self.hostname, self.zmq_send_queue,
-                            self.termination_queue, self.keep_jobdir)
+                            self.termination_queue, self.keep_jobdir,
+                            self.callback_dir, self.library_dir)
         self.node_workers[worker.name] = worker
 
         worker.thread = threading.Thread(target=worker.run)
@@ -489,7 +508,8 @@ class LaunchServer(object):
 class NodeWorker(object):
     def __init__(self, config, jobs, builds, sites, name, host,
                  description, labels, manager_name, zmq_send_queue,
-                 termination_queue, keep_jobdir):
+                 termination_queue, keep_jobdir, callback_dir,
+                 library_dir):
         self.log = logging.getLogger("zuul.NodeWorker.%s" % (name,))
         self.log.debug("Creating node worker %s" % (name,))
         self.config = config
@@ -534,6 +554,8 @@ class NodeWorker(object):
             self.username = config.get('launcher', 'username')
         else:
             self.username = 'zuul'
+        self.callback_dir = callback_dir
+        self.library_dir = library_dir
 
     def isAlive(self):
         # Meant to be called from the manager
@@ -1175,16 +1197,8 @@ class NodeWorker(object):
             config.write('log_path = %s\n' % os.path.join(
                 jobdir.logs, 'ansible.txt'))
             config.write('gathering = explicit\n')
-
-            callback_path = zuul.ansible.plugins.callback_plugins.__file__
-            callback_path = os.path.abspath(callback_path)
-            callback_path = os.path.dirname(callback_path)
-            config.write('callback_plugins = %s\n' % callback_path)
-
-            library_path = zuul.ansible.library.__file__
-            library_path = os.path.abspath(library_path)
-            library_path = os.path.dirname(library_path)
-            config.write('library = %s\n' % library_path)
+            config.write('callback_plugins = %s\n' % self.callback_dir)
+            config.write('library = %s\n' % self.library_dir)
 
         return timeout
 
