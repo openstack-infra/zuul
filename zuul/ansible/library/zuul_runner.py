@@ -31,8 +31,12 @@ class Console(object):
         self.logfile.close()
 
     def addLine(self, ln):
+        # Note this format with deliminator is "inspired" by the old
+        # Jenkins format but with microsecond resolution instead of
+        # millisecond.  It is kept so log parsing/formatting remains
+        # consistent.
         ts = datetime.datetime.now()
-        outln = '%s %s' % (str(ts), ln)
+        outln = '%s | %s' % (ts, ln)
         self.logfile.write(outln)
 
 
