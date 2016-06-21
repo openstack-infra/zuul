@@ -29,7 +29,7 @@ class Console(object):
 
     def addLine(self, ln):
         ts = datetime.datetime.now()
-        outln = '%s %s' % (str(ts), ln)
+        outln = '%s | %s' % (str(ts), ln)
         self.logfile.write(outln)
 
 
