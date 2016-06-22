@@ -111,9 +111,8 @@ class JobDir(object):
         self.post_playbook = os.path.join(self.ansible_root, 'post_playbook')
         self.config = os.path.join(self.ansible_root, 'ansible.cfg')
         self.script_root = os.path.join(self.ansible_root, 'scripts')
+        self.ansible_log = os.path.join(self.ansible_root, 'ansible_log.txt')
         os.makedirs(self.script_root)
-        self.logs = os.path.join(self.ansible_root, 'logs')
-        os.makedirs(self.logs)
         self.staging_root = os.path.join(self.root, 'staging')
         os.makedirs(self.staging_root)
 
@@ -1229,8 +1228,7 @@ class NodeWorker(object):
             config.write('local_tmp = %s/.ansible/tmp\n' % jobdir.root)
             config.write('private_key_file = %s\n' % self.private_key_file)
             config.write('retry_files_enabled = False\n')
-            config.write('log_path = %s\n' % os.path.join(
-                jobdir.logs, 'ansible.txt'))
+            config.write('log_path = %s\n' % jobdir.ansible_log)
             config.write('gathering = explicit\n')
             config.write('callback_plugins = %s\n' % self.callback_dir)
             config.write('library = %s\n' % self.library_dir)
