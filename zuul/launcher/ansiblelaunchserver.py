@@ -42,7 +42,8 @@ ANSIBLE_DEFAULT_TIMEOUT = 2 * 60 * 60
 ANSIBLE_DEFAULT_POST_TIMEOUT = 10 * 60
 
 
-COMMANDS = ['reconfigure', 'stop', 'pause', 'unpause', 'release', 'graceful']
+COMMANDS = ['reconfigure', 'stop', 'pause', 'unpause', 'release', 'graceful',
+            'verbose', 'unverbose']
 
 
 def boolify(x):
@@ -131,6 +132,9 @@ class LaunchServer(object):
 
     def __init__(self, config, keep_jobdir=False):
         self.config = config
+        self.options = dict(
+            verbose=False
+        )
         self.keep_jobdir = keep_jobdir
         self.hostname = socket.gethostname()
         self.registered_functions = set()
@@ -148,6 +152,8 @@ class LaunchServer(object):
             unpause=self.unpause,
             release=self.release,
             graceful=self.graceful,
+            verbose=self.verboseOn,
+            unverbose=self.verboseOff,
         )
 
         if config.has_option('launcher', 'accept_nodes'):
@@ -391,6 +397,14 @@ class LaunchServer(object):
         # class, which is called by the command shell.
         self.log.debug("Stopped")
 
+    def verboseOn(self):
+        self.log.debug("Enabling verbose mode")
+        self.options['verbose'] = True
+
+    def verboseOff(self):
+        self.log.debug("Disabling verbose mode")
+        self.options['verbose'] = False
+
     def join(self):
         self.command_thread.join()
 
@@ -458,7 +472,8 @@ class LaunchServer(object):
                             args['description'], args['labels'],
                             self.hostname, self.zmq_send_queue,
                             self.termination_queue, self.keep_jobdir,
-                            self.callback_dir, self.library_dir)
+                            self.callback_dir, self.library_dir,
+                            self.options)
         self.node_workers[worker.name] = worker
 
         worker.thread = threading.Thread(target=worker.run)
@@ -534,7 +549,7 @@ class NodeWorker(object):
     def __init__(self, config, jobs, builds, sites, name, host,
                  description, labels, manager_name, zmq_send_queue,
                  termination_queue, keep_jobdir, callback_dir,
-                 library_dir):
+                 library_dir, options):
         self.log = logging.getLogger("zuul.NodeWorker.%s" % (name,))
         self.log.debug("Creating node worker %s" % (name,))
         self.config = config
@@ -581,6 +596,7 @@ class NodeWorker(object):
             self.username = 'zuul'
         self.callback_dir = callback_dir
         self.library_dir = library_dir
+        self.options = options
 
     def isAlive(self):
         # Meant to be called from the manager
@@ -1250,7 +1266,12 @@ class NodeWorker(object):
         env_copy = os.environ.copy()
         env_copy['LOGNAME'] = 'zuul'
 
-        cmd = ['ansible-playbook', jobdir.playbook, '-v']
+        if self.options['verbose']:
+            verbose = '-vvv'
+        else:
+            verbose = '-v'
+
+        cmd = ['ansible-playbook', jobdir.playbook, verbose]
         self.log.debug("Ansible command: %s" % (cmd,))
 
         self.ansible_job_proc = subprocess.Popen(
@@ -1291,8 +1312,13 @@ class NodeWorker(object):
         env_copy = os.environ.copy()
         env_copy['LOGNAME'] = 'zuul'
 
+        if self.options['verbose']:
+            verbose = '-vvv'
+        else:
+            verbose = '-v'
+
         cmd = ['ansible-playbook', jobdir.post_playbook,
-               '-e', 'success=%s' % success, '-v']
+               '-e', 'success=%s' % success, verbose]
         self.log.debug("Ansible post command: %s" % (cmd,))
 
         self.ansible_post_proc = subprocess.Popen(
