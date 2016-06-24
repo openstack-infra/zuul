@@ -807,11 +807,10 @@ class NodeWorker(object):
             self.log.exception("Exception while launching job thread")
 
         self._running_job = False
-        if not result:
-            result = b''
 
         try:
-            job.sendWorkComplete(result)
+            data = json.dumps(dict(result=result))
+            job.sendWorkComplete(data)
         except Exception:
             self.log.exception("Exception while sending job completion packet")
 
@@ -894,16 +893,16 @@ class NodeWorker(object):
 
             post_status = self.runAnsiblePostPlaybook(jobdir, job_status)
             if not post_status:
-                status = 'POST_FAILURE'
+                result = 'POST_FAILURE'
             elif job_status:
-                status = 'SUCCESS'
+                result = 'SUCCESS'
             else:
-                status = 'FAILURE'
+                result = 'FAILURE'
 
-            if not self._aborted_job:
+            if self._aborted_job:
                 # A Null result will cause zuul to relaunch the job if
                 # it needs to.
-                result = json.dumps(dict(result=status))
+                result = None
 
         return result
 
