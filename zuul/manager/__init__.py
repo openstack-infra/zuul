@@ -14,6 +14,7 @@ import extras
 import logging
 
 from zuul import exceptions
+import zuul.configloader
 from zuul.model import NullChange
 
 statsd = extras.try_import('statsd.statsd')
@@ -363,7 +364,15 @@ class BasePipelineManager(object):
     def launchJobs(self, item):
         # TODO(jeblair): This should return a value indicating a job
         # was launched.  Appears to be a longstanding bug.
-        jobs = self.pipeline.findJobsToRun(item, self.sched.mutex)
+        if not item.current_build_set.layout:
+            return False
+
+        # We may be working with a dynamic layout.  Get a pipeline
+        # object from *that* layout to find out which jobs we should
+        # run.
+        layout = item.current_build_set.layout
+        pipeline = layout.pipelines[self.pipeline.name]
+        jobs = pipeline.findJobsToRun(item, self.sched.mutex)
         if jobs:
             self._launchJobs(item, jobs)
 
@@ -392,6 +401,78 @@ class BasePipelineManager(object):
                 canceled = True
         return canceled
 
+    def _makeMergerItem(self, item):
+        # Create a dictionary with all info about the item needed by
+        # the merger.
+        number = None
+        patchset = None
+        oldrev = None
+        newrev = None
+        if hasattr(item.change, 'number'):
+            number = item.change.number
+            patchset = item.change.patchset
+        elif hasattr(item.change, 'newrev'):
+            oldrev = item.change.oldrev
+            newrev = item.change.newrev
+        connection_name = self.pipeline.source.connection.connection_name
+        return dict(project=item.change.project.name,
+                    url=self.pipeline.source.getGitUrl(
+                        item.change.project),
+                    connection_name=connection_name,
+                    merge_mode=item.change.project.merge_mode,
+                    refspec=item.change.refspec,
+                    branch=item.change.branch,
+                    ref=item.current_build_set.ref,
+                    number=number,
+                    patchset=patchset,
+                    oldrev=oldrev,
+                    newrev=newrev,
+                    )
+
+    def getLayout(self, item):
+        if not item.change.updatesConfig():
+            if item.item_ahead:
+                return item.item_ahead.current_build_set.layout
+            else:
+                return item.queue.pipeline.layout
+        # This item updates the config, ask the merger for the result.
+        build_set = item.current_build_set
+        if build_set.merge_state == build_set.PENDING:
+            return None
+        if build_set.merge_state == build_set.COMPLETE:
+            if build_set.unable_to_merge:
+                return None
+            # Load layout
+            loader = zuul.configloader.ConfigLoader()
+            self.log.debug("Load dynamic layout with %s" % build_set.files)
+            layout = loader.createDynamicLayout(item.pipeline.layout.tenant,
+                                                build_set.files)
+            return layout
+        build_set.merge_state = build_set.PENDING
+        self.log.debug("Preparing dynamic layout for: %s" % item.change)
+        dependent_items = self.getDependentItems(item)
+        dependent_items.reverse()
+        all_items = dependent_items + [item]
+        merger_items = map(self._makeMergerItem, all_items)
+        self.sched.merger.mergeChanges(merger_items,
+                                       item.current_build_set,
+                                       ['.zuul.yaml'],
+                                       self.pipeline.precedence)
+
+    def prepareLayout(self, item):
+        # Get a copy of the layout in the context of the current
+        # queue.
+        # Returns True if the ref is ready, false otherwise
+        if not item.current_build_set.ref:
+            item.current_build_set.setConfiguration()
+        if not item.current_build_set.layout:
+            item.current_build_set.layout = self.getLayout(item)
+        if not item.current_build_set.layout:
+            return False
+        if not item.job_tree:
+            item.freezeJobTree()
+        return True
+
     def _processOneItem(self, item, nnfi):
         changed = False
         item_ahead = item.item_ahead
@@ -416,6 +497,7 @@ class BasePipelineManager(object):
         dep_items = self.getFailingDependentItems(item)
         actionable = change_queue.isActionable(item)
         item.active = actionable
+        ready = False
         if dep_items:
             failing_reasons.append('a needed change is failing')
             self.cancelJobs(item, prime=False)
@@ -433,13 +515,14 @@ class BasePipelineManager(object):
                 change_queue.moveItem(item, nnfi)
                 changed = True
                 self.cancelJobs(item)
-        if actionable:
-            if not item.current_build_set.ref:
-                item.current_build_set.setConfiguration()
-            if self.provisionNodes(item):
-                changed = True
-            if self.launchJobs(item):
-                changed = True
+            if actionable:
+                ready = self.prepareLayout(item)
+                if item.current_build_set.unable_to_merge:
+                    failing_reasons.append("it has a merge conflict")
+                if ready and self.provisionNodes(item):
+                    changed = True
+        if actionable and ready and self.launchJobs(item):
+            changed = True
         if self.pipeline.didAnyJobFail(item):
             failing_reasons.append("at least one job failed")
         if (not item.live) and (not item.items_behind):
@@ -533,6 +616,7 @@ class BasePipelineManager(object):
         build_set.zuul_url = event.zuul_url
         if event.merged:
             build_set.commit = event.commit
+            build_set.files.setFiles(event.files)
         elif event.updated:
             if not isinstance(item.change, NullChange):
                 build_set.commit = item.change.newrev
@@ -591,6 +675,9 @@ class BasePipelineManager(object):
             actions = self.pipeline.success_actions
             item.setReportedResult('SUCCESS')
             self.pipeline._consecutive_failures = 0
+        elif not self.pipeline.didMergerSucceed(item):
+            actions = self.pipeline.merge_failure_actions
+            item.setReportedResult('MERGER_FAILURE')
         else:
             actions = self.pipeline.failure_actions
             item.setReportedResult('FAILURE')

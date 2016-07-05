@@ -108,7 +108,7 @@ class FakeChange(object):
                   'VRFY': ('Verified', -2, 2)}
 
     def __init__(self, gerrit, number, project, branch, subject,
-                 status='NEW', upstream_root=None):
+                 status='NEW', upstream_root=None, files={}):
         self.gerrit = gerrit
         self.reported = 0
         self.queried = 0
@@ -142,11 +142,11 @@ class FakeChange(object):
             'url': 'https://hostname/%s' % number}
 
         self.upstream_root = upstream_root
-        self.addPatchset()
+        self.addPatchset(files=files)
         self.data['submitRecords'] = self.getSubmitRecords()
         self.open = status == 'NEW'
 
-    def add_fake_change_to_repo(self, msg, fn, large):
+    def addFakeChangeToRepo(self, msg, files, large):
         path = os.path.join(self.upstream_root, self.project)
         repo = git.Repo(path)
         ref = ChangeReference.create(repo, '1/%s/%s' % (self.number,
@@ -158,12 +158,11 @@ class FakeChange(object):
 
         path = os.path.join(self.upstream_root, self.project)
         if not large:
-            fn = os.path.join(path, fn)
-            f = open(fn, 'w')
-            f.write("test %s %s %s\n" %
-                    (self.branch, self.number, self.latest_patchset))
-            f.close()
-            repo.index.add([fn])
+            for fn, content in files.items():
+                fn = os.path.join(path, fn)
+                with open(fn, 'w') as f:
+                    f.write(content)
+                repo.index.add([fn])
         else:
             for fni in range(100):
                 fn = os.path.join(path, str(fni))
@@ -180,19 +179,20 @@ class FakeChange(object):
         repo.heads['master'].checkout()
         return r
 
-    def addPatchset(self, files=[], large=False):
+    def addPatchset(self, files=None, large=False):
         self.latest_patchset += 1
-        if files:
-            fn = files[0]
-        else:
+        if not files:
             fn = '%s-%s' % (self.branch.replace('/', '_'), self.number)
+            data = ("test %s %s %s\n" %
+                    (self.branch, self.number, self.latest_patchset))
+            files = {fn: data}
         msg = self.subject + '-' + str(self.latest_patchset)
-        c = self.add_fake_change_to_repo(msg, fn, large)
+        c = self.addFakeChangeToRepo(msg, files, large)
         ps_files = [{'file': '/COMMIT_MSG',
                      'type': 'ADDED'},
                     {'file': 'README',
                      'type': 'MODIFIED'}]
-        for f in files:
+        for f in files.keys():
             ps_files.append({'file': f, 'type': 'ADDED'})
         d = {'approvals': [],
              'createdOn': time.time(),
@@ -400,11 +400,12 @@ class FakeGerritConnection(zuul.connection.gerrit.GerritConnection):
         self.queries = []
         self.upstream_root = upstream_root
 
-    def addFakeChange(self, project, branch, subject, status='NEW'):
+    def addFakeChange(self, project, branch, subject, status='NEW',
+                      files=None):
         self.change_number += 1
         c = FakeChange(self, self.change_number, project, branch, subject,
                        upstream_root=self.upstream_root,
-                       status=status)
+                       status=status, files=files)
         self.changes[self.change_number] = c
         return c
 
@@ -937,9 +938,8 @@ class ZuulTestCase(BaseTestCase):
         self.config.set('zuul', 'state_dir', self.state_root)
 
         # For each project in config:
-        self.init_repo("org/project")
-        self.init_repo("org/project1")
-        self.init_repo("org/project2")
+        # TODOv3(jeblair): remove these and replace with new git
+        # filesystem fixtures
         self.init_repo("org/project3")
         self.init_repo("org/project4")
         self.init_repo("org/project5")
@@ -1107,13 +1107,12 @@ class ZuulTestCase(BaseTestCase):
                 'git')
             if os.path.exists(git_path):
                 for reponame in os.listdir(git_path):
-                    self.copyDirToRepo(reponame,
+                    project = reponame.replace('_', '/')
+                    self.copyDirToRepo(project,
                                        os.path.join(git_path, reponame))
 
     def copyDirToRepo(self, project, source_path):
-        repo_path = os.path.join(self.upstream_root, project)
-        if not os.path.exists(repo_path):
-            self.init_repo(project)
+        self.init_repo(project)
 
         files = {}
         for (dirpath, dirnames, filenames) in os.walk(source_path):
@@ -1126,7 +1125,7 @@ class ZuulTestCase(BaseTestCase):
                     content = f.read()
                 files[relative_filepath] = content
         self.addCommitToRepo(project, 'add content from fixture',
-                             files, branch='master')
+                             files, branch='master', tag='init')
 
     def setup_repos(self):
         """Subclasses can override to manipulate repos before tests"""
@@ -1176,20 +1175,12 @@ class ZuulTestCase(BaseTestCase):
             config_writer.set_value('user', 'email', 'user@example.com')
             config_writer.set_value('user', 'name', 'User Name')
 
-        fn = os.path.join(path, 'README')
-        f = open(fn, 'w')
-        f.write("test\n")
-        f.close()
-        repo.index.add([fn])
         repo.index.commit('initial commit')
         master = repo.create_head('master')
-        repo.create_tag('init')
 
         repo.head.reference = master
         zuul.merger.merger.reset_repo_to_head(repo)
         repo.git.clean('-x', '-f', '-d')
-
-        self.create_branch(project, 'mp')
 
     def create_branch(self, project, branch):
         path = os.path.join(self.upstream_root, project)
@@ -1452,7 +1443,8 @@ tenants:
         f.close()
         self.config.set('zuul', 'tenant_config', f.name)
 
-    def addCommitToRepo(self, project, message, files, branch='master'):
+    def addCommitToRepo(self, project, message, files,
+                        branch='master', tag=None):
         path = os.path.join(self.upstream_root, project)
         repo = git.Repo(path)
         repo.head.reference = branch
@@ -1467,3 +1459,5 @@ tenants:
         repo.head.reference = branch
         repo.git.clean('-x', '-f', '-d')
         repo.heads[branch].checkout()
+        if tag:
+            repo.create_tag(tag)

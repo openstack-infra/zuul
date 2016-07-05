@@ -146,6 +146,8 @@ class Pipeline(object):
         return tree
 
     def getJobs(self, item):
+        # TODOv3(jeblair): can this be removed in favor of the frozen
+        # job list in item?
         if not item.live:
             return []
         tree = self.getJobTree(item.change.project)
@@ -213,21 +215,27 @@ class Pipeline(object):
         return self._findJobsToRequest(tree.job_trees, item)
 
     def haveAllJobsStarted(self, item):
-        for job in self.getJobs(item):
+        if not item.hasJobTree():
+            return False
+        for job in item.getJobs():
             build = item.current_build_set.getBuild(job.name)
             if not build or not build.start_time:
                 return False
         return True
 
     def areAllJobsComplete(self, item):
-        for job in self.getJobs(item):
+        if not item.hasJobTree():
+            return False
+        for job in item.getJobs():
             build = item.current_build_set.getBuild(job.name)
             if not build or not build.result:
                 return False
         return True
 
     def didAllJobsSucceed(self, item):
-        for job in self.getJobs(item):
+        if not item.hasJobTree():
+            return False
+        for job in item.getJobs():
             if not job.voting:
                 continue
             build = item.current_build_set.getBuild(job.name)
@@ -243,7 +251,9 @@ class Pipeline(object):
         return True
 
     def didAnyJobFail(self, item):
-        for job in self.getJobs(item):
+        if not item.hasJobTree():
+            return False
+        for job in item.getJobs():
             if not job.voting:
                 continue
             build = item.current_build_set.getBuild(job.name)
@@ -254,7 +264,9 @@ class Pipeline(object):
     def isHoldingFollowingChanges(self, item):
         if not item.live:
             return False
-        for job in self.getJobs(item):
+        if not item.hasJobTree():
+            return False
+        for job in item.getJobs():
             if not job.hold_following_changes:
                 continue
             build = item.current_build_set.getBuild(job.name)
@@ -375,7 +387,6 @@ class ChangeQueue(object):
 
     def enqueueChange(self, change):
         item = QueueItem(self, change)
-        item.freezeJobTree()
         self.enqueueItem(item)
         item.enqueue_time = time.time()
         return item
@@ -457,6 +468,7 @@ class Project(object):
         # of layout projects, this should matter
         # when deciding whether to enqueue their changes
         self.foreign = foreign
+        self.unparsed_config = None
 
     def __str__(self):
         return self.name
@@ -489,8 +501,6 @@ class Job(object):
         pre_run=None,
         post_run=None,
         voting=None,
-        project_source=None,
-        project_name=None,
         failure_message=None,
         success_message=None,
         failure_url=None,
@@ -652,6 +662,27 @@ class Worker(object):
         return '<Worker %s>' % self.name
 
 
+class RepoFiles(object):
+    # When we ask a merger to prepare a future multiple-repo state and
+    # collect files so that we can dynamically load our configuration,
+    # this class provides easy access to that data.
+    def __init__(self):
+        self.projects = {}
+
+    def __repr__(self):
+        return '<RepoFiles %s>' % self.projects
+
+    def setFiles(self, items):
+        self.projects = {}
+        for item in items:
+            project = self.projects.setdefault(item['project'], {})
+            branch = project.setdefault(item['branch'], {})
+            branch.update(item['files'])
+
+    def getFile(self, project, branch, fn):
+        return self.projects.get(project, {}).get(branch, {}).get(fn)
+
+
 class BuildSet(object):
     # Merge states:
     NEW = 1
@@ -679,6 +710,8 @@ class BuildSet(object):
         self.merge_state = self.NEW
         self.nodes = {}  # job -> nodes
         self.node_requests = {}  # job -> reqs
+        self.files = RepoFiles()
+        self.layout = None
 
     def __repr__(self):
         return '<BuildSet item: %s #builds: %s merge state: %s>' % (
@@ -754,6 +787,7 @@ class QueueItem(object):
         self.reported = False
         self.active = False  # Whether an item is within an active window
         self.live = True  # Whether an item is intended to be processed at all
+        self.layout = None  # This item's shadow layout
         self.job_tree = None
 
     def __repr__(self):
@@ -782,37 +816,15 @@ class QueueItem(object):
     def setReportedResult(self, result):
         self.current_build_set.result = result
 
-    def _createJobTree(self, job_trees, parent):
-        for tree in job_trees:
-            job = tree.job
-            if not job.changeMatches(self.change):
-                continue
-            frozen_job = Job(job.name)
-            frozen_tree = JobTree(frozen_job)
-            inherited = set()
-            for variant in self.pipeline.layout.getJobs(job.name):
-                if variant.changeMatches(self.change):
-                    if variant not in inherited:
-                        frozen_job.inheritFrom(variant)
-                        inherited.add(variant)
-            if job not in inherited:
-                # Only update from the job in the tree if it is
-                # unique, otherwise we might unset an attribute we
-                # have overloaded.
-                frozen_job.inheritFrom(job)
-            parent.job_trees.append(frozen_tree)
-            self._createJobTree(tree.job_trees, frozen_tree)
-
-    def createJobTree(self):
-        project_tree = self.pipeline.getJobTree(self.change.project)
-        ret = JobTree(None)
-        self._createJobTree(project_tree.job_trees, ret)
-        return ret
-
     def freezeJobTree(self):
         """Find or create actual matching jobs for this item's change and
         store the resulting job tree."""
-        self.job_tree = self.createJobTree()
+        layout = self.current_build_set.layout
+        self.job_tree = layout.createJobTree(self)
+
+    def hasJobTree(self):
+        """Returns True if the item has a job tree."""
+        return self.job_tree is not None
 
     def getJobs(self):
         if not self.live or not self.job_tree:
@@ -877,7 +889,7 @@ class QueueItem(object):
         else:
             ret['owner'] = None
         max_remaining = 0
-        for job in self.pipeline.getJobs(self):
+        for job in self.getJobs():
             now = time.time()
             build = self.current_build_set.getBuild(job.name)
             elapsed = None
@@ -957,7 +969,7 @@ class QueueItem(object):
                 changeish.project.name,
                 changeish._id(),
                 self.item_ahead)
-        for job in self.pipeline.getJobs(self):
+        for job in self.getJobs():
             build = self.current_build_set.getBuild(job.name)
             if build:
                 result = build.result
@@ -1007,6 +1019,9 @@ class Changeish(object):
 
     def getRelatedChanges(self):
         return set()
+
+    def updatesConfig(self):
+        return False
 
 
 class Change(Changeish):
@@ -1058,6 +1073,11 @@ class Change(Changeish):
             related.add(c)
             related.update(c.getRelatedChanges())
         return related
+
+    def updatesConfig(self):
+        if 'zuul.yaml' in self.files or '.zuul.yaml' in self.files:
+            return True
+        return False
 
 
 class Ref(Changeish):
@@ -1511,6 +1531,14 @@ class UnparsedTenantConfig(object):
         self.project_templates = []
         self.projects = []
 
+    def copy(self):
+        r = UnparsedTenantConfig()
+        r.pipelines = copy.deepcopy(self.pipelines)
+        r.jobs = copy.deepcopy(self.jobs)
+        r.project_templates = copy.deepcopy(self.project_templates)
+        r.projects = copy.deepcopy(self.projects)
+        return r
+
     def extend(self, conf):
         if isinstance(conf, UnparsedTenantConfig):
             self.pipelines.extend(conf.pipelines)
@@ -1549,6 +1577,7 @@ class UnparsedTenantConfig(object):
 
 class Layout(object):
     def __init__(self):
+        self.tenant = None
         self.projects = {}
         self.project_configs = {}
         self.project_templates = {}
@@ -1581,20 +1610,62 @@ class Layout(object):
     def addProjectTemplate(self, project_template):
         self.project_templates[project_template.name] = project_template
 
-    def addProjectConfig(self, project_config):
+    def addProjectConfig(self, project_config, update_pipeline=True):
         self.project_configs[project_config.name] = project_config
         # TODOv3(jeblair): tidy up the relationship between pipelines
-        # and projects and projectconfigs
+        # and projects and projectconfigs.  Specifically, move
+        # job_trees out of the pipeline since they are more dynamic
+        # than pipelines.  Remove the update_pipeline argument
+        if not update_pipeline:
+            return
         for pipeline_name, pipeline_config in project_config.pipelines.items():
             pipeline = self.pipelines[pipeline_name]
             project = pipeline.source.getProject(project_config.name)
             pipeline.job_trees[project] = pipeline_config.job_tree
+
+    def _createJobTree(self, change, job_trees, parent):
+        for tree in job_trees:
+            job = tree.job
+            if not job.changeMatches(change):
+                continue
+            frozen_job = Job(job.name)
+            frozen_tree = JobTree(frozen_job)
+            inherited = set()
+            for variant in self.getJobs(job.name):
+                if variant.changeMatches(change):
+                    if variant not in inherited:
+                        frozen_job.inheritFrom(variant)
+                        inherited.add(variant)
+            if job not in inherited:
+                # Only update from the job in the tree if it is
+                # unique, otherwise we might unset an attribute we
+                # have overloaded.
+                frozen_job.inheritFrom(job)
+            parent.job_trees.append(frozen_tree)
+            self._createJobTree(change, tree.job_trees, frozen_tree)
+
+    def createJobTree(self, item):
+        project_config = self.project_configs[item.change.project.name]
+        project_tree = project_config.pipelines[item.pipeline.name].job_tree
+        ret = JobTree(None)
+        self._createJobTree(item.change, project_tree.job_trees, ret)
+        return ret
 
 
 class Tenant(object):
     def __init__(self, name):
         self.name = name
         self.layout = None
+        # The list of repos from which we will read main
+        # configuration.  (source, project)
+        self.config_repos = []
+        # The unparsed config from those repos.
+        self.config_repos_config = None
+        # The list of projects from which we will read in-repo
+        # configuration.  (source, project)
+        self.project_repos = []
+        # The unparsed config from those repos.
+        self.project_repos_config = None
 
 
 class Abide(object):

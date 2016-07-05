@@ -74,28 +74,38 @@ class TestInRepoConfig(ZuulTestCase):
 
     tenant_config_file = 'config/in-repo/main.yaml'
 
-    def setup_repos(self):
-        in_repo_conf = textwrap.dedent(
-            """
-            - job:
-                name: project-test1
-
-            - project:
-                name: org/project
-                tenant-one-gate:
-                  jobs:
-                    - project-test1
-            """)
-
-        self.addCommitToRepo('org/project', 'add zuul conf',
-                             {'.zuul.yaml': in_repo_conf})
-
     def test_in_repo_config(self):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('CRVW', 2)
         self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2,
+                         "A should report start and success")
+        self.assertIn('tenant-one-gate', A.messages[1],
+                      "A should transit tenant-one gate")
+
+    def test_dynamic_config(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test2
+
+            - project:
+                name: org/project
+                tenant-one-gate:
+                  jobs:
+                    - project-test2
+            """)
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files={'.zuul.yaml': in_repo_conf})
+        A.addApproval('CRVW', 2)
+        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
                          'SUCCESS')
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2,
