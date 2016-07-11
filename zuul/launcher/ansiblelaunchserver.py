@@ -161,6 +161,7 @@ class LaunchServer(object):
                                                   'accept_nodes')
         else:
             self.accept_nodes = True
+        self.config_accept_nodes = self.accept_nodes
 
         if self.config.has_option('zuul', 'state_dir'):
             state_dir = os.path.expanduser(
@@ -335,7 +336,7 @@ class LaunchServer(object):
 
     def unpause(self):
         self.log.debug("Unpausing")
-        self.accept_nodes = True
+        self.accept_nodes = self.config_accept_nodes
         self.register()
         for node in self.node_workers.values():
             try:
