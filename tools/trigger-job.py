@@ -68,7 +68,7 @@ def main():
     job = gear.Job("build:%s" % args.job,
                    json.dumps(data),
                    unique=data['ZUUL_UUID'])
-    c.submitJob(job)
+    c.submitJob(job, precedence=gear.PRECEDENCE_HIGH)
 
     while not job.complete:
         time.sleep(1)
