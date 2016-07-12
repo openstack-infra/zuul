@@ -89,6 +89,7 @@ class Server(zuul.cmd.ZuulApp):
         self.sched = zuul.scheduler.Scheduler(self.config,
                                               testonly=True)
         self.configure_connections()
+        self.sched.registerConnections(self.connections, load=False)
         layout = self.sched.testConfig(self.config.get('zuul',
                                                        'layout_config'),
                                        self.connections)

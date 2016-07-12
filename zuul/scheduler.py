@@ -316,11 +316,14 @@ class Scheduler(threading.Thread):
             # Any skip-if predicate can be matched to trigger a skip
             return cm.MatchAny(skip_matchers)
 
-    def registerConnections(self, connections):
+    def registerConnections(self, connections, load=True):
+        # load: whether or not to trigger the onLoad for the connection. This
+        # is useful for not doing a full load during layout validation.
         self.connections = connections
         for connection_name, connection in self.connections.items():
             connection.registerScheduler(self)
-            connection.onLoad()
+            if load:
+                connection.onLoad()
 
     def stopConnections(self):
         for connection_name, connection in self.connections.items():
