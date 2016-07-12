@@ -173,8 +173,9 @@ class Cloner(object):
             self.log.info("upstream repo has branch %s", indicated_branch)
             fallback_branch = indicated_branch
         else:
-            self.log.info("upstream repo is missing branch %s",
-                          self.branch)
+            if indicated_branch:
+                self.log.info("upstream repo is missing branch %s",
+                              indicated_branch)
             # FIXME should be origin HEAD branch which might not be 'master'
             fallback_branch = 'master'
 
