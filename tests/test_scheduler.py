@@ -4427,3 +4427,38 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertIn('Build failed.', K.messages[0])
         # No more messages reported via smtp
         self.assertEqual(3, len(self.smtp_messages))
+
+    def test_success_pattern(self):
+        "Ensure bad build params are ignored"
+
+        # Use SMTP reporter to grab the result message easier
+        self.init_repo("org/docs")
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-success-pattern.yaml')
+        self.sched.reconfigure(self.config)
+        self.worker.hold_jobs_in_build = True
+        self.registerJobs()
+
+        A = self.fake_gerrit.addFakeChange('org/docs', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        # Grab build id
+        self.assertEqual(len(self.builds), 1)
+        uuid = self.builds[0].unique[:7]
+
+        self.worker.hold_jobs_in_build = False
+        self.worker.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.smtp_messages), 1)
+        body = self.smtp_messages[0]['body'].splitlines()
+        self.assertEqual('Build succeeded.', body[0])
+
+        self.assertIn(
+            '- docs-draft-test http://docs-draft.example.org/1/1/1/check/'
+            'docs-draft-test/%s/publish-docs/' % uuid,
+            body[2])
+        self.assertIn(
+            '- docs-draft-test2 https://server/job/docs-draft-test2/1/',
+            body[3])
