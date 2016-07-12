@@ -27,6 +27,8 @@ ZUUL_ENV_SUFFIXES = (
     'branch',
     'ref',
     'url',
+    'project',
+    'newrev',
 )
 
 
@@ -98,6 +100,10 @@ class Cloner(zuul.cmd.ZuulApp):
             parser.error("Specifying a Zuul ref requires a Zuul url. "
                          "Define Zuul arguments either via environment "
                          "variables or using options above.")
+        if 'zuul_newrev' in zuul_args and 'zuul_project' not in zuul_args:
+            parser.error("ZUUL_NEWREV has been specified without "
+                         "ZUUL_PROJECT. Please define a ZUUL_PROJECT or do "
+                         "not set ZUUL_NEWREV.")
 
         self.args = args
 
@@ -145,6 +151,8 @@ class Cloner(zuul.cmd.ZuulApp):
             clone_map_file=self.args.clone_map_file,
             project_branches=project_branches,
             cache_dir=self.args.cache_dir,
+            zuul_newrev=self.args.zuul_newrev,
+            zuul_project=self.args.zuul_project,
         )
         cloner.execute()
 
