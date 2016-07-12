@@ -36,12 +36,12 @@ class TestJob(BaseTestCase):
 
     def test_change_matches_returns_false_for_matched_skip_if(self):
         change = model.Change('project')
-        change.files = ['docs/foo']
+        change.files = ['/COMMIT_MSG', 'docs/foo']
         self.assertFalse(self.job.changeMatches(change))
 
     def test_change_matches_returns_true_for_unmatched_skip_if(self):
         change = model.Change('project')
-        change.files = ['foo']
+        change.files = ['/COMMIT_MSG', 'foo']
         self.assertTrue(self.job.changeMatches(change))
 
     def test_copy_retains_skip_if(self):
