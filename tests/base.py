@@ -48,8 +48,8 @@ import zuul.connection.smtp
 import zuul.scheduler
 import zuul.webapp
 import zuul.rpclistener
-import zuul.launcher.ansiblelaunchserver
-import zuul.launcher.launchclient
+import zuul.launcher.server
+import zuul.launcher.client
 import zuul.lib.swift
 import zuul.lib.connections
 import zuul.merger.client
@@ -637,7 +637,7 @@ class FakeBuild(threading.Thread):
         self.worker.lock.release()
 
 
-class RecordingLaunchServer(zuul.launcher.ansiblelaunchserver.LaunchServer):
+class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
     def __init__(self, *args, **kw):
         super(RecordingLaunchServer, self).__init__(*args, **kw)
         self.job_history = []
@@ -974,7 +974,7 @@ class ZuulTestCase(BaseTestCase):
         old_urlopen = urllib2.urlopen
         urllib2.urlopen = URLOpenerFactory
 
-        self.launcher = zuul.launcher.launchclient.LaunchClient(
+        self.launcher = zuul.launcher.client.LaunchClient(
             self.config, self.sched, self.swift)
         self.merge_client = zuul.merger.client.MergeClient(
             self.config, self.sched)
