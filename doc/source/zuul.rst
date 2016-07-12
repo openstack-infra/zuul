@@ -75,6 +75,17 @@ than connecting to an external one.
   Path to log config file for internal Gearman server.
   ``log_config=/etc/zuul/gearman-logging.yaml``
 
+webapp
+""""""
+
+**listen_address**
+  IP address or domain name on which to listen (default: 0.0.0.0).
+  ``listen_address=127.0.0.1``
+
+**port**
+  Port on which the webapp is listening (default: 8001).
+  ``port=8008``
+
 zuul
 """"
 
