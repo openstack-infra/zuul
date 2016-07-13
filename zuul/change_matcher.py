@@ -101,7 +101,7 @@ class MatchAllFiles(AbstractMatcherCollection):
         yield self.commit_regex
 
     def matches(self, change):
-        if not (hasattr(change, 'files') and change.files):
+        if not (hasattr(change, 'files') and len(change.files) > 1):
             return False
         for file_ in change.files:
             matched_file = False

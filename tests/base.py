@@ -22,10 +22,12 @@ import logging
 import os
 import pprint
 from six.moves import queue as Queue
+from six.moves import urllib
 import random
 import re
 import select
 import shutil
+from six.moves import reload_module
 import socket
 import string
 import subprocess
@@ -33,12 +35,10 @@ import swiftclient
 import tempfile
 import threading
 import time
-import urllib2
 
 import git
 import gear
 import fixtures
-import six.moves.urllib.parse as urlparse
 import statsd
 import testtools
 from git import GitCommandError
@@ -482,7 +482,7 @@ class FakeURLOpener(object):
         self.url = url
 
     def read(self):
-        res = urlparse.urlparse(self.url)
+        res = urllib.parse.urlparse(self.url)
         path = res.path
         project = '/'.join(path.split('/')[2:-2])
         ret = '001e# service=git-upload-pack\n'
@@ -882,6 +882,28 @@ class BaseTestCase(testtools.TestCase):
                 format='%(asctime)s %(name)-32s '
                 '%(levelname)-8s %(message)s'))
 
+            # NOTE(notmorgan): Extract logging overrides for specific libraries
+            # from the OS_LOG_DEFAULTS env and create FakeLogger fixtures for
+            # each. This is used to limit the output during test runs from
+            # libraries that zuul depends on such as gear.
+            log_defaults_from_env = os.environ.get('OS_LOG_DEFAULTS')
+
+            if log_defaults_from_env:
+                for default in log_defaults_from_env.split(','):
+                    try:
+                        name, level_str = default.split('=', 1)
+                        level = getattr(logging, level_str, logging.DEBUG)
+                        self.useFixture(fixtures.FakeLogger(
+                            name=name,
+                            level=level,
+                            format='%(asctime)s %(name)-32s '
+                                   '%(levelname)-8s %(message)s'))
+                    except ValueError:
+                        # NOTE(notmorgan): Invalid format of the log default,
+                        # skip and don't try and apply a logger for the
+                        # specified module
+                        pass
+
 
 class ZuulTestCase(BaseTestCase):
     config_file = 'zuul.conf'
@@ -897,11 +919,13 @@ class ZuulTestCase(BaseTestCase):
         self.test_root = os.path.join(tmp_root, "zuul-test")
         self.upstream_root = os.path.join(self.test_root, "upstream")
         self.git_root = os.path.join(self.test_root, "git")
+        self.state_root = os.path.join(self.test_root, "lib")
 
         if os.path.exists(self.test_root):
             shutil.rmtree(self.test_root)
         os.makedirs(self.test_root)
         os.makedirs(self.upstream_root)
+        os.makedirs(self.state_root)
 
         # Make per test copy of Configuration.
         self.setup_config()
@@ -909,6 +933,7 @@ class ZuulTestCase(BaseTestCase):
                         os.path.join(FIXTURE_DIR,
                                      self.config.get('zuul', 'tenant_config')))
         self.config.set('merger', 'git_dir', self.git_root)
+        self.config.set('zuul', 'state_dir', self.state_root)
 
         # For each project in config:
         self.init_repo("org/project")
@@ -937,8 +962,8 @@ class ZuulTestCase(BaseTestCase):
         os.environ['STATSD_PORT'] = str(self.statsd.port)
         self.statsd.start()
         # the statsd client object is configured in the statsd module import
-        reload(statsd)
-        reload(zuul.scheduler)
+        reload_module(statsd)
+        reload_module(zuul.scheduler)
 
         self.gearman_server = FakeGearmanServer()
 
@@ -967,12 +992,12 @@ class ZuulTestCase(BaseTestCase):
         self.ansible_server.start()
 
         def URLOpenerFactory(*args, **kw):
-            if isinstance(args[0], urllib2.Request):
+            if isinstance(args[0], urllib.request.Request):
                 return old_urlopen(*args, **kw)
             return FakeURLOpener(self.upstream_root, *args, **kw)
 
-        old_urlopen = urllib2.urlopen
-        urllib2.urlopen = URLOpenerFactory
+        old_urlopen = urllib.request.urlopen
+        urllib.request.urlopen = URLOpenerFactory
 
         self.launcher = zuul.launcher.client.LaunchClient(
             self.config, self.sched, self.swift)
@@ -982,7 +1007,8 @@ class ZuulTestCase(BaseTestCase):
         self.sched.setLauncher(self.launcher)
         self.sched.setMerger(self.merge_client)
 
-        self.webapp = zuul.webapp.WebApp(self.sched, port=0)
+        self.webapp = zuul.webapp.WebApp(
+            self.sched, port=0, listen_address='127.0.0.1')
         self.rpc = zuul.rpclistener.RPCListener(self.config, self.sched)
 
         self.sched.start()
@@ -1179,6 +1205,17 @@ class ZuulTestCase(BaseTestCase):
         zuul.merger.merger.reset_repo_to_head(repo)
         repo.git.clean('-x', '-f', '-d')
 
+    def create_commit(self, project):
+        path = os.path.join(self.upstream_root, project)
+        repo = git.Repo(path)
+        repo.head.reference = repo.heads['master']
+        file_name = os.path.join(path, 'README')
+        with open(file_name, 'a') as f:
+            f.write('creating fake commit\n')
+        repo.index.add([file_name])
+        commit = repo.index.commit('Creating a fake commit')
+        return commit.hexsha
+
     def ref_has_change(self, ref, change):
         path = os.path.join(self.git_root, change.project)
         repo = git.Repo(path)
@@ -1325,9 +1362,11 @@ class ZuulTestCase(BaseTestCase):
         start = time.time()
         while True:
             if time.time() - start > 10:
-                print 'queue status:',
-                print ' '.join(self.eventQueuesEmpty())
-                print self.areAllBuildsWaiting()
+                self.log.debug("Queue status:")
+                for queue in self.event_queues:
+                    self.log.debug("  %s: %s" % (queue, queue.empty()))
+                self.log.debug("All builds waiting: %s" %
+                               (self.areAllBuildsWaiting(),))
                 raise Exception("Timeout waiting for Zuul to settle")
             # Make sure no new events show up while we're checking
             # have all build states propogated to zuul?
@@ -1369,8 +1408,8 @@ class ZuulTestCase(BaseTestCase):
             for pipeline in tenant.layout.pipelines.values():
                 for queue in pipeline.queues:
                     if len(queue.queue) != 0:
-                        print 'pipeline %s queue %s contents %s' % (
-                            pipeline.name, queue.name, queue.queue)
+                        print('pipeline %s queue %s contents %s' % (
+                            pipeline.name, queue.name, queue.queue))
                     self.assertEqual(len(queue.queue), 0,
                                      "Pipelines queues should be empty")
 

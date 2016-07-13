@@ -21,7 +21,7 @@ import traceback
 import gear
 import six
 
-import model
+from zuul import model
 
 
 class RPCListener(object):
@@ -40,11 +40,11 @@ class RPCListener(object):
             port = 4730
         self.worker = gear.Worker('Zuul RPC Listener')
         self.worker.addServer(server, port)
+        self.worker.waitForServer()
+        self.register()
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
         self.thread.start()
-        self.worker.waitForServer()
-        self.register()
 
     def register(self):
         self.worker.registerFunction("zuul:enqueue")
@@ -66,8 +66,8 @@ class RPCListener(object):
         while self._running:
             try:
                 job = self.worker.getJob()
-                z, jobname = job.name.split(':')
                 self.log.debug("Received job %s" % job.name)
+                z, jobname = job.name.split(':')
                 attrname = 'handle_' + jobname
                 if hasattr(self, attrname):
                     f = getattr(self, attrname)

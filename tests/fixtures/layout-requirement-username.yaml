@@ -3,7 +3,7 @@ pipelines:
     manager: IndependentPipelineManager
     require:
       approval:
-        - username: jenkins
+        - username: ^(jenkins|zuul)$
     trigger:
       gerrit:
         - event: comment-added

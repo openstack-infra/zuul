@@ -19,8 +19,8 @@ from time import time
 import os
 import random
 import six
+from six.moves import urllib
 import string
-import urlparse
 
 
 class Swift(object):
@@ -156,7 +156,7 @@ class Swift(object):
         url = os.path.join(self.storage_url, settings['container'],
                            settings['file_path_prefix'],
                            destination_prefix)
-        u = urlparse.urlparse(url)
+        u = urllib.parse.urlparse(url)
 
         hmac_body = '%s\n%s\n%s\n%s\n%s' % (u.path, redirect,
                                             settings['max_file_size'],

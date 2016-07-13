@@ -26,6 +26,10 @@ default_container=logs
 region_name=EXP
 logserver_prefix=http://logs.example.org/server.app/
 
+[webapp]
+listen_address=0.0.0.0
+port=8001
+
 [connection gerrit]
 driver=gerrit
 server=review.example.com

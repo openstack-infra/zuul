@@ -13,7 +13,9 @@
 # under the License.
 
 import copy
+import os
 import re
+import struct
 import time
 from uuid import uuid4
 import extras
@@ -121,7 +123,11 @@ class Pipeline(object):
         return job_tree
 
     def getProjects(self):
-        return sorted(self.job_trees.keys(), lambda a, b: cmp(a.name, b.name))
+        # cmp is not in python3, applied idiom from
+        # http://python-future.org/compatible_idioms.html#cmp
+        return sorted(
+            self.job_trees.keys(),
+            key=lambda p: p.name)
 
     def addQueue(self, queue):
         self.queues.append(queue)
@@ -273,7 +279,7 @@ class Pipeline(object):
             items.extend(shared_queue.queue)
         return items
 
-    def formatStatusJSON(self):
+    def formatStatusJSON(self, url_pattern=None):
         j_pipeline = dict(name=self.name,
                           description=self.description)
         j_queues = []
@@ -290,7 +296,7 @@ class Pipeline(object):
                     if j_changes:
                         j_queue['heads'].append(j_changes)
                     j_changes = []
-                j_changes.append(e.formatJSON())
+                j_changes.append(e.formatJSON(url_pattern))
                 if (len(j_changes) > 1 and
                         (j_changes[-2]['remaining_time'] is not None) and
                         (j_changes[-1]['remaining_time'] is not None)):
@@ -413,7 +419,7 @@ class ChangeQueue(object):
             elif self.window_decrease_type == 'exponential':
                 self.window = max(
                     self.window_floor,
-                    self.window / self.window_decrease_factor)
+                    int(self.window / self.window_decrease_factor))
 
 
 class Project(object):
@@ -766,7 +772,34 @@ class QueueItem(object):
             return []
         return self.job_tree.getJobs()
 
-    def formatJSON(self):
+    def formatJobResult(self, job, url_pattern=None):
+        build = self.current_build_set.getBuild(job.name)
+        result = build.result
+        pattern = url_pattern
+        if result == 'SUCCESS':
+            if job.success_message:
+                result = job.success_message
+            if job.success_pattern:
+                pattern = job.success_pattern
+        elif result == 'FAILURE':
+            if job.failure_message:
+                result = job.failure_message
+            if job.failure_pattern:
+                pattern = job.failure_pattern
+        url = None
+        if pattern:
+            try:
+                url = pattern.format(change=self.change,
+                                     pipeline=self.pipeline,
+                                     job=job,
+                                     build=build)
+            except Exception:
+                pass  # FIXME: log this or something?
+        if not url:
+            url = build.url or job.name
+        return (result, url)
+
+    def formatJSON(self, url_pattern=None):
         changeish = self.change
         ret = {}
         ret['active'] = self.active
@@ -803,11 +836,13 @@ class QueueItem(object):
             elapsed = None
             remaining = None
             result = None
-            url = None
+            build_url = None
+            report_url = None
             worker = None
             if build:
                 result = build.result
-                url = build.url
+                build_url = build.url
+                (unused, report_url) = self.formatJobResult(job, url_pattern)
                 if build.start_time:
                     if build.end_time:
                         elapsed = int((build.end_time -
@@ -835,7 +870,8 @@ class QueueItem(object):
                 'name': job.name,
                 'elapsed_time': elapsed,
                 'remaining_time': remaining,
-                'url': url,
+                'url': build_url,
+                'report_url': report_url,
                 'result': result,
                 'voting': job.voting,
                 'uuid': build.uuid if build else None,
@@ -1085,7 +1121,7 @@ class BaseFilter(object):
         for a in approvals:
             for k, v in a.items():
                 if k == 'username':
-                    pass
+                    a['username'] = re.compile(v)
                 elif k in ['email', 'email-filter']:
                     a['email'] = re.compile(v)
                 elif k == 'newer-than':
@@ -1104,7 +1140,7 @@ class BaseFilter(object):
         by = approval.get('by', {})
         for k, v in rapproval.items():
             if k == 'username':
-                if (by.get('username', '') != v):
+                if (not v.search(by.get('username', ''))):
                         return False
             elif k == 'email':
                 if (not v.search(by.get('email', ''))):
@@ -1517,3 +1553,78 @@ class Tenant(object):
 class Abide(object):
     def __init__(self):
         self.tenants = OrderedDict()
+
+
+class JobTimeData(object):
+    format = 'B10H10H10B'
+    version = 0
+
+    def __init__(self, path):
+        self.path = path
+        self.success_times = [0 for x in range(10)]
+        self.failure_times = [0 for x in range(10)]
+        self.results = [0 for x in range(10)]
+
+    def load(self):
+        if not os.path.exists(self.path):
+            return
+        with open(self.path) as f:
+            data = struct.unpack(self.format, f.read())
+        version = data[0]
+        if version != self.version:
+            raise Exception("Unkown data version")
+        self.success_times = list(data[1:11])
+        self.failure_times = list(data[11:21])
+        self.results = list(data[21:32])
+
+    def save(self):
+        tmpfile = self.path + '.tmp'
+        data = [self.version]
+        data.extend(self.success_times)
+        data.extend(self.failure_times)
+        data.extend(self.results)
+        data = struct.pack(self.format, *data)
+        with open(tmpfile, 'w') as f:
+            f.write(data)
+        os.rename(tmpfile, self.path)
+
+    def add(self, elapsed, result):
+        elapsed = int(elapsed)
+        if result == 'SUCCESS':
+            self.success_times.append(elapsed)
+            self.success_times.pop(0)
+            result = 0
+        else:
+            self.failure_times.append(elapsed)
+            self.failure_times.pop(0)
+            result = 1
+        self.results.append(result)
+        self.results.pop(0)
+
+    def getEstimatedTime(self):
+        times = [x for x in self.success_times if x]
+        if times:
+            return float(sum(times)) / len(times)
+        return 0.0
+
+
+class TimeDataBase(object):
+    def __init__(self, root):
+        self.root = root
+        self.jobs = {}
+
+    def _getTD(self, name):
+        td = self.jobs.get(name)
+        if not td:
+            td = JobTimeData(os.path.join(self.root, name))
+            self.jobs[name] = td
+            td.load()
+        return td
+
+    def getEstimatedTime(self, name):
+        return self._getTD(name).getEstimatedTime()
+
+    def update(self, name, elapsed, result):
+        td = self._getTD(name)
+        td.add(elapsed, result)
+        td.save()

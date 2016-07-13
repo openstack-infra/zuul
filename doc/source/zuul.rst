@@ -10,11 +10,11 @@ Zuul has three configuration files:
 
 **zuul.conf**
   Connection information for Gerrit and Gearman, locations of the
-  other config files.
+  other config files. (required)
 **layout.yaml**
-  Project and pipeline configuration -- what Zuul does.
+  Project and pipeline configuration -- what Zuul does. (required)
 **logging.conf**
-    Python logging config.
+    Python logging config. (optional)
 
 Examples of each of the three files can be found in the etc/ directory
 of the source distribution.
@@ -41,16 +41,27 @@ You can also find an example zuul.conf file in the git
 gearman
 """""""
 
+Client connection information for gearman. If using Zuul's builtin gearmand
+server just set **server** to 127.0.0.1.
+
 **server**
   Hostname or IP address of the Gearman server.
-  ``server=gearman.example.com``
+  ``server=gearman.example.com`` (required)
 
 **port**
   Port on which the Gearman server is listening.
-  ``port=4730``
+  ``port=4730`` (optional)
+
+**check_job_registration**
+  Check to see if job is registered with Gearman or not. When True
+  a build result of NOT_REGISTERED will be return if job is not found.
+  ``check_job_registration=True``
 
 gearman_server
 """"""""""""""
+
+The builtin gearman server. Zuul can fork a gearman process from itself rather
+than connecting to an external one.
 
 **start**
   Whether to start the internal Gearman server (default: False).
@@ -64,8 +75,24 @@ gearman_server
   Path to log config file for internal Gearman server.
   ``log_config=/etc/zuul/gearman-logging.yaml``
 
+webapp
+""""""
+
+**listen_address**
+  IP address or domain name on which to listen (default: 0.0.0.0).
+  ``listen_address=127.0.0.1``
+
+**port**
+  Port on which the webapp is listening (default: 8001).
+  ``port=8008``
+
 zuul
 """"
+
+Zuul's main configuration section. At minimum zuul must be able to find
+layout.yaml to be useful.
+
+.. note:: Must be provided when running zuul-server
 
 .. _layout_config:
 
@@ -117,6 +144,13 @@ zuul
 
 merger
 """"""
+
+The zuul-merger process configuration. Detailed documentation on this process
+can be found on the :doc:`merger` page.
+
+.. note:: Must be provided when running zuul-merger. Both services may share the
+          same configuration (and even host) or otherwise have an individual
+          zuul.conf.
 
 **git_dir**
   Directory that Zuul should clone local git repositories to.
@@ -394,11 +428,12 @@ explanation of each of the parameters::
   approval matching all specified requirements.
 
     *username*
-    If present, an approval from this username is required.
+    If present, an approval from this username is required.  It is
+    treated as a regular expression.
 
     *email*
     If present, an approval with this email address is required.  It
-    is treated as a regular expression as above.
+    is treated as a regular expression.
 
     *email-filter* (deprecated)
     A deprecated alternate spelling of *email*.  Only one of *email* or
@@ -759,7 +794,10 @@ each job as it builds a list from the project specification.
     expressions.
 
     The pattern for '/COMMIT_MSG' is always matched on and does not
-    have to be included.
+    have to be included. Exception is merge commits (without modified
+    files), in this case '/COMMIT_MSG' is not matched, and job is not
+    skipped. In case of merge commits it's assumed that list of modified
+    files isn't predictible and CI should be run.
 
 **voting (optional)**
   Boolean value (``true`` or ``false``) that indicates whatever
@@ -997,9 +1035,8 @@ normal operation, omit ``-d`` and let Zuul run as a daemon.
 
 If you send signal 1 (SIGHUP) to the zuul-server process, Zuul will
 stop executing new jobs, wait until all executing jobs are finished,
-reload its configuration, and resume.  Any values in any of the
-configuration files may be changed, except the location of Zuul's PID
-file (a change to that will be ignored until Zuul is restarted).
+reload its layout.yaml, and resume. Changes to any connections or
+the PID  file will be ignored until Zuul is restarted.
 
 If you send a SIGUSR1 to the zuul-server process, Zuul will stop
 executing new jobs, wait until all executing jobs are finished,

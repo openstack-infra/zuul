@@ -35,7 +35,7 @@ for pipeline in data['pipelines']:
                 if not change['live']:
                     continue
                 cid, cps = change['id'].split(',')
-                print (
+                print(
                     "zuul enqueue --trigger gerrit --pipeline %s "
                     "--project %s --change %s,%s" % (
                         options.pipeline_name,

@@ -31,7 +31,7 @@ Metrics
 
 The metrics are emitted by the Zuul scheduler (`zuul/scheduler.py`):
 
-**gerrit.events.<type> (counters)**
+**gerrit.event.<type> (counters)**
   Gerrit emits different kind of message over its `stream-events` interface. As
   a convenience, Zuul emits metrics to statsd which save you from having to use
   a different daemon to measure Gerrit events.
@@ -51,6 +51,18 @@ The metrics are emitted by the Zuul scheduler (`zuul/scheduler.py`):
 
   Refer to your Gerrit installation documentation for an exhaustive list of
   Gerrit event types.
+
+**zuul.node_type.**
+  Holds metrics specifc to build nodes per label. The hierarchy is:
+
+    #. **<build node label>** each of the labels associated to a build in
+           Jenkins. It contains:
+
+      #. **job.<jobname>** subtree detailing per job statistics:
+
+        #. **wait_time** counter and timer of the wait time, with the
+                   difference of the job start time and the launch time, in
+                   milliseconds.
 
 **zuul.pipeline.**
   Holds metrics specific to jobs. The hierarchy is:
@@ -75,10 +87,13 @@ The metrics are emitted by the Zuul scheduler (`zuul/scheduler.py`):
                known by Zuul (which includes build time and Zuul overhead).
       #. **total_changes** counter of the number of change proceeding since
                Zuul started.
+      #. **wait_time** counter and timer of the wait time, with the difference
+               of the job start time and the launch time, in milliseconds.
 
   Additionally, the `zuul.pipeline.<pipeline name>` hierarchy contains
-  `current_changes` and `resident_time` metrics for each projects. The slash
-  separator used in Gerrit name being replaced by dots.
+  `current_changes` (gauge), `resident_time` (timing) and `total_changes`
+  (counter) metrics for each projects. The slash separator used in Gerrit name
+  being replaced by dots.
 
   As an example, given a job named `myjob` triggered by the `gate` pipeline
   which took 40 seconds to build, the Zuul scheduler will emit the following

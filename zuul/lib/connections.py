@@ -24,10 +24,11 @@ class ConnectionRegistry(object):
     def __init__(self):
         self.connections = {}
 
-    def registerScheduler(self, sched):
+    def registerScheduler(self, sched, load=True):
         for connection_name, connection in self.connections.items():
             connection.registerScheduler(sched)
-            connection.onLoad()
+            if load:
+                connection.onLoad()
 
     def stop(self):
         for connection_name, connection in self.connections.items():

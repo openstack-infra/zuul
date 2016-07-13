@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import ConfigParser
+from six.moves import configparser as ConfigParser
 import os
 import re
 
@@ -36,13 +36,13 @@ class TestLayoutValidator(testtools.TestCase):
 
     def test_layouts(self):
         """Test layout file validation"""
-        print
+        print()
         errors = []
         for fn in os.listdir(os.path.join(FIXTURE_DIR, 'layouts')):
             m = LAYOUT_RE.match(fn)
             if not m:
                 continue
-            print fn
+            print(fn)
 
             # Load any .conf file by the same name but .conf extension.
             config_file = ("%s.conf" %
@@ -72,7 +72,7 @@ class TestLayoutValidator(testtools.TestCase):
                                     fn)
                 except voluptuous.Invalid as e:
                     error = str(e)
-                    print '  ', error
+                    print('  ', error)
                     if error in errors:
                         raise Exception("Error has already been tested: %s" %
                                         error)

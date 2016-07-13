@@ -19,7 +19,10 @@ import os
 import re
 import yaml
 
+import six
+
 from git import GitCommandError
+from zuul import exceptions
 from zuul.lib.clonemapper import CloneMapper
 from zuul.merger.merger import Repo
 
@@ -29,7 +32,8 @@ class Cloner(object):
 
     def __init__(self, git_base_url, projects, workspace, zuul_branch,
                  zuul_ref, zuul_url, branch=None, clone_map_file=None,
-                 project_branches=None, cache_dir=None):
+                 project_branches=None, cache_dir=None, zuul_newrev=None,
+                 zuul_project=None):
 
         self.clone_map = []
         self.dests = None
@@ -43,6 +47,10 @@ class Cloner(object):
         self.zuul_ref = zuul_ref or ''
         self.zuul_url = zuul_url
         self.project_branches = project_branches or {}
+        self.project_revisions = {}
+
+        if zuul_newrev and zuul_project:
+            self.project_revisions[zuul_project] = zuul_newrev
 
         if clone_map_file:
             self.readCloneMap(clone_map_file)
@@ -62,7 +70,7 @@ class Cloner(object):
         dests = mapper.expand(workspace=self.workspace)
 
         self.log.info("Preparing %s repositories", len(dests))
-        for project, dest in dests.iteritems():
+        for project, dest in six.iteritems(dests):
             self.prepareRepo(project, dest)
         self.log.info("Prepared all repositories")
 
@@ -103,7 +111,14 @@ class Cloner(object):
             repo.fetchFrom(zuul_remote, ref)
             self.log.debug("Fetched ref %s from %s", ref, project)
             return True
-        except (ValueError, GitCommandError):
+        except ValueError:
+            self.log.debug("Project %s in Zuul does not have ref %s",
+                           project, ref)
+            return False
+        except GitCommandError as error:
+            # Bail out if fetch fails due to infrastructure reasons
+            if error.stderr.startswith('fatal: unable to access'):
+                raise
             self.log.debug("Project %s in Zuul does not have ref %s",
                            project, ref)
             return False
@@ -112,10 +127,15 @@ class Cloner(object):
         """Clone a repository for project at dest and apply a reference
         suitable for testing. The reference lookup is attempted in this order:
 
-         1) Zuul reference for the indicated branch
-         2) Zuul reference for the master branch
-         3) The tip of the indicated branch
-         4) The tip of the master branch
+         1) The indicated revision for specific project
+         2) Zuul reference for the indicated branch
+         3) Zuul reference for the master branch
+         4) The tip of the indicated branch
+         5) The tip of the master branch
+
+        If an "indicated revision" is specified for this project, and we are
+        unable to meet this requirement, we stop attempting to check this
+        repo out and raise a zuul.exceptions.RevNotFound exception.
 
         The "indicated branch" is one of the following:
 
@@ -135,6 +155,10 @@ class Cloner(object):
         # `git branch` is happy with.
         repo.reset()
 
+        indicated_revision = None
+        if project in self.project_revisions:
+            indicated_revision = self.project_revisions[project]
+
         indicated_branch = self.branch or self.zuul_branch
         if project in self.project_branches:
             indicated_branch = self.project_branches[project]
@@ -149,8 +173,9 @@ class Cloner(object):
             self.log.info("upstream repo has branch %s", indicated_branch)
             fallback_branch = indicated_branch
         else:
-            self.log.info("upstream repo is missing branch %s",
-                          self.branch)
+            if indicated_branch:
+                self.log.info("upstream repo is missing branch %s",
+                              indicated_branch)
             # FIXME should be origin HEAD branch which might not be 'master'
             fallback_branch = 'master'
 
@@ -160,13 +185,26 @@ class Cloner(object):
         else:
             fallback_zuul_ref = None
 
+        # If the user has requested an explicit revision to be checked out,
+        # we use it above all else, and if we cannot satisfy this requirement
+        # we raise an error and do not attempt to continue.
+        if indicated_revision:
+            self.log.info("Attempting to check out revision %s for "
+                          "project %s", indicated_revision, project)
+            try:
+                self.fetchFromZuul(repo, project, self.zuul_ref)
+                commit = repo.checkout(indicated_revision)
+            except (ValueError, GitCommandError):
+                raise exceptions.RevNotFound(project, indicated_revision)
+            self.log.info("Prepared '%s' repo at revision '%s'", project,
+                          indicated_revision)
         # If we have a non empty zuul_ref to use, use it. Otherwise we fall
         # back to checking out the branch.
-        if ((override_zuul_ref and
-            self.fetchFromZuul(repo, project, override_zuul_ref)) or
-            (fallback_zuul_ref and
-             fallback_zuul_ref != override_zuul_ref and
-            self.fetchFromZuul(repo, project, fallback_zuul_ref))):
+        elif ((override_zuul_ref and
+              self.fetchFromZuul(repo, project, override_zuul_ref)) or
+              (fallback_zuul_ref and
+               fallback_zuul_ref != override_zuul_ref and
+              self.fetchFromZuul(repo, project, fallback_zuul_ref))):
             # Work around a bug in GitPython which can not parse FETCH_HEAD
             gitcmd = git.Git(dest)
             fetch_head = gitcmd.rev_parse('FETCH_HEAD')

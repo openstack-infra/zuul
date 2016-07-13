@@ -13,6 +13,7 @@
 # under the License.
 
 import abc
+import logging
 
 import six
 
@@ -23,6 +24,8 @@ class BaseReporter(object):
 
     Defines the exact public methods that must be supplied.
     """
+
+    log = logging.getLogger("zuul.reporter.BaseReporter")
 
     def __init__(self, reporter_config={}, connection=None):
         self.reporter_config = reporter_config
@@ -107,25 +110,7 @@ class BaseReporter(object):
 
         for job in pipeline.getJobs(item):
             build = item.current_build_set.getBuild(job.name)
-            result = build.result
-            pattern = url_pattern
-            if result == 'SUCCESS':
-                if job.success_message:
-                    result = job.success_message
-                if job.success_pattern:
-                    pattern = job.success_pattern
-            elif result == 'FAILURE':
-                if job.failure_message:
-                    result = job.failure_message
-                if job.failure_pattern:
-                    pattern = job.failure_pattern
-            if pattern:
-                url = pattern.format(change=item.change,
-                                     pipeline=pipeline,
-                                     job=job,
-                                     build=build)
-            else:
-                url = build.url or job.name
+            (result, url) = item.formatJobResult(job, url_pattern)
             if not job.voting:
                 voting = ' (non-voting)'
             else:

@@ -12,6 +12,12 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+
+import os
+import random
+
+import fixtures
+
 from zuul import model
 from zuul import configloader
 
@@ -32,12 +38,12 @@ class TestJob(BaseTestCase):
 
     def test_change_matches_returns_false_for_matched_skip_if(self):
         change = model.Change('project')
-        change.files = ['docs/foo']
+        change.files = ['/COMMIT_MSG', 'docs/foo']
         self.assertFalse(self.job.changeMatches(change))
 
     def test_change_matches_returns_true_for_unmatched_skip_if(self):
         change = model.Change('project')
-        change.files = ['foo']
+        change.files = ['/COMMIT_MSG', 'foo']
         self.assertTrue(self.job.changeMatches(change))
 
     def test_job_sets_defaults_for_boolean_attributes(self):
@@ -98,3 +104,76 @@ class TestJob(BaseTestCase):
         job = item.getJobs()[0]
         self.assertEqual(job.name, 'python27')
         self.assertEqual(job.timeout, 50)
+
+
+class TestJobTimeData(BaseTestCase):
+    def setUp(self):
+        super(TestJobTimeData, self).setUp()
+        self.tmp_root = self.useFixture(fixtures.TempDir(
+            rootdir=os.environ.get("ZUUL_TEST_ROOT"))
+        ).path
+
+    def test_empty_timedata(self):
+        path = os.path.join(self.tmp_root, 'job-name')
+        self.assertFalse(os.path.exists(path))
+        self.assertFalse(os.path.exists(path + '.tmp'))
+        td = model.JobTimeData(path)
+        self.assertEqual(td.success_times, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        self.assertEqual(td.failure_times, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        self.assertEqual(td.results, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+
+    def test_save_reload(self):
+        path = os.path.join(self.tmp_root, 'job-name')
+        self.assertFalse(os.path.exists(path))
+        self.assertFalse(os.path.exists(path + '.tmp'))
+        td = model.JobTimeData(path)
+        self.assertEqual(td.success_times, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        self.assertEqual(td.failure_times, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        self.assertEqual(td.results, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        success_times = []
+        failure_times = []
+        results = []
+        for x in range(10):
+            success_times.append(int(random.random() * 1000))
+            failure_times.append(int(random.random() * 1000))
+            results.append(0)
+            results.append(1)
+        random.shuffle(results)
+        s = f = 0
+        for result in results:
+            if result:
+                td.add(failure_times[f], 'FAILURE')
+                f += 1
+            else:
+                td.add(success_times[s], 'SUCCESS')
+                s += 1
+        self.assertEqual(td.success_times, success_times)
+        self.assertEqual(td.failure_times, failure_times)
+        self.assertEqual(td.results, results[10:])
+        td.save()
+        self.assertTrue(os.path.exists(path))
+        self.assertFalse(os.path.exists(path + '.tmp'))
+        td = model.JobTimeData(path)
+        td.load()
+        self.assertEqual(td.success_times, success_times)
+        self.assertEqual(td.failure_times, failure_times)
+        self.assertEqual(td.results, results[10:])
+
+
+class TestTimeDataBase(BaseTestCase):
+    def setUp(self):
+        super(TestTimeDataBase, self).setUp()
+        self.tmp_root = self.useFixture(fixtures.TempDir(
+            rootdir=os.environ.get("ZUUL_TEST_ROOT"))
+        ).path
+        self.db = model.TimeDataBase(self.tmp_root)
+
+    def test_timedatabase(self):
+        self.assertEqual(self.db.getEstimatedTime('job-name'), 0)
+        self.db.update('job-name', 50, 'SUCCESS')
+        self.assertEqual(self.db.getEstimatedTime('job-name'), 50)
+        self.db.update('job-name', 100, 'SUCCESS')
+        self.assertEqual(self.db.getEstimatedTime('job-name'), 75)
+        for x in range(10):
+            self.db.update('job-name', 100, 'SUCCESS')
+        self.assertEqual(self.db.getEstimatedTime('job-name'), 100)

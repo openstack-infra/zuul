@@ -12,6 +12,7 @@
 
 import os
 import logging
+import six
 import yaml
 
 import voluptuous as vs
@@ -154,7 +155,7 @@ class ProjectTemplateParser(object):
         if not tree:
             tree = model.JobTree(None)
         for conf_job in conf:
-            if isinstance(conf_job, basestring):
+            if isinstance(conf_job, six.string_types):
                 tree.addJob(layout.getJob(conf_job))
             elif isinstance(conf_job, dict):
                 # A dictionary in a job tree may override params, or

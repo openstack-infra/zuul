@@ -277,8 +277,8 @@ class LaunchServer(object):
         )
         (out, err) = proc.communicate()
         ret = proc.wait()
-        print out
-        print err
+        print(out)
+        print(err)
         if ret == 0:
             return 'SUCCESS'
         else:

@@ -58,3 +58,17 @@ instance, a clone will produce a repository in an unpredictable state
 depending on what the state of Zuul's repository is when the clone
 happens).  They are, however, suitable for automated systems that
 respond to Zuul triggers.
+
+Clearing old references
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The references created under refs/zuul are not garbage collected. Since
+git fetch send them all to Gerrit to sync the repositories, the time
+spent on merge will slightly grow overtime and start being noticeable.
+
+To clean them you can use the ``tools/zuul-clear-refs.py`` script on
+each repositories. It will delete Zuul references that point to commits
+for which the commit date is older than a given amount of days (default
+360)::
+
+  ./tools/zuul-clear-refs.py /path/to/zuul/git/repo

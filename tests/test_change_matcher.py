@@ -123,13 +123,13 @@ class TestMatchAllFiles(BaseTestMatcher):
         self._test_matches(False)
 
     def test_matches_returns_false_when_not_all_files_match(self):
-        self._test_matches(False, files=['docs/foo', 'foo/bar'])
+        self._test_matches(False, files=['/COMMIT_MSG', 'docs/foo', 'foo/bar'])
 
-    def test_matches_returns_true_when_commit_message_matches(self):
-        self._test_matches(True, files=['/COMMIT_MSG'])
+    def test_matches_returns_false_when_commit_message_matches(self):
+        self._test_matches(False, files=['/COMMIT_MSG'])
 
     def test_matches_returns_true_when_all_files_match(self):
-        self._test_matches(True, files=['docs/foo'])
+        self._test_matches(True, files=['/COMMIT_MSG', 'docs/foo'])
 
 
 class TestMatchAll(BaseTestMatcher):
