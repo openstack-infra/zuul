@@ -17,7 +17,7 @@ import yaml
 
 import voluptuous as vs
 
-import model
+from zuul import model
 import zuul.manager
 import zuul.manager.dependent
 import zuul.manager.independent

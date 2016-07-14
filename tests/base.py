@@ -1169,9 +1169,9 @@ class ZuulTestCase(BaseTestCase):
         path = os.path.join(self.upstream_root, project)
         repo = git.Repo.init(path)
 
-        repo.config_writer().set_value('user', 'email', 'user@example.com')
-        repo.config_writer().set_value('user', 'name', 'User Name')
-        repo.config_writer().write()
+        with repo.config_writer() as config_writer:
+            config_writer.set_value('user', 'email', 'user@example.com')
+            config_writer.set_value('user', 'name', 'User Name')
 
         fn = os.path.join(path, 'README')
         f = open(fn, 'w')
