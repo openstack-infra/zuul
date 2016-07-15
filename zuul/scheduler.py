@@ -28,7 +28,6 @@ import time
 
 from zuul import configloader
 from zuul import model
-from zuul.model import Project
 from zuul import exceptions
 from zuul import version as zuul_version
 
@@ -284,20 +283,6 @@ class Scheduler(threading.Thread):
 
     def setNodepool(self, nodepool):
         self.nodepool = nodepool
-
-    def getProject(self, name, create_foreign=False):
-        self.layout_lock.acquire()
-        p = None
-        try:
-            p = self.layout.projects.get(name)
-            if p is None and create_foreign:
-                # TODOv3(jeblair): fix
-                self.log.info("Registering foreign project: %s" % name)
-                p = Project(name, foreign=True)
-                self.layout.projects[name] = p
-        finally:
-            self.layout_lock.release()
-        return p
 
     def addEvent(self, event):
         self.log.debug("Adding trigger event: %s" % event)
