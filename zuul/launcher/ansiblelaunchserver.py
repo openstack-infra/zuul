@@ -583,6 +583,7 @@ class NodeWorker(object):
         self._job_complete_event = threading.Event()
         self._running_job = False
         self._aborted_job = False
+        self._watchdog_timeout = False
         self._sent_complete_event = False
         self.ansible_job_proc = None
         self.ansible_post_proc = None
@@ -796,6 +797,7 @@ class NodeWorker(object):
         result = None
         self._sent_complete_event = False
         self._aborted_job = False
+        self._watchog_timeout = False
 
         try:
             self.sendStartEvent(job_name, args)
@@ -900,7 +902,7 @@ class NodeWorker(object):
             else:
                 result = 'FAILURE'
 
-            if self._aborted_job:
+            if self._aborted_job and not self._watchdog_timeout:
                 # A Null result will cause zuul to relaunch the job if
                 # it needs to.
                 result = None
@@ -1257,6 +1259,7 @@ class NodeWorker(object):
         return timeout
 
     def _ansibleTimeout(self, proc, msg):
+        self._watchdog_timeout = True
         self.log.warning(msg)
         self.abortRunningProc(proc)
 
@@ -1297,6 +1300,8 @@ class NodeWorker(object):
             watchdog.stop()
         self.log.debug("Ansible exit code: %s" % (ret,))
         self.ansible_job_proc = None
+        if self._watchdog_timeout:
+            return False
         if ret == 3:
             # AnsibleHostUnreachable: We had a network issue connecting to
             # our zuul-worker.
