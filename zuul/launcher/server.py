@@ -157,6 +157,7 @@ class LaunchServer(object):
     def register(self):
         self.worker.registerFunction("launcher:launch")
         # TODOv3: abort
+        self.worker.registerFunction("merger:merge")
         self.worker.registerFunction("merger:cat")
 
     def stop(self):
@@ -202,6 +203,9 @@ class LaunchServer(object):
                     elif job.name == 'merger:cat':
                         self.log.debug("Got cat job: %s" % job.unique)
                         self.cat(job)
+                    elif job.name == 'merger:merge':
+                        self.log.debug("Got merge job: %s" % job.unique)
+                        self.merge(job)
                     else:
                         self.log.error("Unable to handle job %s" % job.name)
                         job.sendWorkFail()
@@ -293,4 +297,15 @@ class LaunchServer(object):
         result = dict(updated=True,
                       files=files,
                       zuul_url=self.zuul_url)
+        job.sendWorkComplete(json.dumps(result))
+
+    def merge(self, job):
+        args = json.loads(job.arguments)
+        ret = self.merger.mergeChanges(args['items'], args.get('files'))
+        result = dict(merged=(ret is not None),
+                      zuul_url=self.zuul_url)
+        if args.get('files'):
+            result['commit'], result['files'] = ret
+        else:
+            result['commit'] = ret
         job.sendWorkComplete(json.dumps(result))

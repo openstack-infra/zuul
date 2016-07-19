@@ -180,11 +180,14 @@ class Repo(object):
         origin = repo.remotes.origin
         origin.update()
 
-    def getFiles(self, branch, files):
+    def getFiles(self, files, branch=None, commit=None):
         ret = {}
         repo = self.createRepoObject()
-        for fn in files:
+        if branch:
             tree = repo.heads[branch].commit.tree
+        else:
+            tree = repo.commit(commit).tree
+        for fn in files:
             if fn in tree:
                 ret[fn] = tree[fn].data_stream.read()
             else:
@@ -335,9 +338,10 @@ class Merger(object):
                 return None
         return commit
 
-    def mergeChanges(self, items):
+    def mergeChanges(self, items, files=None):
         recent = {}
         commit = None
+        read_files = []
         for item in items:
             if item.get("number") and item.get("patchset"):
                 self.log.debug("Merging for change %s,%s." %
@@ -348,8 +352,16 @@ class Merger(object):
             commit = self._mergeItem(item, recent)
             if not commit:
                 return None
+            if files:
+                repo = self.getRepo(item['project'], item['url'])
+                repo_files = repo.getFiles(files, commit=commit)
+                read_files.append(dict(project=item['project'],
+                                       branch=item['branch'],
+                                       files=repo_files))
+        if files:
+            return commit.hexsha, read_files
         return commit.hexsha
 
     def getFiles(self, project, url, branch, files):
         repo = self.getRepo(project, url)
-        return repo.getFiles(branch, files)
+        return repo.getFiles(files, branch=branch)

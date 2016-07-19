@@ -108,7 +108,7 @@ class BaseReporter(object):
         else:
             url_pattern = None
 
-        for job in pipeline.getJobs(item):
+        for job in item.getJobs():
             build = item.current_build_set.getBuild(job.name)
             (result, url) = item.formatJobResult(job, url_pattern)
             if not job.voting:

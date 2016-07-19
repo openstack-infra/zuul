@@ -51,6 +51,11 @@ class TestJob(BaseTestCase):
 
     def test_job_inheritance(self):
         layout = model.Layout()
+
+        pipeline = model.Pipeline('gate', layout)
+        layout.addPipeline(pipeline)
+        queue = model.ChangeQueue(pipeline)
+
         base = configloader.JobParser.fromYaml(layout, {
             'name': 'base',
             'timeout': 30,
@@ -71,17 +76,21 @@ class TestJob(BaseTestCase):
         })
         layout.addJob(python27diablo)
 
-        pipeline = model.Pipeline('gate', layout)
-        layout.addPipeline(pipeline)
-        queue = model.ChangeQueue(pipeline)
+        project_config = configloader.ProjectParser.fromYaml(layout, {
+            'name': 'project',
+            'gate': {
+                'jobs': [
+                    'python27'
+                ]
+            }
+        })
+        layout.addProjectConfig(project_config, update_pipeline=False)
 
         project = model.Project('project')
-        tree = pipeline.addProject(project)
-        tree.addJob(layout.getJob('python27'))
-
         change = model.Change(project)
         change.branch = 'master'
         item = queue.enqueueChange(change)
+        item.current_build_set.layout = layout
 
         self.assertTrue(base.changeMatches(change))
         self.assertTrue(python27.changeMatches(change))
@@ -94,6 +103,8 @@ class TestJob(BaseTestCase):
         self.assertEqual(job.timeout, 40)
 
         change.branch = 'stable/diablo'
+        item = queue.enqueueChange(change)
+        item.current_build_set.layout = layout
 
         self.assertTrue(base.changeMatches(change))
         self.assertTrue(python27.changeMatches(change))
@@ -104,6 +115,73 @@ class TestJob(BaseTestCase):
         job = item.getJobs()[0]
         self.assertEqual(job.name, 'python27')
         self.assertEqual(job.timeout, 50)
+
+    def test_job_inheritance_job_tree(self):
+        layout = model.Layout()
+
+        pipeline = model.Pipeline('gate', layout)
+        layout.addPipeline(pipeline)
+        queue = model.ChangeQueue(pipeline)
+
+        base = configloader.JobParser.fromYaml(layout, {
+            'name': 'base',
+            'timeout': 30,
+        })
+        layout.addJob(base)
+        python27 = configloader.JobParser.fromYaml(layout, {
+            'name': 'python27',
+            'parent': 'base',
+            'timeout': 40,
+        })
+        layout.addJob(python27)
+        python27diablo = configloader.JobParser.fromYaml(layout, {
+            'name': 'python27',
+            'branches': [
+                'stable/diablo'
+            ],
+            'timeout': 50,
+        })
+        layout.addJob(python27diablo)
+
+        project_config = configloader.ProjectParser.fromYaml(layout, {
+            'name': 'project',
+            'gate': {
+                'jobs': [
+                    {'python27': {'timeout': 70}}
+                ]
+            }
+        })
+        layout.addProjectConfig(project_config, update_pipeline=False)
+
+        project = model.Project('project')
+        change = model.Change(project)
+        change.branch = 'master'
+        item = queue.enqueueChange(change)
+        item.current_build_set.layout = layout
+
+        self.assertTrue(base.changeMatches(change))
+        self.assertTrue(python27.changeMatches(change))
+        self.assertFalse(python27diablo.changeMatches(change))
+
+        item.freezeJobTree()
+        self.assertEqual(len(item.getJobs()), 1)
+        job = item.getJobs()[0]
+        self.assertEqual(job.name, 'python27')
+        self.assertEqual(job.timeout, 70)
+
+        change.branch = 'stable/diablo'
+        item = queue.enqueueChange(change)
+        item.current_build_set.layout = layout
+
+        self.assertTrue(base.changeMatches(change))
+        self.assertTrue(python27.changeMatches(change))
+        self.assertTrue(python27diablo.changeMatches(change))
+
+        item.freezeJobTree()
+        self.assertEqual(len(item.getJobs()), 1)
+        job = item.getJobs()[0]
+        self.assertEqual(job.name, 'python27')
+        self.assertEqual(job.timeout, 70)
 
 
 class TestJobTimeData(BaseTestCase):
