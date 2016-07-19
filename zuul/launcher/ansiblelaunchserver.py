@@ -596,6 +596,11 @@ class NodeWorker(object):
             self.username = config.get('launcher', 'username')
         else:
             self.username = 'zuul'
+        if self.config.has_option('launcher', 'register_labels'):
+            self.register_labels = config.getboolean('launcher',
+                                                     'register_labels')
+        else:
+            self.register_labels = True
         self.callback_dir = callback_dir
         self.library_dir = library_dir
         self.options = options
@@ -735,8 +740,9 @@ class NodeWorker(object):
             if not matching_labels:
                 return ret
         ret.add('build:%s' % (job['name'],))
-        for label in matching_labels:
-            ret.add('build:%s:%s' % (job['name'], label))
+        if self.register_labels:
+            for label in matching_labels:
+                ret.add('build:%s:%s' % (job['name'], label))
         return ret
 
     def register(self):
