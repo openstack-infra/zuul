@@ -17,6 +17,7 @@ import os
 import random
 
 import fixtures
+import testtools
 
 from zuul import model
 from zuul import configloader
@@ -55,19 +56,23 @@ class TestJob(BaseTestCase):
         pipeline = model.Pipeline('gate', layout)
         layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
+        project = model.Project('project')
 
         base = configloader.JobParser.fromYaml(layout, {
+            '_source_project': project,
             'name': 'base',
             'timeout': 30,
         })
         layout.addJob(base)
         python27 = configloader.JobParser.fromYaml(layout, {
+            '_source_project': project,
             'name': 'python27',
             'parent': 'base',
             'timeout': 40,
         })
         layout.addJob(python27)
         python27diablo = configloader.JobParser.fromYaml(layout, {
+            '_source_project': project,
             'name': 'python27',
             'branches': [
                 'stable/diablo'
@@ -86,7 +91,6 @@ class TestJob(BaseTestCase):
         })
         layout.addProjectConfig(project_config, update_pipeline=False)
 
-        project = model.Project('project')
         change = model.Change(project)
         change.branch = 'master'
         item = queue.enqueueChange(change)
@@ -122,19 +126,23 @@ class TestJob(BaseTestCase):
         pipeline = model.Pipeline('gate', layout)
         layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
+        project = model.Project('project')
 
         base = configloader.JobParser.fromYaml(layout, {
+            '_source_project': project,
             'name': 'base',
             'timeout': 30,
         })
         layout.addJob(base)
         python27 = configloader.JobParser.fromYaml(layout, {
+            '_source_project': project,
             'name': 'python27',
             'parent': 'base',
             'timeout': 40,
         })
         layout.addJob(python27)
         python27diablo = configloader.JobParser.fromYaml(layout, {
+            '_source_project': project,
             'name': 'python27',
             'branches': [
                 'stable/diablo'
@@ -153,7 +161,6 @@ class TestJob(BaseTestCase):
         })
         layout.addProjectConfig(project_config, update_pipeline=False)
 
-        project = model.Project('project')
         change = model.Change(project)
         change.branch = 'master'
         item = queue.enqueueChange(change)
@@ -182,6 +189,26 @@ class TestJob(BaseTestCase):
         job = item.getJobs()[0]
         self.assertEqual(job.name, 'python27')
         self.assertEqual(job.timeout, 70)
+
+    def test_job_source_project(self):
+        layout = model.Layout()
+        base_project = model.Project('base_project')
+        base = configloader.JobParser.fromYaml(layout, {
+            '_source_project': base_project,
+            'name': 'base',
+        })
+        layout.addJob(base)
+
+        other_project = model.Project('other_project')
+        base2 = configloader.JobParser.fromYaml(layout, {
+            '_source_project': other_project,
+            'name': 'base',
+        })
+        with testtools.ExpectedException(
+                Exception,
+                "Job base in other_project is not permitted "
+                "to shadow job base in base_project"):
+            layout.addJob(base2)
 
 
 class TestJobTimeData(BaseTestCase):

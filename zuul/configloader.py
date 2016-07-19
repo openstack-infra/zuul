@@ -72,6 +72,7 @@ class JobParser(object):
                'irrelevant-files': to_list(str),
                'nodes': [node],
                'timeout': int,
+               '_source_project': model.Project,
                }
 
         return vs.Schema(job)
@@ -96,6 +97,10 @@ class JobParser(object):
             # accumulate onto any previously applied tags from
             # metajobs.
             job.tags = job.tags.union(set(tags))
+        # This attribute may not be overridden -- it is always
+        # supplied by the config loader and is the Project instance of
+        # the repo where it originated.
+        job.source_project = conf.get('_source_project')
         job.failure_message = conf.get('failure-message', job.failure_message)
         job.success_message = conf.get('success-message', job.success_message)
         job.failure_url = conf.get('failure-url', job.failure_url)
@@ -521,29 +526,29 @@ class TenantParser(object):
                         (job.project, fn))
                     if job.config_repo:
                         incdata = TenantParser._parseConfigRepoLayout(
-                            job.files[fn])
+                            job.files[fn], job.project)
                         config_repos_config.extend(incdata)
                     else:
                         incdata = TenantParser._parseProjectRepoLayout(
-                            job.files[fn])
+                            job.files[fn], job.project)
                         project_repos_config.extend(incdata)
                     job.project.unparsed_config = incdata
         return config_repos_config, project_repos_config
 
     @staticmethod
-    def _parseConfigRepoLayout(data):
+    def _parseConfigRepoLayout(data, project):
         # This is the top-level configuration for a tenant.
         config = model.UnparsedTenantConfig()
-        config.extend(yaml.load(data))
+        config.extend(yaml.load(data), project)
 
         return config
 
     @staticmethod
-    def _parseProjectRepoLayout(data):
+    def _parseProjectRepoLayout(data, project):
         # TODOv3(jeblair): this should implement some rules to protect
         # aspects of the config that should not be changed in-repo
         config = model.UnparsedTenantConfig()
-        config.extend(yaml.load(data))
+        config.extend(yaml.load(data), project)
 
         return config
 
@@ -610,7 +615,7 @@ class ConfigLoader(object):
                 data = project.unparsed_config
             if not data:
                 continue
-            incdata = TenantParser._parseProjectRepoLayout(data)
+            incdata = TenantParser._parseProjectRepoLayout(data, project)
             config.extend(incdata)
 
         layout = model.Layout()

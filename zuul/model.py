@@ -525,6 +525,7 @@ class Job(object):
 
     def __init__(self, name):
         self.name = name
+        self.project_source = None
         for k, v in self.attributes.items():
             setattr(self, k, v)
 
@@ -1545,7 +1546,7 @@ class UnparsedTenantConfig(object):
         r.projects = copy.deepcopy(self.projects)
         return r
 
-    def extend(self, conf):
+    def extend(self, conf, source_project=None):
         if isinstance(conf, UnparsedTenantConfig):
             self.pipelines.extend(conf.pipelines)
             self.jobs.extend(conf.jobs)
@@ -1570,6 +1571,8 @@ class UnparsedTenantConfig(object):
             if key == 'project':
                 self.projects.append(value)
             elif key == 'job':
+                if source_project is not None:
+                    value['_source_project'] = source_project
                 self.jobs.append(value)
             elif key == 'project-template':
                 self.project_templates.append(value)
@@ -1605,6 +1608,16 @@ class Layout(object):
         return self.jobs.get(name, [])
 
     def addJob(self, job):
+        # We can have multiple variants of a job all with the same
+        # name, but these variants must all be defined in the same repo.
+        prior_jobs = [j for j in self.getJobs(job.name)
+                      if j.source_project != job.source_project]
+        if prior_jobs:
+            raise Exception("Job %s in %s is not permitted to shadow "
+                            "job %s in %s" % (job, job.source_project,
+                                              prior_jobs[0],
+                                              prior_jobs[0].source_project))
+
         if job.name in self.jobs:
             self.jobs[job.name].append(job)
         else:
