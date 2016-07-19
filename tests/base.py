@@ -55,6 +55,7 @@ import zuul.lib.connections
 import zuul.merger.client
 import zuul.merger.merger
 import zuul.merger.server
+import zuul.nodepool
 import zuul.reporter.gerrit
 import zuul.reporter.smtp
 import zuul.source.gerrit
@@ -1003,9 +1004,11 @@ class ZuulTestCase(BaseTestCase):
             self.config, self.sched, self.swift)
         self.merge_client = zuul.merger.client.MergeClient(
             self.config, self.sched)
+        self.nodepool = zuul.nodepool.Nodepool(self.sched)
 
         self.sched.setLauncher(self.launcher)
         self.sched.setMerger(self.merge_client)
+        self.sched.setNodepool(self.nodepool)
 
         self.webapp = zuul.webapp.WebApp(
             self.sched, port=0, listen_address='127.0.0.1')

@@ -199,6 +199,17 @@ class MergeCompletedEvent(ResultEvent):
         self.commit = commit
 
 
+class NodesProvisionedEvent(ResultEvent):
+    """Nodes have been provisioned for a build_set
+
+    :arg BuildSet build_set: The build_set which has nodes.
+    :arg list of Node objects nodes: The provisioned nodes
+    """
+
+    def __init__(self, request):
+        self.request = request
+
+
 def toList(item):
     if not item:
         return []
@@ -268,6 +279,9 @@ class Scheduler(threading.Thread):
 
     def setMerger(self, merger):
         self.merger = merger
+
+    def setNodepool(self, nodepool):
+        self.nodepool = nodepool
 
     def getProject(self, name, create_foreign=False):
         self.layout_lock.acquire()
@@ -349,6 +363,13 @@ class Scheduler(threading.Thread):
                        build_set)
         event = MergeCompletedEvent(build_set, zuul_url,
                                     merged, updated, commit)
+        self.result_event_queue.put(event)
+        self.wake_event.set()
+
+    def onNodesProvisioned(self, req):
+        self.log.debug("Adding nodes provisioned event for build set: %s" %
+                       req.build_set)
+        event = NodesProvisionedEvent(req)
         self.result_event_queue.put(event)
         self.wake_event.set()
 
@@ -718,6 +739,8 @@ class Scheduler(threading.Thread):
                 self._doBuildCompletedEvent(event)
             elif isinstance(event, MergeCompletedEvent):
                 self._doMergeCompletedEvent(event)
+            elif isinstance(event, NodesProvisionedEvent):
+                self._doNodesProvisionedEvent(event)
             else:
                 self.log.error("Unable to handle event %s" % event)
         finally:
@@ -772,6 +795,20 @@ class Scheduler(threading.Thread):
                              (build_set,))
             return
         pipeline.manager.onMergeCompleted(event)
+
+    def _doNodesProvisionedEvent(self, event):
+        request = event.request
+        build_set = request.build_set
+        if build_set is not build_set.item.current_build_set:
+            self.log.warning("Build set %s is not current" % (build_set,))
+            self.nodepool.returnNodes(request.nodes, used=False)
+            return
+        pipeline = build_set.item.pipeline
+        if not pipeline:
+            self.log.warning("Build set %s is not associated with a pipeline" %
+                             (build_set,))
+            return
+        pipeline.manager.onNodesProvisioned(event)
 
     def formatStatusJSON(self):
         # TODOv3(jeblair): use tenants
