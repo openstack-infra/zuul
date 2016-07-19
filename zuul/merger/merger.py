@@ -182,7 +182,7 @@ class Repo(object):
         repo = self.createRepoObject()
         self.log.debug("Updating repository %s" % self.local_path)
         origin = repo.remotes.origin
-        origin.update()
+        origin.fetch(tags=True)
 
 
 class Merger(object):
