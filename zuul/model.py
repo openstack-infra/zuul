@@ -461,12 +461,18 @@ class ChangeQueue(object):
 
 
 class Project(object):
+    # NOTE: Projects should only be instantiated via a Source object
+    # so that they are associated with and cached by their Connection.
+    # This makes a Project instance a unique identifier for a given
+    # project from a given source.
+
     def __init__(self, name, foreign=False):
         self.name = name
         self.merge_mode = MERGER_MERGE_RESOLVE
         # foreign projects are those referenced in dependencies
         # of layout projects, this should matter
         # when deciding whether to enqueue their changes
+        # TODOv3 (jeblair): re-add support for foreign projects if needed
         self.foreign = foreign
         self.unparsed_config = None
 
