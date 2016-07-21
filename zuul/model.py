@@ -145,157 +145,6 @@ class Pipeline(object):
         tree = self.job_trees.get(project)
         return tree
 
-    def _findJobsToRun(self, job_trees, item, mutex):
-        torun = []
-        for tree in job_trees:
-            job = tree.job
-            result = None
-            if job:
-                if not job.changeMatches(item.change):
-                    continue
-                build = item.current_build_set.getBuild(job.name)
-                if build:
-                    result = build.result
-                else:
-                    # There is no build for the root of this job tree,
-                    # so we should run it.
-                    if mutex.acquire(item, job):
-                        # If this job needs a mutex, either acquire it or make
-                        # sure that we have it before running the job.
-                        torun.append(job)
-            # If there is no job, this is a null job tree, and we should
-            # run all of its jobs.
-            if result == 'SUCCESS' or not job:
-                torun.extend(self._findJobsToRun(tree.job_trees, item, mutex))
-        return torun
-
-    def findJobsToRun(self, item, mutex):
-        if not item.live:
-            return []
-        tree = item.job_tree
-        if not tree:
-            return []
-        return self._findJobsToRun(tree.job_trees, item, mutex)
-
-    def _findJobsToRequest(self, job_trees, item):
-        toreq = []
-        for tree in job_trees:
-            job = tree.job
-            if job:
-                if not job.changeMatches(item.change):
-                    continue
-                nodes = item.current_build_set.getJobNodes(job.name)
-                if nodes is None:
-                    req = item.current_build_set.getJobNodeRequest(job.name)
-                    if req is None:
-                        toreq.append(job)
-            # If there is no job, this is a null job tree, and we should
-            # run all of its jobs.
-            if not job:
-                toreq.extend(self._findJobsToRequest(
-                    tree.job_trees, item))
-        return toreq
-
-    def findJobsToRequest(self, item):
-        if not item.live:
-            return []
-        tree = item.job_tree
-        if not tree:
-            return []
-        return self._findJobsToRequest(tree.job_trees, item)
-
-    def haveAllJobsStarted(self, item):
-        if not item.hasJobTree():
-            return False
-        for job in item.getJobs():
-            build = item.current_build_set.getBuild(job.name)
-            if not build or not build.start_time:
-                return False
-        return True
-
-    def areAllJobsComplete(self, item):
-        if not item.hasJobTree():
-            return False
-        for job in item.getJobs():
-            build = item.current_build_set.getBuild(job.name)
-            if not build or not build.result:
-                return False
-        return True
-
-    def didAllJobsSucceed(self, item):
-        if not item.hasJobTree():
-            return False
-        for job in item.getJobs():
-            if not job.voting:
-                continue
-            build = item.current_build_set.getBuild(job.name)
-            if not build:
-                return False
-            if build.result != 'SUCCESS':
-                return False
-        return True
-
-    def didMergerSucceed(self, item):
-        if item.current_build_set.unable_to_merge:
-            return False
-        return True
-
-    def didAnyJobFail(self, item):
-        if not item.hasJobTree():
-            return False
-        for job in item.getJobs():
-            if not job.voting:
-                continue
-            build = item.current_build_set.getBuild(job.name)
-            if build and build.result and (build.result != 'SUCCESS'):
-                return True
-        return False
-
-    def isHoldingFollowingChanges(self, item):
-        if not item.live:
-            return False
-        if not item.hasJobTree():
-            return False
-        for job in item.getJobs():
-            if not job.hold_following_changes:
-                continue
-            build = item.current_build_set.getBuild(job.name)
-            if not build:
-                return True
-            if build.result != 'SUCCESS':
-                return True
-
-        if not item.item_ahead:
-            return False
-        return self.isHoldingFollowingChanges(item.item_ahead)
-
-    def setResult(self, item, build):
-        if build.retry:
-            item.removeBuild(build)
-        elif build.result != 'SUCCESS':
-            # Get a JobTree from a Job so we can find only its dependent jobs
-            tree = item.job_tree.getJobTreeForJob(build.job)
-            for job in tree.getJobs():
-                fakebuild = Build(job, None)
-                fakebuild.result = 'SKIPPED'
-                item.addBuild(fakebuild)
-
-    def setUnableToMerge(self, item):
-        item.current_build_set.unable_to_merge = True
-        root = self.getJobTree(item.change.project)
-        for job in root.getJobs():
-            fakebuild = Build(job, None)
-            fakebuild.result = 'SKIPPED'
-            item.addBuild(fakebuild)
-
-    def setDequeuedNeedingChange(self, item):
-        item.dequeued_needing_change = True
-        root = self.getJobTree(item.change.project)
-        for job in root.getJobs():
-            fakebuild = Build(job, None)
-            fakebuild.result = 'SKIPPED'
-            item.addBuild(fakebuild)
-
     def getChangesInQueue(self):
         changes = []
         for shared_queue in self.queues:
@@ -828,6 +677,156 @@ class QueueItem(object):
             return []
         return self.job_tree.getJobs()
 
+    def haveAllJobsStarted(self):
+        if not self.hasJobTree():
+            return False
+        for job in self.getJobs():
+            build = self.current_build_set.getBuild(job.name)
+            if not build or not build.start_time:
+                return False
+        return True
+
+    def areAllJobsComplete(self):
+        if not self.hasJobTree():
+            return False
+        for job in self.getJobs():
+            build = self.current_build_set.getBuild(job.name)
+            if not build or not build.result:
+                return False
+        return True
+
+    def didAllJobsSucceed(self):
+        if not self.hasJobTree():
+            return False
+        for job in self.getJobs():
+            if not job.voting:
+                continue
+            build = self.current_build_set.getBuild(job.name)
+            if not build:
+                return False
+            if build.result != 'SUCCESS':
+                return False
+        return True
+
+    def didAnyJobFail(self):
+        if not self.hasJobTree():
+            return False
+        for job in self.getJobs():
+            if not job.voting:
+                continue
+            build = self.current_build_set.getBuild(job.name)
+            if build and build.result and (build.result != 'SUCCESS'):
+                return True
+        return False
+
+    def didMergerFail(self):
+        if self.current_build_set.unable_to_merge:
+            return True
+        return False
+
+    # TODOv3(jeblair): This method is currently unused, but it should
+    # be in order to support the Job.hold_following_changes attribute.
+    def isHoldingFollowingChanges(self):
+        if not self.live:
+            return False
+        if not self.hasJobTree():
+            return False
+        for job in self.getJobs():
+            if not job.hold_following_changes:
+                continue
+            build = self.current_build_set.getBuild(job.name)
+            if not build:
+                return True
+            if build.result != 'SUCCESS':
+                return True
+
+        if not self.item_ahead:
+            return False
+        return self.item_ahead.isHoldingFollowingChanges()
+
+    def _findJobsToRun(self, job_trees, mutex):
+        torun = []
+        for tree in job_trees:
+            job = tree.job
+            result = None
+            if job:
+                if not job.changeMatches(self.change):
+                    continue
+                build = self.current_build_set.getBuild(job.name)
+                if build:
+                    result = build.result
+                else:
+                    # There is no build for the root of this job tree,
+                    # so we should run it.
+                    if mutex.acquire(self, job):
+                        # If this job needs a mutex, either acquire it or make
+                        # sure that we have it before running the job.
+                        torun.append(job)
+            # If there is no job, this is a null job tree, and we should
+            # run all of its jobs.
+            if result == 'SUCCESS' or not job:
+                torun.extend(self._findJobsToRun(tree.job_trees, mutex))
+        return torun
+
+    def findJobsToRun(self, mutex):
+        if not self.live:
+            return []
+        tree = self.job_tree
+        if not tree:
+            return []
+        return self._findJobsToRun(tree.job_trees, mutex)
+
+    def _findJobsToRequest(self, job_trees):
+        toreq = []
+        for tree in job_trees:
+            job = tree.job
+            if job:
+                if not job.changeMatches(self.change):
+                    continue
+                nodes = self.current_build_set.getJobNodes(job.name)
+                if nodes is None:
+                    req = self.current_build_set.getJobNodeRequest(job.name)
+                    if req is None:
+                        toreq.append(job)
+            # If there is no job, this is a null job tree, and we should
+            # run all of its jobs.
+            if not job:
+                toreq.extend(self._findJobsToRequest(tree.job_trees))
+        return toreq
+
+    def findJobsToRequest(self):
+        if not self.live:
+            return []
+        tree = self.job_tree
+        if not tree:
+            return []
+        return self._findJobsToRequest(tree.job_trees)
+
+    def setResult(self, build):
+        if build.retry:
+            self.removeBuild(build)
+        elif build.result != 'SUCCESS':
+            # Get a JobTree from a Job so we can find only its dependent jobs
+            tree = self.job_tree.getJobTreeForJob(build.job)
+            for job in tree.getJobs():
+                fakebuild = Build(job, None)
+                fakebuild.result = 'SKIPPED'
+                self.addBuild(fakebuild)
+
+    def setDequeuedNeedingChange(self):
+        self.dequeued_needing_change = True
+        self._setAllJobsSkipped()
+
+    def setUnableToMerge(self):
+        self.current_build_set.unable_to_merge = True
+        self._setAllJobsSkipped()
+
+    def _setAllJobsSkipped(self):
+        for job in self.getJobs():
+            fakebuild = Build(job, None)
+            fakebuild.result = 'SKIPPED'
+            self.addBuild(fakebuild)
+
     def formatJobResult(self, job, url_pattern=None):
         build = self.current_build_set.getBuild(job.name)
         result = build.result
@@ -944,7 +943,7 @@ class QueueItem(object):
                 'worker': worker,
             })
 
-        if self.pipeline.haveAllJobsStarted(self):
+        if self.haveAllJobsStarted():
             ret['remaining_time'] = max_remaining
         else:
             ret['remaining_time'] = None

@@ -60,6 +60,8 @@ class BaseReporter(object):
         }
         return format_methods[self._action]
 
+    # TODOv3(jeblair): Consider removing pipeline argument in favor of
+    # item.pipeline
     def _formatItemReport(self, pipeline, item):
         """Format a report from the given items. Usually to provide results to
         a reporter taking free-form text."""
@@ -80,7 +82,7 @@ class BaseReporter(object):
     def _formatItemReportFailure(self, pipeline, item):
         if item.dequeued_needing_change:
             msg = 'This change depends on a change that failed to merge.\n'
-        elif not pipeline.didMergerSucceed(item):
+        elif item.didMergerFail():
             msg = pipeline.merge_failure_message
         else:
             msg = (pipeline.failure_message + '\n\n' +

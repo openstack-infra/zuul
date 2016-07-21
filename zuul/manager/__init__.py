@@ -261,12 +261,12 @@ class BasePipelineManager(object):
                 # added to the tree.
                 for build in item.current_build_set.getBuilds():
                     if build.result:
-                        self.pipeline.setResult(item, build)
+                        item.setResult(build)
                 # Similarly, reset the item state.
                 if item.current_build_set.unable_to_merge:
-                    self.pipeline.setUnableToMerge(item)
+                    item.setUnableToMerge()
                 if item.dequeued_needing_change:
-                    self.pipeline.setDequeuedNeedingChange(item)
+                    item.setDequeuedNeedingChange()
 
                 self.reportStats(item)
                 return True
@@ -348,7 +348,7 @@ class BasePipelineManager(object):
         self.reportStats(item)
 
     def provisionNodes(self, item):
-        jobs = self.pipeline.findJobsToRequest(item)
+        jobs = item.findJobsToRequest()
         if not jobs:
             return False
         build_set = item.current_build_set
@@ -382,12 +382,7 @@ class BasePipelineManager(object):
         if not item.current_build_set.layout:
             return False
 
-        # We may be working with a dynamic layout.  Get a pipeline
-        # object from *that* layout to find out which jobs we should
-        # run.
-        layout = item.current_build_set.layout
-        pipeline = layout.pipelines[self.pipeline.name]
-        jobs = pipeline.findJobsToRun(item, self.sched.mutex)
+        jobs = item.findJobsToRun(self.sched.mutex)
         if jobs:
             self._launchJobs(item, jobs)
 
@@ -502,7 +497,7 @@ class BasePipelineManager(object):
                           "it can no longer merge" % item.change)
             self.cancelJobs(item)
             self.dequeueItem(item)
-            self.pipeline.setDequeuedNeedingChange(item)
+            item.setDequeuedNeedingChange()
             if item.live:
                 try:
                     self.reportItem(item)
@@ -538,14 +533,13 @@ class BasePipelineManager(object):
                     changed = True
         if actionable and ready and self.launchJobs(item):
             changed = True
-        if self.pipeline.didAnyJobFail(item):
+        if item.didAnyJobFail():
             failing_reasons.append("at least one job failed")
         if (not item.live) and (not item.items_behind):
             failing_reasons.append("is a non-live item with no items behind")
             self.dequeueItem(item)
             changed = True
-        if ((not item_ahead) and self.pipeline.areAllJobsComplete(item)
-            and item.live):
+        if ((not item_ahead) and item.areAllJobsComplete() and item.live):
             try:
                 self.reportItem(item)
             except exceptions.MergeFailure:
@@ -618,7 +612,7 @@ class BasePipelineManager(object):
         self.log.debug("Build %s completed" % build)
         item = build.build_set.item
 
-        self.pipeline.setResult(item, build)
+        item.setResult(build)
         self.sched.mutex.release(item, build.job)
         self.log.debug("Item %s status is now:\n %s" %
                        (item, item.formatStatus()))
@@ -637,7 +631,7 @@ class BasePipelineManager(object):
                 build_set.commit = item.change.newrev
         if not build_set.commit and not isinstance(item.change, NullChange):
             self.log.info("Unable to merge change %s" % item.change)
-            self.pipeline.setUnableToMerge(item)
+            item.setUnableToMerge()
 
     def onNodesProvisioned(self, event):
         request = event.request
@@ -652,7 +646,7 @@ class BasePipelineManager(object):
             # _reportItem() returns True if it failed to report.
             item.reported = not self._reportItem(item)
         if self.changes_merge:
-            succeeded = self.pipeline.didAllJobsSucceed(item)
+            succeeded = item.didAllJobsSucceed()
             merged = item.reported
             if merged:
                 merged = self.pipeline.source.isMerged(item.change,
@@ -685,12 +679,12 @@ class BasePipelineManager(object):
             # as they cannot be followed by +1's
             self.log.debug("No jobs for change %s" % item.change)
             actions = []
-        elif self.pipeline.didAllJobsSucceed(item):
+        elif item.didAllJobsSucceed():
             self.log.debug("success %s" % (self.pipeline.success_actions))
             actions = self.pipeline.success_actions
             item.setReportedResult('SUCCESS')
             self.pipeline._consecutive_failures = 0
-        elif not self.pipeline.didMergerSucceed(item):
+        elif item.didMergerFail():
             actions = self.pipeline.merge_failure_actions
             item.setReportedResult('MERGER_FAILURE')
         else:
