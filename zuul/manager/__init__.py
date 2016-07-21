@@ -242,6 +242,21 @@ class BasePipelineManager(object):
                                (item.change, change_queue))
                 change_queue.enqueueItem(item)
 
+                # Get an updated copy of the layout if necessary.
+                # This will return one of the following:
+                # 1) An existing layout from the item ahead or pipeline.
+                # 2) A newly created layout from the cached pipeline
+                #    layout config plus the previously returned
+                #    in-repo files stored in the buildset.
+                # 3) None in the case that a fetch of the files from
+                #    the merger is still pending.
+                item.current_build_set.layout = self.getLayout(item)
+
+                # Rebuild the frozen job tree from the new layout, if
+                # we have one.  If not, it will be built later.
+                if item.current_build_set.layout:
+                    item.freezeJobTree()
+
                 # Re-set build results in case any new jobs have been
                 # added to the tree.
                 for build in item.current_build_set.getBuilds():
@@ -664,7 +679,7 @@ class BasePipelineManager(object):
     def _reportItem(self, item):
         self.log.debug("Reporting change %s" % item.change)
         ret = True  # Means error as returned by trigger.report
-        if not self.pipeline.getJobs(item):
+        if not item.getJobs():
             # We don't send empty reports with +1,
             # and the same for -1's (merge failures or transient errors)
             # as they cannot be followed by +1's

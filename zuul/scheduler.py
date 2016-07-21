@@ -502,16 +502,17 @@ class Scheduler(threading.Thread):
                     project_name = item.change.project.name
                     item.change.project = new_pipeline.source.getProject(
                         project_name)
-                    item_jobs = new_pipeline.getJobs(item)
-                    for build in item.current_build_set.getBuilds():
-                        job = tenant.layout.jobs.get(build.job.name)
-                        if job and job in item_jobs:
-                            build.job = job
-                        else:
-                            item.removeBuild(build)
-                            builds_to_cancel.append(build)
-                    if not new_pipeline.manager.reEnqueueItem(item,
-                                                              last_head):
+                    if new_pipeline.manager.reEnqueueItem(item,
+                                                          last_head):
+                        new_jobs = item.getJobs()
+                        for build in item.current_build_set.getBuilds():
+                            job = item.layout.getJob(build.job.name)
+                            if job and job in new_jobs:
+                                build.job = job
+                            else:
+                                item.removeBuild(build)
+                                builds_to_cancel.append(build)
+                    else:
                         items_to_remove.append(item)
             for item in items_to_remove:
                 for build in item.current_build_set.getBuilds():

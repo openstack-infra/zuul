@@ -145,16 +145,6 @@ class Pipeline(object):
         tree = self.job_trees.get(project)
         return tree
 
-    def getJobs(self, item):
-        # TODOv3(jeblair): can this be removed in favor of the frozen
-        # job list in item?
-        if not item.live:
-            return []
-        tree = self.getJobTree(item.change.project)
-        if not tree:
-            return []
-        return item.change.filterJobs(tree.getJobs())
-
     def _findJobsToRun(self, job_trees, item, mutex):
         torun = []
         for tree in job_trees:
