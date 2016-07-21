@@ -889,7 +889,7 @@ class NodeWorker(object):
             data = {
                 'manager': self.manager_name,
                 'number': job.unique,
-                'url': 'telnet://%s:8088' % self.host,
+                'url': 'telnet://%s:19885' % self.host,
             }
             job.sendWorkData(json.dumps(data))
             job.sendWorkStatus(0, 100)
@@ -1188,7 +1188,8 @@ class NodeWorker(object):
             task = dict(file=dict(path='/tmp/console.html', state='absent'))
             main_block.append(task)
 
-            task = dict(zuul_console=dict(path='/tmp/console.html', port=8088))
+            task = dict(zuul_console=dict(path='/tmp/console.html',
+                                          port=19885))
             main_block.append(task)
 
             task = dict(file=dict(path=parameters['WORKSPACE'],
