@@ -21,6 +21,7 @@ import re
 import shutil
 import time
 import yaml
+from unittest import skip
 
 import git
 from six.moves import urllib
@@ -44,9 +45,7 @@ logging.basicConfig(level=logging.DEBUG,
 
 class TestScheduler(ZuulTestCase):
 
-    def setUp(self):
-        self.skip("Disabled for early v3 development")
-
+    @skip("Disabled for early v3 development")
     def test_jobs_launched(self):
         "Test that jobs are launched and a change is merged"
 
@@ -81,6 +80,7 @@ class TestScheduler(ZuulTestCase):
         for build in self.builds:
             self.assertEqual(build.parameters['ZUUL_VOTING'], '1')
 
+    @skip("Disabled for early v3 development")
     def test_initial_pipeline_gauges(self):
         "Test that each pipeline reported its length on start"
         pipeline_names = self.sched.layout.pipelines.keys()
@@ -89,6 +89,7 @@ class TestScheduler(ZuulTestCase):
             self.assertReportedStat('zuul.pipeline.%s.current_changes' % name,
                                     value='0|g')
 
+    @skip("Disabled for early v3 development")
     def test_duplicate_pipelines(self):
         "Test that a change matching multiple pipelines works"
 
@@ -112,6 +113,7 @@ class TestScheduler(ZuulTestCase):
             self.assertNotIn('dup1/project-test1', A.messages[0])
             self.assertIn('dup2/project-test1', A.messages[0])
 
+    @skip("Disabled for early v3 development")
     def test_parallel_changes(self):
         "Test that changes are tested in parallel and merged in series"
 
@@ -189,6 +191,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_failed_changes(self):
         "Test that a change behind a failed change is retested"
         self.worker.hold_jobs_in_build = True
@@ -219,6 +222,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.reported, 2)
         self.assertEqual(B.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_independent_queues(self):
         "Test that changes end up in the right queues"
 
@@ -266,6 +270,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_failed_change_at_head(self):
         "Test that if a change at the head fails, jobs behind it are canceled"
 
@@ -324,6 +329,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_failed_change_in_middle(self):
         "Test a failed change in the middle of the queue"
 
@@ -400,6 +406,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_failed_change_at_head_with_queue(self):
         "Test that if a change at the head fails, queued jobs are canceled"
 
@@ -462,6 +469,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def _test_time_database(self, iteration):
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -496,12 +504,14 @@ class TestScheduler(ZuulTestCase):
         self.worker.release()
         self.waitUntilSettled()
 
+    @skip("Disabled for early v3 development")
     def test_time_database(self):
         "Test the time database"
 
         self._test_time_database(1)
         self._test_time_database(2)
 
+    @skip("Disabled for early v3 development")
     def test_two_failed_changes_at_head(self):
         "Test that changes are reparented correctly if 2 fail at head"
 
@@ -607,6 +617,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_parse_skip_if(self):
         job_yaml = """
 jobs:
@@ -637,6 +648,7 @@ jobs:
         matcher = self.sched._parseSkipIf(config_job)
         self.assertEqual(expected, matcher)
 
+    @skip("Disabled for early v3 development")
     def test_patch_order(self):
         "Test that dependent patches are tested in the right order"
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -681,6 +693,7 @@ jobs:
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_needed_changes_enqueue(self):
         "Test that a needed change is enqueued ahead"
         #          A      Given a git tree like this, if we enqueue
@@ -766,6 +779,7 @@ jobs:
         self.assertEqual(self.history[6].changes,
                          '1,1 2,1 3,1 4,1 5,1 6,1 7,1')
 
+    @skip("Disabled for early v3 development")
     def test_source_cache(self):
         "Test that the source cache operates correctly"
         self.worker.hold_jobs_in_build = True
@@ -812,6 +826,7 @@ jobs:
         self.assertEqual(A.queried, 2)  # Initial and isMerged
         self.assertEqual(B.queried, 3)  # Initial A, refresh from B, isMerged
 
+    @skip("Disabled for early v3 development")
     def test_can_merge(self):
         "Test whether a change is ready to merge"
         # TODO: move to test_gerrit (this is a unit test!)
@@ -829,6 +844,7 @@ jobs:
         a = source._getChange(1, 2, refresh=True)
         self.assertTrue(source.canMerge(a, mgr.getSubmitAllowNeeds()))
 
+    @skip("Disabled for early v3 development")
     def test_build_configuration(self):
         "Test that zuul merges the right commits for testing"
 
@@ -863,6 +879,7 @@ jobs:
         correct_messages = ['initial commit', 'A-1', 'B-1', 'C-1']
         self.assertEqual(repo_messages, correct_messages)
 
+    @skip("Disabled for early v3 development")
     def test_build_configuration_conflict(self):
         "Test that merge conflicts are handled"
 
@@ -908,6 +925,7 @@ jobs:
         self.assertEqual(C.reported, 2)
         self.assertEqual(len(self.history), 6)
 
+    @skip("Disabled for early v3 development")
     def test_post(self):
         "Test that post jobs run"
 
@@ -930,6 +948,7 @@ jobs:
         self.assertEqual(len(self.history), 1)
         self.assertIn('project-post', job_names)
 
+    @skip("Disabled for early v3 development")
     def test_post_ignore_deletes(self):
         "Test that deleting refs does not trigger post jobs"
 
@@ -952,6 +971,7 @@ jobs:
         self.assertEqual(len(self.history), 0)
         self.assertNotIn('project-post', job_names)
 
+    @skip("Disabled for early v3 development")
     def test_post_ignore_deletes_negative(self):
         "Test that deleting refs does trigger post jobs"
 
@@ -978,6 +998,7 @@ jobs:
         self.assertEqual(len(self.history), 1)
         self.assertIn('project-post', job_names)
 
+    @skip("Disabled for early v3 development")
     def test_build_configuration_branch(self):
         "Test that the right commits are on alternate branches"
 
@@ -1012,6 +1033,7 @@ jobs:
         correct_messages = ['initial commit', 'mp commit', 'A-1', 'B-1', 'C-1']
         self.assertEqual(repo_messages, correct_messages)
 
+    @skip("Disabled for early v3 development")
     def test_build_configuration_branch_interaction(self):
         "Test that switching between branches works"
         self.test_build_configuration()
@@ -1022,6 +1044,7 @@ jobs:
         repo.heads.master.commit = repo.commit('init')
         self.test_build_configuration()
 
+    @skip("Disabled for early v3 development")
     def test_build_configuration_multi_branch(self):
         "Test that dependent changes on multiple branches are merged"
 
@@ -1104,6 +1127,7 @@ jobs:
         self.assertNotEqual(ref_A, ref_B, ref_C)
         self.assertNotEqual(commit_A, commit_B, commit_C)
 
+    @skip("Disabled for early v3 development")
     def test_one_job_project(self):
         "Test that queueing works with one job"
         A = self.fake_gerrit.addFakeChange('org/one-job-project',
@@ -1121,6 +1145,7 @@ jobs:
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(B.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_job_from_templates_launched(self):
         "Test whether a job generated via a template can be launched"
 
@@ -1134,6 +1159,7 @@ jobs:
         self.assertEqual(self.getJobFromHistory('project-test2').result,
                          'SUCCESS')
 
+    @skip("Disabled for early v3 development")
     def test_layered_templates(self):
         "Test whether a job generated via a template can be launched"
 
@@ -1155,6 +1181,7 @@ jobs:
         self.assertEqual(self.getJobFromHistory('project-test6').result,
                          'SUCCESS')
 
+    @skip("Disabled for early v3 development")
     def test_dependent_changes_dequeue(self):
         "Test that dependent patches are not needlessly tested"
 
@@ -1190,6 +1217,7 @@ jobs:
         self.assertEqual(C.reported, 2)
         self.assertEqual(len(self.history), 1)
 
+    @skip("Disabled for early v3 development")
     def test_failing_dependent_changes(self):
         "Test that failing dependent patches are taken out of stream"
         self.worker.hold_jobs_in_build = True
@@ -1255,6 +1283,7 @@ jobs:
         self.assertIn('Build succeeded', E.messages[1])
         self.assertEqual(len(self.history), 18)
 
+    @skip("Disabled for early v3 development")
     def test_head_is_dequeued_once(self):
         "Test that if a change at the head fails it is dequeued only once"
         # If it's dequeued more than once, we should see extra
@@ -1320,6 +1349,7 @@ jobs:
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_nonvoting_job(self):
         "Test that non-voting jobs don't vote."
 
@@ -1346,6 +1376,7 @@ jobs:
         for build in self.builds:
             self.assertEqual(build.parameters['ZUUL_VOTING'], '0')
 
+    @skip("Disabled for early v3 development")
     def test_check_queue_success(self):
         "Test successful check queue jobs."
 
@@ -1363,6 +1394,7 @@ jobs:
         self.assertEqual(self.getJobFromHistory('project-test2').result,
                          'SUCCESS')
 
+    @skip("Disabled for early v3 development")
     def test_check_queue_failure(self):
         "Test failed check queue jobs."
 
@@ -1381,6 +1413,7 @@ jobs:
         self.assertEqual(self.getJobFromHistory('project-test2').result,
                          'FAILURE')
 
+    @skip("Disabled for early v3 development")
     def test_dependent_behind_dequeue(self):
         "test that dependent changes behind dequeued changes work"
         # This complicated test is a reproduction of a real life bug
@@ -1467,6 +1500,7 @@ jobs:
         self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 15)
         self.assertEqual(len(self.history), 44)
 
+    @skip("Disabled for early v3 development")
     def test_merger_repack(self):
         "Test that the merger works after a repack"
 
@@ -1501,6 +1535,7 @@ jobs:
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_merger_repack_large_change(self):
         "Test that the merger works with large changes after a repack"
         # https://bugs.launchpad.net/zuul/+bug/1078946
@@ -1527,6 +1562,7 @@ jobs:
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_nonexistent_job(self):
         "Test launching a job that doesn't exist"
         # Set to the state immediately after a restart
@@ -1560,6 +1596,7 @@ jobs:
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_single_nonexistent_post_job(self):
         "Test launching a single post job that doesn't exist"
         e = {
@@ -1583,6 +1620,7 @@ jobs:
 
         self.assertEqual(len(self.history), 0)
 
+    @skip("Disabled for early v3 development")
     def test_new_patchset_dequeues_old(self):
         "Test that a new patchset causes the old to be dequeued"
         # D -> C (depends on B) -> B (depends on A) -> A -> M
@@ -1627,6 +1665,7 @@ jobs:
         self.assertEqual(D.reported, 2)
         self.assertEqual(len(self.history), 9)  # 3 each for A, B, D.
 
+    @skip("Disabled for early v3 development")
     def test_new_patchset_check(self):
         "Test a new patchset in check"
 
@@ -1722,6 +1761,7 @@ jobs:
         self.assertEqual(self.history[3].result, 'SUCCESS')
         self.assertEqual(self.history[3].changes, '1,1 2,2')
 
+    @skip("Disabled for early v3 development")
     def test_abandoned_gate(self):
         "Test that an abandoned change is dequeued from gate"
 
@@ -1747,6 +1787,7 @@ jobs:
         self.assertEqual(A.reported, 1,
                          "Abandoned gate change should report only start")
 
+    @skip("Disabled for early v3 development")
     def test_abandoned_check(self):
         "Test that an abandoned change is dequeued from check"
 
@@ -1800,6 +1841,7 @@ jobs:
         self.assertEqual(A.reported, 0, "Abandoned change should not report")
         self.assertEqual(B.reported, 1, "Change should report")
 
+    @skip("Disabled for early v3 development")
     def test_abandoned_not_timer(self):
         "Test that an abandoned change does not cancel timer jobs"
 
@@ -1835,6 +1877,7 @@ jobs:
         self.worker.release()
         self.waitUntilSettled()
 
+    @skip("Disabled for early v3 development")
     def test_zuul_url_return(self):
         "Test if ZUUL_URL is returning when zuul_url is set in zuul.conf"
         self.assertTrue(self.sched.config.has_option('merger', 'zuul_url'))
@@ -1853,6 +1896,7 @@ jobs:
         self.worker.release()
         self.waitUntilSettled()
 
+    @skip("Disabled for early v3 development")
     def test_new_patchset_dequeues_old_on_head(self):
         "Test that a new patchset causes the old to be dequeued (at head)"
         # D -> C (depends on B) -> B (depends on A) -> A -> M
@@ -1896,6 +1940,7 @@ jobs:
         self.assertEqual(D.reported, 2)
         self.assertEqual(len(self.history), 7)
 
+    @skip("Disabled for early v3 development")
     def test_new_patchset_dequeues_old_without_dependents(self):
         "Test that a new patchset causes only the old to be dequeued"
         self.worker.hold_jobs_in_build = True
@@ -1927,6 +1972,7 @@ jobs:
         self.assertEqual(C.reported, 2)
         self.assertEqual(len(self.history), 9)
 
+    @skip("Disabled for early v3 development")
     def test_new_patchset_dequeues_old_independent_queue(self):
         "Test that a new patchset causes the old to be dequeued (independent)"
         self.worker.hold_jobs_in_build = True
@@ -1955,6 +2001,7 @@ jobs:
         self.assertEqual(len(self.history), 10)
         self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 1)
 
+    @skip("Disabled for early v3 development")
     def test_noop_job(self):
         "Test that the internal noop job works"
         A = self.fake_gerrit.addFakeChange('org/noop-project', 'master', 'A')
@@ -1968,6 +2015,7 @@ jobs:
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_no_job_project(self):
         "Test that reports with no jobs don't get sent"
         A = self.fake_gerrit.addFakeChange('org/no-jobs-project',
@@ -1985,6 +2033,7 @@ jobs:
 
         self.assertEqual(len(self.history), 0)
 
+    @skip("Disabled for early v3 development")
     def test_zuul_refs(self):
         "Test that zuul refs exist and have the right changes"
         self.worker.hold_jobs_in_build = True
@@ -2072,6 +2121,7 @@ jobs:
         self.assertEqual(D.data['status'], 'MERGED')
         self.assertEqual(D.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_rerun_on_error(self):
         "Test that if a worker fails to run a job, it is run again"
         self.worker.hold_jobs_in_build = True
@@ -2087,6 +2137,7 @@ jobs:
         self.assertEqual(self.countJobResults(self.history, 'RUN_ERROR'), 1)
         self.assertEqual(self.countJobResults(self.history, 'SUCCESS'), 3)
 
+    @skip("Disabled for early v3 development")
     def test_statsd(self):
         "Test each of the statsd methods used in the scheduler"
         import extras
@@ -2098,6 +2149,7 @@ jobs:
         self.assertReportedStat('test-timing', '3|ms')
         self.assertReportedStat('test-gauge', '12|g')
 
+    @skip("Disabled for early v3 development")
     def test_stuck_job_cleanup(self):
         "Test that pending jobs are cleaned up if removed from layout"
         # This job won't be registered at startup because it is not in
@@ -2126,6 +2178,7 @@ jobs:
         self.assertEqual(self.history[0].name, 'gate-noop')
         self.assertEqual(self.history[0].result, 'SUCCESS')
 
+    @skip("Disabled for early v3 development")
     def test_file_head(self):
         # This is a regression test for an observed bug.  A change
         # with a file named "HEAD" in the root directory of the repo
@@ -2150,6 +2203,7 @@ jobs:
         self.assertIn('Build succeeded', A.messages[0])
         self.assertIn('Build succeeded', B.messages[0])
 
+    @skip("Disabled for early v3 development")
     def test_file_jobs(self):
         "Test that file jobs run only when appropriate"
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -2171,6 +2225,7 @@ jobs:
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(B.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def _test_skip_if_jobs(self, branch, should_skip):
         "Test that jobs with a skip-if filter run only when appropriate"
         self.updateConfigLayout(
@@ -2192,17 +2247,21 @@ jobs:
         else:
             self.assertIn(change.data['number'], tested_change_ids)
 
+    @skip("Disabled for early v3 development")
     def test_skip_if_match_skips_job(self):
         self._test_skip_if_jobs(branch='master', should_skip=True)
 
+    @skip("Disabled for early v3 development")
     def test_skip_if_no_match_runs_job(self):
         self._test_skip_if_jobs(branch='mp', should_skip=False)
 
+    @skip("Disabled for early v3 development")
     def test_test_config(self):
         "Test that we can test the config"
         self.sched.testConfig(self.config.get('zuul', 'tenant_config'),
                               self.connections)
 
+    @skip("Disabled for early v3 development")
     def test_build_description(self):
         "Test that build descriptions update"
         self.worker.registerFunction('set_description:' +
@@ -2221,6 +2280,7 @@ jobs:
         self.assertTrue(re.search("project-test2.*SUCCESS", desc))
         self.assertTrue(re.search("Reported result.*SUCCESS", desc))
 
+    @skip("Disabled for early v3 development")
     def test_queue_names(self):
         "Test shared change queue names"
         project1 = self.sched.layout.projects['org/project1']
@@ -2236,6 +2296,7 @@ jobs:
             Exception, "More than one name assigned to change queue"):
             self.sched.reconfigure(self.config)
 
+    @skip("Disabled for early v3 development")
     def test_queue_precedence(self):
         "Test that queue precedence works"
 
@@ -2264,6 +2325,7 @@ jobs:
         self.assertEqual(self.history[4].pipeline, 'check')
         self.assertEqual(self.history[5].pipeline, 'check')
 
+    @skip("Disabled for early v3 development")
     def test_json_status(self):
         "Test that we can retrieve JSON status info"
         self.worker.hold_jobs_in_build = True
@@ -2326,6 +2388,7 @@ jobs:
         self.assertEqual('http://logs.example.com/1/1/gate/project-test2/2',
                          status_jobs[2]['report_url'])
 
+    @skip("Disabled for early v3 development")
     def test_merging_queues(self):
         "Test that transitively-connected change queues are merged"
         self.updateConfigLayout(
@@ -2333,6 +2396,7 @@ jobs:
         self.sched.reconfigure(self.config)
         self.assertEqual(len(self.sched.layout.pipelines['gate'].queues), 1)
 
+    @skip("Disabled for early v3 development")
     def test_mutex(self):
         "Test job mutexes"
         self.config.set('zuul', 'layout_config',
@@ -2397,6 +2461,7 @@ jobs:
         self.assertEqual(B.reported, 1)
         self.assertFalse('test-mutex' in self.sched.mutex.mutexes)
 
+    @skip("Disabled for early v3 development")
     def test_node_label(self):
         "Test that a job runs on a specific node label"
         self.worker.registerFunction('build:node-project-test1:debian')
@@ -2411,6 +2476,7 @@ jobs:
                          'debian')
         self.assertIsNone(self.getJobFromHistory('node-project-test2').node)
 
+    @skip("Disabled for early v3 development")
     def test_live_reconfiguration(self):
         "Test that live reconfiguration works"
         self.worker.hold_jobs_in_build = True
@@ -2433,6 +2499,7 @@ jobs:
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_live_reconfiguration_merge_conflict(self):
         # A real-world bug: a change in a gate queue has a merge
         # conflict and a job is added to its project while it's
@@ -2492,6 +2559,7 @@ jobs:
                          'SUCCESS')
         self.assertEqual(len(self.history), 4)
 
+    @skip("Disabled for early v3 development")
     def test_live_reconfiguration_failed_root(self):
         # An extrapolation of test_live_reconfiguration_merge_conflict
         # that tests a job added to a job tree with a failed root does
@@ -2553,6 +2621,7 @@ jobs:
         self.assertEqual(self.history[4].result, 'SUCCESS')
         self.assertEqual(len(self.history), 5)
 
+    @skip("Disabled for early v3 development")
     def test_live_reconfiguration_failed_job(self):
         # Test that a change with a removed failing job does not
         # disrupt reconfiguration.  If a change has a failed job and
@@ -2605,6 +2674,7 @@ jobs:
         # Ensure the removed job was not included in the report.
         self.assertNotIn('project-test1', A.messages[0])
 
+    @skip("Disabled for early v3 development")
     def test_live_reconfiguration_shared_queue(self):
         # Test that a change with a failing job which was removed from
         # this project but otherwise still exists in the system does
@@ -2658,6 +2728,7 @@ jobs:
         # Ensure the removed job was not included in the report.
         self.assertNotIn('project1-project2-integration', A.messages[0])
 
+    @skip("Disabled for early v3 development")
     def test_double_live_reconfiguration_shared_queue(self):
         # This was a real-world regression.  A change is added to
         # gate; a reconfigure happens, a second change which depends
@@ -2705,6 +2776,7 @@ jobs:
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(B.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_live_reconfiguration_del_project(self):
         # Test project deletion from layout
         # while changes are enqueued
@@ -2755,6 +2827,7 @@ jobs:
         self.assertEqual(len(self.sched.layout.pipelines['check'].queues), 0)
         self.assertIn('Build succeeded', A.messages[0])
 
+    @skip("Disabled for early v3 development")
     def test_live_reconfiguration_functions(self):
         "Test live reconfiguration with a custom function"
         self.worker.registerFunction('build:node-project-test1:debian')
@@ -2784,6 +2857,7 @@ jobs:
                          'wheezy')
         self.assertIsNone(self.getJobFromHistory('node-project-test2').node)
 
+    @skip("Disabled for early v3 development")
     def test_delayed_repo_init(self):
         self.updateConfigLayout(
             'tests/fixtures/layout-delayed-repo-init.yaml')
@@ -2804,6 +2878,7 @@ jobs:
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_repo_deleted(self):
         self.updateConfigLayout(
             'tests/fixtures/layout-repo-deleted.yaml')
@@ -2841,6 +2916,7 @@ jobs:
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(B.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_tags(self):
         "Test job tags"
         self.config.set('zuul', 'layout_config',
@@ -2860,6 +2936,7 @@ jobs:
             self.assertEqual(results.get(build.name, ''),
                              build.parameters.get('BUILD_TAGS'))
 
+    @skip("Disabled for early v3 development")
     def test_timer(self):
         "Test that a periodic job is triggered"
         self.worker.hold_jobs_in_build = True
@@ -2908,6 +2985,7 @@ jobs:
         self.assertIn('project-bitrot-stable-old', status_jobs)
         self.assertIn('project-bitrot-stable-older', status_jobs)
 
+    @skip("Disabled for early v3 development")
     def test_idle(self):
         "Test that frequent periodic jobs work"
         self.worker.hold_jobs_in_build = True
@@ -2940,6 +3018,7 @@ jobs:
             self.assertEqual(len(self.builds), 0)
             self.assertEqual(len(self.history), x * 2)
 
+    @skip("Disabled for early v3 development")
     def test_check_smtp_pool(self):
         self.updateConfigLayout(
             'tests/fixtures/layout-smtp.yaml')
@@ -2971,6 +3050,7 @@ jobs:
         self.assertEqual(A.messages[0],
                          self.smtp_messages[1]['body'])
 
+    @skip("Disabled for early v3 development")
     def test_timer_smtp(self):
         "Test that a periodic job is triggered"
         self.worker.hold_jobs_in_build = True
@@ -3017,6 +3097,7 @@ jobs:
         self.worker.release('.*')
         self.waitUntilSettled()
 
+    @skip("Disabled for early v3 development")
     def test_client_enqueue_change(self):
         "Test that the RPC client can enqueue a change"
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -3040,6 +3121,7 @@ jobs:
         self.assertEqual(A.reported, 2)
         self.assertEqual(r, True)
 
+    @skip("Disabled for early v3 development")
     def test_client_enqueue_ref(self):
         "Test that the RPC client can enqueue a ref"
 
@@ -3058,6 +3140,7 @@ jobs:
         self.assertIn('project-post', job_names)
         self.assertEqual(r, True)
 
+    @skip("Disabled for early v3 development")
     def test_client_enqueue_negative(self):
         "Test that the RPC client returns errors"
         client = zuul.rpcclient.RPCClient('127.0.0.1',
@@ -3102,6 +3185,7 @@ jobs:
         self.assertEqual(len(self.history), 0)
         self.assertEqual(len(self.builds), 0)
 
+    @skip("Disabled for early v3 development")
     def test_client_promote(self):
         "Test that the RPC client can promote a change"
         self.worker.hold_jobs_in_build = True
@@ -3175,6 +3259,7 @@ jobs:
         client.shutdown()
         self.assertEqual(r, True)
 
+    @skip("Disabled for early v3 development")
     def test_client_promote_dependent(self):
         "Test that the RPC client can promote a dependent change"
         # C (depends on B) -> B -> A ; then promote C to get:
@@ -3242,6 +3327,7 @@ jobs:
         client.shutdown()
         self.assertEqual(r, True)
 
+    @skip("Disabled for early v3 development")
     def test_client_promote_negative(self):
         "Test that the RPC client returns errors for promotion"
         self.worker.hold_jobs_in_build = True
@@ -3269,6 +3355,7 @@ jobs:
         self.worker.release()
         self.waitUntilSettled()
 
+    @skip("Disabled for early v3 development")
     def test_queue_rate_limiting(self):
         "Test that DependentPipelines are rate limited with dep across window"
         self.updateConfigLayout(
@@ -3360,6 +3447,7 @@ jobs:
         self.assertEqual(queue.window_floor, 1)
         self.assertEqual(C.data['status'], 'MERGED')
 
+    @skip("Disabled for early v3 development")
     def test_queue_rate_limiting_dependent(self):
         "Test that DependentPipelines are rate limited with dep in window"
         self.updateConfigLayout(
@@ -3433,6 +3521,7 @@ jobs:
         self.assertEqual(queue.window_floor, 1)
         self.assertEqual(C.data['status'], 'MERGED')
 
+    @skip("Disabled for early v3 development")
     def test_worker_update_metadata(self):
         "Test if a worker can send back metadata about itself"
         self.worker.hold_jobs_in_build = True
@@ -3471,6 +3560,7 @@ jobs:
         self.worker.release()
         self.waitUntilSettled()
 
+    @skip("Disabled for early v3 development")
     def test_footer_message(self):
         "Test a pipeline's footer message is correctly added to the report."
         self.updateConfigLayout(
@@ -3511,6 +3601,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(failure_body, self.smtp_messages[0]['body'])
         self.assertEqual(success_body, self.smtp_messages[1]['body'])
 
+    @skip("Disabled for early v3 development")
     def test_merge_failure_reporters(self):
         """Check that the config is set up correctly"""
 
@@ -3556,6 +3647,7 @@ For CI problems and help debugging, contact ci@example.org"""
             )
         )
 
+    @skip("Disabled for early v3 development")
     def test_merge_failure_reports(self):
         """Check that when a change fails to merge the correct message is sent
         to the correct reporter"""
@@ -3591,6 +3683,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual('The merge failed! For more information...',
                          self.smtp_messages[0]['body'])
 
+    @skip("Disabled for early v3 development")
     def test_default_merge_failure_reports(self):
         """Check that the default merge failure reports are correct."""
 
@@ -3616,6 +3709,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertNotIn('logs.example.com', B.messages[1])
         self.assertNotIn('SKIPPED', B.messages[1])
 
+    @skip("Disabled for early v3 development")
     def test_swift_instructions(self):
         "Test that the correct swift instructions are sent to the workers"
         self.updateConfigLayout(
@@ -3661,6 +3755,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.worker.release()
         self.waitUntilSettled()
 
+    @skip("Disabled for early v3 development")
     def test_client_get_running_jobs(self):
         "Test that the RPC client can get a list of running jobs"
         self.worker.hold_jobs_in_build = True
@@ -3719,6 +3814,7 @@ For CI problems and help debugging, contact ci@example.org"""
         running_items = client.get_running_jobs()
         self.assertEqual(0, len(running_items))
 
+    @skip("Disabled for early v3 development")
     def test_nonvoting_pipeline(self):
         "Test that a nonvoting pipeline (experimental) can still report"
 
@@ -3731,6 +3827,7 @@ For CI problems and help debugging, contact ci@example.org"""
             'SUCCESS')
         self.assertEqual(A.reported, 1)
 
+    @skip("Disabled for early v3 development")
     def test_crd_gate(self):
         "Test cross-repo dependencies"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -3796,6 +3893,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(self.getJobFromHistory('project1-merge').changes,
                          '2,1 1,1')
 
+    @skip("Disabled for early v3 development")
     def test_crd_branch(self):
         "Test cross-repo dependencies in multiple branches"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -3836,6 +3934,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(self.getJobFromHistory('project1-merge').changes,
                          '2,1 3,1 1,1')
 
+    @skip("Disabled for early v3 development")
     def test_crd_multiline(self):
         "Test multiple depends-on lines in commit"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -3875,6 +3974,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(self.getJobFromHistory('project1-merge').changes,
                          '2,1 3,1 1,1')
 
+    @skip("Disabled for early v3 development")
     def test_crd_unshared_gate(self):
         "Test cross-repo dependencies in unshared gate queues"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -3913,6 +4013,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
+    @skip("Disabled for early v3 development")
     def test_crd_gate_reverse(self):
         "Test reverse cross-repo dependencies"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -3952,6 +4053,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(self.getJobFromHistory('project1-merge').changes,
                          '2,1 1,1')
 
+    @skip("Disabled for early v3 development")
     def test_crd_cycle(self):
         "Test cross-repo dependency cycles"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -3974,6 +4076,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(B.data['status'], 'NEW')
 
+    @skip("Disabled for early v3 development")
     def test_crd_gate_unknown(self):
         "Test unknown projects in dependent pipeline"
         self.init_repo("org/unknown")
@@ -4016,6 +4119,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(B.reported, 0)
 
+    @skip("Disabled for early v3 development")
     def test_crd_check(self):
         "Test cross-repo dependencies in independent pipelines"
 
@@ -4058,6 +4162,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(self.history[0].changes, '2,1 1,1')
         self.assertEqual(len(self.sched.layout.pipelines['check'].queues), 0)
 
+    @skip("Disabled for early v3 development")
     def test_crd_check_git_depends(self):
         "Test single-repo dependencies in independent pipelines"
         self.gearman_server.hold_jobs_in_build = True
@@ -4088,6 +4193,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertIn('Build succeeded', A.messages[0])
         self.assertIn('Build succeeded', B.messages[0])
 
+    @skip("Disabled for early v3 development")
     def test_crd_check_duplicate(self):
         "Test duplicate check in independent pipelines"
         self.worker.hold_jobs_in_build = True
@@ -4130,6 +4236,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertIn('Build succeeded', A.messages[0])
         self.assertIn('Build succeeded', B.messages[0])
 
+    @skip("Disabled for early v3 development")
     def _test_crd_check_reconfiguration(self, project1, project2):
         "Test cross-repo dependencies re-enqueued in independent pipelines"
 
@@ -4168,9 +4275,11 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(self.history[0].changes, '2,1 1,1')
         self.assertEqual(len(self.sched.layout.pipelines['check'].queues), 0)
 
+    @skip("Disabled for early v3 development")
     def test_crd_check_reconfiguration(self):
         self._test_crd_check_reconfiguration('org/project1', 'org/project2')
 
+    @skip("Disabled for early v3 development")
     def test_crd_undefined_project(self):
         """Test that undefined projects in dependencies are handled for
         independent pipelines"""
@@ -4179,6 +4288,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.init_repo("org/unknown")
         self._test_crd_check_reconfiguration('org/project1', 'org/unknown')
 
+    @skip("Disabled for early v3 development")
     def test_crd_check_ignore_dependencies(self):
         "Test cross-repo dependencies can be ignored"
         self.updateConfigLayout(
@@ -4224,6 +4334,7 @@ For CI problems and help debugging, contact ci@example.org"""
         for job in self.history:
             self.assertEqual(len(job.changes.split()), 1)
 
+    @skip("Disabled for early v3 development")
     def test_crd_check_transitive(self):
         "Test transitive cross-repo dependencies"
         # Specifically, if A -> B -> C, and C gets a new patchset and
@@ -4264,6 +4375,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.waitUntilSettled()
         self.assertEqual(self.history[-1].changes, '3,2 2,1 1,2')
 
+    @skip("Disabled for early v3 development")
     def test_crd_cycle_join(self):
         "Test an updated change creates a cycle"
         A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A')
@@ -4303,6 +4415,7 @@ For CI problems and help debugging, contact ci@example.org"""
         source._getChange(u'1', u'2', True)
         source._getChange(u'2', u'2', True)
 
+    @skip("Disabled for early v3 development")
     def test_disable_at(self):
         "Test a pipeline will only report to the disabled trigger when failing"
 
@@ -4425,6 +4538,7 @@ For CI problems and help debugging, contact ci@example.org"""
         # No more messages reported via smtp
         self.assertEqual(3, len(self.smtp_messages))
 
+    @skip("Disabled for early v3 development")
     def test_success_pattern(self):
         "Ensure bad build params are ignored"
 
