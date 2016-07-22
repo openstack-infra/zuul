@@ -31,8 +31,6 @@ from zuul import model
 from zuul import exceptions
 from zuul import version as zuul_version
 
-statsd = extras.try_import('statsd.statsd')
-
 
 class MutexHandler(object):
     log = logging.getLogger("zuul.MutexHandler")
@@ -234,6 +232,7 @@ class Scheduler(threading.Thread):
         self.launcher = None
         self.merger = None
         self.connections = None
+        self.statsd = extras.try_import('statsd.statsd')
         # TODO(jeblair): fix this
         self.mutex = MutexHandler()
         # Despite triggers being part of the pipeline, there is one trigger set
@@ -287,8 +286,8 @@ class Scheduler(threading.Thread):
     def addEvent(self, event):
         self.log.debug("Adding trigger event: %s" % event)
         try:
-            if statsd:
-                statsd.incr('gerrit.event.%s' % event.type)
+            if self.statsd:
+                self.statsd.incr('gerrit.event.%s' % event.type)
         except:
             self.log.exception("Exception reporting event stats")
         self.trigger_event_queue.put(event)
@@ -313,10 +312,10 @@ class Scheduler(threading.Thread):
         # timing) is recorded before setting the result.
         build.result = result
         try:
-            if statsd and build.pipeline:
+            if self.statsd and build.pipeline:
                 jobname = build.job.name.replace('.', '_')
                 key = 'zuul.pipeline.%s.all_jobs' % build.pipeline.name
-                statsd.incr(key)
+                self.statsd.incr(key)
                 for label in build.node_labels:
                     # Jenkins includes the node name in its list of labels, so
                     # we filter it out here, since that is not statistically
@@ -326,18 +325,18 @@ class Scheduler(threading.Thread):
                     dt = int((build.start_time - build.launch_time) * 1000)
                     key = 'zuul.pipeline.%s.label.%s.wait_time' % (
                         build.pipeline.name, label)
-                    statsd.timing(key, dt)
+                    self.statsd.timing(key, dt)
                 key = 'zuul.pipeline.%s.job.%s.%s' % (build.pipeline.name,
                                                       jobname, build.result)
                 if build.result in ['SUCCESS', 'FAILURE'] and build.start_time:
                     dt = int((build.end_time - build.start_time) * 1000)
-                    statsd.timing(key, dt)
-                statsd.incr(key)
+                    self.statsd.timing(key, dt)
+                self.statsd.incr(key)
 
                 key = 'zuul.pipeline.%s.job.%s.wait_time' % (
                     build.pipeline.name, jobname)
                 dt = int((build.start_time - build.launch_time) * 1000)
-                statsd.timing(key, dt)
+                self.statsd.timing(key, dt)
         except:
             self.log.exception("Exception reporting runtime stats")
         event = BuildCompletedEvent(build)
@@ -475,12 +474,7 @@ class Scheduler(threading.Thread):
         finally:
             self.layout_lock.release()
 
-    def _reconfigureTenant(self, tenant):
-        # This is called from _doReconfigureEvent while holding the
-        # layout lock
-        old_tenant = self.abide.tenants.get(tenant.name)
-        if not old_tenant:
-            return
+    def _reenqueueTenant(self, old_tenant, tenant):
         for name, new_pipeline in tenant.layout.pipelines.items():
             old_pipeline = old_tenant.layout.pipelines.get(name)
             if not old_pipeline:
@@ -526,20 +520,28 @@ class Scheduler(threading.Thread):
                     self.log.exception(
                         "Exception while canceling build %s "
                         "for change %s" % (build, item.change))
+
+    def _reconfigureTenant(self, tenant):
+        # This is called from _doReconfigureEvent while holding the
+        # layout lock
+        old_tenant = self.abide.tenants.get(tenant.name)
+        if old_tenant:
+            self._reenqueueTenant(old_tenant, tenant)
         # TODOv3(jeblair): update for tenants
-        self.maintainConnectionCache()
+        # self.maintainConnectionCache()
         for pipeline in tenant.layout.pipelines.values():
             pipeline.source.postConfig()
-            pipeline.trigger.postConfig(pipeline)
+            for trigger in pipeline.triggers:
+                trigger.postConfig(pipeline)
             for reporter in pipeline.actions:
                 reporter.postConfig()
-        if statsd:
+        if self.statsd:
             try:
-                for pipeline in self.layout.pipelines.values():
+                for pipeline in tenant.layout.pipelines.values():
                     items = len(pipeline.getAllItems())
                     # stats.gauges.zuul.pipeline.NAME.current_changes
                     key = 'zuul.pipeline.%s' % pipeline.name
-                    statsd.gauge(key + '.current_changes', items)
+                    self.statsd.gauge(key + '.current_changes', items)
             except Exception:
                 self.log.exception("Exception reporting initial "
                                    "pipeline stats:")
@@ -612,7 +614,7 @@ class Scheduler(threading.Thread):
         return False
 
     def run(self):
-        if statsd:
+        if self.statsd:
             self.log.debug("Statsd enabled")
         else:
             self.log.debug("Statsd disabled because python statsd "

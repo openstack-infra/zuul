@@ -44,8 +44,8 @@ logging.basicConfig(level=logging.DEBUG,
 
 
 class TestScheduler(ZuulTestCase):
+    tenant_config_file = 'config/single-tenant/main.yaml'
 
-    @skip("Disabled for early v3 development")
     def test_jobs_launched(self):
         "Test that jobs are launched and a change is merged"
 
@@ -62,6 +62,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
+        # TODOv3(jeblair): we may want to report stats by tenant (also?).
         self.assertReportedStat('gerrit.event.comment-added', value='1|c')
         self.assertReportedStat('zuul.pipeline.gate.current_changes',
                                 value='1|g')

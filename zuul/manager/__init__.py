@@ -10,14 +10,11 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import extras
 import logging
 
 from zuul import exceptions
 import zuul.configloader
 from zuul.model import NullChange
-
-statsd = extras.try_import('statsd.statsd')
 
 
 class DynamicChangeQueueContextManager(object):
@@ -692,7 +689,7 @@ class BasePipelineManager(object):
         return ret
 
     def reportStats(self, item):
-        if not statsd:
+        if not self.sched.statsd:
             return
         try:
             # Update the gauge on enqueue and dequeue, but timers only
@@ -707,17 +704,17 @@ class BasePipelineManager(object):
             # stats_counts.zuul.pipeline.NAME.total_changes
             # stats.gauges.zuul.pipeline.NAME.current_changes
             key = 'zuul.pipeline.%s' % self.pipeline.name
-            statsd.gauge(key + '.current_changes', items)
+            self.sched.statsd.gauge(key + '.current_changes', items)
             if dt:
-                statsd.timing(key + '.resident_time', dt)
-                statsd.incr(key + '.total_changes')
+                self.sched.statsd.timing(key + '.resident_time', dt)
+                self.sched.statsd.incr(key + '.total_changes')
 
             # stats.timers.zuul.pipeline.NAME.ORG.PROJECT.resident_time
             # stats_counts.zuul.pipeline.NAME.ORG.PROJECT.total_changes
             project_name = item.change.project.name.replace('/', '.')
             key += '.%s' % project_name
             if dt:
-                statsd.timing(key + '.resident_time', dt)
-                statsd.incr(key + '.total_changes')
+                self.sched.statsd.timing(key + '.resident_time', dt)
+                self.sched.statsd.incr(key + '.total_changes')
         except:
             self.log.exception("Exception reporting pipeline stats")
