@@ -33,7 +33,6 @@ import zuul.reporter.gerrit
 import zuul.reporter.smtp
 
 from tests.base import (
-    BaseTestCase,
     ZuulTestCase,
     repack_repo,
 )
@@ -41,43 +40,6 @@ from tests.base import (
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-32s '
                     '%(levelname)-8s %(message)s')
-
-
-class TestSchedulerConfigParsing(BaseTestCase):
-
-    def setUp(self):
-        self.skip("Disabled for early v3 development")
-
-    def test_parse_skip_if(self):
-        job_yaml = """
-jobs:
-  - name: job_name
-    skip-if:
-      - project: ^project_name$
-        branch: ^stable/icehouse$
-        all-files-match-any:
-          - ^filename$
-      - project: ^project2_name$
-        all-files-match-any:
-          - ^filename2$
-    """.strip()
-        data = yaml.load(job_yaml)
-        config_job = data.get('jobs')[0]
-        sched = zuul.scheduler.Scheduler({})
-        cm = zuul.change_matcher
-        expected = cm.MatchAny([
-            cm.MatchAll([
-                cm.ProjectMatcher('^project_name$'),
-                cm.BranchMatcher('^stable/icehouse$'),
-                cm.MatchAllFiles([cm.FileMatcher('^filename$')]),
-            ]),
-            cm.MatchAll([
-                cm.ProjectMatcher('^project2_name$'),
-                cm.MatchAllFiles([cm.FileMatcher('^filename2$')]),
-            ]),
-        ])
-        matcher = sched._parseSkipIf(config_job)
-        self.assertEqual(expected, matcher)
 
 
 class TestScheduler(ZuulTestCase):
