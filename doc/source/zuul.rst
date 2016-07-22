@@ -52,11 +52,6 @@ server just set **server** to 127.0.0.1.
   Port on which the Gearman server is listening.
   ``port=4730`` (optional)
 
-**check_job_registration**
-  Check to see if job is registered with Gearman or not. When True
-  a build result of NOT_REGISTERED will be return if job is not found.
-  ``check_job_registration=True``
-
 gearman_server
 """"""""""""""
 
