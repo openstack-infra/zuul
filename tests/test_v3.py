@@ -17,16 +17,14 @@
 import logging
 import textwrap
 
-from tests.base import (
-    ZuulTestCase,
-)
+from tests.base import AnsibleZuulTestCase
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-32s '
                     '%(levelname)-8s %(message)s')
 
 
-class TestMultipleTenants(ZuulTestCase):
+class TestMultipleTenants(AnsibleZuulTestCase):
     # A temporary class to hold new tests while others are disabled
 
     tenant_config_file = 'config/multi-tenant/main.yaml'
@@ -69,7 +67,7 @@ class TestMultipleTenants(ZuulTestCase):
                          "not affect tenant one")
 
 
-class TestInRepoConfig(ZuulTestCase):
+class TestInRepoConfig(AnsibleZuulTestCase):
     # A temporary class to hold new tests while others are disabled
 
     tenant_config_file = 'config/in-repo/main.yaml'
@@ -114,7 +112,7 @@ class TestInRepoConfig(ZuulTestCase):
                       "A should transit tenant-one gate")
 
 
-class TestProjectTemplate(ZuulTestCase):
+class TestProjectTemplate(AnsibleZuulTestCase):
     tenant_config_file = 'config/project-template/main.yaml'
 
     def test(self):
