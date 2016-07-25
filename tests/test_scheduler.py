@@ -81,14 +81,12 @@ class TestScheduler(ZuulTestCase):
         for build in self.builds:
             self.assertEqual(build.parameters['ZUUL_VOTING'], '1')
 
-    @skip("Disabled for early v3 development")
     def test_initial_pipeline_gauges(self):
         "Test that each pipeline reported its length on start"
-        pipeline_names = self.sched.layout.pipelines.keys()
-        self.assertNotEqual(len(pipeline_names), 0)
-        for name in pipeline_names:
-            self.assertReportedStat('zuul.pipeline.%s.current_changes' % name,
-                                    value='0|g')
+        self.assertReportedStat('zuul.pipeline.gate.current_changes',
+                                value='0|g')
+        self.assertReportedStat('zuul.pipeline.check.current_changes',
+                                value='0|g')
 
     @skip("Disabled for early v3 development")
     def test_duplicate_pipelines(self):
