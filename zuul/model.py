@@ -502,7 +502,7 @@ class Job(object):
         timeout=None,
         # variables={},
         nodes=[],
-        # auth={},
+        auth={},
         workspace=None,
         pre_run=None,
         post_run=None,
@@ -516,7 +516,6 @@ class Job(object):
         branch_matcher=None,
         file_matcher=None,
         irrelevant_file_matcher=None,  # skip-if
-        swift=None,  # TODOv3(jeblair): move to auth
         parameter_function=None,  # TODOv3(jeblair): remove
         success_pattern=None,  # TODOv3(jeblair): remove
         tags=set(),
@@ -555,8 +554,11 @@ class Job(object):
         if not isinstance(other, Job):
             raise Exception("Job unable to inherit from %s" % (other,))
         for k, v in self.attributes.items():
-            if getattr(other, k) != v:
+            if getattr(other, k) != v and k != 'auth':
                 setattr(self, k, getattr(other, k))
+        # Inherit auth only if explicitly allowed
+        if other.auth and 'inherit' in other.auth and other.auth['inherit']:
+            setattr(self, 'auth', getattr(other, 'auth'))
 
     def changeMatches(self, change):
         if self.branch_matcher and not self.branch_matcher.matches(change):

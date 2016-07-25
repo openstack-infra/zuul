@@ -120,6 +120,81 @@ class TestJob(BaseTestCase):
         self.assertEqual(job.name, 'python27')
         self.assertEqual(job.timeout, 50)
 
+    def test_job_auth_inheritance(self):
+        layout = model.Layout()
+        project = model.Project('project')
+
+        base = configloader.JobParser.fromYaml(layout, {
+            '_source_project': project,
+            'name': 'base',
+            'timeout': 30,
+        })
+        layout.addJob(base)
+        pypi_upload_without_inherit = configloader.JobParser.fromYaml(layout, {
+            '_source_project': project,
+            'name': 'pypi-upload-without-inherit',
+            'parent': 'base',
+            'timeout': 40,
+            'auth': {
+                'password': {
+                    'pypipassword': 'dummypassword'
+                }
+            }
+        })
+        layout.addJob(pypi_upload_without_inherit)
+        pypi_upload_with_inherit = configloader.JobParser.fromYaml(layout, {
+            '_source_project': project,
+            'name': 'pypi-upload-with-inherit',
+            'parent': 'base',
+            'timeout': 40,
+            'auth': {
+                'inherit': True,
+                'password': {
+                    'pypipassword': 'dummypassword'
+                }
+            }
+        })
+        layout.addJob(pypi_upload_with_inherit)
+        pypi_upload_with_inherit_false = configloader.JobParser.fromYaml(
+            layout, {
+                '_source_project': project,
+                'name': 'pypi-upload-with-inherit-false',
+                'parent': 'base',
+                'timeout': 40,
+                'auth': {
+                    'inherit': False,
+                    'password': {
+                        'pypipassword': 'dummypassword'
+                    }
+                }
+            })
+        layout.addJob(pypi_upload_with_inherit_false)
+        in_repo_job_without_inherit = configloader.JobParser.fromYaml(layout, {
+            '_source_project': project,
+            'name': 'in-repo-job-without-inherit',
+            'parent': 'pypi-upload-without-inherit',
+        })
+        layout.addJob(in_repo_job_without_inherit)
+        in_repo_job_with_inherit = configloader.JobParser.fromYaml(layout, {
+            '_source_project': project,
+            'name': 'in-repo-job-with-inherit',
+            'parent': 'pypi-upload-with-inherit',
+        })
+        layout.addJob(in_repo_job_with_inherit)
+        in_repo_job_with_inherit_false = configloader.JobParser.fromYaml(
+            layout, {
+                '_source_project': project,
+                'name': 'in-repo-job-with-inherit-false',
+                'parent': 'pypi-upload-with-inherit-false',
+            })
+        layout.addJob(in_repo_job_with_inherit_false)
+
+        self.assertNotIn('auth', in_repo_job_without_inherit.auth)
+        self.assertIn('password', in_repo_job_with_inherit.auth)
+        self.assertEquals(in_repo_job_with_inherit.auth['password'],
+                          {'pypipassword': 'dummypassword'})
+        self.assertNotIn('auth', in_repo_job_with_inherit_false.auth)
+
     def test_job_inheritance_job_tree(self):
         layout = model.Layout()
 

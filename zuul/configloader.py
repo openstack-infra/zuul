@@ -40,17 +40,23 @@ def as_list(item):
 class JobParser(object):
     @staticmethod
     def getSchema():
-        # TODOv3(jeblair, jhesketh): move to auth
-        swift = {vs.Required('name'): str,
-                 'container': str,
-                 'expiry': int,
-                 'max_file_size': int,
-                 'max-file-size': int,
-                 'max_file_count': int,
-                 'max-file-count': int,
-                 'logserver_prefix': str,
-                 'logserver-prefix': str,
-                 }
+        swift_tmpurl = {vs.Required('name'): str,
+                        'container': str,
+                        'expiry': int,
+                        'max_file_size': int,
+                        'max-file-size': int,
+                        'max_file_count': int,
+                        'max-file-count': int,
+                        'logserver_prefix': str,
+                        'logserver-prefix': str,
+                        }
+
+        password = {str: str}
+
+        auth = {'password': to_list(password),
+                'inherit': bool,
+                'swift-tmpurl': to_list(swift_tmpurl),
+                }
 
         node = {vs.Required('name'): str,
                 vs.Required('image'): str,
@@ -68,7 +74,7 @@ class JobParser(object):
                'tags': to_list(str),
                'branches': to_list(str),
                'files': to_list(str),
-               'swift': to_list(swift),
+               'auth': to_list(auth),
                'irrelevant-files': to_list(str),
                'nodes': [node],
                'timeout': int,
@@ -81,6 +87,8 @@ class JobParser(object):
     def fromYaml(layout, conf):
         JobParser.getSchema()(conf)
         job = model.Job(conf['name'])
+        if 'auth' in conf:
+            job.auth = conf.get('auth')
         if 'parent' in conf:
             parent = layout.getJob(conf['parent'])
             job.inheritFrom(parent)

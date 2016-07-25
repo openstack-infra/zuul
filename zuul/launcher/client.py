@@ -259,7 +259,7 @@ class LaunchClient(object):
         # NOTE(jhesketh): The params need to stay in a key=value data pair
         # as workers cannot necessarily handle lists.
 
-        if job.swift and self.swift.connection:
+        if 'swift' in job.auth and self.swift.connection:
 
             for name, s in job.swift.items():
                 swift_instructions = {}
