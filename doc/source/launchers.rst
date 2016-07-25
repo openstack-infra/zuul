@@ -362,24 +362,3 @@ function should be the following encoded in JSON format:
 
 The original job is expected to complete with a WORK_DATA and
 WORK_FAIL packet as described in `Starting Builds`_.
-
-Build Descriptions
-^^^^^^^^^^^^^^^^^^
-
-In order to update the job running system with a description of the
-current state of all related builds, the job runner may optionally
-implement the following Gearman function:
-
-  set_description:MANAGER_NAME
-
-Where **MANAGER_NAME** is used as described in `Stopping Builds`_.
-The argument to the function is the following encoded in JSON format:
-
-**name**
-  The job name of the build to describe.
-
-**number**
-  The build number of the build to describe.
-
-**html_description**
-  The description of the build in HTML format.

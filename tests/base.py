@@ -546,7 +546,6 @@ class FakeBuild(threading.Thread):
         self.waiting = False
         self.aborted = False
         self.created = time.time()
-        self.description = ''
         self.run_error = False
 
     def release(self):
@@ -624,8 +623,7 @@ class FakeBuild(threading.Thread):
         self.worker.build_history.append(
             BuildHistory(name=self.name, number=self.number,
                          result=result, changes=changes, node=self.node,
-                         uuid=self.unique, description=self.description,
-                         parameters=self.parameters,
+                         uuid=self.unique, parameters=self.parameters,
                          pipeline=self.parameters['ZUUL_PIPELINE'])
         )
 
@@ -689,8 +687,6 @@ class FakeWorker(gear.Worker):
             self.handleLaunch(job)
         elif cmd == 'stop':
             self.handleStop(job)
-        elif cmd == 'set_description':
-            self.handleSetDescription(job)
 
     def handleLaunch(self, job):
         # TODOv3(jeblair): handle nodes
@@ -712,24 +708,6 @@ class FakeWorker(gear.Worker):
             if build.name == name and build.number == number:
                 build.aborted = True
                 build.release()
-                job.sendWorkComplete()
-                return
-        job.sendWorkFail()
-
-    def handleSetDescription(self, job):
-        self.log.debug("handle set description")
-        parameters = json.loads(job.arguments)
-        name = parameters['name']
-        number = parameters['number']
-        descr = parameters['html_description']
-        for build in self.running_builds:
-            if build.name == name and build.number == number:
-                build.description = descr
-                job.sendWorkComplete()
-                return
-        for build in self.build_history:
-            if build.name == name and build.number == number:
-                build.description = descr
                 job.sendWorkComplete()
                 return
         job.sendWorkFail()

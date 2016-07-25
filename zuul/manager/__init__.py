@@ -403,7 +403,6 @@ class BasePipelineManager(object):
                                    "for change %s" % (build, item.change))
             build.result = 'CANCELED'
             canceled = True
-        self.updateBuildDescriptions(old_build_set)
         for item_behind in item.items_behind:
             self.log.debug("Canceling jobs for change %s, behind change %s" %
                            (item_behind.change, item.change))
@@ -584,26 +583,6 @@ class BasePipelineManager(object):
                        (self.pipeline.name, changed))
         return changed
 
-    def updateBuildDescriptions(self, build_set):
-        for build in build_set.getBuilds():
-            try:
-                desc = self.formatDescription(build)
-                self.sched.launcher.setBuildDescription(build, desc)
-            except:
-                # Log the failure and let loop continue
-                self.log.error("Failed to update description for build %s" %
-                               (build))
-
-        if build_set.previous_build_set:
-            for build in build_set.previous_build_set.getBuilds():
-                try:
-                    desc = self.formatDescription(build)
-                    self.sched.launcher.setBuildDescription(build, desc)
-                except:
-                    # Log the failure and let loop continue
-                    self.log.error("Failed to update description for "
-                                   "build %s in previous build set" % (build))
-
     def onBuildStarted(self, build):
         self.log.debug("Build %s started" % build)
         return True
@@ -710,109 +689,6 @@ class BasePipelineManager(object):
             except:
                 self.log.exception("Exception while reporting:")
                 item.setReportedResult('ERROR')
-        self.updateBuildDescriptions(item.current_build_set)
-        return ret
-
-    def formatDescription(self, build):
-        concurrent_changes = ''
-        concurrent_builds = ''
-        other_builds = ''
-
-        for change in build.build_set.other_changes:
-            concurrent_changes += '<li><a href="{change.url}">\
-              {change.number},{change.patchset}</a></li>'.format(
-                change=change)
-
-        change = build.build_set.item.change
-
-        for build in build.build_set.getBuilds():
-            if build.url:
-                concurrent_builds += """\
-<li>
-  <a href="{build.url}">
-  {build.job.name} #{build.number}</a>: {build.result}
-</li>
-""".format(build=build)
-            else:
-                concurrent_builds += """\
-<li>
-  {build.job.name}: {build.result}
-</li>""".format(build=build)
-
-        if build.build_set.previous_build_set:
-            other_build = build.build_set.previous_build_set.getBuild(
-                build.job.name)
-            if other_build:
-                other_builds += """\
-<li>
-  Preceded by: <a href="{build.url}">
-  {build.job.name} #{build.number}</a>
-</li>
-""".format(build=other_build)
-
-        if build.build_set.next_build_set:
-            other_build = build.build_set.next_build_set.getBuild(
-                build.job.name)
-            if other_build:
-                other_builds += """\
-<li>
-  Succeeded by: <a href="{build.url}">
-  {build.job.name} #{build.number}</a>
-</li>
-""".format(build=other_build)
-
-        result = build.build_set.result
-
-        if hasattr(change, 'number'):
-            ret = """\
-<p>
-  Triggered by change:
-    <a href="{change.url}">{change.number},{change.patchset}</a><br/>
-  Branch: <b>{change.branch}</b><br/>
-  Pipeline: <b>{self.pipeline.name}</b>
-</p>"""
-        elif hasattr(change, 'ref'):
-            ret = """\
-<p>
-  Triggered by reference:
-    {change.ref}</a><br/>
-  Old revision: <b>{change.oldrev}</b><br/>
-  New revision: <b>{change.newrev}</b><br/>
-  Pipeline: <b>{self.pipeline.name}</b>
-</p>"""
-        else:
-            ret = ""
-
-        if concurrent_changes:
-            ret += """\
-<p>
-  Other changes tested concurrently with this change:
-  <ul>{concurrent_changes}</ul>
-</p>
-"""
-        if concurrent_builds:
-            ret += """\
-<p>
-  All builds for this change set:
-  <ul>{concurrent_builds}</ul>
-</p>
-"""
-
-        if other_builds:
-            ret += """\
-<p>
-  Other build sets for this change:
-  <ul>{other_builds}</ul>
-</p>
-"""
-        if result:
-            ret += """\
-<p>
-  Reported result: <b>{result}</b>
-</p>
-"""
-
-        ret = ret.format(**locals())
         return ret
 
     def reportStats(self, item):

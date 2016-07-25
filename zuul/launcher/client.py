@@ -541,28 +541,6 @@ class LaunchClient(object):
                                timeout=300)
         return True
 
-    def setBuildDescription(self, build, desc):
-        try:
-            name = "set_description:%s" % build.__gearman_manager
-        except AttributeError:
-            # We haven't yet received the first data packet that tells
-            # us where the job is running.
-            return False
-
-        if self.job_registration and not self.isJobRegistered(name):
-            return False
-
-        desc_uuid = str(uuid4().hex)
-        data = dict(name=build.job.name,
-                    number=build.number,
-                    html_description=desc)
-        desc_job = gear.Job(name, json.dumps(data), unique=desc_uuid)
-        self.meta_jobs[desc_uuid] = desc_job
-        self.log.debug("Submitting describe job: %s", desc_job)
-        self.gearman.submitJob(desc_job, precedence=gear.PRECEDENCE_LOW,
-                               timeout=300)
-        return True
-
     def lookForLostBuilds(self):
         self.log.debug("Looking for lost builds")
         for build in self.builds.values():
