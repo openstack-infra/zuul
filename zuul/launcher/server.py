@@ -28,6 +28,11 @@ import yaml
 import zuul.merger
 
 
+# TODOv3(mordred): put git repos in a hierarchy that includes source
+# hostname, eg: git.openstack.org/openstack/nova.  Also, configure
+# sources to have an alias, so that the review.openstack.org source
+# repos end up in git.openstack.org.
+
 class JobDir(object):
     def __init__(self):
         self.root = tempfile.mkdtemp()

@@ -1113,6 +1113,8 @@ class Ref(Changeish):
 
 
 class NullChange(Changeish):
+    # TODOv3(jeblair): remove this in favor of enqueueing Refs (eg
+    # current master) instead.
     def __repr__(self):
         return '<NullChange for %s>' % (self.project)
 
