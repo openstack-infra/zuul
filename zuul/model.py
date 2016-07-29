@@ -68,7 +68,14 @@ def normalizeCategory(name):
 
 
 class Pipeline(object):
-    """A top-level pipeline such as check, gate, post, etc."""
+    """A configuration that ties triggers, reporters, managers and sources.
+
+    Source is where changes should come from. It is a named connection to
+        an external service defined in zuul.conf
+    Trigger is a description of which events should be processed
+    Manager is responsible for enqueing and dequeing Changes
+    Reporters communicate success and failure results somewhere
+    """
     def __init__(self, name, layout):
         self.name = name
         self.layout = layout
@@ -187,11 +194,21 @@ class Pipeline(object):
 
 
 class ChangeQueue(object):
-    """DependentPipelines have multiple parallel queues shared by
-    different projects; this is one of them.  For instance, there may
-    a queue shared by interrelated projects foo and bar, and a second
-    queue for independent project baz.  Pipelines have one or more
-    ChangeQueues."""
+    """A ChangeQueue contains Changes to be processed related projects.
+
+    DependentPipelines have multiple parallel ChangeQueues shared by
+    different projects.  For instance, there may a ChangeQueue shared by
+    interrelated projects foo and bar, and a second queue for independent
+    project baz.
+
+    IndependentPipelinesManager puts every Change into its own ChangeQueue
+
+    The ChangeQueue Window is inspired by TCP windows and controlls how many
+    Changes in a given ChangeQueue will be considered active and ready to
+    be processed. If a Change succeeds, the Window is increased by
+    `window_increase_factor`. If a Change fails, the Window is decreased by
+    `window_decrease_factor`.
+    """
     def __init__(self, pipeline, window=0, window_floor=1,
                  window_increase_type='linear', window_increase_factor=1,
                  window_decrease_type='exponential', window_decrease_factor=2):
@@ -300,6 +317,8 @@ class ChangeQueue(object):
 
 
 class Project(object):
+    """A Project represents a git repository such as openstack/nova."""
+
     # NOTE: Projects should only be instantiated via a Source object
     # so that they are associated with and cached by their Connection.
     # This makes a Project instance a unique identifier for a given
@@ -323,6 +342,7 @@ class Project(object):
 
 
 class Inheritable(object):
+    """Helper class for implementing context-aware job inheritance."""
     def __init__(self, parent=None):
         self.parent = parent
 
@@ -337,6 +357,8 @@ class Inheritable(object):
 
 
 class Job(object):
+    """A Job represents the defintion of actions to perform."""
+
     attributes = dict(
         timeout=None,
         # variables={},
@@ -413,9 +435,14 @@ class Job(object):
 
 
 class JobTree(object):
-    """ A JobTree represents an instance of one Job, and holds JobTrees
-    whose jobs should be run if that Job succeeds.  A root node of a
-    JobTree will have no associated Job. """
+    """A JobTree holds one or more Jobs to represent Job dependencies.
+
+    If Job foo should only execute if Job bar succeeds, then there will
+    be a JobTree for foo, which will contain a JobTree for bar. A JobTree
+    can hold more than one dependent JobTrees, such that jobs bar and bang
+    both depend on job foo being successful.
+
+    A root node of a JobTree will have no associated Job."""
 
     def __init__(self, job):
         self.job = job
@@ -459,6 +486,8 @@ class JobTree(object):
 
 
 class Build(object):
+    """A Build is an instance of a single running Job."""
+
     def __init__(self, job, uuid):
         self.job = job
         self.uuid = uuid
@@ -484,7 +513,7 @@ class Build(object):
 
 
 class Worker(object):
-    """A model of the worker running a job"""
+    """Information about the specific worker executing a Build."""
     def __init__(self):
         self.name = "Unknown"
         self.hostname = None
@@ -509,6 +538,7 @@ class Worker(object):
 
 
 class RepoFiles(object):
+    """RepoFiles holds config-file content for per-project job config."""
     # When we ask a merger to prepare a future multiple-repo state and
     # collect files so that we can dynamically load our configuration,
     # this class provides easy access to that data.
@@ -530,6 +560,11 @@ class RepoFiles(object):
 
 
 class BuildSet(object):
+    """Contains the Builds for a Change representing potential future state.
+
+    A BuildSet also holds the UUID used to produce the Zuul Ref that builders
+    check out.
+    """
     # Merge states:
     NEW = 1
     PENDING = 2
@@ -616,7 +651,12 @@ class BuildSet(object):
 
 
 class QueueItem(object):
-    """A changish inside of a Pipeline queue"""
+    """Represents the position of a Change in a ChangeQueue.
+
+    All Changes are enqueued into ChangeQueue in a QueueItem. The QueueItem
+    holds the current `BuildSet` as well as all previous `BuildSets` that were
+    produced for this `QueueItem`.
+    """
 
     def __init__(self, queue, change):
         self.pipeline = queue.pipeline
@@ -989,7 +1029,7 @@ class QueueItem(object):
 
 
 class Changeish(object):
-    """Something like a change; either a change or a ref"""
+    """Base class for Change and Ref."""
 
     def __init__(self, project):
         self.project = project
@@ -1021,6 +1061,7 @@ class Changeish(object):
 
 
 class Change(Changeish):
+    """A proposed new state for a Project."""
     def __init__(self, project):
         super(Change, self).__init__(project)
         self.branch = None
@@ -1077,6 +1118,7 @@ class Change(Changeish):
 
 
 class Ref(Changeish):
+    """An existing state of a Project."""
     def __init__(self, project):
         super(Ref, self).__init__(project)
         self.ref = None
@@ -1130,6 +1172,7 @@ class NullChange(Changeish):
 
 
 class TriggerEvent(object):
+    """Incoming event from an external system."""
     def __init__(self):
         self.data = None
         # common
@@ -1174,6 +1217,7 @@ class TriggerEvent(object):
 
 
 class BaseFilter(object):
+    """Base Class for filtering which Changes and Events to process."""
     def __init__(self, required_approvals=[], reject_approvals=[]):
         self._required_approvals = copy.deepcopy(required_approvals)
         self.required_approvals = self._tidy_approvals(required_approvals)
@@ -1265,6 +1309,7 @@ class BaseFilter(object):
 
 
 class EventFilter(BaseFilter):
+    """Allows a Pipeline to only respond to certain events."""
     def __init__(self, trigger, types=[], branches=[], refs=[],
                  event_approvals={}, comments=[], emails=[], usernames=[],
                  timespecs=[], required_approvals=[], reject_approvals=[],
@@ -1421,6 +1466,7 @@ class EventFilter(BaseFilter):
 
 
 class ChangeishFilter(BaseFilter):
+    """Allows a Manager to only enqueue Changes that meet certain criteria."""
     def __init__(self, open=None, current_patchset=None,
                  statuses=[], required_approvals=[],
                  reject_approvals=[]):
@@ -1486,8 +1532,11 @@ class ProjectConfig(object):
 
 
 class UnparsedAbideConfig(object):
-    # A collection of yaml lists that has not yet been parsed into
-    # objects.
+    """A collection of yaml lists that has not yet been parsed into objects.
+
+    An Abide is a collection of tenants.
+    """
+
     def __init__(self):
         self.tenants = []
 
@@ -1519,8 +1568,8 @@ class UnparsedAbideConfig(object):
 
 
 class UnparsedTenantConfig(object):
-    # A collection of yaml lists that has not yet been parsed into
-    # objects.
+    """A collection of yaml lists that has not yet been parsed into objects."""
+
     def __init__(self):
         self.pipelines = []
         self.jobs = []
@@ -1574,6 +1623,8 @@ class UnparsedTenantConfig(object):
 
 
 class Layout(object):
+    """Holds all of the Pipelines."""
+
     def __init__(self):
         self.tenant = None
         self.projects = {}
