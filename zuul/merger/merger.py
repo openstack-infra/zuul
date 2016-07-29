@@ -182,6 +182,13 @@ class Repo(object):
         repo = self.createRepoObject()
         self.log.debug("Updating repository %s" % self.local_path)
         origin = repo.remotes.origin
+        if repo.git.version_info[:2] < (1, 9):
+            # Before 1.9, 'git fetch --tags' did not include the
+            # behavior covered by 'git --fetch', so we run both
+            # commands in that case.  Starting with 1.9, 'git fetch
+            # --tags' is all that is necessary.  See
+            # https://github.com/git/git/blob/master/Documentation/RelNotes/1.9.0.txt#L18-L20
+            origin.fetch()
         origin.fetch(tags=True)
 
 
