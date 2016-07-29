@@ -17,7 +17,7 @@ basic organizational structure that everything else hangs off.
 .. autoclass:: zuul.model.Pipeline
 
 Pipelines have a configured
-:py:class:`Manager <zuul.manager.BasePipelineManager>` which controlls how
+:py:class:`~zuul.manager.PipelineManager` which controlls how
 the :py:class:`Change <zuul.model.Changeish>` objects are enqueued and
 processed.
 
@@ -25,7 +25,7 @@ There are currently two,
 :py:class:`~zuul.manager.dependent.DependentPipelineManager` and
 :py:class:`~zuul.manager.independent.IndependentPipelineManager`
 
-.. autoclass:: zuul.manager.BasePipelineManager
+.. autoclass:: zuul.manager.PipelineManager
 .. autoclass:: zuul.manager.dependent.DependentPipelineManager
 .. autoclass:: zuul.manager.independent.IndependentPipelineManager
 

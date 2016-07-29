@@ -42,10 +42,10 @@ class StaticChangeQueueContextManager(object):
         pass
 
 
-class BasePipelineManager(object):
+class PipelineManager(object):
     """Abstract Base Class for enqueing and processing Changes in a Pipeline"""
 
-    log = logging.getLogger("zuul.BasePipelineManager")
+    log = logging.getLogger("zuul.PipelineManager")
 
     def __init__(self, sched, pipeline):
         self.sched = sched

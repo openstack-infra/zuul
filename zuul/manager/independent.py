@@ -13,10 +13,10 @@
 import logging
 
 from zuul import model
-from zuul.manager import BasePipelineManager, DynamicChangeQueueContextManager
+from zuul.manager import PipelineManager, DynamicChangeQueueContextManager
 
 
-class IndependentPipelineManager(BasePipelineManager):
+class IndependentPipelineManager(PipelineManager):
     """PipelineManager that puts every Change into its own ChangeQueue."""
 
     log = logging.getLogger("zuul.IndependentPipelineManager")
