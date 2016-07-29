@@ -17,6 +17,13 @@ from zuul.manager import BasePipelineManager, StaticChangeQueueContextManager
 
 
 class DependentPipelineManager(BasePipelineManager):
+    """PipelineManager for handling interrelated Changes.
+
+    The DependentPipelineManager puts Changes that share a Pipeline
+    into a shared :py:class:`~zuul.model.ChangeQueue`. It them processes them
+    using the Optmistic Branch Prediction logic with Nearest Non-Failing Item
+    reparenting algorithm for handling errors.
+    """
     log = logging.getLogger("zuul.DependentPipelineManager")
     changes_merge = True
 

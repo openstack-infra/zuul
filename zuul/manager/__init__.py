@@ -14,7 +14,6 @@ import extras
 import logging
 
 from zuul import exceptions
-import zuul.configloader
 from zuul.model import NullChange
 
 statsd = extras.try_import('statsd.statsd')
@@ -44,6 +43,8 @@ class StaticChangeQueueContextManager(object):
 
 
 class BasePipelineManager(object):
+    """Abstract Base Class for enqueing and processing Changes in a Pipeline"""
+
     log = logging.getLogger("zuul.BasePipelineManager")
 
     def __init__(self, sched, pipeline):
@@ -453,6 +454,8 @@ class BasePipelineManager(object):
             if build_set.unable_to_merge:
                 return None
             # Load layout
+            # Late import to break an import loop
+            import zuul.configloader
             loader = zuul.configloader.ConfigLoader()
             self.log.debug("Load dynamic layout with %s" % build_set.files)
             layout = loader.createDynamicLayout(item.pipeline.layout.tenant,
