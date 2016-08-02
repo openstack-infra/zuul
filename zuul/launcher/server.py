@@ -243,7 +243,7 @@ class LaunchServer(object):
 
             # TODOv3: Ansible the ansible thing here.
             self.prepareAnsibleFiles(jobdir, args)
-            result = self.runAnsible(jobdir)
+            result = self.runAnsible(jobdir, job)
 
             data = {
                 'url': 'https://server/job',
@@ -277,7 +277,8 @@ class LaunchServer(object):
             config.write('[defaults]\n')
             config.write('hostfile = %s\n' % jobdir.inventory)
 
-    def runAnsible(self, jobdir):
+    def runAnsible(self, jobdir, job):
+        # Job is included here for the benefit of the test framework.
         proc = subprocess.Popen(
             ['ansible-playbook', jobdir.playbook],
             cwd=jobdir.ansible_root,
