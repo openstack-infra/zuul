@@ -349,6 +349,7 @@ class Project(object):
         return '<Project %s>' % (self.name)
 
 
+# TODOv3(jeblair): remove; unused
 class Inheritable(object):
     """Helper class for implementing context-aware job inheritance."""
     def __init__(self, parent=None):
@@ -376,6 +377,7 @@ class Job(object):
         pre_run=None,
         post_run=None,
         voting=None,
+        hold_following_changes=None,
         failure_message=None,
         success_message=None,
         failure_url=None,
@@ -774,8 +776,6 @@ class QueueItem(object):
             return True
         return False
 
-    # TODOv3(jeblair): This method is currently unused, but it should
-    # be in order to support the Job.hold_following_changes attribute.
     def isHoldingFollowingChanges(self):
         if not self.live:
             return False
@@ -796,6 +796,11 @@ class QueueItem(object):
 
     def _findJobsToRun(self, job_trees, mutex):
         torun = []
+        if self.item_ahead:
+            # Only run jobs if any 'hold' jobs on the change ahead
+            # have completed successfully.
+            if self.item_ahead.isHoldingFollowingChanges():
+                return []
         for tree in job_trees:
             job = tree.job
             result = None

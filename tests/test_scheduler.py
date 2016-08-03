@@ -112,11 +112,10 @@ class TestScheduler(ZuulTestCase):
             self.assertNotIn('dup1/project-test1', A.messages[0])
             self.assertIn('dup2/project-test1', A.messages[0])
 
-    @skip("Disabled for early v3 development")
     def test_parallel_changes(self):
         "Test that changes are tested in parallel and merged in series"
 
-        self.worker.hold_jobs_in_build = True
+        self.launch_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
@@ -131,54 +130,54 @@ class TestScheduler(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(len(self.builds), 1)
         self.assertEqual(self.builds[0].name, 'project-merge')
-        self.assertTrue(self.job_has_changes(self.builds[0], A))
+        self.assertTrue(self.builds[0].hasChanges(A))
 
-        self.worker.release('.*-merge')
+        self.launch_server.release('.*-merge')
         self.waitUntilSettled()
         self.assertEqual(len(self.builds), 3)
         self.assertEqual(self.builds[0].name, 'project-test1')
-        self.assertTrue(self.job_has_changes(self.builds[0], A))
+        self.assertTrue(self.builds[0].hasChanges(A))
         self.assertEqual(self.builds[1].name, 'project-test2')
-        self.assertTrue(self.job_has_changes(self.builds[1], A))
+        self.assertTrue(self.builds[1].hasChanges(A))
         self.assertEqual(self.builds[2].name, 'project-merge')
-        self.assertTrue(self.job_has_changes(self.builds[2], A, B))
+        self.assertTrue(self.builds[2].hasChanges(A, B))
 
-        self.worker.release('.*-merge')
+        self.launch_server.release('.*-merge')
         self.waitUntilSettled()
         self.assertEqual(len(self.builds), 5)
         self.assertEqual(self.builds[0].name, 'project-test1')
-        self.assertTrue(self.job_has_changes(self.builds[0], A))
+        self.assertTrue(self.builds[0].hasChanges(A))
         self.assertEqual(self.builds[1].name, 'project-test2')
-        self.assertTrue(self.job_has_changes(self.builds[1], A))
+        self.assertTrue(self.builds[1].hasChanges(A))
 
         self.assertEqual(self.builds[2].name, 'project-test1')
-        self.assertTrue(self.job_has_changes(self.builds[2], A, B))
+        self.assertTrue(self.builds[2].hasChanges(A, B))
         self.assertEqual(self.builds[3].name, 'project-test2')
-        self.assertTrue(self.job_has_changes(self.builds[3], A, B))
+        self.assertTrue(self.builds[3].hasChanges(A, B))
 
         self.assertEqual(self.builds[4].name, 'project-merge')
-        self.assertTrue(self.job_has_changes(self.builds[4], A, B, C))
+        self.assertTrue(self.builds[4].hasChanges(A, B, C))
 
-        self.worker.release('.*-merge')
+        self.launch_server.release('.*-merge')
         self.waitUntilSettled()
         self.assertEqual(len(self.builds), 6)
         self.assertEqual(self.builds[0].name, 'project-test1')
-        self.assertTrue(self.job_has_changes(self.builds[0], A))
+        self.assertTrue(self.builds[0].hasChanges(A))
         self.assertEqual(self.builds[1].name, 'project-test2')
-        self.assertTrue(self.job_has_changes(self.builds[1], A))
+        self.assertTrue(self.builds[1].hasChanges(A))
 
         self.assertEqual(self.builds[2].name, 'project-test1')
-        self.assertTrue(self.job_has_changes(self.builds[2], A, B))
+        self.assertTrue(self.builds[2].hasChanges(A, B))
         self.assertEqual(self.builds[3].name, 'project-test2')
-        self.assertTrue(self.job_has_changes(self.builds[3], A, B))
+        self.assertTrue(self.builds[3].hasChanges(A, B))
 
         self.assertEqual(self.builds[4].name, 'project-test1')
-        self.assertTrue(self.job_has_changes(self.builds[4], A, B, C))
+        self.assertTrue(self.builds[4].hasChanges(A, B, C))
         self.assertEqual(self.builds[5].name, 'project-test2')
-        self.assertTrue(self.job_has_changes(self.builds[5], A, B, C))
+        self.assertTrue(self.builds[5].hasChanges(A, B, C))
 
-        self.worker.hold_jobs_in_build = False
-        self.worker.release()
+        self.launch_server.hold_jobs_in_build = False
+        self.launch_server.release()
         self.waitUntilSettled()
         self.assertEqual(len(self.builds), 0)
 

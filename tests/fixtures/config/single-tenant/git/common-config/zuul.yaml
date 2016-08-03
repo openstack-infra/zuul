@@ -37,16 +37,14 @@
     precedence: high
 
 - job:
-    name:
-      project-merge
+    name: project-merge
+    hold-following-changes: true
 
 - job:
-    name:
-      project-test1
+    name: project-test1
 
 - job:
-    name:
-      project-test2
+    name: project-test2
 
 - project:
     name: org/project
