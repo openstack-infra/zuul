@@ -532,10 +532,11 @@ class FakeStatsd(threading.Thread):
 class FakeBuild(object):
     log = logging.getLogger("zuul.test")
 
-    def __init__(self, launch_server, job, number, node):
+    def __init__(self, launch_server, job, jobdir, number, node):
         self.daemon = True
         self.launch_server = launch_server
         self.job = job
+        self.jobdir = jobdir
         self.number = number
         self.node = node
         self.parameters = json.loads(job.arguments)
@@ -612,6 +613,23 @@ class FakeBuild(object):
 
         return result
 
+    def hasChanges(self, *commits):
+        project = self.parameters['ZUUL_PROJECT']
+        path = os.path.join(self.jobdir.git_root, project)
+        repo = git.Repo(path)
+        ref = self.parameters['ZUUL_REF']
+        repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
+        commit_messages = ['%s-1' % commit.subject for commit in commits]
+        self.log.debug("Checking if build %s has changes; commit_messages %s;"
+                       " repo_messages %s" % (self, commit_messages,
+                                              repo_messages))
+        for msg in commit_messages:
+            if msg not in repo_messages:
+                self.log.debug("  messages do not match")
+                return False
+        self.log.debug("  OK")
+        return True
+
 
 class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
     def __init__(self, *args, **kw):
@@ -637,12 +655,27 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
                 return True
         return False
 
+    def release(self, regex=None):
+        builds = self.running_builds[:]
+        self.log.debug("Releasing build %s (%s)" % (regex,
+                                                    len(self.running_builds)))
+        for build in builds:
+            if not regex or re.match(regex, build.name):
+                self.log.debug("Releasing build %s" %
+                               (build.parameters['ZUUL_UUID']))
+                build.release()
+            else:
+                self.log.debug("Not releasing build %s" %
+                               (build.parameters['ZUUL_UUID']))
+        self.log.debug("Done releasing builds %s (%s)" %
+                       (regex, len(self.running_builds)))
+
     def runAnsible(self, jobdir, job):
         with self._build_counter_lock:
             self.build_counter += 1
             build_counter = self.build_counter
         node = None
-        build = FakeBuild(self, job, build_counter, node)
+        build = FakeBuild(self, job, jobdir, build_counter, node)
         job.build = build
 
         self.running_builds.append(build)
@@ -734,21 +767,6 @@ class FakeWorker(gear.Worker):
             if self.test.ref_has_change(ref, change):
                 return True
         return False
-
-    def release(self, regex=None):
-        builds = self.running_builds[:]
-        self.log.debug("releasing build %s (%s)" % (regex,
-                                                    len(self.running_builds)))
-        for build in builds:
-            if not regex or re.match(regex, build.name):
-                self.log.debug("releasing build %s" %
-                               (build.parameters['ZUUL_UUID']))
-                build.release()
-            else:
-                self.log.debug("not releasing build %s" %
-                               (build.parameters['ZUUL_UUID']))
-        self.log.debug("done releasing builds %s (%s)" %
-                       (regex, len(self.running_builds)))
 
 
 class FakeGearmanServer(gear.Server):
@@ -1219,34 +1237,6 @@ class ZuulTestCase(BaseTestCase):
             pass
         return False
 
-    def job_has_changes(self, *args):
-        job = args[0]
-        commits = args[1:]
-        if isinstance(job, FakeBuild):
-            parameters = job.parameters
-        else:
-            parameters = json.loads(job.arguments)
-        project = parameters['ZUUL_PROJECT']
-        path = os.path.join(self.git_root, project)
-        repo = git.Repo(path)
-        ref = parameters['ZUUL_REF']
-        sha = parameters['ZUUL_COMMIT']
-        repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
-        repo_shas = [c.hexsha for c in repo.iter_commits(ref)]
-        commit_messages = ['%s-1' % commit.subject for commit in commits]
-        self.log.debug("Checking if job %s has changes; commit_messages %s;"
-                       " repo_messages %s; sha %s" % (job, commit_messages,
-                                                      repo_messages, sha))
-        for msg in commit_messages:
-            if msg not in repo_messages:
-                self.log.debug("  messages do not match")
-                return False
-        if repo_shas[0] != sha:
-            self.log.debug("  sha does not match")
-            return False
-        self.log.debug("  OK")
-        return True
-
     def orderedRelease(self):
         # Run one build at a time to ensure non-race order:
         while len(self.builds):
@@ -1332,12 +1322,19 @@ class ZuulTestCase(BaseTestCase):
             if build.number is None:
                 self.log.debug("%s has not reported start" % build)
                 return False
-            if False:  # worker_job.build.isWaiting():
-                # TODOv3: when we grow the ability to have fake
-                # ansible jobs wait, check for that here.
-                continue
+            worker_build = None
+            for wb in self.launch_server.running_builds:
+                if wb.job.unique == server_job.unique:
+                    worker_build = wb
+                    break
+            if worker_build:
+                if worker_build.isWaiting():
+                    continue
+                else:
+                    self.log.debug("%s is running" % worker_build)
+                    return False
             else:
-                self.log.debug("%s is running" % build)
+                self.log.debug("%s is unassigned" % server_job)
                 return False
         return True
 
