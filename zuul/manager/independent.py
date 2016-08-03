@@ -17,6 +17,8 @@ from zuul.manager import BasePipelineManager, DynamicChangeQueueContextManager
 
 
 class IndependentPipelineManager(BasePipelineManager):
+    """PipelineManager that puts every Change into its own ChangeQueue."""
+
     log = logging.getLogger("zuul.IndependentPipelineManager")
     changes_merge = False
 

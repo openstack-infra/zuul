@@ -70,11 +70,18 @@ def normalizeCategory(name):
 class Pipeline(object):
     """A configuration that ties triggers, reporters, managers and sources.
 
-    Source is where changes should come from. It is a named connection to
+    Source
+        Where changes should come from. It is a named connection to
         an external service defined in zuul.conf
-    Trigger is a description of which events should be processed
-    Manager is responsible for enqueing and dequeing Changes
-    Reporters communicate success and failure results somewhere
+
+    Trigger
+        A description of which events should be processed
+
+    Manager
+        Responsible for enqueing and dequeing Changes
+
+    Reporter
+        Communicates success and failure results somewhere
     """
     def __init__(self, name, layout):
         self.name = name
@@ -196,12 +203,13 @@ class Pipeline(object):
 class ChangeQueue(object):
     """A ChangeQueue contains Changes to be processed related projects.
 
-    DependentPipelines have multiple parallel ChangeQueues shared by
-    different projects.  For instance, there may a ChangeQueue shared by
-    interrelated projects foo and bar, and a second queue for independent
-    project baz.
+    A Pipeline with a DependentPipelineManager has multiple parallel
+    ChangeQueues shared by different projects. For instance, there may a
+    ChangeQueue shared by interrelated projects foo and bar, and a second queue
+    for independent project baz.
 
-    IndependentPipelinesManager puts every Change into its own ChangeQueue
+    A Pipeline with an IndependentPipelineManager puts every Change into its
+    own ChangeQueue
 
     The ChangeQueue Window is inspired by TCP windows and controlls how many
     Changes in a given ChangeQueue will be considered active and ready to
