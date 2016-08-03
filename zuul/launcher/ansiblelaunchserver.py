@@ -68,11 +68,16 @@ class NodeGearWorker(gear.Worker):
     MASS_DO = 101
 
     def sendMassDo(self, functions):
-        data = b'\x00'.join([gear.convert_to_bytes(x) for x in functions])
+        names = [gear.convert_to_bytes(x) for x in functions]
+        data = b'\x00'.join(names)
+        new_function_dict = {}
+        for name in names:
+            new_function_dict[name] = gear.FunctionRecord(name)
         self.broadcast_lock.acquire()
         try:
             p = gear.Packet(gear.constants.REQ, self.MASS_DO, data)
             self.broadcast(p)
+            self.functions = new_function_dict
         finally:
             self.broadcast_lock.release()
 
