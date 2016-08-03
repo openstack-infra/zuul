@@ -349,22 +349,6 @@ class Project(object):
         return '<Project %s>' % (self.name)
 
 
-# TODOv3(jeblair): remove; unused
-class Inheritable(object):
-    """Helper class for implementing context-aware job inheritance."""
-    def __init__(self, parent=None):
-        self.parent = parent
-
-    def __getattribute__(self, name):
-        parent = object.__getattribute__(self, 'parent')
-        try:
-            return object.__getattribute__(self, name)
-        except AttributeError:
-            if parent:
-                return getattr(parent, name)
-            raise
-
-
 class Job(object):
     """A Job represents the defintion of actions to perform."""
 
