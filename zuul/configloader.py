@@ -69,6 +69,7 @@ class JobParser(object):
                'success-message': str,
                'failure-url': str,
                'success-url': str,
+               'hold-following-changes': bool,
                'voting': bool,
                'mutex': str,
                'tags': to_list(str),
@@ -97,6 +98,7 @@ class JobParser(object):
         job.pre_run = as_list(conf.get('pre-run', job.pre_run))
         job.post_run = as_list(conf.get('post-run', job.post_run))
         job.voting = conf.get('voting', True)
+        job.hold_following_changes = conf.get('hold-following-changes', False)
         job.mutex = conf.get('mutex', None)
         tags = conf.get('tags')
         if tags:
