@@ -13,10 +13,10 @@
 import logging
 
 from zuul import model
-from zuul.manager import BasePipelineManager, StaticChangeQueueContextManager
+from zuul.manager import PipelineManager, StaticChangeQueueContextManager
 
 
-class DependentPipelineManager(BasePipelineManager):
+class DependentPipelineManager(PipelineManager):
     """PipelineManager for handling interrelated Changes.
 
     The DependentPipelineManager puts Changes that share a Pipeline
