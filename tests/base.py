@@ -386,6 +386,13 @@ class FakeChange(object):
 
 
 class FakeGerritConnection(zuul.connection.gerrit.GerritConnection):
+    """A Fake Gerrit connection for use in tests.
+
+    This subclasses
+    :py:class:`~zuul.connection.gerrit.GerritConnection` to add the
+    ability for tests to add changes to the fake Gerrit it represents.
+    """
+
     log = logging.getLogger("zuul.test.FakeGerritConnection")
 
     def __init__(self, connection_name, connection_config,
@@ -402,6 +409,7 @@ class FakeGerritConnection(zuul.connection.gerrit.GerritConnection):
 
     def addFakeChange(self, project, branch, subject, status='NEW',
                       files=None):
+        """Add a change to the fake Gerrit."""
         self.change_number += 1
         c = FakeChange(self, self.change_number, project, branch, subject,
                        upstream_root=self.upstream_root,
@@ -552,6 +560,7 @@ class FakeBuild(object):
             self.changes = self.parameters['ZUUL_CHANGE_IDS']
 
     def release(self):
+        """Release this build."""
         self.wait_condition.acquire()
         self.wait_condition.notify()
         self.waiting = False
@@ -559,6 +568,12 @@ class FakeBuild(object):
         self.wait_condition.release()
 
     def isWaiting(self):
+        """Return whether this build is being held.
+
+        :returns: Whether the build is being held.
+        :rtype: bool
+        """
+
         self.wait_condition.acquire()
         if self.waiting:
             ret = True
@@ -613,13 +628,23 @@ class FakeBuild(object):
 
         return result
 
-    def hasChanges(self, *commits):
+    def hasChanges(self, *changes):
+        """Return whether this build has certain changes in its git repos.
+
+        :arg FakeChange changes: One or more changes (varargs) that
+        are expected to be present (in order) in the git repository of
+        the active project.
+
+        :returns: Whether the build has the indicated changes.
+        :rtype: bool
+
+        """
         project = self.parameters['ZUUL_PROJECT']
         path = os.path.join(self.jobdir.git_root, project)
         repo = git.Repo(path)
         ref = self.parameters['ZUUL_REF']
         repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
-        commit_messages = ['%s-1' % commit.subject for commit in commits]
+        commit_messages = ['%s-1' % change.subject for change in changes]
         self.log.debug("Checking if build %s has changes; commit_messages %s;"
                        " repo_messages %s" % (self, commit_messages,
                                               repo_messages))
@@ -632,6 +657,16 @@ class FakeBuild(object):
 
 
 class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
+    """An Ansible launcher to be used in tests.
+
+    :ivar bool hold_jobs_in_build: If true, when jobs are launched
+        they will report that they have started but then pause until
+        released before reporting completion.  This attribute may be
+        changed at any time and will take effect for subsequently
+        launched builds, but previously held builds will still need to
+        be explicitly released.
+
+    """
     def __init__(self, *args, **kw):
         self._run_ansible = kw.pop('_run_ansible', False)
         super(RecordingLaunchServer, self).__init__(*args, **kw)
@@ -645,6 +680,12 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
         self.job_builds = {}
 
     def addFailTest(self, name, change):
+        """Instruct the launcher to report matching builds as failures.
+
+        :arg str name: The name of the job to fail.
+        :arg change: TODO: document
+
+        """
         l = self.fail_tests.get(name, [])
         l.append(change)
         self.fail_tests[name] = l
@@ -657,6 +698,13 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
         return False
 
     def release(self, regex=None):
+        """Release a held build.
+
+        :arg str regex: A regular expression which, if supplied, will
+            cause only builds with matching names to be released.  If
+            not supplied, all builds will be released.
+
+        """
         builds = self.running_builds[:]
         self.log.debug("Releasing build %s (%s)" % (regex,
                                                     len(self.running_builds)))
@@ -705,6 +753,17 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
 
 
 class FakeGearmanServer(gear.Server):
+    """A Gearman server for use in tests.
+
+    :ivar bool hold_jobs_in_queue: If true, submitted jobs will be
+        added to the queue but will not be distributed to workers
+        until released.  This attribute may be changed at any time and
+        will take effect for subsequently enqueued jobs, but
+        previously held jobs will still need to be explicitly
+        released.
+
+    """
+
     def __init__(self):
         self.hold_jobs_in_queue = False
         super(FakeGearmanServer, self).__init__(0)
@@ -729,6 +788,12 @@ class FakeGearmanServer(gear.Server):
         return None
 
     def release(self, regex=None):
+        """Release a held job.
+
+        :arg str regex: A regular expression which, if supplied, will
+            cause only jobs with matching names to be released.  If
+            not supplied, all jobs will be released.
+        """
         released = False
         qlen = (len(self.high_queue) + len(self.normal_queue) +
                 len(self.low_queue))
@@ -846,6 +911,52 @@ class BaseTestCase(testtools.TestCase):
 
 
 class ZuulTestCase(BaseTestCase):
+    """A test case with a functioning Zuul.
+
+    The following class variables are used during test setup and can
+    be overidden by subclasses but are effectively read-only once a
+    test method starts running:
+
+    :cvar str config_file: This points to the main zuul config file
+        within the fixtures directory.  Subclasses may override this
+        to obtain a different behavior.
+
+    :cvar str tenant_config_file: This is the tenant config file
+        (which specifies from what git repos the configuration should
+        be loaded).  It defaults to the value specified in
+        `config_file` but can be overidden by subclasses to obtain a
+        different tenant/project layout while using the standard main
+        configuration.
+
+    The following are instance variables that are useful within test
+    methods:
+
+    :ivar FakeGerritConnection fake_<connection>:
+        A :py:class:`~tests.base.FakeGerritConnection` will be
+        instantiated for each connection present in the config file
+        and stored here.  For instance, `fake_gerrit` will hold the
+        FakeGerritConnection object for a connection named `gerrit`.
+
+    :ivar FakeGearmanServer gearman_server: An instance of
+        :py:class:`~tests.base.FakeGearmanServer` which is the Gearman
+        server that all of the Zuul components in this test use to
+        communicate with each other.
+
+    :ivar RecordingLaunchServer launch_server: An instance of
+        :py:class:`~tests.base.RecordingLaunchServer` which is the
+        Ansible launch server used to run jobs for this test.
+
+    :ivar list builds: A list of :py:class:`~tests.base.FakeBuild` objects
+        representing currently running builds.  They are appended to
+        the list in the order they are launched, and removed from this
+        list upon completion.
+
+    :ivar list history: A list of :py:class:`~tests.base.BuildHistory`
+        objects representing completed builds.  They are appended to
+        the list in the order they complete.
+
+    """
+
     config_file = 'zuul.conf'
     run_ansible = False
 
@@ -897,8 +1008,6 @@ class ZuulTestCase(BaseTestCase):
         self.init_repo("org/noop-project")
         self.init_repo("org/experimental-project")
         self.init_repo("org/no-jobs-project")
-
-        self.setup_repos()
 
         self.statsd = FakeStatsd()
         # note, use 127.0.0.1 rather than localhost to avoid getting ipv6
@@ -1044,7 +1153,9 @@ class ZuulTestCase(BaseTestCase):
                     '_legacy_smtp', dict(self.config.items('smtp')))
 
     def setup_config(self):
-        """Per test config object. Override to set different config."""
+        # This creates the per-test configuration object.  It can be
+        # overriden by subclasses, but should not need to be since it
+        # obeys the config_file and tenant_config_file attributes.
         self.config = ConfigParser.ConfigParser()
         self.config.read(os.path.join(FIXTURE_DIR, self.config_file))
         if hasattr(self, 'tenant_config_file'):
@@ -1074,10 +1185,6 @@ class ZuulTestCase(BaseTestCase):
                 files[relative_filepath] = content
         self.addCommitToRepo(project, 'add content from fixture',
                              files, branch='master', tag='init')
-
-    def setup_repos(self):
-        """Subclasses can override to manipulate repos before tests"""
-        pass
 
     def assertFinalState(self):
         # Make sure that git.Repo objects have been garbage collected.
