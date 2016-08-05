@@ -532,11 +532,11 @@ class FakeStatsd(threading.Thread):
 class FakeBuild(object):
     log = logging.getLogger("zuul.test")
 
-    def __init__(self, launch_server, job, jobdir, number, node):
+    def __init__(self, launch_server, job, number, node):
         self.daemon = True
         self.launch_server = launch_server
         self.job = job
-        self.jobdir = jobdir
+        self.jobdir = None
         self.number = number
         self.node = node
         self.parameters = json.loads(job.arguments)
@@ -642,6 +642,7 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
         self._build_counter_lock = threading.Lock()
         self.build_counter = 0
         self.fail_tests = {}
+        self.job_builds = {}
 
     def addFailTest(self, name, change):
         l = self.fail_tests.get(name, [])
@@ -670,15 +671,20 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
         self.log.debug("Done releasing builds %s (%s)" %
                        (regex, len(self.running_builds)))
 
-    def runAnsible(self, jobdir, job):
+    def launch(self, job):
         with self._build_counter_lock:
             self.build_counter += 1
             build_counter = self.build_counter
         node = None
-        build = FakeBuild(self, job, jobdir, build_counter, node)
+        build = FakeBuild(self, job, build_counter, node)
         job.build = build
-
         self.running_builds.append(build)
+        self.job_builds[job.unique] = build
+        super(RecordingLaunchServer, self).launch(job)
+
+    def runAnsible(self, jobdir, job):
+        build = self.job_builds[job.unique]
+        build.jobdir = jobdir
 
         if self._run_ansible:
             result = super(RecordingLaunchServer, self).runAnsible(jobdir, job)
@@ -692,8 +698,8 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
                          uuid=build.unique, parameters=build.parameters,
                          pipeline=build.parameters['ZUUL_PIPELINE'])
         )
-        if build:
-            self.running_builds.remove(build)
+        self.running_builds.remove(build)
+        del self.job_builds[job.unique]
         self.lock.release()
         return result
 
@@ -1322,11 +1328,7 @@ class ZuulTestCase(BaseTestCase):
             if build.number is None:
                 self.log.debug("%s has not reported start" % build)
                 return False
-            worker_build = None
-            for wb in self.launch_server.running_builds:
-                if wb.job.unique == server_job.unique:
-                    worker_build = wb
-                    break
+            worker_build = self.launch_server.job_builds.get(server_job.unique)
             if worker_build:
                 if worker_build.isWaiting():
                     continue
