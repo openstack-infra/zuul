@@ -1,0 +1,26 @@
+- pipeline:
+    name: check
+    manager: independent
+    source: review_gerrit
+    trigger:
+      review_gerrit:
+        - event: patchset-created
+    success:
+      review_gerrit:
+        verified: 1
+    failure:
+      alt_voting_gerrit:
+        verified: -1
+
+- job:
+    name: project-test1
+
+- job:
+    name: project-test2
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-test1
+        - project-test2

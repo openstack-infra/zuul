@@ -21,9 +21,6 @@ from tests.base import ZuulTestCase
 
 
 class TestGerritConnection(testtools.TestCase):
-    def setUp(self):
-        self.skip("Disabled for early v3 development")
-
     log = logging.getLogger("zuul.test_connection")
 
     def test_driver_name(self):
@@ -32,11 +29,8 @@ class TestGerritConnection(testtools.TestCase):
 
 
 class TestConnections(ZuulTestCase):
-    def setUp(self):
-        self.skip("Disabled for early v3 development")
-
-    def setup_config(self, config_file='zuul-connections-same-gerrit.conf'):
-        super(TestConnections, self).setup_config(config_file)
+    config_file = 'zuul-connections-same-gerrit.conf'
+    tenant_config_file = 'config/zuul-connections-same-gerrit/main.yaml'
 
     def test_multiple_connections(self):
         "Test multiple connections to the one gerrit"
