@@ -42,7 +42,7 @@ class TestConnections(ZuulTestCase):
         "Test multiple connections to the one gerrit"
 
         A = self.fake_review_gerrit.addFakeChange('org/project', 'master', 'A')
-        self.fake_review_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.addEvent('review_gerrit', A.getPatchsetCreatedEvent(1))
 
         self.waitUntilSettled()
 
@@ -54,7 +54,7 @@ class TestConnections(ZuulTestCase):
 
         B = self.fake_review_gerrit.addFakeChange('org/project', 'master', 'B')
         self.worker.addFailTest('project-test2', B)
-        self.fake_review_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.addEvent('review_gerrit', B.getPatchsetCreatedEvent(1))
 
         self.waitUntilSettled()
 

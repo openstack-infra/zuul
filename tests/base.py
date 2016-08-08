@@ -396,11 +396,11 @@ class FakeGerritConnection(zuul.connection.gerrit.GerritConnection):
     log = logging.getLogger("zuul.test.FakeGerritConnection")
 
     def __init__(self, connection_name, connection_config,
-                 changes_db=None, queues_db=None, upstream_root=None):
+                 changes_db=None, upstream_root=None):
         super(FakeGerritConnection, self).__init__(connection_name,
                                                    connection_config)
 
-        self.event_queue = queues_db
+        self.event_queue = Queue.Queue()
         self.fixture_dir = os.path.join(FIXTURE_DIR, 'gerrit')
         self.change_number = 0
         self.changes = changes_db
@@ -1094,7 +1094,6 @@ class ZuulTestCase(BaseTestCase):
         # Set a changes database so multiple FakeGerrit's can report back to
         # a virtual canonical database given by the configured hostname
         self.gerrit_changes_dbs = {}
-        self.gerrit_queues_dbs = {}
         self.connections = zuul.lib.connections.ConnectionRegistry()
 
         for section_name in self.config.sections():
@@ -1115,17 +1114,13 @@ class ZuulTestCase(BaseTestCase):
             if con_driver == 'gerrit':
                 if con_config['server'] not in self.gerrit_changes_dbs.keys():
                     self.gerrit_changes_dbs[con_config['server']] = {}
-                if con_config['server'] not in self.gerrit_queues_dbs.keys():
-                    self.gerrit_queues_dbs[con_config['server']] = \
-                        Queue.Queue()
-                    self.event_queues.append(
-                        self.gerrit_queues_dbs[con_config['server']])
                 self.connections.connections[con_name] = FakeGerritConnection(
                     con_name, con_config,
                     changes_db=self.gerrit_changes_dbs[con_config['server']],
-                    queues_db=self.gerrit_queues_dbs[con_config['server']],
                     upstream_root=self.upstream_root
                 )
+                self.event_queues.append(
+                    self.connections.connections[con_name].event_queue)
                 setattr(self, 'fake_' + con_name,
                         self.connections.connections[con_name])
             elif con_driver == 'smtp':
@@ -1140,12 +1135,11 @@ class ZuulTestCase(BaseTestCase):
 
         if 'gerrit' in self.config.sections():
             self.gerrit_changes_dbs['gerrit'] = {}
-            self.gerrit_queues_dbs['gerrit'] = Queue.Queue()
-            self.event_queues.append(self.gerrit_queues_dbs['gerrit'])
+            self.event_queues.append(
+                self.connections.connections[con_name].event_queue)
             self.connections.connections['gerrit'] = FakeGerritConnection(
                 '_legacy_gerrit', dict(self.config.items('gerrit')),
-                changes_db=self.gerrit_changes_dbs['gerrit'],
-                queues_db=self.gerrit_queues_dbs['gerrit'])
+                changes_db=self.gerrit_changes_dbs['gerrit'])
 
         if 'smtp' in self.config.sections():
             self.connections.connections['smtp'] = \
@@ -1493,6 +1487,36 @@ tenants:
         repo.heads[branch].checkout()
         if tag:
             repo.create_tag(tag)
+
+    def addEvent(self, connection, event):
+        """Inject a Fake (Gerrit) event.
+
+        This method accepts a JSON-encoded event and simulates Zuul
+        having received it from Gerrit.  It could (and should)
+        eventually apply to any connection type, but is currently only
+        used with Gerrit connections.  The name of the connection is
+        used to look up the corresponding server, and the event is
+        simulated as having been received by all Zuul connections
+        attached to that server.  So if two Gerrit connections in Zuul
+        are connected to the same Gerrit server, and you invoke this
+        method specifying the name of one of them, the event will be
+        received by both.
+
+        .. note::
+
+            "self.fake_gerrit.addEvent" calls should be migrated to
+            this method.
+
+        :arg str connection: The name of the connection corresponding
+        to the gerrit server.
+        :arg str event: The JSON-encoded event.
+
+        """
+        specified_conn = self.connections.connections[connection]
+        for conn in self.connections.connections.values():
+            if (isinstance(conn, specified_conn.__class__) and
+                specified_conn.server == conn.server):
+                conn.addEvent(event)
 
 
 class AnsibleZuulTestCase(ZuulTestCase):

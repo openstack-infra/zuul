@@ -243,7 +243,7 @@ class GerritConnection(BaseConnection):
         self.port = int(self.connection_config.get('port', 29418))
         self.keyfile = self.connection_config.get('sshkey', None)
         self.watcher_thread = None
-        self.event_queue = None
+        self.event_queue = Queue.Queue()
         self.client = None
 
         self.baseurl = self.connection_config.get('baseurl',
@@ -770,7 +770,6 @@ class GerritConnection(BaseConnection):
             self.watcher_thread.join()
 
     def _start_watcher_thread(self):
-        self.event_queue = Queue.Queue()
         self.watcher_thread = GerritWatcher(
             self,
             self.user,
