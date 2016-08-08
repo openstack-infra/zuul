@@ -372,7 +372,6 @@ class Job(object):
         file_matcher=None,
         irrelevant_file_matcher=None,  # skip-if
         parameter_function=None,  # TODOv3(jeblair): remove
-        success_pattern=None,  # TODOv3(jeblair): remove
         tags=set(),
         mutex=None,
     )
@@ -873,13 +872,13 @@ class QueueItem(object):
         if result == 'SUCCESS':
             if job.success_message:
                 result = job.success_message
-            if job.success_pattern:
-                pattern = job.success_pattern
+            if job.success_url:
+                pattern = job.success_url
         elif result == 'FAILURE':
             if job.failure_message:
                 result = job.failure_message
-            if job.failure_pattern:
-                pattern = job.failure_pattern
+            if job.failure_url:
+                pattern = job.failure_url
         url = None
         if pattern:
             try:

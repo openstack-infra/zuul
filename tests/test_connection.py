@@ -53,7 +53,7 @@ class TestConnections(ZuulTestCase):
                          'jenkins')
 
         B = self.fake_review_gerrit.addFakeChange('org/project', 'master', 'B')
-        self.worker.addFailTest('project-test2', B)
+        self.launch_server.failJob('project-test2', B)
         self.addEvent('review_gerrit', B.getPatchsetCreatedEvent(1))
 
         self.waitUntilSettled()
