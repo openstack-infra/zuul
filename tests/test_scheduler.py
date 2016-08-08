@@ -50,8 +50,8 @@ class TestScheduler(ZuulTestCase):
         "Test that jobs are launched and a change is merged"
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project-merge').result,
                          'SUCCESS')
@@ -119,13 +119,13 @@ class TestScheduler(ZuulTestCase):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
 
         self.waitUntilSettled()
         self.assertEqual(len(self.builds), 1)
@@ -196,13 +196,13 @@ class TestScheduler(ZuulTestCase):
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
 
         self.worker.addFailTest('project-test1', A)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.worker.release('.*-merge')
@@ -228,13 +228,13 @@ class TestScheduler(ZuulTestCase):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
 
         self.waitUntilSettled()
 
@@ -276,15 +276,15 @@ class TestScheduler(ZuulTestCase):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
 
         self.worker.addFailTest('project-test1', A)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
 
         self.waitUntilSettled()
 
@@ -335,15 +335,15 @@ class TestScheduler(ZuulTestCase):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
 
         self.worker.addFailTest('project-test1', B)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
 
         self.waitUntilSettled()
 
@@ -412,15 +412,15 @@ class TestScheduler(ZuulTestCase):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
 
         self.worker.addFailTest('project-test1', A)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
 
         self.waitUntilSettled()
         queue = self.gearman_server.getQueue()
@@ -471,8 +471,8 @@ class TestScheduler(ZuulTestCase):
     def _test_time_database(self, iteration):
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
         time.sleep(2)
 
@@ -517,16 +517,16 @@ class TestScheduler(ZuulTestCase):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
 
         self.worker.addFailTest('project-test1', A)
         self.worker.addFailTest('project-test1', B)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.worker.release('.*-merge')
@@ -652,9 +652,9 @@ jobs:
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
 
         M2 = self.fake_gerrit.addFakeChange('org/project', 'master', 'M2')
         M1 = self.fake_gerrit.addFakeChange('org/project', 'master', 'M1')
@@ -671,7 +671,7 @@ jobs:
         A.setDependsOn(M1, 1)
         M1.setDependsOn(M2, 1)
 
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
 
         self.waitUntilSettled()
 
@@ -679,8 +679,8 @@ jobs:
         self.assertEqual(B.data['status'], 'NEW')
         self.assertEqual(C.data['status'], 'NEW')
 
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
 
         self.waitUntilSettled()
         self.assertEqual(M2.queried, 0)
@@ -716,14 +716,14 @@ jobs:
         F.setDependsOn(B, 1)
         G.setDependsOn(A, 1)
 
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
-        D.addApproval('CRVW', 2)
-        E.addApproval('CRVW', 2)
-        F.addApproval('CRVW', 2)
-        G.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
+        D.addApproval('code-review', 2)
+        E.addApproval('code-review', 2)
+        F.addApproval('code-review', 2)
+        G.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
 
         self.waitUntilSettled()
 
@@ -745,13 +745,13 @@ jobs:
             connection.maintainCache([])
 
         self.worker.hold_jobs_in_build = True
-        A.addApproval('APRV', 1)
-        B.addApproval('APRV', 1)
-        D.addApproval('APRV', 1)
-        E.addApproval('APRV', 1)
-        F.addApproval('APRV', 1)
-        G.addApproval('APRV', 1)
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        A.addApproval('approved', 1)
+        B.addApproval('approved', 1)
+        D.addApproval('approved', 1)
+        E.addApproval('approved', 1)
+        F.addApproval('approved', 1)
+        G.addApproval('approved', 1)
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
 
         for x in range(8):
             self.worker.release('.*-merge')
@@ -785,8 +785,8 @@ jobs:
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         X = self.fake_gerrit.addFakeChange('org/project', 'master', 'X')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
 
         M1 = self.fake_gerrit.addFakeChange('org/project', 'master', 'M1')
         M1.setMerged()
@@ -794,7 +794,7 @@ jobs:
         B.setDependsOn(A, 1)
         A.setDependsOn(M1, 1)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.fake_gerrit.addEvent(X.getPatchsetCreatedEvent(1))
 
         self.waitUntilSettled()
@@ -808,7 +808,7 @@ jobs:
                 build.release()
         self.waitUntilSettled()
 
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.log.debug("len %s" % self.fake_gerrit._change_cache.keys())
@@ -834,11 +834,11 @@ jobs:
         mgr = self.sched.layout.pipelines['gate'].manager
         self.assertFalse(source.canMerge(a, mgr.getSubmitAllowNeeds()))
 
-        A.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
         a = source._getChange(1, 2, refresh=True)
         self.assertFalse(source.canMerge(a, mgr.getSubmitAllowNeeds()))
 
-        A.addApproval('APRV', 1)
+        A.addApproval('approved', 1)
         a = source._getChange(1, 2, refresh=True)
         self.assertTrue(source.canMerge(a, mgr.getSubmitAllowNeeds()))
 
@@ -850,12 +850,12 @@ jobs:
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.gearman_server.release('.*-merge')
@@ -890,12 +890,12 @@ jobs:
         B.addPatchset(['conflict'])
         C = self.fake_gerrit.addFakeChange('org/conflict-project',
                                            'master', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(A.reported, 1)
@@ -1004,12 +1004,12 @@ jobs:
         A = self.fake_gerrit.addFakeChange('org/project', 'mp', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'mp', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'mp', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.gearman_server.release('.*-merge')
@@ -1050,12 +1050,12 @@ jobs:
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'mp', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
         self.waitUntilSettled()
         queue = self.gearman_server.getQueue()
         job_A = None
@@ -1132,10 +1132,10 @@ jobs:
                                            'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/one-job-project',
                                            'master', 'B')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')
@@ -1186,9 +1186,9 @@ jobs:
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
 
         M1 = self.fake_gerrit.addFakeChange('org/project', 'master', 'M1')
         M1.setMerged()
@@ -1201,9 +1201,9 @@ jobs:
 
         self.worker.addFailTest('project-merge', A)
 
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
 
         self.waitUntilSettled()
 
@@ -1224,11 +1224,11 @@ jobs:
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
         D = self.fake_gerrit.addFakeChange('org/project', 'master', 'D')
         E = self.fake_gerrit.addFakeChange('org/project', 'master', 'E')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
-        D.addApproval('CRVW', 2)
-        E.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
+        D.addApproval('code-review', 2)
+        E.addApproval('code-review', 2)
 
         # E, D -> C -> B, A
 
@@ -1237,11 +1237,11 @@ jobs:
 
         self.worker.addFailTest('project-test1', B)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(D.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(E.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(D.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(E.addApproval('approved', 1))
 
         self.waitUntilSettled()
         self.worker.release('.*-merge')
@@ -1291,17 +1291,17 @@ jobs:
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project1', 'master', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
 
         self.worker.addFailTest('project1-test1', A)
         self.worker.addFailTest('project1-test2', A)
         self.worker.addFailTest('project1-project2-integration', A)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
 
         self.waitUntilSettled()
 
@@ -1353,9 +1353,9 @@ jobs:
 
         A = self.fake_gerrit.addFakeChange('org/nonvoting-project',
                                            'master', 'A')
-        A.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
         self.worker.addFailTest('nonvoting-project-test2', A)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
 
         self.waitUntilSettled()
 
@@ -1426,21 +1426,21 @@ jobs:
         F = self.fake_gerrit.addFakeChange('org/project3', 'master', 'F')
         D.setDependsOn(C, 1)
         E.setDependsOn(D, 1)
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
-        D.addApproval('CRVW', 2)
-        E.addApproval('CRVW', 2)
-        F.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
+        D.addApproval('code-review', 2)
+        E.addApproval('code-review', 2)
+        F.addApproval('code-review', 2)
 
         A.fail_merge = True
 
         # Change object re-use in the gerrit trigger is hidden if
         # changes are added in quick succession; waiting makes it more
         # like real life.
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.worker.release('.*-merge')
@@ -1448,13 +1448,13 @@ jobs:
         self.worker.release('.*-merge')
         self.waitUntilSettled()
 
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
         self.waitUntilSettled()
-        self.fake_gerrit.addEvent(D.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(D.addApproval('approved', 1))
         self.waitUntilSettled()
-        self.fake_gerrit.addEvent(E.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(E.addApproval('approved', 1))
         self.waitUntilSettled()
-        self.fake_gerrit.addEvent(F.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(F.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.worker.release('.*-merge')
@@ -1503,8 +1503,8 @@ jobs:
         "Test that the merger works after a repack"
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project-merge').result,
                          'SUCCESS')
@@ -1521,8 +1521,8 @@ jobs:
         print(repack_repo(path))
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project-merge').result,
                          'SUCCESS')
@@ -1548,8 +1548,8 @@ jobs:
         path = os.path.join(self.git_root, "org/project1")
         print(repack_repo(path))
 
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project1-merge').result,
                          'SUCCESS')
@@ -1568,8 +1568,8 @@ jobs:
         self.launcher.negative_function_cache_ttl = 0
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         # There may be a thread about to report a lost change
         while A.reported < 2:
             self.waitUntilSettled()
@@ -1582,8 +1582,8 @@ jobs:
         # Make sure things still work:
         self.registerJobs()
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project-merge').result,
                          'SUCCESS')
@@ -1630,19 +1630,19 @@ jobs:
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
         D = self.fake_gerrit.addFakeChange('org/project', 'master', 'D')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
-        D.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
+        D.addApproval('code-review', 2)
 
         C.setDependsOn(B, 1)
         B.setDependsOn(A, 1)
         A.setDependsOn(M, 1)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(D.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(D.addApproval('approved', 1))
         self.waitUntilSettled()
 
         B.addPatchset()
@@ -1766,8 +1766,8 @@ jobs:
         self.worker.hold_jobs_in_build = True
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
         self.assertEqual(len(self.builds), 1, "One job being built (on hold)")
         self.assertEqual(self.builds[0].name, 'project-merge')
@@ -1882,8 +1882,8 @@ jobs:
         self.worker.hold_jobs_in_build = True
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 1)
@@ -1905,19 +1905,19 @@ jobs:
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
         D = self.fake_gerrit.addFakeChange('org/project', 'master', 'D')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
-        D.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
+        D.addApproval('code-review', 2)
 
         C.setDependsOn(B, 1)
         B.setDependsOn(A, 1)
         A.setDependsOn(M, 1)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(D.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(D.addApproval('approved', 1))
         self.waitUntilSettled()
 
         A.addPatchset()
@@ -1945,13 +1945,13 @@ jobs:
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
 
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         B.addPatchset()
@@ -2003,8 +2003,8 @@ jobs:
     def test_noop_job(self):
         "Test that the internal noop job works"
         A = self.fake_gerrit.addFakeChange('org/noop-project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(len(self.gearman_server.getQueue()), 0)
@@ -2044,14 +2044,14 @@ jobs:
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
         D = self.fake_gerrit.addFakeChange('org/project2', 'master', 'D')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
-        D.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(D.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
+        D.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(D.addApproval('approved', 1))
 
         self.waitUntilSettled()
         self.worker.release('.*-merge')
@@ -2124,8 +2124,8 @@ jobs:
         "Test that if a worker fails to run a job, it is run again"
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.builds[0].run_error = True
@@ -2157,8 +2157,8 @@ jobs:
         self.worker.registerFunction('build:gate-noop')
         self.gearman_server.hold_jobs_in_queue = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
         self.assertEqual(len(self.gearman_server.getQueue()), 1)
 
@@ -2207,10 +2207,10 @@ jobs:
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addPatchset(['pip-requires'])
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
 
         testfile_jobs = [x for x in self.history
@@ -2283,8 +2283,8 @@ jobs:
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
 
         self.waitUntilSettled()
         self.gearman_server.hold_jobs_in_queue = False
@@ -2309,8 +2309,8 @@ jobs:
         "Test that we can retrieve JSON status info"
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.worker.release('project-merge')
@@ -2446,8 +2446,8 @@ jobs:
         self.worker.registerFunction('build:node-project-test1:debian')
 
         A = self.fake_gerrit.addFakeChange('org/node-project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertIsNone(self.getJobFromHistory('node-project-merge').node)
@@ -2460,8 +2460,8 @@ jobs:
         "Test that live reconfiguration works"
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.sched.reconfigure(self.config)
@@ -2493,17 +2493,17 @@ jobs:
         # next change.  This change will succeed and merge.
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addPatchset(['conflict'])
-        A.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
 
         # This change will be in merge conflict.  During the
         # reconfiguration, we will add a job.  We want to make sure
         # that doesn't cause it to get stuck.
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         B.addPatchset(['conflict'])
-        B.addApproval('CRVW', 2)
+        B.addApproval('code-review', 2)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
 
         self.waitUntilSettled()
 
@@ -2551,16 +2551,16 @@ jobs:
         # reconfiguration.  This change will succeed and merge.
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addPatchset(['conflict'])
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
         self.worker.release('.*-merge')
         self.waitUntilSettled()
 
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         self.worker.addFailTest('project-merge', B)
-        B.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        B.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.worker.release('.*-merge')
@@ -2721,11 +2721,11 @@ jobs:
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
         B.setDependsOn(A, 1)
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
 
         # Add the parent change.
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
         self.worker.release('.*-merge')
         self.waitUntilSettled()
@@ -2735,7 +2735,7 @@ jobs:
         self.waitUntilSettled()
 
         # Add the child change.
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
         self.worker.release('.*-merge')
         self.waitUntilSettled()
@@ -2768,7 +2768,7 @@ jobs:
         # A Depends-On: B
         A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
             A.subject, B.data['id'])
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
 
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
@@ -2812,8 +2812,8 @@ jobs:
         self.worker.registerFunction('build:node-project-test1:debian')
         self.worker.registerFunction('build:node-project-test1:wheezy')
         A = self.fake_gerrit.addFakeChange('org/node-project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertIsNone(self.getJobFromHistory('node-project-merge').node)
@@ -2827,8 +2827,8 @@ jobs:
         self.worker.build_history = []
 
         B = self.fake_gerrit.addFakeChange('org/node-project', 'master', 'B')
-        B.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        B.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertIsNone(self.getJobFromHistory('node-project-merge').node)
@@ -2845,8 +2845,8 @@ jobs:
         self.init_repo("org/new-project")
         A = self.fake_gerrit.addFakeChange('org/new-project', 'master', 'A')
 
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project-merge').result,
                          'SUCCESS')
@@ -2866,8 +2866,8 @@ jobs:
         self.init_repo("org/delete-project")
         A = self.fake_gerrit.addFakeChange('org/delete-project', 'master', 'A')
 
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project-merge').result,
                          'SUCCESS')
@@ -2883,8 +2883,8 @@ jobs:
 
         B = self.fake_gerrit.addFakeChange('org/delete-project', 'master', 'B')
 
-        B.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        B.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project-merge').result,
                          'SUCCESS')
@@ -3080,8 +3080,8 @@ jobs:
     def test_client_enqueue_change(self):
         "Test that the RPC client can enqueue a change"
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        A.addApproval('APRV', 1)
+        A.addApproval('code-review', 2)
+        A.addApproval('approved', 1)
 
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
@@ -3171,13 +3171,13 @@ jobs:
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
 
         self.waitUntilSettled()
 
@@ -3250,13 +3250,13 @@ jobs:
 
         C.setDependsOn(B, 1)
 
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
 
         self.waitUntilSettled()
 
@@ -3311,8 +3311,8 @@ jobs:
         "Test that the RPC client returns errors for promotion"
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         client = zuul.rpcclient.RPCClient('127.0.0.1',
@@ -3348,13 +3348,13 @@ jobs:
         C.setDependsOn(B, 1)
         self.worker.addFailTest('project-test1', A)
 
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
         self.waitUntilSettled()
 
         # Only A and B will have their merge jobs queued because
@@ -3441,13 +3441,13 @@ jobs:
 
         self.worker.addFailTest('project-test1', A)
 
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
         self.waitUntilSettled()
 
         # Only A and B will have their merge jobs queued because
@@ -3506,8 +3506,8 @@ jobs:
         self.worker.hold_jobs_in_build = True
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(len(self.launcher.builds), 1)
@@ -3548,14 +3548,14 @@ jobs:
         self.registerJobs()
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
         self.worker.addFailTest('test1', A)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
-        B.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        B.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(2, len(self.smtp_messages))
@@ -3637,9 +3637,9 @@ For CI problems and help debugging, contact ci@example.org"""
 
         # Check a test failure isn't reported to SMTP
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
         self.worker.addFailTest('project-test1', A)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(3, len(self.history))  # 3 jobs
@@ -3651,10 +3651,10 @@ For CI problems and help debugging, contact ci@example.org"""
         B.addPatchset(['conflict'])
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
         C.addPatchset(['conflict'])
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(6, len(self.history))  # A and B jobs
@@ -3671,10 +3671,10 @@ For CI problems and help debugging, contact ci@example.org"""
         A.addPatchset(['conflict'])
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         B.addPatchset(['conflict'])
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(3, len(self.history))  # A jobs
@@ -3699,8 +3699,8 @@ For CI problems and help debugging, contact ci@example.org"""
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
 
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(
@@ -3739,8 +3739,8 @@ For CI problems and help debugging, contact ci@example.org"""
         "Test that the RPC client can get a list of running jobs"
         self.worker.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         client = zuul.rpcclient.RPCClient('127.0.0.1',
@@ -3811,8 +3811,8 @@ For CI problems and help debugging, contact ci@example.org"""
         "Test cross-repo dependencies"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
 
         AM2 = self.fake_gerrit.addFakeChange('org/project1', 'master', 'AM2')
         AM1 = self.fake_gerrit.addFakeChange('org/project1', 'master', 'AM1')
@@ -3840,7 +3840,7 @@ For CI problems and help debugging, contact ci@example.org"""
         A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
             A.subject, B.data['id'])
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -3850,8 +3850,8 @@ For CI problems and help debugging, contact ci@example.org"""
             connection.maintainCache([])
 
         self.worker.hold_jobs_in_build = True
-        B.addApproval('APRV', 1)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        B.addApproval('approved', 1)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.worker.release('.*-merge')
@@ -3879,18 +3879,18 @@ For CI problems and help debugging, contact ci@example.org"""
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project2', 'mp', 'C')
         C.data['id'] = B.data['id']
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
 
         # A Depends-On: B+C
         A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
             A.subject, B.data['id'])
 
         self.worker.hold_jobs_in_build = True
-        B.addApproval('APRV', 1)
-        C.addApproval('APRV', 1)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        B.addApproval('approved', 1)
+        C.addApproval('approved', 1)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.worker.release('.*-merge')
@@ -3919,18 +3919,18 @@ For CI problems and help debugging, contact ci@example.org"""
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
 
         # A Depends-On: B+C
         A.data['commitMessage'] = '%s\n\nDepends-On: %s\nDepends-On: %s\n' % (
             A.subject, B.data['id'], C.data['id'])
 
         self.worker.hold_jobs_in_build = True
-        B.addApproval('APRV', 1)
-        C.addApproval('APRV', 1)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        B.addApproval('approved', 1)
+        C.addApproval('approved', 1)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.worker.release('.*-merge')
@@ -3958,8 +3958,8 @@ For CI problems and help debugging, contact ci@example.org"""
         "Test cross-repo dependencies in unshared gate queues"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
 
         # A Depends-On: B
         A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
@@ -3967,8 +3967,8 @@ For CI problems and help debugging, contact ci@example.org"""
 
         # A and B do not share a queue, make sure that A is unable to
         # enqueue B (and therefore, A is unable to be enqueued).
-        B.addApproval('APRV', 1)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        B.addApproval('approved', 1)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -3978,7 +3978,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(len(self.history), 0)
 
         # Enqueue and merge B alone.
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(B.data['status'], 'MERGED')
@@ -3986,7 +3986,7 @@ For CI problems and help debugging, contact ci@example.org"""
 
         # Now that B is merged, A should be able to be enqueued and
         # merged.
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')
@@ -3997,23 +3997,23 @@ For CI problems and help debugging, contact ci@example.org"""
         "Test reverse cross-repo dependencies"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
 
         # A Depends-On: B
 
         A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
             A.subject, B.data['id'])
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(B.data['status'], 'NEW')
 
         self.worker.hold_jobs_in_build = True
-        A.addApproval('APRV', 1)
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        A.addApproval('approved', 1)
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.worker.release('.*-merge')
@@ -4037,8 +4037,8 @@ For CI problems and help debugging, contact ci@example.org"""
         "Test cross-repo dependency cycles"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
 
         # A -> B -> A (via commit-depends)
 
@@ -4047,7 +4047,7 @@ For CI problems and help debugging, contact ci@example.org"""
         B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
             B.subject, A.data['id'])
 
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(A.reported, 0)
@@ -4061,15 +4061,15 @@ For CI problems and help debugging, contact ci@example.org"""
         self.init_repo("org/unknown")
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/unknown', 'master', 'B')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
 
         # A Depends-On: B
         A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
             A.subject, B.data['id'])
 
-        B.addApproval('APRV', 1)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        B.addApproval('approved', 1)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         # Unknown projects cannot share a queue with any other
@@ -4083,14 +4083,14 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(len(self.history), 0)
 
         # Simulate change B being gated outside this layout
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         B.setMerged()
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # Now that B is merged, A should be able to be enqueued and
         # merged.
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')

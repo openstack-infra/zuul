@@ -31,8 +31,8 @@ class TestMultipleTenants(AnsibleZuulTestCase):
 
     def test_multiple_tenants(self):
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project1-test1').result,
                          'SUCCESS')
@@ -47,8 +47,8 @@ class TestMultipleTenants(AnsibleZuulTestCase):
                          "A should *not* transit tenant-two gate")
 
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
-        B.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        B.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('python27',
                                                 'org/project2').result,
@@ -74,8 +74,8 @@ class TestInRepoConfig(AnsibleZuulTestCase):
 
     def test_in_repo_config(self):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project-test1').result,
                          'SUCCESS')
@@ -100,8 +100,8 @@ class TestInRepoConfig(AnsibleZuulTestCase):
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
                                            files={'.zuul.yaml': in_repo_conf})
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project-test2').result,
                          'SUCCESS')
@@ -117,8 +117,8 @@ class TestProjectTemplate(AnsibleZuulTestCase):
 
     def test(self):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project-test1').result,
                          'SUCCESS')

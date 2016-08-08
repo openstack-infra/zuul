@@ -103,9 +103,9 @@ class ChangeReference(git.Reference):
 
 
 class FakeChange(object):
-    categories = {'APRV': ('Approved', -1, 1),
-                  'CRVW': ('Code-Review', -2, 2),
-                  'VRFY': ('Verified', -2, 2)}
+    categories = {'approved': ('Approved', -1, 1),
+                  'code-review': ('Code-Review', -2, 2),
+                  'verified': ('Verified', -2, 2)}
 
     def __init__(self, gerrit, number, project, branch, subject,
                  status='NEW', upstream_root=None, files={}):
@@ -260,7 +260,7 @@ class FakeChange(object):
                             "url": "https://hostname/3"},
                  "patchSet": self.patchsets[patchset - 1],
                  "author": {"name": "User Name"},
-                 "approvals": [{"type": "Code-Review",
+                 "approvals": [{"type": "code-review",
                                 "description": "Code-Review",
                                 "value": "0"}],
                  "comment": "This is a comment"}
@@ -431,10 +431,11 @@ class FakeGerritConnection(zuul.connection.gerrit.GerritConnection):
         # happens they can add their own verified event into the queue.
         # Nevertheless, we can update change with the new review in gerrit.
 
-        for cat in ['CRVW', 'VRFY', 'APRV']:
-            if cat in action:
+        for cat in action.keys():
+            if cat != 'submit':
                 change.addApproval(cat, action[cat], username=self.user)
 
+        # TODOv3(jeblair): can this be removed?
         if 'label' in action:
             parts = action['label'].split('=')
             change.addApproval(parts[0], parts[2], username=self.user)
