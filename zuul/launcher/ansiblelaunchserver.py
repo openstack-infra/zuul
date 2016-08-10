@@ -547,6 +547,11 @@ class LaunchServer(object):
 
 
 class NodeWorker(object):
+    retry_args = dict(register='task_result',
+                      until='task_result.rc == 0',
+                      retries=3,
+                      delay=30)
+
     def __init__(self, config, jobs, builds, sites, name, host,
                  description, labels, manager_name, zmq_send_queue,
                  termination_queue, keep_jobdir, callback_dir,
@@ -961,6 +966,8 @@ class NodeWorker(object):
                                 dest=os.path.join(scproot, '_zuul_ansible'))
                 task = dict(copy=copyargs,
                             delegate_to='127.0.0.1')
+                # This is a local copy and should not fail, so does
+                # not need a retry stanza.
                 tasks.append(task)
 
                 # Fetch the console log from the remote host.
@@ -982,10 +989,12 @@ class NodeWorker(object):
             task = dict(synchronize=syncargs)
             if not scpfile.get('copy-after-failure'):
                 task['when'] = 'success'
+            task.update(self.retry_args)
             tasks.append(task)
 
             task = self._makeSCPTaskLocalAction(
                 site, scpfile, scproot, parameters)
+            task.update(self.retry_args)
             tasks.append(task)
         return tasks
 
@@ -1053,6 +1062,7 @@ class NodeWorker(object):
             syncargs['rsync_opts'] = rsync_opts
         task = dict(synchronize=syncargs,
                     when='success')
+        task.update(self.retry_args)
         tasks.append(task)
         task = dict(shell='lftp -f %s' % ftpscript,
                     when='success',
@@ -1075,6 +1085,7 @@ class NodeWorker(object):
             script.write('open %s\n' % site['host'])
             script.write('user %s %s\n' % (site['user'], site['pass']))
             script.write('mirror -R %s %s\n' % (ftpsource, ftptarget))
+        task.update(self.retry_args)
         tasks.append(task)
         return tasks
 
