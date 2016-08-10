@@ -1391,6 +1391,8 @@ class ZuulTestCase(BaseTestCase):
                     self.log.debug("  %s: %s" % (queue, queue.empty()))
                 self.log.debug("All builds waiting: %s" %
                                (self.areAllBuildsWaiting(),))
+                self.log.debug("All builds reported: %s" %
+                               (self.haveAllBuildsReported(),))
                 raise Exception("Timeout waiting for Zuul to settle")
             # Make sure no new events show up while we're checking
 
