@@ -483,8 +483,8 @@ class BuildHistory(object):
         self.__dict__.update(kw)
 
     def __repr__(self):
-        return ("<Completed build, result: %s name: %s #%s changes: %s>" %
-                (self.result, self.name, self.number, self.changes))
+        return ("<Completed build, result: %s name: %s uuid: %s changes: %s>" %
+                (self.result, self.name, self.uuid, self.changes))
 
 
 class FakeURLOpener(object):
@@ -541,12 +541,12 @@ class FakeStatsd(threading.Thread):
 class FakeBuild(object):
     log = logging.getLogger("zuul.test")
 
-    def __init__(self, launch_server, job, number, node):
+    def __init__(self, launch_server, job, node):
         self.daemon = True
         self.launch_server = launch_server
         self.job = job
         self.jobdir = None
-        self.number = number
+        self.uuid = job.unique
         self.node = node
         self.parameters = json.loads(job.arguments)
         self.unique = self.parameters['ZUUL_UUID']
@@ -591,25 +591,7 @@ class FakeBuild(object):
         self.wait_condition.release()
 
     def run(self):
-        data = {
-            'url': 'https://server/job/%s/%s/' % (self.name, self.number),
-            'name': self.name,
-            'number': self.number,
-            'manager': self.launch_server.worker.worker_id,
-            'worker_name': 'My Worker',
-            'worker_hostname': 'localhost',
-            'worker_ips': ['127.0.0.1', '192.168.1.1'],
-            'worker_fqdn': 'zuul.example.org',
-            'worker_program': 'FakeBuilder',
-            'worker_version': 'v1.1',
-            'worker_extra': {'something': 'else'}
-        }
-
         self.log.debug('Running build %s' % self.unique)
-
-        self.job.sendWorkData(json.dumps(data))
-        self.log.debug('Sent WorkData packet with %s' % json.dumps(data))
-        self.job.sendWorkStatus(0, 100)
 
         if self.launch_server.hold_jobs_in_build:
             self.log.debug('Holding build %s' % self.unique)
@@ -680,8 +662,6 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
         self.lock = threading.Lock()
         self.running_builds = []
         self.build_history = []
-        self._build_counter_lock = threading.Lock()
-        self.build_counter = 0
         self.fail_tests = {}
         self.job_builds = {}
 
@@ -720,16 +700,23 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
         self.log.debug("Done releasing builds %s (%s)" %
                        (regex, len(self.running_builds)))
 
-    def launch(self, job):
-        with self._build_counter_lock:
-            self.build_counter += 1
-            build_counter = self.build_counter
+    def launchJob(self, job):
         node = None
-        build = FakeBuild(self, job, build_counter, node)
+        build = FakeBuild(self, job, node)
         job.build = build
         self.running_builds.append(build)
         self.job_builds[job.unique] = build
-        super(RecordingLaunchServer, self).launch(job)
+        super(RecordingLaunchServer, self).launchJob(job)
+
+    def stopJob(self, job):
+        self.log.debug("handle stop")
+        parameters = json.loads(job.arguments)
+        uuid = parameters['uuid']
+        for build in self.running_builds:
+            if build.unique == uuid:
+                build.aborted = True
+                build.release()
+        super(RecordingLaunchServer, self).stopJob(job)
 
     def runAnsible(self, jobdir, job):
         build = self.job_builds[job.unique]
@@ -742,9 +729,9 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
 
         self.lock.acquire()
         self.build_history.append(
-            BuildHistory(name=build.name, number=build.number,
-                         result=result, changes=build.changes, node=build.node,
-                         uuid=build.unique, parameters=build.parameters,
+            BuildHistory(name=build.name, result=result, changes=build.changes,
+                         node=build.node, uuid=build.unique,
+                         parameters=build.parameters,
                          pipeline=build.parameters['ZUUL_PIPELINE'])
         )
         self.running_builds.remove(build)
@@ -1358,7 +1345,7 @@ class ZuulTestCase(BaseTestCase):
                 return False
             if server_job.waiting:
                 continue
-            if build.number is None:
+            if build.url is None:
                 self.log.debug("%s has not reported start" % build)
                 return False
             worker_build = self.launch_server.job_builds.get(server_job.unique)

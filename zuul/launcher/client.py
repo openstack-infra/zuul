@@ -390,6 +390,7 @@ class LaunchClient(object):
         gearman_job = gear.Job('launcher:launch', json.dumps(params),
                                unique=uuid)
         build.__gearman_job = gearman_job
+        build.__gearman_manager = None
         self.builds[uuid] = build
 
         if pipeline.precedence == zuul.model.PRECEDENCE_NORMAL:
@@ -428,7 +429,8 @@ class LaunchClient(object):
             self.log.debug("Build %s has no associated gearman job" % build)
             return
 
-        if build.number is not None:
+        # TODOv3(jeblair): make a nicer way of recording build start.
+        if build.url is not None:
             self.log.debug("Build %s has already started" % build)
             self.cancelRunningBuild(build)
             self.log.debug("Canceled running build %s" % build)
@@ -444,7 +446,7 @@ class LaunchClient(object):
         time.sleep(1)
 
         self.log.debug("Still unable to find build %s to cancel" % build)
-        if build.number:
+        if build.url:
             self.log.debug("Build %s has just started" % build)
             self.log.debug("Canceled running build %s" % build)
             self.cancelRunningBuild(build)
@@ -473,7 +475,7 @@ class LaunchClient(object):
             # internal dict after it's added to the report queue.
             del self.builds[job.unique]
         else:
-            if not job.name.startswith("stop:"):
+            if not job.name.startswith("launcher:stop:"):
                 self.log.error("Unable to find build %s" % job.unique)
 
     def onWorkStatus(self, job):
@@ -481,14 +483,14 @@ class LaunchClient(object):
         self.log.debug("Build %s update %s" % (job, data))
         build = self.builds.get(job.unique)
         if build:
+            started = (build.url is not None)
             # Allow URL to be updated
-            build.url = data.get('url') or build.url
+            build.url = data.get('url', build.url)
             # Update information about worker
             build.worker.updateFromData(data)
 
-            if build.number is None:
+            if not started:
                 self.log.info("Build %s started" % job)
-                build.number = data.get('number')
                 build.__gearman_manager = data.get('manager')
                 self.sched.onBuildStarted(build)
         else:
@@ -518,10 +520,12 @@ class LaunchClient(object):
         return False
 
     def cancelRunningBuild(self, build):
+        if not build.__gearman_manager:
+            self.log.error("Build %s has no manager while canceling" %
+                           (build,))
         stop_uuid = str(uuid4().hex)
-        data = dict(name=build.job.name,
-                    number=build.number)
-        stop_job = gear.Job("stop:%s" % build.__gearman_manager,
+        data = dict(uuid=build.__gearman_job.unique)
+        stop_job = gear.Job("launcher:stop:%s" % build.__gearman_manager,
                             json.dumps(data), unique=stop_uuid)
         self.meta_jobs[stop_uuid] = stop_job
         self.log.debug("Submitting stop job: %s", stop_job)

@@ -487,7 +487,6 @@ class Build(object):
         self.job = job
         self.uuid = uuid
         self.url = None
-        self.number = None
         self.result = None
         self.build_set = None
         self.launch_time = time.time()
@@ -975,7 +974,6 @@ class QueueItem(object):
                 'pipeline': build.pipeline.name if build else None,
                 'canceled': build.canceled if build else None,
                 'retry': build.retry if build else None,
-                'number': build.number if build else None,
                 'node_labels': build.node_labels if build else [],
                 'node_name': build.node_name if build else None,
                 'worker': worker,
