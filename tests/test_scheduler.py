@@ -189,7 +189,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
-    @skip("Disabled for early v3 development")
     def test_failed_changes(self):
         "Test that a change behind a failed change is retested"
         self.launch_server.hold_jobs_in_build = True
@@ -204,17 +203,46 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
+        self.assertBuilds([dict(name='project-merge', changes='1,1')])
 
         self.launch_server.release('.*-merge')
         self.waitUntilSettled()
+        # A/project-merge is complete
+        self.assertBuilds([
+            dict(name='project-test1', changes='1,1'),
+            dict(name='project-test2', changes='1,1'),
+            dict(name='project-merge', changes='1,1 2,1'),
+        ])
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
-
+        self.launch_server.release('.*-merge')
         self.waitUntilSettled()
-        # It's certain that the merge job for change 2 will run, but
-        # the test1 and test2 jobs may or may not run.
-        self.assertTrue(len(self.history) > 6)
+        # A/project-merge is complete
+        # B/project-merge is complete
+        self.assertBuilds([
+            dict(name='project-test1', changes='1,1'),
+            dict(name='project-test2', changes='1,1'),
+            dict(name='project-test1', changes='1,1 2,1'),
+            dict(name='project-test2', changes='1,1 2,1'),
+        ])
+
+        # Release project-test1 for A which will fail.  This will
+        # abort both running B jobs and relaunch project-merge for B.
+        self.builds[0].release()
+        self.waitUntilSettled()
+
+        self.orderedRelease()
+        self.assertHistory([
+            dict(name='project-merge', result='SUCCESS', changes='1,1'),
+            dict(name='project-merge', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='project-test1', result='FAILURE', changes='1,1'),
+            dict(name='project-test1', result='ABORTED', changes='1,1 2,1'),
+            dict(name='project-test2', result='ABORTED', changes='1,1 2,1'),
+            dict(name='project-test2', result='SUCCESS', changes='1,1'),
+            dict(name='project-merge', result='SUCCESS', changes='2,1'),
+            dict(name='project-test1', result='SUCCESS', changes='2,1'),
+            dict(name='project-test2', result='SUCCESS', changes='2,1'),
+        ])
+
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)

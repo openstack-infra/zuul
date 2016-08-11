@@ -1445,6 +1445,42 @@ class ZuulTestCase(BaseTestCase):
         pprint.pprint(self.statsd.stats)
         raise Exception("Key %s not found in reported stats" % key)
 
+    def assertBuilds(self, builds):
+        """Assert that the running builds are as described.
+
+        The list of running builds is examined and must match exactly
+        the list of builds described by the input.
+
+        :arg list builds: A list of dictionaries.  Each item in the
+            list must match the corresponding build in the build
+            history, and each element of the dictionary must match the
+            corresponding attribute of the build.
+
+        """
+        self.assertEqual(len(self.builds), len(builds))
+        for i, d in enumerate(builds):
+            for k, v in d.items():
+                self.assertEqual(getattr(self.builds[i], k), v,
+                                 "Element %i in builds does not match" % (i,))
+
+    def assertHistory(self, history):
+        """Assert that the completed builds are as described.
+
+        The list of completed builds is examined and must match
+        exactly the list of builds described by the input.
+
+        :arg list history: A list of dictionaries.  Each item in the
+            list must match the corresponding build in the build
+            history, and each element of the dictionary must match the
+            corresponding attribute of the build.
+
+        """
+        self.assertEqual(len(self.history), len(history))
+        for i, d in enumerate(history):
+            for k, v in d.items():
+                self.assertEqual(getattr(self.history[i], k), v,
+                                 "Element %i in history does not match" % (i,))
+
     def getPipeline(self, name):
         return self.sched.abide.tenants.values()[0].layout.pipelines.get(name)
 
