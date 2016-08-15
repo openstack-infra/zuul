@@ -60,28 +60,13 @@ class Console(object):
 class Server(object):
     def __init__(self, path, port):
         self.path = path
-        s = None
-        for res in socket.getaddrinfo(None, port, socket.AF_UNSPEC,
-                                      socket.SOCK_STREAM, 0,
-                                      socket.AI_PASSIVE):
-            af, socktype, proto, canonname, sa = res
-            try:
-                s = socket.socket(af, socktype, proto)
-                s.setsockopt(socket.SOL_SOCKET,
-                             socket.SO_REUSEADDR, 1)
-            except socket.error:
-                s = None
-                continue
-            try:
-                s.bind(sa)
-                s.listen(1)
-            except socket.error:
-                s.close()
-                s = None
-                continue
-            break
-        if s is None:
-            sys.exit(1)
+
+        s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET,
+                     socket.SO_REUSEADDR, 1)
+        s.bind(('::', port))
+        s.listen(1)
+
         self.socket = s
 
     def accept(self):
