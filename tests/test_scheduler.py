@@ -248,7 +248,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.reported, 2)
         self.assertEqual(B.reported, 2)
 
-    @skip("Disabled for early v3 development")
     def test_independent_queues(self):
         "Test that changes end up in the right queues"
 
@@ -267,28 +266,43 @@ class TestScheduler(ZuulTestCase):
         self.waitUntilSettled()
 
         # There should be one merge job at the head of each queue running
-        self.assertEqual(len(self.builds), 2)
-        self.assertEqual(self.builds[0].name, 'project-merge')
-        self.assertTrue(self.job_has_changes(self.builds[0], A))
-        self.assertEqual(self.builds[1].name, 'project1-merge')
-        self.assertTrue(self.job_has_changes(self.builds[1], B))
+        self.assertBuilds([
+            dict(name='project-merge', changes='1,1'),
+            dict(name='project-merge', changes='2,1'),
+        ])
 
         # Release the current merge builds
-        self.launch_server.release('.*-merge')
+        self.builds[0].release()
+        self.waitUntilSettled()
+        self.builds[0].release()
         self.waitUntilSettled()
         # Release the merge job for project2 which is behind project1
         self.launch_server.release('.*-merge')
         self.waitUntilSettled()
 
         # All the test builds should be running:
-        # project1 (3) + project2 (3) + project (2) = 8
-        self.assertEqual(len(self.builds), 8)
+        self.assertBuilds([
+            dict(name='project-test1', changes='1,1'),
+            dict(name='project-test2', changes='1,1'),
+            dict(name='project-test1', changes='2,1'),
+            dict(name='project-test2', changes='2,1'),
+            dict(name='project-test1', changes='2,1 3,1'),
+            dict(name='project-test2', changes='2,1 3,1'),
+        ])
 
-        self.launch_server.release()
-        self.waitUntilSettled()
-        self.assertEqual(len(self.builds), 0)
+        self.orderedRelease()
+        self.assertHistory([
+            dict(name='project-merge', result='SUCCESS', changes='1,1'),
+            dict(name='project-merge', result='SUCCESS', changes='2,1'),
+            dict(name='project-merge', result='SUCCESS', changes='2,1 3,1'),
+            dict(name='project-test1', result='SUCCESS', changes='1,1'),
+            dict(name='project-test2', result='SUCCESS', changes='1,1'),
+            dict(name='project-test1', result='SUCCESS', changes='2,1'),
+            dict(name='project-test2', result='SUCCESS', changes='2,1'),
+            dict(name='project-test1', result='SUCCESS', changes='2,1 3,1'),
+            dict(name='project-test2', result='SUCCESS', changes='2,1 3,1'),
+        ])
 
-        self.assertEqual(len(self.history), 11)
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(C.data['status'], 'MERGED')
