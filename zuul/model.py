@@ -131,11 +131,6 @@ class Pipeline(object):
     def setManager(self, manager):
         self.manager = manager
 
-    def addProject(self, project):
-        job_tree = JobTree(None)  # Null job == job tree root
-        self.job_trees[project] = job_tree
-        return job_tree
-
     def getProjects(self):
         # cmp is not in python3, applied idiom from
         # http://python-future.org/compatible_idioms.html#cmp
@@ -219,11 +214,13 @@ class ChangeQueue(object):
     """
     def __init__(self, pipeline, window=0, window_floor=1,
                  window_increase_type='linear', window_increase_factor=1,
-                 window_decrease_type='exponential', window_decrease_factor=2):
+                 window_decrease_type='exponential', window_decrease_factor=2,
+                 name=None):
         self.pipeline = pipeline
-        self.name = ''
-        self.assigned_name = None
-        self.generated_name = None
+        if name:
+            self.name = name
+        else:
+            self.name = ''
         self.projects = []
         self._jobs = set()
         self.queue = []
@@ -244,10 +241,8 @@ class ChangeQueue(object):
         if project not in self.projects:
             self.projects.append(project)
 
-            names = [x.name for x in self.projects]
-            names.sort()
-            self.generated_name = ', '.join(names)
-            self.name = self.assigned_name or self.generated_name
+            if not self.name:
+                self.name = project.name
 
     def enqueueChange(self, change):
         item = QueueItem(self, change)

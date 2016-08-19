@@ -36,51 +36,38 @@ class DependentPipelineManager(PipelineManager):
 
     def buildChangeQueues(self):
         self.log.debug("Building shared change queues")
-        change_queues = []
+        change_queues = {}
+        project_configs = self.pipeline.layout.project_configs
 
         for project in self.pipeline.getProjects():
-            change_queue = model.ChangeQueue(
-                self.pipeline,
-                window=self.pipeline.window,
-                window_floor=self.pipeline.window_floor,
-                window_increase_type=self.pipeline.window_increase_type,
-                window_increase_factor=self.pipeline.window_increase_factor,
-                window_decrease_type=self.pipeline.window_decrease_type,
-                window_decrease_factor=self.pipeline.window_decrease_factor)
+            project_config = project_configs[project.name]
+            project_pipeline_config = project_config.pipelines[
+                self.pipeline.name]
+            queue_name = project_pipeline_config.queue_name
+            if queue_name and queue_name in change_queues:
+                change_queue = change_queues[queue_name]
+            else:
+                p = self.pipeline
+                change_queue = model.ChangeQueue(
+                    p,
+                    window=p.window,
+                    window_floor=p.window_floor,
+                    window_increase_type=p.window_increase_type,
+                    window_increase_factor=p.window_increase_factor,
+                    window_decrease_type=p.window_decrease_type,
+                    window_decrease_factor=p.window_decrease_factor,
+                    name=queue_name)
+                if queue_name:
+                    # If this is a named queue, keep track of it in
+                    # case it is referenced again.  Otherwise, it will
+                    # have a name automatically generated from its
+                    # constituent projects.
+                    change_queues[queue_name] = change_queue
+                self.pipeline.addQueue(change_queue)
+                self.log.debug("Created queue: %s" % change_queue)
             change_queue.addProject(project)
-            change_queues.append(change_queue)
-            self.log.debug("Created queue: %s" % change_queue)
-
-        # Iterate over all queues trying to combine them, and keep doing
-        # so until they can not be combined further.
-        last_change_queues = change_queues
-        while True:
-            new_change_queues = self.combineChangeQueues(last_change_queues)
-            if len(last_change_queues) == len(new_change_queues):
-                break
-            last_change_queues = new_change_queues
-
-        self.log.info("  Shared change queues:")
-        for queue in new_change_queues:
-            self.pipeline.addQueue(queue)
-            self.log.info("    %s containing %s" % (
-                queue, queue.generated_name))
-
-    def combineChangeQueues(self, change_queues):
-        self.log.debug("Combining shared queues")
-        new_change_queues = []
-        for a in change_queues:
-            merged_a = False
-            for b in new_change_queues:
-                if not a.getJobs().isdisjoint(b.getJobs()):
-                    self.log.debug("Merging queue %s into %s" % (a, b))
-                    b.mergeChangeQueue(a)
-                    merged_a = True
-                    break  # this breaks out of 'for b' and continues 'for a'
-            if not merged_a:
-                self.log.debug("Keeping queue %s" % (a))
-                new_change_queues.append(a)
-        return new_change_queues
+            self.log.debug("Added project %s to queue: %s" %
+                           (project, change_queue))
 
     def getChangeQueue(self, change, existing=None):
         if existing:
