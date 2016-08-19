@@ -560,6 +560,12 @@ class FakeBuild(object):
         if 'ZUUL_CHANGE_IDS' in self.parameters:
             self.changes = self.parameters['ZUUL_CHANGE_IDS']
 
+    def __repr__(self):
+        waiting = ''
+        if self.waiting:
+            waiting = ' [waiting]'
+        return '<FakeBuild %s %s%s>' % (self.name, self.changes, waiting)
+
     def release(self):
         """Release this build."""
         self.wait_condition.acquire()
@@ -1457,11 +1463,19 @@ class ZuulTestCase(BaseTestCase):
             corresponding attribute of the build.
 
         """
-        self.assertEqual(len(self.builds), len(builds))
-        for i, d in enumerate(builds):
-            for k, v in d.items():
-                self.assertEqual(getattr(self.builds[i], k), v,
-                                 "Element %i in builds does not match" % (i,))
+        try:
+            self.assertEqual(len(self.builds), len(builds))
+            for i, d in enumerate(builds):
+                for k, v in d.items():
+                    self.assertEqual(
+                        getattr(self.builds[i], k), v,
+                        "Element %i in builds does not match" % (i,))
+        except Exception:
+            for build in self.builds:
+                self.log.error("Running build: %s" % build)
+            else:
+                self.log.error("No running builds")
+            raise
 
     def assertHistory(self, history):
         """Assert that the completed builds are as described.
@@ -1475,11 +1489,19 @@ class ZuulTestCase(BaseTestCase):
             corresponding attribute of the build.
 
         """
-        self.assertEqual(len(self.history), len(history))
-        for i, d in enumerate(history):
-            for k, v in d.items():
-                self.assertEqual(getattr(self.history[i], k), v,
-                                 "Element %i in history does not match" % (i,))
+        try:
+            self.assertEqual(len(self.history), len(history))
+            for i, d in enumerate(history):
+                for k, v in d.items():
+                    self.assertEqual(
+                        getattr(self.history[i], k), v,
+                        "Element %i in history does not match" % (i,))
+        except Exception:
+            for build in self.history:
+                self.log.error("Completed build: %s" % build)
+            else:
+                self.log.error("No completed builds")
+            raise
 
     def getPipeline(self, name):
         return self.sched.abide.tenants.values()[0].layout.pipelines.get(name)
