@@ -158,7 +158,7 @@ class ProjectTemplateParser(object):
             project_template.pipelines[pipeline.name] = project_pipeline
             project_pipeline.queue_name = conf_pipeline.get('queue')
             project_pipeline.job_tree = ProjectTemplateParser._parseJobTree(
-                layout, conf_pipeline.get('jobs'))
+                layout, conf_pipeline.get('jobs', []))
         return project_template
 
     @staticmethod
