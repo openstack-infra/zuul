@@ -1,0 +1,6 @@
+- tenant:
+    name: openstack
+    source:
+      gerrit:
+        config-repos:
+          - project-config
