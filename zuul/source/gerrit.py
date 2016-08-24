@@ -243,11 +243,7 @@ class GerritSource(BaseSource):
 
         if 'project' not in data:
             raise exceptions.ChangeNotFound(change.number, change.patchset)
-        # If updated changed came as a dependent on
-        # and its project is not defined,
-        # then create a 'foreign' project for it in layout
-        change.project = self.sched.getProject(data['project'],
-                                               create_foreign=bool(history))
+        change.project = self.sched.getProject(data['project'])
         change.branch = data['branch']
         change.url = data['url']
         max_ps = 0
