@@ -10,21 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from uuid import uuid4
-
-
-class Node(object):
-    def __init__(self, name, image):
-        self.name = name
-        self.image = image
-
-
-class Request(object):
-    def __init__(self, build_set, job, nodes):
-        self.build_set = build_set
-        self.job = job
-        self.nodes = nodes
-        self.id = uuid4().hex
+from zuul.model import Node, NodeRequest
 
 
 class Nodepool(object):
@@ -33,9 +19,9 @@ class Nodepool(object):
         self.sched = scheduler
 
     def requestNodes(self, build_set, job):
-        nodes = job.nodes
-        nodes = [Node(node['name'], node['image']) for node in nodes]
-        req = Request(build_set, job, nodes)
+        nodes = job.nodes.items()
+        nodes = [Node(name, image) for (name, image) in nodes]
+        req = NodeRequest(build_set, job, nodes)
         self.requests[req.id] = req
         self._requestComplete(req.id)
         return req

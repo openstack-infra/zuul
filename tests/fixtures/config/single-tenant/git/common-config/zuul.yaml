@@ -42,6 +42,16 @@
 
 - job:
     name: project-test1
+    nodes:
+      - name: controller
+        image: image1
+
+- job:
+    name: project-test1
+    branches: stable
+    nodes:
+      - name: controller
+        image: image2
 
 - job:
     name: project-test2

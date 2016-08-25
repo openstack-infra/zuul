@@ -61,6 +61,8 @@ class TestScheduler(ZuulTestCase):
                          'SUCCESS')
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
+        self.assertEqual(self.getJobFromHistory('project-test1').node,
+                         'image1')
 
         # TODOv3(jeblair): we may want to report stats by tenant (also?).
         self.assertReportedStat('gerrit.event.comment-added', value='1|c')
@@ -87,6 +89,25 @@ class TestScheduler(ZuulTestCase):
                                 value='0|g')
         self.assertReportedStat('zuul.pipeline.check.current_changes',
                                 value='0|g')
+
+    def test_job_branch(self):
+        "Test the correct variant of a job runs on a branch"
+        self.create_branch('org/project', 'stable')
+        A = self.fake_gerrit.addFakeChange('org/project', 'stable', 'A')
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2,
+                         "A should report start and success")
+        self.assertIn('gate', A.messages[1],
+                      "A should transit gate")
+        self.assertEqual(self.getJobFromHistory('project-test1').node,
+                         'image2')
 
     @skip("Disabled for early v3 development")
     def test_duplicate_pipelines(self):

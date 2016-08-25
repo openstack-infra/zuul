@@ -280,9 +280,14 @@ class LaunchServer(object):
         job.sendWorkComplete()
 
     def getHostList(self, args):
-        # TODOv3: This should get the appropriate nodes from nodepool,
-        # or in the unit tests, be overriden to return localhost.
-        return [('localhost', dict(ansible_connection='local'))]
+        # TODOv3: the localhost addition is temporary so we have
+        # something to exercise ansible.
+        hosts = [('localhost', dict(ansible_connection='local'))]
+        for node in args['nodes']:
+            # TODOv3: the connection should almost certainly not be
+            # local.
+            hosts.append((node['name'], dict(ansible_connection='local')))
+        return hosts
 
     def prepareAnsibleFiles(self, jobdir, args):
         with open(jobdir.inventory, 'w') as inventory:

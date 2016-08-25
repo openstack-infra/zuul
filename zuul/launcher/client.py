@@ -297,9 +297,11 @@ class LaunchClient(object):
     def launch(self, job, item, pipeline, dependent_items=[]):
         uuid = str(uuid4().hex)
         self.log.info(
-            "Launch job %s (uuid: %s) for change %s with dependent "
-            "changes %s" % (
-                job, uuid, item.change,
+            "Launch job %s (uuid: %s) on nodes %s for change %s "
+            "with dependent changes %s" % (
+                job, uuid,
+                item.current_build_set.getJobNodes(job.name),
+                item.change,
                 [x.change for x in dependent_items]))
         dependent_items = dependent_items[:]
         dependent_items.reverse()
@@ -371,6 +373,10 @@ class LaunchClient(object):
         params['job'] = job.name
         params['items'] = merger_items
         params['projects'] = []
+        nodes = []
+        for node in item.current_build_set.getJobNodes(job.name):
+            nodes.append(dict(name=node.name, image=node.image))
+        params['nodes'] = nodes
         projects = set()
         for item in all_items:
             if item.change.project not in projects:

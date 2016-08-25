@@ -344,13 +344,33 @@ class Project(object):
         return '<Project %s>' % (self.name)
 
 
+class Node(object):
+    def __init__(self, name, image):
+        self.name = name
+        self.image = image
+
+    def __repr__(self):
+        return '<Node %s:%s>' % (self.name, self.image)
+
+
+class NodeRequest(object):
+    def __init__(self, build_set, job, nodes):
+        self.build_set = build_set
+        self.job = job
+        self.nodes = nodes
+        self.id = uuid4().hex
+
+    def __repr__(self):
+        return '<NodeRequest %s>' % (self.nodes,)
+
+
 class Job(object):
     """A Job represents the defintion of actions to perform."""
 
     attributes = dict(
         timeout=None,
         # variables={},
-        nodes=[],
+        nodes={},
         auth={},
         workspace=None,
         pre_run=None,
@@ -394,7 +414,7 @@ class Job(object):
         return self.name
 
     def __repr__(self):
-        return '<Job %s>' % (self.name,)
+        return '<Job %s branches: %s>' % (self.name, self.branch_matcher)
 
     def inheritFrom(self, other):
         """Copy the inheritable attributes which have been set on the other
@@ -789,7 +809,12 @@ class QueueItem(object):
                     result = build.result
                 else:
                     # There is no build for the root of this job tree,
-                    # so we should run it.
+                    # so it has not run yet.
+                    nodes = self.current_build_set.getJobNodes(job.name)
+                    if nodes is None:
+                        # The nodes for this job are not ready, skip
+                        # it for now.
+                        continue
                     if mutex.acquire(self, job):
                         # If this job needs a mutex, either acquire it or make
                         # sure that we have it before running the job.
@@ -820,10 +845,7 @@ class QueueItem(object):
                     req = self.current_build_set.getJobNodeRequest(job.name)
                     if req is None:
                         toreq.append(job)
-            # If there is no job, this is a null job tree, and we should
-            # run all of its jobs.
-            if not job:
-                toreq.extend(self._findJobsToRequest(tree.job_trees))
+            toreq.extend(self._findJobsToRequest(tree.job_trees))
         return toreq
 
     def findJobsToRequest(self):

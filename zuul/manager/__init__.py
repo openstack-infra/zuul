@@ -617,8 +617,10 @@ class PipelineManager(object):
         build_set = request.build_set
         build_set.jobNodeRequestComplete(request.job.name, request,
                                          request.nodes)
-        self.log.info("Completed node request %s for job %s of item %s" %
-                      (request, request.job.name, build_set.item))
+        self.log.info("Completed node request %s for job %s of item %s "
+                      "with nodes %s" %
+                      (request, request.job, build_set.item,
+                       request.nodes))
 
     def reportItem(self, item):
         if not item.reported:
