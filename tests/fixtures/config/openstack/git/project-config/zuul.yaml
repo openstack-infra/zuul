@@ -42,10 +42,27 @@
 # Job definitions
 
 - job:
+    name: base
+    timeout: 30
+    nodes:
+      - name: controller
+        image: ubuntu-xenial
+
+- job:
     name: python27
+    parent: base
+
+- job:
+    name: python27
+    parent: base
+    branches: stable/mitaka
+    nodes:
+      - name: controller
+        image: ubuntu-trusty
 
 - job:
     name: python35
+    parent: base
 
 - project-template:
     name: python-jobs

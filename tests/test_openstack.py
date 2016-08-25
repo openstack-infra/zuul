@@ -29,7 +29,7 @@ class TestOpenStack(AnsibleZuulTestCase):
 
     tenant_config_file = 'config/openstack/main.yaml'
 
-    def test_openstack(self):
+    def test_nova_master(self):
         A = self.fake_gerrit.addFakeChange('openstack/nova', 'master', 'A')
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
@@ -41,3 +41,22 @@ class TestOpenStack(AnsibleZuulTestCase):
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2,
                          "A should report start and success")
+        self.assertEqual(self.getJobFromHistory('python27').node,
+                         'ubuntu-xenial')
+
+    def test_nova_mitaka(self):
+        self.create_branch('openstack/nova', 'stable/mitaka')
+        A = self.fake_gerrit.addFakeChange('openstack/nova',
+                                           'stable/mitaka', 'A')
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('python27').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('python35').result,
+                         'SUCCESS')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2,
+                         "A should report start and success")
+        self.assertEqual(self.getJobFromHistory('python27').node,
+                         'ubuntu-trusty')
