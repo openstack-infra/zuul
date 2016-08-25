@@ -1193,12 +1193,6 @@ class NodeWorker(object):
             pre_tasks.append(dict(shell=shellargs,
                              delegate_to='127.0.0.1'))
 
-            shellargs = "ssh-keygen -E md5 -lf %s > %s" % (
-                jobdir.known_hosts,
-                os.path.join(self.ansible_root, 'ssh_host_key'))
-            pre_tasks.append(dict(shell=shellargs,
-                             delegate_to='127.0.0.1'))
-
             tasks.append(dict(block=main_block,
                               rescue=error_block))
 
