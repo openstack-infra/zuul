@@ -625,12 +625,12 @@ class Scheduler(threading.Thread):
     def setMerger(self, merger):
         self.merger = merger
 
-    def getProject(self, name, create_foreign=False):
+    def getProject(self, name):
         self.layout_lock.acquire()
         p = None
         try:
             p = self.layout.projects.get(name)
-            if p is None and create_foreign:
+            if p is None:
                 self.log.info("Registering foreign project: %s" % name)
                 p = Project(name, foreign=True)
                 self.layout.projects[name] = p
