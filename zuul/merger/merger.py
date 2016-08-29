@@ -95,8 +95,12 @@ class Repo(object):
                 continue
             repo.create_head(ref.remote_head, ref, force=True)
 
-        # Reset to remote HEAD (usually origin/master)
-        repo.head.reference = origin.refs['HEAD']
+        # try reset to remote HEAD (usually origin/master)
+        # If it fails, pick the first reference
+        try:
+            repo.head.reference = origin.refs['HEAD']
+        except IndexError:
+            repo.head.reference = origin.refs[0]
         reset_repo_to_head(repo)
         repo.git.clean('-x', '-f', '-d')
 
