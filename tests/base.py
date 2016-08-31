@@ -1483,7 +1483,7 @@ class ZuulTestCase(BaseTestCase):
                 self.log.error("No running builds")
             raise
 
-    def assertHistory(self, history):
+    def assertHistory(self, history, ordered=True):
         """Assert that the completed builds are as described.
 
         The list of completed builds is examined and must match
@@ -1494,14 +1494,37 @@ class ZuulTestCase(BaseTestCase):
             history, and each element of the dictionary must match the
             corresponding attribute of the build.
 
+        :arg bool ordered: If true, the history must match the order
+            supplied, if false, the builds are permitted to have
+            arrived in any order.
+
         """
+        def matches(history_item, item):
+            for k, v in item.items():
+                if getattr(history_item, k) != v:
+                    return False
+            return True
         try:
             self.assertEqual(len(self.history), len(history))
-            for i, d in enumerate(history):
-                for k, v in d.items():
-                    self.assertEqual(
-                        getattr(self.history[i], k), v,
-                        "Element %i in history does not match" % (i,))
+            if ordered:
+                for i, d in enumerate(history):
+                    if not matches(self.history[i], d):
+                        raise Exception(
+                            "Element %i in history does not match" % (i,))
+            else:
+                unseen = self.history[:]
+                for i, d in enumerate(history):
+                    found = False
+                    for unseen_item in unseen:
+                        if matches(unseen_item, d):
+                            found = True
+                            unseen.remove(unseen_item)
+                            break
+                    if not found:
+                        raise Exception("No match found for element %i "
+                                        "in history" % (i,))
+                if unseen:
+                    raise Exception("Unexpected items in history")
         except Exception:
             for build in self.history:
                 self.log.error("Completed build: %s" % build)

@@ -262,7 +262,7 @@ class TestScheduler(ZuulTestCase):
             dict(name='project-merge', result='SUCCESS', changes='2,1'),
             dict(name='project-test1', result='SUCCESS', changes='2,1'),
             dict(name='project-test2', result='SUCCESS', changes='2,1'),
-        ])
+        ], ordered=False)
 
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(B.data['status'], 'MERGED')
@@ -331,7 +331,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
-    @skip("Disabled for early v3 development")
     def test_failed_change_at_head(self):
         "Test that if a change at the head fails, jobs behind it are canceled"
 
@@ -351,9 +350,9 @@ class TestScheduler(ZuulTestCase):
 
         self.waitUntilSettled()
 
-        self.assertEqual(len(self.builds), 1)
-        self.assertEqual(self.builds[0].name, 'project-merge')
-        self.assertTrue(self.job_has_changes(self.builds[0], A))
+        self.assertBuilds([
+            dict(name='project-merge', changes='1,1'),
+        ])
 
         self.launch_server.release('.*-merge')
         self.waitUntilSettled()
@@ -362,27 +361,84 @@ class TestScheduler(ZuulTestCase):
         self.launch_server.release('.*-merge')
         self.waitUntilSettled()
 
-        self.assertEqual(len(self.builds), 6)
-        self.assertEqual(self.builds[0].name, 'project-test1')
-        self.assertEqual(self.builds[1].name, 'project-test2')
-        self.assertEqual(self.builds[2].name, 'project-test1')
-        self.assertEqual(self.builds[3].name, 'project-test2')
-        self.assertEqual(self.builds[4].name, 'project-test1')
-        self.assertEqual(self.builds[5].name, 'project-test2')
+        self.assertBuilds([
+            dict(name='project-test1', changes='1,1'),
+            dict(name='project-test2', changes='1,1'),
+            dict(name='project-test1', changes='1,1 2,1'),
+            dict(name='project-test2', changes='1,1 2,1'),
+            dict(name='project-test1', changes='1,1 2,1 3,1'),
+            dict(name='project-test2', changes='1,1 2,1 3,1'),
+        ])
 
         self.release(self.builds[0])
         self.waitUntilSettled()
 
         # project-test2, project-merge for B
-        self.assertEqual(len(self.builds), 2)
-        self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 4)
+        self.assertBuilds([
+            dict(name='project-test2', changes='1,1'),
+            dict(name='project-merge', changes='2,1'),
+        ])
+        # Unordered history comparison because the aborts can finish
+        # in any order.
+        self.assertHistory([
+            dict(name='project-merge', result='SUCCESS',
+                 changes='1,1'),
+            dict(name='project-merge', result='SUCCESS',
+                 changes='1,1 2,1'),
+            dict(name='project-merge', result='SUCCESS',
+                 changes='1,1 2,1 3,1'),
+            dict(name='project-test1', result='FAILURE',
+                 changes='1,1'),
+            dict(name='project-test1', result='ABORTED',
+                 changes='1,1 2,1'),
+            dict(name='project-test2', result='ABORTED',
+                 changes='1,1 2,1'),
+            dict(name='project-test1', result='ABORTED',
+                 changes='1,1 2,1 3,1'),
+            dict(name='project-test2', result='ABORTED',
+                 changes='1,1 2,1 3,1'),
+        ], ordered=False)
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.launch_server.release('.*-merge')
         self.waitUntilSettled()
+        self.launch_server.release('.*-merge')
+        self.waitUntilSettled()
+        self.orderedRelease()
 
-        self.assertEqual(len(self.builds), 0)
-        self.assertEqual(len(self.history), 15)
+        self.assertBuilds([])
+        self.assertHistory([
+            dict(name='project-merge', result='SUCCESS',
+                 changes='1,1'),
+            dict(name='project-merge', result='SUCCESS',
+                 changes='1,1 2,1'),
+            dict(name='project-merge', result='SUCCESS',
+                 changes='1,1 2,1 3,1'),
+            dict(name='project-test1', result='FAILURE',
+                 changes='1,1'),
+            dict(name='project-test1', result='ABORTED',
+                 changes='1,1 2,1'),
+            dict(name='project-test2', result='ABORTED',
+                 changes='1,1 2,1'),
+            dict(name='project-test1', result='ABORTED',
+                 changes='1,1 2,1 3,1'),
+            dict(name='project-test2', result='ABORTED',
+                 changes='1,1 2,1 3,1'),
+            dict(name='project-merge', result='SUCCESS',
+                 changes='2,1'),
+            dict(name='project-merge', result='SUCCESS',
+                 changes='2,1 3,1'),
+            dict(name='project-test2', result='SUCCESS',
+                 changes='1,1'),
+            dict(name='project-test1', result='SUCCESS',
+                 changes='2,1'),
+            dict(name='project-test2', result='SUCCESS',
+                 changes='2,1'),
+            dict(name='project-test1', result='SUCCESS',
+                 changes='2,1 3,1'),
+            dict(name='project-test2', result='SUCCESS',
+                 changes='2,1 3,1'),
+        ], ordered=False)
+
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(C.data['status'], 'MERGED')
