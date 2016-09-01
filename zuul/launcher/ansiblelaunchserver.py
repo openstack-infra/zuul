@@ -1268,6 +1268,9 @@ class NodeWorker(object):
             config.write('gathering = explicit\n')
             config.write('callback_plugins = %s\n' % self.callback_dir)
             config.write('library = %s\n' % self.library_dir)
+            # bump the timeout because busy nodes may take more than
+            # 10s to respond
+            config.write('timeout = 30\n')
 
             config.write('[ssh_connection]\n')
             ssh_args = "-o ControlMaster=auto -o ControlPersist=60s " \
