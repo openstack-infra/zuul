@@ -1187,8 +1187,8 @@ class NodeWorker(object):
             error_block = []
             variables = []
 
-            shellargs = "ssh-keyscan %s > %s" % (
-                self.host, jobdir.known_hosts)
+            shellargs = "ssh-keyscan {{ ansible_host }} > %s" % (
+                jobdir.known_hosts)
             pre_tasks.append(dict(shell=shellargs,
                              delegate_to='127.0.0.1'))
 
