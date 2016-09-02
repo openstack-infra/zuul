@@ -345,6 +345,12 @@ class Project(object):
 
 
 class Node(object):
+    """A single node for use by a job.
+
+    This may represent a request for a node, or an actual node
+    provided by Nodepool.
+    """
+
     def __init__(self, name, image):
         self.name = name
         self.image = image
@@ -353,11 +359,41 @@ class Node(object):
         return '<Node %s:%s>' % (self.name, self.image)
 
 
+class NodeSet(object):
+    """A set of nodes.
+
+    In configuration, NodeSets are attributes of Jobs indicating that
+    a Job requires nodes matching this description.
+
+    They may appear as top-level configuration objects and be named,
+    or they may appears anonymously in in-line job definitions.
+    """
+
+    def __init__(self, name=None):
+        self.name = name or ''
+        self.nodes = OrderedDict()
+
+    def addNode(self, node):
+        if node.name in self.nodes:
+            raise Exception("Duplicate node in %s" % (self,))
+        self.nodes[node.name] = node
+
+    def __repr__(self):
+        if self.name:
+            name = self.name + ' '
+        else:
+            name = ''
+        return '<NodeSet %s%s>' % (name, self.nodes)
+
+
 class NodeRequest(object):
+    """A request for a set of nodes."""
+
     def __init__(self, build_set, job, nodes):
         self.build_set = build_set
         self.job = job
         self.nodes = nodes
+        # TODOv3(jeblair): use a NodeSet here
         self.id = uuid4().hex
 
     def __repr__(self):
@@ -1590,6 +1626,7 @@ class UnparsedTenantConfig(object):
         self.jobs = []
         self.project_templates = []
         self.projects = []
+        self.nodesets = []
 
     def copy(self):
         r = UnparsedTenantConfig()
@@ -1597,6 +1634,7 @@ class UnparsedTenantConfig(object):
         r.jobs = copy.deepcopy(self.jobs)
         r.project_templates = copy.deepcopy(self.project_templates)
         r.projects = copy.deepcopy(self.projects)
+        r.nodesets = copy.deepcopy(self.nodesets)
         return r
 
     def extend(self, conf, source_project=None):
@@ -1605,6 +1643,7 @@ class UnparsedTenantConfig(object):
             self.jobs.extend(conf.jobs)
             self.project_templates.extend(conf.project_templates)
             self.projects.extend(conf.projects)
+            self.nodesets.extend(conf.nodesets)
             return
 
         if not isinstance(conf, list):
@@ -1631,6 +1670,8 @@ class UnparsedTenantConfig(object):
                 self.project_templates.append(value)
             elif key == 'pipeline':
                 self.pipelines.append(value)
+            elif key == 'nodeset':
+                self.nodesets.append(value)
             else:
                 raise Exception("Configuration item `%s` not recognized "
                                 "(when parsing %s)" %
@@ -1653,6 +1694,7 @@ class Layout(object):
         # that override some attribute of the job.  These aspects all
         # inherit from the reference definition.
         self.jobs = {}
+        self.nodesets = {}
 
     def getJob(self, name):
         if name in self.jobs:
@@ -1677,6 +1719,11 @@ class Layout(object):
             self.jobs[job.name].append(job)
         else:
             self.jobs[job.name] = [job]
+
+    def addNodeSet(self, nodeset):
+        if nodeset.name in self.nodesets:
+            raise Exception("NodeSet %s already defined" % (nodeset.name,))
+        self.nodesets[nodeset.name] = nodeset
 
     def addPipeline(self, pipeline):
         self.pipelines[pipeline.name] = pipeline

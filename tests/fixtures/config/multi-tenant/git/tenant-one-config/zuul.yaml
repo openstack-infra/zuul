@@ -21,6 +21,12 @@
         verified: 0
     precedence: high
 
+- nodeset:
+    name: nodeset1
+    nodes:
+      - name: controller
+        image: controller-image
+
 - job:
     name:
       project1-test1

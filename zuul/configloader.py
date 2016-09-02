@@ -37,6 +37,29 @@ def as_list(item):
     return [item]
 
 
+class NodeSetParser(object):
+    @staticmethod
+    def getSchema():
+        node = {vs.Required('name'): str,
+                vs.Required('image'): str,
+                }
+
+        nodeset = {vs.Required('name'): str,
+                   vs.Required('nodes'): [node],
+                   }
+
+        return vs.Schema(nodeset)
+
+    @staticmethod
+    def fromYaml(layout, conf):
+        NodeSetParser.getSchema()(conf)
+        ns = model.NodeSet(conf['name'])
+        for conf_node in as_list(conf['nodes']):
+            node = model.Node(conf_node['name'], conf_node['image'])
+            ns.addNode(node)
+        return ns
+
+
 class JobParser(object):
     @staticmethod
     def getSchema():
@@ -579,6 +602,9 @@ class TenantParser(object):
             layout.addPipeline(PipelineParser.fromYaml(layout, connections,
                                                        scheduler,
                                                        config_pipeline))
+
+        for config_nodeset in data.nodesets:
+            layout.addNodeSet(NodeSetParser.fromYaml(layout, config_nodeset))
 
         for config_job in data.jobs:
             layout.addJob(JobParser.fromYaml(layout, config_job))
