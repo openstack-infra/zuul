@@ -100,7 +100,7 @@ class JobParser(object):
                'files': to_list(str),
                'auth': to_list(auth),
                'irrelevant-files': to_list(str),
-               'nodes': [node],
+               'nodes': vs.Any([node], str),
                'timeout': int,
                '_source_project': model.Project,
                }
@@ -124,13 +124,16 @@ class JobParser(object):
         job.hold_following_changes = conf.get('hold-following-changes', False)
         job.mutex = conf.get('mutex', None)
         if 'nodes' in conf:
-            nodes = {}
-            for node in as_list(conf['nodes']):
-                name = node['name']
-                if name in nodes:
-                    raise Exception("Duplicate node name")
-                nodes[node['name']] = node['image']
-            job.nodes = nodes
+            conf_nodes = conf['nodes']
+            if isinstance(conf_nodes, six.string_types):
+                # This references an existing named nodeset in the layout.
+                ns = layout.nodesets[conf_nodes]
+            else:
+                ns = model.NodeSet()
+                for conf_node in conf_nodes:
+                    node = model.Node(conf_node['name'], conf_node['image'])
+                    ns.addNode(node)
+            job.nodeset = ns
 
         tags = conf.get('tags')
         if tags:

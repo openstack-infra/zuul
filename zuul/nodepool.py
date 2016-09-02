@@ -10,7 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from zuul.model import Node, NodeRequest
+from zuul.model import NodeRequest
 
 
 class Nodepool(object):
@@ -19,9 +19,7 @@ class Nodepool(object):
         self.sched = scheduler
 
     def requestNodes(self, build_set, job):
-        nodes = job.nodes.items()
-        nodes = [Node(name, image) for (name, image) in nodes]
-        req = NodeRequest(build_set, job, nodes)
+        req = NodeRequest(build_set, job, job.nodeset)
         self.requests[req.id] = req
         self._requestComplete(req.id)
         return req

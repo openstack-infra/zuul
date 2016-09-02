@@ -378,6 +378,9 @@ class NodeSet(object):
             raise Exception("Duplicate node in %s" % (self,))
         self.nodes[node.name] = node
 
+    def getNodes(self):
+        return self.nodes.values()
+
     def __repr__(self):
         if self.name:
             name = self.name + ' '
@@ -389,15 +392,14 @@ class NodeSet(object):
 class NodeRequest(object):
     """A request for a set of nodes."""
 
-    def __init__(self, build_set, job, nodes):
+    def __init__(self, build_set, job, nodeset):
         self.build_set = build_set
         self.job = job
-        self.nodes = nodes
-        # TODOv3(jeblair): use a NodeSet here
+        self.nodeset = nodeset
         self.id = uuid4().hex
 
     def __repr__(self):
-        return '<NodeRequest %s>' % (self.nodes,)
+        return '<NodeRequest %s>' % (self.nodeset,)
 
 
 class Job(object):
@@ -406,7 +408,7 @@ class Job(object):
     attributes = dict(
         timeout=None,
         # variables={},
-        nodes={},
+        nodeset=NodeSet(),
         auth={},
         workspace=None,
         pre_run=None,
@@ -634,7 +636,7 @@ class BuildSet(object):
         self.unable_to_merge = False
         self.failing_reasons = []
         self.merge_state = self.NEW
-        self.nodes = {}  # job -> nodes
+        self.nodesets = {}  # job -> nodeset
         self.node_requests = {}  # job -> reqs
         self.files = RepoFiles()
         self.layout = None
@@ -676,9 +678,10 @@ class BuildSet(object):
         keys.sort()
         return [self.builds.get(x) for x in keys]
 
-    def getJobNodes(self, job_name):
-        # Return None if not provisioned; [] if no nodes required
-        return self.nodes.get(job_name)
+    def getJobNodeSet(self, job_name):
+        # Return None if not provisioned; empty NodeSet if no nodes
+        # required
+        return self.nodesets.get(job_name)
 
     def setJobNodeRequest(self, job_name, req):
         if job_name in self.node_requests:
@@ -688,10 +691,10 @@ class BuildSet(object):
     def getJobNodeRequest(self, job_name):
         return self.node_requests.get(job_name)
 
-    def jobNodeRequestComplete(self, job_name, req, nodes):
-        if job_name in self.nodes:
+    def jobNodeRequestComplete(self, job_name, req, nodeset):
+        if job_name in self.nodesets:
             raise Exception("Prior node request for %s" % (job_name))
-        self.nodes[job_name] = nodes
+        self.nodesets[job_name] = nodeset
         del self.node_requests[job_name]
 
 
@@ -846,8 +849,8 @@ class QueueItem(object):
                 else:
                     # There is no build for the root of this job tree,
                     # so it has not run yet.
-                    nodes = self.current_build_set.getJobNodes(job.name)
-                    if nodes is None:
+                    nodeset = self.current_build_set.getJobNodeSet(job.name)
+                    if nodeset is None:
                         # The nodes for this job are not ready, skip
                         # it for now.
                         continue
@@ -876,8 +879,8 @@ class QueueItem(object):
             if job:
                 if not job.changeMatches(self.change):
                     continue
-                nodes = self.current_build_set.getJobNodes(job.name)
-                if nodes is None:
+                nodeset = self.current_build_set.getJobNodeSet(job.name)
+                if nodeset is None:
                     req = self.current_build_set.getJobNodeRequest(job.name)
                     if req is None:
                         toreq.append(job)

@@ -300,7 +300,7 @@ class LaunchClient(object):
             "Launch job %s (uuid: %s) on nodes %s for change %s "
             "with dependent changes %s" % (
                 job, uuid,
-                item.current_build_set.getJobNodes(job.name),
+                item.current_build_set.getJobNodeSet(job.name),
                 item.change,
                 [x.change for x in dependent_items]))
         dependent_items = dependent_items[:]
@@ -374,7 +374,7 @@ class LaunchClient(object):
         params['items'] = merger_items
         params['projects'] = []
         nodes = []
-        for node in item.current_build_set.getJobNodes(job.name):
+        for node in item.current_build_set.getJobNodeSet(job.name).getNodes():
             nodes.append(dict(name=node.name, image=node.image))
         params['nodes'] = nodes
         projects = set()
