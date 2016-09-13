@@ -1290,8 +1290,8 @@ class NodeWorker(object):
         runner = dict(command=remote_path,
                       cwd=parameters['WORKSPACE'],
                       parameters=parameters)
-        task = dict(zuul_runner=runner)
-        task['name'] = ('zuul_runner with {{ timeout | int - elapsed_time }} '
+        task = dict(command=runner)
+        task['name'] = ('command with {{ timeout | int - elapsed_time }} '
                         'second timeout')
         task['when'] = '{{ elapsed_time < timeout | int }}'
         task['async'] = '{{ timeout | int - elapsed_time }}'
