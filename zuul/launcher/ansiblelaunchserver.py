@@ -34,7 +34,6 @@ import jenkins_jobs.formatter
 import zmq
 
 import zuul.ansible.library
-import zuul.ansible.plugins.callback_plugins
 from zuul.lib import commandsocket
 
 ANSIBLE_WATCHDOG_GRACE = 5 * 60
@@ -213,18 +212,9 @@ class LaunchServer(object):
         path = os.path.join(state_dir, 'launcher.socket')
         self.command_socket = commandsocket.CommandSocket(path)
         ansible_dir = os.path.join(state_dir, 'ansible')
-        plugins_dir = os.path.join(ansible_dir, 'plugins')
-        self.callback_dir = os.path.join(plugins_dir, 'callback_plugins')
-        if not os.path.exists(self.callback_dir):
-            os.makedirs(self.callback_dir)
         self.library_dir = os.path.join(ansible_dir, 'library')
         if not os.path.exists(self.library_dir):
             os.makedirs(self.library_dir)
-
-        callback_path = os.path.dirname(os.path.abspath(
-            zuul.ansible.plugins.callback_plugins.__file__))
-        for fn in os.listdir(callback_path):
-            shutil.copy(os.path.join(callback_path, fn), self.callback_dir)
 
         library_path = os.path.dirname(os.path.abspath(
             zuul.ansible.library.__file__))
@@ -513,8 +503,7 @@ class LaunchServer(object):
                             args['description'], args['labels'],
                             self.hostname, self.zmq_send_queue,
                             self.termination_queue, self.keep_jobdir,
-                            self.callback_dir, self.library_dir,
-                            self.options)
+                            self.library_dir, self.options)
         self.node_workers[worker.name] = worker
 
         worker.thread = threading.Thread(target=worker.run)
@@ -594,8 +583,7 @@ class NodeWorker(object):
 
     def __init__(self, config, jobs, builds, sites, name, host,
                  description, labels, manager_name, zmq_send_queue,
-                 termination_queue, keep_jobdir, callback_dir,
-                 library_dir, options):
+                 termination_queue, keep_jobdir, library_dir, options):
         self.log = logging.getLogger("zuul.NodeWorker.%s" % (name,))
         self.log.debug("Creating node worker %s" % (name,))
         self.config = config
@@ -641,7 +629,6 @@ class NodeWorker(object):
             self.username = config.get('launcher', 'username')
         else:
             self.username = 'zuul'
-        self.callback_dir = callback_dir
         self.library_dir = library_dir
         self.options = options
 
@@ -1313,11 +1300,7 @@ class NodeWorker(object):
         (executable, shell) = deal_with_shebang(builder['shell'])
 
         task = dict(shell=shell)
-        task['name'] = ('command with {{ timeout | int - elapsed_time }} '
-                        'second timeout')
-        task['when'] = '{{ elapsed_time < timeout | int }}'
-        task['async'] = '{{ timeout | int - elapsed_time }}'
-        task['poll'] = 5
+        task['name'] = 'command generated from JJB'
         task['environment'] = parameters
         task['args'] = dict(chdir=parameters['WORKSPACE'])
         if executable:
@@ -1370,19 +1353,15 @@ class NodeWorker(object):
                 inventory.write('\n')
 
         timeout = None
-        timeout_var = None
         for wrapper in jjb_job.get('wrappers', []):
             if isinstance(wrapper, dict):
                 build_timeout = wrapper.get('timeout')
                 if isinstance(build_timeout, dict):
-                    timeout_var = build_timeout.get('timeout-var')
                     timeout = build_timeout.get('timeout')
                     if timeout is not None:
                         timeout = int(timeout) * 60
         if not timeout:
             timeout = ANSIBLE_DEFAULT_TIMEOUT
-        if timeout_var:
-            parameters[timeout_var] = str(timeout * 1000)
 
         with open(jobdir.playbook, 'w') as playbook:
             pre_tasks = []
@@ -1428,7 +1407,6 @@ class NodeWorker(object):
             error_block.append(task)
             error_block.append(dict(fail=dict(msg='FAILURE')))
 
-            variables.append(dict(timeout=timeout))
             play = dict(hosts='node', name='Job body', vars=variables,
                         pre_tasks=pre_tasks, tasks=tasks)
             playbook.write(yaml.safe_dump([play], default_flow_style=False))
@@ -1473,7 +1451,6 @@ class NodeWorker(object):
             config.write('retry_files_enabled = False\n')
             config.write('log_path = %s\n' % jobdir.ansible_log)
             config.write('gathering = explicit\n')
-            config.write('callback_plugins = %s\n' % self.callback_dir)
             config.write('library = %s\n' % self.library_dir)
             # TODO(mordred) This can be removed once we're using ansible 2.2
             config.write('module_set_locale = False\n')
