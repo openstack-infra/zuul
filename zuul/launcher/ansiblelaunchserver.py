@@ -891,8 +891,12 @@ class NodeWorker(object):
             data = {
                 'manager': self.manager_name,
                 'number': job.unique,
-                'url': 'telnet://%s:19885' % self.host,
             }
+            if ':' in self.host:
+                data['url'] = 'telnet://[%s]:19885' % self.host
+            else:
+                data['url'] = 'telnet://%s:19885' % self.host
+
             job.sendWorkData(json.dumps(data))
             job.sendWorkStatus(0, 100)
 
