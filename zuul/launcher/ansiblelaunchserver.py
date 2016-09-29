@@ -1109,6 +1109,11 @@ class NodeWorker(object):
         # that.
         afsroot = tempfile.mkdtemp(dir=jobdir.staging_root)
         afscontent = os.path.join(afsroot, 'content')
+        afssource = afscontent
+        if afs.get('remove-prefix'):
+            afssource = os.path.join(afscontent, afs['remove-prefix'])
+        while afssource[-1] == '/':
+            afssource = afssource[:-1]
 
         src = parameters['WORKSPACE']
         if not src.endswith('/'):
@@ -1148,7 +1153,7 @@ class NodeWorker(object):
         # Find the list of root markers in the just-completed build
         # (usually there will only be one, but some builds produce
         # content at the root *and* at a tag location).
-        task = dict(shell=find_pipe.format(path=afscontent,
+        task = dict(shell=find_pipe.format(path=afssource,
                                            file=src_markers_file),
                     when='success',
                     delegate_to='127.0.0.1')
@@ -1192,7 +1197,7 @@ class NodeWorker(object):
         # all, since "/" will be excluded later.
 
         command = ("/bin/grep -v '^/$' {src} | "
-                   "/bin/sed -e 's/^+ /' > {filter}".format(
+                   "/bin/sed -e 's/^/+ /' > {filter}".format(
                        src=src_markers_file,
                        filter=filter_file))
         task = dict(shell=command,
@@ -1208,7 +1213,7 @@ class NodeWorker(object):
         # underneath the root.
 
         command = ("/bin/grep -v '^/$' {exclude} | "
-                   "/bin/sed -e 's/^- /' >> {filter}".format(
+                   "/bin/sed -e 's/^/- /' >> {filter}".format(
                        exclude=exclude_file,
                        filter=filter_file))
         task = dict(shell=command,
@@ -1224,25 +1229,40 @@ class NodeWorker(object):
         # then we should omit the '/*' exclusion so that it is
         # implicitly included.
 
-        command = "grep '^/$' {exclude} && echo '- /*' >> {filter}".format(
-            exclude=exclude_file,
-            filter=filter_file)
+        command = ("grep '^/$' {exclude} && "
+                   "echo '- /*' >> {filter} || "
+                   "/bin/true".format(
+                       exclude=exclude_file,
+                       filter=filter_file))
         task = dict(shell=command,
                     when='success',
                     delegate_to='127.0.0.1')
         tasks.append(task)
 
         # Perform the rsync with the filter list.
-        rsync_cmd = [
-            '/usr/bin/k5start', '-t', '-k', '{keytab}', '--',
+        rsync_cmd = ' '.join([
             '/usr/bin/rsync', '-rtp', '--safe-links', '--delete-after',
             "--filter='merge {filter}'", '{src}/', '{dst}/',
-        ]
-        shellargs = ' '.join(rsync_cmd).format(
-            src=afscontent,
+        ])
+        mkdir_cmd = ' '.join(['mkdir', '-p', '{dst}/'])
+        bash_cmd = ' '.join([
+            '/bin/bash', '-c', '"{mkdir_cmd} && {rsync_cmd}"'
+        ]).format(
+            mkdir_cmd=mkdir_cmd,
+            rsync_cmd=rsync_cmd)
+
+        k5start_cmd = ' '.join([
+            '/usr/bin/k5start', '-t', '-f', '{keytab}', '{user}', '--',
+            bash_cmd,
+        ])
+
+        shellargs = k5start_cmd.format(
+            src=afssource,
             dst=afstarget,
             filter=filter_file,
+            user=site['user'],
             keytab=site['keytab'])
+
         task = dict(shell=shellargs,
                     when='success',
                     delegate_to='127.0.0.1')
