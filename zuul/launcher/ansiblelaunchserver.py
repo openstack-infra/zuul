@@ -1131,7 +1131,7 @@ class NodeWorker(object):
         task.update(self.retry_args)
         tasks.append(task)
 
-        afstarget = afs['target']
+        afstarget = afs['target'].lstrip('/')
         afstarget = self._substituteVariables(afstarget, parameters)
         afstarget = os.path.join(site['root'], afstarget)
         afstarget = os.path.normpath(afstarget)
