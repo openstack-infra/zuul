@@ -1640,7 +1640,7 @@ class UnparsedTenantConfig(object):
         r.nodesets = copy.deepcopy(self.nodesets)
         return r
 
-    def extend(self, conf, source_project=None):
+    def extend(self, conf, source_project=None, source_branch=None):
         if isinstance(conf, UnparsedTenantConfig):
             self.pipelines.extend(conf.pipelines)
             self.jobs.extend(conf.jobs)
@@ -1668,6 +1668,8 @@ class UnparsedTenantConfig(object):
             elif key == 'job':
                 if source_project is not None:
                     value['_source_project'] = source_project
+                if source_branch is not None:
+                    value['_source_branch'] = source_branch
                 self.jobs.append(value)
             elif key == 'project-template':
                 self.project_templates.append(value)
