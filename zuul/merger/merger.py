@@ -91,8 +91,12 @@ class Repo(object):
                 continue
             repo.create_head(ref.remote_head, ref, force=True)
 
-        # Reset to remote HEAD (usually origin/master)
-        repo.head.reference = origin.refs['HEAD']
+        # try reset to remote HEAD (usually origin/master)
+        # If it fails, pick the first reference
+        try:
+            repo.head.reference = origin.refs['HEAD']
+        except IndexError:
+            repo.head.reference = origin.refs[0]
         reset_repo_to_head(repo)
         repo.git.clean('-x', '-f', '-d')
 
@@ -178,7 +182,14 @@ class Repo(object):
         repo = self.createRepoObject()
         self.log.debug("Updating repository %s" % self.local_path)
         origin = repo.remotes.origin
-        origin.update()
+        if repo.git.version_info[:2] < (1, 9):
+            # Before 1.9, 'git fetch --tags' did not include the
+            # behavior covered by 'git --fetch', so we run both
+            # commands in that case.  Starting with 1.9, 'git fetch
+            # --tags' is all that is necessary.  See
+            # https://github.com/git/git/blob/master/Documentation/RelNotes/1.9.0.txt#L18-L20
+            origin.fetch()
+        origin.fetch(tags=True)
 
     def getFiles(self, files, branch=None, commit=None):
         ret = {}

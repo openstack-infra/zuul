@@ -4474,6 +4474,26 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(self.history[-1].changes, '3,2 2,1 1,2')
 
     @skip("Disabled for early v3 development")
+    def test_crd_check_unknown(self):
+        "Test unknown projects in independent pipeline"
+        self.init_repo("org/unknown")
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/unknown', 'master', 'D')
+        # A Depends-On: B
+        A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            A.subject, B.data['id'])
+
+        # Make sure zuul has seen an event on B.
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(B.reported, 0)
+
+    @skip("Disabled for early v3 development")
     def test_crd_cycle_join(self):
         "Test an updated change creates a cycle"
         A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A')
