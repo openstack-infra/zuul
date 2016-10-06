@@ -1878,7 +1878,6 @@ jobs:
         self.assertEqual(self.history[3].result, 'SUCCESS')
         self.assertEqual(self.history[3].changes, '1,1 2,2')
 
-    @skip("Disabled for early v3 development")
     def test_abandoned_gate(self):
         "Test that an abandoned change is dequeued from gate"
 
@@ -1897,10 +1896,10 @@ jobs:
         self.launch_server.release('.*-merge')
         self.waitUntilSettled()
 
-        self.assertEqual(len(self.builds), 0, "No job running")
-        self.assertEqual(len(self.history), 1, "Only one build in history")
-        self.assertEqual(self.history[0].result, 'ABORTED',
-                         "Build should have been aborted")
+        self.assertBuilds([])
+        self.assertHistory([
+            dict(name='project-merge', result='ABORTED', changes='1,1')],
+            ordered=False)
         self.assertEqual(A.reported, 1,
                          "Abandoned gate change should report only start")
 
