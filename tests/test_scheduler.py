@@ -109,30 +109,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.getJobFromHistory('project-test1').node,
                          'image2')
 
-    @skip("Disabled for early v3 development")
-    def test_duplicate_pipelines(self):
-        "Test that a change matching multiple pipelines works"
-
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        self.fake_gerrit.addEvent(A.getChangeRestoredEvent())
-        self.waitUntilSettled()
-
-        self.assertEqual(len(self.history), 2)
-        self.history[0].name == 'project-test1'
-        self.history[1].name == 'project-test1'
-
-        self.assertEqual(len(A.messages), 2)
-        if 'dup1/project-test1' in A.messages[0]:
-            self.assertIn('dup1/project-test1', A.messages[0])
-            self.assertNotIn('dup2/project-test1', A.messages[0])
-            self.assertNotIn('dup1/project-test1', A.messages[1])
-            self.assertIn('dup2/project-test1', A.messages[1])
-        else:
-            self.assertIn('dup1/project-test1', A.messages[1])
-            self.assertNotIn('dup2/project-test1', A.messages[1])
-            self.assertNotIn('dup1/project-test1', A.messages[0])
-            self.assertIn('dup2/project-test1', A.messages[0])
-
     def test_parallel_changes(self):
         "Test that changes are tested in parallel and merged in series"
 
@@ -4687,3 +4663,31 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertIn(
             '- docs-draft-test2 https://server/job/docs-draft-test2/1/',
             body[3])
+
+
+class TestDuplicatePipeline(ZuulTestCase):
+    tenant_config_file = 'config/duplicate-pipeline/main.yaml'
+
+    def test_duplicate_pipelines(self):
+        "Test that a change matching multiple pipelines works"
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getChangeRestoredEvent())
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='project-test1', result='SUCCESS', changes='1,1',
+                 pipeline='dup1'),
+            dict(name='project-test1', result='SUCCESS', changes='1,1',
+                 pipeline='dup2'),
+        ])
+
+        self.assertEqual(len(A.messages), 2)
+
+        self.assertIn('dup1', A.messages[0])
+        self.assertNotIn('dup2', A.messages[0])
+        self.assertIn('project-test1', A.messages[0])
+
+        self.assertIn('dup2', A.messages[1])
+        self.assertNotIn('dup1', A.messages[1])
+        self.assertIn('project-test1', A.messages[1])

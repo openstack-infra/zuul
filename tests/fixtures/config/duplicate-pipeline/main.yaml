@@ -1,0 +1,6 @@
+- tenant:
+    name: tenant-duplicate
+    source:
+      gerrit:
+        config-repos:
+          - common-config
