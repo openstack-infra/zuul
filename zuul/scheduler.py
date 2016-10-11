@@ -866,6 +866,8 @@ class Scheduler(threading.Thread):
                         self.log.exception(
                             "Exception while canceling build %s "
                             "for change %s" % (build, item.change))
+                    finally:
+                        self.mutex.release(build.build_set.item, build.job)
             self.layout = layout
             self.maintainConnectionCache()
             for trigger in self.triggers.values():
@@ -1540,6 +1542,8 @@ class BasePipelineManager(object):
             except:
                 self.log.exception("Exception while canceling build %s "
                                    "for change %s" % (build, item.change))
+            finally:
+                self.sched.mutex.release(build.build_set.item, build.job)
             build.result = 'CANCELED'
             canceled = True
         self.updateBuildDescriptions(old_build_set)

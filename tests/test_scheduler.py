@@ -2394,6 +2394,63 @@ jobs:
         self.assertEqual(B.reported, 1)
         self.assertFalse('test-mutex' in self.sched.mutex.mutexes)
 
+    def test_mutex_abandon(self):
+        "Test abandon with job mutexes"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-mutex.yaml')
+        self.sched.reconfigure(self.config)
+
+        self.worker.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.assertFalse('test-mutex' in self.sched.mutex.mutexes)
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertTrue('test-mutex' in self.sched.mutex.mutexes)
+
+        self.fake_gerrit.addEvent(A.getChangeAbandonedEvent())
+        self.waitUntilSettled()
+
+        # The check pipeline should be empty
+        items = self.sched.layout.pipelines['check'].getAllItems()
+        self.assertEqual(len(items), 0)
+
+        # The mutex should be released
+        self.assertFalse('test-mutex' in self.sched.mutex.mutexes)
+
+    def test_mutex_reconfigure(self):
+        "Test reconfigure with job mutexes"
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-mutex.yaml')
+        self.sched.reconfigure(self.config)
+
+        self.worker.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.assertFalse('test-mutex' in self.sched.mutex.mutexes)
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertTrue('test-mutex' in self.sched.mutex.mutexes)
+
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-mutex-reconfiguration.yaml')
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        self.worker.release('project-test1')
+        self.waitUntilSettled()
+
+        # The check pipeline should be empty
+        items = self.sched.layout.pipelines['check'].getAllItems()
+        self.assertEqual(len(items), 0)
+
+        # The mutex should be released
+        self.assertFalse('test-mutex' in self.sched.mutex.mutexes)
+
     def test_node_label(self):
         "Test that a job runs on a specific node label"
         self.worker.registerFunction('build:node-project-test1:debian')
