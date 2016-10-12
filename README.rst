@@ -1,7 +1,7 @@
 Zuul
 ====
 
-Zuul is a trunk gating system developed for the OpenStack Project.
+Zuul is a project gating system developed for the OpenStack Project.
 
 Contributing
 ------------
@@ -11,10 +11,11 @@ To clone the latest code, use `git clone git://git.openstack.org/openstack-infra
 
 Bugs are handled at: https://storyboard.openstack.org/#!/project/679
 
-Code reviews are, as you might expect, handled by gerrit. The gerrit they
-use is http://review.openstack.org
+Code reviews are, as you might expect, handled by gerrit at
+https://review.openstack.org
 
-Use `git review` to submit patches (after creating a gerrit account that links to your launchpad account). Example::
+Use `git review` to submit patches (after creating a Gerrit account
+that links to your launchpad account). Example::
 
     # Do your commits
     $ git review
