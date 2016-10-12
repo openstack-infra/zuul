@@ -25,7 +25,6 @@ import threading
 import time
 import traceback
 import Queue
-import uuid
 
 import gear
 import yaml
@@ -1268,9 +1267,9 @@ class NodeWorker(object):
 
         return tasks
 
-    def _makeBuilderTask(self, jobdir, builder, parameters):
+    def _makeBuilderTask(self, jobdir, builder, parameters, sequence):
         tasks = []
-        script_fn = '%s.sh' % str(uuid.uuid4().hex)
+        script_fn = '%02d.sh' % sequence
         script_path = os.path.join(jobdir.script_root, script_fn)
         with open(script_path, 'w') as script:
             data = builder['shell']
@@ -1392,10 +1391,13 @@ class NodeWorker(object):
         with open(jobdir.playbook, 'w') as playbook:
             tasks = []
 
+            sequence = 0
             for builder in jjb_job.get('builders', []):
                 if 'shell' in builder:
+                    sequence += 1
                     tasks.extend(
-                        self._makeBuilderTask(jobdir, builder, parameters))
+                        self._makeBuilderTask(jobdir, builder, parameters,
+                                              sequence))
 
             play = dict(hosts='node', name='Job body', tasks=tasks)
             playbook.write(yaml.safe_dump([play], default_flow_style=False))
