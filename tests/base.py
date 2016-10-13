@@ -728,7 +728,8 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
         args = json.loads(job.arguments)
         args['zuul']['_test'] = dict(test_root=self._test_root)
         job.arguments = json.dumps(args)
-        super(RecordingLaunchServer, self).launchJob(job)
+        self.job_workers[job.unique] = RecordingAnsibleJob(self, job)
+        self.job_workers[job.unique].run()
 
     def stopJob(self, job):
         self.log.debug("handle stop")
@@ -740,25 +741,27 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
                 build.release()
         super(RecordingLaunchServer, self).stopJob(job)
 
-    def runAnsible(self, jobdir, job):
-        build = self.job_builds[job.unique]
+
+class RecordingAnsibleJob(zuul.launcher.server.AnsibleJob):
+    def runAnsible(self, jobdir):
+        build = self.launcher_server.job_builds[self.job.unique]
         build.jobdir = jobdir
 
-        if self._run_ansible:
-            result = super(RecordingLaunchServer, self).runAnsible(jobdir, job)
+        if self.launcher_server._run_ansible:
+            result = super(RecordingAnsibleJob, self).runAnsible(jobdir)
         else:
             result = build.run()
 
-        self.lock.acquire()
-        self.build_history.append(
+        self.launcher_server.lock.acquire()
+        self.launcher_server.build_history.append(
             BuildHistory(name=build.name, result=result, changes=build.changes,
                          node=build.node, uuid=build.unique,
                          parameters=build.parameters,
                          pipeline=build.parameters['ZUUL_PIPELINE'])
         )
-        self.running_builds.remove(build)
-        del self.job_builds[job.unique]
-        self.lock.release()
+        self.launcher_server.running_builds.remove(build)
+        del self.launcher_server.job_builds[self.job.unique]
+        self.launcher_server.lock.release()
         if build.run_error:
             result = None
         return result
