@@ -36,6 +36,19 @@
         verified: 0
     precedence: high
 
+- pipeline:
+    name: experimental
+    manager: independent
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit: {}
+    failure:
+      gerrit: {}
+
 - job:
     name: project-merge
     hold-following-changes: true
@@ -55,6 +68,9 @@
 
 - job:
     name: project-test2
+
+- job:
+    name: experimental-project-test
 
 - project:
     name: org/project
@@ -84,3 +100,11 @@
             jobs:
               - project-test1
               - project-test2
+
+- project:
+    name: org/experimental-project
+    experimental:
+      jobs:
+        - project-merge:
+            jobs:
+              - experimental-project-test
