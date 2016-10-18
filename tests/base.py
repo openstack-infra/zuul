@@ -262,6 +262,25 @@ class FakeChange(object):
                  "comment": "This is a comment"}
         return event
 
+    def getRefUpdatedEvent(self):
+        path = os.path.join(self.upstream_root, self.project)
+        repo = git.Repo(path)
+        oldrev = repo.heads[self.branch].commit.hexsha
+
+        event = {
+            "type": "ref-updated",
+            "submitter": {
+                "name": "User Name",
+            },
+            "refUpdate": {
+                "oldRev": oldrev,
+                "newRev": self.patchsets[-1]['revision'],
+                "refName": self.branch,
+                "project": self.project,
+            }
+        }
+        return event
+
     def addApproval(self, category, value, username='reviewer_john',
                     granted_on=None, message=''):
         if not granted_on:

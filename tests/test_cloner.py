@@ -108,11 +108,34 @@ class TestCloner(ZuulTestCase):
                                   'be correct' % (project, number))
 
         work = self.getWorkspaceRepos(projects)
-        upstream_repo_path = os.path.join(self.upstream_root, 'org/project1')
-        self.assertEquals(
+        # project1 is the zuul_project so the origin should be set to the
+        # zuul_url since that is the most up to date.
+        cache_repo_path = os.path.join(cache_root, 'org/project1')
+        self.assertNotEqual(
             work['org/project1'].remotes.origin.url,
+            cache_repo_path,
+            'workspace repo origin should not be the cache'
+        )
+        zuul_url_repo_path = os.path.join(self.git_root, 'org/project1')
+        self.assertEqual(
+            work['org/project1'].remotes.origin.url,
+            zuul_url_repo_path,
+            'workspace repo origin should be the zuul url'
+        )
+
+        # project2 is not the zuul_project so the origin should be set
+        # to upstream since that is the best we can do
+        cache_repo_path = os.path.join(cache_root, 'org/project2')
+        self.assertNotEqual(
+            work['org/project2'].remotes.origin.url,
+            cache_repo_path,
+            'workspace repo origin should not be the cache'
+        )
+        upstream_repo_path = os.path.join(self.upstream_root, 'org/project2')
+        self.assertEqual(
+            work['org/project2'].remotes.origin.url,
             upstream_repo_path,
-            'workspace repo origin should be upstream, not cache'
+            'workspace repo origin should be the upstream url'
         )
 
         self.worker.hold_jobs_in_build = False
@@ -656,55 +679,76 @@ class TestCloner(ZuulTestCase):
         self.waitUntilSettled()
 
     def test_post_checkout(self):
-        project = "org/project"
-        path = os.path.join(self.upstream_root, project)
-        repo = git.Repo(path)
-        repo.head.reference = repo.heads['master']
-        commits = []
-        for i in range(0, 3):
-            commits.append(self.create_commit(project))
-        newRev = commits[1]
+        self.worker.hold_jobs_in_build = True
+        project = "org/project1"
+
+        A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
+        event = A.getRefUpdatedEvent()
+        A.setMerged()
+        self.fake_gerrit.addEvent(event)
+        self.waitUntilSettled()
+
+        build = self.builds[0]
+        state = {'org/project1': build.parameters['ZUUL_COMMIT']}
+
+        build.release()
+        self.waitUntilSettled()
 
         cloner = zuul.lib.cloner.Cloner(
             git_base_url=self.upstream_root,
             projects=[project],
             workspace=self.workspace_root,
-            zuul_project='org/project',
-            zuul_branch=None,
-            zuul_ref='master',
+            zuul_project=build.parameters.get('ZUUL_PROJECT', None),
+            zuul_branch=build.parameters.get('ZUUL_BRANCH', None),
+            zuul_ref=build.parameters.get('ZUUL_REF', None),
+            zuul_newrev=build.parameters.get('ZUUL_NEWREV', None),
             zuul_url=self.git_root,
-            zuul_newrev=newRev,
         )
         cloner.execute()
-        repos = self.getWorkspaceRepos([project])
-        cloned_sha = repos[project].rev_parse('HEAD').hexsha
-        self.assertEqual(newRev, cloned_sha)
+        work = self.getWorkspaceRepos([project])
+        self.assertEquals(state[project],
+                          str(work[project].commit('HEAD')),
+                          'Project %s commit for build %s should '
+                          'be correct' % (project, 0))
+        shutil.rmtree(self.workspace_root)
 
     def test_post_and_master_checkout(self):
-        project = "org/project1"
-        master_project = "org/project2"
-        path = os.path.join(self.upstream_root, project)
-        repo = git.Repo(path)
-        repo.head.reference = repo.heads['master']
-        commits = []
-        for i in range(0, 3):
-            commits.append(self.create_commit(project))
-        newRev = commits[1]
+        self.worker.hold_jobs_in_build = True
+        projects = ["org/project1", "org/project2"]
+
+        A = self.fake_gerrit.addFakeChange(projects[0], 'master', 'A')
+        event = A.getRefUpdatedEvent()
+        A.setMerged()
+        self.fake_gerrit.addEvent(event)
+        self.waitUntilSettled()
+
+        build = self.builds[0]
+        upstream = self.getUpstreamRepos(projects)
+        state = {'org/project1':
+                 build.parameters['ZUUL_COMMIT'],
+                 'org/project2':
+                 str(upstream['org/project2'].commit('master')),
+                 }
+
+        build.release()
+        self.waitUntilSettled()
 
         cloner = zuul.lib.cloner.Cloner(
             git_base_url=self.upstream_root,
-            projects=[project, master_project],
+            projects=projects,
             workspace=self.workspace_root,
-            zuul_project='org/project1',
-            zuul_branch=None,
-            zuul_ref='master',
+            zuul_project=build.parameters.get('ZUUL_PROJECT', None),
+            zuul_branch=build.parameters.get('ZUUL_BRANCH', None),
+            zuul_ref=build.parameters.get('ZUUL_REF', None),
+            zuul_newrev=build.parameters.get('ZUUL_NEWREV', None),
             zuul_url=self.git_root,
-            zuul_newrev=newRev
         )
         cloner.execute()
-        repos = self.getWorkspaceRepos([project, master_project])
-        cloned_sha = repos[project].rev_parse('HEAD').hexsha
-        self.assertEqual(newRev, cloned_sha)
-        self.assertEqual(
-            repos[master_project].rev_parse('HEAD').hexsha,
-            repos[master_project].rev_parse('master').hexsha)
+        work = self.getWorkspaceRepos(projects)
+
+        for project in projects:
+            self.assertEquals(state[project],
+                              str(work[project].commit('HEAD')),
+                              'Project %s commit for build %s should '
+                              'be correct' % (project, 0))
+        shutil.rmtree(self.workspace_root)

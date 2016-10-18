@@ -30,6 +30,13 @@ pipelines:
       gerrit:
         verified: -2
 
+  - name: post
+    manager: IndependentPipelineManager
+    trigger:
+      gerrit:
+        - event: ref-updated
+          ref: ^(?!refs/).*$
+
 projects:
   - name: org/project
     check:
@@ -42,6 +49,8 @@ projects:
       - integration
     gate:
       - integration
+    post:
+      - postjob
 
   - name: org/project2
     check:
