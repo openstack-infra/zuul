@@ -857,9 +857,11 @@ class BaseTestCase(testtools.TestCase):
             self.useFixture(fixtures.MonkeyPatch('sys.stderr', stderr))
         if (os.environ.get('OS_LOG_CAPTURE') == 'True' or
             os.environ.get('OS_LOG_CAPTURE') == '1'):
-            log_level = logging.INFO
+            log_level = logging.DEBUG
             if os.environ.get('OS_LOG_LEVEL') == 'DEBUG':
                 log_level = logging.DEBUG
+            elif os.environ.get('OS_LOG_LEVEL') == 'INFO':
+                log_level = logging.INFO
             elif os.environ.get('OS_LOG_LEVEL') == 'WARNING':
                 log_level = logging.WARNING
             elif os.environ.get('OS_LOG_LEVEL') == 'ERROR':
