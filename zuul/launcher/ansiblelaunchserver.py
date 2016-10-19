@@ -12,7 +12,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import getopt
 import json
 import logging
 import os
@@ -26,6 +25,7 @@ import threading
 import time
 import traceback
 import Queue
+import uuid
 
 import gear
 import yaml
@@ -50,45 +50,6 @@ def boolify(x):
     if isinstance(x, str):
         return bool(int(x))
     return bool(x)
-
-
-def deal_with_shebang(data):
-    # Ansible shell blocks do not honor shebang lines. That's fine - but
-    # we do have a bunch of scripts that have either nothing, -x, -xe,
-    # -ex or -eux. Transform those into leading set commands
-    if not data.startswith('#!'):
-        return (None, data)
-    data_lines = data.split('\n')
-    data_lines.reverse()
-    shebang = data_lines.pop()
-    split_line = shebang.split()
-    # Strip the # and the !
-    executable = split_line[0][2:]
-    if executable == '/bin/sh':
-        # Ansible default
-        executable = None
-    if len(split_line) > 1:
-        flag_x = False
-        flag_e = False
-        flag_u = False
-        optlist, args = getopt.getopt(split_line[1:], 'uex')
-        for opt, _ in optlist:
-            if opt == '-x':
-                flag_x = True
-            elif opt == '-e':
-                flag_e = True
-            elif opt == '-u':
-                flag_u = True
-
-        if flag_x:
-            data_lines.append('set -x')
-        if flag_e:
-            data_lines.append('set -e')
-        if flag_u:
-            data_lines.append('set -u')
-    data_lines.reverse()
-    data = '\n'.join(data_lines)
-    return (executable, data)
 
 
 class LaunchGearWorker(gear.Worker):
@@ -157,7 +118,9 @@ class JobDir(object):
         self.playbook = os.path.join(self.ansible_root, 'playbook')
         self.post_playbook = os.path.join(self.ansible_root, 'post_playbook')
         self.config = os.path.join(self.ansible_root, 'ansible.cfg')
+        self.script_root = os.path.join(self.ansible_root, 'scripts')
         self.ansible_log = os.path.join(self.ansible_root, 'ansible_log.txt')
+        os.makedirs(self.script_root)
         self.staging_root = os.path.join(self.root, 'staging')
         os.makedirs(self.staging_root)
 
@@ -1307,16 +1270,30 @@ class NodeWorker(object):
 
     def _makeBuilderTask(self, jobdir, builder, parameters):
         tasks = []
+        script_fn = '%s.sh' % str(uuid.uuid4().hex)
+        script_path = os.path.join(jobdir.script_root, script_fn)
+        with open(script_path, 'w') as script:
+            data = builder['shell']
+            if not data.startswith('#!'):
+                data = '#!/bin/bash -x\n %s' % (data,)
+            script.write(data)
 
-        (executable, shell) = deal_with_shebang(builder['shell'])
+        remote_path = os.path.join('/tmp', script_fn)
+        copy = dict(src=script_path,
+                    dest=remote_path,
+                    mode=0o555)
+        task = dict(copy=copy)
+        tasks.append(task)
 
-        task = dict(shell=shell)
+        task = dict(command=remote_path)
         task['name'] = 'command generated from JJB'
         task['environment'] = "{{ zuul.environment }}"
         task['args'] = dict(chdir=parameters['WORKSPACE'])
-        if executable:
-            task['args']['executable'] = executable
+        tasks.append(task)
 
+        filetask = dict(path=remote_path,
+                        state='absent')
+        task = dict(file=filetask)
         tasks.append(task)
 
         return tasks
