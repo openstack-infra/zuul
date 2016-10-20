@@ -323,7 +323,10 @@ def zuul_run_command(self, args, check_rc=False, close_fds=True, executable=None
                                 "after child exited")
             console.addLine("[Zuul] Task exit code: %s\n" % ret)
 
-        cmd.stdout.close()
+        # ZUUL: If the console log follow thread *is* stuck in readline,
+        # we can't close stdout (attempting to do so raises an
+        # exception) , so this is disabled.
+        # cmd.stdout.close()
 
         # ZUUL: stdout and stderr are in the console log file
         stdout = ''
