@@ -1341,15 +1341,19 @@ class NodeWorker(object):
                 inventory.write('\n')
 
         timeout = None
+        timeout_var = None
         for wrapper in jjb_job.get('wrappers', []):
             if isinstance(wrapper, dict):
                 build_timeout = wrapper.get('timeout')
                 if isinstance(build_timeout, dict):
+                    timeout_var = build_timeout.get('timeout-var')
                     timeout = build_timeout.get('timeout')
                     if timeout is not None:
                         timeout = int(timeout) * 60
         if not timeout:
             timeout = ANSIBLE_DEFAULT_TIMEOUT
+        if timeout_var:
+            parameters[timeout_var] = str(timeout * 1000)
 
         with open(jobdir.vars, 'w') as vars_yaml:
             variables = dict(
