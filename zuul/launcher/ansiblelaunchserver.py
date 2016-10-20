@@ -1448,7 +1448,6 @@ class NodeWorker(object):
         with open(jobdir.config, 'w') as config:
             config.write('[defaults]\n')
             config.write('hostfile = %s\n' % jobdir.inventory)
-            config.write('keep_remote_files = True\n')
             config.write('local_tmp = %s/.ansible/local_tmp\n' % jobdir.root)
             config.write('remote_tmp = %s/.ansible/remote_tmp\n' % jobdir.root)
             config.write('private_key_file = %s\n' % self.private_key_file)
@@ -1463,6 +1462,14 @@ class NodeWorker(object):
             config.write('timeout = 30\n')
 
             config.write('[ssh_connection]\n')
+            # NB: when setting pipelining = True, keep_remote_files
+            # must be False (the default).  Otherwise it apparently
+            # will override the pipelining option and effectively
+            # disable it.  Pipelining has a side effect of running the
+            # command without a tty (ie, without the -tt argument to
+            # ssh).  We require this behavior so that if a job runs a
+            # command which expects interactive input on a tty (such
+            # as sudo) it does not hang.
             config.write('pipelining = True\n')
             ssh_args = "-o ControlMaster=auto -o ControlPersist=60s " \
                 "-o UserKnownHostsFile=%s" % jobdir.known_hosts
