@@ -765,7 +765,6 @@ jobs:
         matcher = self.sched._parseSkipIf(config_job)
         self.assertEqual(expected, matcher)
 
-    @skip("Disabled for early v3 development")
     def test_patch_order(self):
         "Test that dependent patches are tested in the right order"
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -1298,7 +1297,6 @@ jobs:
         self.assertEqual(self.getJobFromHistory('project-test6').result,
                          'SUCCESS')
 
-    @skip("Disabled for early v3 development")
     def test_dependent_changes_dequeue(self):
         "Test that dependent patches are not needlessly tested"
 
@@ -1334,7 +1332,6 @@ jobs:
         self.assertEqual(C.reported, 2)
         self.assertEqual(len(self.history), 1)
 
-    @skip("Disabled for early v3 development")
     def test_failing_dependent_changes(self):
         "Test that failing dependent patches are taken out of stream"
         self.launch_server.hold_jobs_in_build = True
