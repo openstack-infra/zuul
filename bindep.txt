@@ -1,5 +1,1 @@
-mysql-client [test]
-mysql-server [test]
-postgresql [test]
-postgresql-client [test]
 libjpeg-dev [test]
