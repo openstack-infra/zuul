@@ -422,7 +422,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
-    @skip("Disabled for early v3 development")
     def test_failed_change_in_middle(self):
         "Test a failed change in the middle of the queue"
 
@@ -474,7 +473,8 @@ class TestScheduler(ZuulTestCase):
         # project-test1 and project-test2 for C
         self.assertEqual(len(self.builds), 5)
 
-        items = self.sched.layout.pipelines['gate'].getAllItems()
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        items = tenant.layout.pipelines['gate'].getAllItems()
         builds = items[0].current_build_set.getBuilds()
         self.assertEqual(self.countJobResults(builds, 'SUCCESS'), 1)
         self.assertEqual(self.countJobResults(builds, None), 2)
