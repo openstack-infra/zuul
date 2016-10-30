@@ -16,6 +16,7 @@
 # under the License.
 
 import json
+from unittest import skip
 
 from six.moves import urllib
 
@@ -23,24 +24,23 @@ from tests.base import ZuulTestCase
 
 
 class TestWebapp(ZuulTestCase):
+    tenant_config_file = 'config/single-tenant/main.yaml'
 
     def _cleanup(self):
-        self.worker.hold_jobs_in_build = False
-        self.worker.release()
+        self.launch_server.hold_jobs_in_build = False
+        self.launch_server.release()
         self.waitUntilSettled()
 
     def setUp(self):
-        self.skip("Disabled for early v3 development")
-
         super(TestWebapp, self).setUp()
         self.addCleanup(self._cleanup)
-        self.worker.hold_jobs_in_build = True
+        self.launch_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
-        B.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
         self.port = self.webapp.server.socket.getsockname()[1]
 
@@ -48,7 +48,7 @@ class TestWebapp(ZuulTestCase):
         "Test that we can filter to only certain changes in the webapp."
 
         req = urllib.request.Request(
-            "http://localhost:%s/status" % self.port)
+            "http://localhost:%s/tenant-one/status" % self.port)
         f = urllib.request.urlopen(req)
         data = json.loads(f.read())
 
@@ -57,7 +57,7 @@ class TestWebapp(ZuulTestCase):
     def test_webapp_status_compat(self):
         # testing compat with status.json
         req = urllib.request.Request(
-            "http://localhost:%s/status.json" % self.port)
+            "http://localhost:%s/tenant-one/status.json" % self.port)
         f = urllib.request.urlopen(req)
         data = json.loads(f.read())
 
@@ -69,6 +69,7 @@ class TestWebapp(ZuulTestCase):
             "http://localhost:%s/status/foo" % self.port)
         self.assertRaises(urllib.error.HTTPError, urllib.request.urlopen, req)
 
+    @skip("Disabled for early v3 development")
     def test_webapp_find_change(self):
         # can we filter by change id
         req = urllib.request.Request(

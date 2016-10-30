@@ -803,7 +803,7 @@ class Scheduler(threading.Thread):
             return
         pipeline.manager.onNodesProvisioned(event)
 
-    def formatStatusJSON(self):
+    def formatStatusJSON(self, tenant_name):
         # TODOv3(jeblair): use tenants
         if self.config.has_option('zuul', 'url_pattern'):
             url_pattern = self.config.get('zuul', 'url_pattern')
@@ -834,6 +834,7 @@ class Scheduler(threading.Thread):
 
         pipelines = []
         data['pipelines'] = pipelines
-        for pipeline in self.layout.pipelines.values():
+        tenant = self.abide.tenants.get(tenant_name)
+        for pipeline in tenant.layout.pipelines.values():
             pipelines.append(pipeline.formatStatusJSON(url_pattern))
         return json.dumps(data)
