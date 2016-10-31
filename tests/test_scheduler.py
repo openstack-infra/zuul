@@ -1687,30 +1687,6 @@ jobs:
         self.assertEqual(A.reported, 2)
 
     @skip("Disabled for early v3 development")
-    def test_single_nonexistent_post_job(self):
-        "Test launching a single post job that doesn't exist"
-        e = {
-            "type": "ref-updated",
-            "submitter": {
-                "name": "User Name",
-            },
-            "refUpdate": {
-                "oldRev": "90f173846e3af9154517b88543ffbd1691f31366",
-                "newRev": "d479a0bfcb34da57a31adb2a595c0cf687812543",
-                "refName": "master",
-                "project": "org/project",
-            }
-        }
-        # Set to the state immediately after a restart
-        self.resetGearmanServer()
-        self.launcher.negative_function_cache_ttl = 0
-
-        self.fake_gerrit.addEvent(e)
-        self.waitUntilSettled()
-
-        self.assertEqual(len(self.history), 0)
-
-    @skip("Disabled for early v3 development")
     def test_new_patchset_dequeues_old(self):
         "Test that a new patchset causes the old to be dequeued"
         # D -> C (depends on B) -> B (depends on A) -> A -> M
