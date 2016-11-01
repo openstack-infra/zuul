@@ -1249,9 +1249,16 @@ class NodeWorker(object):
                     delegate_to='127.0.0.1')
         tasks.append(task)
 
+        task = dict(name='cat filter list',
+                    shell='cat {filter}'.format(filter=filter_file),
+                    when='success|bool',
+                    delegate_to='127.0.0.1')
+        tasks.append(task)
+
         # Perform the rsync with the filter list.
         rsync_cmd = ' '.join([
             '/usr/bin/rsync', '-rtp', '--safe-links', '--delete-after',
+            "--out-format='<<CHANGED>>%i %n%L'",
             "--filter='merge {filter}'", '{src}/', '{dst}/',
         ])
         mkdir_cmd = ' '.join(['mkdir', '-p', '{dst}/'])
