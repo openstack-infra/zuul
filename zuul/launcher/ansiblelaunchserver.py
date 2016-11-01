@@ -118,6 +118,8 @@ class JobDir(object):
         self.playbook = os.path.join(self.ansible_root, 'playbook')
         self.post_playbook = os.path.join(self.ansible_root, 'post_playbook')
         self.config = os.path.join(self.ansible_root, 'ansible.cfg')
+        self.pre_post_config = os.path.join(self.ansible_root,
+                                            'ansible_pre_post.cfg')
         self.script_root = os.path.join(self.ansible_root, 'scripts')
         self.ansible_log = os.path.join(self.ansible_root, 'ansible_log.txt')
         os.makedirs(self.script_root)
@@ -181,10 +183,24 @@ class LaunchServer(object):
         self.library_dir = os.path.join(ansible_dir, 'library')
         if not os.path.exists(self.library_dir):
             os.makedirs(self.library_dir)
+        self.pre_post_library_dir = os.path.join(ansible_dir,
+                                                 'pre_post_library')
+        if not os.path.exists(self.pre_post_library_dir):
+            os.makedirs(self.pre_post_library_dir)
 
         library_path = os.path.dirname(os.path.abspath(
             zuul.ansible.library.__file__))
-        for fn in os.listdir(library_path):
+        # Ansible library modules that should be available to all
+        # playbooks:
+        all_libs = ['zuul_log.py', 'zuul_console.py']
+        # Modules that should only be used by job playbooks:
+        job_libs = ['command.py']
+
+        for fn in all_libs:
+            shutil.copy(os.path.join(library_path, fn), self.library_dir)
+            shutil.copy(os.path.join(library_path, fn),
+                        self.pre_post_library_dir)
+        for fn in job_libs:
             shutil.copy(os.path.join(library_path, fn), self.library_dir)
 
         def get_config_default(section, option, default):
@@ -469,7 +485,8 @@ class LaunchServer(object):
                             args['description'], args['labels'],
                             self.hostname, self.zmq_send_queue,
                             self.termination_queue, self.keep_jobdir,
-                            self.library_dir, self.options)
+                            self.library_dir, self.pre_post_library_dir,
+                            self.options)
         self.node_workers[worker.name] = worker
 
         worker.thread = threading.Thread(target=worker.run)
@@ -549,7 +566,8 @@ class NodeWorker(object):
 
     def __init__(self, config, jobs, builds, sites, name, host,
                  description, labels, manager_name, zmq_send_queue,
-                 termination_queue, keep_jobdir, library_dir, options):
+                 termination_queue, keep_jobdir, library_dir,
+                 pre_post_library_dir, options):
         self.log = logging.getLogger("zuul.NodeWorker.%s" % (name,))
         self.log.debug("Creating node worker %s" % (name,))
         self.config = config
@@ -597,6 +615,7 @@ class NodeWorker(object):
         else:
             self.username = 'zuul'
         self.library_dir = library_dir
+        self.pre_post_library_dir = pre_post_library_dir
         self.options = options
 
     def isAlive(self):
@@ -1465,7 +1484,15 @@ class NodeWorker(object):
                         tasks=tasks)
             playbook.write(yaml.safe_dump([play], default_flow_style=False))
 
-        with open(jobdir.config, 'w') as config:
+        self._writeAnsibleConfig(jobdir, jobdir.config,
+                                 library=self.library_dir)
+        self._writeAnsibleConfig(jobdir, jobdir.pre_post_config,
+                                 library=self.pre_post_library_dir)
+
+        return timeout
+
+    def _writeAnsibleConfig(self, jobdir, fn, library):
+        with open(fn, 'w') as config:
             config.write('[defaults]\n')
             config.write('hostfile = %s\n' % jobdir.inventory)
             config.write('local_tmp = %s/.ansible/local_tmp\n' % jobdir.root)
@@ -1474,7 +1501,7 @@ class NodeWorker(object):
             config.write('retry_files_enabled = False\n')
             config.write('log_path = %s\n' % jobdir.ansible_log)
             config.write('gathering = explicit\n')
-            config.write('library = %s\n' % self.library_dir)
+            config.write('library = %s\n' % library)
             # TODO(mordred) This can be removed once we're using ansible 2.2
             config.write('module_set_locale = False\n')
             # bump the timeout because busy nodes may take more than
@@ -1495,8 +1522,6 @@ class NodeWorker(object):
                 "-o UserKnownHostsFile=%s" % jobdir.known_hosts
             config.write('ssh_args = %s\n' % ssh_args)
 
-        return timeout
-
     def _ansibleTimeout(self, proc, msg):
         self._watchdog_timeout = True
         self.log.warning(msg)
@@ -1507,6 +1532,7 @@ class NodeWorker(object):
         # the correct user.
         env_copy = os.environ.copy()
         env_copy['LOGNAME'] = 'zuul'
+        env_copy['ANSIBLE_CONFIG'] = jobdir.pre_post_config
 
         if self.options['verbose']:
             verbose = '-vvv'
@@ -1547,6 +1573,7 @@ class NodeWorker(object):
         # the correct user.
         env_copy = os.environ.copy()
         env_copy['LOGNAME'] = 'zuul'
+        env_copy['ANSIBLE_CONFIG'] = jobdir.config
 
         if self.options['verbose']:
             verbose = '-vvv'
@@ -1596,6 +1623,7 @@ class NodeWorker(object):
         # the correct user.
         env_copy = os.environ.copy()
         env_copy['LOGNAME'] = 'zuul'
+        env_copy['ANSIBLE_CONFIG'] = jobdir.pre_post_config
 
         if self.options['verbose']:
             verbose = '-vvv'
