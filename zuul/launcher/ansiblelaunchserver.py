@@ -963,7 +963,8 @@ class NodeWorker(object):
                 # upload.  This uploads the playbook and ansible logs.
                 copyargs = dict(src=jobdir.ansible_root + '/',
                                 dest=os.path.join(scproot, '_zuul_ansible'))
-                task = dict(copy=copyargs,
+                task = dict(name='copy console log',
+                            copy=copyargs,
                             delegate_to='127.0.0.1')
                 # This is a local copy and should not fail, so does
                 # not need a retry stanza.
@@ -985,7 +986,8 @@ class NodeWorker(object):
                             mode='pull')
             if rsync_opts:
                 syncargs['rsync_opts'] = rsync_opts
-            task = dict(synchronize=syncargs)
+            task = dict(name='copy files from node',
+                        synchronize=syncargs)
             if not scpfile.get('copy-after-failure'):
                 task['when'] = 'success|bool'
             task.update(self.retry_args)
@@ -1028,7 +1030,8 @@ class NodeWorker(object):
             private_key_file=self.private_key_file,
             host=site['host'],
             user=site['user'])
-        task = dict(shell=shellargs,
+        task = dict(name='rsync logs to server',
+                    shell=shellargs,
                     delegate_to='127.0.0.1')
         if not scpfile.get('copy-after-failure'):
             task['when'] = 'success|bool'
@@ -1059,11 +1062,13 @@ class NodeWorker(object):
                         mode='pull')
         if rsync_opts:
             syncargs['rsync_opts'] = rsync_opts
-        task = dict(synchronize=syncargs,
+        task = dict(name='copy files from node',
+                    synchronize=syncargs,
                     when='success|bool')
         task.update(self.retry_args)
         tasks.append(task)
-        task = dict(shell='lftp -f %s' % ftpscript,
+        task = dict(name='FTP files to server',
+                    shell='lftp -f %s' % ftpscript,
                     when='success|bool',
                     delegate_to='127.0.0.1')
         ftpsource = ftpcontent
@@ -1124,7 +1129,8 @@ class NodeWorker(object):
                         mode='pull')
         if rsync_opts:
             syncargs['rsync_opts'] = rsync_opts
-        task = dict(synchronize=syncargs,
+        task = dict(name='copy files from node',
+                    synchronize=syncargs,
                     when='success|bool')
         task.update(self.retry_args)
         tasks.append(task)
@@ -1151,7 +1157,8 @@ class NodeWorker(object):
         # Find the list of root markers in the just-completed build
         # (usually there will only be one, but some builds produce
         # content at the root *and* at a tag location).
-        task = dict(shell=find_pipe.format(path=afssource,
+        task = dict(name='find root markers in build',
+                    shell=find_pipe.format(path=afssource,
                                            file=src_markers_file),
                     when='success|bool',
                     delegate_to='127.0.0.1')
@@ -1159,7 +1166,8 @@ class NodeWorker(object):
 
         # Find the list of root markers that already exist in the
         # published site.
-        task = dict(shell=find_pipe.format(path=afstarget,
+        task = dict(name='find root markers in site',
+                    shell=find_pipe.format(path=afstarget,
                                            file=dst_markers_file),
                     when='success|bool',
                     delegate_to='127.0.0.1')
@@ -1172,7 +1180,8 @@ class NodeWorker(object):
             src=src_markers_file,
             dst=dst_markers_file,
             exclude=exclude_file)
-        task = dict(shell=exclude_command,
+        task = dict(name='produce list of root maker differences',
+                    shell=exclude_command,
                     when='success|bool',
                     delegate_to='127.0.0.1')
         tasks.append(task)
@@ -1198,7 +1207,8 @@ class NodeWorker(object):
                    "/bin/sed -e 's/^/+ /' > {filter}".format(
                        src=src_markers_file,
                        filter=filter_file))
-        task = dict(shell=command,
+        task = dict(name='produce first filter list',
+                    shell=command,
                     when='success|bool',
                     delegate_to='127.0.0.1')
         tasks.append(task)
@@ -1214,7 +1224,8 @@ class NodeWorker(object):
                    "/bin/sed -e 's/^/- /' >> {filter}".format(
                        exclude=exclude_file,
                        filter=filter_file))
-        task = dict(shell=command,
+        task = dict(name='produce second filter list',
+                    shell=command,
                     when='success|bool',
                     delegate_to='127.0.0.1')
         tasks.append(task)
@@ -1232,7 +1243,8 @@ class NodeWorker(object):
                    "/bin/true".format(
                        exclude=exclude_file,
                        filter=filter_file))
-        task = dict(shell=command,
+        task = dict(name='produce third filter list',
+                    shell=command,
                     when='success|bool',
                     delegate_to='127.0.0.1')
         tasks.append(task)
@@ -1261,7 +1273,8 @@ class NodeWorker(object):
             user=site['user'],
             keytab=site['keytab'])
 
-        task = dict(shell=shellargs,
+        task = dict(name='k5start write files to AFS',
+                    shell=shellargs,
                     when='success|bool',
                     delegate_to='127.0.0.1')
         tasks.append(task)
