@@ -32,8 +32,8 @@ class GerritSource(BaseSource):
     def postConfig(self):
         pass
 
-    def getChange(self, event):
-        return self.connection.getChange(event)
+    def getChange(self, event, refresh=False):
+        return self.connection.getChange(event, refresh)
 
     def getProject(self, name):
         return self.connection.getProject(name)

@@ -32,6 +32,7 @@ import zuul.scheduler
 import zuul.rpcclient
 import zuul.reporter.gerrit
 import zuul.reporter.smtp
+import zuul.model
 
 from tests.base import (
     ZuulTestCase,
@@ -918,22 +919,30 @@ jobs:
         self.assertEqual(A.queried, 2)  # Initial and isMerged
         self.assertEqual(B.queried, 3)  # Initial A, refresh from B, isMerged
 
-    @skip("Disabled for early v3 development")
     def test_can_merge(self):
         "Test whether a change is ready to merge"
         # TODO: move to test_gerrit (this is a unit test!)
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        source = self.sched.layout.pipelines['gate'].source
-        a = source._getChange(1, 2)
-        mgr = self.sched.layout.pipelines['gate'].manager
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        source = tenant.layout.pipelines['gate'].source
+
+        # TODO(pabelanger): As we add more source / trigger APIs we should make
+        # it easier for users to create events for testing.
+        event = zuul.model.TriggerEvent()
+        event.trigger_name = 'gerrit'
+        event.change_number = '1'
+        event.patch_number = '2'
+
+        a = source.getChange(event)
+        mgr = tenant.layout.pipelines['gate'].manager
         self.assertFalse(source.canMerge(a, mgr.getSubmitAllowNeeds()))
 
         A.addApproval('code-review', 2)
-        a = source._getChange(1, 2, refresh=True)
+        a = source.getChange(event, refresh=True)
         self.assertFalse(source.canMerge(a, mgr.getSubmitAllowNeeds()))
 
         A.addApproval('approved', 1)
-        a = source._getChange(1, 2, refresh=True)
+        a = source.getChange(event, refresh=True)
         self.assertTrue(source.canMerge(a, mgr.getSubmitAllowNeeds()))
 
     @skip("Disabled for early v3 development")
