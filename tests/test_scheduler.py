@@ -871,7 +871,6 @@ jobs:
         self.assertEqual(self.history[6].changes,
                          '1,1 2,1 3,1 4,1 5,1 6,1 7,1')
 
-    @skip("Disabled for early v3 development")
     def test_source_cache(self):
         "Test that the source cache operates correctly"
         self.launch_server.hold_jobs_in_build = True
