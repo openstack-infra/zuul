@@ -229,11 +229,6 @@ projects:
     post:
       - nonvoting-project-post
 
-  - name: org/templated-project
-    template:
-      - name: test-one-and-two
-        projectname: project
-
   - name: org/layered-project
     template:
       - name: test-one-and-two

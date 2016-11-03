@@ -1227,20 +1227,6 @@ jobs:
         self.assertNotEqual(commit_A, commit_B, commit_C)
 
     @skip("Disabled for early v3 development")
-    def test_job_from_templates_launched(self):
-        "Test whether a job generated via a template can be launched"
-
-        A = self.fake_gerrit.addFakeChange(
-            'org/templated-project', 'master', 'A')
-        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
-        self.waitUntilSettled()
-
-        self.assertEqual(self.getJobFromHistory('project-test1').result,
-                         'SUCCESS')
-        self.assertEqual(self.getJobFromHistory('project-test2').result,
-                         'SUCCESS')
-
-    @skip("Disabled for early v3 development")
     def test_layered_templates(self):
         "Test whether a job generated via a template can be launched"
 
@@ -4679,3 +4665,20 @@ class TestSchedulerOneJobProject(ZuulTestCase):
         self.assertEqual(A.reported, 2)
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(B.reported, 2)
+
+
+class TestSchedulerTemplatedProject(ZuulTestCase):
+    tenant_config_file = 'config/templated-project/main.yaml'
+
+    def test_job_from_templates_launched(self):
+        "Test whether a job generated via a template can be launched"
+
+        A = self.fake_gerrit.addFakeChange(
+            'org/templated-project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
