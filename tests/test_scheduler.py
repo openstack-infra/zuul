@@ -2148,7 +2148,6 @@ jobs:
         self.assertEqual(self.countJobResults(self.history, 'RUN_ERROR'), 1)
         self.assertEqual(self.countJobResults(self.history, 'SUCCESS'), 3)
 
-    @skip("Disabled for early v3 development")
     def test_statsd(self):
         "Test each of the statsd methods used in the scheduler"
         import extras
