@@ -435,7 +435,7 @@ class Job(object):
         for k, v in self.attributes.items():
             setattr(self, k, v)
 
-    def __equals__(self, other):
+    def __eq__(self, other):
         # Compare the name and all inheritable attributes to determine
         # whether two jobs with the same name are identically
         # configured.  Useful upon reconfiguration.

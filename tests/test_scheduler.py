@@ -2463,7 +2463,6 @@ jobs:
                          'debian')
         self.assertIsNone(self.getJobFromHistory('node-project-test2').node)
 
-    @skip("Disabled for early v3 development")
     def test_live_reconfiguration(self):
         "Test that live reconfiguration works"
         self.launch_server.hold_jobs_in_build = True
