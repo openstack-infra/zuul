@@ -74,6 +74,12 @@
 
 - project:
     name: org/project
+    check:
+      jobs:
+        - project-merge:
+            jobs:
+              - project-test1
+              - project-test2
     gate:
       jobs:
         - project-merge:
