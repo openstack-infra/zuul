@@ -217,14 +217,6 @@ projects:
     post:
       - project3-post
 
-  - name: org/one-job-project
-    check:
-      - one-job-project-merge
-    gate:
-      - one-job-project-merge
-    post:
-      - one-job-project-post
-
   - name: org/nonvoting-project
     check:
       - nonvoting-project-merge:

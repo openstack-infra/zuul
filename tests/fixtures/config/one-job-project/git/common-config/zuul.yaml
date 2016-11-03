@@ -1,0 +1,66 @@
+- pipeline:
+    name: check
+    manager: independent
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+- pipeline:
+    name: gate
+    manager: dependent
+    success-message: Build succeeded (gate).
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - approved: 1
+    success:
+      gerrit:
+        verified: 2
+        submit: true
+    failure:
+      gerrit:
+        verified: -2
+    start:
+      gerrit:
+        verified: 0
+    precedence: high
+
+- pipeline:
+    name: post
+    manager: independent
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: ref-updated
+          ref: ^(?!refs/).*$
+
+- job:
+    name: one-job-project-merge
+    hold-following-changes: true
+
+- job:
+    name: one-job-project-post
+
+- project:
+    name: org/one-job-project
+    check:
+      jobs:
+        - one-job-project-merge
+    gate:
+      jobs:
+        - one-job-project-merge
+    post:
+      jobs:
+        - one-job-project-post
