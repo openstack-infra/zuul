@@ -3084,7 +3084,6 @@ jobs:
         self.launch_server.release('.*')
         self.waitUntilSettled()
 
-    @skip("Disabled for early v3 development")
     def test_client_enqueue_change(self):
         "Test that the RPC client can enqueue a change"
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -3093,7 +3092,8 @@ jobs:
 
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
-        r = client.enqueue(pipeline='gate',
+        r = client.enqueue(tenant='tenant-one',
+                           pipeline='gate',
                            project='org/project',
                            trigger='gerrit',
                            change='1,1')
@@ -3115,6 +3115,7 @@ jobs:
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
         r = client.enqueue_ref(
+            tenant='tenant-one',
             pipeline='post',
             project='org/project',
             trigger='gerrit',
@@ -3127,14 +3128,24 @@ jobs:
         self.assertIn('project-post', job_names)
         self.assertEqual(r, True)
 
-    @skip("Disabled for early v3 development")
     def test_client_enqueue_negative(self):
         "Test that the RPC client returns errors"
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
         with testtools.ExpectedException(zuul.rpcclient.RPCFailure,
+                                         "Invalid tenant"):
+            r = client.enqueue(tenant='tenant-foo',
+                               pipeline='gate',
+                               project='org/project',
+                               trigger='gerrit',
+                               change='1,1')
+            client.shutdown()
+            self.assertEqual(r, False)
+
+        with testtools.ExpectedException(zuul.rpcclient.RPCFailure,
                                          "Invalid project"):
-            r = client.enqueue(pipeline='gate',
+            r = client.enqueue(tenant='tenant-one',
+                               pipeline='gate',
                                project='project-does-not-exist',
                                trigger='gerrit',
                                change='1,1')
@@ -3143,7 +3154,8 @@ jobs:
 
         with testtools.ExpectedException(zuul.rpcclient.RPCFailure,
                                          "Invalid pipeline"):
-            r = client.enqueue(pipeline='pipeline-does-not-exist',
+            r = client.enqueue(tenant='tenant-one',
+                               pipeline='pipeline-does-not-exist',
                                project='org/project',
                                trigger='gerrit',
                                change='1,1')
@@ -3152,7 +3164,8 @@ jobs:
 
         with testtools.ExpectedException(zuul.rpcclient.RPCFailure,
                                          "Invalid trigger"):
-            r = client.enqueue(pipeline='gate',
+            r = client.enqueue(tenant='tenant-one',
+                               pipeline='gate',
                                project='org/project',
                                trigger='trigger-does-not-exist',
                                change='1,1')
@@ -3161,7 +3174,8 @@ jobs:
 
         with testtools.ExpectedException(zuul.rpcclient.RPCFailure,
                                          "Invalid change"):
-            r = client.enqueue(pipeline='gate',
+            r = client.enqueue(tenant='tenant-one',
+                               pipeline='gate',
                                project='org/project',
                                trigger='gerrit',
                                change='1,1')
@@ -3172,7 +3186,6 @@ jobs:
         self.assertEqual(len(self.history), 0)
         self.assertEqual(len(self.builds), 0)
 
-    @skip("Disabled for early v3 development")
     def test_client_promote(self):
         "Test that the RPC client can promote a change"
         self.launch_server.hold_jobs_in_build = True
@@ -3189,18 +3202,20 @@ jobs:
 
         self.waitUntilSettled()
 
-        items = self.sched.layout.pipelines['gate'].getAllItems()
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        items = tenant.layout.pipelines['gate'].getAllItems()
         enqueue_times = {}
         for item in items:
             enqueue_times[str(item.change)] = item.enqueue_time
 
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
-        r = client.promote(pipeline='gate',
+        r = client.promote(tenant='tenant-one',
+                           pipeline='gate',
                            change_ids=['2,1', '3,1'])
 
         # ensure that enqueue times are durable
-        items = self.sched.layout.pipelines['gate'].getAllItems()
+        items = tenant.layout.pipelines['gate'].getAllItems()
         for item in items:
             self.assertEqual(
                 enqueue_times[str(item.change)], item.enqueue_time)
@@ -3221,17 +3236,17 @@ jobs:
         self.assertEqual(self.builds[4].name, 'project-test1')
         self.assertEqual(self.builds[5].name, 'project-test2')
 
-        self.assertTrue(self.job_has_changes(self.builds[0], B))
-        self.assertFalse(self.job_has_changes(self.builds[0], A))
-        self.assertFalse(self.job_has_changes(self.builds[0], C))
+        self.assertTrue(self.builds[0].hasChanges(B))
+        self.assertFalse(self.builds[0].hasChanges(A))
+        self.assertFalse(self.builds[0].hasChanges(C))
 
-        self.assertTrue(self.job_has_changes(self.builds[2], B))
-        self.assertTrue(self.job_has_changes(self.builds[2], C))
-        self.assertFalse(self.job_has_changes(self.builds[2], A))
+        self.assertTrue(self.builds[2].hasChanges(B))
+        self.assertTrue(self.builds[2].hasChanges(C))
+        self.assertFalse(self.builds[2].hasChanges(A))
 
-        self.assertTrue(self.job_has_changes(self.builds[4], B))
-        self.assertTrue(self.job_has_changes(self.builds[4], C))
-        self.assertTrue(self.job_has_changes(self.builds[4], A))
+        self.assertTrue(self.builds[4].hasChanges(B))
+        self.assertTrue(self.builds[4].hasChanges(C))
+        self.assertTrue(self.builds[4].hasChanges(A))
 
         self.launch_server.release()
         self.waitUntilSettled()
@@ -3246,7 +3261,6 @@ jobs:
         client.shutdown()
         self.assertEqual(r, True)
 
-    @skip("Disabled for early v3 development")
     def test_client_promote_dependent(self):
         "Test that the RPC client can promote a dependent change"
         # C (depends on B) -> B -> A ; then promote C to get:
@@ -3270,7 +3284,8 @@ jobs:
 
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
-        r = client.promote(pipeline='gate',
+        r = client.promote(tenant='tenant-one',
+                           pipeline='gate',
                            change_ids=['3,1'])
 
         self.waitUntilSettled()
@@ -3289,17 +3304,17 @@ jobs:
         self.assertEqual(self.builds[4].name, 'project-test1')
         self.assertEqual(self.builds[5].name, 'project-test2')
 
-        self.assertTrue(self.job_has_changes(self.builds[0], B))
-        self.assertFalse(self.job_has_changes(self.builds[0], A))
-        self.assertFalse(self.job_has_changes(self.builds[0], C))
+        self.assertTrue(self.builds[0].hasChanges(B))
+        self.assertFalse(self.builds[0].hasChanges(A))
+        self.assertFalse(self.builds[0].hasChanges(C))
 
-        self.assertTrue(self.job_has_changes(self.builds[2], B))
-        self.assertTrue(self.job_has_changes(self.builds[2], C))
-        self.assertFalse(self.job_has_changes(self.builds[2], A))
+        self.assertTrue(self.builds[2].hasChanges(B))
+        self.assertTrue(self.builds[2].hasChanges(C))
+        self.assertFalse(self.builds[2].hasChanges(A))
 
-        self.assertTrue(self.job_has_changes(self.builds[4], B))
-        self.assertTrue(self.job_has_changes(self.builds[4], C))
-        self.assertTrue(self.job_has_changes(self.builds[4], A))
+        self.assertTrue(self.builds[4].hasChanges(B))
+        self.assertTrue(self.builds[4].hasChanges(C))
+        self.assertTrue(self.builds[4].hasChanges(A))
 
         self.launch_server.release()
         self.waitUntilSettled()
@@ -3314,7 +3329,6 @@ jobs:
         client.shutdown()
         self.assertEqual(r, True)
 
-    @skip("Disabled for early v3 development")
     def test_client_promote_negative(self):
         "Test that the RPC client returns errors for promotion"
         self.launch_server.hold_jobs_in_build = True
@@ -3327,13 +3341,15 @@ jobs:
                                           self.gearman_server.port)
 
         with testtools.ExpectedException(zuul.rpcclient.RPCFailure):
-            r = client.promote(pipeline='nonexistent',
+            r = client.promote(tenant='tenant-one',
+                               pipeline='nonexistent',
                                change_ids=['2,1', '3,1'])
             client.shutdown()
             self.assertEqual(r, False)
 
         with testtools.ExpectedException(zuul.rpcclient.RPCFailure):
-            r = client.promote(pipeline='gate',
+            r = client.promote(tenant='tenant-one',
+                               pipeline='gate',
                                change_ids=['4,1'])
             client.shutdown()
             self.assertEqual(r, False)

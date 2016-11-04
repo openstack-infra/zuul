@@ -128,13 +128,15 @@ class ReconfigureEvent(ManagementEvent):
 class PromoteEvent(ManagementEvent):
     """Promote one or more changes to the head of the queue.
 
+    :arg str tenant_name: the name of the tenant
     :arg str pipeline_name: the name of the pipeline
     :arg list change_ids: a list of strings of change ids in the form
         1234,1
     """
 
-    def __init__(self, pipeline_name, change_ids):
+    def __init__(self, tenant_name, pipeline_name, change_ids):
         super(PromoteEvent, self).__init__()
+        self.tenant_name = tenant_name
         self.pipeline_name = pipeline_name
         self.change_ids = change_ids
 
@@ -370,8 +372,8 @@ class Scheduler(threading.Thread):
         self.log.debug("Reconfiguration complete")
         self.last_reconfigured = int(time.time())
 
-    def promote(self, pipeline_name, change_ids):
-        event = PromoteEvent(pipeline_name, change_ids)
+    def promote(self, tenant_name, pipeline_name, change_ids):
+        event = PromoteEvent(tenant_name, pipeline_name, change_ids)
         self.management_event_queue.put(event)
         self.wake_event.set()
         self.log.debug("Waiting for promotion")
@@ -547,7 +549,8 @@ class Scheduler(threading.Thread):
                                    "pipeline stats:")
 
     def _doPromoteEvent(self, event):
-        pipeline = self.layout.pipelines[event.pipeline_name]
+        tenant = self.abide.tenants.get(event.tenant_name)
+        pipeline = tenant.layout.pipelines[event.pipeline_name]
         change_ids = [c.split(',') for c in event.change_ids]
         items_to_enqueue = []
         change_queue = None
@@ -586,8 +589,9 @@ class Scheduler(threading.Thread):
                 ignore_requirements=True)
 
     def _doEnqueueEvent(self, event):
-        project = self.layout.projects.get(event.project_name)
-        pipeline = self.layout.pipelines[event.forced_pipeline]
+        tenant = self.abide.tenants.get(event.tenant_name)
+        project = tenant.layout.project_configs.get(event.project_name)
+        pipeline = tenant.layout.pipelines[event.forced_pipeline]
         change = pipeline.source.getChange(event, project)
         self.log.debug("Event %s for change %s was directly assigned "
                        "to pipeline %s" % (event, change, self))

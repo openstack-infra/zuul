@@ -46,6 +46,8 @@ class Client(zuul.cmd.ZuulApp):
                                            help='additional help')
 
         cmd_enqueue = subparsers.add_parser('enqueue', help='enqueue a change')
+        cmd_enqueue.add_argument('--tenant', help='tenant name',
+                                 required=True)
         cmd_enqueue.add_argument('--trigger', help='trigger name',
                                  required=True)
         cmd_enqueue.add_argument('--pipeline', help='pipeline name',
@@ -58,6 +60,8 @@ class Client(zuul.cmd.ZuulApp):
 
         cmd_enqueue = subparsers.add_parser('enqueue-ref',
                                             help='enqueue a ref')
+        cmd_enqueue.add_argument('--tenant', help='tenant name',
+                                 required=True)
         cmd_enqueue.add_argument('--trigger', help='trigger name',
                                  required=True)
         cmd_enqueue.add_argument('--pipeline', help='pipeline name',
@@ -76,6 +80,8 @@ class Client(zuul.cmd.ZuulApp):
 
         cmd_promote = subparsers.add_parser('promote',
                                             help='promote one or more changes')
+        cmd_promote.add_argument('--tenant', help='tenant name',
+                                 required=True)
         cmd_promote.add_argument('--pipeline', help='pipeline name',
                                  required=True)
         cmd_promote.add_argument('--changes', help='change ids',
@@ -127,7 +133,8 @@ class Client(zuul.cmd.ZuulApp):
 
     def enqueue(self):
         client = zuul.rpcclient.RPCClient(self.server, self.port)
-        r = client.enqueue(pipeline=self.args.pipeline,
+        r = client.enqueue(tenant=self.args.tenant,
+                           pipeline=self.args.pipeline,
                            project=self.args.project,
                            trigger=self.args.trigger,
                            change=self.args.change)
@@ -135,7 +142,8 @@ class Client(zuul.cmd.ZuulApp):
 
     def enqueue_ref(self):
         client = zuul.rpcclient.RPCClient(self.server, self.port)
-        r = client.enqueue_ref(pipeline=self.args.pipeline,
+        r = client.enqueue_ref(tenant=self.args.tenant,
+                               pipeline=self.args.pipeline,
                                project=self.args.project,
                                trigger=self.args.trigger,
                                ref=self.args.ref,
@@ -145,7 +153,8 @@ class Client(zuul.cmd.ZuulApp):
 
     def promote(self):
         client = zuul.rpcclient.RPCClient(self.server, self.port)
-        r = client.promote(pipeline=self.args.pipeline,
+        r = client.promote(tenant=self.args.tenant,
+                           pipeline=self.args.pipeline,
                            change_ids=self.args.changes)
         return r
 

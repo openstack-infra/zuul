@@ -1231,6 +1231,8 @@ class TriggerEvent(object):
         self.data = None
         # common
         self.type = None
+        # For management events (eg: enqueue / promote)
+        self.tenant_name = None
         self.project_name = None
         self.trigger_name = None
         # Representation of the user account that performed the event.

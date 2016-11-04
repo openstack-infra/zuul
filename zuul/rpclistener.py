@@ -88,24 +88,34 @@ class RPCListener(object):
         args = json.loads(job.arguments)
         event = model.TriggerEvent()
         errors = ''
+        tenant = None
+        project = None
+        pipeline = None
 
-        trigger = self.sched.triggers.get(args['trigger'])
-        if trigger:
-            event.trigger_name = args['trigger']
-        else:
-            errors += 'Invalid trigger: %s\n' % (args['trigger'],)
+        tenant = self.sched.abide.tenants.get(args['tenant'])
+        if tenant:
+            event.tenant_name = args['tenant']
 
-        project = self.sched.layout.projects.get(args['project'])
-        if project:
-            event.project_name = args['project']
-        else:
-            errors += 'Invalid project: %s\n' % (args['project'],)
+            project = tenant.layout.project_configs.get(args['project'])
+            if project:
+                event.project_name = args['project']
+            else:
+                errors += 'Invalid project: %s\n' % (args['project'],)
 
-        pipeline = self.sched.layout.pipelines.get(args['pipeline'])
-        if pipeline:
-            event.forced_pipeline = args['pipeline']
+            pipeline = tenant.layout.pipelines.get(args['pipeline'])
+            if pipeline:
+                event.forced_pipeline = args['pipeline']
+
+                for trigger in pipeline.triggers:
+                    if trigger.name == args['trigger']:
+                        event.trigger_name = args['trigger']
+                        continue
+                if not event.trigger_name:
+                    errors += 'Invalid trigger: %s\n' % (args['trigger'],)
+            else:
+                errors += 'Invalid pipeline: %s\n' % (args['pipeline'],)
         else:
-            errors += 'Invalid pipeline: %s\n' % (args['pipeline'],)
+            errors += 'Invalid tenant: %s\n' % (args['tenant'],)
 
         return (args, event, errors, pipeline, project)
 
@@ -141,9 +151,10 @@ class RPCListener(object):
 
     def handle_promote(self, job):
         args = json.loads(job.arguments)
+        tenant_name = args['tenant']
         pipeline_name = args['pipeline']
         change_ids = args['change_ids']
-        self.sched.promote(pipeline_name, change_ids)
+        self.sched.promote(tenant_name, pipeline_name, change_ids)
         job.sendWorkComplete()
 
     def handle_get_running_jobs(self, job):
