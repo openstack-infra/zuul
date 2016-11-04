@@ -605,7 +605,6 @@ class TestScheduler(ZuulTestCase):
         self._test_time_database(1)
         self._test_time_database(2)
 
-    @skip("Disabled for early v3 development")
     def test_two_failed_changes_at_head(self):
         "Test that changes are reparented correctly if 2 fail at head"
 
@@ -640,12 +639,12 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[4].name, 'project-test1')
         self.assertEqual(self.builds[5].name, 'project-test2')
 
-        self.assertTrue(self.job_has_changes(self.builds[0], A))
-        self.assertTrue(self.job_has_changes(self.builds[2], A))
-        self.assertTrue(self.job_has_changes(self.builds[2], B))
-        self.assertTrue(self.job_has_changes(self.builds[4], A))
-        self.assertTrue(self.job_has_changes(self.builds[4], B))
-        self.assertTrue(self.job_has_changes(self.builds[4], C))
+        self.assertTrue(self.builds[0].hasChanges(A))
+        self.assertTrue(self.builds[2].hasChanges(A))
+        self.assertTrue(self.builds[2].hasChanges(B))
+        self.assertTrue(self.builds[4].hasChanges(A))
+        self.assertTrue(self.builds[4].hasChanges(B))
+        self.assertTrue(self.builds[4].hasChanges(C))
 
         # Fail change B first
         self.release(self.builds[2])
@@ -662,12 +661,12 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[3].name, 'project-test1')
         self.assertEqual(self.builds[4].name, 'project-test2')
 
-        self.assertTrue(self.job_has_changes(self.builds[1], A))
-        self.assertTrue(self.job_has_changes(self.builds[2], A))
-        self.assertTrue(self.job_has_changes(self.builds[2], B))
-        self.assertTrue(self.job_has_changes(self.builds[4], A))
-        self.assertFalse(self.job_has_changes(self.builds[4], B))
-        self.assertTrue(self.job_has_changes(self.builds[4], C))
+        self.assertTrue(self.builds[1].hasChanges(A))
+        self.assertTrue(self.builds[2].hasChanges(A))
+        self.assertTrue(self.builds[2].hasChanges(B))
+        self.assertTrue(self.builds[4].hasChanges(A))
+        self.assertFalse(self.builds[4].hasChanges(B))
+        self.assertTrue(self.builds[4].hasChanges(C))
 
         # Finish running all passing jobs for change A
         self.release(self.builds[1])
@@ -688,15 +687,15 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[2].name, 'project-test1')  # C
         self.assertEqual(self.builds[3].name, 'project-test2')  # C
 
-        self.assertFalse(self.job_has_changes(self.builds[1], A))
-        self.assertTrue(self.job_has_changes(self.builds[1], B))
-        self.assertFalse(self.job_has_changes(self.builds[1], C))
+        self.assertFalse(self.builds[1].hasChanges(A))
+        self.assertTrue(self.builds[1].hasChanges(B))
+        self.assertFalse(self.builds[1].hasChanges(C))
 
-        self.assertFalse(self.job_has_changes(self.builds[2], A))
+        self.assertFalse(self.builds[2].hasChanges(A))
         # After A failed and B and C restarted, B should be back in
         # C's tests because it has not failed yet.
-        self.assertTrue(self.job_has_changes(self.builds[2], B))
-        self.assertTrue(self.job_has_changes(self.builds[2], C))
+        self.assertTrue(self.builds[2].hasChanges(B))
+        self.assertTrue(self.builds[2].hasChanges(C))
 
         self.launch_server.hold_jobs_in_build = False
         self.launch_server.release()
