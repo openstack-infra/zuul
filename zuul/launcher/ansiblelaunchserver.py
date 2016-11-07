@@ -192,7 +192,7 @@ class LaunchServer(object):
             zuul.ansible.library.__file__))
         # Ansible library modules that should be available to all
         # playbooks:
-        all_libs = ['zuul_log.py', 'zuul_console.py']
+        all_libs = ['zuul_log.py', 'zuul_console.py', 'zuul_afs.py']
         # Modules that should only be used by job playbooks:
         job_libs = ['command.py']
 
@@ -1120,15 +1120,6 @@ class NodeWorker(object):
             raise Exception("Undefined AFS site: %s" % site)
         site = self.sites[site]
 
-        # It is possible that this could be done in one rsync step,
-        # however, the current rysnc from the host is complicated (so
-        # that we can match the behavior of ant), and then rsync to
-        # afs is complicated and involves a pre-processing step in
-        # both locations (so that we can exclude directories).  Each
-        # is well understood individually so it is easier to compose
-        # them in series than combine them together.  A better,
-        # longer-lived solution (with better testing) would do just
-        # that.
         afsroot = tempfile.mkdtemp(dir=jobdir.staging_root)
         afscontent = os.path.join(afsroot, 'content')
         afssource = afscontent
@@ -1162,145 +1153,14 @@ class NodeWorker(object):
             raise Exception("Target path %s is not below site root" %
                             (afstarget,))
 
-        src_markers_file = os.path.join(afsroot, 'src-markers')
-        dst_markers_file = os.path.join(afsroot, 'dst-markers')
-        exclude_file = os.path.join(afsroot, 'exclude')
-        filter_file = os.path.join(afsroot, 'filter')
+        afsargs = dict(user=site['user'],
+                       keytab=site['keytab'],
+                       root=afsroot,
+                       source=afssource,
+                       target=afstarget)
 
-        find_pipe = [
-            "/usr/bin/find {path} -name .root-marker -printf '/%P\n'",
-            "/usr/bin/xargs -I{{}} dirname {{}}",
-            "/usr/bin/sort > {file}"]
-        find_pipe = ' | '.join(find_pipe)
-
-        # Find the list of root markers in the just-completed build
-        # (usually there will only be one, but some builds produce
-        # content at the root *and* at a tag location).
-        task = dict(name='find root markers in build',
-                    shell=find_pipe.format(path=afssource,
-                                           file=src_markers_file),
-                    when='success|bool',
-                    delegate_to='127.0.0.1')
-        tasks.append(task)
-
-        # Find the list of root markers that already exist in the
-        # published site.
-        task = dict(name='find root markers in site',
-                    shell=find_pipe.format(path=afstarget,
-                                           file=dst_markers_file),
-                    when='success|bool',
-                    delegate_to='127.0.0.1')
-        tasks.append(task)
-
-        # Create a file that contains the set of directories with root
-        # markers in the published site that do not have root markers
-        # in the built site.
-        exclude_command = "/usr/bin/comm -23 {dst} {src} > {exclude}".format(
-            src=src_markers_file,
-            dst=dst_markers_file,
-            exclude=exclude_file)
-        task = dict(name='produce list of root maker differences',
-                    shell=exclude_command,
-                    when='success|bool',
-                    delegate_to='127.0.0.1')
-        tasks.append(task)
-
-        # Create a filter list for rsync so that we copy exactly the
-        # directories we want to without deleting any existing
-        # directories in the published site that were placed there by
-        # previous builds.
-
-        # The first group of items in the filter list are the
-        # directories in the current build with root markers, except
-        # for the root of the build.  This is so that if, later, the
-        # build root ends up as an exclude, we still copy the
-        # directories in this build underneath it (since these
-        # includes will have matched first).  We can't include the
-        # build root itself here, even if we do want to synchronize
-        # it, since that would defeat later excludes.  In other words,
-        # if the build produces a root marker in "/subdir" but not in
-        # "/", this section is needed so that "/subdir" is copied at
-        # all, since "/" will be excluded later.
-
-        command = ("/bin/grep -v '^/$' {src} | "
-                   "/bin/sed -e 's/^/+ /' > {filter}".format(
-                       src=src_markers_file,
-                       filter=filter_file))
-        task = dict(name='produce first filter list',
-                    shell=command,
-                    when='success|bool',
-                    delegate_to='127.0.0.1')
-        tasks.append(task)
-
-        # The second group is the set of directories that are in the
-        # published site but not in the built site.  This is so that
-        # if the built site does contain a marker at root (meaning
-        # that there is content that should be copied into the root)
-        # that we don't delete everything else previously built
-        # underneath the root.
-
-        command = ("/bin/grep -v '^/$' {exclude} | "
-                   "/bin/sed -e 's/^/- /' >> {filter}".format(
-                       exclude=exclude_file,
-                       filter=filter_file))
-        task = dict(name='produce second filter list',
-                    shell=command,
-                    when='success|bool',
-                    delegate_to='127.0.0.1')
-        tasks.append(task)
-
-        # The last entry in the filter file is for the build root.  If
-        # there is no marker in the build root, then we need to
-        # exclude it from the rsync, so we add it here.  It needs to
-        # be in the form of '/*' so that it matches all of the files
-        # in the build root.  If there is no marker at the build root,
-        # then we should omit the '/*' exclusion so that it is
-        # implicitly included.
-
-        command = ("/bin/grep '^/$' {exclude} && "
-                   "echo '- /*' >> {filter} || "
-                   "/bin/true".format(
-                       exclude=exclude_file,
-                       filter=filter_file))
-        task = dict(name='produce third filter list',
-                    shell=command,
-                    when='success|bool',
-                    delegate_to='127.0.0.1')
-        tasks.append(task)
-
-        task = dict(name='cat filter list',
-                    shell='cat {filter}'.format(filter=filter_file),
-                    when='success|bool',
-                    delegate_to='127.0.0.1')
-        tasks.append(task)
-
-        # Perform the rsync with the filter list.
-        rsync_cmd = ' '.join([
-            '/usr/bin/rsync', '-rtp', '--safe-links', '--delete-after',
-            "--out-format='<<CHANGED>>%i %n%L'",
-            "--filter='merge {filter}'", '{src}/', '{dst}/',
-        ])
-        mkdir_cmd = ' '.join(['mkdir', '-p', '{dst}/'])
-        bash_cmd = ' '.join([
-            '/bin/bash', '-c', '"{mkdir_cmd} && {rsync_cmd}"'
-        ]).format(
-            mkdir_cmd=mkdir_cmd,
-            rsync_cmd=rsync_cmd)
-
-        k5start_cmd = ' '.join([
-            '/usr/bin/k5start', '-t', '-f', '{keytab}', '{user}', '--',
-            bash_cmd,
-        ])
-
-        shellargs = k5start_cmd.format(
-            src=afssource,
-            dst=afstarget,
-            filter=filter_file,
-            user=site['user'],
-            keytab=site['keytab'])
-
-        task = dict(name='k5start write files to AFS',
-                    shell=shellargs,
+        task = dict(name='Synchronize files to AFS',
+                    zuul_afs=afsargs,
                     when='success|bool',
                     delegate_to='127.0.0.1')
         tasks.append(task)
