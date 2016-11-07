@@ -424,7 +424,6 @@ class Job(object):
         branch_matcher=None,
         file_matcher=None,
         irrelevant_file_matcher=None,  # skip-if
-        parameter_function=None,  # TODOv3(jeblair): remove
         tags=set(),
         mutex=None,
     )

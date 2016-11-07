@@ -50,9 +50,6 @@ class ConfigSchema(object):
 
 
 class LayoutSchema(object):
-    include = {'python-file': str}
-    includes = [include]
-
     manager = v.Any('IndependentPipelineManager',
                     'DependentPipelineManager')
 
@@ -129,7 +126,6 @@ class LayoutSchema(object):
            'voting': bool,
            'mutex': str,
            'tags': toList(str),
-           'parameter-function': str,
            'branch': toList(str),
            'files': toList(str),
            'swift': toList(swift),
