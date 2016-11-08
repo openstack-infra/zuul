@@ -540,6 +540,7 @@ class FakeBuild(threading.Thread):
         self.wait_condition = threading.Condition()
         self.waiting = False
         self.aborted = False
+        self.requeue = False
         self.created = time.time()
         self.description = ''
         self.run_error = False
@@ -602,6 +603,8 @@ class FakeBuild(threading.Thread):
             result = 'FAILURE'
         if self.aborted:
             result = 'ABORTED'
+        if self.requeue:
+            result = None
 
         if self.run_error:
             work_fail = True

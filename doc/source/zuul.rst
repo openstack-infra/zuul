@@ -803,6 +803,11 @@ each job as it builds a list from the project specification.
   Boolean value (``true`` or ``false``) that indicates whatever
   a job is voting or not.  Default: ``true``.
 
+**attempts (optional)**
+  Number of attempts zuul will launch a job. Once reached, zuul will report
+  RETRY_LIMIT as the job result.
+  Defaults to 3.
+
 **tags (optional)**
   A list of arbitrary strings which will be associated with the job.
   Can be used by the parameter-function to alter behavior based on

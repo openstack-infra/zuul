@@ -466,6 +466,8 @@ class Job(object):
         self._files = []
         self.skip_if_matcher = None
         self.swift = {}
+        # Number of attempts to launch a job before giving up.
+        self.attempts = 3
 
     def __str__(self):
         return self.name
@@ -646,6 +648,7 @@ class BuildSet(object):
         self.unable_to_merge = False
         self.failing_reasons = []
         self.merge_state = self.NEW
+        self.tries = {}
 
     def __repr__(self):
         return '<BuildSet item: %s #builds: %s merge state: %s>' % (
@@ -671,9 +674,12 @@ class BuildSet(object):
 
     def addBuild(self, build):
         self.builds[build.job.name] = build
+        if build.job.name not in self.tries:
+            self.tries[build.job.name] = 1
         build.build_set = self
 
     def removeBuild(self, build):
+        self.tries[build.job.name] += 1
         del self.builds[build.job.name]
 
     def getBuild(self, job_name):
@@ -683,6 +689,9 @@ class BuildSet(object):
         keys = self.builds.keys()
         keys.sort()
         return [self.builds.get(x) for x in keys]
+
+    def getTries(self, job_name):
+        return self.tries.get(job_name)
 
 
 class QueueItem(object):
