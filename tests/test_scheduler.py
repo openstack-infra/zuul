@@ -4612,13 +4612,20 @@ class TestDuplicatePipeline(ZuulTestCase):
 
         self.assertEqual(len(A.messages), 2)
 
-        self.assertIn('dup1', A.messages[0])
-        self.assertNotIn('dup2', A.messages[0])
-        self.assertIn('project-test1', A.messages[0])
-
-        self.assertIn('dup2', A.messages[1])
-        self.assertNotIn('dup1', A.messages[1])
-        self.assertIn('project-test1', A.messages[1])
+        if 'dup1' in A.messages[0]:
+            self.assertIn('dup1', A.messages[0])
+            self.assertNotIn('dup2', A.messages[0])
+            self.assertIn('project-test1', A.messages[0])
+            self.assertIn('dup2', A.messages[1])
+            self.assertNotIn('dup1', A.messages[1])
+            self.assertIn('project-test1', A.messages[1])
+        else:
+            self.assertIn('dup1', A.messages[1])
+            self.assertNotIn('dup2', A.messages[1])
+            self.assertIn('project-test1', A.messages[1])
+            self.assertIn('dup2', A.messages[0])
+            self.assertNotIn('dup1', A.messages[0])
+            self.assertIn('project-test1', A.messages[0])
 
 
 class TestSchedulerOneJobProject(ZuulTestCase):
