@@ -2284,7 +2284,6 @@ jobs:
             Exception, "More than one name assigned to change queue"):
             self.sched.reconfigure(self.config)
 
-    @skip("Disabled for early v3 development")
     def test_queue_precedence(self):
         "Test that queue precedence works"
 

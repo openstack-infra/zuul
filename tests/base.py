@@ -772,7 +772,7 @@ class FakeGearmanServer(gear.Server):
         for queue in [self.high_queue, self.normal_queue, self.low_queue]:
             for job in queue:
                 if not hasattr(job, 'waiting'):
-                    if job.name.startswith('build:'):
+                    if job.name.startswith('launcher:launch'):
                         job.waiting = self.hold_jobs_in_queue
                     else:
                         job.waiting = False
@@ -799,10 +799,10 @@ class FakeGearmanServer(gear.Server):
                 len(self.low_queue))
         self.log.debug("releasing queued job %s (%s)" % (regex, qlen))
         for job in self.getQueue():
-            cmd, name = job.name.split(':')
-            if cmd != 'build':
+            if job.name != 'launcher:launch':
                 continue
-            if not regex or re.match(regex, name):
+            parameters = json.loads(job.arguments)
+            if not regex or re.match(regex, parameters.get('job')):
                 self.log.debug("releasing queued job %s" %
                                job.unique)
                 job.waiting = False
