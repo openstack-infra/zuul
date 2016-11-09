@@ -1540,7 +1540,6 @@ jobs:
         self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 15)
         self.assertEqual(len(self.history), 44)
 
-    @skip("Disabled for early v3 development")
     def test_merger_repack(self):
         "Test that the merger works after a repack"
 
@@ -1557,7 +1556,7 @@ jobs:
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
         self.assertEmptyQueues()
-        self.worker.build_history = []
+        self.build_history = []
 
         path = os.path.join(self.git_root, "org/project")
         print(repack_repo(path))
