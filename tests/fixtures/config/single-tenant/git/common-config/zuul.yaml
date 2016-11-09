@@ -89,6 +89,12 @@
 
 - project:
     name: org/project1
+    check:
+      jobs:
+        - project-merge:
+            jobs:
+              - project-test1
+              - project-test2
     gate:
       queue: integrated
       jobs:

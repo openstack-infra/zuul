@@ -3967,7 +3967,6 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(self.getJobFromHistory('project1-merge').changes,
                          '2,1 3,1 1,1')
 
-    @skip("Disabled for early v3 development")
     def test_crd_unshared_gate(self):
         "Test cross-repo dependencies in unshared gate queues"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -4046,7 +4045,6 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(self.getJobFromHistory('project1-merge').changes,
                          '2,1 1,1')
 
-    @skip("Disabled for early v3 development")
     def test_crd_cycle(self):
         "Test cross-repo dependency cycles"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -4155,7 +4153,6 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(self.history[0].changes, '2,1 1,1')
         self.assertEqual(len(self.sched.layout.pipelines['check'].queues), 0)
 
-    @skip("Disabled for early v3 development")
     def test_crd_check_git_depends(self):
         "Test single-repo dependencies in independent pipelines"
         self.gearman_server.hold_jobs_in_build = True
@@ -4181,18 +4178,19 @@ For CI problems and help debugging, contact ci@example.org"""
 
         self.assertEqual(self.history[0].changes, '1,1')
         self.assertEqual(self.history[-1].changes, '1,1 2,1')
-        self.assertEqual(len(self.sched.layout.pipelines['check'].queues), 0)
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        self.assertEqual(len(tenant.layout.pipelines['check'].queues), 0)
 
         self.assertIn('Build succeeded', A.messages[0])
         self.assertIn('Build succeeded', B.messages[0])
 
-    @skip("Disabled for early v3 development")
     def test_crd_check_duplicate(self):
         "Test duplicate check in independent pipelines"
         self.launch_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
-        check_pipeline = self.sched.layout.pipelines['check']
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        check_pipeline = tenant.layout.pipelines['check']
 
         # Add two git-dependent changes...
         B.setDependsOn(A, 1)
@@ -4224,7 +4222,7 @@ For CI problems and help debugging, contact ci@example.org"""
 
         self.assertEqual(self.history[0].changes, '1,1 2,1')
         self.assertEqual(self.history[1].changes, '1,1')
-        self.assertEqual(len(self.sched.layout.pipelines['check'].queues), 0)
+        self.assertEqual(len(tenant.layout.pipelines['check'].queues), 0)
 
         self.assertIn('Build succeeded', A.messages[0])
         self.assertIn('Build succeeded', B.messages[0])
