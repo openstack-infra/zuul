@@ -2186,7 +2186,6 @@ jobs:
         self.assertEqual(self.history[0].name, 'gate-noop')
         self.assertEqual(self.history[0].result, 'SUCCESS')
 
-    @skip("Disabled for early v3 development")
     def test_file_head(self):
         # This is a regression test for an observed bug.  A change
         # with a file named "HEAD" in the root directory of the repo
@@ -2199,7 +2198,7 @@ jobs:
         #   Use '--' to separate filenames from revisions'
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addPatchset(['HEAD'])
+        A.addPatchset({'HEAD': ''})
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
 
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(2))
