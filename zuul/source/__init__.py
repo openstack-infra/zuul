@@ -63,3 +63,7 @@ class BaseSource(object):
     @abc.abstractmethod
     def getProject(self, name):
         """Get a project."""
+
+    @abc.abstractmethod
+    def getProjectBranches(self, project):
+        """Get branches for a project"""

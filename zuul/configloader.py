@@ -551,7 +551,11 @@ class TenantParser(object):
             # Get in-project-repo config files which have a restricted
             # set of options.
             url = source.getGitUrl(project)
-            # TODOv3(jeblair): config should be branch specific
+            # TODOv3(jeblair): config should be branch specific.  For
+            # each branch in the repo, get the zuul.yaml for that
+            # branch.  Remember the branch and then implicitly add a
+            # branch selector to each job there.
+            source.getProjectBranches(project)
             job = merger.getFiles(project.name, url, 'master',
                                   files=['.zuul.yaml'])
             job.project = project

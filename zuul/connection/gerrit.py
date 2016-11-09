@@ -571,6 +571,12 @@ class GerritConnection(BaseConnection):
                                    (record.get('number'),))
         return changes
 
+    def getProjectBranches(self, project):
+        refs = self.getInfoRefs(project)
+        heads = [str(k[len('refs/heads/'):]) for k in refs.keys()
+                 if k.startswith('refs/heads/')]
+        return heads
+
     def addEvent(self, data):
         return self.event_queue.put((time.time(), data))
 
