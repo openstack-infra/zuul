@@ -1226,28 +1226,6 @@ jobs:
         self.assertNotEqual(ref_A, ref_B, ref_C)
         self.assertNotEqual(commit_A, commit_B, commit_C)
 
-    @skip("Disabled for early v3 development")
-    def test_layered_templates(self):
-        "Test whether a job generated via a template can be launched"
-
-        A = self.fake_gerrit.addFakeChange(
-            'org/layered-project', 'master', 'A')
-        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
-        self.waitUntilSettled()
-
-        self.assertEqual(self.getJobFromHistory('project-test1').result,
-                         'SUCCESS')
-        self.assertEqual(self.getJobFromHistory('project-test2').result,
-                         'SUCCESS')
-        self.assertEqual(self.getJobFromHistory('layered-project-test3'
-                                                ).result, 'SUCCESS')
-        self.assertEqual(self.getJobFromHistory('layered-project-test4'
-                                                ).result, 'SUCCESS')
-        self.assertEqual(self.getJobFromHistory('layered-project-foo-test5'
-                                                ).result, 'SUCCESS')
-        self.assertEqual(self.getJobFromHistory('project-test6').result,
-                         'SUCCESS')
-
     def test_dependent_changes_dequeue(self):
         "Test that dependent patches are not needlessly tested"
 
@@ -4681,4 +4659,25 @@ class TestSchedulerTemplatedProject(ZuulTestCase):
         self.assertEqual(self.getJobFromHistory('project-test1').result,
                          'SUCCESS')
         self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+
+    def test_layered_templates(self):
+        "Test whether a job generated via a template can be launched"
+
+        A = self.fake_gerrit.addFakeChange(
+            'org/layered-project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('layered-project-test3'
+                                                ).result, 'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('layered-project-test4'
+                                                ).result, 'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('layered-project-foo-test5'
+                                                ).result, 'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test6').result,
                          'SUCCESS')

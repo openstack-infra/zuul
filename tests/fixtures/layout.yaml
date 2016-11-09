@@ -142,19 +142,6 @@ jobs:
       - project1
       - extratag
 
-project-templates:
-  - name: test-one-and-two
-    check:
-     - '{projectname}-test1'
-     - '{projectname}-test2'
-  - name: test-three-and-four
-    check:
-     - '{name}-test3'
-     - '{name}-test4'
-  - name: test-five
-    check:
-     - '{name}-{something}-test5'
-
 projects:
   - name: org/project
     merge-mode: cherry-pick
@@ -228,16 +215,6 @@ projects:
         - nonvoting-project-test2
     post:
       - nonvoting-project-post
-
-  - name: org/layered-project
-    template:
-      - name: test-one-and-two
-        projectname: project
-      - name: test-three-and-four
-      - name: test-five
-        something: foo
-    check:
-      - project-test6
 
   - name: org/node-project
     gate:

@@ -53,13 +53,45 @@
         - project-test1
         - project-test2
 
+- project-template:
+    name: test-three-and-four
+    check:
+       jobs:
+         - layered-project-test3
+         - layered-project-test4
+
+- project-template:
+    name: test-five
+    check:
+      jobs:
+         - layered-project-foo-test5
+
 - job:
     name: project-test1
 
 - job:
     name: project-test2
 
+- job:
+    name: layered-project-test3
+
+- job:
+    name: layered-project-test4
+
+- job:
+    name: layered-project-foo-test5
+
 - project:
     name: org/templated-project
     templates:
       - test-one-and-two
+
+- project:
+    name: org/layered-project
+    templates:
+      - test-one-and-two
+      - test-three-and-four
+      - test-five
+    check:
+      jobs:
+        - project-test6
