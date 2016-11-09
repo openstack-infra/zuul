@@ -4633,7 +4633,7 @@ class TestDuplicatePipeline(ZuulTestCase):
                  pipeline='dup1'),
             dict(name='project-test1', result='SUCCESS', changes='1,1',
                  pipeline='dup2'),
-        ])
+        ], ordered=False)
 
         self.assertEqual(len(A.messages), 2)
 
