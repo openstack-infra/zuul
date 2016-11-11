@@ -2865,10 +2865,8 @@ jobs:
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
-    @skip("Disabled for early v3 development")
     def test_repo_deleted(self):
-        self.updateConfigLayout(
-            'tests/fixtures/layout-repo-deleted.yaml')
+        self.updateConfigLayout('layout-repo-deleted')
         self.sched.reconfigure(self.config)
 
         self.init_repo("org/delete-project")

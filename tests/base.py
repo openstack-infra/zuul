@@ -1540,13 +1540,16 @@ class ZuulTestCase(BaseTestCase):
         os.makedirs(root)
         f = tempfile.NamedTemporaryFile(dir=root, delete=False)
         f.write("""
-tenants:
-  - name: openstack
-    include:
-      - %s
-        """ % os.path.abspath(path))
+- tenant:
+    name: openstack
+    source:
+      gerrit:
+        config-repos:
+          - %s
+        """ % path)
         f.close()
-        self.config.set('zuul', 'tenant_config', f.name)
+        self.config.set('zuul', 'tenant_config',
+                        os.path.join(FIXTURE_DIR, f.name))
 
     def addCommitToRepo(self, project, message, files,
                         branch='master', tag=None):
