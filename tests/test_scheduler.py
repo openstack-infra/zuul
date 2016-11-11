@@ -3003,10 +3003,8 @@ jobs:
             self.assertEqual(len(self.builds), 0)
             self.assertEqual(len(self.history), x * 2)
 
-    @skip("Disabled for early v3 development")
     def test_check_smtp_pool(self):
-        self.updateConfigLayout(
-            'tests/fixtures/layout-smtp.yaml')
+        self.updateConfigLayout('layout-smtp')
         self.sched.reconfigure(self.config)
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')

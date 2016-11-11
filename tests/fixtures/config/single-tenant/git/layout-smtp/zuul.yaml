@@ -1,0 +1,81 @@
+- pipeline:
+    name: check
+    manager: independent
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: patchset-created
+    start:
+      smtp:
+        to: you@example.com
+    success:
+      gerrit:
+        verified: 1
+      smtp:
+        to: alternative_me@example.com
+        from: zuul_from@example.com
+    failure:
+      gerrit:
+        verified: -1
+
+- pipeline:
+    name: gate
+    manager: dependent
+    success-message: Build succeeded (gate).
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - approved: 1
+    success:
+      gerrit:
+        verified: 2
+        submit: true
+    failure:
+      gerrit:
+        verified: -2
+    start:
+      gerrit:
+        verified: 0
+    precedence: high
+
+- job:
+    name: project-merge
+    hold-following-changes: true
+
+- job:
+    name: project-test1
+    nodes:
+      - name: controller
+        image: image1
+
+- job:
+    name: project-test1
+    branches: stable
+    nodes:
+      - name: controller
+        image: image2
+
+- job:
+    name: project-test2
+
+- job:
+    name: experimental-project-test
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-merge:
+            jobs:
+              - project-test1
+              - project-test2
+    gate:
+      jobs:
+        - project-merge:
+            jobs:
+              - project-test1
+              - project-test2
