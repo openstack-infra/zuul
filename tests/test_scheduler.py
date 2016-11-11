@@ -4418,18 +4418,17 @@ For CI problems and help debugging, contact ci@example.org"""
         source._getChange(u'1', u'2', True)
         source._getChange(u'2', u'2', True)
 
-    @skip("Disabled for early v3 development")
     def test_disable_at(self):
         "Test a pipeline will only report to the disabled trigger when failing"
 
-        self.updateConfigLayout(
-            'tests/fixtures/layout-disable-at.yaml')
+        self.updateConfigLayout('layout-disabled-at')
         self.sched.reconfigure(self.config)
 
-        self.assertEqual(3, self.sched.layout.pipelines['check'].disable_at)
+        tenant = self.sched.abide.tenants.get('openstack')
+        self.assertEqual(3, tenant.layout.pipelines['check'].disable_at)
         self.assertEqual(
-            0, self.sched.layout.pipelines['check']._consecutive_failures)
-        self.assertFalse(self.sched.layout.pipelines['check']._disabled)
+            0, tenant.layout.pipelines['check']._consecutive_failures)
+        self.assertFalse(tenant.layout.pipelines['check']._disabled)
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
@@ -4460,15 +4459,15 @@ For CI problems and help debugging, contact ci@example.org"""
         self.waitUntilSettled()
 
         self.assertEqual(
-            2, self.sched.layout.pipelines['check']._consecutive_failures)
-        self.assertFalse(self.sched.layout.pipelines['check']._disabled)
+            2, tenant.layout.pipelines['check']._consecutive_failures)
+        self.assertFalse(tenant.layout.pipelines['check']._disabled)
 
         self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
 
         self.assertEqual(
-            0, self.sched.layout.pipelines['check']._consecutive_failures)
-        self.assertFalse(self.sched.layout.pipelines['check']._disabled)
+            0, tenant.layout.pipelines['check']._consecutive_failures)
+        self.assertFalse(tenant.layout.pipelines['check']._disabled)
 
         self.fake_gerrit.addEvent(D.getPatchsetCreatedEvent(1))
         self.fake_gerrit.addEvent(E.getPatchsetCreatedEvent(1))
@@ -4477,8 +4476,8 @@ For CI problems and help debugging, contact ci@example.org"""
 
         # We should be disabled now
         self.assertEqual(
-            3, self.sched.layout.pipelines['check']._consecutive_failures)
-        self.assertTrue(self.sched.layout.pipelines['check']._disabled)
+            3, tenant.layout.pipelines['check']._consecutive_failures)
+        self.assertTrue(tenant.layout.pipelines['check']._disabled)
 
         # We need to wait between each of these patches to make sure the
         # smtp messages come back in an expected order
@@ -4508,30 +4507,35 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(3, len(self.smtp_messages))
         self.assertEqual(0, len(G.messages))
         self.assertIn('Build failed.', self.smtp_messages[0]['body'])
-        self.assertIn('/7/1/check', self.smtp_messages[0]['body'])
+        self.assertIn(
+            'project-test1 https://server/job', self.smtp_messages[0]['body'])
         self.assertEqual(0, len(H.messages))
         self.assertIn('Build failed.', self.smtp_messages[1]['body'])
-        self.assertIn('/8/1/check', self.smtp_messages[1]['body'])
+        self.assertIn(
+            'project-test1 https://server/job', self.smtp_messages[1]['body'])
         self.assertEqual(0, len(I.messages))
         self.assertIn('Build succeeded.', self.smtp_messages[2]['body'])
-        self.assertIn('/9/1/check', self.smtp_messages[2]['body'])
+        self.assertIn(
+            'project-test1 https://server/job', self.smtp_messages[2]['body'])
 
         # Now reload the configuration (simulate a HUP) to check the pipeline
         # comes out of disabled
         self.sched.reconfigure(self.config)
 
-        self.assertEqual(3, self.sched.layout.pipelines['check'].disable_at)
+        tenant = self.sched.abide.tenants.get('openstack')
+
+        self.assertEqual(3, tenant.layout.pipelines['check'].disable_at)
         self.assertEqual(
-            0, self.sched.layout.pipelines['check']._consecutive_failures)
-        self.assertFalse(self.sched.layout.pipelines['check']._disabled)
+            0, tenant.layout.pipelines['check']._consecutive_failures)
+        self.assertFalse(tenant.layout.pipelines['check']._disabled)
 
         self.fake_gerrit.addEvent(J.getPatchsetCreatedEvent(1))
         self.fake_gerrit.addEvent(K.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
 
         self.assertEqual(
-            2, self.sched.layout.pipelines['check']._consecutive_failures)
-        self.assertFalse(self.sched.layout.pipelines['check']._disabled)
+            2, tenant.layout.pipelines['check']._consecutive_failures)
+        self.assertFalse(tenant.layout.pipelines['check']._disabled)
 
         # J and K went back to gerrit
         self.assertEqual(1, len(J.messages))
