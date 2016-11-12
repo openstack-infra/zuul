@@ -284,6 +284,7 @@ class TestScheduler(ZuulTestCase):
             dict(name='project-test2', changes='1,1'),
             dict(name='project-test1', changes='2,1'),
             dict(name='project-test2', changes='2,1'),
+            dict(name='project1-project2-integration', changes='2,1'),
             dict(name='project-test1', changes='2,1 3,1'),
             dict(name='project-test2', changes='2,1 3,1'),
         ])
@@ -297,6 +298,10 @@ class TestScheduler(ZuulTestCase):
             dict(name='project-test2', result='SUCCESS', changes='1,1'),
             dict(name='project-test1', result='SUCCESS', changes='2,1'),
             dict(name='project-test2', result='SUCCESS', changes='2,1'),
+            dict(
+                name='project1-project2-integration',
+                result='SUCCESS',
+                changes='2,1'),
             dict(name='project-test1', result='SUCCESS', changes='2,1 3,1'),
             dict(name='project-test2', result='SUCCESS', changes='2,1 3,1'),
         ])
@@ -1325,7 +1330,6 @@ jobs:
         self.assertIn('Build succeeded', E.messages[1])
         self.assertEqual(len(self.history), 18)
 
-    @skip("Disabled for early v3 development")
     def test_head_is_dequeued_once(self):
         "Test that if a change at the head fails it is dequeued only once"
         # If it's dequeued more than once, we should see extra
@@ -1339,8 +1343,8 @@ jobs:
         B.addApproval('code-review', 2)
         C.addApproval('code-review', 2)
 
-        self.launch_server.failJob('project1-test1', A)
-        self.launch_server.failJob('project1-test2', A)
+        self.launch_server.failJob('project-test1', A)
+        self.launch_server.failJob('project-test2', A)
         self.launch_server.failJob('project1-project2-integration', A)
 
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
@@ -1350,8 +1354,8 @@ jobs:
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 1)
-        self.assertEqual(self.builds[0].name, 'project1-merge')
-        self.assertTrue(self.job_has_changes(self.builds[0], A))
+        self.assertEqual(self.builds[0].name, 'project-merge')
+        self.assertTrue(self.builds[0].hasChanges(A))
 
         self.launch_server.release('.*-merge')
         self.waitUntilSettled()
@@ -1361,14 +1365,14 @@ jobs:
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 9)
-        self.assertEqual(self.builds[0].name, 'project1-test1')
-        self.assertEqual(self.builds[1].name, 'project1-test2')
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test2')
         self.assertEqual(self.builds[2].name, 'project1-project2-integration')
-        self.assertEqual(self.builds[3].name, 'project1-test1')
-        self.assertEqual(self.builds[4].name, 'project1-test2')
+        self.assertEqual(self.builds[3].name, 'project-test1')
+        self.assertEqual(self.builds[4].name, 'project-test2')
         self.assertEqual(self.builds[5].name, 'project1-project2-integration')
-        self.assertEqual(self.builds[6].name, 'project1-test1')
-        self.assertEqual(self.builds[7].name, 'project1-test2')
+        self.assertEqual(self.builds[6].name, 'project-test1')
+        self.assertEqual(self.builds[7].name, 'project-test2')
         self.assertEqual(self.builds[8].name, 'project1-project2-integration')
 
         self.release(self.builds[0])

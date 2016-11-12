@@ -70,6 +70,10 @@
     name: project-test2
 
 - job:
+    name: project1-project2-integration
+    queue-name: integration
+
+- job:
     name: experimental-project-test
 
 - project:
@@ -95,6 +99,7 @@
             jobs:
               - project-test1
               - project-test2
+              - project1-project2-integration
     gate:
       queue: integrated
       jobs:
@@ -102,6 +107,7 @@
             jobs:
               - project-test1
               - project-test2
+              - project1-project2-integration
 
 - project:
     name: org/project2
