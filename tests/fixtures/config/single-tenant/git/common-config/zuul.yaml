@@ -126,3 +126,12 @@
         - project-merge:
             jobs:
               - experimental-project-test
+
+- project:
+    name: org/noop-project
+    check:
+      jobs:
+        - noop
+    gate:
+      jobs:
+        - noop

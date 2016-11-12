@@ -2014,7 +2014,6 @@ jobs:
         self.assertEqual(len(self.history), 10)
         self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 1)
 
-    @skip("Disabled for early v3 development")
     def test_noop_job(self):
         "Test that the internal noop job works"
         A = self.fake_gerrit.addFakeChange('org/noop-project', 'master', 'A')

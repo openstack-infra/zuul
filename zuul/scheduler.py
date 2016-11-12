@@ -601,13 +601,14 @@ class Scheduler(threading.Thread):
             self.log.debug("Waiting on merger")
             return False
         waiting = False
-        for pipeline in self.layout.pipelines.values():
-            for item in pipeline.getAllItems():
-                for build in item.current_build_set.getBuilds():
-                    if build.result is None:
-                        self.log.debug("%s waiting on %s" %
-                                       (pipeline.manager, build))
-                        waiting = True
+        for tenant in self.abide.tenants.values():
+            for pipeline in tenant.layout.pipelines.values():
+                for item in pipeline.getAllItems():
+                    for build in item.current_build_set.getBuilds():
+                        if build.result is None:
+                            self.log.debug("%s waiting on %s" %
+                                           (pipeline.manager, build))
+                            waiting = True
         if not waiting:
             self.log.debug("All builds are complete")
             return True
