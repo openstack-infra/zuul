@@ -1771,11 +1771,12 @@ class Layout(object):
             self._createJobTree(change, tree.job_trees, frozen_tree)
 
     def createJobTree(self, item):
-        project_config = self.project_configs[item.change.project.name]
+        project_config = self.project_configs.get(
+            item.change.project.name, None)
         ret = JobTree(None)
         # NOTE(pabelanger): It is possible for a foreign project not to have a
         # configured pipeline, if so return an empty JobTree.
-        if item.pipeline.name in project_config.pipelines:
+        if project_config and item.pipeline.name in project_config.pipelines:
             project_tree = \
                 project_config.pipelines[item.pipeline.name].job_tree
             self._createJobTree(item.change, project_tree.job_trees, ret)

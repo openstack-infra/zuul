@@ -4356,7 +4356,6 @@ For CI problems and help debugging, contact ci@example.org"""
         self.waitUntilSettled()
         self.assertEqual(self.history[-1].changes, '3,2 2,1 1,2')
 
-    @skip("Disabled for early v3 development")
     def test_crd_check_unknown(self):
         "Test unknown projects in independent pipeline"
         self.init_repo("org/unknown")
