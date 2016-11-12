@@ -1578,13 +1578,13 @@ jobs:
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
-    @skip("Disabled for early v3 development")
     def test_merger_repack_large_change(self):
         "Test that the merger works with large changes after a repack"
         # https://bugs.launchpad.net/zuul/+bug/1078946
         # This test assumes the repo is already cloned; make sure it is
+        tenant = self.sched.abide.tenants.get('tenant-one')
         url = self.fake_gerrit.getGitUrl(
-            self.sched.layout.projects['org/project1'])
+            tenant.layout.project_configs.get('org/project1'))
         self.merge_server.merger.addProject('org/project1', url)
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         A.addPatchset(large=True)
@@ -1596,11 +1596,11 @@ jobs:
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
-        self.assertEqual(self.getJobFromHistory('project1-merge').result,
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
                          'SUCCESS')
-        self.assertEqual(self.getJobFromHistory('project1-test1').result,
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
                          'SUCCESS')
-        self.assertEqual(self.getJobFromHistory('project1-test2').result,
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
                          'SUCCESS')
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
