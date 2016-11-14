@@ -31,14 +31,12 @@ logging.basicConfig(level=logging.DEBUG,
 class TestMergerRepo(ZuulTestCase):
 
     log = logging.getLogger("zuul.test.merger.repo")
+    tenant_config_file = 'config/single-tenant/main.yaml'
     workspace_root = None
 
     def setUp(self):
-        self.skip("Disabled for early v3 development")
-
-    # def setUp(self):
-    #     super(TestMergerRepo, self).setUp()
-    #     self.workspace_root = os.path.join(self.test_root, 'workspace')
+        super(TestMergerRepo, self).setUp()
+        self.workspace_root = os.path.join(self.test_root, 'workspace')
 
     def test_ensure_cloned(self):
         parent_path = os.path.join(self.upstream_root, 'org/project1')
