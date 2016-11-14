@@ -4388,7 +4388,6 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(B.data['status'], 'NEW')
         self.assertEqual(B.reported, 0)
 
-    @skip("Disabled for early v3 development")
     def test_crd_cycle_join(self):
         "Test an updated change creates a cycle"
         A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A')
@@ -4414,10 +4413,18 @@ For CI problems and help debugging, contact ci@example.org"""
         # call the method that would ultimately be called by the event
         # processing.
 
-        source = self.sched.layout.pipelines['gate'].source
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        source = tenant.layout.pipelines['gate'].source
+
+        # TODO(pabelanger): As we add more source / trigger APIs we should make
+        # it easier for users to create events for testing.
+        event = zuul.model.TriggerEvent()
+        event.trigger_name = 'gerrit'
+        event.change_number = '1'
+        event.patch_number = '2'
         with testtools.ExpectedException(
             Exception, "Dependency cycle detected"):
-            source._getChange(u'1', u'2', True)
+            source.getChange(event, True)
         self.log.debug("Got expected dependency cycle exception")
 
         # Now if we update B to remove the depends-on, everything
@@ -4425,8 +4432,10 @@ For CI problems and help debugging, contact ci@example.org"""
 
         B.addPatchset()
         B.data['commitMessage'] = '%s\n' % (B.subject,)
-        source._getChange(u'1', u'2', True)
-        source._getChange(u'2', u'2', True)
+
+        source.getChange(event, True)
+        event.change_number = '2'
+        source.getChange(event, True)
 
     def test_disable_at(self):
         "Test a pipeline will only report to the disabled trigger when failing"
