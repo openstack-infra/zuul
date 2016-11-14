@@ -3880,9 +3880,10 @@ For CI problems and help debugging, contact ci@example.org"""
             'project-merge', 'org/project1').changes
         self.assertEqual(changes, '2,1 1,1')
 
-    @skip("Disabled for early v3 development")
     def test_crd_branch(self):
         "Test cross-repo dependencies in multiple branches"
+
+        self.create_branch('org/project2', 'mp')
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project2', 'mp', 'C')
@@ -3918,8 +3919,9 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
-        self.assertEqual(self.getJobFromHistory('project1-merge').changes,
-                         '2,1 3,1 1,1')
+        changes = self.getJobFromHistory(
+            'project-merge', 'org/project1').changes
+        self.assertEqual(changes, '2,1 3,1 1,1')
 
     def test_crd_multiline(self):
         "Test multiple depends-on lines in commit"
