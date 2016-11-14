@@ -4103,10 +4103,10 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(B.reported, 0)
 
-    @skip("Disabled for early v3 development")
     def test_crd_check(self):
         "Test cross-repo dependencies in independent pipelines"
 
+        self.launch_server.hold_jobs_in_build = True
         self.gearman_server.hold_jobs_in_queue = True
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
@@ -4124,19 +4124,28 @@ For CI problems and help debugging, contact ci@example.org"""
         self.gearman_server.release()
         self.waitUntilSettled()
 
-        path = os.path.join(self.git_root, "org/project1")
+        self.launch_server.release('.*-merge')
+        self.waitUntilSettled()
+
+        path = os.path.join(self.builds[0].jobdir.git_root, "org/project1")
         repo = git.Repo(path)
         repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
         repo_messages.reverse()
-        correct_messages = ['initial commit', 'A-1']
+        correct_messages = [
+            'initial commit', 'add content from fixture', 'A-1']
         self.assertEqual(repo_messages, correct_messages)
 
-        path = os.path.join(self.git_root, "org/project2")
+        path = os.path.join(self.builds[0].jobdir.git_root, "org/project2")
         repo = git.Repo(path)
         repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
         repo_messages.reverse()
-        correct_messages = ['initial commit', 'B-1']
+        correct_messages = [
+            'initial commit', 'add content from fixture', 'B-1']
         self.assertEqual(repo_messages, correct_messages)
+
+        self.launch_server.hold_jobs_in_build = False
+        self.launch_server.release()
+        self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(B.data['status'], 'NEW')
@@ -4144,7 +4153,8 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(B.reported, 0)
 
         self.assertEqual(self.history[0].changes, '2,1 1,1')
-        self.assertEqual(len(self.sched.layout.pipelines['check'].queues), 0)
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        self.assertEqual(len(tenant.layout.pipelines['check'].queues), 0)
 
     def test_crd_check_git_depends(self):
         "Test single-repo dependencies in independent pipelines"
