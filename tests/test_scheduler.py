@@ -3814,7 +3814,6 @@ For CI problems and help debugging, contact ci@example.org"""
             'SUCCESS')
         self.assertEqual(A.reported, 1)
 
-    @skip("Disabled for early v3 development")
     def test_crd_gate(self):
         "Test cross-repo dependencies"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -3854,7 +3853,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(B.data['status'], 'NEW')
 
-        for connection in self.connections.values():
+        for connection in self.connections.connections.values():
             connection.maintainCache([])
 
         self.launch_server.hold_jobs_in_build = True
@@ -3877,8 +3876,9 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(A.reported, 2)
         self.assertEqual(B.reported, 2)
 
-        self.assertEqual(self.getJobFromHistory('project1-merge').changes,
-                         '2,1 1,1')
+        changes = self.getJobFromHistory(
+            'project-merge', 'org/project1').changes
+        self.assertEqual(changes, '2,1 1,1')
 
     @skip("Disabled for early v3 development")
     def test_crd_branch(self):
@@ -3921,7 +3921,6 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(self.getJobFromHistory('project1-merge').changes,
                          '2,1 3,1 1,1')
 
-    @skip("Disabled for early v3 development")
     def test_crd_multiline(self):
         "Test multiple depends-on lines in commit"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -3958,8 +3957,9 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
-        self.assertEqual(self.getJobFromHistory('project1-merge').changes,
-                         '2,1 3,1 1,1')
+        changes = self.getJobFromHistory(
+            'project-merge', 'org/project1').changes
+        self.assertEqual(changes, '2,1 3,1 1,1')
 
     def test_crd_unshared_gate(self):
         "Test cross-repo dependencies in unshared gate queues"
@@ -3999,7 +3999,6 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
-    @skip("Disabled for early v3 development")
     def test_crd_gate_reverse(self):
         "Test reverse cross-repo dependencies"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -4036,8 +4035,9 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(A.reported, 2)
         self.assertEqual(B.reported, 2)
 
-        self.assertEqual(self.getJobFromHistory('project1-merge').changes,
-                         '2,1 1,1')
+        changes = self.getJobFromHistory(
+            'project-merge', 'org/project1').changes
+        self.assertEqual(changes, '2,1 1,1')
 
     def test_crd_cycle(self):
         "Test cross-repo dependency cycles"
