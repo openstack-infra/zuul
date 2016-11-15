@@ -529,6 +529,7 @@ class Scheduler(threading.Thread):
             m = config_job.get('hold-following-changes', False)
             if m:
                 job.hold_following_changes = True
+            job.attempts = config_job.get('attempts', 3)
             m = config_job.get('voting', None)
             if m is not None:
                 job.voting = m
