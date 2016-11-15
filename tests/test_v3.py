@@ -110,22 +110,3 @@ class TestInRepoConfig(AnsibleZuulTestCase):
                          "A should report start and success")
         self.assertIn('tenant-one-gate', A.messages[1],
                       "A should transit tenant-one gate")
-
-
-class TestProjectTemplate(AnsibleZuulTestCase):
-    tenant_config_file = 'config/project-template/main.yaml'
-
-    def test(self):
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
-        self.waitUntilSettled()
-        self.assertEqual(self.getJobFromHistory('project-test1').result,
-                         'SUCCESS')
-        self.assertEqual(self.getJobFromHistory('project-test2').result,
-                         'SUCCESS')
-        self.assertEqual(A.data['status'], 'MERGED')
-        self.assertEqual(A.reported, 2,
-                         "A should report start and success")
-        self.assertIn('gate', A.messages[1],
-                      "A should transit gate")
