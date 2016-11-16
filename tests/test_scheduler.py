@@ -2045,7 +2045,6 @@ jobs:
 
         self.assertEqual(len(self.history), 0)
 
-    @skip("Disabled for early v3 development")
     def test_zuul_refs(self):
         "Test that zuul refs exist and have the right changes"
         self.launch_server.hold_jobs_in_build = True
@@ -2078,15 +2077,22 @@ jobs:
         self.waitUntilSettled()
 
         a_zref = b_zref = c_zref = d_zref = None
+        a_build = b_build = c_build = d_build = None
         for x in self.builds:
             if x.parameters['ZUUL_CHANGE'] == '3':
                 a_zref = x.parameters['ZUUL_REF']
-            if x.parameters['ZUUL_CHANGE'] == '4':
+                a_build = x
+            elif x.parameters['ZUUL_CHANGE'] == '4':
                 b_zref = x.parameters['ZUUL_REF']
-            if x.parameters['ZUUL_CHANGE'] == '5':
+                b_build = x
+            elif x.parameters['ZUUL_CHANGE'] == '5':
                 c_zref = x.parameters['ZUUL_REF']
-            if x.parameters['ZUUL_CHANGE'] == '6':
+                c_build = x
+            elif x.parameters['ZUUL_CHANGE'] == '6':
                 d_zref = x.parameters['ZUUL_REF']
+                d_build = x
+            if a_build and b_build and c_build and d_build:
+                break
 
         # There are... four... refs.
         self.assertIsNotNone(a_zref)
@@ -2098,27 +2104,20 @@ jobs:
         refs = set([a_zref, b_zref, c_zref, d_zref])
         self.assertEqual(len(refs), 4)
 
-        # a ref should have a, not b, and should not be in project2
-        self.assertTrue(self.ref_has_change(a_zref, A))
-        self.assertFalse(self.ref_has_change(a_zref, B))
-        self.assertFalse(self.ref_has_change(a_zref, M2))
+        # should have a, not b, and should not be in project2
+        self.assertTrue(a_build.hasChanges(A))
+        self.assertFalse(a_build.hasChanges(B, M2))
 
-        # b ref should have a and b, and should not be in project2
-        self.assertTrue(self.ref_has_change(b_zref, A))
-        self.assertTrue(self.ref_has_change(b_zref, B))
-        self.assertFalse(self.ref_has_change(b_zref, M2))
+        # should have a and b, and should not be in project2
+        self.assertTrue(b_build.hasChanges(A, B))
+        self.assertFalse(b_build.hasChanges(M2))
 
-        # c ref should have a and b in 1, c in 2
-        self.assertTrue(self.ref_has_change(c_zref, A))
-        self.assertTrue(self.ref_has_change(c_zref, B))
-        self.assertTrue(self.ref_has_change(c_zref, C))
-        self.assertFalse(self.ref_has_change(c_zref, D))
+        # should have a and b in 1, c in 2
+        self.assertTrue(c_build.hasChanges(A, B, C))
+        self.assertFalse(c_build.hasChanges(D))
 
-        # d ref should have a and b in 1, c and d in 2
-        self.assertTrue(self.ref_has_change(d_zref, A))
-        self.assertTrue(self.ref_has_change(d_zref, B))
-        self.assertTrue(self.ref_has_change(d_zref, C))
-        self.assertTrue(self.ref_has_change(d_zref, D))
+        # should have a and b in 1, c and d in 2
+        self.assertTrue(d_build.hasChanges(A, B, C, D))
 
         self.launch_server.hold_jobs_in_build = False
         self.launch_server.release()

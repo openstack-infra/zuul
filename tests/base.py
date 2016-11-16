@@ -41,7 +41,7 @@ import gear
 import fixtures
 import statsd
 import testtools
-from git import GitCommandError
+from git.exc import NoSuchPathError
 
 import zuul.connection.gerrit
 import zuul.connection.smtp
@@ -640,17 +640,20 @@ class FakeBuild(object):
         :rtype: bool
 
         """
-        project = self.parameters['ZUUL_PROJECT']
-        path = os.path.join(self.jobdir.git_root, project)
-        repo = git.Repo(path)
-        ref = self.parameters['ZUUL_REF']
-        repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
-        commit_messages = ['%s-1' % change.subject for change in changes]
-        self.log.debug("Checking if build %s has changes; commit_messages %s;"
-                       " repo_messages %s" % (self, commit_messages,
-                                              repo_messages))
-        for msg in commit_messages:
-            if msg not in repo_messages:
+        for change in changes:
+            path = os.path.join(self.jobdir.git_root, change.project)
+            try:
+                repo = git.Repo(path)
+            except NoSuchPathError as e:
+                self.log.debug('%s' % e)
+                return False
+            ref = self.parameters['ZUUL_REF']
+            repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
+            commit_message = '%s-1' % change.subject
+            self.log.debug("Checking if build %s has changes; commit_message "
+                           "%s; repo_messages %s" % (self, commit_message,
+                                                     repo_messages))
+            if commit_message not in repo_messages:
                 self.log.debug("  messages do not match")
                 return False
         self.log.debug("  OK")
@@ -1261,19 +1264,6 @@ class ZuulTestCase(BaseTestCase):
         repo.index.add([file_name])
         commit = repo.index.commit('Creating a fake commit')
         return commit.hexsha
-
-    def ref_has_change(self, ref, change):
-        # TODOv3(jeblair): this should probably be removed in favor of
-        # build.hasChanges
-        path = os.path.join(self.git_root, change.project)
-        repo = git.Repo(path)
-        try:
-            for commit in repo.iter_commits(ref):
-                if commit.message.strip() == ('%s-1' % change.subject):
-                    return True
-        except GitCommandError:
-            pass
-        return False
 
     def orderedRelease(self):
         # Run one build at a time to ensure non-race order:
