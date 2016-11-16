@@ -1009,7 +1009,11 @@ class NodeWorker(object):
                         synchronize=syncargs)
             if not scpfile.get('copy-after-failure'):
                 task['when'] = 'success|bool'
-            task.update(self.retry_args)
+            # We don't use retry_args here because there is a bug in
+            # the synchronize module that breaks subsequent attempts at
+            # retrying. Better to try once and get an accurate error
+            # message if it fails.
+            # https://github.com/ansible/ansible/issues/18281
             tasks.append(task)
 
             task = self._makeSCPTaskLocalAction(
@@ -1084,7 +1088,10 @@ class NodeWorker(object):
         task = dict(name='copy files from node',
                     synchronize=syncargs,
                     when='success|bool')
-        task.update(self.retry_args)
+        # We don't use retry_args here because there is a bug in the
+        # synchronize module that breaks subsequent attempts at retrying.
+        # Better to try once and get an accurate error message if it fails.
+        # https://github.com/ansible/ansible/issues/18281
         tasks.append(task)
         task = dict(name='FTP files to server',
                     shell='lftp -f %s' % ftpscript,
@@ -1142,7 +1149,10 @@ class NodeWorker(object):
         task = dict(name='copy files from node',
                     synchronize=syncargs,
                     when='success|bool')
-        task.update(self.retry_args)
+        # We don't use retry_args here because there is a bug in the
+        # synchronize module that breaks subsequent attempts at retrying.
+        # Better to try once and get an accurate error message if it fails.
+        # https://github.com/ansible/ansible/issues/18281
         tasks.append(task)
 
         afstarget = afs['target'].lstrip('/')
