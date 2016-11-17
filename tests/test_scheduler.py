@@ -505,7 +505,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
-    @skip("Disabled for early v3 development")
     def test_failed_change_at_head_with_queue(self):
         "Test that if a change at the head fails, queued jobs are canceled"
 
@@ -527,8 +526,10 @@ class TestScheduler(ZuulTestCase):
         queue = self.gearman_server.getQueue()
         self.assertEqual(len(self.builds), 0)
         self.assertEqual(len(queue), 1)
-        self.assertEqual(queue[0].name, 'build:project-merge')
-        self.assertTrue(self.job_has_changes(queue[0], A))
+        self.assertEqual(queue[0].name, 'launcher:launch')
+        job_args = json.loads(queue[0].arguments)
+        self.assertEqual(job_args['job'], 'project-merge')
+        self.assertEqual(job_args['items'][0]['number'], '%d' % A.number)
 
         self.gearman_server.release('.*-merge')
         self.waitUntilSettled()
@@ -540,12 +541,19 @@ class TestScheduler(ZuulTestCase):
 
         self.assertEqual(len(self.builds), 0)
         self.assertEqual(len(queue), 6)
-        self.assertEqual(queue[0].name, 'build:project-test1')
-        self.assertEqual(queue[1].name, 'build:project-test2')
-        self.assertEqual(queue[2].name, 'build:project-test1')
-        self.assertEqual(queue[3].name, 'build:project-test2')
-        self.assertEqual(queue[4].name, 'build:project-test1')
-        self.assertEqual(queue[5].name, 'build:project-test2')
+
+        self.assertEqual(
+            json.loads(queue[0].arguments)['job'], 'project-test1')
+        self.assertEqual(
+            json.loads(queue[1].arguments)['job'], 'project-test2')
+        self.assertEqual(
+            json.loads(queue[2].arguments)['job'], 'project-test1')
+        self.assertEqual(
+            json.loads(queue[3].arguments)['job'], 'project-test2')
+        self.assertEqual(
+            json.loads(queue[4].arguments)['job'], 'project-test1')
+        self.assertEqual(
+            json.loads(queue[5].arguments)['job'], 'project-test2')
 
         self.release(queue[0])
         self.waitUntilSettled()
