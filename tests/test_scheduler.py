@@ -20,7 +20,6 @@ import os
 import re
 import shutil
 import time
-import yaml
 from unittest import skip
 
 import git
@@ -714,37 +713,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.reported, 2)
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
-
-    @skip("Disabled for early v3 development")
-    def test_parse_skip_if(self):
-        job_yaml = """
-jobs:
-  - name: job_name
-    skip-if:
-      - project: ^project_name$
-        branch: ^stable/icehouse$
-        all-files-match-any:
-          - ^filename$
-      - project: ^project2_name$
-        all-files-match-any:
-          - ^filename2$
-    """.strip()
-        data = yaml.load(job_yaml)
-        config_job = data.get('jobs')[0]
-        cm = zuul.change_matcher
-        expected = cm.MatchAny([
-            cm.MatchAll([
-                cm.ProjectMatcher('^project_name$'),
-                cm.BranchMatcher('^stable/icehouse$'),
-                cm.MatchAllFiles([cm.FileMatcher('^filename$')]),
-            ]),
-            cm.MatchAll([
-                cm.ProjectMatcher('^project2_name$'),
-                cm.MatchAllFiles([cm.FileMatcher('^filename2$')]),
-            ]),
-        ])
-        matcher = self.sched._parseSkipIf(config_job)
-        self.assertEqual(expected, matcher)
 
     def test_patch_order(self):
         "Test that dependent patches are tested in the right order"
@@ -2234,35 +2202,36 @@ jobs:
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(B.reported, 2)
 
-    @skip("Disabled for early v3 development")
-    def _test_skip_if_jobs(self, branch, should_skip):
-        "Test that jobs with a skip-if filter run only when appropriate"
-        self.updateConfigLayout(
-            'tests/fixtures/layout-skip-if.yaml')
+    def _test_irrelevant_files_jobs(self, should_skip):
+        "Test that jobs with irrelevant-files filter run only when appropriate"
+        self.updateConfigLayout('layout-irrelevant-files')
         self.sched.reconfigure(self.config)
-        self.registerJobs()
+
+        if should_skip:
+            files = {'ignoreme': 'ignored\n'}
+        else:
+            files = {'respectme': 'please!\n'}
 
         change = self.fake_gerrit.addFakeChange('org/project',
-                                                branch,
-                                                'test skip-if')
+                                                'master',
+                                                'test irrelevant-files',
+                                                files=files)
         self.fake_gerrit.addEvent(change.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
 
         tested_change_ids = [x.changes[0] for x in self.history
-                             if x.name == 'project-test-skip-if']
+                             if x.name == 'project-test-irrelevant-files']
 
         if should_skip:
             self.assertEqual([], tested_change_ids)
         else:
             self.assertIn(change.data['number'], tested_change_ids)
 
-    @skip("Disabled for early v3 development")
-    def test_skip_if_match_skips_job(self):
-        self._test_skip_if_jobs(branch='master', should_skip=True)
+    def test_irrelevant_files_match_skips_job(self):
+        self._test_irrelevant_files_jobs(should_skip=True)
 
-    @skip("Disabled for early v3 development")
-    def test_skip_if_no_match_runs_job(self):
-        self._test_skip_if_jobs(branch='mp', should_skip=False)
+    def test_irrelevant_files_no_match_runs_job(self):
+        self._test_irrelevant_files_jobs(should_skip=False)
 
     @skip("Disabled for early v3 development")
     def test_test_config(self):

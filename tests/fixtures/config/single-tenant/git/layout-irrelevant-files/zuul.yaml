@@ -1,0 +1,27 @@
+- pipeline:
+    name: check
+    manager: independent
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+
+- job:
+    name: project-test-irrelevant-files
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-test-irrelevant-files:
+            irrelevant-files:
+              - ^README$
+              - ^ignoreme$
