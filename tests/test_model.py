@@ -136,9 +136,9 @@ class TestJob(BaseTestCase):
             'parent': 'base',
             'timeout': 40,
             'auth': {
-                'password': {
-                    'pypipassword': 'dummypassword'
-                }
+                'secrets': [
+                    'pypi-credentials',
+                ]
             }
         })
         layout.addJob(pypi_upload_without_inherit)
@@ -149,9 +149,9 @@ class TestJob(BaseTestCase):
             'timeout': 40,
             'auth': {
                 'inherit': True,
-                'password': {
-                    'pypipassword': 'dummypassword'
-                }
+                'secrets': [
+                    'pypi-credentials',
+                ]
             }
         })
         layout.addJob(pypi_upload_with_inherit)
@@ -163,9 +163,9 @@ class TestJob(BaseTestCase):
                 'timeout': 40,
                 'auth': {
                     'inherit': False,
-                    'password': {
-                        'pypipassword': 'dummypassword'
-                    }
+                    'secrets': [
+                        'pypi-credentials',
+                    ]
                 }
             })
         layout.addJob(pypi_upload_with_inherit_false)
@@ -190,9 +190,9 @@ class TestJob(BaseTestCase):
         layout.addJob(in_repo_job_with_inherit_false)
 
         self.assertNotIn('auth', in_repo_job_without_inherit.auth)
-        self.assertIn('password', in_repo_job_with_inherit.auth)
-        self.assertEquals(in_repo_job_with_inherit.auth['password'],
-                          {'pypipassword': 'dummypassword'})
+        self.assertIn('secrets', in_repo_job_with_inherit.auth)
+        self.assertEquals(in_repo_job_with_inherit.auth['secrets'],
+                          ['pypi-credentials'])
         self.assertNotIn('auth', in_repo_job_with_inherit_false.auth)
 
     def test_job_inheritance_job_tree(self):
