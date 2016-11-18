@@ -1,0 +1,46 @@
+- pipeline:
+    name: check
+    manager: independent
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+
+- job:
+    name: project-test-irrelevant-starts-empty
+
+- job:
+    name: project-test-irrelevant-starts-full
+    irrelevant-files:
+      - ^README$
+      - ^ignoreme$
+
+- job:
+    name: project-test-nomatch-starts-empty
+
+- job:
+    name: project-test-nomatch-starts-full
+    irrelevant-files:
+      - ^README$
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-test-irrelevant-starts-empty:
+            irrelevant-files:
+              - ^README$
+              - ^ignoreme$
+        - project-test-irrelevant-starts-full
+        - project-test-nomatch-starts-empty:
+            irrelevant-files:
+              - ^README$
+        - project-test-nomatch-starts-full
