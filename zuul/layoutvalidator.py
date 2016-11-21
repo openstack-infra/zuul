@@ -127,6 +127,7 @@ class LayoutSchema(object):
            'success-pattern': str,
            'hold-following-changes': bool,
            'voting': bool,
+           'attempts': int,
            'mutex': str,
            'tags': toList(str),
            'parameter-function': str,

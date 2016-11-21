@@ -124,6 +124,7 @@ class JobParser(object):
         job.voting = conf.get('voting', True)
         job.hold_following_changes = conf.get('hold-following-changes', False)
         job.mutex = conf.get('mutex', None)
+        job.attempts = conf.get('attempts', 3)
         if 'nodes' in conf:
             conf_nodes = conf['nodes']
             if isinstance(conf_nodes, six.string_types):

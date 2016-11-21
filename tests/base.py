@@ -561,6 +561,7 @@ class FakeBuild(object):
         self.wait_condition = threading.Condition()
         self.waiting = False
         self.aborted = False
+        self.requeue = False
         self.created = time.time()
         self.run_error = False
         self.changes = None
@@ -616,6 +617,8 @@ class FakeBuild(object):
             result = 'FAILURE'
         if self.aborted:
             result = 'ABORTED'
+        if self.requeue:
+            result = None
 
         if self.run_error:
             result = 'RUN_ERROR'
@@ -885,8 +888,19 @@ class BaseTestCase(testtools.TestCase):
             self.useFixture(fixtures.MonkeyPatch('sys.stderr', stderr))
         if (os.environ.get('OS_LOG_CAPTURE') == 'True' or
             os.environ.get('OS_LOG_CAPTURE') == '1'):
+            log_level = logging.DEBUG
+            if os.environ.get('OS_LOG_LEVEL') == 'DEBUG':
+                log_level = logging.DEBUG
+            elif os.environ.get('OS_LOG_LEVEL') == 'INFO':
+                log_level = logging.INFO
+            elif os.environ.get('OS_LOG_LEVEL') == 'WARNING':
+                log_level = logging.WARNING
+            elif os.environ.get('OS_LOG_LEVEL') == 'ERROR':
+                log_level = logging.ERROR
+            elif os.environ.get('OS_LOG_LEVEL') == 'CRITICAL':
+                log_level = logging.CRITICAL
             self.useFixture(fixtures.FakeLogger(
-                level=logging.DEBUG,
+                level=log_level,
                 format='%(asctime)s %(name)-32s '
                 '%(levelname)-8s %(message)s'))
 

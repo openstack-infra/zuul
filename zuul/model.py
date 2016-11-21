@@ -427,6 +427,7 @@ class Job(object):
         parameter_function=None,  # TODOv3(jeblair): remove
         tags=set(),
         mutex=None,
+        attempts=3,
     )
 
     def __init__(self, name):
@@ -640,6 +641,7 @@ class BuildSet(object):
         self.node_requests = {}  # job -> reqs
         self.files = RepoFiles()
         self.layout = None
+        self.tries = {}
 
     def __repr__(self):
         return '<BuildSet item: %s #builds: %s merge state: %s>' % (
@@ -665,9 +667,12 @@ class BuildSet(object):
 
     def addBuild(self, build):
         self.builds[build.job.name] = build
+        if build.job.name not in self.tries:
+            self.tries[build.job.name] = 1
         build.build_set = self
 
     def removeBuild(self, build):
+        self.tries[build.job.name] += 1
         del self.builds[build.job.name]
 
     def getBuild(self, job_name):
@@ -696,6 +701,9 @@ class BuildSet(object):
             raise Exception("Prior node request for %s" % (job_name))
         self.nodesets[job_name] = nodeset
         del self.node_requests[job_name]
+
+    def getTries(self, job_name):
+        return self.tries.get(job_name)
 
 
 class QueueItem(object):
