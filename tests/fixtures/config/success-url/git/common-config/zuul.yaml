@@ -1,0 +1,35 @@
+- pipeline:
+    name: check
+    manager: independent
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: patchset-created
+    start:
+      smtp:
+        to: alternative_me@example.com
+    success:
+      gerrit:
+        verified: 1
+      smtp:
+        to: alternative_me@example.com
+    failure:
+      gerrit:
+        verified: -1
+
+
+- job:
+    name: docs-draft-test
+    success-url: http://docs-draft.example.org/{build.parameters[LOG_PATH]}/publish-docs/
+
+- job:
+    name: docs-draft-test2
+    success-url: http://docs-draft.example.org/{NOPE}/{build.parameters[BAD]}/publish-docs/
+
+- project:
+    name: org/docs
+    check:
+      jobs:
+        - docs-draft-test
+        - docs-draft-test2

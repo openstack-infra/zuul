@@ -4557,42 +4557,6 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(3, len(self.smtp_messages))
 
     @skip("Disabled for early v3 development")
-    def test_success_pattern(self):
-        "Ensure bad build params are ignored"
-
-        # Use SMTP reporter to grab the result message easier
-        self.init_repo("org/docs")
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-success-pattern.yaml')
-        self.sched.reconfigure(self.config)
-        self.launch_server.hold_jobs_in_build = True
-        self.registerJobs()
-
-        A = self.fake_gerrit.addFakeChange('org/docs', 'master', 'A')
-        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
-        self.waitUntilSettled()
-
-        # Grab build id
-        self.assertEqual(len(self.builds), 1)
-        uuid = self.builds[0].unique[:7]
-
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
-        self.waitUntilSettled()
-
-        self.assertEqual(len(self.smtp_messages), 1)
-        body = self.smtp_messages[0]['body'].splitlines()
-        self.assertEqual('Build succeeded.', body[0])
-
-        self.assertIn(
-            '- docs-draft-test http://docs-draft.example.org/1/1/1/check/'
-            'docs-draft-test/%s/publish-docs/' % uuid,
-            body[2])
-        self.assertIn(
-            '- docs-draft-test2 https://server/job/docs-draft-test2/1/',
-            body[3])
-
-    @skip("Disabled for early v3 development")
     def test_rerun_on_abort(self):
         "Test that if a worker fails to run a job, it is run again"
 
@@ -4719,3 +4683,37 @@ class TestSchedulerTemplatedProject(ZuulTestCase):
                                                 ).result, 'SUCCESS')
         self.assertEqual(self.getJobFromHistory('project-test6').result,
                          'SUCCESS')
+
+
+class TestSchedulerSuccessURL(ZuulTestCase):
+    tenant_config_file = 'config/success-url/main.yaml'
+
+    def test_success_url(self):
+        "Ensure bad build params are ignored"
+        self.sched.reconfigure(self.config)
+        self.init_repo('org/docs')
+
+        A = self.fake_gerrit.addFakeChange('org/docs', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        # Both builds ran: docs-draft-test + docs-draft-test2
+        self.assertEqual(len(self.history), 2)
+
+        # Grab build id
+        uuid = self.history[0].uuid[:7]
+
+        # Two msgs: 'Starting...'  + results
+        self.assertEqual(len(self.smtp_messages), 2)
+        body = self.smtp_messages[1]['body'].splitlines()
+        self.assertEqual('Build succeeded.', body[0])
+
+        self.assertIn(
+            '- docs-draft-test http://docs-draft.example.org/1/1/1/check/'
+            'docs-draft-test/%s/publish-docs/' % uuid,
+            body[2])
+
+        # NOTE: This default URL is currently hard-coded in launcher/server.py
+        self.assertIn(
+            '- docs-draft-test2 https://server/job',
+            body[3])
