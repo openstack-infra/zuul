@@ -16,6 +16,7 @@
 
 import logging
 import time
+from unittest import skip
 
 from tests.base import ZuulTestCase
 
@@ -27,14 +28,13 @@ logging.basicConfig(level=logging.DEBUG,
 class TestRequirements(ZuulTestCase):
     """Test pipeline and trigger requirements"""
 
-    def setUp(self):
-        self.skip("Disabled for early v3 development")
-
+    @skip("Disabled for early v3 development")
     def test_pipeline_require_approval_newer_than(self):
         "Test pipeline requirement: approval newer than"
         return self._test_require_approval_newer_than('org/project1',
                                                       'project1-pipeline')
 
+    @skip("Disabled for early v3 development")
     def test_trigger_require_approval_newer_than(self):
         "Test trigger requirement: approval newer than"
         return self._test_require_approval_newer_than('org/project2',
@@ -68,11 +68,13 @@ class TestRequirements(ZuulTestCase):
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, job)
 
+    @skip("Disabled for early v3 development")
     def test_pipeline_require_approval_older_than(self):
         "Test pipeline requirement: approval older than"
         return self._test_require_approval_older_than('org/project1',
                                                       'project1-pipeline')
 
+    @skip("Disabled for early v3 development")
     def test_trigger_require_approval_older_than(self):
         "Test trigger requirement: approval older than"
         return self._test_require_approval_older_than('org/project2',
@@ -106,11 +108,13 @@ class TestRequirements(ZuulTestCase):
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, job)
 
+    @skip("Disabled for early v3 development")
     def test_pipeline_require_approval_username(self):
         "Test pipeline requirement: approval username"
         return self._test_require_approval_username('org/project1',
                                                     'project1-pipeline')
 
+    @skip("Disabled for early v3 development")
     def test_trigger_require_approval_username(self):
         "Test trigger requirement: approval username"
         return self._test_require_approval_username('org/project2',
@@ -137,11 +141,13 @@ class TestRequirements(ZuulTestCase):
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, job)
 
+    @skip("Disabled for early v3 development")
     def test_pipeline_require_approval_email(self):
         "Test pipeline requirement: approval email"
         return self._test_require_approval_email('org/project1',
                                                  'project1-pipeline')
 
+    @skip("Disabled for early v3 development")
     def test_trigger_require_approval_email(self):
         "Test trigger requirement: approval email"
         return self._test_require_approval_email('org/project2',
@@ -168,11 +174,13 @@ class TestRequirements(ZuulTestCase):
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, job)
 
+    @skip("Disabled for early v3 development")
     def test_pipeline_require_approval_vote1(self):
         "Test pipeline requirement: approval vote with one value"
         return self._test_require_approval_vote1('org/project1',
                                                  'project1-pipeline')
 
+    @skip("Disabled for early v3 development")
     def test_trigger_require_approval_vote1(self):
         "Test trigger requirement: approval vote with one value"
         return self._test_require_approval_vote1('org/project2',
@@ -205,11 +213,13 @@ class TestRequirements(ZuulTestCase):
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, job)
 
+    @skip("Disabled for early v3 development")
     def test_pipeline_require_approval_vote2(self):
         "Test pipeline requirement: approval vote with two values"
         return self._test_require_approval_vote2('org/project1',
                                                  'project1-pipeline')
 
+    @skip("Disabled for early v3 development")
     def test_trigger_require_approval_vote2(self):
         "Test trigger requirement: approval vote with two values"
         return self._test_require_approval_vote2('org/project2',
@@ -262,6 +272,7 @@ class TestRequirements(ZuulTestCase):
         self.assertEqual(len(self.history), 2)
         self.assertEqual(self.history[1].name, job)
 
+    @skip("Disabled for early v3 development")
     def test_pipeline_require_current_patchset(self):
         "Test pipeline requirement: current-patchset"
         self.updateConfigLayout(
@@ -290,6 +301,7 @@ class TestRequirements(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 3)
 
+    @skip("Disabled for early v3 development")
     def test_pipeline_require_open(self):
         "Test pipeline requirement: open"
         self.updateConfigLayout(
@@ -308,6 +320,7 @@ class TestRequirements(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
 
+    @skip("Disabled for early v3 development")
     def test_pipeline_require_status(self):
         "Test pipeline requirement: status"
         self.updateConfigLayout(
@@ -358,11 +371,13 @@ class TestRequirements(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
 
+    @skip("Disabled for early v3 development")
     def test_pipeline_reject_username(self):
         "Test negative pipeline requirement: no comment from jenkins"
         return self._test_require_reject_username('org/project1',
                                                   'project1-pipeline')
 
+    @skip("Disabled for early v3 development")
     def test_trigger_reject_username(self):
         "Test negative trigger requirement: no comment from jenkins"
         return self._test_require_reject_username('org/project2',
@@ -418,10 +433,12 @@ class TestRequirements(ZuulTestCase):
         self.assertEqual(len(self.history), 3)
         self.assertEqual(self.history[2].name, job)
 
+    @skip("Disabled for early v3 development")
     def test_pipeline_require_reject(self):
         "Test pipeline requirement: rejections absent"
         return self._test_require_reject('org/project1', 'project1-pipeline')
 
+    @skip("Disabled for early v3 development")
     def test_trigger_require_reject(self):
         "Test trigger requirement: rejections absent"
         return self._test_require_reject('org/project2', 'project2-trigger')
