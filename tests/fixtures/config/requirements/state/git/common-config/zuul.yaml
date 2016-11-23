@@ -1,0 +1,74 @@
+- pipeline:
+    name: current-check
+    manager: independent
+    source:
+      gerrit
+    require:
+      current-patchset: True
+    trigger:
+      gerrit:
+        - event: patchset-created
+        - event: comment-added
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+- pipeline:
+    name: open-check
+    manager: independent
+    source:
+      gerrit
+    require:
+      open: True
+    trigger:
+      gerrit:
+        - event: patchset-created
+        - event: comment-added
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+- pipeline:
+    name: status-check
+    manager: independent
+    source:
+      gerrit
+    require:
+      status: NEW
+    trigger:
+      gerrit:
+        - event: patchset-created
+        - event: comment-added
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+- job:
+    name: project-job
+
+- project:
+    name: current-project
+    current-check:
+      jobs:
+        - project-job
+
+- project:
+    name: open-project
+    open-check:
+      jobs:
+        - project-job
+
+- project:
+    name: status-project
+    status-check:
+      jobs:
+        - project-job
