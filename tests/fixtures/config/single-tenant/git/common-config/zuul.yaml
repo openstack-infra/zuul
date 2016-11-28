@@ -37,6 +37,16 @@
     precedence: high
 
 - pipeline:
+    name: post
+    manager: independent
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: ref-updated
+          ref: ^(?!refs/).*$
+
+- pipeline:
     name: experimental
     manager: independent
     source:
@@ -67,6 +77,12 @@
         image: image2
 
 - job:
+    name: project-post
+    nodes:
+      - name: static
+        image: ubuntu-xenial
+
+- job:
     name: project-test2
 
 - job:
@@ -90,6 +106,9 @@
             jobs:
               - project-test1
               - project-test2
+    post:
+      jobs:
+        - project-post
 
 - project:
     name: org/project1

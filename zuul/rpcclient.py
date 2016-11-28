@@ -48,16 +48,19 @@ class RPCClient(object):
         self.log.debug("Job complete, success: %s" % (not job.failure))
         return job
 
-    def enqueue(self, pipeline, project, trigger, change):
-        data = {'pipeline': pipeline,
+    def enqueue(self, tenant, pipeline, project, trigger, change):
+        data = {'tenant': tenant,
+                'pipeline': pipeline,
                 'project': project,
                 'trigger': trigger,
                 'change': change,
                 }
         return not self.submitJob('zuul:enqueue', data).failure
 
-    def enqueue_ref(self, pipeline, project, trigger, ref, oldrev, newrev):
-        data = {'pipeline': pipeline,
+    def enqueue_ref(
+            self, tenant, pipeline, project, trigger, ref, oldrev, newrev):
+        data = {'tenant': tenant,
+                'pipeline': pipeline,
                 'project': project,
                 'trigger': trigger,
                 'ref': ref,
@@ -66,8 +69,9 @@ class RPCClient(object):
                 }
         return not self.submitJob('zuul:enqueue_ref', data).failure
 
-    def promote(self, pipeline, change_ids):
-        data = {'pipeline': pipeline,
+    def promote(self, tenant, pipeline, change_ids):
+        data = {'tenant': tenant,
+                'pipeline': pipeline,
                 'change_ids': change_ids,
                 }
         return not self.submitJob('zuul:promote', data).failure

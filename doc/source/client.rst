@@ -28,7 +28,7 @@ Enqueue
 
 Example::
 
-  zuul enqueue --trigger gerrit --pipeline check --project example_project --change 12345,1
+  zuul enqueue --tenant openstack --trigger gerrit --pipeline check --project example_project --change 12345,1
 
 Note that the format of change id is <number>,<patchset>.
 
@@ -38,7 +38,7 @@ Promote
 
 Example::
 
-  zuul promote --pipeline check --changes 12345,1 13336,3
+  zuul promote --tenant openstack --pipeline check --changes 12345,1 13336,3
 
 Note that the format of changes id is <number>,<patchset>.
 
