@@ -51,7 +51,7 @@ class WebApp(threading.Thread):
         self.port = port
         self.cache_expiry = cache_expiry
         self.cache_time = 0
-        self.cache = None
+        self.cache = {}
         self.daemon = True
         self.server = httpserver.serve(
             dec.wsgify(self.app), host=self.listen_address, port=self.port,
@@ -97,14 +97,17 @@ class WebApp(threading.Thread):
         return None
 
     def app(self, request):
-        path = self._normalize_path(request.path)
+        tenant_name = request.path.split('/')[1]
+        path = request.path.replace('/' + tenant_name, '')
+        path = self._normalize_path(path)
         if path is None:
             raise webob.exc.HTTPNotFound()
 
-        if (not self.cache or
+        if (tenant_name not in self.cache or
             (time.time() - self.cache_time) > self.cache_expiry):
             try:
-                self.cache = self.scheduler.formatStatusJSON()
+                self.cache[tenant_name] = self.scheduler.formatStatusJSON(
+                    tenant_name)
                 # Call time.time() again because formatting above may take
                 # longer than the cache timeout.
                 self.cache_time = time.time()
@@ -113,7 +116,7 @@ class WebApp(threading.Thread):
                 raise
 
         if path == 'status':
-            response = webob.Response(body=self.cache,
+            response = webob.Response(body=self.cache[tenant_name],
                                       content_type='application/json')
         else:
             status = self._status_for_change(path)
