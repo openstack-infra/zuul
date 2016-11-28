@@ -261,26 +261,6 @@ and projects are defined, what tests should be run, and what actions
 Zuul should perform.  There are three sections: pipelines, jobs, and
 projects.
 
-.. _includes:
-
-Includes
-""""""""
-
-Custom functions to be used in Zuul's configuration may be provided
-using the ``includes`` directive.  It accepts a list of files to
-include, and currently supports one type of inclusion, a python file::
-
-  includes:
-    - python-file: local_functions.py
-
-**python-file**
-  The path to a python file (either an absolute path or relative to the
-  directory name of :ref:`layout_config <layout_config>`).  The
-  file will be loaded and objects that it defines will be placed in a
-  special environment which can be referenced in the Zuul configuration.
-  Currently only the parameter-function attribute of a Job uses this
-  feature.
-
 Pipelines
 """""""""
 
@@ -800,33 +780,6 @@ each job as it builds a list from the project specification.
 
 **tags (optional)**
   A list of arbitrary strings which will be associated with the job.
-  Can be used by the parameter-function to alter behavior based on
-  their presence on a job.  If the job name is a regular expression,
-  tags will accumulate on jobs that match.
-
-**parameter-function (optional)**
-  Specifies a function that should be applied to the parameters before
-  the job is launched.  The function should be defined in a python file
-  included with the :ref:`includes` directive.  The function
-  should have the following signature:
-
-  .. function:: parameters(item, job, parameters)
-
-     Manipulate the parameters passed to a job before a build is
-     launched.  The ``parameters`` dictionary will already contain the
-     standard Zuul job parameters, and is expected to be modified
-     in-place.
-
-     :param item: the current queue item
-     :type item: zuul.model.QueueItem
-     :param job: the job about to be run
-     :type job: zuul.model.Job
-     :param parameters: parameters to be passed to the job
-     :type parameters: dict
-
-  If the parameter **ZUUL_NODE** is set by this function, then it will
-  be used to specify on what node (or class of node) the job should be
-  run.
 
 **swift**
   If :ref:`swift` is configured then each job can define a destination

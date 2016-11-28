@@ -13,7 +13,6 @@
 # under the License.
 
 import gear
-import inspect
 import json
 import logging
 import os
@@ -283,16 +282,6 @@ class LaunchClient(object):
                 # given  in the form of NAME_PARAMETER=VALUE
                 for key, value in swift_instructions.items():
                     params['_'.join(['SWIFT', name, key])] = value
-
-        if callable(job.parameter_function):
-            pargs = inspect.getargspec(job.parameter_function)
-            if len(pargs.args) == 2:
-                job.parameter_function(item, params)
-            else:
-                job.parameter_function(item, job, params)
-            self.log.debug("Custom parameter function used for job %s, "
-                           "change: %s, params: %s" % (job, item.change,
-                                                       params))
 
     def launch(self, job, item, pipeline, dependent_items=[]):
         uuid = str(uuid4().hex)

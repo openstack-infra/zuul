@@ -273,9 +273,7 @@ instead invoke:
   build:FUNCTION_NAME:NODE_NAME
 
 where **NODE_NAME** is the name or class of node on which the job
-should be run.  This can be specified by setting the ZUUL_NODE
-parameter in a parameter-function (see :ref:`includes` section in
-:ref:`zuulconf`).
+should be run.
 
 Zuul sends the ZUUL_* parameters described in `Zuul Parameters`_
 encoded in JSON format as the argument included with the
