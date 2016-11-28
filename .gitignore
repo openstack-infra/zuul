@@ -2,6 +2,7 @@
 *.egg
 *.egg-info
 *.pyc
+.idea
 .test
 .testrepository
 .tox
