@@ -32,20 +32,24 @@ def make_merger_item(item):
     patchset = None
     oldrev = None
     newrev = None
+    refspec = None
     if hasattr(item.change, 'number'):
         number = item.change.number
         patchset = item.change.patchset
+        refspec = item.change.refspec
+        branch = item.change.branch
     elif hasattr(item.change, 'newrev'):
         oldrev = item.change.oldrev
         newrev = item.change.newrev
+        branch = item.change.ref
     connection_name = item.pipeline.source.connection.connection_name
     return dict(project=item.change.project.name,
                 url=item.pipeline.source.getGitUrl(
                     item.change.project),
                 connection_name=connection_name,
                 merge_mode=item.change.project.merge_mode,
-                refspec=item.change.refspec,
-                branch=item.change.branch,
+                refspec=refspec,
+                branch=branch,
                 ref=item.current_build_set.ref,
                 number=number,
                 patchset=patchset,

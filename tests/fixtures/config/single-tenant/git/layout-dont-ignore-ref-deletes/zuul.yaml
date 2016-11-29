@@ -1,0 +1,23 @@
+- pipeline:
+    name: post
+    manager: independent
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: ref-updated
+          ref: ^(?!refs/).*$
+          ignore-deletes: False
+
+- job:
+    name: project-post
+    nodes:
+      - name: static
+        image: ubuntu-xenial
+
+- project:
+    name: org/project
+    post:
+      jobs:
+        - project-post
+
