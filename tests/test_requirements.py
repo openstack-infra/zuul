@@ -25,48 +25,50 @@ logging.basicConfig(level=logging.DEBUG,
                     '%(levelname)-8s %(message)s')
 
 
-class TestRequirements(ZuulTestCase):
-    """Test pipeline and trigger requirements"""
+class TestRequirementsApprovalNewerThan(ZuulTestCase):
+    """Requirements with a newer-than comment requirement"""
 
-    @skip("Disabled for early v3 development")
+    tenant_config_file = 'config/requirements/newer-than/main.yaml'
+
     def test_pipeline_require_approval_newer_than(self):
         "Test pipeline requirement: approval newer than"
         return self._test_require_approval_newer_than('org/project1',
-                                                      'project1-pipeline')
+                                                      'project1-job')
 
-    @skip("Disabled for early v3 development")
     def test_trigger_require_approval_newer_than(self):
         "Test trigger requirement: approval newer than"
         return self._test_require_approval_newer_than('org/project2',
-                                                      'project2-trigger')
+                                                      'project2-job')
 
     def _test_require_approval_newer_than(self, project, job):
-        self.updateConfigLayout(
-            'tests/fixtures/layout-requirement-newer-than.yaml')
-        self.sched.reconfigure(self.config)
-        self.registerJobs()
-
         A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
         # A comment event that we will keep submitting to trigger
-        comment = A.addApproval('CRVW', 2, username='nobody')
+        comment = A.addApproval('code-review', 2, username='nobody')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         # No +1 from Jenkins so should not be enqueued
         self.assertEqual(len(self.history), 0)
 
         # Add a too-old +1, should not be enqueued
-        A.addApproval('VRFY', 1, username='jenkins',
+        A.addApproval('verified', 1, username='jenkins',
                       granted_on=time.time() - 72 * 60 * 60)
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # Add a recent +1
-        self.fake_gerrit.addEvent(A.addApproval('VRFY', 1, username='jenkins'))
+        self.fake_gerrit.addEvent(A.addApproval('verified', 1,
+                                                username='jenkins'))
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, job)
+
+
+class TestRequirements(ZuulTestCase):
+    """Test pipeline and trigger requirements"""
+
+    tenant_config_file = 'config/requirements/main.yaml'
 
     @skip("Disabled for early v3 development")
     def test_pipeline_require_approval_older_than(self):

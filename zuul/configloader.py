@@ -462,9 +462,9 @@ class PipelineParser(object):
             f = model.ChangeishFilter(
                 open=require.get('open'),
                 current_patchset=require.get('current-patchset'),
-                statuses=to_list(require.get('status')),
-                required_approvals=to_list(require.get('approval')),
-                reject_approvals=to_list(reject.get('approval'))
+                statuses=as_list(require.get('status')),
+                required_approvals=as_list(require.get('approval')),
+                reject_approvals=as_list(reject.get('approval'))
             )
             manager.changeish_filters.append(f)
 
