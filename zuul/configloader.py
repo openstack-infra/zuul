@@ -74,9 +74,7 @@ class JobParser(object):
                         'logserver-prefix': str,
                         }
 
-        password = {str: str}
-
-        auth = {'password': to_list(password),
+        auth = {'secrets': to_list(str),
                 'inherit': bool,
                 'swift-tmpurl': to_list(swift_tmpurl),
                 }
