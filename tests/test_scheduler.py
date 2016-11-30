@@ -1004,7 +1004,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(C.reported, 2)
         self.assertEqual(len(self.history), 6)
 
-    @skip("Disabled for early v3 development")
     def test_post(self):
         "Test that post jobs run"
 
@@ -1027,7 +1026,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.history), 1)
         self.assertIn('project-post', job_names)
 
-    @skip("Disabled for early v3 development")
     def test_post_ignore_deletes(self):
         "Test that deleting refs does not trigger post jobs"
 
@@ -1050,12 +1048,10 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.history), 0)
         self.assertNotIn('project-post', job_names)
 
-    @skip("Disabled for early v3 development")
     def test_post_ignore_deletes_negative(self):
         "Test that deleting refs does trigger post jobs"
 
-        self.updateConfigLayout(
-            'tests/fixtures/layout-dont-ignore-deletes.yaml')
+        self.updateConfigLayout('layout-dont-ignore-ref-deletes')
         self.sched.reconfigure(self.config)
 
         e = {

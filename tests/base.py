@@ -477,6 +477,9 @@ class FakeGerritConnection(zuul.connection.gerrit.GerritConnection):
     def getGitUrl(self, project):
         return os.path.join(self.upstream_root, project.name)
 
+    def _getGitwebUrl(self, project, sha=None):
+        return self.getGitwebUrl(project, sha)
+
 
 class BuildHistory(object):
     def __init__(self, **kw):
