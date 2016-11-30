@@ -1698,7 +1698,7 @@ class Layout(object):
         # elements are aspects of that job with different matchers
         # that override some attribute of the job.  These aspects all
         # inherit from the reference definition.
-        self.jobs = {}
+        self.jobs = {'noop': [Job('noop')]}
         self.nodesets = {}
 
     def getJob(self, name):
