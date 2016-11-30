@@ -30,7 +30,6 @@ import yaml
 
 import zuul.merger
 import zuul.ansible.library
-import zuul.ansible.plugins.callback_plugins
 from zuul.lib import commandsocket
 
 ANSIBLE_WATCHDOG_GRACE = 5 * 60
@@ -197,18 +196,9 @@ class LaunchServer(object):
         path = os.path.join(state_dir, 'launcher.socket')
         self.command_socket = commandsocket.CommandSocket(path)
         ansible_dir = os.path.join(state_dir, 'ansible')
-        plugins_dir = os.path.join(ansible_dir, 'plugins')
-        self.callback_dir = os.path.join(plugins_dir, 'callback_plugins')
-        if not os.path.exists(self.callback_dir):
-            os.makedirs(self.callback_dir)
         self.library_dir = os.path.join(ansible_dir, 'library')
         if not os.path.exists(self.library_dir):
             os.makedirs(self.library_dir)
-
-        callback_path = os.path.dirname(os.path.abspath(
-            zuul.ansible.plugins.callback_plugins.__file__))
-        for fn in os.listdir(callback_path):
-            shutil.copy(os.path.join(callback_path, fn), self.callback_dir)
 
         library_path = os.path.dirname(os.path.abspath(
             zuul.ansible.library.__file__))
@@ -419,20 +409,27 @@ class LaunchServer(object):
         with open(jobdir.config, 'w') as config:
             config.write('[defaults]\n')
             config.write('hostfile = %s\n' % jobdir.inventory)
-            config.write('keep_remote_files = True\n')
             config.write('local_tmp = %s/.ansible/local_tmp\n' % jobdir.root)
             config.write('remote_tmp = %s/.ansible/remote_tmp\n' % jobdir.root)
             config.write('private_key_file = %s\n' % self.private_key_file)
             config.write('retry_files_enabled = False\n')
             config.write('log_path = %s\n' % jobdir.ansible_log)
             config.write('gathering = explicit\n')
-            config.write('callback_plugins = %s\n' % self.callback_dir)
             config.write('library = %s\n' % self.library_dir)
             # bump the timeout because busy nodes may take more than
             # 10s to respond
             config.write('timeout = 30\n')
 
             config.write('[ssh_connection]\n')
+            # NB: when setting pipelining = True, keep_remote_files
+            # must be False (the default).  Otherwise it apparently
+            # will override the pipelining option and effectively
+            # disable it.  Pipelining has a side effect of running the
+            # command without a tty (ie, without the -tt argument to
+            # ssh).  We require this behavior so that if a job runs a
+            # command which expects interactive input on a tty (such
+            # as sudo) it does not hang.
+            config.write('pipelining = True\n')
             ssh_args = "-o ControlMaster=auto -o ControlPersist=60s " \
                 "-o UserKnownHostsFile=%s" % jobdir.known_hosts
             config.write('ssh_args = %s\n' % ssh_args)

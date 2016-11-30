@@ -24,8 +24,8 @@ import tempfile
 import threading
 import time
 import traceback
-import Queue
 import uuid
+import Queue
 
 import gear
 import yaml
@@ -34,11 +34,11 @@ import jenkins_jobs.formatter
 import zmq
 
 import zuul.ansible.library
-import zuul.ansible.plugins.callback_plugins
 from zuul.lib import commandsocket
 
 ANSIBLE_WATCHDOG_GRACE = 5 * 60
 ANSIBLE_DEFAULT_TIMEOUT = 2 * 60 * 60
+ANSIBLE_DEFAULT_PRE_TIMEOUT = 10 * 60
 ANSIBLE_DEFAULT_POST_TIMEOUT = 10 * 60
 
 
@@ -113,9 +113,13 @@ class JobDir(object):
         os.makedirs(self.ansible_root)
         self.known_hosts = os.path.join(self.ansible_root, 'known_hosts')
         self.inventory = os.path.join(self.ansible_root, 'inventory')
+        self.vars = os.path.join(self.ansible_root, 'vars.yaml')
+        self.pre_playbook = os.path.join(self.ansible_root, 'pre_playbook')
         self.playbook = os.path.join(self.ansible_root, 'playbook')
         self.post_playbook = os.path.join(self.ansible_root, 'post_playbook')
         self.config = os.path.join(self.ansible_root, 'ansible.cfg')
+        self.pre_post_config = os.path.join(self.ansible_root,
+                                            'ansible_pre_post.cfg')
         self.script_root = os.path.join(self.ansible_root, 'scripts')
         self.ansible_log = os.path.join(self.ansible_root, 'ansible_log.txt')
         os.makedirs(self.script_root)
@@ -176,22 +180,27 @@ class LaunchServer(object):
         path = os.path.join(state_dir, 'launcher.socket')
         self.command_socket = commandsocket.CommandSocket(path)
         ansible_dir = os.path.join(state_dir, 'ansible')
-        plugins_dir = os.path.join(ansible_dir, 'plugins')
-        self.callback_dir = os.path.join(plugins_dir, 'callback_plugins')
-        if not os.path.exists(self.callback_dir):
-            os.makedirs(self.callback_dir)
         self.library_dir = os.path.join(ansible_dir, 'library')
         if not os.path.exists(self.library_dir):
             os.makedirs(self.library_dir)
-
-        callback_path = os.path.dirname(os.path.abspath(
-            zuul.ansible.plugins.callback_plugins.__file__))
-        for fn in os.listdir(callback_path):
-            shutil.copy(os.path.join(callback_path, fn), self.callback_dir)
+        self.pre_post_library_dir = os.path.join(ansible_dir,
+                                                 'pre_post_library')
+        if not os.path.exists(self.pre_post_library_dir):
+            os.makedirs(self.pre_post_library_dir)
 
         library_path = os.path.dirname(os.path.abspath(
             zuul.ansible.library.__file__))
-        for fn in os.listdir(library_path):
+        # Ansible library modules that should be available to all
+        # playbooks:
+        all_libs = ['zuul_log.py', 'zuul_console.py', 'zuul_afs.py']
+        # Modules that should only be used by job playbooks:
+        job_libs = ['command.py']
+
+        for fn in all_libs:
+            shutil.copy(os.path.join(library_path, fn), self.library_dir)
+            shutil.copy(os.path.join(library_path, fn),
+                        self.pre_post_library_dir)
+        for fn in job_libs:
             shutil.copy(os.path.join(library_path, fn), self.library_dir)
 
         def get_config_default(section, option, default):
@@ -476,7 +485,7 @@ class LaunchServer(object):
                             args['description'], args['labels'],
                             self.hostname, self.zmq_send_queue,
                             self.termination_queue, self.keep_jobdir,
-                            self.callback_dir, self.library_dir,
+                            self.library_dir, self.pre_post_library_dir,
                             self.options)
         self.node_workers[worker.name] = worker
 
@@ -557,8 +566,8 @@ class NodeWorker(object):
 
     def __init__(self, config, jobs, builds, sites, name, host,
                  description, labels, manager_name, zmq_send_queue,
-                 termination_queue, keep_jobdir, callback_dir,
-                 library_dir, options):
+                 termination_queue, keep_jobdir, library_dir,
+                 pre_post_library_dir, options):
         self.log = logging.getLogger("zuul.NodeWorker.%s" % (name,))
         self.log.debug("Creating node worker %s" % (name,))
         self.config = config
@@ -593,6 +602,7 @@ class NodeWorker(object):
         self._aborted_job = False
         self._watchdog_timeout = False
         self._sent_complete_event = False
+        self.ansible_pre_proc = None
         self.ansible_job_proc = None
         self.ansible_post_proc = None
         self.workspace_root = config.get('launcher', 'workspace_root')
@@ -604,8 +614,8 @@ class NodeWorker(object):
             self.username = config.get('launcher', 'username')
         else:
             self.username = 'zuul'
-        self.callback_dir = callback_dir
         self.library_dir = library_dir
+        self.pre_post_library_dir = pre_post_library_dir
         self.options = options
 
     def isAlive(self):
@@ -872,6 +882,7 @@ class NodeWorker(object):
                                'SUCCESS', {})
 
     def runJob(self, job, args):
+        self.ansible_pre_proc = None
         self.ansible_job_proc = None
         self.ansible_post_proc = None
         result = None
@@ -899,6 +910,12 @@ class NodeWorker(object):
 
             job.sendWorkData(json.dumps(data))
             job.sendWorkStatus(0, 100)
+
+            pre_status = self.runAnsiblePrePlaybook(jobdir)
+            if pre_status is None:
+                # These should really never fail, so return None and have
+                # zuul try again
+                return result
 
             job_status = self.runAnsiblePlaybook(jobdir, timeout)
             if job_status is None:
@@ -965,7 +982,8 @@ class NodeWorker(object):
                 # upload.  This uploads the playbook and ansible logs.
                 copyargs = dict(src=jobdir.ansible_root + '/',
                                 dest=os.path.join(scproot, '_zuul_ansible'))
-                task = dict(copy=copyargs,
+                task = dict(name='copy console log',
+                            copy=copyargs,
                             delegate_to='127.0.0.1')
                 # This is a local copy and should not fail, so does
                 # not need a retry stanza.
@@ -987,10 +1005,15 @@ class NodeWorker(object):
                             mode='pull')
             if rsync_opts:
                 syncargs['rsync_opts'] = rsync_opts
-            task = dict(synchronize=syncargs)
+            task = dict(name='copy files from node',
+                        synchronize=syncargs)
             if not scpfile.get('copy-after-failure'):
-                task['when'] = 'success'
-            task.update(self.retry_args)
+                task['when'] = 'success|bool'
+            # We don't use retry_args here because there is a bug in
+            # the synchronize module that breaks subsequent attempts at
+            # retrying. Better to try once and get an accurate error
+            # message if it fails.
+            # https://github.com/ansible/ansible/issues/18281
             tasks.append(task)
 
             task = self._makeSCPTaskLocalAction(
@@ -1030,10 +1053,11 @@ class NodeWorker(object):
             private_key_file=self.private_key_file,
             host=site['host'],
             user=site['user'])
-        task = dict(shell=shellargs,
+        task = dict(name='rsync logs to server',
+                    shell=shellargs,
                     delegate_to='127.0.0.1')
         if not scpfile.get('copy-after-failure'):
-            task['when'] = 'success'
+            task['when'] = 'success|bool'
 
         return task
 
@@ -1061,12 +1085,17 @@ class NodeWorker(object):
                         mode='pull')
         if rsync_opts:
             syncargs['rsync_opts'] = rsync_opts
-        task = dict(synchronize=syncargs,
-                    when='success')
-        task.update(self.retry_args)
+        task = dict(name='copy files from node',
+                    synchronize=syncargs,
+                    when='success|bool')
+        # We don't use retry_args here because there is a bug in the
+        # synchronize module that breaks subsequent attempts at retrying.
+        # Better to try once and get an accurate error message if it fails.
+        # https://github.com/ansible/ansible/issues/18281
         tasks.append(task)
-        task = dict(shell='lftp -f %s' % ftpscript,
-                    when='success',
+        task = dict(name='FTP files to server',
+                    shell='lftp -f %s' % ftpscript,
+                    when='success|bool',
                     delegate_to='127.0.0.1')
         ftpsource = ftpcontent
         if ftp.get('remove-prefix'):
@@ -1098,17 +1127,13 @@ class NodeWorker(object):
             raise Exception("Undefined AFS site: %s" % site)
         site = self.sites[site]
 
-        # It is possible that this could be done in one rsync step,
-        # however, the current rysnc from the host is complicated (so
-        # that we can match the behavior of ant), and then rsync to
-        # afs is complicated and involves a pre-processing step in
-        # both locations (so that we can exclude directories).  Each
-        # is well understood individually so it is easier to compose
-        # them in series than combine them together.  A better,
-        # longer-lived solution (with better testing) would do just
-        # that.
         afsroot = tempfile.mkdtemp(dir=jobdir.staging_root)
         afscontent = os.path.join(afsroot, 'content')
+        afssource = afscontent
+        if afs.get('remove-prefix'):
+            afssource = os.path.join(afscontent, afs['remove-prefix'])
+        while afssource[-1] == '/':
+            afssource = afssource[:-1]
 
         src = parameters['WORKSPACE']
         if not src.endswith('/'):
@@ -1121,12 +1146,16 @@ class NodeWorker(object):
                         mode='pull')
         if rsync_opts:
             syncargs['rsync_opts'] = rsync_opts
-        task = dict(synchronize=syncargs,
-                    when='success')
-        task.update(self.retry_args)
+        task = dict(name='copy files from node',
+                    synchronize=syncargs,
+                    when='success|bool')
+        # We don't use retry_args here because there is a bug in the
+        # synchronize module that breaks subsequent attempts at retrying.
+        # Better to try once and get an accurate error message if it fails.
+        # https://github.com/ansible/ansible/issues/18281
         tasks.append(task)
 
-        afstarget = afs['target']
+        afstarget = afs['target'].lstrip('/')
         afstarget = self._substituteVariables(afstarget, parameters)
         afstarget = os.path.join(site['root'], afstarget)
         afstarget = os.path.normpath(afstarget)
@@ -1134,125 +1163,23 @@ class NodeWorker(object):
             raise Exception("Target path %s is not below site root" %
                             (afstarget,))
 
-        src_markers_file = os.path.join(afsroot, 'src-markers')
-        dst_markers_file = os.path.join(afsroot, 'dst-markers')
-        exclude_file = os.path.join(afsroot, 'exclude')
-        filter_file = os.path.join(afsroot, 'filter')
+        afsargs = dict(user=site['user'],
+                       keytab=site['keytab'],
+                       root=afsroot,
+                       source=afssource,
+                       target=afstarget)
 
-        find_pipe = [
-            "/usr/bin/find {path} -name .root-marker -printf '%P\n'",
-            "/usr/bin/xargs -I{{}} dirname {{}}",
-            "/usr/bin/sort > {file}"]
-        find_pipe = ' | '.join(find_pipe)
-
-        # Find the list of root markers in the just-completed build
-        # (usually there will only be one, but some builds produce
-        # content at the root *and* at a tag location).
-        task = dict(shell=find_pipe.format(path=afscontent,
-                                           file=src_markers_file),
-                    when='success',
-                    delegate_to='127.0.0.1')
-        tasks.append(task)
-
-        # Find the list of root markers that already exist in the
-        # published site.
-        task = dict(shell=find_pipe.format(path=afstarget,
-                                           file=dst_markers_file),
-                    when='success',
-                    delegate_to='127.0.0.1')
-        tasks.append(task)
-
-        # Create a file that contains the set of directories with root
-        # markers in the published site that do not have root markers
-        # in the built site.
-        exclude_command = "/usr/bin/comm -23 {dst} {src} > {exclude}".format(
-            src=src_markers_file,
-            dst=dst_markers_file,
-            exclude=exclude_file)
-        task = dict(shell=exclude_command,
-                    when='success',
-                    delegate_to='127.0.0.1')
-        tasks.append(task)
-
-        # Create a filter list for rsync so that we copy exactly the
-        # directories we want to without deleting any existing
-        # directories in the published site that were placed there by
-        # previous builds.
-
-        # The first group of items in the filter list are the
-        # directories in the current build with root markers, except
-        # for the root of the build.  This is so that if, later, the
-        # build root ends up as an exclude, we still copy the
-        # directories in this build underneath it (since these
-        # includes will have matched first).  We can't include the
-        # build root itself here, even if we do want to synchronize
-        # it, since that would defeat later excludes.  In other words,
-        # if the build produces a root marker in "/subdir" but not in
-        # "/", this section is needed so that "/subdir" is copied at
-        # all, since "/" will be excluded later.
-
-        command = ("/bin/grep -v '^/$' {src} | "
-                   "/bin/sed -e 's/^+ /' > {filter}".format(
-                       src=src_markers_file,
-                       filter=filter_file))
-        task = dict(shell=command,
-                    when='success',
-                    delegate_to='127.0.0.1')
-        tasks.append(task)
-
-        # The second group is the set of directories that are in the
-        # published site but not in the built site.  This is so that
-        # if the built site does contain a marker at root (meaning
-        # that there is content that should be copied into the root)
-        # that we don't delete everything else previously built
-        # underneath the root.
-
-        command = ("/bin/grep -v '^/$' {exclude} | "
-                   "/bin/sed -e 's/^- /' >> {filter}".format(
-                       exclude=exclude_file,
-                       filter=filter_file))
-        task = dict(shell=command,
-                    when='success',
-                    delegate_to='127.0.0.1')
-        tasks.append(task)
-
-        # The last entry in the filter file is for the build root.  If
-        # there is no marker in the build root, then we need to
-        # exclude it from the rsync, so we add it here.  It needs to
-        # be in the form of '/*' so that it matches all of the files
-        # in the build root.  If there is no marker at the build root,
-        # then we should omit the '/*' exclusion so that it is
-        # implicitly included.
-
-        command = "grep '^/$' {exclude} && echo '- /*' >> {filter}".format(
-            exclude=exclude_file,
-            filter=filter_file)
-        task = dict(shell=command,
-                    when='success',
-                    delegate_to='127.0.0.1')
-        tasks.append(task)
-
-        # Perform the rsync with the filter list.
-        rsync_cmd = [
-            '/usr/bin/k5start', '-t', '-k', '{keytab}', '--',
-            '/usr/bin/rsync', '-rtp', '--safe-links', '--delete-after',
-            "--filter='merge {filter}'", '{src}/', '{dst}/',
-        ]
-        shellargs = ' '.join(rsync_cmd).format(
-            src=afscontent,
-            dst=afstarget,
-            filter=filter_file,
-            keytab=site['keytab'])
-        task = dict(shell=shellargs,
-                    when='success',
+        task = dict(name='Synchronize files to AFS',
+                    zuul_afs=afsargs,
+                    when='success|bool',
                     delegate_to='127.0.0.1')
         tasks.append(task)
 
         return tasks
 
-    def _makeBuilderTask(self, jobdir, builder, parameters):
+    def _makeBuilderTask(self, jobdir, builder, parameters, sequence):
         tasks = []
-        script_fn = '%s.sh' % str(uuid.uuid4().hex)
+        script_fn = '%02d-%s.sh' % (sequence, str(uuid.uuid4().hex))
         script_path = os.path.join(jobdir.script_root, script_fn)
         with open(script_path, 'w') as script:
             data = builder['shell']
@@ -1267,15 +1194,10 @@ class NodeWorker(object):
         task = dict(copy=copy)
         tasks.append(task)
 
-        runner = dict(command=remote_path,
-                      cwd=parameters['WORKSPACE'],
-                      parameters=parameters)
-        task = dict(zuul_runner=runner)
-        task['name'] = ('zuul_runner with {{ timeout | int - elapsed_time }} '
-                        'second timeout')
-        task['when'] = '{{ elapsed_time < timeout | int }}'
-        task['async'] = '{{ timeout | int - elapsed_time }}'
-        task['poll'] = 5
+        task = dict(command=remote_path)
+        task['name'] = 'command generated from JJB'
+        task['environment'] = "{{ zuul.environment }}"
+        task['args'] = dict(chdir=parameters['WORKSPACE'])
         tasks.append(task)
 
         filetask = dict(path=remote_path,
@@ -1342,53 +1264,56 @@ class NodeWorker(object):
         if timeout_var:
             parameters[timeout_var] = str(timeout * 1000)
 
-        with open(jobdir.playbook, 'w') as playbook:
-            pre_tasks = []
-            tasks = []
-            main_block = []
-            error_block = []
-            variables = []
+        with open(jobdir.vars, 'w') as vars_yaml:
+            variables = dict(
+                timeout=timeout,
+                environment=parameters,
+            )
+            zuul_vars = dict(zuul=variables)
+            vars_yaml.write(
+                yaml.safe_dump(zuul_vars, default_flow_style=False))
+
+        with open(jobdir.pre_playbook, 'w') as pre_playbook:
 
             shellargs = "ssh-keyscan {{ ansible_host }} > %s" % (
                 jobdir.known_hosts)
-            pre_tasks.append(dict(shell=shellargs,
-                             delegate_to='127.0.0.1'))
-
-            tasks.append(dict(block=main_block,
-                              rescue=error_block))
+            tasks = []
+            tasks.append(dict(shell=shellargs, delegate_to='127.0.0.1'))
 
             task = dict(file=dict(path='/tmp/console.html', state='absent'))
-            main_block.append(task)
+            tasks.append(task)
 
             task = dict(zuul_console=dict(path='/tmp/console.html',
                                           port=19885))
-            main_block.append(task)
+            tasks.append(task)
 
             task = dict(file=dict(path=parameters['WORKSPACE'],
                                   state='directory'))
-            main_block.append(task)
+            tasks.append(task)
 
             msg = [
                 "Launched by %s" % self.manager_name,
                 "Building remotely on %s in workspace %s" % (
                     self.name, parameters['WORKSPACE'])]
             task = dict(zuul_log=dict(msg=msg))
-            main_block.append(task)
+            tasks.append(task)
 
+            play = dict(hosts='node', name='Job setup', tasks=tasks)
+            pre_playbook.write(
+                yaml.safe_dump([play], default_flow_style=False))
+
+        with open(jobdir.playbook, 'w') as playbook:
+            tasks = []
+
+            sequence = 0
             for builder in jjb_job.get('builders', []):
                 if 'shell' in builder:
-                    main_block.extend(
-                        self._makeBuilderTask(jobdir, builder, parameters))
-            task = dict(zuul_log=dict(msg="Job complete, result: SUCCESS"))
-            main_block.append(task)
+                    sequence += 1
+                    tasks.extend(
+                        self._makeBuilderTask(jobdir, builder, parameters,
+                                              sequence))
 
-            task = dict(zuul_log=dict(msg="Job complete, result: FAILURE"))
-            error_block.append(task)
-            error_block.append(dict(fail=dict(msg='FAILURE')))
-
-            variables.append(dict(timeout=timeout))
-            play = dict(hosts='node', name='Job body', vars=variables,
-                        pre_tasks=pre_tasks, tasks=tasks)
+            play = dict(hosts='node', name='Job body', tasks=tasks)
             playbook.write(yaml.safe_dump([play], default_flow_style=False))
 
         early_publishers, late_publishers = self._transformPublishers(jjb_job)
@@ -1414,6 +1339,14 @@ class NodeWorker(object):
             # we run the log publisher regardless of whether the rest
             # of the publishers succeed.
             tasks = []
+
+            task = dict(zuul_log=dict(msg="Job complete, result: SUCCESS"),
+                        when='success|bool')
+            blocks[0].insert(0, task)
+            task = dict(zuul_log=dict(msg="Job complete, result: FAILURE"),
+                        when='not success|bool')
+            blocks[0].insert(0, task)
+
             tasks.append(dict(block=blocks[0],
                               always=blocks[1]))
 
@@ -1421,46 +1354,104 @@ class NodeWorker(object):
                         tasks=tasks)
             playbook.write(yaml.safe_dump([play], default_flow_style=False))
 
-        with open(jobdir.config, 'w') as config:
+        self._writeAnsibleConfig(jobdir, jobdir.config,
+                                 library=self.library_dir)
+        self._writeAnsibleConfig(jobdir, jobdir.pre_post_config,
+                                 library=self.pre_post_library_dir)
+
+        return timeout
+
+    def _writeAnsibleConfig(self, jobdir, fn, library):
+        with open(fn, 'w') as config:
             config.write('[defaults]\n')
             config.write('hostfile = %s\n' % jobdir.inventory)
-            config.write('keep_remote_files = True\n')
             config.write('local_tmp = %s/.ansible/local_tmp\n' % jobdir.root)
             config.write('remote_tmp = %s/.ansible/remote_tmp\n' % jobdir.root)
             config.write('private_key_file = %s\n' % self.private_key_file)
             config.write('retry_files_enabled = False\n')
             config.write('log_path = %s\n' % jobdir.ansible_log)
             config.write('gathering = explicit\n')
-            config.write('callback_plugins = %s\n' % self.callback_dir)
-            config.write('library = %s\n' % self.library_dir)
+            config.write('library = %s\n' % library)
+            # TODO(mordred) This can be removed once we're using ansible 2.2
+            config.write('module_set_locale = False\n')
             # bump the timeout because busy nodes may take more than
             # 10s to respond
             config.write('timeout = 30\n')
 
             config.write('[ssh_connection]\n')
+            # NB: when setting pipelining = True, keep_remote_files
+            # must be False (the default).  Otherwise it apparently
+            # will override the pipelining option and effectively
+            # disable it.  Pipelining has a side effect of running the
+            # command without a tty (ie, without the -tt argument to
+            # ssh).  We require this behavior so that if a job runs a
+            # command which expects interactive input on a tty (such
+            # as sudo) it does not hang.
+            config.write('pipelining = True\n')
             ssh_args = "-o ControlMaster=auto -o ControlPersist=60s " \
                 "-o UserKnownHostsFile=%s" % jobdir.known_hosts
             config.write('ssh_args = %s\n' % ssh_args)
-
-        return timeout
 
     def _ansibleTimeout(self, proc, msg):
         self._watchdog_timeout = True
         self.log.warning(msg)
         self.abortRunningProc(proc)
 
-    def runAnsiblePlaybook(self, jobdir, timeout):
+    def runAnsiblePrePlaybook(self, jobdir):
         # Set LOGNAME env variable so Ansible log_path log reports
         # the correct user.
         env_copy = os.environ.copy()
         env_copy['LOGNAME'] = 'zuul'
+        env_copy['ANSIBLE_CONFIG'] = jobdir.pre_post_config
 
         if self.options['verbose']:
             verbose = '-vvv'
         else:
             verbose = '-v'
 
-        cmd = ['ansible-playbook', jobdir.playbook, verbose]
+        cmd = ['ansible-playbook', jobdir.pre_playbook,
+               '-e@%s' % jobdir.vars, verbose]
+        self.log.debug("Ansible pre command: %s" % (cmd,))
+
+        self.ansible_pre_proc = subprocess.Popen(
+            cmd,
+            cwd=jobdir.ansible_root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            preexec_fn=os.setsid,
+            env=env_copy,
+        )
+        ret = None
+        watchdog = Watchdog(ANSIBLE_DEFAULT_PRE_TIMEOUT,
+                            self._ansibleTimeout,
+                            (self.ansible_pre_proc,
+                             "Ansible pre timeout exceeded"))
+        watchdog.start()
+        try:
+            for line in iter(self.ansible_pre_proc.stdout.readline, b''):
+                line = line[:1024].rstrip()
+                self.log.debug("Ansible pre output: %s" % (line,))
+            ret = self.ansible_pre_proc.wait()
+        finally:
+            watchdog.stop()
+        self.log.debug("Ansible pre exit code: %s" % (ret,))
+        self.ansible_pre_proc = None
+        return ret == 0
+
+    def runAnsiblePlaybook(self, jobdir, timeout):
+        # Set LOGNAME env variable so Ansible log_path log reports
+        # the correct user.
+        env_copy = os.environ.copy()
+        env_copy['LOGNAME'] = 'zuul'
+        env_copy['ANSIBLE_CONFIG'] = jobdir.config
+
+        if self.options['verbose']:
+            verbose = '-vvv'
+        else:
+            verbose = '-v'
+
+        cmd = ['ansible-playbook', jobdir.playbook, verbose,
+               '-e@%s' % jobdir.vars]
         self.log.debug("Ansible command: %s" % (cmd,))
 
         self.ansible_job_proc = subprocess.Popen(
@@ -1502,6 +1493,7 @@ class NodeWorker(object):
         # the correct user.
         env_copy = os.environ.copy()
         env_copy['LOGNAME'] = 'zuul'
+        env_copy['ANSIBLE_CONFIG'] = jobdir.pre_post_config
 
         if self.options['verbose']:
             verbose = '-vvv'
@@ -1509,7 +1501,9 @@ class NodeWorker(object):
             verbose = '-v'
 
         cmd = ['ansible-playbook', jobdir.post_playbook,
-               '-e', 'success=%s' % success, verbose]
+               '-e', 'success=%s' % success,
+               '-e@%s' % jobdir.vars,
+               verbose]
         self.log.debug("Ansible post command: %s" % (cmd,))
 
         self.ansible_post_proc = subprocess.Popen(
