@@ -361,7 +361,11 @@ class LaunchServer(object):
                 task.wait()
             self.log.debug("Job %s: git updates complete" % (job.unique,))
             merger = self._getMerger(jobdir.git_root)
-            commit = merger.mergeChanges(args['items'])  # noqa
+            merge_items = [i for i in args['items'] if i.get('refspec')]
+            if merge_items:
+                commit = merger.mergeChanges(merge_items)  # noqa
+            else:
+                commit = args['items'][-1]['newrev']  # noqa
 
             # TODOv3: Ansible the ansible thing here.
             self.prepareAnsibleFiles(jobdir, args)
