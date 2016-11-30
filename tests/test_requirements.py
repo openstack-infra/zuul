@@ -136,43 +136,42 @@ class TestRequirementsUserName(ZuulTestCase):
         self.assertEqual(self.history[0].name, job)
 
 
-class TestRequirements(ZuulTestCase):
-    """Test pipeline and trigger requirements"""
+class TestRequirementsEmail(ZuulTestCase):
+    """Requirements with a email requirement"""
 
-    tenant_config_file = 'config/requirements/main.yaml'
+    tenant_config_file = 'config/requirements/email/main.yaml'
 
-    @skip("Disabled for early v3 development")
     def test_pipeline_require_approval_email(self):
         "Test pipeline requirement: approval email"
         return self._test_require_approval_email('org/project1',
-                                                 'project1-pipeline')
+                                                 'project1-job')
 
-    @skip("Disabled for early v3 development")
     def test_trigger_require_approval_email(self):
         "Test trigger requirement: approval email"
         return self._test_require_approval_email('org/project2',
-                                                 'project2-trigger')
+                                                 'project2-job')
 
     def _test_require_approval_email(self, project, job):
-        self.updateConfigLayout(
-            'tests/fixtures/layout-requirement-email.yaml')
-        self.sched.reconfigure(self.config)
-        self.registerJobs()
-
         A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
         # A comment event that we will keep submitting to trigger
-        comment = A.addApproval('CRVW', 2, username='nobody')
+        comment = A.addApproval('code-review', 2, username='nobody')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         # No approval from Jenkins so should not be enqueued
         self.assertEqual(len(self.history), 0)
 
         # Add an approval from Jenkins
-        A.addApproval('VRFY', 1, username='jenkins')
+        A.addApproval('verified', 1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, job)
+
+
+class TestRequirements(ZuulTestCase):
+    """Test pipeline and trigger requirements"""
+
+    tenant_config_file = 'config/requirements/main.yaml'
 
     @skip("Disabled for early v3 development")
     def test_pipeline_require_approval_vote1(self):
