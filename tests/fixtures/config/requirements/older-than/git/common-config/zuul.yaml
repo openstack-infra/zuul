@@ -1,0 +1,54 @@
+- pipeline:
+    name: pipeline
+    manager: independent
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: comment-added
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+    require:
+      approval:
+        - username: jenkins
+          older-than: 48h
+
+- pipeline:
+    name: trigger
+    manager: independent
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: comment-added
+          require-approval:
+            - username: jenkins
+              older-than: 48h
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+- job:
+    name: project1-job
+
+- job:
+    name: project2-job
+
+- project:
+    name: org/project1
+    pipeline:
+      jobs:
+        - project1-job
+
+- project:
+    name: org/project2
+    trigger:
+      jobs:
+        - project2-job
