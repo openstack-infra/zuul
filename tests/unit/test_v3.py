@@ -17,10 +17,12 @@
 import os
 import textwrap
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
 import testtools
 
 import zuul.configloader
-from tests.base import AnsibleZuulTestCase, ZuulTestCase
+from tests.base import AnsibleZuulTestCase, ZuulTestCase, FIXTURE_DIR
 
 
 class TestMultipleTenants(AnsibleZuulTestCase):
@@ -303,3 +305,36 @@ class TestBrokenConfig(ZuulTestCase):
 
     def test_broken_config_on_startup(self):
         pass
+
+
+class TestProjectKeys(ZuulTestCase):
+    # Test that we can generate project keys
+
+    # Normally the test infrastructure copies a static key in place
+    # for each project before starting tests.  This saves time because
+    # Zuul's automatic key-generation on startup can be slow.  To make
+    # sure we exercise that code, in this test we allow Zuul to create
+    # keys for the project on startup.
+    create_project_keys = True
+    tenant_config_file = 'config/in-repo/main.yaml'
+
+    def test_key_generation(self):
+        key_root = os.path.join(self.state_root, 'keys')
+        private_key_file = os.path.join(key_root, 'gerrit/org/project.pem')
+        # Make sure that a proper key was created on startup
+        with open(private_key_file, "rb") as f:
+            private_key = serialization.load_pem_private_key(
+                f.read(),
+                password=None,
+                backend=default_backend()
+            )
+
+        with open(os.path.join(FIXTURE_DIR, 'private.pem')) as i:
+            fixture_private_key = i.read()
+
+        # Make sure that we didn't just end up with the static fixture
+        # key
+        self.assertNotEqual(fixture_private_key, private_key)
+
+        # Make sure it's the right length
+        self.assertEqual(4096, private_key.key_size)

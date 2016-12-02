@@ -2084,6 +2084,7 @@ class ProjectConfig(object):
         self.name = name
         self.merge_mode = None
         self.pipelines = {}
+        self.private_key_file = None
 
 
 class UnparsedAbideConfig(object):
