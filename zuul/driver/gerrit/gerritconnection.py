@@ -171,11 +171,15 @@ class GerritWatcher(threading.Thread):
         self._stopped = False
 
     def _read(self, fd):
-        l = fd.readline()
-        data = json.loads(l)
-        self.log.debug("Received data from Gerrit event stream: \n%s" %
-                       pprint.pformat(data))
-        self.gerrit_connection.addEvent(data)
+        while True:
+            l = fd.readline()
+            data = json.loads(l)
+            self.log.debug("Received data from Gerrit event stream: \n%s" %
+                           pprint.pformat(data))
+            self.gerrit_connection.addEvent(data)
+            # Continue until all the lines received are consumed
+            if fd._pos == fd._realpos:
+                break
 
     def _listen(self, stdout, stderr):
         poll = select.poll()
