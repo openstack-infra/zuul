@@ -422,11 +422,13 @@ class PipelineManager(object):
             oldrev = item.change.oldrev
             newrev = item.change.newrev
         connection_name = self.pipeline.source.connection.connection_name
-        return dict(project=item.change.project.name,
+
+        project = item.change.project.name
+        return dict(project=project,
                     url=self.pipeline.source.getGitUrl(
                         item.change.project),
                     connection_name=connection_name,
-                    merge_mode=item.change.project.merge_mode,
+                    merge_mode=item.current_build_set.getMergeMode(project),
                     refspec=item.change.refspec,
                     branch=item.change.branch,
                     ref=item.current_build_set.ref,
