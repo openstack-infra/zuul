@@ -758,6 +758,8 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
         self.running_builds.remove(build)
         del self.job_builds[job.unique]
         self.lock.release()
+        if build.run_error:
+            result = None
         return result
 
 
