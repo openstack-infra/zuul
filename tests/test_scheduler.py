@@ -2237,6 +2237,24 @@ class TestScheduler(ZuulTestCase):
     def test_irrelevant_files_no_match_runs_job(self):
         self._test_irrelevant_files_jobs(should_skip=False)
 
+    def test_inherited_jobs_keep_matchers(self):
+        self.updateConfigLayout('layout-inheritance')
+        self.sched.reconfigure(self.config)
+
+        files = {'ignoreme': 'ignored\n'}
+
+        change = self.fake_gerrit.addFakeChange('org/project',
+                                                'master',
+                                                'test irrelevant-files',
+                                                files=files)
+        self.fake_gerrit.addEvent(change.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        run_jobs = set([build.name for build in self.history])
+
+        self.assertEqual(set(['project-test-nomatch-starts-empty',
+                              'project-test-nomatch-starts-full']), run_jobs)
+
     @skip("Disabled for early v3 development")
     def test_test_config(self):
         "Test that we can test the config"

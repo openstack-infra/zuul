@@ -265,6 +265,51 @@ class TestJob(BaseTestCase):
         self.assertEqual(job.name, 'python27')
         self.assertEqual(job.timeout, 70)
 
+    def test_inheritance_keeps_matchers(self):
+        layout = model.Layout()
+
+        pipeline = model.Pipeline('gate', layout)
+        layout.addPipeline(pipeline)
+        queue = model.ChangeQueue(pipeline)
+        project = model.Project('project')
+
+        base = configloader.JobParser.fromYaml(layout, {
+            '_source_project': project,
+            'name': 'base',
+            'timeout': 30,
+        })
+        layout.addJob(base)
+        python27 = configloader.JobParser.fromYaml(layout, {
+            '_source_project': project,
+            'name': 'python27',
+            'parent': 'base',
+            'timeout': 40,
+            'irrelevant-files': ['^ignored-file$'],
+        })
+        layout.addJob(python27)
+
+        project_config = configloader.ProjectParser.fromYaml(layout, {
+            'name': 'project',
+            'gate': {
+                'jobs': [
+                    'python27',
+                ]
+            }
+        })
+        layout.addProjectConfig(project_config, update_pipeline=False)
+
+        change = model.Change(project)
+        change.branch = 'master'
+        change.files = ['/COMMIT_MSG', 'ignored-file']
+        item = queue.enqueueChange(change)
+        item.current_build_set.layout = layout
+
+        self.assertTrue(base.changeMatches(change))
+        self.assertFalse(python27.changeMatches(change))
+
+        item.freezeJobTree()
+        self.assertEqual([], item.getJobs())
+
     def test_job_source_project(self):
         layout = model.Layout()
         base_project = model.Project('base_project')
