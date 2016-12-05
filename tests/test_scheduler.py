@@ -3727,7 +3727,6 @@ For CI problems and help debugging, contact ci@example.org"""
         self.launch_server.release()
         self.waitUntilSettled()
 
-    @skip("Disabled for early v3 development")
     def test_client_get_running_jobs(self):
         "Test that the RPC client can get a list of running jobs"
         self.launch_server.hold_jobs_in_build = True
@@ -3745,7 +3744,7 @@ For CI problems and help debugging, contact ci@example.org"""
             if time.time() - start > 10:
                 raise Exception("Timeout waiting for gearman server to report "
                                 + "back to the client")
-            build = self.launcher.builds.values()[0]
+            build = self.launch_client.builds.values()[0]
             if build.worker.name == "My Worker":
                 break
             else:

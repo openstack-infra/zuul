@@ -161,10 +161,11 @@ class RPCListener(object):
         # args = json.loads(job.arguments)
         # TODO: use args to filter by pipeline etc
         running_items = []
-        for pipeline_name, pipeline in six.iteritems(
-                self.sched.layout.pipelines):
-            for queue in pipeline.queues:
-                for item in queue.queue:
-                    running_items.append(item.formatJSON())
+        for tenant in self.sched.abide.tenants.values():
+            for pipeline_name, pipeline in six.iteritems(
+                    tenant.layout.pipelines):
+                for queue in pipeline.queues:
+                    for item in queue.queue:
+                        running_items.append(item.formatJSON())
 
         job.sendWorkComplete(json.dumps(running_items))

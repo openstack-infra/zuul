@@ -362,7 +362,8 @@ class LaunchServer(object):
 
             data = {
                 'manager': self.hostname,
-                'url': 'https://server/job',
+                'url': 'https://server/job/{}/0/'.format(args['job']),
+                'worker_name': 'My Worker',
             }
 
             # TODOv3:
