@@ -1771,6 +1771,11 @@ class Layout(object):
                     if variant not in inherited:
                         frozen_job.inheritFrom(variant)
                         inherited.add(variant)
+            if not inherited:
+                # A change must match at least one defined job variant
+                # (that is to say that it must match more than just
+                # the job that is defined in the tree).
+                continue
             if job not in inherited:
                 # Only update from the job in the tree if it is
                 # unique, otherwise we might unset an attribute we

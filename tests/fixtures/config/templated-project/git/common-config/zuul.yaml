@@ -81,6 +81,9 @@
 - job:
     name: layered-project-foo-test5
 
+- job:
+    name: project-test6
+
 - project:
     name: org/templated-project
     templates:
