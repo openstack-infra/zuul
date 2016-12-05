@@ -557,6 +557,8 @@ class FakeBuild(object):
         if len(self.parameters.get('nodes')) == 1:
             self.node = self.parameters['nodes'][0]['image']
         self.unique = self.parameters['ZUUL_UUID']
+        self.pipeline = self.parameters['ZUUL_PIPELINE']
+        self.project = self.parameters['ZUUL_PROJECT']
         self.name = self.parameters['job']
         self.wait_condition = threading.Condition()
         self.waiting = False
@@ -571,7 +573,8 @@ class FakeBuild(object):
         waiting = ''
         if self.waiting:
             waiting = ' [waiting]'
-        return '<FakeBuild %s %s%s>' % (self.name, self.changes, waiting)
+        return '<FakeBuild %s:%s %s%s>' % (self.pipeline, self.name,
+                                           self.changes, waiting)
 
     def release(self):
         """Release this build."""

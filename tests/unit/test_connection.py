@@ -47,28 +47,48 @@ class TestConnections(ZuulTestCase):
 
 
 class TestMultipleGerrits(ZuulTestCase):
-    def setUp(self):
-        self.skip("Disabled for early v3 development")
 
-    def setup_config(self,
-                     config_file='zuul-connections-multiple-gerrits.conf'):
-        super(TestMultipleGerrits, self).setup_config(config_file)
-        self.self.updateConfigLayout(
-            'layout-connections-multiple-gerrits.yaml')
+    config_file = 'zuul-connections-multiple-gerrits.conf'
+    tenant_config_file = 'config/zuul-connections-multiple-gerrits/main.yaml'
 
     def test_multiple_project_separate_gerrits(self):
-        self.worker.hold_jobs_in_build = True
+        self.launch_server.hold_jobs_in_build = True
 
         A = self.fake_another_gerrit.addFakeChange(
-            'org/project', 'master', 'A')
+            'org/project1', 'master', 'A')
         self.fake_another_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
 
         self.waitUntilSettled()
 
-        self.assertEqual(1, len(self.builds))
-        self.assertEqual('project-another-gerrit', self.builds[0].name)
-        self.assertTrue(self.job_has_changes(self.builds[0], A))
+        self.assertBuilds([dict(name='project-test2',
+                                changes='1,1',
+                                project='org/project1',
+                                pipeline='another_check')])
 
-        self.worker.hold_jobs_in_build = False
-        self.worker.release()
+        # NOTE(jamielennox): the tests back the git repo for both connections
+        # onto the same git repo on the file system. If we just create another
+        # fake change the fake_review_gerrit will try to create another 1,1
+        # change and git will fail to create the ref. Arbitrarily set it to get
+        # around the problem.
+        self.fake_review_gerrit.change_number = 50
+
+        B = self.fake_review_gerrit.addFakeChange(
+            'org/project1', 'master', 'B')
+        self.fake_review_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+
+        self.waitUntilSettled()
+
+        self.assertBuilds([
+            dict(name='project-test2',
+                 changes='1,1',
+                 project='org/project1',
+                 pipeline='another_check'),
+            dict(name='project-test1',
+                 changes='51,1',
+                 project='org/project1',
+                 pipeline='review_check'),
+        ])
+
+        self.launch_server.hold_jobs_in_build = False
+        self.launch_server.release()
         self.waitUntilSettled()
