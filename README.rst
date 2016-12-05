@@ -125,3 +125,20 @@ the following:
   simply reflect who to ask to explain the item in more detail if it
   is too cryptic.  In your own work, feel free to leave TODOv3 notes
   if a change would otherwise become too large or unweildy.
+
+Roadmap
+-------
+
+* Implement Zookeeper for Nodepool builders and begin using this in
+  OpenStack Infra
+* Implement Zookeeper for Nodepool launchers
+* Implement a shim to translate Zuul v2 demand into Nodepool Zookeeper
+  launcher requests
+* Begin using Zookeeper based Nodepool launchers with Zuul v2.5 in
+  OpenStack Infra
+* Begin using Zuul v3 to run jobs for Zuul itself
+* Move OpenStack Infra to use Zuul v3
+* Implement Github support
+* Begin using Zuul v3 to run tests on Ansible repos
+* Implement support in Nodepool for non-OpenStack clouds
+* Add native container support to Zuul / Nodepool
