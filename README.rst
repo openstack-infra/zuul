@@ -86,9 +86,7 @@ way to get started with this effort:
    trying to coordinate and prioritize work) know what you would like
    to work on.
 
-7) TODOv3(jeblair): Coming soon: check storyboard for status of
-   current work items.  We do not have a list of work items yet, but
-   we will soon.
+7) Check storyboard for status of current work items: https://storyboard.openstack.org/#!/board/41
 
 Once you are up to speed on those items, it will be helpful to know
 the following:
@@ -100,9 +98,9 @@ the following:
   from something simple such as a test-framework method changing its
   name, to more substantial issues, such as a feature being removed as
   part of the v3 work.  Each test will need to be evaluated
-  individually.  Feel free to, at any time, claim a test name on this
-  etherpad and work on re-enabling it:
-  https://etherpad.openstack.org/p/zuulv3
+  individually.  Feel free to, at any time, claim a test name in this
+  story and work on re-enabling it:
+  https://storyboard.openstack.org/#!/story/2000773
 
 * Because of the importance of external systems, as well as the number
   of internal Zuul components, actually running Zuul in a development
