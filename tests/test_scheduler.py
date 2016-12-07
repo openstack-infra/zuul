@@ -4569,36 +4569,36 @@ For CI problems and help debugging, contact ci@example.org"""
         # No more messages reported via smtp
         self.assertEqual(3, len(self.smtp_messages))
 
-    @skip("Disabled for early v3 development")
     def test_rerun_on_abort(self):
-        "Test that if a worker fails to run a job, it is run again"
+        "Test that if a launch server fails to run a job, it is run again"
 
         self.config.set('zuul', 'layout_config',
                         'tests/fixtures/layout-abort-attempts.yaml')
         self.sched.reconfigure(self.config)
-        self.worker.hold_jobs_in_build = True
+        self.launch_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
 
-        self.worker.release('.*-merge')
+        self.launch_server.release('.*-merge')
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 2)
         self.builds[0].requeue = True
-        self.worker.release('.*-test*')
+        self.launch_server.release('.*-test*')
         self.waitUntilSettled()
 
-        for x in range(3):
-            self.assertEqual(len(self.builds), 1)
+        for x in range(2):
+            self.assertEqual(len(self.builds), 1,
+                             'len of builds at x=%d is wrong' % x)
             self.builds[0].requeue = True
-            self.worker.release('.*-test1')
+            self.launch_server.release('.*-test1')
             self.waitUntilSettled()
 
-        self.worker.hold_jobs_in_build = False
-        self.worker.release()
+        self.launch_server.hold_jobs_in_build = False
+        self.launch_server.release()
         self.waitUntilSettled()
-        self.assertEqual(len(self.history), 6)
+        self.assertEqual(len(self.history), 5)
         self.assertEqual(self.countJobResults(self.history, 'SUCCESS'), 2)
         self.assertEqual(A.reported, 1)
         self.assertIn('RETRY_LIMIT', A.messages[0])
