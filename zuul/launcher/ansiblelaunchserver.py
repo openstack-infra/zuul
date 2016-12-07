@@ -1421,6 +1421,8 @@ class NodeWorker(object):
             preexec_fn=os.setsid,
             env=env_copy,
         )
+        # Reset timeout flag
+        self._watchdog_timeout = False
         ret = None
         watchdog = Watchdog(ANSIBLE_DEFAULT_PRE_TIMEOUT,
                             self._ansibleTimeout,
@@ -1462,6 +1464,8 @@ class NodeWorker(object):
             preexec_fn=os.setsid,
             env=env_copy,
         )
+        # Reset timeout flag
+        self._watchdog_timeout = False
         ret = None
         watchdog = Watchdog(timeout + ANSIBLE_WATCHDOG_GRACE,
                             self._ansibleTimeout,
@@ -1514,6 +1518,8 @@ class NodeWorker(object):
             preexec_fn=os.setsid,
             env=env_copy,
         )
+        # Reset timeout flag
+        self._watchdog_timeout = False
         ret = None
         watchdog = Watchdog(ANSIBLE_DEFAULT_POST_TIMEOUT,
                             self._ansibleTimeout,
