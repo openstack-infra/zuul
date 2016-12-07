@@ -185,7 +185,12 @@ class ProjectTemplateParser(object):
 
     @staticmethod
     def getSchema(layout):
-        project_template = {vs.Required('name'): str}
+        project_template = {
+            vs.Required('name'): str,
+            'merge-mode': vs.Any(
+                'merge', 'merge-resolve',
+                'cherry-pick')}
+
         for p in layout.pipelines.values():
             project_template[p.name] = {'queue': str,
                                         'jobs': [vs.Any(str, dict)]}
@@ -240,7 +245,9 @@ class ProjectParser(object):
     @staticmethod
     def getSchema(layout):
         project = {vs.Required('name'): str,
-                   'templates': [str]}
+                   'templates': [str],
+                   'merge-mode': vs.Any('merge', 'merge-resolve',
+                                        'cherry-pick')}
         for p in layout.pipelines.values():
             project[p.name] = {'queue': str,
                                'jobs': [vs.Any(str, dict)]}
@@ -259,6 +266,8 @@ class ProjectParser(object):
         configs = [layout.project_templates[name] for name in conf_templates]
         configs.append(project_template)
         project = model.ProjectConfig(conf['name'])
+        mode = conf.get('merge-mode', 'merge-resolve')
+        project.merge_mode = model.MERGER_MAP[mode]
         for pipeline in layout.pipelines.values():
             project_pipeline = model.ProjectPipelineConfig()
             project_pipeline.job_tree = model.JobTree(None)

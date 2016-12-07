@@ -924,41 +924,6 @@ class TestScheduler(ZuulTestCase):
         self.assertTrue(source.canMerge(a, mgr.getSubmitAllowNeeds()))
 
     @skip("Disabled for early v3 development")
-    def test_build_configuration(self):
-        "Test that zuul merges the right commits for testing"
-
-        self.gearman_server.hold_jobs_in_queue = True
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
-        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
-        A.addApproval('code-review', 2)
-        B.addApproval('code-review', 2)
-        C.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
-        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
-        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
-        self.waitUntilSettled()
-
-        self.gearman_server.release('.*-merge')
-        self.waitUntilSettled()
-        self.gearman_server.release('.*-merge')
-        self.waitUntilSettled()
-        self.gearman_server.release('.*-merge')
-        self.waitUntilSettled()
-        queue = self.gearman_server.getQueue()
-        ref = self.getParameter(queue[-1], 'ZUUL_REF')
-        self.gearman_server.hold_jobs_in_queue = False
-        self.gearman_server.release()
-        self.waitUntilSettled()
-
-        path = os.path.join(self.git_root, "org/project")
-        repo = git.Repo(path)
-        repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
-        repo_messages.reverse()
-        correct_messages = ['initial commit', 'A-1', 'B-1', 'C-1']
-        self.assertEqual(repo_messages, correct_messages)
-
-    @skip("Disabled for early v3 development")
     def test_build_configuration_conflict(self):
         "Test that merge conflicts are handled"
 
@@ -4729,3 +4694,66 @@ class TestSchedulerSuccessURL(ZuulTestCase):
         self.assertIn(
             '- docs-draft-test2 https://server/job',
             body[3])
+
+
+class TestSchedulerMergeModes(ZuulTestCase):
+    tenant_config_file = 'config/merge-modes/main.yaml'
+
+    def _test_project_merge_mode(self, mode):
+        self.launch_server.keep_jobdir = False
+        project = 'org/project-%s' % mode
+        self.launch_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
+        B = self.fake_gerrit.addFakeChange(project, 'master', 'B')
+        C = self.fake_gerrit.addFakeChange(project, 'master', 'C')
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
+        self.waitUntilSettled()
+
+        build = self.builds[-1]
+        ref = self.getParameter(build, 'ZUUL_REF')
+
+        path = os.path.join(build.jobdir.git_root, project)
+        repo = git.Repo(path)
+        repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
+        repo_messages.reverse()
+
+        self.launch_server.hold_jobs_in_build = False
+        self.launch_server.release()
+        self.waitUntilSettled()
+
+        return repo_messages
+
+    def _test_merge(self, mode):
+        us_path = os.path.join(
+            self.upstream_root, 'org/project-%s' % mode)
+        expected_messages = [
+            'initial commit',
+            'add content from fixture',
+            # the intermediate commits order is nondeterministic
+            "Merge commit 'refs/changes/1/2/1' of %s into HEAD" % us_path,
+            "Merge commit 'refs/changes/1/3/1' of %s into HEAD" % us_path,
+        ]
+        result = self._test_project_merge_mode(mode)
+        self.assertEqual(result[:2], expected_messages[:2])
+        self.assertEqual(result[-2:], expected_messages[-2:])
+
+    def test_project_merge_mode_merge(self):
+        self._test_merge('merge')
+
+    def test_project_merge_mode_merge_resolve(self):
+        self._test_merge('merge-resolve')
+
+    def test_project_merge_mode_cherrypick(self):
+        expected_messages = [
+            'initial commit',
+            'add content from fixture',
+            'A-1',
+            'B-1',
+            'C-1']
+        result = self._test_project_merge_mode('cherry-pick')
+        self.assertEqual(result, expected_messages)

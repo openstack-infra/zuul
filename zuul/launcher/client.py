@@ -43,11 +43,13 @@ def make_merger_item(item):
         newrev = item.change.newrev
         branch = item.change.ref
     connection_name = item.pipeline.source.connection.connection_name
-    return dict(project=item.change.project.name,
+    project = item.change.project.name
+
+    return dict(project=project,
                 url=item.pipeline.source.getGitUrl(
                     item.change.project),
                 connection_name=connection_name,
-                merge_mode=item.change.project.merge_mode,
+                merge_mode=item.current_build_set.getMergeMode(project),
                 refspec=refspec,
                 branch=branch,
                 ref=item.current_build_set.ref,

@@ -329,7 +329,6 @@ class Project(object):
 
     def __init__(self, name, foreign=False):
         self.name = name
-        self.merge_mode = MERGER_MERGE_RESOLVE
         # foreign projects are those referenced in dependencies
         # of layout projects, this should matter
         # when deciding whether to enqueue their changes
@@ -703,6 +702,11 @@ class BuildSet(object):
 
     def getTries(self, job_name):
         return self.tries.get(job_name)
+
+    def getMergeMode(self, job_name):
+        if not self.layout or job_name not in self.layout.project_configs:
+            return MERGER_MERGE_RESOLVE
+        return self.layout.project_configs[job_name].merge_mode
 
 
 class QueueItem(object):
@@ -1584,13 +1588,14 @@ class ProjectPipelineConfig(object):
     def __init__(self):
         self.job_tree = None
         self.queue_name = None
-        # TODOv3(jeblair): add merge mode
+        self.merge_mode = None
 
 
 class ProjectConfig(object):
     # Represents a project cofiguration
     def __init__(self, name):
         self.name = name
+        self.merge_mode = None
         self.pipelines = {}
 
 
