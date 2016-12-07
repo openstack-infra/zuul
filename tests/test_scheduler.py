@@ -2104,7 +2104,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(D.data['status'], 'MERGED')
         self.assertEqual(D.reported, 2)
 
-    @skip("Disabled for early v3 development")
     def test_rerun_on_error(self):
         "Test that if a worker fails to run a job, it is run again"
         self.launch_server.hold_jobs_in_build = True

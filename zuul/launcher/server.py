@@ -380,6 +380,9 @@ class LaunchServer(object):
             job.sendWorkStatus(0, 100)
 
             result = self.runAnsible(jobdir, job)
+            if result is None:
+                job.sendWorkFail()
+                return
             result = dict(result=result)
             job.sendWorkComplete(json.dumps(result))
 
