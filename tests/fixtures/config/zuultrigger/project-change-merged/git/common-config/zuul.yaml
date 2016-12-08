@@ -1,6 +1,6 @@
-pipelines:
-  - name: check
-    manager: IndependentPipelineManager
+- pipeline:
+    name: check
+    manager: independent
     source: gerrit
     trigger:
       gerrit:
@@ -12,8 +12,9 @@ pipelines:
       gerrit:
         verified: -1
 
-  - name: gate
-    manager: DependentPipelineManager
+- pipeline:
+    name: gate
+    manager: dependent
     failure-message: Build failed.  For information on how to proceed, see http://wiki.example.org/Test_Failures
     source: gerrit
     trigger:
@@ -33,8 +34,9 @@ pipelines:
         verified: 0
     precedence: high
 
-  - name: merge-check
-    manager: IndependentPipelineManager
+- pipeline:
+    name: merge-check
+    manager: independent
     source: gerrit
     ignore-dependencies: true
     trigger:
@@ -44,11 +46,20 @@ pipelines:
       gerrit:
         verified: -1
 
-projects:
-  - name: org/project
+- job:
+    name: project-check
+
+- job:
+    name: project-gate
+
+- project:
+    name: org/project
     check:
-      - project-check
+      jobs:
+        - project-check
     gate:
-      - project-gate
+      jobs:
+        - project-gate
     merge-check:
-      - noop
+      jobs:
+        - noop
