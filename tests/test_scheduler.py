@@ -4552,7 +4552,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.launch_server.release('.*-test*')
         self.waitUntilSettled()
 
-        for x in range(2):
+        for x in range(3):
             self.assertEqual(len(self.builds), 1,
                              'len of builds at x=%d is wrong' % x)
             self.builds[0].requeue = True
@@ -4562,7 +4562,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.launch_server.hold_jobs_in_build = False
         self.launch_server.release()
         self.waitUntilSettled()
-        self.assertEqual(len(self.history), 5)
+        self.assertEqual(len(self.history), 6)
         self.assertEqual(self.countJobResults(self.history, 'SUCCESS'), 2)
         self.assertEqual(A.reported, 1)
         self.assertIn('RETRY_LIMIT', A.messages[0])
