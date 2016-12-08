@@ -1,4 +1,4 @@
-# Copyright 2014 Rackspace Australia
+# Copyright 2016 Red Hat, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -12,14 +12,18 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import logging
-import testtools
-
-import zuul.source
+import smtpconnection
+import smtpreporter
 
 
-class TestGerritSource(testtools.TestCase):
-    log = logging.getLogger("zuul.test_source")
+class SMTPDriver(object):
+    name = 'smtp'
 
-    def test_source_name(self):
-        self.assertEqual('gerrit', zuul.source.gerrit.GerritSource.name)
+    def getConnection(self, name, config):
+        return smtpconnection.SMTPConnection(self, name, config)
+
+    def getReporter(self, connection, config=None):
+        return smtpreporter.SMTPReporter(self, connection, config)
+
+    def getReporterSchema(self):
+        return smtpreporter.getSchema()

@@ -29,8 +29,6 @@ import testtools
 import zuul.change_matcher
 import zuul.scheduler
 import zuul.rpcclient
-import zuul.reporter.gerrit
-import zuul.reporter.smtp
 import zuul.model
 
 from tests.base import (

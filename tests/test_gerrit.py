@@ -21,7 +21,7 @@ except ImportError:
     import mock
 
 from tests.base import BaseTestCase
-from zuul.connection.gerrit import GerritConnection
+from zuul.driver.gerrit.gerritconnection import GerritConnection
 
 FIXTURE_DIR = os.path.join(os.path.dirname(__file__), 'fixtures/gerrit')
 
@@ -46,13 +46,13 @@ def read_fixtures(files):
 
 class TestGerrit(BaseTestCase):
 
-    @mock.patch('zuul.connection.gerrit.GerritConnection._ssh')
+    @mock.patch('zuul.driver.gerrit.gerritconnection.GerritConnection._ssh')
     def run_query(self, files, expected_patches, _ssh_mock):
         gerrit_config = {
             'user': 'gerrit',
             'server': 'localhost',
         }
-        gerrit = GerritConnection('review_gerrit', gerrit_config)
+        gerrit = GerritConnection(None, 'review_gerrit', gerrit_config)
 
         calls, values = read_fixtures(files)
         _ssh_mock.side_effect = values

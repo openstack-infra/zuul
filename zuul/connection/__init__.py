@@ -34,12 +34,13 @@ class BaseConnection(object):
     into. For example, a trigger will likely require some kind of query method
     while a reporter may need a review method."""
 
-    def __init__(self, connection_name, connection_config):
+    def __init__(self, driver, connection_name, connection_config):
         # connection_name is the name given to this connection in zuul.ini
         # connection_config is a dictionary of config_section from zuul.ini for
         # this connection.
         # __init__ shouldn't make the actual connection in case this connection
         # isn't used in the layout.
+        self.driver = driver
         self.connection_name = connection_name
         self.connection_config = connection_config
 

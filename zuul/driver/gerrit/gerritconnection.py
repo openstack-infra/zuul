@@ -228,8 +228,8 @@ class GerritConnection(BaseConnection):
     replication_timeout = 300
     replication_retry_interval = 5
 
-    def __init__(self, connection_name, connection_config):
-        super(GerritConnection, self).__init__(connection_name,
+    def __init__(self, driver, connection_name, connection_config):
+        super(GerritConnection, self).__init__(driver, connection_name,
                                                connection_config)
         if 'server' not in self.connection_config:
             raise Exception('server is required for gerrit connections in '
@@ -760,12 +760,12 @@ class GerritConnection(BaseConnection):
         return url
 
     def onLoad(self):
-        self.log.debug("Starting Gerrit Conncetion/Watchers")
+        self.log.debug("Starting Gerrit Connection/Watchers")
         self._start_watcher_thread()
         self._start_event_connector()
 
     def onStop(self):
-        self.log.debug("Stopping Gerrit Conncetion/Watchers")
+        self.log.debug("Stopping Gerrit Connection/Watchers")
         self._stop_watcher_thread()
         self._stop_event_connector()
 

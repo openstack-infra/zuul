@@ -534,6 +534,8 @@ class Scheduler(threading.Thread):
             self._reenqueueTenant(old_tenant, tenant)
         # TODOv3(jeblair): update for tenants
         # self.maintainConnectionCache()
+        self.connections.reconfigureDrivers(tenant)
+        # TODOv3(jeblair): remove postconfig calls?
         for pipeline in tenant.layout.pipelines.values():
             pipeline.source.postConfig()
             for trigger in pipeline.triggers:
