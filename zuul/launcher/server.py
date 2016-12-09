@@ -280,7 +280,8 @@ class LaunchServer(object):
         while self._command_running:
             try:
                 command = self.command_socket.get()
-                self.command_map[command]()
+                if command != '_stop':
+                    self.command_map[command]()
             except Exception:
                 self.log.exception("Exception while processing command")
 
