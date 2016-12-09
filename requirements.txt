@@ -24,3 +24,5 @@ sqlalchemy
 alembic
 cryptography>=1.6
 cachecontrol
+pyjwt
+iso8601
