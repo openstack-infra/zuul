@@ -1037,41 +1037,6 @@ class TestScheduler(ZuulTestCase):
         self.assertIn('project-post', job_names)
 
     @skip("Disabled for early v3 development")
-    def test_build_configuration_branch(self):
-        "Test that the right commits are on alternate branches"
-
-        self.gearman_server.hold_jobs_in_queue = True
-        A = self.fake_gerrit.addFakeChange('org/project', 'mp', 'A')
-        B = self.fake_gerrit.addFakeChange('org/project', 'mp', 'B')
-        C = self.fake_gerrit.addFakeChange('org/project', 'mp', 'C')
-        A.addApproval('code-review', 2)
-        B.addApproval('code-review', 2)
-        C.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
-        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
-        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
-        self.waitUntilSettled()
-
-        self.gearman_server.release('.*-merge')
-        self.waitUntilSettled()
-        self.gearman_server.release('.*-merge')
-        self.waitUntilSettled()
-        self.gearman_server.release('.*-merge')
-        self.waitUntilSettled()
-        queue = self.gearman_server.getQueue()
-        ref = self.getParameter(queue[-1], 'ZUUL_REF')
-        self.gearman_server.hold_jobs_in_queue = False
-        self.gearman_server.release()
-        self.waitUntilSettled()
-
-        path = os.path.join(self.git_root, "org/project")
-        repo = git.Repo(path)
-        repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
-        repo_messages.reverse()
-        correct_messages = ['initial commit', 'mp commit', 'A-1', 'B-1', 'C-1']
-        self.assertEqual(repo_messages, correct_messages)
-
-    @skip("Disabled for early v3 development")
     def test_build_configuration_branch_interaction(self):
         "Test that switching between branches works"
         self.test_build_configuration()
@@ -1081,89 +1046,6 @@ class TestScheduler(ZuulTestCase):
         repo = git.Repo(path)
         repo.heads.master.commit = repo.commit('init')
         self.test_build_configuration()
-
-    @skip("Disabled for early v3 development")
-    def test_build_configuration_multi_branch(self):
-        "Test that dependent changes on multiple branches are merged"
-
-        self.gearman_server.hold_jobs_in_queue = True
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        B = self.fake_gerrit.addFakeChange('org/project', 'mp', 'B')
-        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
-        A.addApproval('code-review', 2)
-        B.addApproval('code-review', 2)
-        C.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
-        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
-        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
-        self.waitUntilSettled()
-        queue = self.gearman_server.getQueue()
-        job_A = None
-        for job in queue:
-            if 'project-merge' in job.name:
-                job_A = job
-        ref_A = self.getParameter(job_A, 'ZUUL_REF')
-        commit_A = self.getParameter(job_A, 'ZUUL_COMMIT')
-        self.log.debug("Got Zuul ref for change A: %s" % ref_A)
-        self.log.debug("Got Zuul commit for change A: %s" % commit_A)
-
-        self.gearman_server.release('.*-merge')
-        self.waitUntilSettled()
-        queue = self.gearman_server.getQueue()
-        job_B = None
-        for job in queue:
-            if 'project-merge' in job.name:
-                job_B = job
-        ref_B = self.getParameter(job_B, 'ZUUL_REF')
-        commit_B = self.getParameter(job_B, 'ZUUL_COMMIT')
-        self.log.debug("Got Zuul ref for change B: %s" % ref_B)
-        self.log.debug("Got Zuul commit for change B: %s" % commit_B)
-
-        self.gearman_server.release('.*-merge')
-        self.waitUntilSettled()
-        queue = self.gearman_server.getQueue()
-        for job in queue:
-            if 'project-merge' in job.name:
-                job_C = job
-        ref_C = self.getParameter(job_C, 'ZUUL_REF')
-        commit_C = self.getParameter(job_C, 'ZUUL_COMMIT')
-        self.log.debug("Got Zuul ref for change C: %s" % ref_C)
-        self.log.debug("Got Zuul commit for change C: %s" % commit_C)
-        self.gearman_server.hold_jobs_in_queue = False
-        self.gearman_server.release()
-        self.waitUntilSettled()
-
-        path = os.path.join(self.git_root, "org/project")
-        repo = git.Repo(path)
-
-        repo_messages = [c.message.strip()
-                         for c in repo.iter_commits(ref_C)]
-        repo_shas = [c.hexsha for c in repo.iter_commits(ref_C)]
-        repo_messages.reverse()
-        correct_messages = ['initial commit', 'A-1', 'C-1']
-        # Ensure the right commits are in the history for this ref
-        self.assertEqual(repo_messages, correct_messages)
-        # Ensure ZUUL_REF -> ZUUL_COMMIT
-        self.assertEqual(repo_shas[0], commit_C)
-
-        repo_messages = [c.message.strip()
-                         for c in repo.iter_commits(ref_B)]
-        repo_shas = [c.hexsha for c in repo.iter_commits(ref_B)]
-        repo_messages.reverse()
-        correct_messages = ['initial commit', 'mp commit', 'B-1']
-        self.assertEqual(repo_messages, correct_messages)
-        self.assertEqual(repo_shas[0], commit_B)
-
-        repo_messages = [c.message.strip()
-                         for c in repo.iter_commits(ref_A)]
-        repo_shas = [c.hexsha for c in repo.iter_commits(ref_A)]
-        repo_messages.reverse()
-        correct_messages = ['initial commit', 'A-1']
-        self.assertEqual(repo_messages, correct_messages)
-        self.assertEqual(repo_shas[0], commit_A)
-
-        self.assertNotEqual(ref_A, ref_B, ref_C)
-        self.assertNotEqual(commit_A, commit_B, commit_C)
 
     def test_dependent_changes_dequeue(self):
         "Test that dependent patches are not needlessly tested"
@@ -4697,8 +4579,8 @@ class TestSchedulerSuccessURL(ZuulTestCase):
             body[3])
 
 
-class TestSchedulerMergeModes(ZuulTestCase):
-    tenant_config_file = 'config/merge-modes/main.yaml'
+class TestSchedulerMerges(ZuulTestCase):
+    tenant_config_file = 'config/merges/main.yaml'
 
     def _test_project_merge_mode(self, mode):
         self.launch_server.keep_jobdir = False
@@ -4758,3 +4640,137 @@ class TestSchedulerMergeModes(ZuulTestCase):
             'C-1']
         result = self._test_project_merge_mode('cherry-pick')
         self.assertEqual(result, expected_messages)
+
+    def test_merge_branch(self):
+        "Test that the right commits are on alternate branches"
+        self.create_branch('org/project-merge-branches', 'mp')
+
+        self.launch_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange(
+            'org/project-merge-branches', 'mp', 'A')
+        B = self.fake_gerrit.addFakeChange(
+            'org/project-merge-branches', 'mp', 'B')
+        C = self.fake_gerrit.addFakeChange(
+            'org/project-merge-branches', 'mp', 'C')
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
+        self.waitUntilSettled()
+
+        self.launch_server.release('.*-merge')
+        self.waitUntilSettled()
+        self.launch_server.release('.*-merge')
+        self.waitUntilSettled()
+        self.launch_server.release('.*-merge')
+        self.waitUntilSettled()
+
+        build = self.builds[-1]
+        self.assertEqual(self.getParameter(build, 'ZUUL_BRANCH'), 'mp')
+        ref = self.getParameter(build, 'ZUUL_REF')
+        path = os.path.join(
+            build.jobdir.git_root, 'org/project-merge-branches')
+        repo = git.Repo(path)
+
+        repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
+        repo_messages.reverse()
+        correct_messages = [
+            'initial commit',
+            'add content from fixture',
+            'mp commit',
+            'A-1', 'B-1', 'C-1']
+        self.assertEqual(repo_messages, correct_messages)
+
+        self.launch_server.hold_jobs_in_build = False
+        self.launch_server.release()
+        self.waitUntilSettled()
+
+    def test_merge_multi_branch(self):
+        "Test that dependent changes on multiple branches are merged"
+        self.create_branch('org/project-merge-branches', 'mp')
+
+        self.launch_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange(
+            'org/project-merge-branches', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange(
+            'org/project-merge-branches', 'mp', 'B')
+        C = self.fake_gerrit.addFakeChange(
+            'org/project-merge-branches', 'master', 'C')
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
+        self.waitUntilSettled()
+
+        job_A = None
+        for job in self.builds:
+            if 'project-merge' in job.name:
+                job_A = job
+        ref_A = self.getParameter(job_A, 'ZUUL_REF')
+        commit_A = self.getParameter(job_A, 'ZUUL_COMMIT')
+        self.log.debug("Got Zuul ref for change A: %s" % ref_A)
+        self.log.debug("Got Zuul commit for change A: %s" % commit_A)
+
+        path = os.path.join(
+            job_A.jobdir.git_root, "org/project-merge-branches")
+        repo = git.Repo(path)
+        repo_messages = [c.message.strip()
+                         for c in repo.iter_commits(ref_A)]
+        repo_messages.reverse()
+        correct_messages = [
+            'initial commit', 'add content from fixture', 'A-1']
+        self.assertEqual(repo_messages, correct_messages)
+
+        self.launch_server.release('.*-merge')
+        self.waitUntilSettled()
+
+        job_B = None
+        for job in self.builds:
+            if 'project-merge' in job.name:
+                job_B = job
+        ref_B = self.getParameter(job_B, 'ZUUL_REF')
+        commit_B = self.getParameter(job_B, 'ZUUL_COMMIT')
+        self.log.debug("Got Zuul ref for change B: %s" % ref_B)
+        self.log.debug("Got Zuul commit for change B: %s" % commit_B)
+
+        path = os.path.join(
+            job_B.jobdir.git_root, "org/project-merge-branches")
+        repo = git.Repo(path)
+        repo_messages = [c.message.strip()
+                         for c in repo.iter_commits(ref_B)]
+        repo_messages.reverse()
+        correct_messages = [
+            'initial commit', 'add content from fixture', 'mp commit', 'B-1']
+        self.assertEqual(repo_messages, correct_messages)
+
+        self.launch_server.release('.*-merge')
+        self.waitUntilSettled()
+
+        job_C = None
+        for job in self.builds:
+            if 'project-merge' in job.name:
+                job_C = job
+        ref_C = self.getParameter(job_C, 'ZUUL_REF')
+        commit_C = self.getParameter(job_C, 'ZUUL_COMMIT')
+        self.log.debug("Got Zuul ref for change C: %s" % ref_C)
+        self.log.debug("Got Zuul commit for change C: %s" % commit_C)
+        path = os.path.join(
+            job_C.jobdir.git_root, "org/project-merge-branches")
+        repo = git.Repo(path)
+        repo_messages = [c.message.strip()
+                         for c in repo.iter_commits(ref_C)]
+
+        repo_messages.reverse()
+        correct_messages = [
+            'initial commit', 'add content from fixture',
+            'A-1', 'C-1']
+        # Ensure the right commits are in the history for this ref
+        self.assertEqual(repo_messages, correct_messages)
+
+        self.launch_server.hold_jobs_in_build = False
+        self.launch_server.release()
+        self.waitUntilSettled()

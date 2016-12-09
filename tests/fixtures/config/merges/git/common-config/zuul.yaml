@@ -40,6 +40,15 @@
     name:
       project-test1
 
+- job:
+    name:
+      project-test2
+
+- job:
+    name:
+      project-merge
+    hold-following-changes: true
+
 - project:
     name: org/project-merge
     merge-mode: merge
@@ -60,3 +69,12 @@
     gate:
       jobs:
         - project-test1
+
+- project:
+    name: org/project-merge-branches
+    merge-mode: cherry-pick
+    gate:
+      jobs:
+        - project-merge:
+            jobs:
+              - project-test1
