@@ -168,90 +168,82 @@ class TestRequirementsEmail(ZuulTestCase):
         self.assertEqual(self.history[0].name, job)
 
 
-class TestRequirements(ZuulTestCase):
-    """Test pipeline and trigger requirements"""
+class TestRequirementsVote1(ZuulTestCase):
+    """Requirements with a voting requirement"""
 
-    tenant_config_file = 'config/requirements/main.yaml'
+    tenant_config_file = 'config/requirements/vote1/main.yaml'
 
-    @skip("Disabled for early v3 development")
     def test_pipeline_require_approval_vote1(self):
         "Test pipeline requirement: approval vote with one value"
         return self._test_require_approval_vote1('org/project1',
-                                                 'project1-pipeline')
+                                                 'project1-job')
 
-    @skip("Disabled for early v3 development")
     def test_trigger_require_approval_vote1(self):
         "Test trigger requirement: approval vote with one value"
         return self._test_require_approval_vote1('org/project2',
-                                                 'project2-trigger')
+                                                 'project2-job')
 
     def _test_require_approval_vote1(self, project, job):
-        self.updateConfigLayout(
-            'tests/fixtures/layout-requirement-vote1.yaml')
-        self.sched.reconfigure(self.config)
-        self.registerJobs()
-
         A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
         # A comment event that we will keep submitting to trigger
-        comment = A.addApproval('CRVW', 2, username='nobody')
+        comment = A.addApproval('code-review', 2, username='nobody')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         # No approval from Jenkins so should not be enqueued
         self.assertEqual(len(self.history), 0)
 
         # A -1 from jenkins should not cause it to be enqueued
-        A.addApproval('VRFY', -1, username='jenkins')
+        A.addApproval('verified', -1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # A +1 should allow it to be enqueued
-        A.addApproval('VRFY', 1, username='jenkins')
+        A.addApproval('verified', 1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, job)
 
-    @skip("Disabled for early v3 development")
+
+class TestRequirementsVote2(ZuulTestCase):
+    """Requirements with a voting requirement"""
+
+    tenant_config_file = 'config/requirements/vote2/main.yaml'
+
     def test_pipeline_require_approval_vote2(self):
         "Test pipeline requirement: approval vote with two values"
         return self._test_require_approval_vote2('org/project1',
-                                                 'project1-pipeline')
+                                                 'project1-job')
 
-    @skip("Disabled for early v3 development")
     def test_trigger_require_approval_vote2(self):
         "Test trigger requirement: approval vote with two values"
         return self._test_require_approval_vote2('org/project2',
-                                                 'project2-trigger')
+                                                 'project2-job')
 
     def _test_require_approval_vote2(self, project, job):
-        self.updateConfigLayout(
-            'tests/fixtures/layout-requirement-vote2.yaml')
-        self.sched.reconfigure(self.config)
-        self.registerJobs()
-
         A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
         # A comment event that we will keep submitting to trigger
-        comment = A.addApproval('CRVW', 2, username='nobody')
+        comment = A.addApproval('code-review', 2, username='nobody')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         # No approval from Jenkins so should not be enqueued
         self.assertEqual(len(self.history), 0)
 
         # A -1 from jenkins should not cause it to be enqueued
-        A.addApproval('VRFY', -1, username='jenkins')
+        A.addApproval('verified', -1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # A -2 from jenkins should not cause it to be enqueued
-        A.addApproval('VRFY', -2, username='jenkins')
+        A.addApproval('verified', -2, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # A +1 from jenkins should allow it to be enqueued
-        A.addApproval('VRFY', 1, username='jenkins')
+        A.addApproval('verified', 1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
@@ -260,16 +252,22 @@ class TestRequirements(ZuulTestCase):
         # A +2 should allow it to be enqueued
         B = self.fake_gerrit.addFakeChange(project, 'master', 'B')
         # A comment event that we will keep submitting to trigger
-        comment = B.addApproval('CRVW', 2, username='nobody')
+        comment = B.addApproval('code-review', 2, username='nobody')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
 
-        B.addApproval('VRFY', 2, username='jenkins')
+        B.addApproval('verified', 2, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 2)
         self.assertEqual(self.history[1].name, job)
+
+
+class TestRequirements(ZuulTestCase):
+    """Test pipeline and trigger requirements"""
+
+    tenant_config_file = 'config/requirements/main.yaml'
 
     @skip("Disabled for early v3 development")
     def test_pipeline_require_current_patchset(self):
