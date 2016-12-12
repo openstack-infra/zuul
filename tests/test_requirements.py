@@ -16,7 +16,6 @@
 
 import logging
 import time
-from unittest import skip
 
 from tests.base import ZuulTestCase
 
@@ -317,111 +316,104 @@ class TestRequirementsState(ZuulTestCase):
         self.assertEqual(len(self.history), 1)
 
 
-class TestRequirements(ZuulTestCase):
-    """Test pipeline and trigger requirements"""
+class TestRequirementsRejectUsername(ZuulTestCase):
+    """Requirements with reject username requirement"""
 
-    tenant_config_file = 'config/requirements/main.yaml'
+    tenant_config_file = 'config/requirements/reject-username/main.yaml'
 
     def _test_require_reject_username(self, project, job):
         "Test negative username's match"
         # Should only trigger if Jenkins hasn't voted.
-        self.updateConfigLayout(
-            'tests/fixtures/layout-requirement-reject-username.yaml')
-        self.sched.reconfigure(self.config)
-        self.registerJobs()
-
         # add in a change with no comments
         A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # add in a comment that will trigger
-        self.fake_gerrit.addEvent(A.addApproval('CRVW', 1,
+        self.fake_gerrit.addEvent(A.addApproval('code-review', 1,
                                                 username='reviewer'))
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, job)
 
         # add in a comment from jenkins user which shouldn't trigger
-        self.fake_gerrit.addEvent(A.addApproval('VRFY', 1, username='jenkins'))
+        self.fake_gerrit.addEvent(A.addApproval('verified', 1,
+                                                username='jenkins'))
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
 
         # Check future reviews also won't trigger as a 'jenkins' user has
         # commented previously
-        self.fake_gerrit.addEvent(A.addApproval('CRVW', 1,
+        self.fake_gerrit.addEvent(A.addApproval('code-review', 1,
                                                 username='reviewer'))
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
 
-    @skip("Disabled for early v3 development")
     def test_pipeline_reject_username(self):
         "Test negative pipeline requirement: no comment from jenkins"
         return self._test_require_reject_username('org/project1',
-                                                  'project1-pipeline')
+                                                  'project1-job')
 
-    @skip("Disabled for early v3 development")
     def test_trigger_reject_username(self):
         "Test negative trigger requirement: no comment from jenkins"
         return self._test_require_reject_username('org/project2',
-                                                  'project2-trigger')
+                                                  'project2-job')
+
+
+class TestRequirementsReject(ZuulTestCase):
+    """Requirements with reject requirement"""
+
+    tenant_config_file = 'config/requirements/reject/main.yaml'
 
     def _test_require_reject(self, project, job):
         "Test no approval matches a reject param"
-        self.updateConfigLayout(
-            'tests/fixtures/layout-requirement-reject.yaml')
-        self.sched.reconfigure(self.config)
-        self.registerJobs()
-
         A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # First positive vote should not queue until jenkins has +1'd
-        comment = A.addApproval('VRFY', 1, username='reviewer_a')
+        comment = A.addApproval('verified', 1, username='reviewer_a')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # Jenkins should put in a +1 which will also queue
-        comment = A.addApproval('VRFY', 1, username='jenkins')
+        comment = A.addApproval('verified', 1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, job)
 
         # Negative vote should not queue
-        comment = A.addApproval('VRFY', -1, username='reviewer_b')
+        comment = A.addApproval('verified', -1, username='reviewer_b')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
 
         # Future approvals should do nothing
-        comment = A.addApproval('VRFY', 1, username='reviewer_c')
+        comment = A.addApproval('verified', 1, username='reviewer_c')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
 
         # Change/update negative vote should queue
-        comment = A.addApproval('VRFY', 1, username='reviewer_b')
+        comment = A.addApproval('verified', 1, username='reviewer_b')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 2)
         self.assertEqual(self.history[1].name, job)
 
         # Future approvals should also queue
-        comment = A.addApproval('VRFY', 1, username='reviewer_d')
+        comment = A.addApproval('verified', 1, username='reviewer_d')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 3)
         self.assertEqual(self.history[2].name, job)
 
-    @skip("Disabled for early v3 development")
     def test_pipeline_require_reject(self):
         "Test pipeline requirement: rejections absent"
-        return self._test_require_reject('org/project1', 'project1-pipeline')
+        return self._test_require_reject('org/project1', 'project1-job')
 
-    @skip("Disabled for early v3 development")
     def test_trigger_require_reject(self):
         "Test trigger requirement: rejections absent"
-        return self._test_require_reject('org/project2', 'project2-trigger')
+        return self._test_require_reject('org/project2', 'project2-job')
