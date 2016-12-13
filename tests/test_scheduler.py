@@ -1963,7 +1963,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
-    @skip("Disabled for early v3 development")
     def test_no_job_project(self):
         "Test that reports with no jobs don't get sent"
         A = self.fake_gerrit.addFakeChange('org/no-jobs-project',
@@ -1975,7 +1974,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.reported, False)
 
         # Check queue is empty afterwards
-        check_pipeline = self.sched.layout.pipelines['check']
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        check_pipeline = tenant.layout.pipelines['check']
         items = check_pipeline.getAllItems()
         self.assertEqual(len(items), 0)
 

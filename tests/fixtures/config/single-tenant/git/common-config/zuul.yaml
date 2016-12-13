@@ -103,6 +103,11 @@
     name: nonvoting-project-test2
     voting: false
 
+- job:
+    name: project-testfile
+    files:
+      - '.*-requires'
+
 - project:
     name: org/project
     check:
@@ -180,3 +185,9 @@
             jobs:
               - nonvoting-project-test1
               - nonvoting-project-test2
+
+- project:
+    name: org/no-jobs-project
+    check:
+      jobs:
+        - project-testfile
