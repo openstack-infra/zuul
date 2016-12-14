@@ -1541,40 +1541,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
-    @skip("Disabled for early v3 development")
-    def test_nonexistent_job(self):
-        "Test launching a job that doesn't exist"
-        # Set to the state immediately after a restart
-        self.resetGearmanServer()
-        self.launcher.negative_function_cache_ttl = 0
-
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
-        # There may be a thread about to report a lost change
-        while A.reported < 2:
-            self.waitUntilSettled()
-        job_names = [x.name for x in self.history]
-        self.assertFalse(job_names)
-        self.assertEqual(A.data['status'], 'NEW')
-        self.assertEqual(A.reported, 2)
-        self.assertEmptyQueues()
-
-        # Make sure things still work:
-        self.registerJobs()
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
-        self.waitUntilSettled()
-        self.assertEqual(self.getJobFromHistory('project-merge').result,
-                         'SUCCESS')
-        self.assertEqual(self.getJobFromHistory('project-test1').result,
-                         'SUCCESS')
-        self.assertEqual(self.getJobFromHistory('project-test2').result,
-                         'SUCCESS')
-        self.assertEqual(A.data['status'], 'MERGED')
-        self.assertEqual(A.reported, 2)
-
     def test_new_patchset_dequeues_old(self):
         "Test that a new patchset causes the old to be dequeued"
         # D -> C (depends on B) -> B (depends on A) -> A -> M
