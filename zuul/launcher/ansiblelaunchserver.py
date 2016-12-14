@@ -1344,7 +1344,10 @@ class NodeWorker(object):
                         when='success|bool')
             blocks[0].insert(0, task)
             task = dict(zuul_log=dict(msg="Job complete, result: FAILURE"),
-                        when='not success|bool')
+                        when='not success|bool and not timedout|bool')
+            blocks[0].insert(0, task)
+            task = dict(zuul_log=dict(msg="Job timed out, result: FAILURE"),
+                        when='not success|bool and timedout|bool')
             blocks[0].insert(0, task)
 
             tasks.append(dict(block=blocks[0],
@@ -1506,6 +1509,7 @@ class NodeWorker(object):
 
         cmd = ['ansible-playbook', jobdir.post_playbook,
                '-e', 'success=%s' % success,
+               '-e', 'timedout=%s' % self._watchdog_timeout,
                '-e@%s' % jobdir.vars,
                verbose]
         self.log.debug("Ansible post command: %s" % (cmd,))
