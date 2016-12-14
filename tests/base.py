@@ -1305,21 +1305,6 @@ class ZuulTestCase(BaseTestCase):
             parameters = json.loads(job.arguments)
             return parameters[name]
 
-    def resetGearmanServer(self):
-        self.launch_server.worker.setFunctions([])
-        while True:
-            done = True
-            for connection in self.gearman_server.active_connections:
-                if (connection.functions and
-                    connection.client_id not in ['Zuul RPC Listener',
-                                                 'Zuul Merger']):
-                    done = False
-            if done:
-                break
-            time.sleep(0)
-        self.gearman_server.functions = set()
-        self.rpc.register()
-
     def haveAllBuildsReported(self):
         # See if Zuul is waiting on a meta job to complete
         if self.launch_client.meta_jobs:
