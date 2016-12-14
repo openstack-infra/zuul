@@ -12,6 +12,13 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+############################################################################
+# NOTE(jhesketh): This file has been superceeded by zuul/launcher/server.py.
+# It is kept here to make merging master back into v3 easier. Once closer
+# to completion it can be removed.
+############################################################################
+
+
 import json
 import logging
 import os
