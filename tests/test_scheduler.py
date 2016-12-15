@@ -1332,7 +1332,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
-    @skip("Disabled for early v3 development")
     def test_nonvoting_job(self):
         "Test that non-voting jobs don't vote."
 

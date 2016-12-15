@@ -92,6 +92,17 @@
 - job:
     name: experimental-project-test
 
+- job:
+    name: nonvoting-project-merge
+    hold-following-changes: true
+
+- job:
+    name: nonvoting-project-test1
+
+- job:
+    name: nonvoting-project-test2
+    voting: false
+
 - project:
     name: org/project
     check:
@@ -154,3 +165,18 @@
     gate:
       jobs:
         - noop
+
+- project:
+    name: org/nonvoting-project
+    check:
+      jobs:
+        - nonvoting-project-merge:
+            jobs:
+              - nonvoting-project-test1
+              - nonvoting-project-test2
+    gate:
+      jobs:
+        - nonvoting-project-merge:
+            jobs:
+              - nonvoting-project-test1
+              - nonvoting-project-test2
