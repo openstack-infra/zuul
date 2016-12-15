@@ -666,7 +666,7 @@ class BuildSet(object):
     def addBuild(self, build):
         self.builds[build.job.name] = build
         if build.job.name not in self.tries:
-            self.tries[build.job.name] = 0
+            self.tries[build.job.name] = 1
         build.build_set = self
 
     def removeBuild(self, build):

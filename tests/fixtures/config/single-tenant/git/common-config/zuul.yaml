@@ -65,6 +65,7 @@
 
 - job:
     name: project-test1
+    attempts: 4
     nodes:
       - name: controller
         image: image1
