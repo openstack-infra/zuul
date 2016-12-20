@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # Copyright 2012 Hewlett-Packard Development Company, L.P.
+# Copyright 2016 Red Hat, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -39,6 +40,7 @@ import time
 import git
 import gear
 import fixtures
+import kazoo.client
 import statsd
 import testtools
 from git.exc import NoSuchPathError
@@ -869,6 +871,57 @@ class FakeSwiftClientConnection(swiftclient.client.Connection):
         return endpoint, ''
 
 
+class ChrootedKazooFixture(fixtures.Fixture):
+    def __init__(self):
+        super(ChrootedKazooFixture, self).__init__()
+
+        zk_host = os.environ.get('NODEPOOL_ZK_HOST', 'localhost')
+        if ':' in zk_host:
+            host, port = zk_host.split(':')
+        else:
+            host = zk_host
+            port = None
+
+        self.zookeeper_host = host
+
+        if not port:
+            self.zookeeper_port = 2181
+        else:
+            self.zookeeper_port = int(port)
+
+    def _setUp(self):
+        # Make sure the test chroot paths do not conflict
+        random_bits = ''.join(random.choice(string.ascii_lowercase +
+                                            string.ascii_uppercase)
+                              for x in range(8))
+
+        rand_test_path = '%s_%s' % (random_bits, os.getpid())
+        self.zookeeper_chroot = "/nodepool_test/%s" % rand_test_path
+
+        # Ensure the chroot path exists and clean up any pre-existing znodes.
+        _tmp_client = kazoo.client.KazooClient(
+            hosts='%s:%s' % (self.zookeeper_host, self.zookeeper_port))
+        _tmp_client.start()
+
+        if _tmp_client.exists(self.zookeeper_chroot):
+            _tmp_client.delete(self.zookeeper_chroot, recursive=True)
+
+        _tmp_client.ensure_path(self.zookeeper_chroot)
+        _tmp_client.stop()
+        _tmp_client.close()
+
+        self.addCleanup(self._cleanup)
+
+    def _cleanup(self):
+        '''Remove the chroot path.'''
+        # Need a non-chroot'ed client to remove the chroot path
+        _tmp_client = kazoo.client.KazooClient(
+            hosts='%s:%s' % (self.zookeeper_host, self.zookeeper_port))
+        _tmp_client.start()
+        _tmp_client.delete(self.zookeeper_chroot, recursive=True)
+        _tmp_client.stop()
+
+
 class BaseTestCase(testtools.TestCase):
     log = logging.getLogger("zuul.test")
 
@@ -989,6 +1042,9 @@ class ZuulTestCase(BaseTestCase):
 
     def setUp(self):
         super(ZuulTestCase, self).setUp()
+
+        self.setupZK()
+
         if USE_TEMPDIR:
             tmp_root = self.useFixture(fixtures.TempDir(
                 rootdir=os.environ.get("ZUUL_TEST_ROOT"))
@@ -1185,6 +1241,12 @@ class ZuulTestCase(BaseTestCase):
                     project = reponame.replace('_', '/')
                     self.copyDirToRepo(project,
                                        os.path.join(git_path, reponame))
+
+    def setupZK(self):
+        self.zk_chroot_fixture = self.useFixture(ChrootedKazooFixture())
+        self.zookeeper_host = self.zk_chroot_fixture.zookeeper_host
+        self.zookeeper_port = self.zk_chroot_fixture.zookeeper_port
+        self.zookeeper_chroot = self.zk_chroot_fixture.zookeeper_chroot
 
     def copyDirToRepo(self, project, source_path):
         self.init_repo(project)
