@@ -16,7 +16,6 @@
 # under the License.
 
 import json
-from unittest import skip
 
 from six.moves import urllib
 
@@ -39,7 +38,7 @@ class TestWebapp(ZuulTestCase):
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
-        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
         self.port = self.webapp.server.socket.getsockname()[1]
@@ -69,11 +68,10 @@ class TestWebapp(ZuulTestCase):
             "http://localhost:%s/status/foo" % self.port)
         self.assertRaises(urllib.error.HTTPError, urllib.request.urlopen, req)
 
-    @skip("Disabled for early v3 development")
     def test_webapp_find_change(self):
         # can we filter by change id
         req = urllib.request.Request(
-            "http://localhost:%s/status/change/1,1" % self.port)
+            "http://localhost:%s/tenant-one/status/change/1,1" % self.port)
         f = urllib.request.urlopen(req)
         data = json.loads(f.read())
 
@@ -81,7 +79,7 @@ class TestWebapp(ZuulTestCase):
         self.assertEqual("org/project", data[0]['project'])
 
         req = urllib.request.Request(
-            "http://localhost:%s/status/change/2,1" % self.port)
+            "http://localhost:%s/tenant-one/status/change/2,1" % self.port)
         f = urllib.request.urlopen(req)
         data = json.loads(f.read())
 

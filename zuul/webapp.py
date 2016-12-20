@@ -63,7 +63,7 @@ class WebApp(threading.Thread):
     def stop(self):
         self.server.server_close()
 
-    def _changes_by_func(self, func):
+    def _changes_by_func(self, func, tenant_name):
         """Filter changes by a user provided function.
 
         In order to support arbitrary collection of subsets of changes
@@ -72,7 +72,7 @@ class WebApp(threading.Thread):
         is a flattened list of those collected changes.
         """
         status = []
-        jsonstruct = json.loads(self.cache)
+        jsonstruct = json.loads(self.cache[tenant_name])
         for pipeline in jsonstruct['pipelines']:
             for change_queue in pipeline['change_queues']:
                 for head in change_queue['heads']:
@@ -81,11 +81,11 @@ class WebApp(threading.Thread):
                             status.append(copy.deepcopy(change))
         return json.dumps(status)
 
-    def _status_for_change(self, rev):
+    def _status_for_change(self, rev, tenant_name):
         """Return the statuses for a particular change id X,Y."""
         def func(change):
             return change['id'] == rev
-        return self._changes_by_func(func)
+        return self._changes_by_func(func, tenant_name)
 
     def _normalize_path(self, path):
         # support legacy status.json as well as new /status
@@ -119,7 +119,7 @@ class WebApp(threading.Thread):
             response = webob.Response(body=self.cache[tenant_name],
                                       content_type='application/json')
         else:
-            status = self._status_for_change(path)
+            status = self._status_for_change(path, tenant_name)
             if status:
                 response = webob.Response(body=status,
                                           content_type='application/json')
