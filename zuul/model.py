@@ -395,10 +395,38 @@ class NodeRequest(object):
         self.build_set = build_set
         self.job = job
         self.nodeset = nodeset
-        self.id = uuid4().hex
+        self._state = 'requested'
+        self.state_time = time.time()
+        self.stat = None
+        self.uid = uuid4().hex
+
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, value):
+        # TODOv3(jeblair): reinstate
+        # if value not in STATES:
+        #     raise TypeError("'%s' is not a valid state" % value)
+        self._state = value
+        self.state_time = time.time()
 
     def __repr__(self):
         return '<NodeRequest %s>' % (self.nodeset,)
+
+    def toDict(self):
+        d = {}
+        nodes = [n.image for n in self.nodeset.getNodes()]
+        d['node_types'] = nodes
+        d['requestor'] = 'zuul'  # TODOv3(jeblair): better descriptor
+        d['state'] = self.state
+        d['state_time'] = self.state_time
+        return d
+
+    def updateFromDict(self, data):
+        self._state = data['state']
+        self.state_time = data['state_time']
 
 
 class Job(object):

@@ -10,18 +10,26 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import logging
+
 from zuul.model import NodeRequest
 
 
 class Nodepool(object):
+    log = logging.getLogger('zuul.nodepool')
+
     def __init__(self, scheduler):
         self.requests = {}
         self.sched = scheduler
 
     def requestNodes(self, build_set, job):
         req = NodeRequest(build_set, job, job.nodeset)
-        self.requests[req.id] = req
-        self._requestComplete(req.id)
+        self.requests[req.uid] = req
+        self.log.debug("Submitting node request: %s" % (req,))
+
+        self.sched.zk.submitNodeRequest(req)
+        self._updateNodeRequest(req)
+
         return req
 
     def cancelRequest(self, request):
@@ -31,7 +39,16 @@ class Nodepool(object):
     def returnNodes(self, nodes, used=True):
         pass
 
-    def _requestComplete(self, id):
-        req = self.requests[id]
-        del self.requests[id]
-        self.sched.onNodesProvisioned(req)
+    def _updateNodeRequest(self, request):
+        self.log.debug("Updating node request: %s" % (request,))
+
+        def callback(event):
+            self._updateNodeRequest(request)
+        self.sched.zk.getNodeRequest(request, callback)
+
+        if request.uid not in self.requests:
+            return
+
+        if request.state == 'fulfilled':
+            self.sched.onNodesProvisioned(request)
+            del self.requests[request.uid]
