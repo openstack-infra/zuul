@@ -1517,13 +1517,18 @@ class ZuulTestCase(BaseTestCase):
         start = time.time()
         while True:
             if time.time() - start > 10:
-                self.log.debug("Queue status:")
+                self.log.error("Timeout waiting for Zuul to settle")
+                self.log.error("Queue status:")
                 for queue in self.event_queues:
-                    self.log.debug("  %s: %s" % (queue, queue.empty()))
-                self.log.debug("All builds waiting: %s" %
+                    self.log.error("  %s: %s" % (queue, queue.empty()))
+                self.log.error("All builds waiting: %s" %
                                (self.areAllBuildsWaiting(),))
-                self.log.debug("All builds reported: %s" %
+                self.log.error("All builds reported: %s" %
                                (self.haveAllBuildsReported(),))
+                self.log.error("All requests completed: %s" %
+                               (self.areAllNodeRequestsComplete(),))
+                self.log.error("Merge client jobs: %s" %
+                               (self.merge_client.jobs,))
                 raise Exception("Timeout waiting for Zuul to settle")
             # Make sure no new events show up while we're checking
 
