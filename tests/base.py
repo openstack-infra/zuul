@@ -1369,6 +1369,7 @@ class ZuulTestCase(BaseTestCase):
         threads = threading.enumerate()
         if len(threads) > 1:
             self.log.error("More than one thread is running: %s" % threads)
+        self.printHistory()
 
     def init_repo(self, project):
         parts = project.split('/')
@@ -1669,6 +1670,17 @@ class ZuulTestCase(BaseTestCase):
             else:
                 self.log.error("No completed builds")
             raise
+
+    def printHistory(self):
+        """Log the build history.
+
+        This can be useful during tests to summarize what jobs have
+        completed.
+
+        """
+        self.log.debug("Build history:")
+        for build in self.history:
+            self.log.debug(build)
 
     def getPipeline(self, name):
         return self.sched.abide.tenants.values()[0].layout.pipelines.get(name)
