@@ -1,0 +1,45 @@
+- pipeline:
+    name: check
+    description: Standard check
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request
+          action: opened
+    start:
+      github:
+        status: 'pending'
+        comment: false
+    success:
+      github:
+        status: 'success'
+
+- pipeline:
+    name: reporting
+    description: Uncommon reporting
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: 'reporting check'
+    start:
+      github: {}
+    success:
+      github:
+        comment: false
+    failure:
+      github:
+        comment: false
+
+- job:
+    name: project-test1
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-test1
+    reporting:
+      jobs:
+        - project-test1
