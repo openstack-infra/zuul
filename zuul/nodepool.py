@@ -27,8 +27,7 @@ class Nodepool(object):
         self.requests[req.uid] = req
         self.log.debug("Submitting node request: %s" % (req,))
 
-        self.sched.zk.submitNodeRequest(req)
-        self._updateNodeRequest(req)
+        self.sched.zk.submitNodeRequest(req, self._updateNodeRequest)
 
         return req
 
@@ -39,16 +38,19 @@ class Nodepool(object):
     def returnNodes(self, nodes, used=True):
         pass
 
-    def _updateNodeRequest(self, request):
+    def _updateNodeRequest(self, request, deleted):
+        # Return False to indicate that we should stop watching the
+        # node.
         self.log.debug("Updating node request: %s" % (request,))
 
-        def callback(event):
-            self._updateNodeRequest(request)
-        self.sched.zk.getNodeRequest(request, callback)
-
         if request.uid not in self.requests:
-            return
+            return False
 
         if request.state == 'fulfilled':
             self.sched.onNodesProvisioned(request)
             del self.requests[request.uid]
+            return False
+        elif deleted:
+            self.log.debug("Resubmitting lost node request %s" % (request,))
+            self.sched.zk.submitNodeRequest(request, self._updateNodeRequest)
+        return True

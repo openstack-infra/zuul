@@ -17,7 +17,6 @@ import logging
 import six
 import time
 from kazoo.client import KazooClient, KazooState
-from kazoo import exceptions as kze
 
 # States:
 # We are building this node but it is not ready for use.
@@ -269,12 +268,21 @@ class ZooKeeper(object):
             hosts = buildZooKeeperHosts(host_list)
             self.client.set_hosts(hosts=hosts)
 
-    def submitNodeRequest(self, node_request):
+    def submitNodeRequest(self, node_request, watcher):
         '''
         Submit a request for nodes to Nodepool.
 
         :param NodeRequest node_request: A NodeRequest with the
             contents of the request.
+
+        :param callable watcher: A callable object that will be
+            invoked each time the request is updated.  It is called
+            with two arguments: (node_request, deleted) where
+            node_request is the same argument passed to this method,
+            and deleted is a boolean which is True if the node no
+            longer exists (notably, this will happen on disconnection
+            from ZooKeeper).  The watcher should return False when
+            further updates are no longer necessary.
         '''
         priority = 100  # TODO(jeblair): integrate into nodereq
 
@@ -282,28 +290,17 @@ class ZooKeeper(object):
         data['created_time'] = time.time()
 
         path = '%s/%s-' % (self.REQUEST_ROOT, priority)
-        self.log.debug(data)
         path = self.client.create(path, self._dictToStr(data),
                                   makepath=True,
                                   sequence=True, ephemeral=True)
         reqid = path.split("/")[-1]
         node_request.id = reqid
 
-    def getNodeRequest(self, node_request, watcher):
-        '''
-        Read the specified node request and update its values.
+        def callback(data, stat):
+            if data:
+                data = self._strToDict(data)
+                node_request.updateFromDict(data)
+            deleted = (data is None)  # data *are* none
+            return watcher(node_request, deleted)
 
-        :param NodeRequest node_request: A NodeRequest to be read.  It
-            will be updated with the results of the read.
-        :param callable watcher: A watch function to be called when the
-            node request is updated.
-        '''
-
-        path = '%s/%s' % (self.REQUEST_ROOT, node_request.id)
-        try:
-            data, stat = self.client.get(path, watch=watcher)
-        except kze.NoNodeError:
-            return
-        data = self._strToDict(data)
-        node_request.updateFromDict(data)
-        # TODOv3(jeblair): re-register watches on disconnect
+        self.client.DataWatch(path, callback)
