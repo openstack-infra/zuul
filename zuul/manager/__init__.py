@@ -615,6 +615,7 @@ class PipelineManager(object):
             item.setUnableToMerge()
 
     def onNodesProvisioned(self, event):
+        # TODOv3(jeblair): handle provisioning failure here
         request = event.request
         build_set = request.build_set
         build_set.jobNodeRequestComplete(request.job.name, request,

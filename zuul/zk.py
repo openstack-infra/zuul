@@ -17,6 +17,8 @@ import logging
 import six
 import time
 from kazoo.client import KazooClient, KazooState
+from kazoo import exceptions as kze
+from kazoo.recipe.lock import Lock
 
 # States:
 # We are building this node but it is not ready for use.
@@ -27,6 +29,10 @@ READY = 'ready'
 DELETING = 'deleting'
 
 STATES = set([BUILDING, READY, DELETING])
+
+
+class LockException(Exception):
+    pass
 
 
 class ZooKeeperConnectionConfig(object):
@@ -178,6 +184,7 @@ class ZooKeeper(object):
     log = logging.getLogger("zuul.zk.ZooKeeper")
 
     REQUEST_ROOT = '/nodepool/requests'
+    NODE_ROOT = '/nodepool/nodes'
 
     def __init__(self):
         '''
@@ -300,7 +307,69 @@ class ZooKeeper(object):
             if data:
                 data = self._strToDict(data)
                 node_request.updateFromDict(data)
+                request_nodes = node_request.nodeset.getNodes()
+                for i, nodeid in enumerate(data.get('nodes', [])):
+                    node_path = '%s/%s' % (self.NODE_ROOT, nodeid)
+                    node_data, node_stat = self.client.get(node_path)
+                    node_data = self._strToDict(node_data)
+                    request_nodes[i].id = nodeid
+                    request_nodes[i].updateFromDict(node_data)
             deleted = (data is None)  # data *are* none
             return watcher(node_request, deleted)
 
         self.client.DataWatch(path, callback)
+
+    def deleteNodeRequest(self, node_request):
+        '''
+        Delete a request for nodes.
+
+        :param NodeRequest node_request: A NodeRequest with the
+            contents of the request.
+        '''
+
+        path = '%s/%s' % (self.REQUEST_ROOT, node_request.id)
+        try:
+            self.client.delete(path)
+        except kze.NoNodeError:
+            pass
+
+    def lockNode(self, node, blocking=True, timeout=None):
+        '''
+        Lock a node.
+
+        This should be called as soon as a request is fulfilled and
+        the lock held for as long as the node is in-use.  It can be
+        used by nodepool to detect if Zuul has gone offline and the
+        node should be reclaimed.
+
+        :param Node node: The node which should be locked.
+        '''
+
+        lock_path = '%s/%s/lock' % (self.NODE_ROOT, node.id)
+        try:
+            lock = Lock(self.client, lock_path)
+            have_lock = lock.acquire(blocking, timeout)
+        except kze.LockTimeout:
+            raise LockException(
+                "Timeout trying to acquire lock %s" % lock_path)
+
+        # If we aren't blocking, it's possible we didn't get the lock
+        # because someone else has it.
+        if not have_lock:
+            raise LockException("Did not get lock on %s" % lock_path)
+
+        node.lock = lock
+
+    def unlockNode(self, node):
+        '''
+        Unlock a node.
+
+        The node must already have been locked.
+
+        :param Node node: The node which should be unlocked.
+        '''
+
+        if node.lock is None:
+            raise LockException("Node %s does not hold a lock" % (node,))
+        node.lock.release()
+        node.lock = None

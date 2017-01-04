@@ -919,14 +919,45 @@ class FakeNodepool(object):
             reqs.append(data)
         return reqs
 
+    def makeNode(self, request_id, node_type):
+        now = time.time()
+        path = '/nodepool/nodes/'
+        data = dict(type=node_type,
+                    provider='test-provider',
+                    region='test-region',
+                    az=None,
+                    public_ipv4='127.0.0.1',
+                    private_ipv4=None,
+                    public_ipv6=None,
+                    allocated_to=request_id,
+                    state='ready',
+                    state_time=now,
+                    created_time=now,
+                    updated_time=now,
+                    image_id=None,
+                    launcher='fake-nodepool')
+        data = json.dumps(data)
+        path = self.client.create(path, data,
+                                  makepath=True,
+                                  sequence=True)
+        nodeid = path.split("/")[-1]
+        return nodeid
+
     def fulfillRequest(self, request):
         if request['state'] == 'fulfilled':
             return
         request = request.copy()
-        request['state'] = 'fulfilled'
-        request['state_time'] = time.time()
         oid = request['_oid']
         del request['_oid']
+
+        nodes = []
+        for node in request['node_types']:
+            nodeid = self.makeNode(oid, node)
+            nodes.append(nodeid)
+
+        request['state'] = 'fulfilled'
+        request['state_time'] = time.time()
+        request['nodes'] = nodes
         path = self.REQUEST_ROOT + '/' + oid
         data = json.dumps(request)
         self.log.debug("Fulfilling node request: %s %s" % (oid, data))

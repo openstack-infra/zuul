@@ -354,9 +354,35 @@ class Node(object):
         self.name = name
         self.image = image
         self.id = None
+        self.lock = None
+        # Attributes from Nodepool
+        self._state = 'unknown'
+        self.state_time = time.time()
+        self.public_ipv4 = None
+        self.private_ipv4 = None
+        self.public_ipv6 = None
+
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, value):
+        # TODOv3(jeblair): reinstate
+        # if value not in STATES:
+        #     raise TypeError("'%s' is not a valid state" % value)
+        self._state = value
+        self.state_time = time.time()
 
     def __repr__(self):
         return '<Node %s %s:%s>' % (self.id, self.name, self.image)
+
+    def updateFromDict(self, data):
+        self._state = data['state']
+        self.state_time = data['state_time']
+        self.public_ipv4 = data.get('public_ipv4')
+        self.private_ipv4 = data.get('private_ipv4')
+        self.public_ipv6 = data.get('public_ipv6')
 
 
 class NodeSet(object):
@@ -407,6 +433,9 @@ class NodeRequest(object):
         self.stat = None
         self.uid = uuid4().hex
         self.id = None
+        # Zuul internal failure flag (not stored in ZK so it's not
+        # overwritten).
+        self.failed = False
 
     @property
     def state(self):
