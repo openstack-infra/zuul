@@ -45,8 +45,14 @@ class Nodepool(object):
             node.state = 'in-use'
             self.sched.zk.storeNode(node)
 
-    def returnNodes(self, nodes, used=True):
-        pass
+    def returnNodeset(self, nodeset):
+        for node in nodeset.getNodes():
+            if node.lock is None:
+                raise Exception("Node %s is not locked" % (node,))
+            if node.state == 'in-use':
+                node.state = 'used'
+            self.sched.zk.storeNode(node)
+        self._unlockNodes(nodeset.getNodes())
 
     def unlockNodeset(self, nodeset):
         self._unlockNodes(nodeset.getNodes())
