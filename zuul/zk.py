@@ -333,6 +333,18 @@ class ZooKeeper(object):
         except kze.NoNodeError:
             pass
 
+    def storeNode(self, node):
+        '''Store the node.
+
+        The node is expected to already exist and is updated in its
+        entirety.
+
+        :param Node node: The node to update.
+        '''
+
+        path = '%s/%s' % (self.NODE_ROOT, node.id)
+        self.client.set(path, self._dictToStr(node.toDict()))
+
     def lockNode(self, node, blocking=True, timeout=None):
         '''
         Lock a node.

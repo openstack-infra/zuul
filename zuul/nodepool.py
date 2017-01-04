@@ -38,6 +38,13 @@ class Nodepool(object):
         if request in self.requests:
             self.requests.remove(request)
 
+    def useNodeset(self, nodeset):
+        for node in nodeset.getNodes():
+            if node.lock is None:
+                raise Exception("Node %s is not locked" % (node,))
+            node.state = 'in-use'
+            self.sched.zk.storeNode(node)
+
     def returnNodes(self, nodes, used=True):
         pass
 
