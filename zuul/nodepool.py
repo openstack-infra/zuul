@@ -23,7 +23,10 @@ class Nodepool(object):
         self.sched = scheduler
 
     def requestNodes(self, build_set, job):
-        req = NodeRequest(build_set, job, job.nodeset)
+        # Create a copy of the nodeset to represent the actual nodes
+        # returned by nodepool.
+        nodeset = job.nodeset.copy()
+        req = NodeRequest(build_set, job, nodeset)
         self.requests[req.uid] = req
         self.log.debug("Submitting node request: %s" % (req,))
 
