@@ -427,6 +427,7 @@ class LaunchClient(object):
         return build
 
     def cancel(self, build):
+        # Returns whether a running build was canceled
         self.log.info("Cancel build %s for job %s" % (build, build.job))
 
         build.canceled = True
@@ -434,21 +435,21 @@ class LaunchClient(object):
             job = build.__gearman_job  # noqa
         except AttributeError:
             self.log.debug("Build %s has no associated gearman job" % build)
-            return
+            return False
 
         # TODOv3(jeblair): make a nicer way of recording build start.
         if build.url is not None:
             self.log.debug("Build %s has already started" % build)
             self.cancelRunningBuild(build)
             self.log.debug("Canceled running build %s" % build)
-            return
+            return True
         else:
             self.log.debug("Build %s has not started yet" % build)
 
         self.log.debug("Looking for build %s in queue" % build)
         if self.cancelJobInQueue(build):
             self.log.debug("Removed build %s from queue" % build)
-            return
+            return False
 
         time.sleep(1)
 
@@ -457,7 +458,7 @@ class LaunchClient(object):
             self.log.debug("Build %s has just started" % build)
             self.log.debug("Canceled running build %s" % build)
             self.cancelRunningBuild(build)
-            return
+            return True
         self.log.debug("Unable to cancel build %s" % build)
 
     def onBuildCompleted(self, job, result=None):

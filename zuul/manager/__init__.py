@@ -396,11 +396,20 @@ class PipelineManager(object):
             self.sched.nodepool.cancelRequest(req)
         old_build_set.node_requests = {}
         for build in old_build_set.getBuilds():
+            was_running = False
             try:
-                self.sched.launcher.cancel(build)
+                was_running = self.sched.launcher.cancel(build)
             except:
                 self.log.exception("Exception while canceling build %s "
                                    "for change %s" % (build, item.change))
+            if not was_running:
+                try:
+                    nodeset = build.build_set.getJobNodeSet(build.job.name)
+                    self.nodepool.returnNodeset(nodeset)
+                except Exception:
+                    self.log.exception("Unable to return nodeset %s for "
+                                       "canceled build request %s" %
+                                       (nodeset, build))
             build.result = 'CANCELED'
             canceled = True
         for item_behind in item.items_behind:

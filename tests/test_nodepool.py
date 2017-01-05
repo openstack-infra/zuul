@@ -105,3 +105,18 @@ class TestNodepool(BaseTestCase):
         self.waitForRequests()
         self.assertEqual(len(self.provisioned_requests), 1)
         self.assertEqual(request.state, 'fulfilled')
+
+    def test_node_request_canceled(self):
+        # Test that node requests can be canceled
+
+        nodeset = model.NodeSet()
+        nodeset.addNode(model.Node('controller', 'ubuntu-xenial'))
+        nodeset.addNode(model.Node('compute', 'ubuntu-xenial'))
+        job = model.Job('testjob')
+        job.nodeset = nodeset
+        self.fake_nodepool.paused = True
+        request = self.nodepool.requestNodes(None, job)
+        self.nodepool.cancelRequest(request)
+
+        self.waitForRequests()
+        self.assertEqual(len(self.provisioned_requests), 0)
