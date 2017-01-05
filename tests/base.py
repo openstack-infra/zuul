@@ -874,6 +874,7 @@ class FakeSwiftClientConnection(swiftclient.client.Connection):
 
 class FakeNodepool(object):
     REQUEST_ROOT = '/nodepool/requests'
+    NODE_ROOT = '/nodepool/nodes'
 
     log = logging.getLogger("zuul.test.FakeNodepool")
 
@@ -917,6 +918,28 @@ class FakeNodepool(object):
             data['_oid'] = oid
             reqs.append(data)
         return reqs
+
+    def getNodes(self):
+        try:
+            nodeids = self.client.get_children(self.NODE_ROOT)
+        except kazoo.exceptions.NoNodeError:
+            return []
+        nodes = []
+        for oid in sorted(nodeids):
+            path = self.NODE_ROOT + '/' + oid
+            data, stat = self.client.get(path)
+            data = json.loads(data)
+            data['_oid'] = oid
+            try:
+                lockfiles = self.client.get_children(path + '/lock')
+            except kazoo.exceptions.NoNodeError:
+                lockfiles = []
+            if lockfiles:
+                data['_lock'] = True
+            else:
+                data['_lock'] = False
+            nodes.append(data)
+        return nodes
 
     def makeNode(self, request_id, node_type):
         now = time.time()
@@ -1257,8 +1280,11 @@ class ZuulTestCase(BaseTestCase):
         self.rpc.start()
         self.launch_client.gearman.waitForServer()
 
-        self.addCleanup(self.assertFinalState)
         self.addCleanup(self.shutdown)
+
+    def tearDown(self):
+        super(ZuulTestCase, self).tearDown()
+        self.assertFinalState()
 
     def configure_connections(self):
         # Register connections from the config
@@ -1366,6 +1392,17 @@ class ZuulTestCase(BaseTestCase):
         self.addCommitToRepo(project, 'add content from fixture',
                              files, branch='master', tag='init')
 
+    def assertNodepoolState(self):
+        # Make sure that there are no pending requests
+
+        requests = self.fake_nodepool.getNodeRequests()
+        self.assertEqual(len(requests), 0)
+
+        nodes = self.fake_nodepool.getNodes()
+        for node in nodes:
+            self.assertFalse(node['_lock'], "Node %s is locked" %
+                             (node['_oid'],))
+
     def assertFinalState(self):
         # Make sure that git.Repo objects have been garbage collected.
         repos = []
@@ -1375,6 +1412,7 @@ class ZuulTestCase(BaseTestCase):
                 repos.append(obj)
         self.assertEqual(len(repos), 0)
         self.assertEmptyQueues()
+        self.assertNodepoolState()
         ipm = zuul.manager.independent.IndependentPipelineManager
         for tenant in self.sched.abide.tenants.values():
             for pipeline in tenant.layout.pipelines.values():

@@ -28,14 +28,15 @@ class Nodepool(object):
         nodeset = job.nodeset.copy()
         req = NodeRequest(build_set, job, nodeset)
         self.requests[req.uid] = req
-        self.log.debug("Submitting node request: %s" % (req,))
 
         self.sched.zk.submitNodeRequest(req, self._updateNodeRequest)
+        # Logged after submission so that we have the request id
+        self.log.info("Submited node request %s" % (req,))
 
         return req
 
     def cancelRequest(self, request):
-        self.log.debug("Canceling node request: %s" % (request,))
+        self.log.info("Canceling node request %s" % (request,))
         if request.uid in self.requests:
             try:
                 self.sched.zk.deleteNodeRequest(request)
@@ -44,6 +45,7 @@ class Nodepool(object):
             del self.requests[request.uid]
 
     def useNodeset(self, nodeset):
+        self.log.info("Setting nodeset %s in use" % (nodeset,))
         for node in nodeset.getNodes():
             if node.lock is None:
                 raise Exception("Node %s is not locked" % (node,))
@@ -51,6 +53,7 @@ class Nodepool(object):
             self.sched.zk.storeNode(node)
 
     def returnNodeset(self, nodeset):
+        self.log.info("Returning nodeset %s" % (nodeset,))
         for node in nodeset.getNodes():
             if node.lock is None:
                 raise Exception("Node %s is not locked" % (node,))
@@ -79,7 +82,7 @@ class Nodepool(object):
         locked_nodes = []
         try:
             for node in nodes:
-                self.log.debug("Locking node: %s" % (node,))
+                self.log.debug("Locking node %s" % (node,))
                 self.sched.zk.lockNode(node)
                 locked_nodes.append(node)
         except Exception:
@@ -90,7 +93,7 @@ class Nodepool(object):
     def _updateNodeRequest(self, request, deleted):
         # Return False to indicate that we should stop watching the
         # node.
-        self.log.debug("Updating node request: %s" % (request,))
+        self.log.debug("Updating node request %s" % (request,))
 
         if request.uid not in self.requests:
             return False
@@ -114,7 +117,7 @@ class Nodepool(object):
         # Called by the scheduler when it wants to accept and lock
         # nodes for (potential) use.
 
-        self.log.debug("Accepting node request: %s" % (request,))
+        self.log.info("Accepting node request %s" % (request,))
 
         # First, try to lock the nodes.
         locked = False
@@ -127,7 +130,7 @@ class Nodepool(object):
 
         # Regardless of whether locking succeeded, delete the
         # request.
-        self.log.debug("Deleting node request: %s" % (request,))
+        self.log.debug("Deleting node request %s" % (request,))
         try:
             self.sched.zk.deleteNodeRequest(request)
         except Exception:

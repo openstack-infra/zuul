@@ -767,9 +767,19 @@ class Scheduler(threading.Thread):
 
     def _doBuildCompletedEvent(self, event):
         build = event.build
+
+        # Regardless of any other conditions which might cause us not
+        # to pass this on to the pipeline manager, make sure we return
+        # the nodes to nodepool.
+        try:
+            nodeset = build.build_set.getJobNodeSet(build.job.name)
+            self.nodepool.returnNodeset(nodeset)
+        except Exception:
+            self.log.exception("Unable to return nodeset %s" % (nodeset,))
+
         if build.build_set is not build.build_set.item.current_build_set:
-            self.log.warning("Build %s is not in the current build set" %
-                             (build,))
+            self.log.debug("Build %s is not in the current build set" %
+                           (build,))
             return
         pipeline = build.build_set.item.pipeline
         if not pipeline:

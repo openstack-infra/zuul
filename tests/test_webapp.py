@@ -26,14 +26,8 @@ from tests.base import ZuulTestCase
 class TestWebapp(ZuulTestCase):
     tenant_config_file = 'config/single-tenant/main.yaml'
 
-    def _cleanup(self):
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
-        self.waitUntilSettled()
-
     def setUp(self):
         super(TestWebapp, self).setUp()
-        self.addCleanup(self._cleanup)
         self.launch_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
@@ -43,6 +37,12 @@ class TestWebapp(ZuulTestCase):
         self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
         self.port = self.webapp.server.socket.getsockname()[1]
+
+    def tearDown(self):
+        self.launch_server.hold_jobs_in_build = False
+        self.launch_server.release()
+        self.waitUntilSettled()
+        super(TestWebapp, self).tearDown()
 
     def test_webapp_status(self):
         "Test that we can filter to only certain changes in the webapp."
