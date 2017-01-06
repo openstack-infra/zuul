@@ -811,22 +811,19 @@ class Scheduler(threading.Thread):
         request = event.request
         build_set = request.build_set
 
-        try:
-            self.nodepool.acceptNodes(request)
-        except Exception:
-            self.log.exception("Unable to accept nodes from request %s:"
-                               % (request,))
-            return
+        self.nodepool.acceptNodes(request)
 
         if build_set is not build_set.item.current_build_set:
             self.log.warning("Build set %s is not current" % (build_set,))
-            self.nodepool.returnNodeset(request.nodeset)
+            if request.fulfilled:
+                self.nodepool.returnNodeset(request.nodeset)
             return
         pipeline = build_set.item.pipeline
         if not pipeline:
             self.log.warning("Build set %s is not associated with a pipeline" %
                              (build_set,))
-            self.nodepool.returnNodeset(request.nodeset)
+            if request.fulfilled:
+                self.nodepool.returnNodeset(request.nodeset)
             return
         pipeline.manager.onNodesProvisioned(event)
 

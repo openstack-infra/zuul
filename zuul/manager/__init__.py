@@ -648,6 +648,10 @@ class PipelineManager(object):
         build_set = request.build_set
         build_set.jobNodeRequestComplete(request.job.name, request,
                                          request.nodeset)
+        if request.failed or not request.fulfilled:
+            self.log.info("Node request failure for %s" %
+                          (request.job.name,))
+            build_set.item.setNodeRequestFailure(request.job)
         self.log.info("Completed node request %s for job %s of item %s "
                       "with nodes %s" %
                       (request, request.job, build_set.item,

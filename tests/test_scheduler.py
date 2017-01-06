@@ -4549,6 +4549,27 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
+    def test_nodepool_failure(self):
+        "Test that jobs are reported after a nodepool failure"
+
+        self.fake_nodepool.paused = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.waitUntilSettled()
+
+        req = self.fake_nodepool.getNodeRequests()[0]
+        self.fake_nodepool.addFailRequest(req)
+
+        self.fake_nodepool.paused = False
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 2)
+        self.assertIn('project-merge : NODE_FAILURE', A.messages[1])
+        self.assertIn('project-test1 : SKIPPED', A.messages[1])
+        self.assertIn('project-test2 : SKIPPED', A.messages[1])
+
 
 class TestDuplicatePipeline(ZuulTestCase):
     tenant_config_file = 'config/duplicate-pipeline/main.yaml'
