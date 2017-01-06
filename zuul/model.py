@@ -47,6 +47,32 @@ PRECEDENCE_MAP = {
     'high': PRECEDENCE_HIGH,
 }
 
+# Request states
+STATE_REQUESTED = 'requested'
+STATE_PENDING = 'pending'
+STATE_FULFILLED = 'fulfilled'
+STATE_FAILED = 'failed'
+REQUEST_STATES = set([STATE_REQUESTED,
+                      STATE_PENDING,
+                      STATE_FULFILLED,
+                      STATE_FAILED])
+
+# Node states
+STATE_BUILDING = 'building'
+STATE_TESTING = 'testing'
+STATE_READY = 'ready'
+STATE_IN_USE = 'in-use'
+STATE_USED = 'used'
+STATE_HOLD = 'hold'
+STATE_DELETING = 'deleting'
+NODE_STATES = set([STATE_BUILDING,
+                   STATE_TESTING,
+                   STATE_READY,
+                   STATE_IN_USE,
+                   STATE_USED,
+                   STATE_HOLD,
+                   STATE_DELETING])
+
 
 def time_to_seconds(s):
     if s.endswith('s'):
@@ -369,9 +395,8 @@ class Node(object):
 
     @state.setter
     def state(self, value):
-        # TODOv3(jeblair): reinstate
-        # if value not in STATES:
-        #     raise TypeError("'%s' is not a valid state" % value)
+        if value not in NODE_STATES:
+            raise TypeError("'%s' is not a valid state" % value)
         self._state = value
         self.state_time = time.time()
 
@@ -439,7 +464,7 @@ class NodeRequest(object):
         self.build_set = build_set
         self.job = job
         self.nodeset = nodeset
-        self._state = 'requested'
+        self._state = STATE_REQUESTED
         self.state_time = time.time()
         self.stat = None
         self.uid = uuid4().hex
@@ -454,9 +479,8 @@ class NodeRequest(object):
 
     @state.setter
     def state(self, value):
-        # TODOv3(jeblair): reinstate
-        # if value not in STATES:
-        #     raise TypeError("'%s' is not a valid state" % value)
+        if value not in REQUEST_STATES:
+            raise TypeError("'%s' is not a valid state" % value)
         self._state = value
         self.state_time = time.time()
 
