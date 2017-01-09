@@ -4501,9 +4501,6 @@ For CI problems and help debugging, contact ci@example.org"""
     def test_rerun_on_abort(self):
         "Test that if a launch server fails to run a job, it is run again"
 
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-abort-attempts.yaml')
-        self.sched.reconfigure(self.config)
         self.launch_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))

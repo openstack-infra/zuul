@@ -100,6 +100,7 @@ class JobParser(object):
                'irrelevant-files': to_list(str),
                'nodes': vs.Any([node], str),
                'timeout': int,
+               'attempts': int,
                '_source_project': model.Project,
                '_source_branch': vs.Any(str, None),
                }
