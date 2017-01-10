@@ -12,37 +12,75 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import abc
 
+import six
+
+
+@six.add_metaclass(abc.ABCMeta)
 class Driver(object):
-    """A Zuul Driver.
+    """A Driver is an extension component of Zuul that supports
+    interfacing with a remote system.  It can support any of the following
+    interfaces (but must support at least one to be useful):
 
-    A Driver is an extension component of Zuul that supports
-    interfacing with a remote system.  It can support any of the
-    following interfaces:
-
-    * Connection
-    * Source
-    * Trigger
-    * Reporter
-
-    Drivers supporting each of these interfaces must implement some of
-    the following methods, as appropriate.
+    * ConnectionInterface
+    * SourceInterface
+    * TriggerInterface
+    * ReporterInterface
 
     Zuul will create a single instance of each Driver (which will be
-    shared by all tenants), and this instance will persist for the
-    life of the process.  The Driver class may therefore manage any
-    global state used by all connections.
+    shared by all tenants), and this instance will persist for the life of
+    the process.  The Driver class may therefore manage any global state
+    used by all connections.
 
     The class or instance attribute **name** must be provided as a string.
 
     """
-
     name = None
 
+    def reconfigure(self, tenant):
+        """Called when a tenant is reconfigured.
+
+        This method is optional; the base implementation does nothing.
+
+        When Zuul performs a reconfiguration for a tenant, this method
+        is called with the tenant (including the new layout
+        configuration) as an argument.  The driver may establish any
+        global resources needed by the tenant at this point.
+
+        :arg Tenant tenant: The tenant which has been reconfigured.
+
+        """
+        pass
+
+    def registerScheduler(self, scheduler):
+        """Register the scheduler with the driver.
+
+        This method is optional; the base implementation does nothing.
+
+        This method is called once during initialization to allow the
+        driver to store a handle to the running scheduler.
+
+        :arg Scheduler scheduler: The current running scheduler.
+
+        """
+        pass
+
+
+@six.add_metaclass(abc.ABCMeta)
+class ConnectionInterface(object):
+    """The Connection interface.
+
+    A driver which is able to supply a Connection should implement
+    this interface.
+
+    """
+
+    @abc.abstractmethod
     def getConnection(self, name, config):
         """Create and return a new Connection object.
 
-        Required if this driver implements the Connection interface.
+        This method is required by the interface.
 
         This method will be called once for each connection specified
         in zuul.conf.  The resultant object should be responsible for
@@ -70,12 +108,23 @@ class Driver(object):
         :rtype: Connection
 
         """
-        raise NotImplementedError
+        pass
 
+
+@six.add_metaclass(abc.ABCMeta)
+class TriggerInterface(object):
+    """The trigger interface.
+
+    A driver which is able to supply a Trigger should implement this
+    interface.
+
+    """
+
+    @abc.abstractmethod
     def getTrigger(self, connection, config=None):
-        """Create and return a new Connection object.
+        """Create and return a new Trigger object.
 
-        Required if this driver implements the Trigger interface.
+        This method is required by the interface.
 
         :arg Connection connection: The Connection object associated
             with the trigger (as previously returned by getConnection)
@@ -87,12 +136,35 @@ class Driver(object):
         :rtype: Trigger
 
         """
-        raise NotImplementedError
+        pass
 
+    @abc.abstractmethod
+    def getTriggerSchema(self):
+        """Get the schema for this driver's trigger.
+
+        This method is required by the interface.
+
+        :returns: A voluptuous schema.
+        :rtype: dict or Schema
+
+        """
+        pass
+
+
+@six.add_metaclass(abc.ABCMeta)
+class SourceInterface(object):
+    """The source interface to be implemented by a driver.
+
+    A driver which is able to supply a Source should implement this
+    interface.
+
+    """
+
+    @abc.abstractmethod
     def getSource(self, connection):
         """Create and return a new Source object.
 
-        Required if this driver implements the Source interface.
+        This method is required by the interface.
 
         :arg Connection connection: The Connection object associated
             with the source (as previously returned by getConnection).
@@ -101,12 +173,23 @@ class Driver(object):
         :rtype: Source
 
         """
-        raise NotImplementedError
+        pass
 
+
+@six.add_metaclass(abc.ABCMeta)
+class ReporterInterface(object):
+    """The reporter interface to be implemented by a driver.
+
+    A driver which is able to supply a Reporter should implement this
+    interface.
+
+    """
+
+    @abc.abstractmethod
     def getReporter(self, connection, config=None):
         """Create and return a new Reporter object.
 
-        Required if this driver implements the Reporter interface.
+        This method is required by the interface.
 
         :arg Connection connection: The Connection object associated
             with the reporter (as previously returned by getConnection)
@@ -118,50 +201,16 @@ class Driver(object):
         :rtype: Reporter
 
         """
-        raise NotImplementedError
+        pass
 
-    def getTriggerSchema(self):
-        """Get the schema for this driver's trigger.
-
-        Required if this driver implements the Trigger interface.
-
-        :returns: A voluptuous schema.
-        :rtype: dict or Schema
-
-        """
-        raise NotImplementedError
-
+    @abc.abstractmethod
     def getReporterSchema(self):
         """Get the schema for this driver's reporter.
 
-        Required if this driver implements the Reporter interface.
+        This method is required by the interface.
 
         :returns: A voluptuous schema.
         :rtype: dict or Schema
-
-        """
-        raise NotImplementedError
-
-    def reconfigure(self, tenant):
-        """Called when a tenant is reconfigured.
-
-        When Zuul performs a reconfiguration for a tenant, this method
-        is called with the tenant (including the new layout
-        configuration) as an argument.  The driver may establish any
-        global resources needed by the tenant at this point.
-
-        :arg Tenant tenant: The tenant which has been reconfigured.
-
-        """
-        pass
-
-    def registerScheduler(self, scheduler):
-        """Register the scheduler with the driver.
-
-        This method is called once during initialization to allow the
-        driver to store a handle to the running scheduler.
-
-        :arg Scheduler scheduler: The current running scheduler.
 
         """
         pass

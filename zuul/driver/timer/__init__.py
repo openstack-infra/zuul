@@ -19,11 +19,12 @@ import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from zuul.driver import Driver, TriggerInterface
 from zuul.model import TriggerEvent
 import timertrigger
 
 
-class TimerDriver(object):
+class TimerDriver(Driver, TriggerInterface):
     name = 'timer'
 
     log = logging.getLogger("zuul.Timer")
