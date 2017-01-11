@@ -1,1 +1,2 @@
 libjpeg-dev [test]
+zookeeperd [platform:dpkg]
