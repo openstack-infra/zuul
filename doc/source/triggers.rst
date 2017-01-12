@@ -109,7 +109,10 @@ A connection name with the github driver can take multiple events with the
 following options.
 
   **event**
-  The pull request event from github. A ``pull_request`` event will
+  The event from github. Supported events are ``pull_request``,
+  ``pull_request_review``,  and ``push``.
+
+  A ``pull_request`` event will
   have associated action(s) to trigger from. The supported actions are:
 
     *opened* - pull request opened
@@ -126,32 +129,46 @@ following options.
 
     *unlabeled* - label removed from pull request
 
+    *review* - review added on pull request
+
     *push* - head reference updated (pushed to branch)
+
+  A ``pull_request_review`` event will
+  have associated action(s) to trigger from. The supported actions are:
+
+    *submitted* - pull request review added
+
+    *dismissed* - pull request review removed
 
   **branch**
   The branch associated with the event. Example: ``master``.  This
   field is treated as a regular expression, and multiple branches may
-  be listed. Used for ``pull-request`` events.
+  be listed. Used for ``pull_request`` and ``pull_request_review`` events.
 
   **comment**
-  This is only used for ``pull_request`` ``comment`` events.  It accepts a list
-  of regexes that are searched for in the comment string. If any of these
+  This is only used for ``pull_request`` ``comment`` actions.  It accepts a
+  list of regexes that are searched for in the comment string. If any of these
   regexes matches a portion of the comment string the trigger is matched.
   ``comment: retrigger`` will match when comments containing 'retrigger'
   somewhere in the comment text are added to a pull request.
 
   **label**
-  This is only used for ``labeled`` and ``unlabeled`` actions. It accepts a list
-  of strings each of which matches the label name in the event literally.
-  ``label: recheck`` will match a ``labeled`` action when pull request is
-  labeled with a ``recheck`` label. ``label: 'do not test'`` will match a
-  ``unlabeled`` action when a label with name ``do not test`` is removed from
-  the pull request.
+  This is only used for ``labeled`` and ``unlabeled`` ``pull_request`` actions.
+  It accepts a list of strings each of which matches the label name in the
+  event literally.  ``label: recheck`` will match a ``labeled`` action when
+  pull request is labeled with a ``recheck`` label. ``label: 'do not test'``
+  will match a ``unlabeled`` action when a label with name ``do not test`` is
+  removed from the pull request.
 
-  Additionally a ``push`` event can be configured, with an ``ref`` field. This
-  field is treated as a regular expression and multiple refs may be listed.
-  Github always sends full ref name, eg. ``refs/tags/bar`` and this string is
-  matched against the regexp.
+  **state**
+  This is only used for ``pull_request_review`` events.  It accepts a list of
+  strings each of which is matched to the review state, which can be one of
+  ``approved``, ``comment``, or ``request_changes``.
+
+  **ref**
+  This is only used for ``push`` events. This field is treated as a regular
+  expression and multiple refs may be listed. Github always sends full ref
+  name, eg. ``refs/tags/bar`` and this string is matched against the regexp.
 
 GitHub Configuration
 ~~~~~~~~~~~~~~~~~~~~

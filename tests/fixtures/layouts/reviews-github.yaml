@@ -1,0 +1,21 @@
+- pipeline:
+    name: reviews
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request_review
+          action: submitted
+          state: 'approve'
+    success:
+      github:
+        label:
+          - 'tests passed'
+
+- job:
+    name: project-reviews
+
+- project:
+    name: org/project
+    reviews:
+      jobs:
+        - project-reviews

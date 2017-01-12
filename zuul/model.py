@@ -1899,6 +1899,7 @@ class TriggerEvent(object):
         self.comment = None
         self.label = None
         self.unlabel = None
+        self.state = None
         # ref-updated
         self.ref = None
         self.oldrev = None
@@ -2050,7 +2051,7 @@ class EventFilter(BaseFilter):
     def __init__(self, trigger, types=[], branches=[], refs=[],
                  event_approvals={}, comments=[], emails=[], usernames=[],
                  timespecs=[], required_approvals=[], reject_approvals=[],
-                 pipelines=[], actions=[], labels=[], unlabels=[],
+                 pipelines=[], actions=[], labels=[], unlabels=[], states=[],
                  ignore_deletes=True):
         super(EventFilter, self).__init__(
             required_approvals=required_approvals,
@@ -2075,6 +2076,7 @@ class EventFilter(BaseFilter):
         self.timespecs = timespecs
         self.labels = labels
         self.unlabels = unlabels
+        self.states = states
         self.ignore_deletes = ignore_deletes
 
     def __repr__(self):
@@ -2113,6 +2115,8 @@ class EventFilter(BaseFilter):
             ret += ' labels: %s' % ', '.join(self.labels)
         if self.unlabels:
             ret += ' unlabels: %s' % ', '.join(self.unlabels)
+        if self.states:
+            ret += ' states: %s' % ', '.join(self.states)
         ret += '>'
 
         return ret
@@ -2223,6 +2227,10 @@ class EventFilter(BaseFilter):
 
         # unlabels are ORed
         if self.unlabels and event.unlabel not in self.unlabels:
+            return False
+
+        # states are ORed
+        if self.states and event.state not in self.states:
             return False
 
         return True

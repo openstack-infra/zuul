@@ -40,7 +40,8 @@ class GithubTrigger(BaseTrigger):
                 refs=toList(trigger.get('ref')),
                 comments=toList(trigger.get('comment')),
                 labels=toList(trigger.get('label')),
-                unlabels=toList(trigger.get('unlabel'))
+                unlabels=toList(trigger.get('unlabel')),
+                states=toList(trigger.get('state'))
             )
             efilters.append(f)
 
@@ -57,6 +58,7 @@ def getSchema():
     github_trigger = {
         v.Required('event'):
             toList(v.Any('pull_request',
+                         'pull_request_review',
                          'push')),
         'action': toList(str),
         'branch': toList(str),
@@ -64,6 +66,7 @@ def getSchema():
         'comment': toList(str),
         'label': toList(str),
         'unlabel': toList(str),
+        'state': toList(str),
     }
 
     return github_trigger
