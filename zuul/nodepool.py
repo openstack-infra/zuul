@@ -35,8 +35,13 @@ class Nodepool(object):
         return req
 
     def cancelRequest(self, request):
-        if request in self.requests:
-            self.requests.remove(request)
+        self.log.debug("Canceling node request: %s" % (request,))
+        if request.uid in self.requests:
+            try:
+                self.sched.zk.deleteNodeRequest(request)
+            except Exception:
+                self.log.exception("Error deleting node request:")
+            del self.requests[request.uid]
 
     def useNodeset(self, nodeset):
         for node in nodeset.getNodes():
@@ -51,7 +56,7 @@ class Nodepool(object):
                 raise Exception("Node %s is not locked" % (node,))
             if node.state == 'in-use':
                 node.state = 'used'
-            self.sched.zk.storeNode(node)
+                self.sched.zk.storeNode(node)
         self._unlockNodes(nodeset.getNodes())
 
     def unlockNodeset(self, nodeset):
