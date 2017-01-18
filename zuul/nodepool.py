@@ -41,6 +41,34 @@ class Nodepool(object):
     def returnNodes(self, nodes, used=True):
         pass
 
+    def unlockNodeset(self, nodeset):
+        self._unlockNodes(nodeset.getNodes())
+
+    def _unlockNodes(self, nodes):
+        for node in nodes:
+            try:
+                self.sched.zk.unlockNode(node)
+            except Exception:
+                self.log.exception("Error unlocking node:")
+
+    def lockNodeset(self, nodeset):
+        self._lockNodes(nodeset.getNodes())
+
+    def _lockNodes(self, nodes):
+        # Try to lock all of the supplied nodes.  If any lock fails,
+        # try to unlock any which have already been locked before
+        # re-raising the error.
+        locked_nodes = []
+        try:
+            for node in nodes:
+                self.log.debug("Locking node: %s" % (node,))
+                self.sched.zk.lockNode(node)
+                locked_nodes.append(node)
+        except Exception:
+            self.log.exception("Error locking nodes:")
+            self._unlockNodes(locked_nodes)
+            raise
+
     def _updateNodeRequest(self, request, deleted):
         # Return False to indicate that we should stop watching the
         # node.
@@ -50,10 +78,45 @@ class Nodepool(object):
             return False
 
         if request.state == 'fulfilled':
+            self.log.info("Node request %s fulfilled" % (request,))
+
+            # Give our results to the scheduler.
             self.sched.onNodesProvisioned(request)
             del self.requests[request.uid]
+
+            # Stop watching this request node.
             return False
+        # TODOv3(jeblair): handle allocation failure
         elif deleted:
             self.log.debug("Resubmitting lost node request %s" % (request,))
             self.sched.zk.submitNodeRequest(request, self._updateNodeRequest)
         return True
+
+    def acceptNodes(self, request):
+        # Called by the scheduler when it wants to accept and lock
+        # nodes for (potential) use.
+
+        self.log.debug("Accepting node request: %s" % (request,))
+
+        # First, try to lock the nodes.
+        locked = False
+        try:
+            self.lockNodeset(request.nodeset)
+            locked = True
+        except Exception:
+            self.log.exception("Error locking nodes:")
+            request.failed = True
+
+        # Regardless of whether locking succeeded, delete the
+        # request.
+        self.log.debug("Deleting node request: %s" % (request,))
+        try:
+            self.sched.zk.deleteNodeRequest(request)
+        except Exception:
+            self.log.exception("Error deleting node request:")
+            request.failed = True
+            # If deleting the request failed, and we did lock the
+            # nodes, unlock the nodes since we're not going to use
+            # them.
+            if locked:
+                self.unlockNodeset(request.nodeset)

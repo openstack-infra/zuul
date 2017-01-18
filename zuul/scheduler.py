@@ -800,6 +800,14 @@ class Scheduler(threading.Thread):
     def _doNodesProvisionedEvent(self, event):
         request = event.request
         build_set = request.build_set
+
+        try:
+            self.nodepool.acceptNodes(request)
+        except Exception:
+            self.log.exception("Unable to accept nodes from request %s:"
+                               % (request,))
+            return
+
         if build_set is not build_set.item.current_build_set:
             self.log.warning("Build set %s is not current" % (build_set,))
             self.nodepool.returnNodes(request.nodes, used=False)
