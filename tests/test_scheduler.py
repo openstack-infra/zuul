@@ -4640,7 +4640,10 @@ class TestSchedulerSuccessURL(ZuulTestCase):
         self.assertEqual(len(self.history), 2)
 
         # Grab build id
-        uuid = self.history[0].uuid[:7]
+        for build in self.history:
+            if build.name == 'docs-draft-test':
+                uuid = build.uuid[:7]
+                break
 
         # Two msgs: 'Starting...'  + results
         self.assertEqual(len(self.smtp_messages), 2)
