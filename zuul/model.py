@@ -361,6 +361,7 @@ class Node(object):
         self.public_ipv4 = None
         self.private_ipv4 = None
         self.public_ipv6 = None
+        self._keys = []
 
     @property
     def state(self):
@@ -377,12 +378,22 @@ class Node(object):
     def __repr__(self):
         return '<Node %s %s:%s>' % (self.id, self.name, self.image)
 
+    def toDict(self):
+        d = {}
+        d['state'] = self.state
+        for k in self._keys:
+            d[k] = getattr(self, k)
+        return d
+
     def updateFromDict(self, data):
         self._state = data['state']
-        self.state_time = data['state_time']
-        self.public_ipv4 = data.get('public_ipv4')
-        self.private_ipv4 = data.get('private_ipv4')
-        self.public_ipv6 = data.get('public_ipv6')
+        keys = []
+        for k, v in data.items():
+            if k == 'state':
+                continue
+            keys.append(k)
+            setattr(self, k, v)
+        self._keys = keys
 
 
 class NodeSet(object):
