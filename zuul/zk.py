@@ -14,7 +14,6 @@
 
 import json
 import logging
-import six
 import time
 from kazoo.client import KazooClient, KazooState
 from kazoo import exceptions as kze
@@ -80,93 +79,6 @@ def buildZooKeeperHosts(host_list):
         host = '%s:%s%s' % (host_def.host, host_def.port, host_def.chroot)
         hosts.append(host)
     return ",".join(hosts)
-
-
-class BaseModel(object):
-    def __init__(self, o_id):
-        if o_id:
-            self.id = o_id
-        self._state = None
-        self.state_time = None
-        self.stat = None
-
-    @property
-    def id(self):
-        return self._id
-
-    @id.setter
-    def id(self, value):
-        if not isinstance(value, six.string_types):
-            raise TypeError("'id' attribute must be a string type")
-        self._id = value
-
-    @property
-    def state(self):
-        return self._state
-
-    @state.setter
-    def state(self, value):
-        if value not in STATES:
-            raise TypeError("'%s' is not a valid state" % value)
-        self._state = value
-        self.state_time = time.time()
-
-    def toDict(self):
-        '''
-        Convert a BaseModel object's attributes to a dictionary.
-        '''
-        d = {}
-        d['state'] = self.state
-        d['state_time'] = self.state_time
-        return d
-
-    def fromDict(self, d):
-        '''
-        Set base attributes based on the given dict.
-
-        Unlike the derived classes, this should NOT return an object as it
-        assumes self has already been instantiated.
-        '''
-        if 'state' in d:
-            self.state = d['state']
-        if 'state_time' in d:
-            self.state_time = d['state_time']
-
-
-class NodeRequest(BaseModel):
-    '''
-    Class representing a node request.
-    '''
-
-    def __init__(self, id=None):
-        super(NodeRequest, self).__init__(id)
-
-    def __repr__(self):
-        d = self.toDict()
-        d['id'] = self.id
-        d['stat'] = self.stat
-        return '<NodeRequest %s>' % d
-
-    def toDict(self):
-        '''
-        Convert a NodeRequest object's attributes to a dictionary.
-        '''
-        d = super(NodeRequest, self).toDict()
-        return d
-
-    @staticmethod
-    def fromDict(d, o_id=None):
-        '''
-        Create a NodeRequest object from a dictionary.
-
-        :param dict d: The dictionary.
-        :param str o_id: The object ID.
-
-        :returns: An initialized ImageBuild object.
-        '''
-        o = NodeRequest(o_id)
-        super(NodeRequest, o).fromDict(d)
-        return o
 
 
 class ZooKeeper(object):
