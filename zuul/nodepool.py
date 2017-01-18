@@ -12,7 +12,7 @@
 
 import logging
 
-from zuul.model import NodeRequest
+from zuul import model
 
 
 class Nodepool(object):
@@ -26,7 +26,7 @@ class Nodepool(object):
         # Create a copy of the nodeset to represent the actual nodes
         # returned by nodepool.
         nodeset = job.nodeset.copy()
-        req = NodeRequest(build_set, job, nodeset)
+        req = model.NodeRequest(build_set, job, nodeset)
         self.requests[req.uid] = req
 
         self.sched.zk.submitNodeRequest(req, self._updateNodeRequest)
@@ -49,7 +49,7 @@ class Nodepool(object):
         for node in nodeset.getNodes():
             if node.lock is None:
                 raise Exception("Node %s is not locked" % (node,))
-            node.state = 'in-use'
+            node.state = model.STATE_IN_USE
             self.sched.zk.storeNode(node)
 
     def returnNodeset(self, nodeset):
@@ -57,8 +57,8 @@ class Nodepool(object):
         for node in nodeset.getNodes():
             if node.lock is None:
                 raise Exception("Node %s is not locked" % (node,))
-            if node.state == 'in-use':
-                node.state = 'used'
+            if node.state == model.STATE_IN_USE:
+                node.state = model.STATE_USED
                 self.sched.zk.storeNode(node)
         self._unlockNodes(nodeset.getNodes())
 
@@ -98,7 +98,7 @@ class Nodepool(object):
         if request.uid not in self.requests:
             return False
 
-        if request.state == 'fulfilled':
+        if request.state == model.STATE_FULFILLED:
             self.log.info("Node request %s fulfilled" % (request,))
 
             # Give our results to the scheduler.
