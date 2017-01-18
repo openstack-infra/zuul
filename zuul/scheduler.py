@@ -285,6 +285,9 @@ class Scheduler(threading.Thread):
     def setNodepool(self, nodepool):
         self.nodepool = nodepool
 
+    def setZooKeeper(self, zk):
+        self.zk = zk
+
     def addEvent(self, event):
         self.log.debug("Adding trigger event: %s" % event)
         try:
