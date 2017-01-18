@@ -44,7 +44,7 @@ class Nodepool(object):
                 self.log.exception("Error deleting node request:")
             del self.requests[request.uid]
 
-    def useNodeset(self, nodeset):
+    def useNodeSet(self, nodeset):
         self.log.info("Setting nodeset %s in use" % (nodeset,))
         for node in nodeset.getNodes():
             if node.lock is None:
@@ -52,7 +52,7 @@ class Nodepool(object):
             node.state = model.STATE_IN_USE
             self.sched.zk.storeNode(node)
 
-    def returnNodeset(self, nodeset):
+    def returnNodeSet(self, nodeset):
         self.log.info("Returning nodeset %s" % (nodeset,))
         for node in nodeset.getNodes():
             if node.lock is None:
@@ -62,7 +62,7 @@ class Nodepool(object):
                 self.sched.zk.storeNode(node)
         self._unlockNodes(nodeset.getNodes())
 
-    def unlockNodeset(self, nodeset):
+    def unlockNodeSet(self, nodeset):
         self._unlockNodes(nodeset.getNodes())
 
     def _unlockNodes(self, nodes):
@@ -72,7 +72,7 @@ class Nodepool(object):
             except Exception:
                 self.log.exception("Error unlocking node:")
 
-    def lockNodeset(self, nodeset):
+    def lockNodeSet(self, nodeset):
         self._lockNodes(nodeset.getNodes())
 
     def _lockNodes(self, nodes):
@@ -123,7 +123,7 @@ class Nodepool(object):
         if request.fulfilled:
             # If the request suceeded, try to lock the nodes.
             try:
-                self.lockNodeset(request.nodeset)
+                self.lockNodeSet(request.nodeset)
                 locked = True
             except Exception:
                 self.log.exception("Error locking nodes:")
@@ -141,4 +141,4 @@ class Nodepool(object):
             # nodes, unlock the nodes since we're not going to use
             # them.
             if locked:
-                self.unlockNodeset(request.nodeset)
+                self.unlockNodeSet(request.nodeset)

@@ -365,7 +365,7 @@ class PipelineManager(object):
             self.log.debug("Found job %s for change %s" % (job, item.change))
             try:
                 nodeset = item.current_build_set.getJobNodeSet(job.name)
-                self.sched.nodepool.useNodeset(nodeset)
+                self.sched.nodepool.useNodeSet(nodeset)
                 build = self.sched.launcher.launch(job, item,
                                                    self.pipeline,
                                                    dependent_items)
@@ -406,7 +406,7 @@ class PipelineManager(object):
             if not was_running:
                 try:
                     nodeset = build.build_set.getJobNodeSet(build.job.name)
-                    self.sched.nodepool.returnNodeset(nodeset)
+                    self.sched.nodepool.returnNodeSet(nodeset)
                 except Exception:
                     self.log.exception("Unable to return nodeset %s for "
                                        "canceled build request %s" %
@@ -417,7 +417,7 @@ class PipelineManager(object):
         for jobname, nodeset in old_build_set.nodesets.items()[:]:
             if jobname in canceled_jobs:
                 continue
-            self.sched.nodepool.returnNodeset(nodeset)
+            self.sched.nodepool.returnNodeSet(nodeset)
         for item_behind in item.items_behind:
             self.log.debug("Canceling jobs for change %s, behind change %s" %
                            (item_behind.change, item.change))
@@ -623,7 +623,7 @@ class PipelineManager(object):
         for build in build.build_set.getBuilds():
             if build.result == 'SKIPPED':
                 nodeset = build.build_set.getJobNodeSet(build.job.name)
-                self.sched.nodepool.returnNodeset(nodeset)
+                self.sched.nodepool.returnNodeSet(nodeset)
 
         return True
 

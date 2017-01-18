@@ -773,7 +773,7 @@ class Scheduler(threading.Thread):
         # the nodes to nodepool.
         try:
             nodeset = build.build_set.getJobNodeSet(build.job.name)
-            self.nodepool.returnNodeset(nodeset)
+            self.nodepool.returnNodeSet(nodeset)
         except Exception:
             self.log.exception("Unable to return nodeset %s" % (nodeset,))
 
@@ -816,14 +816,14 @@ class Scheduler(threading.Thread):
         if build_set is not build_set.item.current_build_set:
             self.log.warning("Build set %s is not current" % (build_set,))
             if request.fulfilled:
-                self.nodepool.returnNodeset(request.nodeset)
+                self.nodepool.returnNodeSet(request.nodeset)
             return
         pipeline = build_set.item.pipeline
         if not pipeline:
             self.log.warning("Build set %s is not associated with a pipeline" %
                              (build_set,))
             if request.fulfilled:
-                self.nodepool.returnNodeset(request.nodeset)
+                self.nodepool.returnNodeSet(request.nodeset)
             return
         pipeline.manager.onNodesProvisioned(event)
 
