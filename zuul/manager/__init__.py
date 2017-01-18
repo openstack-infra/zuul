@@ -599,6 +599,13 @@ class PipelineManager(object):
         self.sched.mutex.release(item, build.job)
         self.log.debug("Item %s status is now:\n %s" %
                        (item, item.formatStatus()))
+
+        try:
+            nodeset = build.build_set.getJobNodeSet(build.job.name)
+            self.nodepool.returnNodeset(nodeset)
+        except Exception:
+            self.log.exception("Unable to return nodeset %s" % (nodeset,))
+
         return True
 
     def onMergeCompleted(self, event):

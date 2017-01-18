@@ -810,12 +810,13 @@ class Scheduler(threading.Thread):
 
         if build_set is not build_set.item.current_build_set:
             self.log.warning("Build set %s is not current" % (build_set,))
-            self.nodepool.returnNodes(request.nodes, used=False)
+            self.nodepool.returnNodeset(request.nodeset)
             return
         pipeline = build_set.item.pipeline
         if not pipeline:
             self.log.warning("Build set %s is not associated with a pipeline" %
                              (build_set,))
+            self.nodepool.returnNodeset(request.nodeset)
             return
         pipeline.manager.onNodesProvisioned(event)
 
