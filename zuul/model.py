@@ -474,6 +474,10 @@ class NodeRequest(object):
         self.failed = False
 
     @property
+    def fulfilled(self):
+        return (self._state == STATE_FULFILLED) and not self.failed
+
+    @property
     def state(self):
         return self._state
 
@@ -989,18 +993,28 @@ class QueueItem(object):
         return self._findJobsToRun(tree.job_trees, mutex)
 
     def _findJobsToRequest(self, job_trees):
+        build_set = self.current_build_set
         toreq = []
+        if self.item_ahead:
+            if self.item_ahead.isHoldingFollowingChanges():
+                return []
         for tree in job_trees:
             job = tree.job
+            result = None
             if job:
                 if not job.changeMatches(self.change):
                     continue
-                nodeset = self.current_build_set.getJobNodeSet(job.name)
-                if nodeset is None:
-                    req = self.current_build_set.getJobNodeRequest(job.name)
-                    if req is None:
-                        toreq.append(job)
-            toreq.extend(self._findJobsToRequest(tree.job_trees))
+                build = build_set.getBuild(job.name)
+                if build:
+                    result = build.result
+                else:
+                    nodeset = build_set.getJobNodeSet(job.name)
+                    if nodeset is None:
+                        req = build_set.getJobNodeRequest(job.name)
+                        if req is None:
+                            toreq.append(job)
+            if result == 'SUCCESS' or not job:
+                toreq.extend(self._findJobsToRequest(tree.job_trees))
         return toreq
 
     def findJobsToRequest(self):
@@ -1021,6 +1035,12 @@ class QueueItem(object):
                 fakebuild = Build(job, None)
                 fakebuild.result = 'SKIPPED'
                 self.addBuild(fakebuild)
+
+    def setNodeRequestFailure(self, job):
+        fakebuild = Build(job, None)
+        self.addBuild(fakebuild)
+        fakebuild.result = 'NODE_FAILURE'
+        self.setResult(fakebuild)
 
     def setDequeuedNeedingChange(self):
         self.dequeued_needing_change = True

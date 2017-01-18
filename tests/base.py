@@ -887,6 +887,7 @@ class FakeNodepool(object):
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
         self.thread.start()
+        self.fail_requests = set()
 
     def stop(self):
         self._running = False
@@ -965,21 +966,27 @@ class FakeNodepool(object):
         nodeid = path.split("/")[-1]
         return nodeid
 
+    def addFailRequest(self, request):
+        self.fail_requests.add(request['_oid'])
+
     def fulfillRequest(self, request):
-        if request['state'] == 'fulfilled':
+        if request['state'] != 'requested':
             return
         request = request.copy()
         oid = request['_oid']
         del request['_oid']
 
-        nodes = []
-        for node in request['node_types']:
-            nodeid = self.makeNode(oid, node)
-            nodes.append(nodeid)
+        if oid in self.fail_requests:
+            request['state'] = 'failed'
+        else:
+            request['state'] = 'fulfilled'
+            nodes = []
+            for node in request['node_types']:
+                nodeid = self.makeNode(oid, node)
+                nodes.append(nodeid)
+            request['nodes'] = nodes
 
-        request['state'] = 'fulfilled'
         request['state_time'] = time.time()
-        request['nodes'] = nodes
         path = self.REQUEST_ROOT + '/' + oid
         data = json.dumps(request)
         self.log.debug("Fulfilling node request: %s %s" % (oid, data))

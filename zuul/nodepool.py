@@ -98,8 +98,8 @@ class Nodepool(object):
         if request.uid not in self.requests:
             return False
 
-        if request.state == model.STATE_FULFILLED:
-            self.log.info("Node request %s fulfilled" % (request,))
+        if request.state in (model.STATE_FULFILLED, model.STATE_FAILED):
+            self.log.info("Node request %s %s" % (request, request.state))
 
             # Give our results to the scheduler.
             self.sched.onNodesProvisioned(request)
@@ -119,17 +119,18 @@ class Nodepool(object):
 
         self.log.info("Accepting node request %s" % (request,))
 
-        # First, try to lock the nodes.
         locked = False
-        try:
-            self.lockNodeset(request.nodeset)
-            locked = True
-        except Exception:
-            self.log.exception("Error locking nodes:")
-            request.failed = True
+        if request.fulfilled:
+            # If the request suceeded, try to lock the nodes.
+            try:
+                self.lockNodeset(request.nodeset)
+                locked = True
+            except Exception:
+                self.log.exception("Error locking nodes:")
+                request.failed = True
 
-        # Regardless of whether locking succeeded, delete the
-        # request.
+        # Regardless of whether locking (or even the request)
+        # succeeded, delete the request.
         self.log.debug("Deleting node request %s" % (request,))
         try:
             self.sched.zk.deleteNodeRequest(request)
