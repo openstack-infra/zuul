@@ -4529,6 +4529,23 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(A.reported, 1)
         self.assertIn('RETRY_LIMIT', A.messages[0])
 
+    def test_zookeeper_disconnect(self):
+        "Test that jobs are launched after a zookeeper disconnect"
+
+        self.fake_nodepool.paused = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.waitUntilSettled()
+
+        self.zk.client.stop()
+        self.zk.client.start()
+        self.fake_nodepool.paused = False
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+
 
 class TestDuplicatePipeline(ZuulTestCase):
     tenant_config_file = 'config/duplicate-pipeline/main.yaml'

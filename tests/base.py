@@ -883,6 +883,7 @@ class FakeNodepool(object):
             hosts='%s:%s%s' % (host, port, chroot))
         self.client.start()
         self._running = True
+        self.paused = False
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
         self.thread.start()
@@ -899,6 +900,8 @@ class FakeNodepool(object):
             time.sleep(0.1)
 
     def _run(self):
+        if self.paused:
+            return
         for req in self.getNodeRequests():
             self.fulfillRequest(req)
 
@@ -1501,6 +1504,8 @@ class ZuulTestCase(BaseTestCase):
         return True
 
     def areAllNodeRequestsComplete(self):
+        if self.fake_nodepool.paused:
+            return True
         if self.sched.nodepool.requests:
             return False
         return True

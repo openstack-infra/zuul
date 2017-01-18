@@ -69,3 +69,20 @@ class TestNodepool(BaseTestCase):
         self.waitForRequests()
         self.assertEqual(len(self.provisioned_requests), 1)
         self.assertEqual(request.state, 'fulfilled')
+
+    def test_node_request_disconnect(self):
+        # Test that node requests are re-submitted after disconnect
+
+        nodeset = model.NodeSet()
+        nodeset.addNode(model.Node('controller', 'ubuntu-xenial'))
+        nodeset.addNode(model.Node('compute', 'ubuntu-xenial'))
+        job = model.Job('testjob')
+        job.nodeset = nodeset
+        self.fake_nodepool.paused = True
+        request = self.nodepool.requestNodes(None, job)
+        self.zk.client.stop()
+        self.zk.client.start()
+        self.fake_nodepool.paused = False
+        self.waitForRequests()
+        self.assertEqual(len(self.provisioned_requests), 1)
+        self.assertEqual(request.state, 'fulfilled')
