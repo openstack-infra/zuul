@@ -395,6 +395,7 @@ class PipelineManager(object):
         for req in old_build_set.node_requests.values():
             self.sched.nodepool.cancelRequest(req)
         old_build_set.node_requests = {}
+        canceled_jobs = set()
         for build in old_build_set.getBuilds():
             was_running = False
             try:
@@ -405,13 +406,18 @@ class PipelineManager(object):
             if not was_running:
                 try:
                     nodeset = build.build_set.getJobNodeSet(build.job.name)
-                    self.nodepool.returnNodeset(nodeset)
+                    self.sched.nodepool.returnNodeset(nodeset)
                 except Exception:
                     self.log.exception("Unable to return nodeset %s for "
                                        "canceled build request %s" %
                                        (nodeset, build))
             build.result = 'CANCELED'
             canceled = True
+            canceled_jobs.add(build.job.name)
+        for jobname, nodeset in old_build_set.nodesets.items()[:]:
+            if jobname in canceled_jobs:
+                continue
+            self.sched.nodepool.returnNodeset(nodeset)
         for item_behind in item.items_behind:
             self.log.debug("Canceling jobs for change %s, behind change %s" %
                            (item_behind.change, item.change))
@@ -609,11 +615,15 @@ class PipelineManager(object):
         self.log.debug("Item %s status is now:\n %s" %
                        (item, item.formatStatus()))
 
-        try:
-            nodeset = build.build_set.getJobNodeSet(build.job.name)
-            self.nodepool.returnNodeset(nodeset)
-        except Exception:
-            self.log.exception("Unable to return nodeset %s" % (nodeset,))
+        if build.retry:
+            build.build_set.removeJobNodeSet(build.job.name)
+
+        # If any jobs were skipped as a result of this build, return
+        # their nodes.
+        for build in build.build_set.getBuilds():
+            if build.result == 'SKIPPED':
+                nodeset = build.build_set.getJobNodeSet(build.job.name)
+                self.sched.nodepool.returnNodeset(nodeset)
 
         return True
 

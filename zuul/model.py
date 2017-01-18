@@ -762,6 +762,11 @@ class BuildSet(object):
         # required
         return self.nodesets.get(job_name)
 
+    def removeJobNodeSet(self, job_name):
+        if job_name not in self.nodesets:
+            raise Exception("No job set for %s" % (job_name))
+        del self.nodesets[job_name]
+
     def setJobNodeRequest(self, job_name, req):
         if job_name in self.node_requests:
             raise Exception("Prior node request for %s" % (job_name))

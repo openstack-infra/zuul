@@ -471,14 +471,13 @@ class LaunchClient(object):
             data = getJobData(job)
             build.node_labels = data.get('node_labels', [])
             build.node_name = data.get('node_name')
-            if not build.canceled:
-                if result is None:
-                    result = data.get('result')
-                if result is None:
-                    build.retry = True
-                self.log.info("Build %s complete, result %s" %
-                              (job, result))
-                self.sched.onBuildCompleted(build, result)
+            if result is None:
+                result = data.get('result')
+            if result is None:
+                build.retry = True
+            self.log.info("Build %s complete, result %s" %
+                          (job, result))
+            self.sched.onBuildCompleted(build, result)
             # The test suite expects the build to be removed from the
             # internal dict after it's added to the report queue.
             del self.builds[job.unique]
