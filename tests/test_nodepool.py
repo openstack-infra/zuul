@@ -79,12 +79,12 @@ class TestNodepool(BaseTestCase):
             self.assertEqual(node.state, 'ready')
 
         # Mark the nodes in use
-        self.nodepool.useNodeset(nodeset)
+        self.nodepool.useNodeSet(nodeset)
         for node in nodeset.getNodes():
             self.assertEqual(node.state, 'in-use')
 
         # Return the nodes
-        self.nodepool.returnNodeset(nodeset)
+        self.nodepool.returnNodeSet(nodeset)
         for node in nodeset.getNodes():
             self.assertIsNone(node.lock)
             self.assertEqual(node.state, 'used')
