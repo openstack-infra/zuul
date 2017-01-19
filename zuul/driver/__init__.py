@@ -48,7 +48,8 @@ class Driver(object):
         configuration) as an argument.  The driver may establish any
         global resources needed by the tenant at this point.
 
-        :arg Tenant tenant: The tenant which has been reconfigured.
+        :arg Tenant tenant: The :py:class:`zuul.model.Tenant` which has been
+            reconfigured.
 
         """
         pass
@@ -61,7 +62,8 @@ class Driver(object):
         This method is called once during initialization to allow the
         driver to store a handle to the running scheduler.
 
-        :arg Scheduler scheduler: The current running scheduler.
+        :arg Scheduler scheduler: The current running
+           :py:class:`zuul.scheduler.Scheduler`.
 
         """
         pass
