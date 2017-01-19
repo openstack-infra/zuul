@@ -245,7 +245,7 @@ class TestRequirements(ZuulTestCase):
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, job)
 
-        # A +2 should allow it to be enqueued
+        # A +2 from nobody should not cause it to be enqueued
         B = self.fake_gerrit.addFakeChange(project, 'master', 'B')
         # A comment event that we will keep submitting to trigger
         comment = B.addApproval('CRVW', 2, username='nobody')
@@ -253,6 +253,7 @@ class TestRequirements(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
 
+        # A +2 from jenkins should allow it to be enqueued
         B.addApproval('VRFY', 2, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
