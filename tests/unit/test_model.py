@@ -34,10 +34,11 @@ class TestJob(BaseTestCase):
 
     @property
     def job(self):
+        tenant = model.Tenant('tenant')
         layout = model.Layout()
         project = model.Project('project', None)
         context = model.SourceContext(project, 'master', True)
-        job = configloader.JobParser.fromYaml(layout, {
+        job = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': context,
             'name': 'job',
             'irrelevant-files': [
@@ -134,6 +135,7 @@ class TestJob(BaseTestCase):
 
     def test_job_inheritance_configloader(self):
         # TODO(jeblair): move this to a configloader test
+        tenant = model.Tenant('tenant')
         layout = model.Layout()
 
         pipeline = model.Pipeline('gate', layout)
@@ -142,7 +144,7 @@ class TestJob(BaseTestCase):
         project = model.Project('project', None)
         context = model.SourceContext(project, 'master', True)
 
-        base = configloader.JobParser.fromYaml(layout, {
+        base = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': context,
             'name': 'base',
             'timeout': 30,
@@ -154,7 +156,7 @@ class TestJob(BaseTestCase):
             }],
         })
         layout.addJob(base)
-        python27 = configloader.JobParser.fromYaml(layout, {
+        python27 = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': context,
             'name': 'python27',
             'parent': 'base',
@@ -167,7 +169,7 @@ class TestJob(BaseTestCase):
             'timeout': 40,
         })
         layout.addJob(python27)
-        python27diablo = configloader.JobParser.fromYaml(layout, {
+        python27diablo = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': context,
             'name': 'python27',
             'branches': [
@@ -184,7 +186,7 @@ class TestJob(BaseTestCase):
         })
         layout.addJob(python27diablo)
 
-        python27essex = configloader.JobParser.fromYaml(layout, {
+        python27essex = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': context,
             'name': 'python27',
             'branches': [
@@ -195,7 +197,7 @@ class TestJob(BaseTestCase):
         })
         layout.addJob(python27essex)
 
-        project_config = configloader.ProjectParser.fromYaml(layout, {
+        project_config = configloader.ProjectParser.fromYaml(tenant, layout, {
             '_source_context': context,
             'name': 'project',
             'gate': {
@@ -291,43 +293,46 @@ class TestJob(BaseTestCase):
                           'playbooks/base'])
 
     def test_job_auth_inheritance(self):
+        tenant = model.Tenant('tenant')
         layout = model.Layout()
         project = model.Project('project', None)
         context = model.SourceContext(project, 'master', True)
 
-        base = configloader.JobParser.fromYaml(layout, {
+        base = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': context,
             'name': 'base',
             'timeout': 30,
         })
         layout.addJob(base)
-        pypi_upload_without_inherit = configloader.JobParser.fromYaml(layout, {
-            '_source_context': context,
-            'name': 'pypi-upload-without-inherit',
-            'parent': 'base',
-            'timeout': 40,
-            'auth': {
-                'secrets': [
-                    'pypi-credentials',
-                ]
-            }
-        })
+        pypi_upload_without_inherit = configloader.JobParser.fromYaml(
+            tenant, layout, {
+                '_source_context': context,
+                'name': 'pypi-upload-without-inherit',
+                'parent': 'base',
+                'timeout': 40,
+                'auth': {
+                    'secrets': [
+                        'pypi-credentials',
+                    ]
+                }
+            })
         layout.addJob(pypi_upload_without_inherit)
-        pypi_upload_with_inherit = configloader.JobParser.fromYaml(layout, {
-            '_source_context': context,
-            'name': 'pypi-upload-with-inherit',
-            'parent': 'base',
-            'timeout': 40,
-            'auth': {
-                'inherit': True,
-                'secrets': [
-                    'pypi-credentials',
-                ]
-            }
-        })
+        pypi_upload_with_inherit = configloader.JobParser.fromYaml(
+            tenant, layout, {
+                '_source_context': context,
+                'name': 'pypi-upload-with-inherit',
+                'parent': 'base',
+                'timeout': 40,
+                'auth': {
+                    'inherit': True,
+                    'secrets': [
+                        'pypi-credentials',
+                    ]
+                }
+            })
         layout.addJob(pypi_upload_with_inherit)
         pypi_upload_with_inherit_false = configloader.JobParser.fromYaml(
-            layout, {
+            tenant, layout, {
                 '_source_context': context,
                 'name': 'pypi-upload-with-inherit-false',
                 'parent': 'base',
@@ -340,20 +345,22 @@ class TestJob(BaseTestCase):
                 }
             })
         layout.addJob(pypi_upload_with_inherit_false)
-        in_repo_job_without_inherit = configloader.JobParser.fromYaml(layout, {
-            '_source_context': context,
-            'name': 'in-repo-job-without-inherit',
-            'parent': 'pypi-upload-without-inherit',
-        })
+        in_repo_job_without_inherit = configloader.JobParser.fromYaml(
+            tenant, layout, {
+                '_source_context': context,
+                'name': 'in-repo-job-without-inherit',
+                'parent': 'pypi-upload-without-inherit',
+            })
         layout.addJob(in_repo_job_without_inherit)
-        in_repo_job_with_inherit = configloader.JobParser.fromYaml(layout, {
-            '_source_context': context,
-            'name': 'in-repo-job-with-inherit',
-            'parent': 'pypi-upload-with-inherit',
-        })
+        in_repo_job_with_inherit = configloader.JobParser.fromYaml(
+            tenant, layout, {
+                '_source_context': context,
+                'name': 'in-repo-job-with-inherit',
+                'parent': 'pypi-upload-with-inherit',
+            })
         layout.addJob(in_repo_job_with_inherit)
         in_repo_job_with_inherit_false = configloader.JobParser.fromYaml(
-            layout, {
+            tenant, layout, {
                 '_source_context': context,
                 'name': 'in-repo-job-with-inherit-false',
                 'parent': 'pypi-upload-with-inherit-false',
@@ -367,6 +374,7 @@ class TestJob(BaseTestCase):
         self.assertNotIn('auth', in_repo_job_with_inherit_false.auth)
 
     def test_job_inheritance_job_tree(self):
+        tenant = model.Tenant('tenant')
         layout = model.Layout()
 
         pipeline = model.Pipeline('gate', layout)
@@ -375,20 +383,20 @@ class TestJob(BaseTestCase):
         project = model.Project('project', None)
         context = model.SourceContext(project, 'master', True)
 
-        base = configloader.JobParser.fromYaml(layout, {
+        base = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': context,
             'name': 'base',
             'timeout': 30,
         })
         layout.addJob(base)
-        python27 = configloader.JobParser.fromYaml(layout, {
+        python27 = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': context,
             'name': 'python27',
             'parent': 'base',
             'timeout': 40,
         })
         layout.addJob(python27)
-        python27diablo = configloader.JobParser.fromYaml(layout, {
+        python27diablo = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': context,
             'name': 'python27',
             'branches': [
@@ -398,7 +406,7 @@ class TestJob(BaseTestCase):
         })
         layout.addJob(python27diablo)
 
-        project_config = configloader.ProjectParser.fromYaml(layout, {
+        project_config = configloader.ProjectParser.fromYaml(tenant, layout, {
             '_source_context': context,
             'name': 'project',
             'gate': {
@@ -439,6 +447,7 @@ class TestJob(BaseTestCase):
         self.assertEqual(job.timeout, 70)
 
     def test_inheritance_keeps_matchers(self):
+        tenant = model.Tenant('tenant')
         layout = model.Layout()
 
         pipeline = model.Pipeline('gate', layout)
@@ -447,13 +456,13 @@ class TestJob(BaseTestCase):
         project = model.Project('project', None)
         context = model.SourceContext(project, 'master', True)
 
-        base = configloader.JobParser.fromYaml(layout, {
+        base = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': context,
             'name': 'base',
             'timeout': 30,
         })
         layout.addJob(base)
-        python27 = configloader.JobParser.fromYaml(layout, {
+        python27 = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': context,
             'name': 'python27',
             'parent': 'base',
@@ -462,7 +471,7 @@ class TestJob(BaseTestCase):
         })
         layout.addJob(python27)
 
-        project_config = configloader.ProjectParser.fromYaml(layout, {
+        project_config = configloader.ProjectParser.fromYaml(tenant, layout, {
             '_source_context': context,
             'name': 'project',
             'gate': {
@@ -486,11 +495,12 @@ class TestJob(BaseTestCase):
         self.assertEqual([], item.getJobs())
 
     def test_job_source_project(self):
+        tenant = model.Tenant('tenant')
         layout = model.Layout()
         base_project = model.Project('base_project', None)
         base_context = model.SourceContext(base_project, 'master', True)
 
-        base = configloader.JobParser.fromYaml(layout, {
+        base = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': base_context,
             'name': 'base',
         })
@@ -498,7 +508,7 @@ class TestJob(BaseTestCase):
 
         other_project = model.Project('other_project', None)
         other_context = model.SourceContext(other_project, 'master', True)
-        base2 = configloader.JobParser.fromYaml(layout, {
+        base2 = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': other_context,
             'name': 'base',
         })

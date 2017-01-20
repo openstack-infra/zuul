@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import abc
 import copy
 import os
 import re
@@ -19,6 +20,8 @@ import struct
 import time
 from uuid import uuid4
 import extras
+
+import six
 
 OrderedDict = extras.try_imports(['collections.OrderedDict',
                                   'ordereddict.OrderedDict'])
@@ -593,6 +596,62 @@ class PlaybookContext(object):
             path=self.path)
 
 
+@six.add_metaclass(abc.ABCMeta)
+class Role(object):
+    """A reference to an ansible role."""
+
+    def __init__(self, target_name):
+        self.target_name = target_name
+
+    @abc.abstractmethod
+    def __repr__(self):
+        pass
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    @abc.abstractmethod
+    def __eq__(self, other):
+        if not isinstance(other, Role):
+            return False
+        return (self.target_name == other.target_name)
+
+    @abc.abstractmethod
+    def toDict(self):
+        # Render to a dict to use in passing json to the launcher
+        return dict(target_name=self.target_name)
+
+
+class ZuulRole(Role):
+    """A reference to an ansible role in a Zuul project."""
+
+    def __init__(self, target_name, connection_name, project_name, secure):
+        super(ZuulRole, self).__init__(target_name)
+        self.connection_name = connection_name
+        self.project_name = project_name
+        self.secure = secure
+
+    def __repr__(self):
+        return '<ZuulRole %s %s>' % (self.project_name, self.target_name)
+
+    def __eq__(self, other):
+        if not isinstance(other, ZuulRole):
+            return False
+        return (super(ZuulRole, self).__eq__(other) and
+                self.connection_name == other.connection_name,
+                self.project_name == other.project_name,
+                self.secure == other.secure)
+
+    def toDict(self):
+        # Render to a dict to use in passing json to the launcher
+        d = super(ZuulRole, self).toDict()
+        d['type'] = 'zuul'
+        d['connection'] = self.connection_name
+        d['project'] = self.project_name
+        d['secure'] = self.secure
+        return d
+
+
 class Job(object):
 
     """A Job represents the defintion of actions to perform.
@@ -638,6 +697,7 @@ class Job(object):
             mutex=None,
             attempts=3,
             final=False,
+            roles=frozenset(),
         )
 
         # These are generally internal attributes which are not
@@ -734,7 +794,7 @@ class Job(object):
                                     "%s=%s with variant %s" % (
                                         repr(self), k, other._get(k),
                                         repr(other)))
-                if k not in set(['pre_run', 'post_run']):
+                if k not in set(['pre_run', 'post_run', 'roles']):
                     setattr(self, k, copy.deepcopy(other._get(k)))
 
         # Don't set final above so that we don't trip an error halfway
@@ -746,6 +806,8 @@ class Job(object):
             self.pre_run = self.pre_run + other.pre_run
         if other._get('post_run') is not None:
             self.post_run = other.post_run + self.post_run
+        if other._get('roles') is not None:
+            self.roles = self.roles.union(other.roles)
 
         for k in self.context_attributes:
             if (other._get(k) is not None and
@@ -2146,6 +2208,39 @@ class Tenant(object):
         self.project_repos = []
         # The unparsed config from those repos.
         self.project_repos_config = None
+        # A mapping of source -> {config_repos: {}, project_repos: {}}
+        self.sources = {}
+
+    def addConfigRepo(self, source, project):
+        sd = self.sources.setdefault(source.name,
+                                     {'config_repos': {},
+                                      'project_repos': {}})
+        sd['config_repos'][project.name] = project
+
+    def addProjectRepo(self, source, project):
+        sd = self.sources.setdefault(source.name,
+                                     {'config_repos': {},
+                                      'project_repos': {}})
+        sd['project_repos'][project.name] = project
+
+    def getRepo(self, source, project_name):
+        """Get a project given a source and project name
+
+        Returns a tuple (secure, project) or (None, None) if the
+        project is not found.
+
+        Secure indicates the project is a config repo.
+
+        """
+
+        sd = self.sources.get(source)
+        if not sd:
+            return (None, None)
+        if project_name in sd['config_repos']:
+            return (True, sd['config_repos'][project_name])
+        if project_name in sd['project_repos']:
+            return (False, sd['project_repos'][project_name])
+        return (None, None)
 
 
 class Abide(object):

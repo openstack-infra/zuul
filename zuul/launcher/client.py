@@ -334,6 +334,7 @@ class LaunchClient(object):
             params['playbooks'] = [x.toDict() for x in job.run]
             params['pre_playbooks'] = [x.toDict() for x in job.pre_run]
             params['post_playbooks'] = [x.toDict() for x in job.post_run]
+            params['roles'] = [x.toDict() for x in job.roles]
 
         nodes = []
         for node in item.current_build_set.getJobNodeSet(job.name).getNodes():

@@ -6,3 +6,5 @@
     - copy:
         src: "{{zuul._test.test_root}}/{{zuul.uuid}}.flag"
         dest: "{{zuul._test.test_root}}/{{zuul.uuid}}.copied"
+  roles:
+    - bare-role

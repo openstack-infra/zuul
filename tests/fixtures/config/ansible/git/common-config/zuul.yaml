@@ -40,3 +40,5 @@
     name: python27
     pre-run: pre
     post-run: post
+    roles:
+      - zuul: bare-role

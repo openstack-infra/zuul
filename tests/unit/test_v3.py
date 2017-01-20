@@ -155,3 +155,6 @@ class TestAnsible(AnsibleZuulTestCase):
         post_flag_path = os.path.join(self.test_root, build.uuid +
                                       '.post.flag')
         self.assertTrue(os.path.exists(post_flag_path))
+        bare_role_flag_path = os.path.join(self.test_root,
+                                           build.uuid + '.bare-role.flag')
+        self.assertTrue(os.path.exists(bare_role_flag_path))

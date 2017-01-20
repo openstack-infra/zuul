@@ -95,6 +95,8 @@ class JobDir(object):
         self.playbook = None  # A pointer to the candidate we have chosen
         self.pre_playbooks = []
         self.post_playbooks = []
+        self.roles = []
+        self.roles_path = []
         self.config = os.path.join(self.ansible_root, 'ansible.cfg')
         self.secure_config = os.path.join(
             self.secure_ansible_root, 'ansible.cfg')
@@ -123,6 +125,13 @@ class JobDir(object):
         playbook = JobDirPlaybook(root)
         self.playbooks.append(playbook)
         return playbook
+
+    def addRole(self):
+        count = len(self.roles)
+        root = os.path.join(self.ansible_root, 'role_%i' % (count,))
+        os.makedirs(root)
+        self.roles.append(root)
+        return root
 
     def cleanup(self):
         if not self.keep:
@@ -518,6 +527,8 @@ class AnsibleJob(object):
         # is the playbook in a repo that we have already prepared?
         self.preparePlaybookRepos(args)
 
+        self.prepareRoles(args)
+
         # TODOv3: Ansible the ansible thing here.
         self.prepareAnsibleFiles(args)
 
@@ -592,28 +603,27 @@ class AnsibleJob(object):
             hosts.append((node['name'], dict(ansible_connection='local')))
         return hosts
 
-    def _blockPluginDirs(self, fn):
-        '''Prevent execution of playbooks with plugins
+    def _blockPluginDirs(self, path):
+        '''Prevent execution of playbooks or roles with plugins
 
-        Plugins are loaded from roles and also if there is a plugin dir
-        adjacent to the playbook. Role exclusion will be handled elsewhere,
-        but while we're looking for playbooks, throw an error if the playbook
-        exists in a location that would cause a plugin to get loaded if the
-        playbook is not in a secure repository.
+        Plugins are loaded from roles and also if there is a plugin
+        dir adjacent to the playbook.  Throw an error if the path
+        contains a location that would cause a plugin to get loaded.
+
         '''
-        playbook_dir = os.path.dirname(os.path.abspath(fn))
-        for entry in os.listdir(playbook_dir):
+        for entry in os.listdir(path):
             if os.path.isdir(entry) and entry.endswith('_plugins'):
                 raise Exception(
                     "Ansible plugin dir %s found adjacent to playbook %s in"
-                    " non-secure repo." % (entry, fn))
+                    " non-secure repo." % (entry, path))
 
     def findPlaybook(self, path, required=False, secure=False):
         for ext in ['.yaml', '.yml']:
             fn = path + ext
             if os.path.exists(fn):
                 if not secure:
-                    self._blockPluginDirs(fn)
+                    playbook_dir = os.path.dirname(os.path.abspath(fn))
+                    self._blockPluginDirs(playbook_dir)
                 return fn
         if required:
             raise Exception("Unable to find playbook %s" % path)
@@ -681,6 +691,75 @@ class AnsibleJob(object):
             required=required,
             secure=playbook['secure'])
 
+    def prepareRoles(self, args):
+        for role in args['roles']:
+            if role['type'] == 'zuul':
+                root = self.jobdir.addRole()
+                self.prepareZuulRole(args, role, root)
+
+    def findRole(self, path, secure=False):
+        d = os.path.join(path, 'tasks')
+        if os.path.isdir(d):
+            # This is a bare role
+            if not secure:
+                self._blockPluginDirs(path)
+            # None signifies that the repo is a bare role
+            return None
+        d = os.path.join(path, 'roles')
+        if os.path.isdir(d):
+            # This repo has a collection of roles
+            if not secure:
+                for entry in os.listdir(d):
+                    self._blockPluginDirs(os.path.join(d, entry))
+            return d
+        # We assume the repository itself is a collection of roles
+        if not secure:
+            for entry in os.listdir(path):
+                self._blockPluginDirs(os.path.join(path, entry))
+        return path
+
+    def prepareZuulRole(self, args, role, root):
+        self.log.debug("Prepare zuul role for %s" % (role,))
+        # Check out the role repo if needed
+        source = self.launcher_server.connections.getSource(
+            role['connection'])
+        project = source.getProject(role['project'])
+        # TODO(jeblair): construct the url in the merger itself
+        url = source.getGitUrl(project)
+        role_repo = None
+        if not role['secure']:
+            # This is a project repo, so it is safe to use the already
+            # checked out version (from speculative merging) of the
+            # role
+
+            for i in args['items']:
+                if (i['connection_name'] == role['connection'] and
+                    i['project'] == role['project']):
+                    # We already have this repo prepared;
+                    # copy it into location.
+
+                    path = os.path.join(self.jobdir.git_root,
+                                        project.name)
+                    link = os.path.join(root, role['name'])
+                    os.symlink(path, link)
+                    role_repo = link
+                    break
+
+        # The role repo is either a config repo, or it isn't in
+        # the stack of changes we are testing, so check out the branch
+        # tip into a dedicated space.
+
+        if not role_repo:
+            merger = self.launcher_server._getMerger(root)
+            merger.checkoutBranch(project.name, url, 'master')
+            role_repo = os.path.join(root, project.name)
+
+        role_path = self.findRole(role_repo, secure=role['secure'])
+        if role_path is None:
+            # In the case of a bare role, add the containing directory
+            role_path = root
+        self.jobdir.roles_path.append(role_path)
+
     def prepareAnsibleFiles(self, args):
         with open(self.jobdir.inventory, 'w') as inventory:
             for host_name, host_vars in self.getHostList(args):
@@ -710,6 +789,9 @@ class AnsibleJob(object):
             config.write('gathering = explicit\n')
             config.write('library = %s\n'
                          % self.launcher_server.library_dir)
+            if self.jobdir.roles_path:
+                config.write('roles_path = %s\n' %
+                             ':'.join(self.jobdir.roles_path))
             # bump the timeout because busy nodes may take more than
             # 10s to respond
             config.write('timeout = 30\n')

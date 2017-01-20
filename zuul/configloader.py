@@ -84,6 +84,14 @@ class JobParser(object):
                 vs.Required('image'): str,
                 }
 
+        zuul_role = {vs.Required('zuul'): str,
+                     'name': str}
+
+        galaxy_role = {vs.Required('galaxy'): str,
+                       'name': str}
+
+        role = vs.Any(zuul_role, galaxy_role)
+
         job = {vs.Required('name'): str,
                'parent': str,
                'queue-name': str,
@@ -106,6 +114,7 @@ class JobParser(object):
                'post-run': to_list(str),
                'run': str,
                '_source_context': model.SourceContext,
+               'roles': to_list(role),
                }
 
         return vs.Schema(job)
@@ -124,7 +133,7 @@ class JobParser(object):
     ]
 
     @staticmethod
-    def fromYaml(layout, conf):
+    def fromYaml(tenant, layout, conf):
         JobParser.getSchema()(conf)
 
         # NB: The default detection system in the Job class requires
@@ -183,6 +192,14 @@ class JobParser(object):
             # accumulate onto any previously applied tags.
             job.tags = job.tags.union(set(tags))
 
+        roles = []
+        for role in conf.get('roles', []):
+            if 'zuul' in role:
+                r = JobParser._makeZuulRole(tenant, job, role)
+                if r:
+                    roles.append(r)
+        job.roles = job.roles.union(set(roles))
+
         # If the definition for this job came from a project repo,
         # implicitly apply a branch matcher for the branch it was on.
         if (not job.source_context.secure):
@@ -209,6 +226,20 @@ class JobParser(object):
                 matchers)
         return job
 
+    @staticmethod
+    def _makeZuulRole(tenant, job, role):
+        name = role['zuul'].split('/')[-1]
+
+        # TODOv3(jeblair): this limits roles to the same
+        # source; we should remove that limitation.
+        source = job.source_context.project.connection_name
+        (secure, project) = tenant.getRepo(source, role['zuul'])
+        if project is None:
+            return None
+
+        return model.ZuulRole(role.get('name', name), source,
+                              project.name, secure)
+
 
 class ProjectTemplateParser(object):
     log = logging.getLogger("zuul.ProjectTemplateParser")
@@ -229,7 +260,7 @@ class ProjectTemplateParser(object):
         return vs.Schema(project_template)
 
     @staticmethod
-    def fromYaml(layout, conf):
+    def fromYaml(tenant, layout, conf):
         ProjectTemplateParser.getSchema(layout)(conf)
         # Make a copy since we modify this later via pop
         conf = copy.deepcopy(conf)
@@ -243,12 +274,12 @@ class ProjectTemplateParser(object):
             project_template.pipelines[pipeline.name] = project_pipeline
             project_pipeline.queue_name = conf_pipeline.get('queue')
             project_pipeline.job_tree = ProjectTemplateParser._parseJobTree(
-                layout, conf_pipeline.get('jobs', []),
+                tenant, layout, conf_pipeline.get('jobs', []),
                 source_context)
         return project_template
 
     @staticmethod
-    def _parseJobTree(layout, conf, source_context, tree=None):
+    def _parseJobTree(tenant, layout, conf, source_context, tree=None):
         if not tree:
             tree = model.JobTree(None)
         for conf_job in conf:
@@ -264,7 +295,8 @@ class ProjectTemplateParser(object):
                     # We are overriding params, so make a new job def
                     attrs['name'] = jobname
                     attrs['_source_context'] = source_context
-                    subtree = tree.addJob(JobParser.fromYaml(layout, attrs))
+                    subtree = tree.addJob(JobParser.fromYaml(
+                        tenant, layout, attrs))
                 else:
                     # Not overriding, so add a blank job
                     job = model.Job(jobname)
@@ -272,9 +304,8 @@ class ProjectTemplateParser(object):
 
                 if jobs:
                     # This is the root of a sub tree
-                    ProjectTemplateParser._parseJobTree(layout, jobs,
-                                                        source_context,
-                                                        subtree)
+                    ProjectTemplateParser._parseJobTree(
+                        tenant, layout, jobs, source_context, subtree)
             else:
                 raise Exception("Job must be a string or dictionary")
         return tree
@@ -299,7 +330,7 @@ class ProjectParser(object):
         return vs.Schema(project)
 
     @staticmethod
-    def fromYaml(layout, conf):
+    def fromYaml(tenant, layout, conf):
         # TODOv3(jeblair): This may need some branch-specific
         # configuration for in-repo configs.
         ProjectParser.getSchema(layout)(conf)
@@ -309,7 +340,7 @@ class ProjectParser(object):
         # The way we construct a project definition is by parsing the
         # definition as a template, then applying all of the
         # templates, including the newly parsed one, in order.
-        project_template = ProjectTemplateParser.fromYaml(layout, conf)
+        project_template = ProjectTemplateParser.fromYaml(tenant, layout, conf)
         configs = [layout.project_templates[name] for name in conf_templates]
         configs.append(project_template)
         project = model.ProjectConfig(conf['name'])
@@ -551,6 +582,10 @@ class TenantParser(object):
         unparsed_config = model.UnparsedTenantConfig()
         tenant.config_repos, tenant.project_repos = \
             TenantParser._loadTenantConfigRepos(connections, conf)
+        for source, repo in tenant.config_repos:
+            tenant.addConfigRepo(source, repo)
+        for source, repo in tenant.project_repos:
+            tenant.addProjectRepo(source, repo)
         tenant.config_repos_config, tenant.project_repos_config = \
             TenantParser._loadTenantInRepoLayouts(merger, connections,
                                                   tenant.config_repos,
@@ -558,8 +593,10 @@ class TenantParser(object):
                                                   cached)
         unparsed_config.extend(tenant.config_repos_config)
         unparsed_config.extend(tenant.project_repos_config)
-        tenant.layout = TenantParser._parseLayout(base, unparsed_config,
-                                                  scheduler, connections)
+        tenant.layout = TenantParser._parseLayout(base, tenant,
+                                                  unparsed_config,
+                                                  scheduler,
+                                                  connections)
         tenant.layout.tenant = tenant
         return tenant
 
@@ -672,7 +709,7 @@ class TenantParser(object):
         return config
 
     @staticmethod
-    def _parseLayout(base, data, scheduler, connections):
+    def _parseLayout(base, tenant, data, scheduler, connections):
         layout = model.Layout()
 
         for config_pipeline in data.pipelines:
@@ -684,15 +721,15 @@ class TenantParser(object):
             layout.addNodeSet(NodeSetParser.fromYaml(layout, config_nodeset))
 
         for config_job in data.jobs:
-            layout.addJob(JobParser.fromYaml(layout, config_job))
+            layout.addJob(JobParser.fromYaml(tenant, layout, config_job))
 
         for config_template in data.project_templates:
             layout.addProjectTemplate(ProjectTemplateParser.fromYaml(
-                layout, config_template))
+                tenant, layout, config_template))
 
         for config_project in data.projects:
             layout.addProjectConfig(ProjectParser.fromYaml(
-                layout, config_project))
+                tenant, layout, config_project))
 
         for pipeline in layout.pipelines.values():
             pipeline.manager._postConfig(layout)
@@ -765,14 +802,14 @@ class ConfigLoader(object):
         layout.pipelines = tenant.layout.pipelines
 
         for config_job in config.jobs:
-            layout.addJob(JobParser.fromYaml(layout, config_job))
+            layout.addJob(JobParser.fromYaml(tenant, layout, config_job))
 
         for config_template in config.project_templates:
             layout.addProjectTemplate(ProjectTemplateParser.fromYaml(
-                layout, config_template))
+                tenant, layout, config_template))
 
         for config_project in config.projects:
             layout.addProjectConfig(ProjectParser.fromYaml(
-                layout, config_project), update_pipeline=False)
+                tenant, layout, config_project), update_pipeline=False)
 
         return layout
