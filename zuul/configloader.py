@@ -103,6 +103,7 @@ class JobParser(object):
                'attempts': int,
                '_source_project': model.Project,
                '_source_branch': vs.Any(str, None),
+               '_source_configrepo': bool,
                }
 
         return vs.Schema(job)
@@ -143,12 +144,16 @@ class JobParser(object):
             # accumulate onto any previously applied tags from
             # metajobs.
             job.tags = job.tags.union(set(tags))
-        # The source attributes may not be overridden -- they are
-        # always supplied by the config loader.  They correspond to
-        # the Project instance of the repo where it originated, and
-        # the branch name.
+        # The source attributes and playbook may not be overridden --
+        # they are always supplied by the config loader.  They
+        # correspond to the Project instance of the repo where it
+        # originated, and the branch name.
         job.source_project = conf.get('_source_project')
         job.source_branch = conf.get('_source_branch')
+        job.source_configrepo = conf.get('_source_configrepo')
+        # TODOv3(jeblair): verify the playbook exists
+        # TODOv3(jeblair): remove hardcoded extension
+        job.playbook = os.path.join('playbooks', job.name + '.yaml')
         job.failure_message = conf.get('failure-message', job.failure_message)
         job.success_message = conf.get('success-message', job.success_message)
         job.failure_url = conf.get('failure-url', job.failure_url)
@@ -156,7 +161,7 @@ class JobParser(object):
 
         # If the definition for this job came from a project repo,
         # implicitly apply a branch matcher for the branch it was on.
-        if job.source_branch:
+        if (not job.source_configrepo) and job.source_branch:
             branches = [job.source_branch]
         elif 'branches' in conf:
             branches = as_list(conf['branches'])
@@ -546,6 +551,7 @@ class TenantParser(object):
             job = merger.getFiles(project.name, url, 'master',
                                   files=['zuul.yaml', '.zuul.yaml'])
             job.project = project
+            job.branch = 'master'
             job.config_repo = True
             jobs.append(job)
 
@@ -579,7 +585,7 @@ class TenantParser(object):
                         (job.project, fn))
                     if job.config_repo:
                         incdata = TenantParser._parseConfigRepoLayout(
-                            job.files[fn], job.project)
+                            job.files[fn], job.project, job.branch)
                         config_repos_config.extend(incdata)
                     else:
                         incdata = TenantParser._parseProjectRepoLayout(
@@ -589,11 +595,10 @@ class TenantParser(object):
         return config_repos_config, project_repos_config
 
     @staticmethod
-    def _parseConfigRepoLayout(data, project):
+    def _parseConfigRepoLayout(data, project, branch):
         # This is the top-level configuration for a tenant.
         config = model.UnparsedTenantConfig()
-        config.extend(yaml.load(data), project)
-
+        config.extend(yaml.load(data), project, branch, True)
         return config
 
     @staticmethod
@@ -601,7 +606,7 @@ class TenantParser(object):
         # TODOv3(jeblair): this should implement some rules to protect
         # aspects of the config that should not be changed in-repo
         config = model.UnparsedTenantConfig()
-        config.extend(yaml.load(data), project, branch)
+        config.extend(yaml.load(data), project, branch, False)
 
         return config
 

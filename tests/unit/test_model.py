@@ -56,7 +56,7 @@ class TestJob(BaseTestCase):
         pipeline = model.Pipeline('gate', layout)
         layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
-        project = model.Project('project')
+        project = model.Project('project', None)
 
         base = configloader.JobParser.fromYaml(layout, {
             '_source_project': project,
@@ -122,7 +122,7 @@ class TestJob(BaseTestCase):
 
     def test_job_auth_inheritance(self):
         layout = model.Layout()
-        project = model.Project('project')
+        project = model.Project('project', None)
 
         base = configloader.JobParser.fromYaml(layout, {
             '_source_project': project,
@@ -201,7 +201,7 @@ class TestJob(BaseTestCase):
         pipeline = model.Pipeline('gate', layout)
         layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
-        project = model.Project('project')
+        project = model.Project('project', None)
 
         base = configloader.JobParser.fromYaml(layout, {
             '_source_project': project,
@@ -271,7 +271,7 @@ class TestJob(BaseTestCase):
         pipeline = model.Pipeline('gate', layout)
         layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
-        project = model.Project('project')
+        project = model.Project('project', None)
 
         base = configloader.JobParser.fromYaml(layout, {
             '_source_project': project,
@@ -312,14 +312,14 @@ class TestJob(BaseTestCase):
 
     def test_job_source_project(self):
         layout = model.Layout()
-        base_project = model.Project('base_project')
+        base_project = model.Project('base_project', None)
         base = configloader.JobParser.fromYaml(layout, {
             '_source_project': base_project,
             'name': 'base',
         })
         layout.addJob(base)
 
-        other_project = model.Project('other_project')
+        other_project = model.Project('other_project', None)
         base2 = configloader.JobParser.fromYaml(layout, {
             '_source_project': other_project,
             'name': 'base',

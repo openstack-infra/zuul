@@ -26,7 +26,6 @@ import time
 import traceback
 
 import gear
-import yaml
 
 import zuul.merger
 import zuul.ansible.library
@@ -76,7 +75,9 @@ class JobDir(object):
         os.makedirs(self.ansible_root)
         self.known_hosts = os.path.join(self.ansible_root, 'known_hosts')
         self.inventory = os.path.join(self.ansible_root, 'inventory')
-        self.playbook = os.path.join(self.ansible_root, 'playbook')
+        self.playbook = None
+        self.playbook_root = os.path.join(self.ansible_root, 'playbook')
+        os.makedirs(self.playbook_root)
         self.post_playbook = os.path.join(self.ansible_root, 'post_playbook')
         self.config = os.path.join(self.ansible_root, 'ansible.cfg')
         self.ansible_log = os.path.join(self.ansible_root, 'ansible_log.txt')
@@ -358,6 +359,9 @@ class LaunchServer(object):
             else:
                 commit = args['items'][-1]['newrev']  # noqa
 
+            # is the playbook in a repo that we have already prepared?
+            jobdir.playbook = self.preparePlaybookRepo(jobdir, args)
+
             # TODOv3: Ansible the ansible thing here.
             self.prepareAnsibleFiles(jobdir, args)
 
@@ -402,6 +406,36 @@ class LaunchServer(object):
             hosts.append((node['name'], dict(ansible_connection='local')))
         return hosts
 
+    def preparePlaybookRepo(self, jobdir, args):
+        # Check out the playbook repo if needed and return the path to
+        # the playbook that should be run.
+        playbook = args['playbook']
+        source = self.connections.getSource(playbook['connection'])
+        project = source.getProject(playbook['project'])
+        # TODO(jeblair): construct the url in the merger itself
+        url = source.getGitUrl(project)
+        if not playbook['config_repo']:
+            # This is a project repo, so it is safe to use the already
+            # checked out version (from speculative merging) of the
+            # playbook
+            for i in args['items']:
+                if (i['connection_name'] == playbook['connection'] and
+                    i['project'] == playbook['project']):
+                    # We already have this repo prepared
+                    return os.path.join(jobdir.git_root,
+                                        project.name,
+                                        playbook['path'])
+        # The playbook repo is either a config repo, or it isn't in
+        # the stack of changes we are testing, so check out the branch
+        # tip into a dedicated space.
+
+        merger = self._getMerger(jobdir.playbook_root)
+        merger.checkoutBranch(project.name, url, playbook['branch'])
+
+        return os.path.join(jobdir.playbook_root,
+                            project.name,
+                            playbook['path'])
+
     def prepareAnsibleFiles(self, jobdir, args):
         with open(jobdir.inventory, 'w') as inventory:
             for host_name, host_vars in self.getHostList(args):
@@ -410,11 +444,6 @@ class LaunchServer(object):
                 for k, v in host_vars.items():
                     inventory.write('%s=%s' % (k, v))
                 inventory.write('\n')
-        with open(jobdir.playbook, 'w') as playbook:
-            play = dict(hosts='localhost',
-                        tasks=[dict(name='test',
-                                    shell='echo Hello world')])
-            playbook.write(yaml.dump([play]))
         with open(jobdir.config, 'w') as config:
             config.write('[defaults]\n')
             config.write('hostfile = %s\n' % jobdir.inventory)

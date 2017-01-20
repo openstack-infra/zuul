@@ -98,8 +98,16 @@ class TestInRepoConfig(AnsibleZuulTestCase):
                     - project-test2
             """)
 
+        in_repo_playbook = textwrap.dedent(
+            """
+            - hosts: all
+              tasks: []
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf,
+                     'playbooks/project-test2.yaml': in_repo_playbook}
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
-                                           files={'.zuul.yaml': in_repo_conf})
+                                           files=file_dict)
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
@@ -110,3 +118,16 @@ class TestInRepoConfig(AnsibleZuulTestCase):
                          "A should report start and success")
         self.assertIn('tenant-one-gate', A.messages[1],
                       "A should transit tenant-one gate")
+
+
+class TestAnsible(AnsibleZuulTestCase):
+    # A temporary class to hold new tests while others are disabled
+
+    tenant_config_file = 'config/ansible/main.yaml'
+
+    def test_playbook(self):
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('python27').result,
+                         'SUCCESS')
