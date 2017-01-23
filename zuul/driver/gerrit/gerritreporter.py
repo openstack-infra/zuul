@@ -30,13 +30,13 @@ class GerritReporter(BaseReporter):
         message = self._formatItemReport(pipeline, item)
 
         self.log.debug("Report change %s, params %s, message: %s" %
-                       (item.change, self.reporter_config, message))
+                       (item.change, self.config, message))
         changeid = '%s,%s' % (item.change.number, item.change.patchset)
         item.change._ref_sha = source.getRefSha(
             item.change.project.name, 'refs/heads/' + item.change.branch)
 
         return self.connection.review(item.change.project.name, changeid,
-                                      message, self.reporter_config)
+                                      message, self.config)
 
     def getSubmitAllowNeeds(self):
         """Get a list of code review labels that are allowed to be
@@ -44,7 +44,7 @@ class GerritReporter(BaseReporter):
         to this queue.  In other words, the list of review labels
         this reporter itself is likely to set before submitting.
         """
-        return self.reporter_config
+        return self.config
 
 
 def getSchema():

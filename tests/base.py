@@ -45,8 +45,8 @@ import statsd
 import testtools
 from git.exc import NoSuchPathError
 
-import zuul.connection.gerrit
-import zuul.connection.smtp
+import zuul.driver.gerrit.gerritsource as gerritsource
+import zuul.driver.gerrit.gerritconnection as gerritconnection
 import zuul.scheduler
 import zuul.webapp
 import zuul.rpclistener
@@ -58,12 +58,6 @@ import zuul.merger.client
 import zuul.merger.merger
 import zuul.merger.server
 import zuul.nodepool
-import zuul.reporter.gerrit
-import zuul.reporter.smtp
-import zuul.source.gerrit
-import zuul.trigger.gerrit
-import zuul.trigger.timer
-import zuul.trigger.zuultrigger
 import zuul.zk
 
 FIXTURE_DIR = os.path.join(os.path.dirname(__file__),
@@ -388,7 +382,7 @@ class FakeChange(object):
         self.reported += 1
 
 
-class FakeGerritConnection(zuul.connection.gerrit.GerritConnection):
+class FakeGerritConnection(gerritconnection.GerritConnection):
     """A Fake Gerrit connection for use in tests.
 
     This subclasses
@@ -398,9 +392,9 @@ class FakeGerritConnection(zuul.connection.gerrit.GerritConnection):
 
     log = logging.getLogger("zuul.test.FakeGerritConnection")
 
-    def __init__(self, connection_name, connection_config,
+    def __init__(self, driver, connection_name, connection_config,
                  changes_db=None, upstream_root=None):
-        super(FakeGerritConnection, self).__init__(connection_name,
+        super(FakeGerritConnection, self).__init__(driver, connection_name,
                                                    connection_config)
 
         self.event_queue = Queue.Queue()
@@ -1225,14 +1219,15 @@ class ZuulTestCase(BaseTestCase):
 
         self.config.set('gearman', 'port', str(self.gearman_server.port))
 
-        zuul.source.gerrit.GerritSource.replication_timeout = 1.5
-        zuul.source.gerrit.GerritSource.replication_retry_interval = 0.5
-        zuul.connection.gerrit.GerritEventConnector.delay = 0.0
+        gerritsource.GerritSource.replication_timeout = 1.5
+        gerritsource.GerritSource.replication_retry_interval = 0.5
+        gerritconnection.GerritEventConnector.delay = 0.0
 
         self.sched = zuul.scheduler.Scheduler(self.config)
 
         self.useFixture(fixtures.MonkeyPatch('swiftclient.client.Connection',
                                              FakeSwiftClientConnection))
+
         self.swift = zuul.lib.swift.Swift(self.config)
 
         self.event_queues = [
@@ -1294,7 +1289,25 @@ class ZuulTestCase(BaseTestCase):
         self.assertFinalState()
 
     def configure_connections(self):
-        # Register connections from the config
+        # Set up gerrit related fakes
+        # Set a changes database so multiple FakeGerrit's can report back to
+        # a virtual canonical database given by the configured hostname
+        self.gerrit_changes_dbs = {}
+
+        def getGerritConnection(driver, name, config):
+            db = self.gerrit_changes_dbs.setdefault(config['server'], {})
+            con = FakeGerritConnection(driver, name, config,
+                                       changes_db=db,
+                                       upstream_root=self.upstream_root)
+            self.event_queues.append(con.event_queue)
+            setattr(self, 'fake_' + name, con)
+            return con
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'zuul.driver.gerrit.GerritDriver.getConnection',
+            getGerritConnection))
+
+        # Set up smtp related fakes
         self.smtp_messages = []
 
         def FakeSMTPFactory(*args, **kw):
@@ -1303,60 +1316,9 @@ class ZuulTestCase(BaseTestCase):
 
         self.useFixture(fixtures.MonkeyPatch('smtplib.SMTP', FakeSMTPFactory))
 
-        # Set a changes database so multiple FakeGerrit's can report back to
-        # a virtual canonical database given by the configured hostname
-        self.gerrit_changes_dbs = {}
+        # Register connections from the config using fakes
         self.connections = zuul.lib.connections.ConnectionRegistry()
-
-        for section_name in self.config.sections():
-            con_match = re.match(r'^connection ([\'\"]?)(.*)(\1)$',
-                                 section_name, re.I)
-            if not con_match:
-                continue
-            con_name = con_match.group(2)
-            con_config = dict(self.config.items(section_name))
-
-            if 'driver' not in con_config:
-                raise Exception("No driver specified for connection %s."
-                                % con_name)
-
-            con_driver = con_config['driver']
-
-            # TODO(jhesketh): load the required class automatically
-            if con_driver == 'gerrit':
-                if con_config['server'] not in self.gerrit_changes_dbs.keys():
-                    self.gerrit_changes_dbs[con_config['server']] = {}
-                self.connections.connections[con_name] = FakeGerritConnection(
-                    con_name, con_config,
-                    changes_db=self.gerrit_changes_dbs[con_config['server']],
-                    upstream_root=self.upstream_root
-                )
-                self.event_queues.append(
-                    self.connections.connections[con_name].event_queue)
-                setattr(self, 'fake_' + con_name,
-                        self.connections.connections[con_name])
-            elif con_driver == 'smtp':
-                self.connections.connections[con_name] = \
-                    zuul.connection.smtp.SMTPConnection(con_name, con_config)
-            else:
-                raise Exception("Unknown driver, %s, for connection %s"
-                                % (con_config['driver'], con_name))
-
-        # If the [gerrit] or [smtp] sections still exist, load them in as a
-        # connection named 'gerrit' or 'smtp' respectfully
-
-        if 'gerrit' in self.config.sections():
-            self.gerrit_changes_dbs['gerrit'] = {}
-            self.event_queues.append(
-                self.connections.connections[con_name].event_queue)
-            self.connections.connections['gerrit'] = FakeGerritConnection(
-                '_legacy_gerrit', dict(self.config.items('gerrit')),
-                changes_db=self.gerrit_changes_dbs['gerrit'])
-
-        if 'smtp' in self.config.sections():
-            self.connections.connections['smtp'] = \
-                zuul.connection.smtp.SMTPConnection(
-                    '_legacy_smtp', dict(self.config.items('smtp')))
+        self.connections.configure(self.config)
 
     def setup_config(self):
         # This creates the per-test configuration object.  It can be

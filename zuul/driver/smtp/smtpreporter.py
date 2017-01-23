@@ -29,15 +29,15 @@ class SMTPReporter(BaseReporter):
         message = self._formatItemReport(pipeline, item)
 
         self.log.debug("Report change %s, params %s, message: %s" %
-                       (item.change, self.reporter_config, message))
+                       (item.change, self.config, message))
 
-        from_email = self.reporter_config['from'] \
-            if 'from' in self.reporter_config else None
-        to_email = self.reporter_config['to'] \
-            if 'to' in self.reporter_config else None
+        from_email = self.config['from'] \
+            if 'from' in self.config else None
+        to_email = self.config['to'] \
+            if 'to' in self.config else None
 
-        if 'subject' in self.reporter_config:
-            subject = self.reporter_config['subject'].format(
+        if 'subject' in self.config:
+            subject = self.config['subject'].format(
                 change=item.change)
         else:
             subject = "Report for change %s" % item.change

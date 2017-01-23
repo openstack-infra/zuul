@@ -328,8 +328,9 @@ class PipelineManager(object):
                     self.reportStart(item)
             self.enqueueChangesBehind(change, quiet, ignore_requirements,
                                       change_queue)
-            for trigger in self.sched.triggers.values():
-                trigger.onChangeEnqueued(item.change, self.pipeline)
+            zuul_driver = self.sched.connections.drivers['zuul']
+            tenant = self.pipeline.layout.tenant
+            zuul_driver.onChangeEnqueued(tenant, item.change, self.pipeline)
             return True
 
     def dequeueItem(self, item):
@@ -683,8 +684,10 @@ class PipelineManager(object):
                 self.log.debug("%s window size increased to %s" %
                                (change_queue, change_queue.window))
 
-                for trigger in self.sched.triggers.values():
-                    trigger.onChangeMerged(item.change, self.pipeline.source)
+                zuul_driver = self.sched.connections.drivers['zuul']
+                tenant = self.pipeline.layout.tenant
+                zuul_driver.onChangeMerged(tenant, item.change,
+                                           self.pipeline.source)
 
     def _reportItem(self, item):
         self.log.debug("Reporting change %s" % item.change)

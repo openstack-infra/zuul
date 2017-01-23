@@ -25,9 +25,8 @@ class SMTPConnection(BaseConnection):
     driver_name = 'smtp'
     log = logging.getLogger("connection.smtp")
 
-    def __init__(self, connection_name, connection_config):
-
-        super(SMTPConnection, self).__init__(connection_name,
+    def __init__(self, driver, connection_name, connection_config):
+        super(SMTPConnection, self).__init__(driver, connection_name,
                                              connection_config)
 
         self.smtp_server = self.connection_config.get(

@@ -23,9 +23,10 @@ class BaseTrigger(object):
 
     Defines the exact public methods that must be supplied."""
 
-    def __init__(self, trigger_config={}, connection=None):
-        self.trigger_config = trigger_config
+    def __init__(self, driver, connection, config=None):
+        self.driver = driver
         self.connection = connection
+        self.config = config or {}
 
     @abc.abstractmethod
     def getEventFilters(self, trigger_conf):

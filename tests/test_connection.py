@@ -12,20 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import logging
-import testtools
-
-import zuul.connection.gerrit
-
 from tests.base import ZuulTestCase
-
-
-class TestGerritConnection(testtools.TestCase):
-    log = logging.getLogger("zuul.test_connection")
-
-    def test_driver_name(self):
-        self.assertEqual('gerrit',
-                         zuul.connection.gerrit.GerritConnection.driver_name)
 
 
 class TestConnections(ZuulTestCase):

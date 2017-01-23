@@ -308,37 +308,17 @@ class PipelineParser(object):
 
     @staticmethod
     def getDriverSchema(dtype, connections):
-        # TODO(jhesketh): Make the driver discovery dynamic
-        connection_drivers = {
-            'trigger': {
-                'gerrit': 'zuul.trigger.gerrit',
-            },
-            'reporter': {
-                'gerrit': 'zuul.reporter.gerrit',
-                'smtp': 'zuul.reporter.smtp',
-            },
-        }
-        standard_drivers = {
-            'trigger': {
-                'timer': 'zuul.trigger.timer',
-                'zuul': 'zuul.trigger.zuultrigger',
-            }
+        methods = {
+            'trigger': 'getTriggerSchema',
+            'reporter': 'getReporterSchema',
         }
 
         schema = {}
         # Add the configured connections as available layout options
         for connection_name, connection in connections.connections.items():
-            for dname, dmod in connection_drivers.get(dtype, {}).items():
-                if connection.driver_name == dname:
-                    schema[connection_name] = to_list(__import__(
-                        connection_drivers[dtype][dname],
-                        fromlist=['']).getSchema())
-
-        # Standard drivers are always available and don't require a unique
-        # (connection) name
-        for dname, dmod in standard_drivers.get(dtype, {}).items():
-            schema[dname] = to_list(__import__(
-                standard_drivers[dtype][dname], fromlist=['']).getSchema())
+            method = getattr(connection.driver, methods[dtype], None)
+            if method:
+                schema[connection_name] = to_list(method())
 
         return schema
 
