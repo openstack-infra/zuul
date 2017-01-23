@@ -23,45 +23,37 @@ logging.basicConfig(level=logging.DEBUG,
                     '%(levelname)-8s %(message)s')
 
 
-class TestZuulTrigger(ZuulTestCase):
-    """Test Zuul Trigger"""
-
-    def setUp(self):
-        self.skip("Disabled for early v3 development")
+class TestZuulTriggerParentChangeEnqueued(ZuulTestCase):
+    tenant_config_file = 'config/zuultrigger/parent-change-enqueued/main.yaml'
 
     def test_zuul_trigger_parent_change_enqueued(self):
         "Test Zuul trigger event: parent-change-enqueued"
-        self.updateConfigLayout(
-            'tests/fixtures/layout-zuultrigger-enqueued.yaml')
-        self.sched.reconfigure(self.config)
-        self.registerJobs()
-
         # This test has the following three changes:
         # B1 -> A; B2 -> A
         # When A is enqueued in the gate, B1 and B2 should both attempt
         # to be enqueued in both pipelines.  B1 should end up in check
         # and B2 in gate because of differing pipeline requirements.
-        self.worker.hold_jobs_in_build = True
+        self.launch_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B1 = self.fake_gerrit.addFakeChange('org/project', 'master', 'B1')
         B2 = self.fake_gerrit.addFakeChange('org/project', 'master', 'B2')
-        A.addApproval('CRVW', 2)
-        B1.addApproval('CRVW', 2)
-        B2.addApproval('CRVW', 2)
-        A.addApproval('VRFY', 1)    # required by gate
-        B1.addApproval('VRFY', -1)  # should go to check
-        B2.addApproval('VRFY', 1)   # should go to gate
-        B1.addApproval('APRV', 1)
-        B2.addApproval('APRV', 1)
+        A.addApproval('code-review', 2)
+        B1.addApproval('code-review', 2)
+        B2.addApproval('code-review', 2)
+        A.addApproval('verified', 1)    # required by gate
+        B1.addApproval('verified', -1)  # should go to check
+        B2.addApproval('verified', 1)   # should go to gate
+        B1.addApproval('approved', 1)
+        B2.addApproval('approved', 1)
         B1.setDependsOn(A, 1)
         B2.setDependsOn(A, 1)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         # Jobs are being held in build to make sure that 3,1 has time
         # to enqueue behind 1,1 so that the test is more
         # deterministic.
         self.waitUntilSettled()
-        self.worker.hold_jobs_in_build = False
-        self.worker.release()
+        self.launch_server.hold_jobs_in_build = False
+        self.launch_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(len(self.history), 3)
@@ -75,13 +67,15 @@ class TestZuulTrigger(ZuulTestCase):
             else:
                 raise Exception("Unknown job")
 
-    def test_zuul_trigger_project_change_merged(self):
-        "Test Zuul trigger event: project-change-merged"
-        self.updateConfigLayout(
-            'tests/fixtures/layout-zuultrigger-merged.yaml')
-        self.sched.reconfigure(self.config)
-        self.registerJobs()
 
+class TestZuulTriggerProjectChangeMerged(ZuulTestCase):
+
+    def setUp(self):
+        self.skip("Disabled because v3 noop job does not perform merge")
+
+    tenant_config_file = 'config/zuultrigger/project-change-merged/main.yaml'
+
+    def test_zuul_trigger_project_change_merged(self):
         # This test has the following three changes:
         # A, B, C;  B conflicts with A, but C does not.
         # When A is merged, B and C should be checked for conflicts,
@@ -93,12 +87,12 @@ class TestZuulTrigger(ZuulTestCase):
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
         D = self.fake_gerrit.addFakeChange('org/project', 'master', 'D')
         E = self.fake_gerrit.addFakeChange('org/project', 'master', 'E')
-        A.addPatchset(['conflict'])
-        B.addPatchset(['conflict'])
-        D.addPatchset(['conflict2'])
-        E.addPatchset(['conflict2'])
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
+        A.addPatchset({'conflict': 'foo'})
+        B.addPatchset({'conflict': 'bar'})
+        D.addPatchset({'conflict2': 'foo'})
+        E.addPatchset({'conflict2': 'bar'})
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(len(self.history), 1)
@@ -124,8 +118,8 @@ class TestZuulTrigger(ZuulTestCase):
         # configuration.
         self.sched.reconfigure(self.config)
 
-        D.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(D.addApproval('APRV', 1))
+        D.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(D.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(len(self.history), 2)
