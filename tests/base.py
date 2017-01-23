@@ -676,6 +676,7 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
     """
     def __init__(self, *args, **kw):
         self._run_ansible = kw.pop('_run_ansible', False)
+        self._test_root = kw.pop('_test_root', False)
         super(RecordingLaunchServer, self).__init__(*args, **kw)
         self.hold_jobs_in_build = False
         self.lock = threading.Lock()
@@ -724,6 +725,9 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
         job.build = build
         self.running_builds.append(build)
         self.job_builds[job.unique] = build
+        args = json.loads(job.arguments)
+        args['zuul']['_test'] = dict(test_root=self._test_root)
+        job.arguments = json.dumps(args)
         super(RecordingLaunchServer, self).launchJob(job)
 
     def stopJob(self, job):
@@ -1252,7 +1256,9 @@ class ZuulTestCase(BaseTestCase):
         self._startMerger()
 
         self.launch_server = RecordingLaunchServer(
-            self.config, self.connections, _run_ansible=self.run_ansible)
+            self.config, self.connections,
+            _run_ansible=self.run_ansible,
+            _test_root=self.test_root)
         self.launch_server.start()
         self.history = self.launch_server.build_history
         self.builds = self.launch_server.running_builds

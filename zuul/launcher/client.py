@@ -300,6 +300,10 @@ class LaunchClient(object):
                 [x.change for x in dependent_items]))
         dependent_items = dependent_items[:]
         dependent_items.reverse()
+        # TODOv3(jeblair): This ansible vars data structure will
+        # replace the environment variables below.
+        zuul_params = dict(uuid=uuid)
+        # Legacy environment variables
         params = dict(ZUUL_UUID=uuid,
                       ZUUL_PROJECT=item.change.project.name)
         params['ZUUL_PIPELINE'] = pipeline.name
@@ -382,6 +386,7 @@ class LaunchClient(object):
         for node in item.current_build_set.getJobNodeSet(job.name).getNodes():
             nodes.append(dict(name=node.name, image=node.image))
         params['nodes'] = nodes
+        params['zuul'] = zuul_params
         projects = set()
         for item in all_items:
             if item.change.project not in projects:

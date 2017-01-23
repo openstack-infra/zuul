@@ -1,6 +1,5 @@
-# TODO(jeblair): Perform an action inside of a test chroot
 - hosts: all
   tasks:
     - file:
-        path: /tmp/playbook.test
+        path: "{{zuul._test.test_root}}/{{zuul.uuid}}.flag"
         state: touch
