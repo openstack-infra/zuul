@@ -220,6 +220,26 @@ def toList(item):
 
 
 class Scheduler(threading.Thread):
+    """The engine of Zuul.
+
+    The Scheduler is reponsible for recieving events and dispatching
+    them to appropriate components (including pipeline managers,
+    mergers and launchers).
+
+    It runs a single threaded main loop which processes events
+    received one at a time and takes action as appropriate.  Other
+    parts of Zuul may run in their own thread, but synchronization is
+    performed within the scheduler to reduce or eliminate the need for
+    locking in most circumstances.
+
+    The main daemon will have one instance of the Scheduler class
+    running which will persist for the life of the process.  The
+    Scheduler instance is supplied to other Zuul components so that
+    they can submit events or otherwise communicate with other
+    components.
+
+    """
+
     log = logging.getLogger("zuul.Scheduler")
 
     def __init__(self, config, testonly=False):

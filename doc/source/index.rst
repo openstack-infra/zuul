@@ -24,7 +24,7 @@ Contents:
    launchers
    statsd
    client
-   internals
+   developer
 
 Indices and tables
 ==================
