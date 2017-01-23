@@ -14,6 +14,7 @@
 
 import logging
 
+from zuul.driver import Driver, TriggerInterface
 from zuul.model import TriggerEvent
 
 import zuultrigger
@@ -22,7 +23,7 @@ PARENT_CHANGE_ENQUEUED = 'parent-change-enqueued'
 PROJECT_CHANGE_MERGED = 'project-change-merged'
 
 
-class ZuulDriver(object):
+class ZuulDriver(Driver, TriggerInterface):
     name = 'zuul'
     log = logging.getLogger("zuul.ZuulTrigger")
 

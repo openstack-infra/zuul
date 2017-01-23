@@ -12,11 +12,12 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from zuul.driver import Driver, ConnectionInterface, ReporterInterface
 import smtpconnection
 import smtpreporter
 
 
-class SMTPDriver(object):
+class SMTPDriver(Driver, ConnectionInterface, ReporterInterface):
     name = 'smtp'
 
     def getConnection(self, name, config):

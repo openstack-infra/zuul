@@ -12,13 +12,16 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from zuul.driver import Driver, ConnectionInterface, TriggerInterface
+from zuul.driver import SourceInterface, ReporterInterface
 import gerritconnection
 import gerrittrigger
 import gerritsource
 import gerritreporter
 
 
-class GerritDriver(object):
+class GerritDriver(Driver, ConnectionInterface, TriggerInterface,
+                   SourceInterface, ReporterInterface):
     name = 'gerrit'
 
     def getConnection(self, name, config):
