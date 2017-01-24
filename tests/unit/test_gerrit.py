@@ -20,10 +20,11 @@ try:
 except ImportError:
     import mock
 
+import tests.base
 from tests.base import BaseTestCase
 from zuul.driver.gerrit.gerritconnection import GerritConnection
 
-FIXTURE_DIR = os.path.join(os.path.dirname(__file__), 'fixtures/gerrit')
+FIXTURE_DIR = os.path.join(tests.base.FIXTURE_DIR, 'gerrit')
 
 
 def read_fixture(file):
