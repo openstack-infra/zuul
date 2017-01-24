@@ -274,7 +274,7 @@ class GerritConnection(BaseConnection):
             if val is True:
                 cmd += ' --%s' % key
             else:
-                cmd += ' --%s %s' % (key, val)
+                cmd += ' --label %s=%s' % (key, val)
         cmd += ' %s' % change
         out, err = self._ssh(cmd)
         return err
