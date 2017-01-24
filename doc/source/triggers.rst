@@ -133,6 +133,8 @@ following options.
 
     *push* - head reference updated (pushed to branch)
 
+    *status* - status set on commit
+
   A ``pull_request_review`` event will
   have associated action(s) to trigger from. The supported actions are:
 
@@ -164,6 +166,12 @@ following options.
   This is only used for ``pull_request_review`` events.  It accepts a list of
   strings each of which is matched to the review state, which can be one of
   ``approved``, ``comment``, or ``request_changes``.
+
+  **status**
+  This is only used for ``status`` actions. It accepts a list of strings each of
+  which matches the user setting the status, the status context, and the status
+  itself in the format of ``user:context:status``.  For example,
+  ``zuul_github_ci_bot:check_pipeline:success``.
 
   **ref**
   This is only used for ``push`` events. This field is treated as a regular
