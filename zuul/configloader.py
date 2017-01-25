@@ -151,9 +151,7 @@ class JobParser(object):
         job.source_project = conf.get('_source_project')
         job.source_branch = conf.get('_source_branch')
         job.source_configrepo = conf.get('_source_configrepo')
-        # TODOv3(jeblair): verify the playbook exists
-        # TODOv3(jeblair): remove hardcoded extension
-        job.playbook = os.path.join('playbooks', job.name + '.yaml')
+        job.playbook = os.path.join('playbooks', job.name)
         job.failure_message = conf.get('failure-message', job.failure_message)
         job.success_message = conf.get('success-message', job.success_message)
         job.failure_url = conf.get('failure-url', job.failure_url)

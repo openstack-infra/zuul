@@ -408,6 +408,13 @@ class LaunchServer(object):
             hosts.append((node['name'], dict(ansible_connection='local')))
         return hosts
 
+    def findPlaybook(self, path):
+        for ext in ['.yaml', '.yml']:
+            fn = path + ext
+            if os.path.exists(fn):
+                return fn
+        raise Exception("Unable to find playbook %s" % path)
+
     def preparePlaybookRepo(self, jobdir, args):
         # Check out the playbook repo if needed and return the path to
         # the playbook that should be run.
@@ -424,9 +431,10 @@ class LaunchServer(object):
                 if (i['connection_name'] == playbook['connection'] and
                     i['project'] == playbook['project']):
                     # We already have this repo prepared
-                    return os.path.join(jobdir.git_root,
+                    path = os.path.join(jobdir.git_root,
                                         project.name,
                                         playbook['path'])
+                    return self.findPlaybook(path)
         # The playbook repo is either a config repo, or it isn't in
         # the stack of changes we are testing, so check out the branch
         # tip into a dedicated space.
@@ -434,9 +442,10 @@ class LaunchServer(object):
         merger = self._getMerger(jobdir.playbook_root)
         merger.checkoutBranch(project.name, url, playbook['branch'])
 
-        return os.path.join(jobdir.playbook_root,
+        path = os.path.join(jobdir.playbook_root,
                             project.name,
                             playbook['path'])
+        return self.findPlaybook(path)
 
     def prepareAnsibleFiles(self, jobdir, args):
         with open(jobdir.inventory, 'w') as inventory:
