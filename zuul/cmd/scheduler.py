@@ -95,7 +95,11 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
                                            host=host,
                                            statsd_host=statsd_host,
                                            statsd_port=statsd_port,
-                                           statsd_prefix=statsd_prefix)
+                                           statsd_prefix=statsd_prefix,
+                                           keepalive=True,
+                                           tcp_keepidle=300,
+                                           tcp_keepintvl=60,
+                                           tcp_keepcnt=5)
 
             # Keep running until the parent dies:
             pipe_read = os.fdopen(pipe_read)
