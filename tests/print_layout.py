@@ -16,9 +16,9 @@ import argparse
 import os
 import sys
 
-import tests.base
-
-CONFIG_DIR = os.path.join(tests.base.FIXTURE_DIR, 'config')
+FIXTURE_DIR = os.path.join(os.path.dirname(__file__),
+                           'fixtures')
+CONFIG_DIR = os.path.join(FIXTURE_DIR, 'config')
 
 
 def print_file(title, path):
