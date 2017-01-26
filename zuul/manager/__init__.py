@@ -622,13 +622,6 @@ class PipelineManager(object):
         if build.retry:
             build.build_set.removeJobNodeSet(build.job.name)
 
-        # If any jobs were skipped as a result of this build, return
-        # their nodes.
-        for build in build.build_set.getBuilds():
-            if build.result == 'SKIPPED':
-                nodeset = build.build_set.getJobNodeSet(build.job.name)
-                self.sched.nodepool.returnNodeSet(nodeset)
-
         return True
 
     def onMergeCompleted(self, event):
