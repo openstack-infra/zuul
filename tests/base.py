@@ -563,7 +563,6 @@ class FakeBuild(object):
         self.aborted = False
         self.requeue = False
         self.created = time.time()
-        self.run_error = False
         self.changes = None
         if 'ZUUL_CHANGE_IDS' in self.parameters:
             self.changes = self.parameters['ZUUL_CHANGE_IDS']
@@ -612,16 +611,13 @@ class FakeBuild(object):
             self._wait()
         self.log.debug("Build %s continuing" % self.unique)
 
-        result = 'SUCCESS'
+        result = (RecordingAnsibleJob.RESULT_NORMAL, 0)  # Success
         if (('ZUUL_REF' in self.parameters) and self.shouldFail()):
-            result = 'FAILURE'
+            result = (RecordingAnsibleJob.RESULT_NORMAL, 1)  # Failure
         if self.aborted:
-            result = 'ABORTED'
+            result = (RecordingAnsibleJob.RESULT_ABORTED, None)
         if self.requeue:
-            result = None
-
-        if self.run_error:
-            result = 'RUN_ERROR'
+            result = (RecordingAnsibleJob.RESULT_UNREACHABLE, None)
 
         return result
 
@@ -743,14 +739,16 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
 
 
 class RecordingAnsibleJob(zuul.launcher.server.AnsibleJob):
-    def runAnsible(self, jobdir):
+    def runPlaybooks(self):
         build = self.launcher_server.job_builds[self.job.unique]
-        build.jobdir = jobdir
+        build.jobdir = self.jobdir
 
-        if self.launcher_server._run_ansible:
-            result = super(RecordingAnsibleJob, self).runAnsible(jobdir)
-        else:
-            result = build.run()
+        result = super(RecordingAnsibleJob, self).runPlaybooks()
+
+        # TODOv3(jeblair): remove this when the launcher supports
+        # aborting
+        if build.aborted:
+            result = 'ABORTED'
 
         self.launcher_server.lock.acquire()
         self.launcher_server.build_history.append(
@@ -762,8 +760,15 @@ class RecordingAnsibleJob(zuul.launcher.server.AnsibleJob):
         self.launcher_server.running_builds.remove(build)
         del self.launcher_server.job_builds[self.job.unique]
         self.launcher_server.lock.release()
-        if build.run_error:
-            result = None
+        return result
+
+    def runAnsible(self, cmd, timeout):
+        build = self.launcher_server.job_builds[self.job.unique]
+
+        if self.launcher_server._run_ansible:
+            result = super(RecordingAnsibleJob, self).runAnsible(cmd, timeout)
+        else:
+            result = build.run()
         return result
 
 

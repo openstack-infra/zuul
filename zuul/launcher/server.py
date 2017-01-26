@@ -80,16 +80,26 @@ class JobDir(object):
         self.playbook = None
         self.playbook_root = os.path.join(self.ansible_root, 'playbook')
         os.makedirs(self.playbook_root)
-        self.post_playbook = os.path.join(self.ansible_root, 'post_playbook')
+        self.pre_playbook = None
+        self.pre_playbook_root = os.path.join(self.ansible_root,
+                                              'pre_playbook')
+        os.makedirs(self.pre_playbook_root)
+        self.post_playbook = None
+        self.post_playbook_root = os.path.join(self.ansible_root,
+                                               'post_playbook')
+        os.makedirs(self.post_playbook_root)
         self.config = os.path.join(self.ansible_root, 'ansible.cfg')
         self.ansible_log = os.path.join(self.ansible_root, 'ansible_log.txt')
+
+    def cleanup(self):
+        if not self.keep:
+            shutil.rmtree(self.root)
 
     def __enter__(self):
         return self
 
     def __exit__(self, etype, value, tb):
-        if not self.keep:
-            shutil.rmtree(self.root)
+        self.cleanup()
 
 
 class UpdateTask(object):
@@ -371,9 +381,15 @@ class LaunchServer(object):
 class AnsibleJob(object):
     log = logging.getLogger("zuul.AnsibleJob")
 
+    RESULT_NORMAL = 1
+    RESULT_TIMED_OUT = 2
+    RESULT_UNREACHABLE = 3
+    RESULT_ABORTED = 4
+
     def __init__(self, launcher_server, job):
         self.launcher_server = launcher_server
         self.job = job
+        self.jobdir = None
         self.main_proc = None
         self.running = False
 
@@ -395,66 +411,99 @@ class AnsibleJob(object):
 
     def launch(self):
         try:
+            self.jobdir = JobDir()
             self._launch()
         finally:
             self.running = False
-            self.launcher_server.finishJob(self.job.unique)
+            try:
+                self.jobdir.cleanup()
+            except Exception:
+                self.log.exception("Error cleaning up jobdir:")
+            try:
+                self.launcher_server.finishJob(self.job.unique)
+            except Exception:
+                self.log.exception("Error finalizing job thread:")
 
     def _launch(self):
         self.log.debug("Job %s: beginning" % (self.job.unique,))
-        with JobDir() as jobdir:
-            self.log.debug("Job %s: job root at %s" %
-                           (self.job.unique, jobdir.root))
-            args = json.loads(self.job.arguments)
-            tasks = []
-            for project in args['projects']:
-                self.log.debug("Job %s: updating project %s" %
-                               (self.job.unique, project['name']))
-                tasks.append(self.launcher_server.update(
-                    project['name'], project['url']))
-            for task in tasks:
-                task.wait()
+        self.log.debug("Job %s: job root at %s" %
+                       (self.job.unique, self.jobdir.root))
+        args = json.loads(self.job.arguments)
+        tasks = []
+        for project in args['projects']:
+            self.log.debug("Job %s: updating project %s" %
+                           (self.job.unique, project['name']))
+            tasks.append(self.launcher_server.update(
+                project['name'], project['url']))
+        for task in tasks:
+            task.wait()
 
-            self.log.debug("Job %s: git updates complete" % (self.job.unique,))
-            merger = self.launcher_server._getMerger(jobdir.git_root)
-            merge_items = [i for i in args['items'] if i.get('refspec')]
-            if merge_items:
-                commit = merger.mergeChanges(merge_items)  # noqa
-            else:
-                commit = args['items'][-1]['newrev']  # noqa
+        self.log.debug("Job %s: git updates complete" % (self.job.unique,))
+        merger = self.launcher_server._getMerger(self.jobdir.git_root)
+        merge_items = [i for i in args['items'] if i.get('refspec')]
+        if merge_items:
+            commit = merger.mergeChanges(merge_items)  # noqa
+        else:
+            commit = args['items'][-1]['newrev']  # noqa
 
-            # is the playbook in a repo that we have already prepared?
-            jobdir.playbook = self.preparePlaybookRepo(jobdir, args)
+        # is the playbook in a repo that we have already prepared?
+        self.jobdir.playbook = self.preparePlaybookRepo(args)
 
-            # TODOv3: Ansible the ansible thing here.
-            self.prepareAnsibleFiles(jobdir, args)
+        # TODOv3: Ansible the ansible thing here.
+        self.prepareAnsibleFiles(args)
 
-            data = {
-                'manager': self.launcher_server.hostname,
-                'url': 'https://server/job/{}/0/'.format(args['job']),
-                'worker_name': 'My Worker',
-            }
+        data = {
+            'manager': self.launcher_server.hostname,
+            'url': 'https://server/job/{}/0/'.format(args['job']),
+            'worker_name': 'My Worker',
+        }
 
-            # TODOv3:
-            # 'name': self.name,
-            # 'manager': self.launch_server.hostname,
-            # 'worker_name': 'My Worker',
-            # 'worker_hostname': 'localhost',
-            # 'worker_ips': ['127.0.0.1', '192.168.1.1'],
-            # 'worker_fqdn': 'zuul.example.org',
-            # 'worker_program': 'FakeBuilder',
-            # 'worker_version': 'v1.1',
-            # 'worker_extra': {'something': 'else'}
+        # TODOv3:
+        # 'name': self.name,
+        # 'manager': self.launch_server.hostname,
+        # 'worker_name': 'My Worker',
+        # 'worker_hostname': 'localhost',
+        # 'worker_ips': ['127.0.0.1', '192.168.1.1'],
+        # 'worker_fqdn': 'zuul.example.org',
+        # 'worker_program': 'FakeBuilder',
+        # 'worker_version': 'v1.1',
+        # 'worker_extra': {'something': 'else'}
 
-            self.job.sendWorkData(json.dumps(data))
-            self.job.sendWorkStatus(0, 100)
+        self.job.sendWorkData(json.dumps(data))
+        self.job.sendWorkStatus(0, 100)
 
-            result = self.runAnsible(jobdir)
-            if result is None:
-                self.job.sendWorkFail()
-            else:
-                result = dict(result=result)
-                self.job.sendWorkComplete(json.dumps(result))
+        result = self.runPlaybooks()
+
+        if result is None:
+            self.job.sendWorkFail()
+            return
+        result = dict(result=result)
+        self.job.sendWorkComplete(json.dumps(result))
+
+    def runPlaybooks(self):
+        result = None
+
+        pre_status, pre_code = self.runAnsiblePrePlaybook()
+        if pre_status != self.RESULT_NORMAL or pre_code != 0:
+            # These should really never fail, so return None and have
+            # zuul try again
+            return result
+
+        job_status, job_code = self.runAnsiblePlaybook()
+        if job_status != self.RESULT_NORMAL:
+            # The result of the job is indeterminate.  Zuul will
+            # run it again.
+            return result
+
+        post_status, post_code = self.runAnsiblePostPlaybook(
+            job_code == 0)
+        if post_status != self.RESULT_NORMAL or post_code != 0:
+            result = 'POST_FAILURE'
+        elif job_code == 0:
+            result = 'SUCCESS'
+        else:
+            result = 'FAILURE'
+        return result
 
     def getHostList(self, args):
         # TODOv3: the localhost addition is temporary so we have
@@ -473,7 +522,7 @@ class AnsibleJob(object):
                 return fn
         raise Exception("Unable to find playbook %s" % path)
 
-    def preparePlaybookRepo(self, jobdir, args):
+    def preparePlaybookRepo(self, args):
         # Check out the playbook repo if needed and return the path to
         # the playbook that should be run.
         playbook = args['playbook']
@@ -490,7 +539,7 @@ class AnsibleJob(object):
                 if (i['connection_name'] == playbook['connection'] and
                     i['project'] == playbook['project']):
                     # We already have this repo prepared
-                    path = os.path.join(jobdir.git_root,
+                    path = os.path.join(self.jobdir.git_root,
                                         project.name,
                                         playbook['path'])
                     return self.findPlaybook(path)
@@ -498,34 +547,36 @@ class AnsibleJob(object):
         # the stack of changes we are testing, so check out the branch
         # tip into a dedicated space.
 
-        merger = self.launcher_server._getMerger(jobdir.playbook_root)
+        merger = self.launcher_server._getMerger(self.jobdir.playbook_root)
         merger.checkoutBranch(project.name, url, playbook['branch'])
 
-        path = os.path.join(jobdir.playbook_root,
+        path = os.path.join(self.jobdir.playbook_root,
                             project.name,
                             playbook['path'])
         return self.findPlaybook(path)
 
-    def prepareAnsibleFiles(self, jobdir, args):
-        with open(jobdir.inventory, 'w') as inventory:
+    def prepareAnsibleFiles(self, args):
+        with open(self.jobdir.inventory, 'w') as inventory:
             for host_name, host_vars in self.getHostList(args):
                 inventory.write(host_name)
                 inventory.write(' ')
                 for k, v in host_vars.items():
                     inventory.write('%s=%s' % (k, v))
                 inventory.write('\n')
-        with open(jobdir.vars, 'w') as vars_yaml:
+        with open(self.jobdir.vars, 'w') as vars_yaml:
             zuul_vars = dict(zuul=args['zuul'])
             vars_yaml.write(
                 yaml.safe_dump(zuul_vars, default_flow_style=False))
-        with open(jobdir.config, 'w') as config:
+        with open(self.jobdir.config, 'w') as config:
             config.write('[defaults]\n')
-            config.write('hostfile = %s\n' % jobdir.inventory)
-            config.write('local_tmp = %s/.ansible/local_tmp\n' % jobdir.root)
-            config.write('remote_tmp = %s/.ansible/remote_tmp\n' % jobdir.root)
+            config.write('hostfile = %s\n' % self.jobdir.inventory)
+            config.write('local_tmp = %s/.ansible/local_tmp\n' %
+                         self.jobdir.root)
+            config.write('remote_tmp = %s/.ansible/remote_tmp\n' %
+                         self.jobdir.root)
             config.write('private_key_file = %s\n' % self.private_key_file)
             config.write('retry_files_enabled = False\n')
-            config.write('log_path = %s\n' % jobdir.ansible_log)
+            config.write('log_path = %s\n' % self.jobdir.ansible_log)
             config.write('gathering = explicit\n')
             config.write('library = %s\n'
                          % self.launcher_server.library_dir)
@@ -544,7 +595,7 @@ class AnsibleJob(object):
             # as sudo) it does not hang.
             config.write('pipelining = True\n')
             ssh_args = "-o ControlMaster=auto -o ControlPersist=60s " \
-                "-o UserKnownHostsFile=%s" % jobdir.known_hosts
+                "-o UserKnownHostsFile=%s" % self.jobdir.known_hosts
             config.write('ssh_args = %s\n' % ssh_args)
 
     def _ansibleTimeout(self, proc, msg):
@@ -564,22 +615,14 @@ class AnsibleJob(object):
                                "ansible process:")
         return aborted
 
-    def runAnsible(self, jobdir):
+    def runAnsible(self, cmd, timeout):
         env_copy = os.environ.copy()
         env_copy['LOGNAME'] = 'zuul'
 
-        if False:  # TODOv3: self.options['verbose']:
-            verbose = '-vvv'
-        else:
-            verbose = '-v'
-
-        cmd = ['ansible-playbook', jobdir.playbook,
-               '-e@%s' % jobdir.vars, verbose]
         self.log.debug("Ansible command: %s" % (cmd,))
-        # TODOv3: verbose
         self.main_proc = subprocess.Popen(
             cmd,
-            cwd=jobdir.ansible_root,
+            cwd=self.jobdir.ansible_root,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             preexec_fn=os.setsid,
@@ -587,8 +630,6 @@ class AnsibleJob(object):
         )
 
         ret = None
-        # TODOv3: get this from the job
-        timeout = 60
         watchdog = Watchdog(timeout + ANSIBLE_WATCHDOG_GRACE,
                             self._ansibleTimeout,
                             (self.main_proc, "Ansible timeout exceeded"))
@@ -603,15 +644,68 @@ class AnsibleJob(object):
         self.log.debug("Ansible exit code: %s" % (ret,))
 
         if watchdog.timed_out:
-            return 'TIMED_OUT'
+            return (self.RESULT_TIMED_OUT, None)
         if ret == 3:
             # AnsibleHostUnreachable: We had a network issue connecting to
             # our zuul-worker.
-            return None
+            return (self.RESULT_UNREACHABLE, None)
         elif ret == -9:
             # Received abort request.
-            return None
+            return (self.RESULT_ABORTED, None)
 
-        if ret == 0:
-            return 'SUCCESS'
-        return 'FAILURE'
+        return (self.RESULT_NORMAL, ret)
+
+    def runAnsiblePrePlaybook(self):
+        # TODOv3(jeblair): remove return statement
+        return (self.RESULT_NORMAL, 0)
+
+        env_copy = os.environ.copy()
+        env_copy['LOGNAME'] = 'zuul'
+
+        if False:  # TODOv3: self.options['verbose']:
+            verbose = '-vvv'
+        else:
+            verbose = '-v'
+
+        cmd = ['ansible-playbook', self.jobdir.pre_playbook,
+               '-e@%s' % self.jobdir.vars, verbose]
+        # TODOv3: get this from the job
+        timeout = 60
+
+        return self.runAnsible(cmd, timeout)
+
+    def runAnsiblePlaybook(self):
+        env_copy = os.environ.copy()
+        env_copy['LOGNAME'] = 'zuul'
+
+        if False:  # TODOv3: self.options['verbose']:
+            verbose = '-vvv'
+        else:
+            verbose = '-v'
+
+        cmd = ['ansible-playbook', self.jobdir.playbook,
+               '-e@%s' % self.jobdir.vars, verbose]
+        # TODOv3: get this from the job
+        timeout = 60
+
+        return self.runAnsible(cmd, timeout)
+
+    def runAnsiblePostPlaybook(self, success):
+        # TODOv3(jeblair): remove return statement
+        return (self.RESULT_NORMAL, 0)
+
+        env_copy = os.environ.copy()
+        env_copy['LOGNAME'] = 'zuul'
+
+        if False:  # TODOv3: self.options['verbose']:
+            verbose = '-vvv'
+        else:
+            verbose = '-v'
+
+        cmd = ['ansible-playbook', self.jobdir.post_playbook,
+               '-e', 'success=%s' % success,
+               '-e@%s' % self.jobdir.vars, verbose]
+        # TODOv3: get this from the job
+        timeout = 60
+
+        return self.runAnsible(cmd, timeout)

@@ -1920,11 +1920,11 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
-        self.builds[0].run_error = True
+        self.builds[0].requeue = True
         self.launch_server.hold_jobs_in_build = False
         self.launch_server.release()
         self.waitUntilSettled()
-        self.assertEqual(self.countJobResults(self.history, 'RUN_ERROR'), 1)
+        self.assertEqual(self.countJobResults(self.history, None), 1)
         self.assertEqual(self.countJobResults(self.history, 'SUCCESS'), 3)
 
     def test_statsd(self):
