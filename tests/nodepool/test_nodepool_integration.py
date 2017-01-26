@@ -60,7 +60,7 @@ class TestNodepoolIntegration(BaseTestCase):
         request = self.nodepool.requestNodes(None, job)
         self.waitForRequests()
         self.assertEqual(len(self.provisioned_requests), 1)
-        self.assertEqual(request.state, 'fulfilled')
+        self.assertEqual(request.state, model.STATE_FULFILLED)
 
         # Accept the nodes
         self.nodepool.acceptNodes(request)
@@ -68,18 +68,29 @@ class TestNodepoolIntegration(BaseTestCase):
 
         for node in nodeset.getNodes():
             self.assertIsNotNone(node.lock)
-            self.assertEqual(node.state, 'ready')
+            self.assertEqual(node.state, model.STATE_READY)
 
         # Mark the nodes in use
         self.nodepool.useNodeSet(nodeset)
         for node in nodeset.getNodes():
-            self.assertEqual(node.state, 'in-use')
+            self.assertEqual(node.state, model.STATE_IN_USE)
 
         # Return the nodes
         self.nodepool.returnNodeSet(nodeset)
         for node in nodeset.getNodes():
             self.assertIsNone(node.lock)
-            self.assertEqual(node.state, 'used')
+            self.assertEqual(node.state, model.STATE_USED)
+
+    def test_invalid_node_request(self):
+        # Test requests with an invalid node type fail
+        nodeset = model.NodeSet()
+        nodeset.addNode(model.Node('controller', 'invalid-label'))
+        job = model.Job('testjob')
+        job.nodeset = nodeset
+        request = self.nodepool.requestNodes(None, job)
+        self.waitForRequests()
+        self.assertEqual(len(self.provisioned_requests), 1)
+        self.assertEqual(request.state, model.STATE_FAILED)
 
     @skip("Disabled until nodepool is ready")
     def test_node_request_disconnect(self):
@@ -97,7 +108,7 @@ class TestNodepoolIntegration(BaseTestCase):
         self.fake_nodepool.paused = False
         self.waitForRequests()
         self.assertEqual(len(self.provisioned_requests), 1)
-        self.assertEqual(request.state, 'fulfilled')
+        self.assertEqual(request.state, model.STATE_FULFILLED)
 
     @skip("Disabled until nodepool is ready")
     def test_node_request_canceled(self):
