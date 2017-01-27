@@ -745,11 +745,6 @@ class RecordingAnsibleJob(zuul.launcher.server.AnsibleJob):
 
         result = super(RecordingAnsibleJob, self).runPlaybooks()
 
-        # TODOv3(jeblair): remove this when the launcher supports
-        # aborting
-        if build.aborted:
-            result = 'ABORTED'
-
         self.launcher_server.lock.acquire()
         self.launcher_server.build_history.append(
             BuildHistory(name=build.name, result=result, changes=build.changes,

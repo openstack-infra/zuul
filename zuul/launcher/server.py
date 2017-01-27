@@ -352,8 +352,21 @@ class LaunchServer(object):
         del(self.job_workers[unique])
 
     def stopJob(self, job):
-        # TODOv3: implement.
-        job.sendWorkComplete()
+        try:
+            args = json.loads(job.arguments)
+            self.log.debug("Stop job with arguments: %s" % (args,))
+            unique = args['uuid']
+            job_worker = self.job_workers.get(unique)
+            if not job_worker:
+                self.log.debug("Unable to find worker for job %s" % (unique,))
+                return
+            try:
+                job_worker.stop()
+            except Exception:
+                self.log.exception("Exception sending stop command "
+                                   "to worker:")
+        finally:
+            job.sendWorkComplete()
 
     def cat(self, job):
         args = json.loads(job.arguments)
@@ -390,8 +403,10 @@ class AnsibleJob(object):
         self.launcher_server = launcher_server
         self.job = job
         self.jobdir = None
-        self.main_proc = None
+        self.proc = None
+        self.proc_lock = threading.Lock()
         self.running = False
+        self.aborted = False
 
         if self.launcher_server.config.has_option(
             'launcher', 'private_key_file'):
@@ -406,7 +421,8 @@ class AnsibleJob(object):
         self.thread.start()
 
     def stop(self):
-        self.abortRunningProc(self.main_proc)
+        self.aborted = True
+        self.abortRunningProc()
         self.thread.join()
 
     def launch(self):
@@ -490,6 +506,10 @@ class AnsibleJob(object):
             return result
 
         job_status, job_code = self.runAnsiblePlaybook()
+        if job_status == self.RESULT_TIMED_OUT:
+            return 'TIMED_OUT'
+        if job_status == self.RESULT_ABORTED:
+            return 'ABORTED'
         if job_status != self.RESULT_NORMAL:
             # The result of the job is indeterminate.  Zuul will
             # run it again.
@@ -598,50 +618,57 @@ class AnsibleJob(object):
                 "-o UserKnownHostsFile=%s" % self.jobdir.known_hosts
             config.write('ssh_args = %s\n' % ssh_args)
 
-    def _ansibleTimeout(self, proc, msg):
+    def _ansibleTimeout(self, msg):
         self.log.warning(msg)
-        self.abortRunningProc(proc)
+        self.abortRunningProc()
 
-    def abortRunningProc(self, proc):
-        aborted = False
-        self.log.debug("Abort: sending kill signal to job "
-                       "process group")
-        try:
-            pgid = os.getpgid(proc.pid)
-            os.killpg(pgid, signal.SIGKILL)
-            aborted = True
-        except Exception:
-            self.log.exception("Exception while killing "
-                               "ansible process:")
-        return aborted
+    def abortRunningProc(self):
+        with self.proc_lock:
+            if not self.proc:
+                self.log.debug("Abort: no process is running")
+                return
+            self.log.debug("Abort: sending kill signal to job "
+                           "process group")
+            try:
+                pgid = os.getpgid(self.proc.pid)
+                os.killpg(pgid, signal.SIGKILL)
+            except Exception:
+                self.log.exception("Exception while killing "
+                                   "ansible process:")
 
     def runAnsible(self, cmd, timeout):
         env_copy = os.environ.copy()
         env_copy['LOGNAME'] = 'zuul'
 
-        self.log.debug("Ansible command: %s" % (cmd,))
-        self.main_proc = subprocess.Popen(
-            cmd,
-            cwd=self.jobdir.ansible_root,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            preexec_fn=os.setsid,
-            env=env_copy,
-        )
+        with self.proc_lock:
+            if self.aborted:
+                return (self.RESULT_ABORTED, None)
+            self.log.debug("Ansible command: %s" % (cmd,))
+            self.proc = subprocess.Popen(
+                cmd,
+                cwd=self.jobdir.ansible_root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                preexec_fn=os.setsid,
+                env=env_copy,
+            )
 
         ret = None
         watchdog = Watchdog(timeout + ANSIBLE_WATCHDOG_GRACE,
                             self._ansibleTimeout,
-                            (self.main_proc, "Ansible timeout exceeded"))
+                            ("Ansible timeout exceeded",))
         watchdog.start()
         try:
-            for line in iter(self.main_proc.stdout.readline, b''):
+            for line in iter(self.proc.stdout.readline, b''):
                 line = line[:1024].rstrip()
                 self.log.debug("Ansible output: %s" % (line,))
-            ret = self.main_proc.wait()
+            ret = self.proc.wait()
         finally:
             watchdog.stop()
         self.log.debug("Ansible exit code: %s" % (ret,))
+
+        with self.proc_lock:
+            self.proc = None
 
         if watchdog.timed_out:
             return (self.RESULT_TIMED_OUT, None)
