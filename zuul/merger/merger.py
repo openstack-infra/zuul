@@ -246,7 +246,7 @@ class Merger(object):
         repo = self.getRepo(project, url)
         try:
             self.log.info("Updating local repository %s", project)
-            repo.update()
+            repo.reset()
         except Exception:
             self.log.exception("Unable to update %s", project)
 
