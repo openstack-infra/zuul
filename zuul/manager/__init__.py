@@ -689,6 +689,12 @@ class PipelineManager(object):
                 tenant = self.pipeline.layout.tenant
                 zuul_driver.onChangeMerged(tenant, item.change,
                                            self.pipeline.source)
+                if item.change.updatesConfig():
+                    # The change that just landed updates the config.
+                    # Clear out cached data for this project and
+                    # perform a reconfiguration.
+                    item.change.project.unparsed_config = None
+                    self.sched.reconfigureTenant(tenant)
 
     def _reportItem(self, item):
         self.log.debug("Reporting change %s" % item.change)

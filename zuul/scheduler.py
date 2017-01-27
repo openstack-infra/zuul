@@ -125,6 +125,17 @@ class ReconfigureEvent(ManagementEvent):
         self.config = config
 
 
+class TenantReconfigureEvent(ManagementEvent):
+    """Reconfigure the given tenant.  The layout will be (re-)loaded from
+    the path specified in the configuration.
+
+    :arg Tenant tenant: the tenant to reconfigure
+    """
+    def __init__(self, tenant):
+        super(TenantReconfigureEvent, self).__init__()
+        self.tenant = tenant
+
+
 class PromoteEvent(ManagementEvent):
     """Promote one or more changes to the head of the queue.
 
@@ -385,6 +396,12 @@ class Scheduler(threading.Thread):
         self.result_event_queue.put(event)
         self.wake_event.set()
 
+    def reconfigureTenant(self, tenant):
+        self.log.debug("Prepare to reconfigure")
+        event = TenantReconfigureEvent(tenant)
+        self.management_event_queue.put(event)
+        self.wake_event.set()
+
     def reconfigure(self, config):
         self.log.debug("Prepare to reconfigure")
         event = ReconfigureEvent(config)
@@ -394,6 +411,7 @@ class Scheduler(threading.Thread):
         event.wait()
         self.log.debug("Reconfiguration complete")
         self.last_reconfigured = int(time.time())
+        # TODOv3(jeblair): reconfigure time should be per-tenant
 
     def promote(self, tenant_name, pipeline_name, change_ids):
         event = PromoteEvent(tenant_name, pipeline_name, change_ids)
@@ -495,6 +513,23 @@ class Scheduler(threading.Thread):
                 self, self.merger, self.connections)
             for tenant in abide.tenants.values():
                 self._reconfigureTenant(tenant)
+            self.abide = abide
+        finally:
+            self.layout_lock.release()
+
+    def _doTenantReconfigureEvent(self, event):
+        # This is called in the scheduler loop after another thread submits
+        # a request
+        self.layout_lock.acquire()
+        try:
+            self.log.debug("Performing tenant reconfiguration")
+            loader = configloader.ConfigLoader()
+            abide = loader.reloadTenant(
+                self.config.get('zuul', 'tenant_config'),
+                self, self.merger, self.connections,
+                self.abide, event.tenant)
+            tenant = abide.tenants[event.tenant.name]
+            self._reconfigureTenant(tenant)
             self.abide = abide
         finally:
             self.layout_lock.release()
@@ -738,6 +773,8 @@ class Scheduler(threading.Thread):
         try:
             if isinstance(event, ReconfigureEvent):
                 self._doReconfigureEvent(event)
+            if isinstance(event, TenantReconfigureEvent):
+                self._doTenantReconfigureEvent(event)
             elif isinstance(event, PromoteEvent):
                 self._doPromoteEvent(event)
             elif isinstance(event, EnqueueEvent):

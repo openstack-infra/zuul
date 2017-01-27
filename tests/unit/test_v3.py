@@ -107,13 +107,25 @@ class TestInRepoConfig(AnsibleZuulTestCase):
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
-        self.assertEqual(self.getJobFromHistory('project-test2').result,
-                         'SUCCESS')
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2,
                          "A should report start and success")
         self.assertIn('tenant-one-gate', A.messages[1],
                       "A should transit tenant-one gate")
+        self.assertHistory([
+            dict(name='project-test2', result='SUCCESS', changes='1,1')])
+
+        # Now that the config change is landed, it should be live for
+        # subsequent changes.
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        B.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertHistory([
+            dict(name='project-test2', result='SUCCESS', changes='1,1'),
+            dict(name='project-test2', result='SUCCESS', changes='2,1')])
 
 
 class TestAnsible(AnsibleZuulTestCase):

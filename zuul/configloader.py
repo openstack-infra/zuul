@@ -10,6 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import copy
 import os
 import logging
 import six
@@ -230,6 +231,8 @@ class ProjectTemplateParser(object):
     @staticmethod
     def fromYaml(layout, conf):
         ProjectTemplateParser.getSchema(layout)(conf)
+        # Make a copy since we modify this later via pop
+        conf = copy.deepcopy(conf)
         project_template = model.ProjectConfig(conf['name'])
         source_context = conf['_source_context']
         for pipeline in layout.pipelines.values():
@@ -300,6 +303,8 @@ class ProjectParser(object):
         # TODOv3(jeblair): This may need some branch-specific
         # configuration for in-repo configs.
         ProjectParser.getSchema(layout)(conf)
+        # Make a copy since we modify this later via pop
+        conf = copy.deepcopy(conf)
         conf_templates = conf.pop('templates', [])
         # The way we construct a project definition is by parsing the
         # definition as a template, then applying all of the
@@ -539,15 +544,18 @@ class TenantParser(object):
         return vs.Schema(tenant)
 
     @staticmethod
-    def fromYaml(base, connections, scheduler, merger, conf):
+    def fromYaml(base, connections, scheduler, merger, conf, cached):
         TenantParser.getSchema(connections)(conf)
         tenant = model.Tenant(conf['name'])
+        tenant.unparsed_config = conf
         unparsed_config = model.UnparsedTenantConfig()
         tenant.config_repos, tenant.project_repos = \
             TenantParser._loadTenantConfigRepos(connections, conf)
         tenant.config_repos_config, tenant.project_repos_config = \
-            TenantParser._loadTenantInRepoLayouts(
-                merger, connections, tenant.config_repos, tenant.project_repos)
+            TenantParser._loadTenantInRepoLayouts(merger, connections,
+                                                  tenant.config_repos,
+                                                  tenant.project_repos,
+                                                  cached)
         unparsed_config.extend(tenant.config_repos_config)
         unparsed_config.extend(tenant.project_repos_config)
         tenant.layout = TenantParser._parseLayout(base, unparsed_config,
@@ -575,12 +583,22 @@ class TenantParser(object):
 
     @staticmethod
     def _loadTenantInRepoLayouts(merger, connections, config_repos,
-                                 project_repos):
+                                 project_repos, cached):
         config_repos_config = model.UnparsedTenantConfig()
         project_repos_config = model.UnparsedTenantConfig()
         jobs = []
 
         for (source, project) in config_repos:
+            # If we have cached data (this is a reconfiguration) use it.
+            if cached and project.unparsed_config:
+                TenantParser.log.info(
+                    "Loading previously parsed configuration from %s" %
+                    (project,))
+                config_repos_config.extend(project.unparsed_config)
+                continue
+            # Otherwise, prepare an empty unparsed config object to
+            # hold cached data later.
+            project.unparsed_config = model.UnparsedTenantConfig()
             # Get main config files.  These files are permitted the
             # full range of configuration.
             url = source.getGitUrl(project)
@@ -590,6 +608,16 @@ class TenantParser(object):
             jobs.append(job)
 
         for (source, project) in project_repos:
+            # If we have cached data (this is a reconfiguration) use it.
+            if cached and project.unparsed_config:
+                TenantParser.log.info(
+                    "Loading previously parsed configuration from %s" %
+                    (project,))
+                project_repos_config.extend(project.unparsed_config)
+                continue
+            # Otherwise, prepare an empty unparsed config object to
+            # hold cached data later.
+            project.unparsed_config = model.UnparsedTenantConfig()
             # Get in-project-repo config files which have a restricted
             # set of options.
             url = source.getGitUrl(project)
@@ -624,7 +652,7 @@ class TenantParser(object):
                         incdata = TenantParser._parseProjectRepoLayout(
                             job.files[fn], job.source_context)
                         project_repos_config.extend(incdata)
-                    job.source_context.project.unparsed_config = incdata
+                    job.source_context.project.unparsed_config.extend(incdata)
         return config_repos_config, project_repos_config
 
     @staticmethod
@@ -695,10 +723,26 @@ class ConfigLoader(object):
         base = os.path.dirname(os.path.realpath(config_path))
 
         for conf_tenant in config.tenants:
+            # When performing a full reload, do not use cached data.
             tenant = TenantParser.fromYaml(base, connections, scheduler,
-                                           merger, conf_tenant)
+                                           merger, conf_tenant, cached=False)
             abide.tenants[tenant.name] = tenant
         return abide
+
+    def reloadTenant(self, config_path, scheduler, merger, connections,
+                     abide, tenant):
+        new_abide = model.Abide()
+        new_abide.tenants = abide.tenants.copy()
+
+        config_path = self.expandConfigPath(config_path)
+        base = os.path.dirname(os.path.realpath(config_path))
+
+        # When reloading a tenant only, use cached data if available.
+        new_tenant = TenantParser.fromYaml(base, connections, scheduler,
+                                           merger, tenant.unparsed_config,
+                                           cached=True)
+        new_abide.tenants[tenant.name] = new_tenant
+        return new_abide
 
     def createDynamicLayout(self, tenant, files):
         config = tenant.config_repos_config.copy()

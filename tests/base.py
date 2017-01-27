@@ -1258,7 +1258,8 @@ class ZuulTestCase(BaseTestCase):
 
         self.event_queues = [
             self.sched.result_event_queue,
-            self.sched.trigger_event_queue
+            self.sched.trigger_event_queue,
+            self.sched.management_event_queue
         ]
 
         self.configure_connections()

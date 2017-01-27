@@ -2133,6 +2133,9 @@ class Tenant(object):
     def __init__(self, name):
         self.name = name
         self.layout = None
+        # The unparsed configuration from the main zuul config for
+        # this tenant.
+        self.unparsed_config = None
         # The list of repos from which we will read main
         # configuration.  (source, project)
         self.config_repos = []
