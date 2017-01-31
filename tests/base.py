@@ -542,7 +542,8 @@ class GithubChangeReference(git.Reference):
 class FakeGithubPullRequest(object):
 
     def __init__(self, github, number, project, branch,
-                 subject, upstream_root, files=[], number_of_commits=1):
+                 subject, upstream_root, files=[], number_of_commits=1,
+                 writers=[]):
         """Creates a new PR with several commits.
         Sends an event about opened PR."""
         self.github = github
@@ -557,6 +558,8 @@ class FakeGithubPullRequest(object):
         self.comments = []
         self.labels = []
         self.statuses = {}
+        self.reviews = []
+        self.writers = []
         self.updated_at = None
         self.head_sha = None
         self.is_merged = False
@@ -773,6 +776,26 @@ class FakeGithubPullRequest(object):
             }
         }))
 
+    def addReview(self, user, state, granted_on=None):
+        # Each user will only have one review at a time, so replace
+        # any existing reviews
+        # FIXME(jlk): this isn't quite right, reviews stack, we only
+        # consider the latest for a user. Thanks GitHub!!
+        for review in self.reviews:
+            if review['user']['login'] == user:
+                self.reviews.remove(review)
+
+        if not granted_on:
+            granted_on = time.time()
+        self.reviews.append({
+            'state': state,
+            'user': {
+                'login': user,
+                'email': user + "@derp.com",
+            },
+            'provided': int(granted_on),
+        })
+
     def _getPRReference(self):
         return '%s/head' % self.number
 
@@ -903,6 +926,10 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         pr = self.pull_requests[number - 1]
         return pr.files
 
+    def _getPullReviews(self, owner, project, number):
+        pr = self.pull_requests[number - 1]
+        return pr.reviews
+
     def getUser(self, login):
         data = {
             'username': login,
@@ -910,6 +937,16 @@ class FakeGithubConnection(githubconnection.GithubConnection):
             'email': 'github.user@example.com'
         }
         return data
+
+    def getRepoPermission(self, project, login):
+        owner, proj = project.split('/')
+        for pr in self.pull_requests:
+            pr_owner, pr_project = pr.project.split('/')
+            if (pr_owner == owner and proj == pr_project):
+                if login in pr.writers:
+                    return 'write'
+                else:
+                    return 'read'
 
     def getGitUrl(self, project):
         return os.path.join(self.upstream_root, str(project))

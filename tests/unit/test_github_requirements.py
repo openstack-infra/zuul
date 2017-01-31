@@ -56,7 +56,7 @@ class TestGithubRequirements(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
-        # An success status from unknown user should not cause it to be
+        # A success status from unknown user should not cause it to be
         # enqueued
         A.setStatus(A.head_sha, 'success', 'null', 'null', 'check', user='foo')
         self.fake_github.emitEvent(A.getCommitStatusEvent('check',
@@ -65,7 +65,7 @@ class TestGithubRequirements(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
-        # A success status goes in
+        # A success status from zuul goes in
         A.setStatus(A.head_sha, 'success', 'null', 'null', 'check')
         self.fake_github.emitEvent(A.getCommitStatusEvent('check'))
         self.waitUntilSettled()
@@ -79,3 +79,95 @@ class TestGithubRequirements(ZuulTestCase):
                                                           state='error'))
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
+
+    @simple_layout('layouts/requirements-github.yaml', driver='github')
+    def test_pipeline_require_review_username(self):
+        "Test pipeline requirement: review username"
+
+        A = self.fake_github.openFakePullRequest('org/project3', 'master', 'A')
+        # A comment event that we will keep submitting to trigger
+        comment = A.getCommentAddedEvent('test me')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        # No approval from derp so should not be enqueued
+        self.assertEqual(len(self.history), 0)
+
+        # Add an approved review from derp
+        A.addReview('derp', 'APPROVED')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+        self.assertEqual(self.history[0].name, 'project3-reviewusername')
+
+    @simple_layout('layouts/requirements-github.yaml', driver='github')
+    def test_pipeline_require_review_state(self):
+        "Test pipeline requirement: review state"
+
+        A = self.fake_github.openFakePullRequest('org/project4', 'master', 'A')
+        # Add derp to writers
+        A.writers.append('derp')
+        # A comment event that we will keep submitting to trigger
+        comment = A.getCommentAddedEvent('test me')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        # No positive review from derp so should not be enqueued
+        self.assertEqual(len(self.history), 0)
+
+        # A negative review from derp should not cause it to be enqueued
+        A.addReview('derp', 'CHANGES_REQUESTED')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+
+        # A positive from nobody should not cause it to be enqueued
+        A.addReview('nobody', 'APPROVED')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+
+        # A positive review from derp should cause it to be enqueued
+        A.addReview('derp', 'APPROVED')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+        self.assertEqual(self.history[0].name, 'project4-reviewreq')
+
+    @simple_layout('layouts/requirements-github.yaml', driver='github')
+    def test_pipeline_require_review_user_state(self):
+        "Test pipeline requirement: review state from user"
+
+        A = self.fake_github.openFakePullRequest('org/project5', 'master', 'A')
+        # Add derp and herp to writers
+        A.writers.extend(('derp', 'herp'))
+        # A comment event that we will keep submitting to trigger
+        comment = A.getCommentAddedEvent('test me')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        # No positive review from derp so should not be enqueued
+        self.assertEqual(len(self.history), 0)
+
+        # A negative review from derp should not cause it to be enqueued
+        A.addReview('derp', 'CHANGES_REQUESTED')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+
+        # A positive from nobody should not cause it to be enqueued
+        A.addReview('nobody', 'APPROVED')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+
+        # A positive review from herp (a writer) should not cause it to be
+        # enqueued
+        A.addReview('herp', 'APPROVED')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+
+        # A positive review from derp should cause it to be enqueued
+        A.addReview('derp', 'APPROVED')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+        self.assertEqual(self.history[0].name, 'project5-reviewuserstate')

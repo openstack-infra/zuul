@@ -14,9 +14,12 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import copy
 import re
+import time
 
 from zuul.model import Change, TriggerEvent, EventFilter, RefFilter
+from zuul.driver.util import time_to_seconds
 
 
 EMPTY_GIT_REF = '0' * 40  # git sha of all zeros, used during creates/deletes
@@ -27,6 +30,7 @@ class PullRequest(Change):
         super(PullRequest, self).__init__(project)
         self.updated_at = None
         self.title = None
+        self.reviews = []
 
     def isUpdateOf(self, other):
         if (hasattr(other, 'number') and self.number == other.number and
@@ -53,6 +57,74 @@ class GithubTriggerEvent(TriggerEvent):
         if self.type == 'pull_request':
             return 'closed' == self.action
         return False
+
+
+class GithubReviewFilter(object):
+    def __init__(self, required_reviews=[]):
+        self._required_reviews = copy.deepcopy(required_reviews)
+        self.required_reviews = self._tidy_reviews(required_reviews)
+
+    def _tidy_reviews(self, reviews):
+        for r in reviews:
+            for k, v in r.items():
+                if k == 'username':
+                    r['username'] = re.compile(v)
+                elif k == 'email':
+                    r['email'] = re.compile(v)
+                elif k == 'newer-than':
+                    r[k] = time_to_seconds(v)
+                elif k == 'older-than':
+                    r[k] = time_to_seconds(v)
+        return reviews
+
+    def _match_review_required_review(self, rreview, review):
+        # Check if the required review and review match
+        now = time.time()
+        by = review.get('by', {})
+        for k, v in rreview.items():
+            if k == 'username':
+                if (not v.search(by.get('username', ''))):
+                        return False
+            elif k == 'email':
+                if (not v.search(by.get('email', ''))):
+                        return False
+            elif k == 'newer-than':
+                t = now - v
+                if (review['provided'] < t):
+                        return False
+            elif k == 'older-than':
+                t = now - v
+                if (review['provided'] >= t):
+                    return False
+            elif k == 'type':
+                if review['type'] != v:
+                    return False
+            elif k == 'permission':
+                # If permission is read, we've matched. You must have read
+                # to provide a review. Write or admin permission is different.
+                if v != 'read':
+                    if review['permission'] != v:
+                        return False
+        return True
+
+    def matchesReviews(self, change):
+        if self.required_reviews and not change.reviews:
+            # No reviews means no matching
+            return False
+
+        return self.matchesRequiredReviews(change)
+
+    def matchesRequiredReviews(self, change):
+        for rreview in self.required_reviews:
+            matches_review = False
+            for review in change.reviews:
+                if self._match_review_required_review(rreview, review):
+                    # Consider matched if any review matches
+                    matches_review = True
+                    break
+            if not matches_review:
+                return False
+        return True
 
 
 class GithubEventFilter(EventFilter):
@@ -170,10 +242,11 @@ class GithubEventFilter(EventFilter):
         return True
 
 
-class GithubRefFilter(RefFilter):
-    def __init__(self, statuses=[]):
+class GithubRefFilter(RefFilter, GithubReviewFilter):
+    def __init__(self, statuses=[], required_reviews=[]):
         RefFilter.__init__(self)
 
+        GithubReviewFilter.__init__(self, required_reviews=required_reviews)
         self.statuses = statuses
 
     def __repr__(self):
@@ -181,6 +254,9 @@ class GithubRefFilter(RefFilter):
 
         if self.statuses:
             ret += ' statuses: %s' % ', '.join(self.statuses)
+        if self.required_reviews:
+            ret += (' required-reviews: %s' %
+                    str(self.required_reviews))
 
         ret += '>'
 
@@ -194,5 +270,9 @@ class GithubRefFilter(RefFilter):
         if self.statuses:
             if set(change.status).isdisjoint(set(self.statuses)):
                 return False
+
+        # required reviews are ANDed
+        if not self.matchesReviews(change):
+            return False
 
         return True
