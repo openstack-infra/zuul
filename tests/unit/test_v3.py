@@ -129,3 +129,9 @@ class TestAnsible(AnsibleZuulTestCase):
         self.assertEqual(build.result, 'SUCCESS')
         flag_path = os.path.join(self.test_root, build.uuid + '.flag')
         self.assertTrue(os.path.exists(flag_path))
+        pre_flag_path = os.path.join(self.test_root, build.uuid +
+                                     '.pre.flag')
+        self.assertTrue(os.path.exists(pre_flag_path))
+        post_flag_path = os.path.join(self.test_root, build.uuid +
+                                      '.post.flag')
+        self.assertTrue(os.path.exists(post_flag_path))

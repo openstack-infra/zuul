@@ -515,7 +515,48 @@ class NodeRequest(object):
         self.state_time = data['state_time']
 
 
+class PlaybookContext(object):
+    """A reference to a playbook in the context of a project.
+
+    Jobs refer to objects of this class for their main, pre, and post
+    playbooks so that we can keep track of which repos and security
+    contexts are needed in order to run them."""
+
+    def __init__(self, project, branch, path, secure):
+        self.project = project
+        self.branch = branch
+        self.path = path
+        self.secure = secure
+
+    def __repr__(self):
+        return '<PlaybookContext %s:%s %s secure:%s>' % (self.project,
+                                                         self.branch,
+                                                         self.path,
+                                                         self.secure)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        if not isinstance(other, PlaybookContext):
+            return False
+        return (self.project == other.project and
+                self.branch == other.branch and
+                self.path == other.path and
+                self.secure == other.secure)
+
+    def toDict(self):
+        # Render to a dict to use in passing json to the launcher
+        return dict(
+            connection=self.project.connection_name,
+            project=self.project.name,
+            branch=self.branch,
+            path=self.path,
+            secure=self.secure)
+
+
 class Job(object):
+
     """A Job represents the defintion of actions to perform."""
 
     def __init__(self, name):
@@ -527,6 +568,7 @@ class Job(object):
             workspace=None,
             pre_run=[],
             post_run=[],
+            run=None,
             voting=None,
             hold_following_changes=None,
             failure_message=None,
@@ -544,12 +586,14 @@ class Job(object):
             source_project=None,
             source_branch=None,
             source_configrepo=None,
-            playbook=None,
         )
 
         self.name = name
         for k, v in self.attributes.items():
             setattr(self, k, v)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __eq__(self, other):
         # Compare the name and all inheritable attributes to determine
@@ -577,11 +621,15 @@ class Job(object):
         if not isinstance(other, Job):
             raise Exception("Job unable to inherit from %s" % (other,))
         for k, v in self.attributes.items():
-            if getattr(other, k) != v and k != 'auth':
+            if (getattr(other, k) != v and k not in
+                set(['auth', 'pre_run', 'post_run'])):
                 setattr(self, k, getattr(other, k))
         # Inherit auth only if explicitly allowed
         if other.auth and 'inherit' in other.auth and other.auth['inherit']:
             setattr(self, 'auth', getattr(other, 'auth'))
+        # Pre and post run are lists; make a copy
+        self.pre_run = other.pre_run + self.pre_run
+        self.post_run = self.post_run + other.post_run
 
     def changeMatches(self, change):
         if self.branch_matcher and not self.branch_matcher.matches(change):
@@ -1816,15 +1864,16 @@ class UnparsedTenantConfig(object):
                                 "a single key (when parsing %s)" %
                                 (conf,))
             key, value = item.items()[0]
-            if key == 'project':
-                self.projects.append(value)
-            elif key == 'job':
+            if key in ['project', 'project-template', 'job']:
                 if source_project is not None:
                     value['_source_project'] = source_project
                 if source_branch is not None:
                     value['_source_branch'] = source_branch
                 if source_configrepo is not None:
                     value['_source_configrepo'] = source_configrepo
+            if key == 'project':
+                self.projects.append(value)
+            elif key == 'job':
                 self.jobs.append(value)
             elif key == 'project-template':
                 self.project_templates.append(value)

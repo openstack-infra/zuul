@@ -66,6 +66,13 @@ class Watchdog(object):
 # repos end up in git.openstack.org.
 
 
+class JobDirPlaybook(object):
+    def __init__(self, root):
+        self.root = root
+        self.secure = None
+        self.path = None
+
+
 class JobDir(object):
     def __init__(self, keep=False):
         self.keep = keep
@@ -77,19 +84,29 @@ class JobDir(object):
         self.known_hosts = os.path.join(self.ansible_root, 'known_hosts')
         self.inventory = os.path.join(self.ansible_root, 'inventory')
         self.vars = os.path.join(self.ansible_root, 'vars.yaml')
-        self.playbook = None
         self.playbook_root = os.path.join(self.ansible_root, 'playbook')
         os.makedirs(self.playbook_root)
-        self.pre_playbook = None
-        self.pre_playbook_root = os.path.join(self.ansible_root,
-                                              'pre_playbook')
-        os.makedirs(self.pre_playbook_root)
-        self.post_playbook = None
-        self.post_playbook_root = os.path.join(self.ansible_root,
-                                               'post_playbook')
-        os.makedirs(self.post_playbook_root)
+        self.playbook = JobDirPlaybook(self.playbook_root)
+        self.pre_playbooks = []
+        self.post_playbooks = []
         self.config = os.path.join(self.ansible_root, 'ansible.cfg')
         self.ansible_log = os.path.join(self.ansible_root, 'ansible_log.txt')
+
+    def addPrePlaybook(self):
+        count = len(self.pre_playbooks)
+        root = os.path.join(self.ansible_root, 'pre_playbook_%i' % (count,))
+        os.makedirs(root)
+        playbook = JobDirPlaybook(root)
+        self.pre_playbooks.append(playbook)
+        return playbook
+
+    def addPostPlaybook(self):
+        count = len(self.post_playbooks)
+        root = os.path.join(self.ansible_root, 'post_playbook_%i' % (count,))
+        os.makedirs(root)
+        playbook = JobDirPlaybook(root)
+        self.post_playbooks.append(playbook)
+        return playbook
 
     def cleanup(self):
         if not self.keep:
@@ -463,7 +480,7 @@ class AnsibleJob(object):
             commit = args['items'][-1]['newrev']  # noqa
 
         # is the playbook in a repo that we have already prepared?
-        self.jobdir.playbook = self.preparePlaybookRepo(args)
+        self.preparePlaybookRepos(args)
 
         # TODOv3: Ansible the ansible thing here.
         self.prepareAnsibleFiles(args)
@@ -499,13 +516,14 @@ class AnsibleJob(object):
     def runPlaybooks(self):
         result = None
 
-        pre_status, pre_code = self.runAnsiblePrePlaybook()
-        if pre_status != self.RESULT_NORMAL or pre_code != 0:
-            # These should really never fail, so return None and have
-            # zuul try again
-            return result
+        for playbook in self.jobdir.pre_playbooks:
+            pre_status, pre_code = self.runAnsiblePlaybook(playbook)
+            if pre_status != self.RESULT_NORMAL or pre_code != 0:
+                # These should really never fail, so return None and have
+                # zuul try again
+                return result
 
-        job_status, job_code = self.runAnsiblePlaybook()
+        job_status, job_code = self.runAnsiblePlaybook(self.jobdir.playbook)
         if job_status == self.RESULT_TIMED_OUT:
             return 'TIMED_OUT'
         if job_status == self.RESULT_ABORTED:
@@ -515,14 +533,17 @@ class AnsibleJob(object):
             # run it again.
             return result
 
-        post_status, post_code = self.runAnsiblePostPlaybook(
-            job_code == 0)
-        if post_status != self.RESULT_NORMAL or post_code != 0:
-            result = 'POST_FAILURE'
-        elif job_code == 0:
+        success = (job_code == 0)
+        if success:
             result = 'SUCCESS'
         else:
             result = 'FAILURE'
+
+        for playbook in self.jobdir.post_playbooks:
+            post_status, post_code = self.runAnsiblePlaybook(
+                playbook, success)
+            if post_status != self.RESULT_NORMAL or post_code != 0:
+                result = 'POST_FAILURE'
         return result
 
     def getHostList(self, args):
@@ -542,16 +563,28 @@ class AnsibleJob(object):
                 return fn
         raise Exception("Unable to find playbook %s" % path)
 
-    def preparePlaybookRepo(self, args):
-        # Check out the playbook repo if needed and return the path to
+    def preparePlaybookRepos(self, args):
+        for playbook in args['pre_playbooks']:
+            jobdir_playbook = self.jobdir.addPrePlaybook()
+            self.preparePlaybookRepo(jobdir_playbook, playbook, args)
+
+        jobdir_playbook = self.jobdir.playbook
+        self.preparePlaybookRepo(jobdir_playbook, args['playbook'], args)
+
+        for playbook in args['post_playbooks']:
+            jobdir_playbook = self.jobdir.addPostPlaybook()
+            self.preparePlaybookRepo(jobdir_playbook, playbook, args)
+
+    def preparePlaybookRepo(self, jobdir_playbook, playbook, args):
+        # Check out the playbook repo if needed and set the path to
         # the playbook that should be run.
-        playbook = args['playbook']
+        jobdir_playbook.secure = playbook['secure']
         source = self.launcher_server.connections.getSource(
             playbook['connection'])
         project = source.getProject(playbook['project'])
         # TODO(jeblair): construct the url in the merger itself
         url = source.getGitUrl(project)
-        if not playbook['config_repo']:
+        if not playbook['secure']:
             # This is a project repo, so it is safe to use the already
             # checked out version (from speculative merging) of the
             # playbook
@@ -562,18 +595,19 @@ class AnsibleJob(object):
                     path = os.path.join(self.jobdir.git_root,
                                         project.name,
                                         playbook['path'])
-                    return self.findPlaybook(path)
+                    jobdir_playbook.path = self.findPlaybook(path)
+                    return
         # The playbook repo is either a config repo, or it isn't in
         # the stack of changes we are testing, so check out the branch
         # tip into a dedicated space.
 
-        merger = self.launcher_server._getMerger(self.jobdir.playbook_root)
+        merger = self.launcher_server._getMerger(jobdir_playbook.root)
         merger.checkoutBranch(project.name, url, playbook['branch'])
 
-        path = os.path.join(self.jobdir.playbook_root,
+        path = os.path.join(jobdir_playbook.root,
                             project.name,
                             playbook['path'])
-        return self.findPlaybook(path)
+        jobdir_playbook.path = self.findPlaybook(path)
 
     def prepareAnsibleFiles(self, args):
         with open(self.jobdir.inventory, 'w') as inventory:
@@ -682,10 +716,7 @@ class AnsibleJob(object):
 
         return (self.RESULT_NORMAL, ret)
 
-    def runAnsiblePrePlaybook(self):
-        # TODOv3(jeblair): remove return statement
-        return (self.RESULT_NORMAL, 0)
-
+    def runAnsiblePlaybook(self, playbook, success=None):
         env_copy = os.environ.copy()
         env_copy['LOGNAME'] = 'zuul'
 
@@ -694,44 +725,13 @@ class AnsibleJob(object):
         else:
             verbose = '-v'
 
-        cmd = ['ansible-playbook', self.jobdir.pre_playbook,
-               '-e@%s' % self.jobdir.vars, verbose]
-        # TODOv3: get this from the job
-        timeout = 60
+        cmd = ['ansible-playbook', playbook.path]
 
-        return self.runAnsible(cmd, timeout)
+        if success is not None:
+            cmd.extend(['-e', 'success=%s' % str(bool(success))])
 
-    def runAnsiblePlaybook(self):
-        env_copy = os.environ.copy()
-        env_copy['LOGNAME'] = 'zuul'
+        cmd.extend(['-e@%s' % self.jobdir.vars, verbose])
 
-        if False:  # TODOv3: self.options['verbose']:
-            verbose = '-vvv'
-        else:
-            verbose = '-v'
-
-        cmd = ['ansible-playbook', self.jobdir.playbook,
-               '-e@%s' % self.jobdir.vars, verbose]
-        # TODOv3: get this from the job
-        timeout = 60
-
-        return self.runAnsible(cmd, timeout)
-
-    def runAnsiblePostPlaybook(self, success):
-        # TODOv3(jeblair): remove return statement
-        return (self.RESULT_NORMAL, 0)
-
-        env_copy = os.environ.copy()
-        env_copy['LOGNAME'] = 'zuul'
-
-        if False:  # TODOv3: self.options['verbose']:
-            verbose = '-vvv'
-        else:
-            verbose = '-v'
-
-        cmd = ['ansible-playbook', self.jobdir.post_playbook,
-               '-e', 'success=%s' % success,
-               '-e@%s' % self.jobdir.vars, verbose]
         # TODOv3: get this from the job
         timeout = 60
 

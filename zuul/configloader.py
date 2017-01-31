@@ -101,6 +101,8 @@ class JobParser(object):
                'nodes': vs.Any([node], str),
                'timeout': int,
                'attempts': int,
+               'pre-run': to_list(str),
+               'post-run': to_list(str),
                '_source_project': model.Project,
                '_source_branch': vs.Any(str, None),
                '_source_configrepo': bool,
@@ -111,6 +113,7 @@ class JobParser(object):
     @staticmethod
     def fromYaml(layout, conf):
         JobParser.getSchema()(conf)
+
         job = model.Job(conf['name'])
         if 'auth' in conf:
             job.auth = conf.get('auth')
@@ -119,8 +122,6 @@ class JobParser(object):
             job.inheritFrom(parent)
         job.timeout = conf.get('timeout', job.timeout)
         job.workspace = conf.get('workspace', job.workspace)
-        job.pre_run = as_list(conf.get('pre-run', job.pre_run))
-        job.post_run = as_list(conf.get('post-run', job.post_run))
         job.voting = conf.get('voting', True)
         job.hold_following_changes = conf.get('hold-following-changes', False)
         job.mutex = conf.get('mutex', None)
@@ -144,14 +145,38 @@ class JobParser(object):
             # accumulate onto any previously applied tags from
             # metajobs.
             job.tags = job.tags.union(set(tags))
-        # The source attributes and playbook may not be overridden --
-        # they are always supplied by the config loader.  They
-        # correspond to the Project instance of the repo where it
+        # The source attributes and playbook info may not be
+        # overridden -- they are always supplied by the config loader.
+        # They correspond to the Project instance of the repo where it
         # originated, and the branch name.
         job.source_project = conf.get('_source_project')
         job.source_branch = conf.get('_source_branch')
         job.source_configrepo = conf.get('_source_configrepo')
-        job.playbook = os.path.join('playbooks', job.name)
+        pre_run_name = conf.get('pre-run')
+        # Append the pre-run command
+        if pre_run_name:
+            pre_run_name = os.path.join('playbooks', pre_run_name)
+            pre_run = model.PlaybookContext(job.source_project,
+                                            job.source_branch,
+                                            pre_run_name,
+                                            job.source_configrepo)
+            job.pre_run.append(pre_run)
+        # Prepend the post-run command
+        post_run_name = conf.get('post-run')
+        if post_run_name:
+            post_run_name = os.path.join('playbooks', post_run_name)
+            post_run = model.PlaybookContext(job.source_project,
+                                             job.source_branch,
+                                             post_run_name,
+                                             job.source_configrepo)
+            job.post_run.insert(0, post_run)
+        # Set the run command
+        run_name = job.name
+        run_name = os.path.join('playbooks', run_name)
+        run = model.PlaybookContext(job.source_project,
+                                    job.source_branch, run_name,
+                                    job.source_configrepo)
+        job.run = run
         job.failure_message = conf.get('failure-message', job.failure_message)
         job.success_message = conf.get('success-message', job.success_message)
         job.failure_url = conf.get('failure-url', job.failure_url)
@@ -193,7 +218,11 @@ class ProjectTemplateParser(object):
             vs.Required('name'): str,
             'merge-mode': vs.Any(
                 'merge', 'merge-resolve',
-                'cherry-pick')}
+                'cherry-pick'),
+            '_source_project': model.Project,
+            '_source_branch': vs.Any(str, None),
+            '_source_configrepo': bool,
+        }
 
         for p in layout.pipelines.values():
             project_template[p.name] = {'queue': str,
@@ -204,6 +233,9 @@ class ProjectTemplateParser(object):
     def fromYaml(layout, conf):
         ProjectTemplateParser.getSchema(layout)(conf)
         project_template = model.ProjectConfig(conf['name'])
+        source_project = conf['_source_project']
+        source_branch = conf['_source_branch']
+        source_configrepo = conf['_source_configrepo']
         for pipeline in layout.pipelines.values():
             conf_pipeline = conf.get(pipeline.name)
             if not conf_pipeline:
@@ -212,11 +244,13 @@ class ProjectTemplateParser(object):
             project_template.pipelines[pipeline.name] = project_pipeline
             project_pipeline.queue_name = conf_pipeline.get('queue')
             project_pipeline.job_tree = ProjectTemplateParser._parseJobTree(
-                layout, conf_pipeline.get('jobs', []))
+                layout, conf_pipeline.get('jobs', []),
+                source_project, source_branch, source_configrepo)
         return project_template
 
     @staticmethod
-    def _parseJobTree(layout, conf, tree=None):
+    def _parseJobTree(layout, conf, source_project, source_branch,
+                      source_configrepo, tree=None):
         if not tree:
             tree = model.JobTree(None)
         for conf_job in conf:
@@ -230,6 +264,9 @@ class ProjectTemplateParser(object):
                 if attrs:
                     # We are overriding params, so make a new job def
                     attrs['name'] = jobname
+                    attrs['_source_project'] = source_project
+                    attrs['_source_branch'] = source_branch
+                    attrs['_source_configrepo'] = source_configrepo
                     subtree = tree.addJob(JobParser.fromYaml(layout, attrs))
                 else:
                     # Not overriding, so get existing job
@@ -237,7 +274,11 @@ class ProjectTemplateParser(object):
 
                 if jobs:
                     # This is the root of a sub tree
-                    ProjectTemplateParser._parseJobTree(layout, jobs, subtree)
+                    ProjectTemplateParser._parseJobTree(layout, jobs,
+                                                        source_project,
+                                                        source_branch,
+                                                        source_configrepo,
+                                                        subtree)
             else:
                 raise Exception("Job must be a string or dictionary")
         return tree
@@ -248,10 +289,16 @@ class ProjectParser(object):
 
     @staticmethod
     def getSchema(layout):
-        project = {vs.Required('name'): str,
-                   'templates': [str],
-                   'merge-mode': vs.Any('merge', 'merge-resolve',
-                                        'cherry-pick')}
+        project = {
+            vs.Required('name'): str,
+            'templates': [str],
+            'merge-mode': vs.Any('merge', 'merge-resolve',
+                                 'cherry-pick'),
+            '_source_project': model.Project,
+            '_source_branch': vs.Any(str, None),
+            '_source_configrepo': bool,
+        }
+
         for p in layout.pipelines.values():
             project[p.name] = {'queue': str,
                                'jobs': [vs.Any(str, dict)]}

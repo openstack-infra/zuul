@@ -94,6 +94,9 @@ class TestJob(BaseTestCase):
         layout.addJob(python27diablo)
 
         project_config = configloader.ProjectParser.fromYaml(layout, {
+            '_source_project': project,
+            '_source_branch': 'master',
+            '_source_configrepo': True,
             'name': 'project',
             'gate': {
                 'jobs': [
@@ -247,6 +250,9 @@ class TestJob(BaseTestCase):
         layout.addJob(python27diablo)
 
         project_config = configloader.ProjectParser.fromYaml(layout, {
+            '_source_project': project,
+            '_source_branch': 'master',
+            '_source_configrepo': True,
             'name': 'project',
             'gate': {
                 'jobs': [
@@ -309,6 +315,9 @@ class TestJob(BaseTestCase):
         layout.addJob(python27)
 
         project_config = configloader.ProjectParser.fromYaml(layout, {
+            '_source_project': project,
+            '_source_branch': 'master',
+            '_source_configrepo': True,
             'name': 'project',
             'gate': {
                 'jobs': [

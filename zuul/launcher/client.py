@@ -373,15 +373,11 @@ class LaunchClient(object):
         params['items'] = merger_items
         params['projects'] = []
 
-        config_repos = set([x[1] for x in
-                            item.pipeline.layout.tenant.config_repos])
         if job.name != 'noop':
-            params['playbook'] = dict(
-                connection=job.source_project.connection_name,
-                config_repo=job.source_project in config_repos,
-                project=job.source_project.name,
-                branch=job.source_branch,
-                path=job.playbook)
+            params['playbook'] = job.run.toDict()
+            params['pre_playbooks'] = [x.toDict() for x in job.pre_run]
+            params['post_playbooks'] = [x.toDict() for x in job.post_run]
+
         nodes = []
         for node in item.current_build_set.getJobNodeSet(job.name).getNodes():
             nodes.append(dict(name=node.name, image=node.image))
