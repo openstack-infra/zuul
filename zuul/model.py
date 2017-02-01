@@ -515,24 +515,48 @@ class NodeRequest(object):
         self.state_time = data['state_time']
 
 
+class SourceContext(object):
+    """A reference to the branch of a project in configuration.
+
+    Jobs and playbooks reference this to keep track of where they
+    originate."""
+
+    def __init__(self, project, branch, secure):
+        self.project = project
+        self.branch = branch
+        self.secure = secure
+
+    def __repr__(self):
+        return '<SourceContext %s:%s secure:%s>' % (self.project,
+                                                    self.branch,
+                                                    self.secure)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        if not isinstance(other, SourceContext):
+            return False
+        return (self.project == other.project and
+                self.branch == other.branch and
+                self.secure == other.secure)
+
+
 class PlaybookContext(object):
+
     """A reference to a playbook in the context of a project.
 
     Jobs refer to objects of this class for their main, pre, and post
     playbooks so that we can keep track of which repos and security
     contexts are needed in order to run them."""
 
-    def __init__(self, project, branch, path, secure):
-        self.project = project
-        self.branch = branch
+    def __init__(self, source_context, path):
+        self.source_context = source_context
         self.path = path
-        self.secure = secure
 
     def __repr__(self):
-        return '<PlaybookContext %s:%s %s secure:%s>' % (self.project,
-                                                         self.branch,
-                                                         self.path,
-                                                         self.secure)
+        return '<PlaybookContext %s %s>' % (self.source_context,
+                                            self.path)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -540,19 +564,17 @@ class PlaybookContext(object):
     def __eq__(self, other):
         if not isinstance(other, PlaybookContext):
             return False
-        return (self.project == other.project and
-                self.branch == other.branch and
-                self.path == other.path and
-                self.secure == other.secure)
+        return (self.source_context == other.source_context and
+                self.path == other.path)
 
     def toDict(self):
         # Render to a dict to use in passing json to the launcher
         return dict(
-            connection=self.project.connection_name,
-            project=self.project.name,
-            branch=self.branch,
-            path=self.path,
-            secure=self.secure)
+            connection=self.source_context.project.connection_name,
+            project=self.source_context.project.name,
+            branch=self.source_context.branch,
+            secure=self.source_context.secure,
+            path=self.path)
 
 
 class Job(object):
@@ -583,9 +605,7 @@ class Job(object):
             tags=set(),
             mutex=None,
             attempts=3,
-            source_project=None,
-            source_branch=None,
-            source_configrepo=None,
+            source_context=None,
         )
 
         self.name = name
@@ -1840,8 +1860,7 @@ class UnparsedTenantConfig(object):
         r.nodesets = copy.deepcopy(self.nodesets)
         return r
 
-    def extend(self, conf, source_project=None, source_branch=None,
-               source_configrepo=None):
+    def extend(self, conf, source_context=None):
         if isinstance(conf, UnparsedTenantConfig):
             self.pipelines.extend(conf.pipelines)
             self.jobs.extend(conf.jobs)
@@ -1854,6 +1873,11 @@ class UnparsedTenantConfig(object):
             raise Exception("Configuration items must be in the form of "
                             "a list of dictionaries (when parsing %s)" %
                             (conf,))
+
+        if source_context is None:
+            raise Exception("A source context must be provided "
+                            "(when parsing %s)" % (conf,))
+
         for item in conf:
             if not isinstance(item, dict):
                 raise Exception("Configuration items must be in the form of "
@@ -1865,12 +1889,7 @@ class UnparsedTenantConfig(object):
                                 (conf,))
             key, value = item.items()[0]
             if key in ['project', 'project-template', 'job']:
-                if source_project is not None:
-                    value['_source_project'] = source_project
-                if source_branch is not None:
-                    value['_source_branch'] = source_branch
-                if source_configrepo is not None:
-                    value['_source_configrepo'] = source_configrepo
+                value['_source_context'] = source_context
             if key == 'project':
                 self.projects.append(value)
             elif key == 'job':
@@ -1915,13 +1934,16 @@ class Layout(object):
     def addJob(self, job):
         # We can have multiple variants of a job all with the same
         # name, but these variants must all be defined in the same repo.
-        prior_jobs = [j for j in self.getJobs(job.name)
-                      if j.source_project != job.source_project]
+        prior_jobs = [j for j in self.getJobs(job.name) if
+                      j.source_context.project !=
+                      job.source_context.project]
         if prior_jobs:
             raise Exception("Job %s in %s is not permitted to shadow "
-                            "job %s in %s" % (job, job.source_project,
-                                              prior_jobs[0],
-                                              prior_jobs[0].source_project))
+                            "job %s in %s" % (
+                                job,
+                                job.source_context.project,
+                                prior_jobs[0],
+                                prior_jobs[0].source_context.project))
 
         if job.name in self.jobs:
             self.jobs[job.name].append(job)

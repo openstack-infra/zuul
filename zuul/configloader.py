@@ -103,9 +103,7 @@ class JobParser(object):
                'attempts': int,
                'pre-run': to_list(str),
                'post-run': to_list(str),
-               '_source_project': model.Project,
-               '_source_branch': vs.Any(str, None),
-               '_source_configrepo': bool,
+               '_source_context': model.SourceContext,
                }
 
         return vs.Schema(job)
@@ -145,37 +143,29 @@ class JobParser(object):
             # accumulate onto any previously applied tags from
             # metajobs.
             job.tags = job.tags.union(set(tags))
-        # The source attributes and playbook info may not be
+        # The source attribute and playbook info may not be
         # overridden -- they are always supplied by the config loader.
         # They correspond to the Project instance of the repo where it
         # originated, and the branch name.
-        job.source_project = conf.get('_source_project')
-        job.source_branch = conf.get('_source_branch')
-        job.source_configrepo = conf.get('_source_configrepo')
+        job.source_context = conf.get('_source_context')
         pre_run_name = conf.get('pre-run')
         # Append the pre-run command
         if pre_run_name:
             pre_run_name = os.path.join('playbooks', pre_run_name)
-            pre_run = model.PlaybookContext(job.source_project,
-                                            job.source_branch,
-                                            pre_run_name,
-                                            job.source_configrepo)
+            pre_run = model.PlaybookContext(job.source_context,
+                                            pre_run_name)
             job.pre_run.append(pre_run)
         # Prepend the post-run command
         post_run_name = conf.get('post-run')
         if post_run_name:
             post_run_name = os.path.join('playbooks', post_run_name)
-            post_run = model.PlaybookContext(job.source_project,
-                                             job.source_branch,
-                                             post_run_name,
-                                             job.source_configrepo)
+            post_run = model.PlaybookContext(job.source_context,
+                                             post_run_name)
             job.post_run.insert(0, post_run)
         # Set the run command
         run_name = job.name
         run_name = os.path.join('playbooks', run_name)
-        run = model.PlaybookContext(job.source_project,
-                                    job.source_branch, run_name,
-                                    job.source_configrepo)
+        run = model.PlaybookContext(job.source_context, run_name)
         job.run = run
         job.failure_message = conf.get('failure-message', job.failure_message)
         job.success_message = conf.get('success-message', job.success_message)
@@ -184,8 +174,8 @@ class JobParser(object):
 
         # If the definition for this job came from a project repo,
         # implicitly apply a branch matcher for the branch it was on.
-        if (not job.source_configrepo) and job.source_branch:
-            branches = [job.source_branch]
+        if (not job.source_context.secure):
+            branches = [job.source_context.branch]
         elif 'branches' in conf:
             branches = as_list(conf['branches'])
         else:
@@ -219,9 +209,7 @@ class ProjectTemplateParser(object):
             'merge-mode': vs.Any(
                 'merge', 'merge-resolve',
                 'cherry-pick'),
-            '_source_project': model.Project,
-            '_source_branch': vs.Any(str, None),
-            '_source_configrepo': bool,
+            '_source_context': model.SourceContext,
         }
 
         for p in layout.pipelines.values():
@@ -233,9 +221,7 @@ class ProjectTemplateParser(object):
     def fromYaml(layout, conf):
         ProjectTemplateParser.getSchema(layout)(conf)
         project_template = model.ProjectConfig(conf['name'])
-        source_project = conf['_source_project']
-        source_branch = conf['_source_branch']
-        source_configrepo = conf['_source_configrepo']
+        source_context = conf['_source_context']
         for pipeline in layout.pipelines.values():
             conf_pipeline = conf.get(pipeline.name)
             if not conf_pipeline:
@@ -245,12 +231,11 @@ class ProjectTemplateParser(object):
             project_pipeline.queue_name = conf_pipeline.get('queue')
             project_pipeline.job_tree = ProjectTemplateParser._parseJobTree(
                 layout, conf_pipeline.get('jobs', []),
-                source_project, source_branch, source_configrepo)
+                source_context)
         return project_template
 
     @staticmethod
-    def _parseJobTree(layout, conf, source_project, source_branch,
-                      source_configrepo, tree=None):
+    def _parseJobTree(layout, conf, source_context, tree=None):
         if not tree:
             tree = model.JobTree(None)
         for conf_job in conf:
@@ -264,9 +249,7 @@ class ProjectTemplateParser(object):
                 if attrs:
                     # We are overriding params, so make a new job def
                     attrs['name'] = jobname
-                    attrs['_source_project'] = source_project
-                    attrs['_source_branch'] = source_branch
-                    attrs['_source_configrepo'] = source_configrepo
+                    attrs['_source_context'] = source_context
                     subtree = tree.addJob(JobParser.fromYaml(layout, attrs))
                 else:
                     # Not overriding, so get existing job
@@ -275,9 +258,7 @@ class ProjectTemplateParser(object):
                 if jobs:
                     # This is the root of a sub tree
                     ProjectTemplateParser._parseJobTree(layout, jobs,
-                                                        source_project,
-                                                        source_branch,
-                                                        source_configrepo,
+                                                        source_context,
                                                         subtree)
             else:
                 raise Exception("Job must be a string or dictionary")
@@ -294,9 +275,7 @@ class ProjectParser(object):
             'templates': [str],
             'merge-mode': vs.Any('merge', 'merge-resolve',
                                  'cherry-pick'),
-            '_source_project': model.Project,
-            '_source_branch': vs.Any(str, None),
-            '_source_configrepo': bool,
+            '_source_context': model.SourceContext,
         }
 
         for p in layout.pipelines.values():
@@ -595,9 +574,7 @@ class TenantParser(object):
             url = source.getGitUrl(project)
             job = merger.getFiles(project.name, url, 'master',
                                   files=['zuul.yaml', '.zuul.yaml'])
-            job.project = project
-            job.branch = 'master'
-            job.config_repo = True
+            job.source_context = model.SourceContext(project, 'master', True)
             jobs.append(job)
 
         for (source, project) in project_repos:
@@ -611,9 +588,8 @@ class TenantParser(object):
             for branch in source.getProjectBranches(project):
                 job = merger.getFiles(project.name, url, branch,
                                       files=['.zuul.yaml'])
-                job.project = project
-                job.branch = branch
-                job.config_repo = False
+                job.source_context = model.SourceContext(project,
+                                                         branch, False)
                 jobs.append(job)
 
         for job in jobs:
@@ -627,31 +603,31 @@ class TenantParser(object):
                 if job.files.get(fn):
                     TenantParser.log.info(
                         "Loading configuration from %s/%s" %
-                        (job.project, fn))
-                    if job.config_repo:
+                        (job.source_context, fn))
+                    if job.source_context.secure:
                         incdata = TenantParser._parseConfigRepoLayout(
-                            job.files[fn], job.project, job.branch)
+                            job.files[fn], job.source_context)
                         config_repos_config.extend(incdata)
                     else:
                         incdata = TenantParser._parseProjectRepoLayout(
-                            job.files[fn], job.project, job.branch)
+                            job.files[fn], job.source_context)
                         project_repos_config.extend(incdata)
-                    job.project.unparsed_config = incdata
+                    job.source_context.project.unparsed_config = incdata
         return config_repos_config, project_repos_config
 
     @staticmethod
-    def _parseConfigRepoLayout(data, project, branch):
+    def _parseConfigRepoLayout(data, source_context):
         # This is the top-level configuration for a tenant.
         config = model.UnparsedTenantConfig()
-        config.extend(yaml.load(data), project, branch, True)
+        config.extend(yaml.load(data), source_context)
         return config
 
     @staticmethod
-    def _parseProjectRepoLayout(data, project, branch):
+    def _parseProjectRepoLayout(data, source_context):
         # TODOv3(jeblair): this should implement some rules to protect
         # aspects of the config that should not be changed in-repo
         config = model.UnparsedTenantConfig()
-        config.extend(yaml.load(data), project, branch, False)
+        config.extend(yaml.load(data), source_context)
 
         return config
 
@@ -722,8 +698,10 @@ class ConfigLoader(object):
                     data = project.unparsed_config
                 if not data:
                     continue
+                source_context = model.SourceContext(project,
+                                                     branch, False)
                 incdata = TenantParser._parseProjectRepoLayout(
-                    data, project, branch)
+                    data, source_context)
                 config.extend(incdata)
 
         layout = model.Layout()
