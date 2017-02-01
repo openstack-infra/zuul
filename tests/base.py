@@ -28,10 +28,12 @@ import re
 import select
 import shutil
 from six.moves import reload_module
+from six import StringIO
 import socket
 import string
 import subprocess
 import swiftclient
+import sys
 import tempfile
 import threading
 import time
@@ -43,6 +45,8 @@ import kazoo.client
 import kazoo.exceptions
 import statsd
 import testtools
+import testtools.content
+import testtools.content_type
 from git.exc import NoSuchPathError
 
 import zuul.driver.gerrit.gerritsource as gerritsource
@@ -63,10 +67,6 @@ import zuul.zk
 FIXTURE_DIR = os.path.join(os.path.dirname(__file__),
                            'fixtures')
 USE_TEMPDIR = True
-
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(name)-32s '
-                    '%(levelname)-8s %(message)s')
 
 
 def repack_repo(path):
@@ -1048,6 +1048,20 @@ class ChrootedKazooFixture(fixtures.Fixture):
 class BaseTestCase(testtools.TestCase):
     log = logging.getLogger("zuul.test")
 
+    def attachLogs(self, *args):
+        def reader():
+            self._log_stream.seek(0)
+            while True:
+                x = self._log_stream.read(4096)
+                if not x:
+                    break
+                yield x.encode('utf8')
+        content = testtools.content.content_from_reader(
+            reader,
+            testtools.content_type.UTF8_TEXT,
+            False)
+        self.addDetail('logging', content)
+
     def setUp(self):
         super(BaseTestCase, self).setUp()
         test_timeout = os.environ.get('OS_TEST_TIMEOUT', 0)
@@ -1069,40 +1083,37 @@ class BaseTestCase(testtools.TestCase):
             self.useFixture(fixtures.MonkeyPatch('sys.stderr', stderr))
         if (os.environ.get('OS_LOG_CAPTURE') == 'True' or
             os.environ.get('OS_LOG_CAPTURE') == '1'):
-            log_level = logging.DEBUG
-            if os.environ.get('OS_LOG_LEVEL') == 'DEBUG':
-                log_level = logging.DEBUG
-            elif os.environ.get('OS_LOG_LEVEL') == 'INFO':
-                log_level = logging.INFO
-            elif os.environ.get('OS_LOG_LEVEL') == 'WARNING':
-                log_level = logging.WARNING
-            elif os.environ.get('OS_LOG_LEVEL') == 'ERROR':
-                log_level = logging.ERROR
-            elif os.environ.get('OS_LOG_LEVEL') == 'CRITICAL':
-                log_level = logging.CRITICAL
-            self.useFixture(fixtures.FakeLogger(
-                level=log_level,
-                format='%(asctime)s %(name)-32s '
-                '%(levelname)-8s %(message)s'))
+            self._log_stream = StringIO()
+            self.addOnException(self.attachLogs)
+        else:
+            self._log_stream = sys.stdout
 
-        # NOTE(notmorgan): Extract logging overrides for specific libraries
-        # from the OS_LOG_DEFAULTS env and create FakeLogger fixtures for
-        # each. This is used to limit the output during test runs from
-        # libraries that zuul depends on such as gear.
+        handler = logging.StreamHandler(self._log_stream)
+        formatter = logging.Formatter('%(asctime)s %(name)-32s '
+                                      '%(levelname)-8s %(message)s')
+        handler.setFormatter(formatter)
+
+        logger = logging.getLogger()
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(handler)
+
+        # NOTE(notmorgan): Extract logging overrides for specific
+        # libraries from the OS_LOG_DEFAULTS env and create loggers
+        # for each. This is used to limit the output during test runs
+        # from libraries that zuul depends on such as gear.
         log_defaults_from_env = os.environ.get(
             'OS_LOG_DEFAULTS',
-            'git.cmd=INFO,kazoo.client=INFO')
+            'git.cmd=INFO,kazoo.client=WARNING,gear=INFO')
 
         if log_defaults_from_env:
             for default in log_defaults_from_env.split(','):
                 try:
                     name, level_str = default.split('=', 1)
                     level = getattr(logging, level_str, logging.DEBUG)
-                    self.useFixture(fixtures.FakeLogger(
-                        name=name,
-                        level=level,
-                        format='%(asctime)s %(name)-32s '
-                               '%(levelname)-8s %(message)s'))
+                    logger = logging.getLogger(name)
+                    logger.setLevel(level)
+                    logger.addHandler(handler)
+                    logger.propagate = False
                 except ValueError:
                     # NOTE(notmorgan): Invalid format of the log default,
                     # skip and don't try and apply a logger for the

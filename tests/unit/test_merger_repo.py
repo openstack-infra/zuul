@@ -23,10 +23,6 @@ import git
 from zuul.merger.merger import Repo
 from tests.base import ZuulTestCase
 
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(name)-32s '
-                    '%(levelname)-8s %(message)s')
-
 
 class TestMergerRepo(ZuulTestCase):
 

@@ -15,7 +15,6 @@
 # under the License.
 
 import json
-import logging
 import os
 import re
 import shutil
@@ -35,10 +34,6 @@ from tests.base import (
     ZuulTestCase,
     repack_repo,
 )
-
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(name)-32s '
-                    '%(levelname)-8s %(message)s')
 
 
 class TestScheduler(ZuulTestCase):

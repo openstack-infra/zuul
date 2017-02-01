@@ -26,10 +26,6 @@ import zuul.lib.cloner
 
 from tests.base import ZuulTestCase
 
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(name)-32s '
-                    '%(levelname)-8s %(message)s')
-
 
 class TestCloner(ZuulTestCase):
 

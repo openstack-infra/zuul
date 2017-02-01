@@ -13,13 +13,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import logging
 import testtools
 from zuul.lib.clonemapper import CloneMapper
-
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(name)-17s '
-                    '%(levelname)-8s %(message)s')
 
 
 class TestCloneMapper(testtools.TestCase):

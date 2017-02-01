@@ -14,14 +14,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import logging
 import time
 
 from tests.base import ZuulTestCase
-
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(name)-32s '
-                    '%(levelname)-8s %(message)s')
 
 
 class TestRequirementsApprovalNewerThan(ZuulTestCase):
