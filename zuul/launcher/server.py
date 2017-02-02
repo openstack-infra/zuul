@@ -446,6 +446,9 @@ class AnsibleJob(object):
         try:
             self.jobdir = JobDir()
             self._launch()
+        except Exception:
+            self.log.exception("Exception while launching job")
+            self.job.sendWorkException(traceback.format_exc())
         finally:
             self.running = False
             try:
