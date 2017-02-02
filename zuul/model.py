@@ -1827,7 +1827,6 @@ class Layout(object):
 
     def __init__(self):
         self.tenant = None
-        self.projects = {}
         self.project_configs = {}
         self.project_templates = {}
         self.pipelines = OrderedDict()

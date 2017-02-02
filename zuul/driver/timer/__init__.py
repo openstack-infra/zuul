@@ -76,12 +76,12 @@ class TimerDriver(Driver, TriggerInterface):
                     jobs.append(job)
 
     def _onTrigger(self, tenant, pipeline_name, timespec):
-        for project in tenant.layout.projects.values():
+        for project_name in tenant.layout.project_configs.keys():
             event = TriggerEvent()
             event.type = 'timer'
             event.timespec = timespec
             event.forced_pipeline = pipeline_name
-            event.project_name = project.name
+            event.project_name = project_name
             self.log.debug("Adding event %s" % event)
             self.sched.addEvent(event)
 
