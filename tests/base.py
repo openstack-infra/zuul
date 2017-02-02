@@ -1273,6 +1273,7 @@ class ZuulTestCase(BaseTestCase):
 
         self.launch_server = RecordingLaunchServer(
             self.config, self.connections,
+            jobdir_root=self.test_root,
             _run_ansible=self.run_ansible,
             _test_root=self.test_root)
         self.launch_server.start()

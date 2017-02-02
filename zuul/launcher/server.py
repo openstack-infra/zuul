@@ -74,9 +74,9 @@ class JobDirPlaybook(object):
 
 
 class JobDir(object):
-    def __init__(self, keep=False):
+    def __init__(self, root=None, keep=False):
         self.keep = keep
-        self.root = tempfile.mkdtemp()
+        self.root = tempfile.mkdtemp(dir=root)
         self.git_root = os.path.join(self.root, 'git')
         os.makedirs(self.git_root)
         self.ansible_root = os.path.join(self.root, 'ansible')
@@ -179,9 +179,11 @@ class DeduplicateQueue(object):
 class LaunchServer(object):
     log = logging.getLogger("zuul.LaunchServer")
 
-    def __init__(self, config, connections={}, keep_jobdir=False):
+    def __init__(self, config, connections={}, jobdir_root=None,
+                 keep_jobdir=False):
         self.config = config
         self.keep_jobdir = keep_jobdir
+        self.jobdir_root = jobdir_root
         # TODOv3(mordred): make the launcher name more unique --
         # perhaps hostname+pid.
         self.hostname = socket.gethostname()
@@ -444,7 +446,7 @@ class AnsibleJob(object):
 
     def launch(self):
         try:
-            self.jobdir = JobDir()
+            self.jobdir = JobDir(root=self.launcher_server.jobdir_root)
             self._launch()
         except Exception:
             self.log.exception("Exception while launching job")
