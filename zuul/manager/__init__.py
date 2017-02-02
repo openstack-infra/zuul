@@ -398,6 +398,9 @@ class PipelineManager(object):
         old_build_set.node_requests = {}
         canceled_jobs = set()
         for build in old_build_set.getBuilds():
+            if build.result:
+                canceled_jobs.add(build.job.name)
+                continue
             was_running = False
             try:
                 was_running = self.sched.launcher.cancel(build)
