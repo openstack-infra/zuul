@@ -908,10 +908,13 @@ class FakeNodepool(object):
         reqs = []
         for oid in sorted(reqids):
             path = self.REQUEST_ROOT + '/' + oid
-            data, stat = self.client.get(path)
-            data = json.loads(data)
-            data['_oid'] = oid
-            reqs.append(data)
+            try:
+                data, stat = self.client.get(path)
+                data = json.loads(data)
+                data['_oid'] = oid
+                reqs.append(data)
+            except kazoo.exceptions.NoNodeError:
+                pass
         return reqs
 
     def getNodes(self):
