@@ -49,7 +49,7 @@ class TimerDriver(Driver, TriggerInterface):
     def _addJobs(self, tenant):
         jobs = []
         self.tenant_jobs[tenant.name] = jobs
-        for pipeline in tenant.layout.pipelines:
+        for pipeline in tenant.layout.pipelines.values():
             for ef in pipeline.manager.event_filters:
                 if not isinstance(ef.trigger, timertrigger.TimerTrigger):
                     continue
@@ -88,8 +88,8 @@ class TimerDriver(Driver, TriggerInterface):
     def stop(self):
         self.apsched.shutdown()
 
-    def getTrigger(self, connection_name):
-        return timertrigger.TimerTrigger(self)
+    def getTrigger(self, connection_name, config=None):
+        return timertrigger.TimerTrigger(self, config)
 
     def getTriggerSchema(self):
         return timertrigger.getSchema()

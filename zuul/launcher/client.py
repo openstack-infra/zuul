@@ -42,6 +42,10 @@ def make_merger_item(item):
         oldrev = item.change.oldrev
         newrev = item.change.newrev
         branch = item.change.ref
+    else:
+        oldrev = None
+        newrev = None
+        branch = None
     connection_name = item.pipeline.source.connection.connection_name
     project = item.change.project.name
 
