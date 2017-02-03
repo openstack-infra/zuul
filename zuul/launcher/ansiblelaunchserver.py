@@ -39,7 +39,7 @@ from zuul.lib import commandsocket
 ANSIBLE_WATCHDOG_GRACE = 5 * 60
 ANSIBLE_DEFAULT_TIMEOUT = 2 * 60 * 60
 ANSIBLE_DEFAULT_PRE_TIMEOUT = 10 * 60
-ANSIBLE_DEFAULT_POST_TIMEOUT = 10 * 60
+ANSIBLE_DEFAULT_POST_TIMEOUT = 30 * 60
 
 
 COMMANDS = ['reconfigure', 'stop', 'pause', 'unpause', 'release', 'graceful',
