@@ -62,12 +62,20 @@ class TestJob(BaseTestCase):
             '_source_project': project,
             'name': 'base',
             'timeout': 30,
+            'nodes': [{
+                'name': 'controller',
+                'image': 'base',
+            }],
         })
         layout.addJob(base)
         python27 = configloader.JobParser.fromYaml(layout, {
             '_source_project': project,
             'name': 'python27',
             'parent': 'base',
+            'nodes': [{
+                'name': 'controller',
+                'image': 'new',
+            }],
             'timeout': 40,
         })
         layout.addJob(python27)
@@ -77,6 +85,10 @@ class TestJob(BaseTestCase):
             'branches': [
                 'stable/diablo'
             ],
+            'nodes': [{
+                'name': 'controller',
+                'image': 'old',
+            }],
             'timeout': 50,
         })
         layout.addJob(python27diablo)
@@ -92,6 +104,7 @@ class TestJob(BaseTestCase):
         layout.addProjectConfig(project_config, update_pipeline=False)
 
         change = model.Change(project)
+        # Test master
         change.branch = 'master'
         item = queue.enqueueChange(change)
         item.current_build_set.layout = layout
@@ -105,7 +118,11 @@ class TestJob(BaseTestCase):
         job = item.getJobs()[0]
         self.assertEqual(job.name, 'python27')
         self.assertEqual(job.timeout, 40)
+        nodes = job.nodeset.getNodes()
+        self.assertEqual(len(nodes), 1)
+        self.assertEqual(nodes[0].image, 'new')
 
+        # Test diablo
         change.branch = 'stable/diablo'
         item = queue.enqueueChange(change)
         item.current_build_set.layout = layout
@@ -119,6 +136,9 @@ class TestJob(BaseTestCase):
         job = item.getJobs()[0]
         self.assertEqual(job.name, 'python27')
         self.assertEqual(job.timeout, 50)
+        nodes = job.nodeset.getNodes()
+        self.assertEqual(len(nodes), 1)
+        self.assertEqual(nodes[0].image, 'old')
 
     def test_job_auth_inheritance(self):
         layout = model.Layout()

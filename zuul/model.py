@@ -436,6 +436,15 @@ class NodeSet(object):
         self.name = name or ''
         self.nodes = OrderedDict()
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        if not isinstance(other, NodeSet):
+            return False
+        return (self.name == other.name and
+                self.nodes == other.nodes)
+
     def copy(self):
         n = NodeSet(self.name)
         for name, node in self.nodes.items():
@@ -509,35 +518,35 @@ class NodeRequest(object):
 class Job(object):
     """A Job represents the defintion of actions to perform."""
 
-    attributes = dict(
-        timeout=None,
-        # variables={},
-        nodeset=NodeSet(),
-        auth={},
-        workspace=None,
-        pre_run=None,
-        post_run=None,
-        voting=None,
-        hold_following_changes=None,
-        failure_message=None,
-        success_message=None,
-        failure_url=None,
-        success_url=None,
-        # Matchers.  These are separate so they can be individually
-        # overidden.
-        branch_matcher=None,
-        file_matcher=None,
-        irrelevant_file_matcher=None,  # skip-if
-        tags=set(),
-        mutex=None,
-        attempts=3,
-        source_project=None,
-        source_branch=None,
-        source_configrepo=None,
-        playbook=None,
-    )
-
     def __init__(self, name):
+        self.attributes = dict(
+            timeout=None,
+            # variables={},
+            nodeset=NodeSet(),
+            auth={},
+            workspace=None,
+            pre_run=[],
+            post_run=[],
+            voting=None,
+            hold_following_changes=None,
+            failure_message=None,
+            success_message=None,
+            failure_url=None,
+            success_url=None,
+            # Matchers.  These are separate so they can be individually
+            # overidden.
+            branch_matcher=None,
+            file_matcher=None,
+            irrelevant_file_matcher=None,  # skip-if
+            tags=set(),
+            mutex=None,
+            attempts=3,
+            source_project=None,
+            source_branch=None,
+            source_configrepo=None,
+            playbook=None,
+        )
+
         self.name = name
         for k, v in self.attributes.items():
             setattr(self, k, v)
