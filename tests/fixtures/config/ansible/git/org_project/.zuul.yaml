@@ -1,6 +1,11 @@
+- job:
+    parent: python27
+    name: faillocal
+
 - project:
     name: org/project
 
     check:
       jobs:
         - python27
+        - faillocal
