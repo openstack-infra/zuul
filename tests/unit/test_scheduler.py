@@ -2114,11 +2114,10 @@ class TestScheduler(ZuulTestCase):
         self.assertIn('Build succeeded', A.messages[0])
         self.assertIn('Build succeeded', B.messages[0])
 
-    @skip("Disabled for early v3 development")
     def test_file_jobs(self):
         "Test that file jobs run only when appropriate"
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addPatchset(['pip-requires'])
+        A.addPatchset({'pip-requires': 'foo'})
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         A.addApproval('code-review', 2)
         B.addApproval('code-review', 2)
