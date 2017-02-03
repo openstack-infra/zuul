@@ -606,6 +606,7 @@ class Job(object):
             mutex=None,
             attempts=3,
             source_context=None,
+            inheritance_path=[],
         )
 
         self.name = name
@@ -632,17 +633,21 @@ class Job(object):
         return self.name
 
     def __repr__(self):
-        return '<Job %s branches: %s>' % (self.name, self.branch_matcher)
+        return '<Job %s branches: %s source: %s>' % (self.name,
+                                                     self.branch_matcher,
+                                                     self.source_context)
 
-    def inheritFrom(self, other):
+    def inheritFrom(self, other, comment='unknown'):
         """Copy the inheritable attributes which have been set on the other
         job to this job."""
 
         if not isinstance(other, Job):
             raise Exception("Job unable to inherit from %s" % (other,))
+        self.inheritance_path.extend(other.inheritance_path)
+        self.inheritance_path.append('%s %s' % (repr(other), comment))
         for k, v in self.attributes.items():
             if (getattr(other, k) != v and k not in
-                set(['auth', 'pre_run', 'post_run'])):
+                set(['auth', 'pre_run', 'post_run', 'inheritance_path'])):
                 setattr(self, k, getattr(other, k))
         # Inherit auth only if explicitly allowed
         if other.auth and 'inherit' in other.auth and other.auth['inherit']:
@@ -705,16 +710,16 @@ class JobTree(object):
                 return ret
         return None
 
-    def inheritFrom(self, other):
+    def inheritFrom(self, other, comment='unknown'):
         if other.job:
             self.job = Job(other.job.name)
-            self.job.inheritFrom(other.job)
+            self.job.inheritFrom(other.job, comment)
         for other_tree in other.job_trees:
             this_tree = self.getJobTreeForJob(other_tree.job)
             if not this_tree:
                 this_tree = JobTree(None)
                 self.job_trees.append(this_tree)
-            this_tree.inheritFrom(other_tree)
+            this_tree.inheritFrom(other_tree, comment)
 
 
 class Build(object):
@@ -1985,7 +1990,8 @@ class Layout(object):
             for variant in self.getJobs(job.name):
                 if variant.changeMatches(change):
                     if variant not in inherited:
-                        frozen_job.inheritFrom(variant)
+                        frozen_job.inheritFrom(variant,
+                                               'variant while freezing')
                         inherited.add(variant)
             if not inherited:
                 # A change must match at least one defined job variant
@@ -1996,7 +2002,7 @@ class Layout(object):
                 # Only update from the job in the tree if it is
                 # unique, otherwise we might unset an attribute we
                 # have overloaded.
-                frozen_job.inheritFrom(job)
+                frozen_job.inheritFrom(job, 'tree job while freezing')
             parent.job_trees.append(frozen_tree)
             self._createJobTree(change, tree.job_trees, frozen_tree)
 

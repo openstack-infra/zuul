@@ -117,7 +117,7 @@ class JobParser(object):
             job.auth = conf.get('auth')
         if 'parent' in conf:
             parent = layout.getJob(conf['parent'])
-            job.inheritFrom(parent)
+            job.inheritFrom(parent, 'parent while parsing')
         job.timeout = conf.get('timeout', job.timeout)
         job.workspace = conf.get('workspace', job.workspace)
         job.voting = conf.get('voting', True)
@@ -313,7 +313,8 @@ class ProjectParser(object):
                     pipeline_defined = True
                     template_pipeline = template.pipelines[pipeline.name]
                     project_pipeline.job_tree.inheritFrom(
-                        template_pipeline.job_tree)
+                        template_pipeline.job_tree,
+                        'job tree while parsing')
                     if template_pipeline.queue_name:
                         queue_name = template_pipeline.queue_name
             if queue_name:
