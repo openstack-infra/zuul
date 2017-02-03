@@ -98,7 +98,7 @@ def getJobData(job):
 
 class ZuulGearmanClient(gear.Client):
     def __init__(self, zuul_gearman):
-        super(ZuulGearmanClient, self).__init__()
+        super(ZuulGearmanClient, self).__init__('Zuul Launch Client')
         self.__zuul_gearman = zuul_gearman
 
     def handleWorkComplete(self, packet):

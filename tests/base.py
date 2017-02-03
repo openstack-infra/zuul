@@ -1239,6 +1239,8 @@ class ZuulTestCase(BaseTestCase):
         self.gearman_server = FakeGearmanServer()
 
         self.config.set('gearman', 'port', str(self.gearman_server.port))
+        self.log.info("Gearman server on port %s" %
+                      (self.gearman_server.port,))
 
         gerritsource.GerritSource.replication_timeout = 1.5
         gerritsource.GerritSource.replication_retry_interval = 0.5

@@ -33,7 +33,7 @@ def getJobData(job):
 
 class MergeGearmanClient(gear.Client):
     def __init__(self, merge_client):
-        super(MergeGearmanClient, self).__init__()
+        super(MergeGearmanClient, self).__init__('Zuul Merge Client')
         self.__merge_client = merge_client
 
     def handleWorkComplete(self, packet):

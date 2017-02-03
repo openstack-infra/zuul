@@ -462,6 +462,8 @@ class AnsibleJob(object):
 
     def _launch(self):
         self.log.debug("Job %s: beginning" % (self.job.unique,))
+        self.log.debug("Job %s: args: %s" % (self.job.unique,
+                                             self.job.arguments,))
         self.log.debug("Job %s: job root at %s" %
                        (self.job.unique, self.jobdir.root))
         args = json.loads(self.job.arguments)
