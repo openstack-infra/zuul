@@ -2182,11 +2182,9 @@ class TestScheduler(ZuulTestCase):
         self.sched.reconfigure(self.config)
         self.assertEqual(len(self.sched.layout.pipelines['gate'].queues), 1)
 
-    @skip("Disabled for early v3 development")
     def test_mutex(self):
         "Test job mutexes"
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-mutex.yaml')
+        self.updateConfigLayout('layout-mutex')
         self.sched.reconfigure(self.config)
 
         self.launch_server.hold_jobs_in_build = True
