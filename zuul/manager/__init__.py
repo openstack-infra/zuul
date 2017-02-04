@@ -67,15 +67,16 @@ class PipelineManager(object):
         def log_jobs(tree, indent=0):
             istr = '    ' + ' ' * indent
             if tree.job:
+                # TODOv3(jeblair): represent matchers
                 efilters = ''
-                for b in tree.job._branches:
-                    efilters += str(b)
-                for f in tree.job._files:
-                    efilters += str(f)
-                if tree.job.skip_if_matcher:
-                    efilters += str(tree.job.skip_if_matcher)
-                if efilters:
-                    efilters = ' ' + efilters
+                # for b in tree.job._branches:
+                #     efilters += str(b)
+                # for f in tree.job._files:
+                #     efilters += str(f)
+                # if tree.job.skip_if_matcher:
+                #     efilters += str(tree.job.skip_if_matcher)
+                # if efilters:
+                #     efilters = ' ' + efilters
                 tags = []
                 if tree.job.hold_following_changes:
                     tags.append('[hold]')
@@ -89,10 +90,11 @@ class PipelineManager(object):
             for x in tree.job_trees:
                 log_jobs(x, indent + 2)
 
-        for p in layout.projects.values():
-            tree = self.pipeline.getJobTree(p)
+        for project_name in layout.project_configs.keys():
+            project = self.pipeline.source.getProject(project_name)
+            tree = self.pipeline.getJobTree(project)
             if tree:
-                self.log.info("    %s" % p)
+                self.log.info("    %s" % project)
                 log_jobs(tree)
         self.log.info("  On start:")
         self.log.info("    %s" % self.pipeline.start_actions)
