@@ -53,8 +53,7 @@ class TestNodepoolIntegration(BaseTestCase):
         # Test a simple node request
 
         nodeset = model.NodeSet()
-        nodeset.addNode(model.Node('controller', 'fake-label'))
-        nodeset.addNode(model.Node('compute', 'fake-label'))
+        nodeset.addNode(model.Node('controller', 'fake-nodepool'))
         job = model.Job('testjob')
         job.nodeset = nodeset
         request = self.nodepool.requestNodes(None, job)
