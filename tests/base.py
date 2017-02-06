@@ -1606,10 +1606,15 @@ class ZuulTestCase(BaseTestCase):
                 self.eventQueuesJoin()
                 self.sched.run_handler_lock.acquire()
                 if (not self.merge_client.jobs and
-                    all(self.eventQueuesEmpty()) and
                     self.haveAllBuildsReported() and
                     self.areAllBuildsWaiting() and
-                    self.areAllNodeRequestsComplete()):
+                    self.areAllNodeRequestsComplete() and
+                    all(self.eventQueuesEmpty())):
+                    # The queue empty check is placed at the end to
+                    # ensure that if a component adds an event between
+                    # when locked the run handler and checked that the
+                    # components were stable, we don't erroneously
+                    # report that we are settled.
                     self.sched.run_handler_lock.release()
                     self.launch_server.lock.release()
                     self.log.debug("...settled.")
