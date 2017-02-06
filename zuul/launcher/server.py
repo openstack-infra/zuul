@@ -24,6 +24,7 @@ import tempfile
 import threading
 import time
 import traceback
+import yaml
 
 import gear
 
@@ -75,6 +76,7 @@ class JobDir(object):
         os.makedirs(self.ansible_root)
         self.known_hosts = os.path.join(self.ansible_root, 'known_hosts')
         self.inventory = os.path.join(self.ansible_root, 'inventory')
+        self.vars = os.path.join(self.ansible_root, 'vars.yaml')
         self.playbook = None
         self.playbook_root = os.path.join(self.ansible_root, 'playbook')
         os.makedirs(self.playbook_root)
@@ -444,6 +446,10 @@ class LaunchServer(object):
                 for k, v in host_vars.items():
                     inventory.write('%s=%s' % (k, v))
                 inventory.write('\n')
+        with open(jobdir.vars, 'w') as vars_yaml:
+            zuul_vars = dict(zuul=args['zuul'])
+            vars_yaml.write(
+                yaml.safe_dump(zuul_vars, default_flow_style=False))
         with open(jobdir.config, 'w') as config:
             config.write('[defaults]\n')
             config.write('hostfile = %s\n' % jobdir.inventory)
@@ -499,7 +505,8 @@ class LaunchServer(object):
         else:
             verbose = '-v'
 
-        cmd = ['ansible-playbook', jobdir.playbook, verbose]
+        cmd = ['ansible-playbook', jobdir.playbook,
+               '-e@%s' % jobdir.vars, verbose]
         self.log.debug("Ansible command: %s" % (cmd,))
         # TODOv3: verbose
         proc = subprocess.Popen(

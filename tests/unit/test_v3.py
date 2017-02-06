@@ -15,6 +15,7 @@
 # under the License.
 
 import logging
+import os
 import textwrap
 
 from tests.base import AnsibleZuulTestCase
@@ -129,5 +130,7 @@ class TestAnsible(AnsibleZuulTestCase):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
-        self.assertEqual(self.getJobFromHistory('python27').result,
-                         'SUCCESS')
+        build = self.getJobFromHistory('python27')
+        self.assertEqual(build.result, 'SUCCESS')
+        flag_path = os.path.join(self.test_root, build.uuid + '.flag')
+        self.assertTrue(os.path.exists(flag_path))
