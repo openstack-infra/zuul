@@ -123,6 +123,7 @@
             jobs:
               - project-test1
               - project-test2
+              - project-testfile
     post:
       jobs:
         - project-post
