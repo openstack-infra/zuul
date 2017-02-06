@@ -260,6 +260,16 @@ class Merger(object):
         except Exception:
             self.log.exception("Unable to update %s", project)
 
+    def checkoutBranch(self, project, url, branch):
+        repo = self.getRepo(project, url)
+        if repo.hasBranch(branch):
+            self.log.info("Checking out branch %s of %s" % (branch, project))
+            head = repo.getBranchHead(branch)
+            repo.checkout(head)
+        else:
+            raise Exception("Project %s does not have branch %s" %
+                            (project, branch))
+
     def _mergeChange(self, item, ref):
         repo = self.getRepo(item['project'], item['url'])
         try:

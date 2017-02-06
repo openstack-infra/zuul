@@ -353,8 +353,9 @@ class Project(object):
     # This makes a Project instance a unique identifier for a given
     # project from a given source.
 
-    def __init__(self, name, foreign=False):
+    def __init__(self, name, connection_name, foreign=False):
         self.name = name
+        self.connection_name = connection_name
         # foreign projects are those referenced in dependencies
         # of layout projects, this should matter
         # when deciding whether to enqueue their changes
@@ -530,11 +531,14 @@ class Job(object):
         tags=set(),
         mutex=None,
         attempts=3,
+        source_project=None,
+        source_branch=None,
+        source_configrepo=None,
+        playbook=None,
     )
 
     def __init__(self, name):
         self.name = name
-        self.project_source = None
         for k, v in self.attributes.items():
             setattr(self, k, v)
 
@@ -1779,7 +1783,8 @@ class UnparsedTenantConfig(object):
         r.nodesets = copy.deepcopy(self.nodesets)
         return r
 
-    def extend(self, conf, source_project=None, source_branch=None):
+    def extend(self, conf, source_project=None, source_branch=None,
+               source_configrepo=None):
         if isinstance(conf, UnparsedTenantConfig):
             self.pipelines.extend(conf.pipelines)
             self.jobs.extend(conf.jobs)
@@ -1809,6 +1814,8 @@ class UnparsedTenantConfig(object):
                     value['_source_project'] = source_project
                 if source_branch is not None:
                     value['_source_branch'] = source_branch
+                if source_configrepo is not None:
+                    value['_source_configrepo'] = source_configrepo
                 self.jobs.append(value)
             elif key == 'project-template':
                 self.project_templates.append(value)
