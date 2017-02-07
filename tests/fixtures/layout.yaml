@@ -129,8 +129,6 @@ jobs:
   - name: project-testfile
     files:
       - '.*-requires'
-  - name: node-project-test1
-    parameter-function: select_debian_node
   - name: project1-project2-integration
     queue-name: integration
   - name: mutex-one
@@ -215,12 +213,6 @@ projects:
         - nonvoting-project-test2
     post:
       - nonvoting-project-post
-
-  - name: org/node-project
-    gate:
-      - node-project-merge:
-        - node-project-test1
-        - node-project-test2
 
   - name: org/conflict-project
     conflict:

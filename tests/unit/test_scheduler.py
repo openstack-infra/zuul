@@ -56,6 +56,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.reported, 2)
         self.assertEqual(self.getJobFromHistory('project-test1').node,
                          'image1')
+        self.assertIsNone(self.getJobFromHistory('project-test2').node)
 
         # TODOv3(jeblair): we may want to report stats by tenant (also?).
         self.assertReportedStat('gerrit.event.comment-added', value='1|c')
@@ -2246,21 +2247,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.reported, 1)
         self.assertEqual(B.reported, 1)
         self.assertFalse('test-mutex' in self.sched.mutex.mutexes)
-
-    @skip("Disabled for early v3 development")
-    def test_node_label(self):
-        "Test that a job runs on a specific node label"
-        self.worker.registerFunction('build:node-project-test1:debian')
-
-        A = self.fake_gerrit.addFakeChange('org/node-project', 'master', 'A')
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
-        self.waitUntilSettled()
-
-        self.assertIsNone(self.getJobFromHistory('node-project-merge').node)
-        self.assertEqual(self.getJobFromHistory('node-project-test1').node,
-                         'debian')
-        self.assertIsNone(self.getJobFromHistory('node-project-test2').node)
 
     def test_live_reconfiguration(self):
         "Test that live reconfiguration works"
