@@ -1195,7 +1195,8 @@ class ZuulTestCase(BaseTestCase):
             tmp_root = os.environ.get("ZUUL_TEST_ROOT")
         self.test_root = os.path.join(tmp_root, "zuul-test")
         self.upstream_root = os.path.join(self.test_root, "upstream")
-        self.git_root = os.path.join(self.test_root, "git")
+        self.merger_git_root = os.path.join(self.test_root, "merger-git")
+        self.launcher_git_root = os.path.join(self.test_root, "launcher-git")
         self.state_root = os.path.join(self.test_root, "lib")
 
         if os.path.exists(self.test_root):
@@ -1209,7 +1210,8 @@ class ZuulTestCase(BaseTestCase):
         self.config.set('zuul', 'tenant_config',
                         os.path.join(FIXTURE_DIR,
                                      self.config.get('zuul', 'tenant_config')))
-        self.config.set('merger', 'git_dir', self.git_root)
+        self.config.set('merger', 'git_dir', self.merger_git_root)
+        self.config.set('launcher', 'git_dir', self.launcher_git_root)
         self.config.set('zuul', 'state_dir', self.state_root)
 
         # For each project in config:
