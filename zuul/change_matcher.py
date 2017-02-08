@@ -35,8 +35,14 @@ class AbstractChangeMatcher(object):
     def copy(self):
         return self.__class__(self._regex)
 
+    def __deepcopy__(self, memo):
+        return self.copy()
+
     def __eq__(self, other):
         return str(self) == str(other)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __str__(self):
         return '{%s:%s}' % (self.__class__.__name__, self._regex)

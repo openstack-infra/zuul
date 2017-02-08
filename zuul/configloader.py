@@ -103,27 +103,66 @@ class JobParser(object):
                'attempts': int,
                'pre-run': to_list(str),
                'post-run': to_list(str),
+               'run': str,
                '_source_context': model.SourceContext,
                }
 
         return vs.Schema(job)
 
+    simple_attributes = [
+        'timeout',
+        'workspace',
+        'voting',
+        'hold-following-changes',
+        'mutex',
+        'attempts',
+        'failure-message',
+        'success-message',
+        'failure-url',
+        'success-url',
+    ]
+
     @staticmethod
     def fromYaml(layout, conf):
         JobParser.getSchema()(conf)
 
+        # NB: The default detection system in the Job class requires
+        # that we always assign values directly rather than modifying
+        # them (e.g., "job.run = ..." rather than
+        # "job.run.append(...)").
+
         job = model.Job(conf['name'])
+        job.source_context = conf.get('_source_context')
         if 'auth' in conf:
             job.auth = conf.get('auth')
+
         if 'parent' in conf:
             parent = layout.getJob(conf['parent'])
-            job.inheritFrom(parent, 'parent while parsing')
-        job.timeout = conf.get('timeout', job.timeout)
-        job.workspace = conf.get('workspace', job.workspace)
-        job.voting = conf.get('voting', True)
-        job.hold_following_changes = conf.get('hold-following-changes', False)
-        job.mutex = conf.get('mutex', None)
-        job.attempts = conf.get('attempts', 3)
+            job.inheritFrom(parent)
+
+        for pre_run_name in as_list(conf.get('pre-run')):
+            full_pre_run_name = os.path.join('playbooks', pre_run_name)
+            pre_run = model.PlaybookContext(job.source_context,
+                                            full_pre_run_name)
+            job.pre_run = job.pre_run + (pre_run,)
+        for post_run_name in as_list(conf.get('post-run')):
+            full_post_run_name = os.path.join('playbooks', post_run_name)
+            post_run = model.PlaybookContext(job.source_context,
+                                             full_post_run_name)
+            job.post_run = (post_run,) + job.post_run
+        if 'run' in conf:
+            run_name = os.path.join('playbooks', conf['run'])
+            run = model.PlaybookContext(job.source_context, run_name)
+            job.run = (run,)
+        else:
+            run_name = os.path.join('playbooks', job.name)
+            run = model.PlaybookContext(job.source_context, run_name)
+            job.implied_run = (run,) + job.implied_run
+
+        for k in JobParser.simple_attributes:
+            a = k.replace('-', '_')
+            if k in conf:
+                setattr(job, a, conf[k])
         if 'nodes' in conf:
             conf_nodes = conf['nodes']
             if isinstance(conf_nodes, six.string_types):
@@ -140,37 +179,8 @@ class JobParser(object):
         if tags:
             # Tags are merged via a union rather than a
             # destructive copy because they are intended to
-            # accumulate onto any previously applied tags from
-            # metajobs.
+            # accumulate onto any previously applied tags.
             job.tags = job.tags.union(set(tags))
-        # The source attribute and playbook info may not be
-        # overridden -- they are always supplied by the config loader.
-        # They correspond to the Project instance of the repo where it
-        # originated, and the branch name.
-        job.source_context = conf.get('_source_context')
-        pre_run_name = conf.get('pre-run')
-        # Append the pre-run command
-        if pre_run_name:
-            pre_run_name = os.path.join('playbooks', pre_run_name)
-            pre_run = model.PlaybookContext(job.source_context,
-                                            pre_run_name)
-            job.pre_run.append(pre_run)
-        # Prepend the post-run command
-        post_run_name = conf.get('post-run')
-        if post_run_name:
-            post_run_name = os.path.join('playbooks', post_run_name)
-            post_run = model.PlaybookContext(job.source_context,
-                                             post_run_name)
-            job.post_run.insert(0, post_run)
-        # Set the run command
-        run_name = job.name
-        run_name = os.path.join('playbooks', run_name)
-        run = model.PlaybookContext(job.source_context, run_name)
-        job.run = run
-        job.failure_message = conf.get('failure-message', job.failure_message)
-        job.success_message = conf.get('success-message', job.success_message)
-        job.failure_url = conf.get('failure-url', job.failure_url)
-        job.success_url = conf.get('success-url', job.success_url)
 
         # If the definition for this job came from a project repo,
         # implicitly apply a branch matcher for the branch it was on.
@@ -240,7 +250,8 @@ class ProjectTemplateParser(object):
             tree = model.JobTree(None)
         for conf_job in conf:
             if isinstance(conf_job, six.string_types):
-                tree.addJob(model.Job(conf_job))
+                job = model.Job(conf_job)
+                tree.addJob(job)
             elif isinstance(conf_job, dict):
                 # A dictionary in a job tree may override params, or
                 # be the root of a sub job tree, or both.
@@ -252,8 +263,9 @@ class ProjectTemplateParser(object):
                     attrs['_source_context'] = source_context
                     subtree = tree.addJob(JobParser.fromYaml(layout, attrs))
                 else:
-                    # Not overriding, so get existing job
-                    subtree = tree.addJob(layout.getJob(jobname))
+                    # Not overriding, so add a blank job
+                    job = model.Job(jobname)
+                    subtree = tree.addJob(job)
 
                 if jobs:
                     # This is the root of a sub tree
@@ -313,8 +325,7 @@ class ProjectParser(object):
                     pipeline_defined = True
                     template_pipeline = template.pipelines[pipeline.name]
                     project_pipeline.job_tree.inheritFrom(
-                        template_pipeline.job_tree,
-                        'job tree while parsing')
+                        template_pipeline.job_tree)
                     if template_pipeline.queue_name:
                         queue_name = template_pipeline.queue_name
             if queue_name:
