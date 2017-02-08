@@ -2768,14 +2768,11 @@ class TestScheduler(ZuulTestCase):
             self.assertEqual(results.get(build.name, ''),
                              build.parameters.get('BUILD_TAGS'))
 
-    @skip("Disabled for early v3 development")
     def test_timer(self):
         "Test that a periodic job is triggered"
         self.launch_server.hold_jobs_in_build = True
-        self.updateConfigLayout(
-            'tests/fixtures/layout-timer.yaml')
+        self.updateConfigLayout('layout-timer')
         self.sched.reconfigure(self.config)
-        self.registerJobs()
 
         # The pipeline triggers every second, so we should have seen
         # several by now.
@@ -2786,17 +2783,16 @@ class TestScheduler(ZuulTestCase):
 
         port = self.webapp.server.socket.getsockname()[1]
 
-        req = urllib.request.Request("http://localhost:%s/status.json" % port)
+        req = urllib.request.Request(
+            "http://localhost:%s/openstack/status" % port)
         f = urllib.request.urlopen(req)
         data = f.read()
 
         self.launch_server.hold_jobs_in_build = False
         # Stop queuing timer triggered jobs so that the assertions
         # below don't race against more jobs being queued.
-        self.updateConfigLayout(
-            'tests/fixtures/layout-no-timer.yaml')
+        self.commitLayoutUpdate('layout-timer', 'layout-no-timer')
         self.sched.reconfigure(self.config)
-        self.registerJobs()
         self.launch_server.release()
         self.waitUntilSettled()
 
