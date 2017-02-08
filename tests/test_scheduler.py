@@ -3020,6 +3020,49 @@ jobs:
         self.worker.release('.*')
         self.waitUntilSettled()
 
+    def test_timer_sshkey(self):
+        "Test that a periodic job can setup SSH key authentication"
+        self.worker.hold_jobs_in_build = True
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-timer.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+
+        # The pipeline triggers every second, so we should have seen
+        # several by now.
+        time.sleep(5)
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 2)
+
+        ssh_wrapper = os.path.join(self.git_root, ".ssh_wrapper_gerrit")
+        self.assertTrue(os.path.isfile(ssh_wrapper))
+        with open(ssh_wrapper) as f:
+            ssh_wrapper_content = f.read()
+        self.assertIn("fake_id_rsa", ssh_wrapper_content)
+        # In the unit tests Merger runs in the same process,
+        # so we see its' environment variables
+        self.assertEqual(os.environ['GIT_SSH'], ssh_wrapper)
+
+        self.worker.release('.*')
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 2)
+
+        self.assertEqual(self.getJobFromHistory(
+            'project-bitrot-stable-old').result, 'SUCCESS')
+        self.assertEqual(self.getJobFromHistory(
+            'project-bitrot-stable-older').result, 'SUCCESS')
+
+        # Stop queuing timer triggered jobs and let any that may have
+        # queued through so that end of test assertions pass.
+        self.config.set('zuul', 'layout_config',
+                        'tests/fixtures/layout-no-timer.yaml')
+        self.sched.reconfigure(self.config)
+        self.registerJobs()
+        self.waitUntilSettled()
+        self.worker.release('.*')
+        self.waitUntilSettled()
+
     def test_client_enqueue_change(self):
         "Test that the RPC client can enqueue a change"
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')

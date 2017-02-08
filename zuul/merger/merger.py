@@ -223,6 +223,14 @@ class Merger(object):
         fd.close()
         os.chmod(name, 0o755)
 
+    def _setGitSsh(self, connection_name):
+        wrapper_name = '.ssh_wrapper_%s' % connection_name
+        name = os.path.join(self.working_root, wrapper_name)
+        if os.path.isfile(name):
+            os.environ['GIT_SSH'] = name
+        elif 'GIT_SSH' in os.environ:
+            del os.environ['GIT_SSH']
+
     def addProject(self, project, url):
         repo = None
         try:
@@ -242,7 +250,8 @@ class Merger(object):
                             " without a url" % (project,))
         return self.addProject(project, url)
 
-    def updateRepo(self, project, url):
+    def updateRepo(self, project, connection_name, url):
+        self._setGitSsh(connection_name)
         repo = self.getRepo(project, url)
         try:
             self.log.info("Updating local repository %s", project)
@@ -278,14 +287,6 @@ class Merger(object):
             return None
 
         return commit
-
-    def _setGitSsh(self, connection_name):
-        wrapper_name = '.ssh_wrapper_%s' % connection_name
-        name = os.path.join(self.working_root, wrapper_name)
-        if os.path.isfile(name):
-            os.environ['GIT_SSH'] = name
-        elif 'GIT_SSH' in os.environ:
-            del os.environ['GIT_SSH']
 
     def _mergeItem(self, item, recent):
         self.log.debug("Processing refspec %s for project %s / %s ref %s" %

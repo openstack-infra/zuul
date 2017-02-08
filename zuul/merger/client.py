@@ -97,9 +97,10 @@ class MergeClient(object):
         data = dict(items=items)
         self.submitJob('merger:merge', data, build_set, precedence)
 
-    def updateRepo(self, project, url, build_set,
+    def updateRepo(self, project, connection_name, url, build_set,
                    precedence=zuul.model.PRECEDENCE_NORMAL):
         data = dict(project=project,
+                    connection_name=connection_name,
                     url=url)
         self.submitJob('merger:update', data, build_set, precedence)
 
