@@ -3358,17 +3358,14 @@ class TestScheduler(ZuulTestCase):
         self.launch_server.release()
         self.waitUntilSettled()
 
-    @skip("Disabled for early v3 development")
     def test_footer_message(self):
         "Test a pipeline's footer message is correctly added to the report."
-        self.updateConfigLayout(
-            'tests/fixtures/layout-footer-message.yaml')
+        self.updateConfigLayout('layout-footer-message')
         self.sched.reconfigure(self.config)
-        self.registerJobs()
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
-        self.launch_server.failJob('test1', A)
+        self.launch_server.failJob('project-test1', A)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
@@ -3379,25 +3376,17 @@ class TestScheduler(ZuulTestCase):
 
         self.assertEqual(2, len(self.smtp_messages))
 
-        failure_body = """\
+        failure_msg = """\
 Build failed.  For information on how to proceed, see \
-http://wiki.example.org/Test_Failures
+http://wiki.example.org/Test_Failures"""
 
-- test1 http://logs.example.com/1/1/gate/test1/0 : FAILURE in 0s
-- test2 http://logs.example.com/1/1/gate/test2/1 : SUCCESS in 0s
-
+        footer_msg = """\
 For CI problems and help debugging, contact ci@example.org"""
 
-        success_body = """\
-Build succeeded.
-
-- test1 http://logs.example.com/2/1/gate/test1/2 : SUCCESS in 0s
-- test2 http://logs.example.com/2/1/gate/test2/3 : SUCCESS in 0s
-
-For CI problems and help debugging, contact ci@example.org"""
-
-        self.assertEqual(failure_body, self.smtp_messages[0]['body'])
-        self.assertEqual(success_body, self.smtp_messages[1]['body'])
+        self.assertTrue(self.smtp_messages[0]['body'].startswith(failure_msg))
+        self.assertTrue(self.smtp_messages[0]['body'].endswith(footer_msg))
+        self.assertFalse(self.smtp_messages[1]['body'].startswith(failure_msg))
+        self.assertTrue(self.smtp_messages[1]['body'].endswith(footer_msg))
 
     @skip("Disabled for early v3 development")
     def test_merge_failure_reporters(self):
