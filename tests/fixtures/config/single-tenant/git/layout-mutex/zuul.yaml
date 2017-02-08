@@ -1,0 +1,33 @@
+- pipeline:
+    name: check
+    manager: independent
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+- job:
+    name: project-test1
+
+- job:
+    name: mutex-one
+    mutex: test-mutex
+
+- job:
+    name: mutex-two
+    mutex: test-mutex
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-test1
+        - mutex-one
+        - mutex-two
