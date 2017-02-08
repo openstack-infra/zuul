@@ -2111,7 +2111,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.history[4].pipeline, 'check')
         self.assertEqual(self.history[5].pipeline, 'check')
 
-    @skip("Disabled for early v3 development")
     def test_json_status(self):
         "Test that we can retrieve JSON status info"
         self.launch_server.hold_jobs_in_build = True
@@ -2125,7 +2124,8 @@ class TestScheduler(ZuulTestCase):
 
         port = self.webapp.server.socket.getsockname()[1]
 
-        req = urllib.request.Request("http://localhost:%s/status.json" % port)
+        req = urllib.request.Request(
+            "http://localhost:%s/tenant-one/status" % port)
         f = urllib.request.urlopen(req)
         headers = f.info()
         self.assertIn('Content-Length', headers)
@@ -2159,19 +2159,18 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual('project-merge', status_jobs[0]['name'])
         self.assertEqual('https://server/job/project-merge/0/',
                          status_jobs[0]['url'])
-        self.assertEqual('http://logs.example.com/1/1/gate/project-merge/0',
+        self.assertEqual('https://server/job/project-merge/0/',
                          status_jobs[0]['report_url'])
-
         self.assertEqual('project-test1', status_jobs[1]['name'])
-        self.assertEqual('https://server/job/project-test1/1/',
+        self.assertEqual('https://server/job/project-test1/0/',
                          status_jobs[1]['url'])
-        self.assertEqual('http://logs.example.com/1/1/gate/project-test1/1',
+        self.assertEqual('https://server/job/project-test1/0/',
                          status_jobs[1]['report_url'])
 
         self.assertEqual('project-test2', status_jobs[2]['name'])
-        self.assertEqual('https://server/job/project-test2/2/',
+        self.assertEqual('https://server/job/project-test2/0/',
                          status_jobs[2]['url'])
-        self.assertEqual('http://logs.example.com/1/1/gate/project-test2/2',
+        self.assertEqual('https://server/job/project-test2/0/',
                          status_jobs[2]['report_url'])
 
     @skip("Disabled for early v3 development")
