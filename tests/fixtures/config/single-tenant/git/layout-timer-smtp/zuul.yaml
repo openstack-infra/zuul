@@ -1,0 +1,28 @@
+- pipeline:
+    name: periodic
+    manager: independent
+    source:
+      gerrit
+    trigger:
+      timer:
+        - time: '* * * * * */1'
+    success:
+      smtp:
+        to: alternative_me@example.com
+        from: zuul_from@example.com
+        subject: 'Periodic check for {change.project} succeeded'
+
+- job:
+    name: project-bitrot-stable-old
+    success-url: http://logs.example.com/{job.name}/{build.number}
+
+- job:
+    name: project-bitrot-stable-older
+    success-url: http://logs.example.com/{job.name}/{build.number}
+
+- project:
+    name: org/project
+    periodic:
+      jobs:
+        - project-bitrot-stable-old
+        - project-bitrot-stable-older

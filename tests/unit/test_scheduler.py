@@ -2876,14 +2876,11 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.messages[0],
                          self.smtp_messages[1]['body'])
 
-    @skip("Disabled for early v3 development")
     def test_timer_smtp(self):
         "Test that a periodic job is triggered"
         self.launch_server.hold_jobs_in_build = True
-        self.updateConfigLayout(
-            'tests/fixtures/layout-timer-smtp.yaml')
+        self.updateConfigLayout('layout-timer-smtp')
         self.sched.reconfigure(self.config)
-        self.registerJobs()
 
         # The pipeline triggers every second, so we should have seen
         # several by now.
@@ -2915,10 +2912,8 @@ class TestScheduler(ZuulTestCase):
 
         # Stop queuing timer triggered jobs and let any that may have
         # queued through so that end of test assertions pass.
-        self.updateConfigLayout(
-            'tests/fixtures/layout-no-timer.yaml')
+        self.commitLayoutUpdate('layout-timer-smtp', 'layout-no-timer')
         self.sched.reconfigure(self.config)
-        self.registerJobs()
         self.waitUntilSettled()
         self.launch_server.release('.*')
         self.waitUntilSettled()
