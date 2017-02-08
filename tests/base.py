@@ -1793,12 +1793,23 @@ class ZuulTestCase(BaseTestCase):
                 f.write(content)
             repo.index.add([fn])
         commit = repo.index.commit(message)
+        before = repo.heads[branch].commit
         repo.heads[branch].commit = commit
         repo.head.reference = branch
         repo.git.clean('-x', '-f', '-d')
         repo.heads[branch].checkout()
         if tag:
             repo.create_tag(tag)
+        return before
+
+    def commitLayoutUpdate(self, orig_name, source_name):
+        source_path = os.path.join(self.test_root, 'upstream',
+                                   source_name, 'zuul.yaml')
+        with open(source_path, 'r') as nt:
+            before = self.addCommitToRepo(
+                orig_name, 'Pulling content from %s' % source_name,
+                {'zuul.yaml': nt.read()})
+        return before
 
     def addEvent(self, connection, event):
         """Inject a Fake (Gerrit) event.

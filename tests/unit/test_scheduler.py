@@ -1663,11 +1663,7 @@ class TestScheduler(ZuulTestCase):
         # Stop queuing timer triggered jobs so that the assertions
         # below don't race against more jobs being queued.
         # Must be in same repo, so overwrite config with another one
-        no_timer_path = os.path.join(self.test_root, 'upstream',
-                                     'layout-no-timer', 'zuul.yaml')
-        with open(no_timer_path, 'r') as nt:
-            self.addCommitToRepo('layout-idle', 'Removing timer jobs',
-                                 {'zuul.yaml': nt.read()})
+        self.commitLayoutUpdate('layout-idle', 'layout-no-timer')
 
         self.sched.reconfigure(self.config)
         self.assertEqual(len(self.builds), 2, "Two timer jobs")
@@ -2821,19 +2817,16 @@ class TestScheduler(ZuulTestCase):
         self.assertIn('project-bitrot-stable-old', status_jobs)
         self.assertIn('project-bitrot-stable-older', status_jobs)
 
-    @skip("Disabled for early v3 development")
     def test_idle(self):
         "Test that frequent periodic jobs work"
         self.launch_server.hold_jobs_in_build = True
+        self.updateConfigLayout('layout-idle')
 
         for x in range(1, 3):
             # Test that timer triggers periodic jobs even across
             # layout config reloads.
             # Start timer trigger
-            self.updateConfigLayout(
-                'tests/fixtures/layout-idle.yaml')
             self.sched.reconfigure(self.config)
-            self.registerJobs()
             self.waitUntilSettled()
 
             # The pipeline triggers every second, so we should have seen
@@ -2842,17 +2835,20 @@ class TestScheduler(ZuulTestCase):
 
             # Stop queuing timer triggered jobs so that the assertions
             # below don't race against more jobs being queued.
-            self.updateConfigLayout(
-                'tests/fixtures/layout-no-timer.yaml')
+            before = self.commitLayoutUpdate('layout-idle', 'layout-no-timer')
             self.sched.reconfigure(self.config)
-            self.registerJobs()
             self.waitUntilSettled()
-
-            self.assertEqual(len(self.builds), 2)
+            self.assertEqual(len(self.builds), 2,
+                             'Timer builds iteration #%d' % x)
             self.launch_server.release('.*')
             self.waitUntilSettled()
             self.assertEqual(len(self.builds), 0)
             self.assertEqual(len(self.history), x * 2)
+            # Revert back to layout-idle
+            repo = git.Repo(os.path.join(self.test_root,
+                                         'upstream',
+                                         'layout-idle'))
+            repo.git.reset('--hard', before)
 
     def test_check_smtp_pool(self):
         self.updateConfigLayout('layout-smtp')
