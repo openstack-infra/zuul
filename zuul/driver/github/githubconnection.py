@@ -434,29 +434,39 @@ class GithubConnection(BaseConnection):
 
         revs = self._getPullReviews(owner, proj, number)
 
-        reviews = []
+        reviews = {}
         for rev in revs:
+            user = rev.get('user').get('login')
             review = {
                 'by': {
-                    'username': rev.get('user').get('login'),
+                    'username': user,
                     'email': rev.get('user').get('email'),
                 },
-                'grantedOn': rev.get('provided'),
+                'grantedOn': int(time.mktime(self._ghTimestampToDate(
+                                             rev.get('submitted_at')))),
             }
 
             review['type'] = rev.get('state').lower()
+            review['submitted_at'] = rev.get('submitted_at')
 
             # Get user's rights. A user always has read to leave a review
             review['permission'] = 'read'
-            permission = self.getRepoPermission(
-                project.name, rev.get('user').get('login'))
+            permission = self.getRepoPermission(project.name, user)
             if permission == 'write':
                 review['permission'] = 'write'
             if permission == 'admin':
                 review['permission'] = 'admin'
 
-            reviews.append(review)
-        return reviews
+            if user not in reviews:
+                reviews[user] = review
+            else:
+                # if there are multiple reviews per user, keep the newest
+                # note that this breaks the ability to set the 'older-than'
+                # option on a review requirement.
+                if review['grantedOn'] > reviews[user]['grantedOn']:
+                    reviews[user] = review
+
+        return reviews.values()
 
     def _getPullReviews(self, owner, project, number):
         # make a list out of the reviews so that we complete our

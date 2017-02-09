@@ -90,11 +90,11 @@ class GithubReviewFilter(object):
                         return False
             elif k == 'newer-than':
                 t = now - v
-                if (review['provided'] < t):
+                if (review['grantedOn'] < t):
                         return False
             elif k == 'older-than':
                 t = now - v
-                if (review['provided'] >= t):
+                if (review['grantedOn'] >= t):
                     return False
             elif k == 'type':
                 if review['type'] != v:

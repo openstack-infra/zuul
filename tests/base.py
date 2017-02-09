@@ -16,6 +16,7 @@
 # under the License.
 
 from six.moves import configparser as ConfigParser
+import datetime
 import gc
 import hashlib
 import json
@@ -777,23 +778,37 @@ class FakeGithubPullRequest(object):
         }))
 
     def addReview(self, user, state, granted_on=None):
-        # Each user will only have one review at a time, so replace
-        # any existing reviews
-        # FIXME(jlk): this isn't quite right, reviews stack, we only
-        # consider the latest for a user. Thanks GitHub!!
-        for review in self.reviews:
-            if review['user']['login'] == user:
-                self.reviews.remove(review)
+        gh_time_format = '%Y-%m-%dT%H:%M:%SZ'
+        # convert the timestamp to a str format that would be returned
+        # from github as 'submitted_at' in the API response
 
-        if not granted_on:
-            granted_on = time.time()
+        if granted_on:
+            granted_on = datetime.datetime.utcfromtimestamp(granted_on)
+            submitted_at = time.strftime(
+                gh_time_format, granted_on.timetuple())
+        else:
+            # github timestamps only down to the second, so we need to make
+            # sure reviews that tests add appear to be added over a period of
+            # time in the past and not all at once.
+            if not self.reviews:
+                # the first review happens 10 mins ago
+                offset = 600
+            else:
+                # subsequent reviews happen 1 minute closer to now
+                offset = 600 - (len(self.reviews) * 60)
+
+            granted_on = datetime.datetime.utcfromtimestamp(
+                time.time() - offset)
+            submitted_at = time.strftime(
+                gh_time_format, granted_on.timetuple())
+
         self.reviews.append({
             'state': state,
             'user': {
                 'login': user,
                 'email': user + "@derp.com",
             },
-            'provided': int(granted_on),
+            'submitted_at': submitted_at,
         })
 
     def _getPRReference(self):
