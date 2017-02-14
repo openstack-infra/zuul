@@ -1761,7 +1761,8 @@ class ZuulTestCase(BaseTestCase):
 
     def updateConfigLayout(self, path):
         root = os.path.join(self.test_root, "config")
-        os.makedirs(root)
+        if not os.path.exists(root):
+            os.makedirs(root)
         f = tempfile.NamedTemporaryFile(dir=root, delete=False)
         f.write("""
 - tenant:
