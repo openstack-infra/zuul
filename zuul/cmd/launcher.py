@@ -29,7 +29,7 @@ import sys
 import signal
 
 import zuul.cmd
-import zuul.launcher.ansiblelaunchserver
+import zuul.launcher.server
 
 # No zuul imports that pull in paramiko here; it must not be
 # imported until after the daemonization.
@@ -52,7 +52,7 @@ class Launcher(zuul.cmd.ZuulApp):
                             action='store_true',
                             help='keep local jobdirs after run completes')
         parser.add_argument('command',
-                            choices=zuul.launcher.ansiblelaunchserver.COMMANDS,
+                            choices=zuul.launcher.server.COMMANDS,
                             nargs='?')
 
         self.args = parser.parse_args()
@@ -79,8 +79,8 @@ class Launcher(zuul.cmd.ZuulApp):
 
         self.log = logging.getLogger("zuul.Launcher")
 
-        LaunchServer = zuul.launcher.ansiblelaunchserver.LaunchServer
-        self.launcher = LaunchServer(self.config,
+        LaunchServer = zuul.launcher.server.LaunchServer
+        self.launcher = LaunchServer(self.config, self.connections,
                                      keep_jobdir=self.args.keep_jobdir)
         self.launcher.start()
 
@@ -102,7 +102,7 @@ def main():
     server.parse_arguments()
     server.read_config()
 
-    if server.args.command in zuul.launcher.ansiblelaunchserver.COMMANDS:
+    if server.args.command in zuul.launcher.server.COMMANDS:
         server.send_command(server.args.command)
         sys.exit(0)
 
