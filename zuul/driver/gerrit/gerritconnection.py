@@ -281,7 +281,6 @@ class GerritConnection(BaseConnection):
             change.newrev = event.newrev
             change.url = self._getGitwebUrl(project, sha=event.newrev)
         else:
-            # TODOv3(jeblair): we need to get the project from the event
             project = self.getProject(event.project_name)
             change = NullChange(project)
         return change
