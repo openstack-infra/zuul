@@ -35,9 +35,9 @@ import zuul.cmd
 # Similar situation with gear and statsd.
 
 
-class Server(zuul.cmd.ZuulApp):
+class Scheduler(zuul.cmd.ZuulApp):
     def __init__(self):
-        super(Server, self).__init__()
+        super(Scheduler, self).__init__()
         self.gear_server_pid = None
 
     def parse_arguments(self):
@@ -160,7 +160,7 @@ class Server(zuul.cmd.ZuulApp):
             self.start_gear_server()
 
         self.setup_logging('zuul', 'log_config')
-        self.log = logging.getLogger("zuul.Server")
+        self.log = logging.getLogger("zuul.Scheduler")
 
         self.sched = zuul.scheduler.Scheduler(self.config)
         # TODO(jhesketh): Move swift into a connection?
@@ -218,31 +218,31 @@ class Server(zuul.cmd.ZuulApp):
 
 
 def main():
-    server = Server()
-    server.parse_arguments()
+    scheduler = Scheduler()
+    scheduler.parse_arguments()
 
-    server.read_config()
+    scheduler.read_config()
 
-    if server.args.layout:
-        server.config.set('zuul', 'layout_config', server.args.layout)
+    if scheduler.args.layout:
+        scheduler.config.set('zuul', 'layout_config', scheduler.args.layout)
 
-    if server.args.validate:
-        path = server.args.validate
+    if scheduler.args.validate:
+        path = scheduler.args.validate
         if path is True:
             path = None
-        sys.exit(server.test_config(path))
+        sys.exit(scheduler.test_config(path))
 
-    if server.config.has_option('zuul', 'pidfile'):
-        pid_fn = os.path.expanduser(server.config.get('zuul', 'pidfile'))
+    if scheduler.config.has_option('zuul', 'pidfile'):
+        pid_fn = os.path.expanduser(scheduler.config.get('zuul', 'pidfile'))
     else:
         pid_fn = '/var/run/zuul/zuul.pid'
     pid = pid_file_module.TimeoutPIDLockFile(pid_fn, 10)
 
-    if server.args.nodaemon:
-        server.main()
+    if scheduler.args.nodaemon:
+        scheduler.main()
     else:
         with daemon.DaemonContext(pidfile=pid):
-            server.main()
+            scheduler.main()
 
 
 if __name__ == "__main__":
