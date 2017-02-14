@@ -758,7 +758,7 @@ class GerritConnection(BaseConnection):
                                      project.name)
         return url
 
-    def getGitwebUrl(self, project, sha=None):
+    def _getGitwebUrl(self, project, sha=None):
         url = '%s/gitweb?p=%s.git' % (self.baseurl, project)
         if sha:
             url += ';a=commitdiff;h=' + sha

@@ -48,4 +48,4 @@ class GerritSource(BaseSource):
         return self.connection.getGitUrl(project)
 
     def _getGitwebUrl(self, project, sha=None):
-        return self.connection.getGitwebUrl(project, sha)
+        return self.connection._getGitwebUrl(project, sha)
