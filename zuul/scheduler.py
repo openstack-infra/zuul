@@ -620,8 +620,6 @@ class Scheduler(threading.Thread):
         change = pipeline.source.getChange(event, project)
         self.log.debug("Event %s for change %s was directly assigned "
                        "to pipeline %s" % (event, change, self))
-        self.log.info("Adding %s %s to %s" %
-                      (project, change, pipeline))
         pipeline.manager.addChange(change, ignore_requirements=True)
 
     def _areAllBuildsComplete(self):
@@ -727,8 +725,6 @@ class Scheduler(threading.Thread):
                     elif event.type == 'change-abandoned':
                         pipeline.manager.removeAbandonedChange(change)
                     if pipeline.manager.eventMatches(event, change):
-                        self.log.info("Adding %s %s to %s" %
-                                      (change.project, change, pipeline))
                         pipeline.manager.addChange(change)
         finally:
             self.trigger_event_queue.task_done()

@@ -318,8 +318,8 @@ class PipelineManager(object):
                                "ignoring" % change)
                 return True
 
-            self.log.debug("Adding change %s to queue %s" %
-                           (change, change_queue))
+            self.log.info("Adding change %s to queue %s in %s" %
+                          (change, change_queue, self.pipeline))
             item = change_queue.enqueueChange(change)
             if enqueue_time:
                 item.enqueue_time = enqueue_time
