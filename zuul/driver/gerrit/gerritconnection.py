@@ -106,13 +106,18 @@ class GerritEventConnector(threading.Thread):
             'comment-added': 'author',
             'ref-updated': 'submitter',
             'reviewer-added': 'reviewer',  # Gerrit 2.5/2.6
+            'ref-replicated': None,
+            'ref-replication-done': None,
         }
-        try:
-            event.account = data.get(accountfield_from_type[event.type])
-        except KeyError:
-            self.log.warning("Received unrecognized event type '%s' from Gerrit.\
-                    Can not get account information." % event.type)
-            event.account = None
+        event.account = None
+        if event.type in accountfield_from_type:
+            field = accountfield_from_type[event.type]
+            if field:
+                event.account = data.get(accountfield_from_type[event.type])
+        else:
+            self.log.warning("Received unrecognized event type '%s' "
+                             "from Gerrit. Can not get account information." %
+                             (event.type,))
 
         if event.change_number:
             # TODO(jhesketh): Check if the project exists?
