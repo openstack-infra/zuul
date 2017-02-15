@@ -1377,8 +1377,12 @@ class TestScheduler(ZuulTestCase):
         self.assertEmptyQueues()
         self.build_history = []
 
-        path = os.path.join(self.git_root, "org/project")
-        print(repack_repo(path))
+        path = os.path.join(self.merger_git_root, "org/project")
+        if os.path.exists(path):
+            repack_repo(path)
+        path = os.path.join(self.launcher_git_root, "org/project")
+        if os.path.exists(path):
+            repack_repo(path)
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
@@ -1404,9 +1408,13 @@ class TestScheduler(ZuulTestCase):
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         A.addPatchset(large=True)
         path = os.path.join(self.upstream_root, "org/project1")
-        print(repack_repo(path))
-        path = os.path.join(self.git_root, "org/project1")
-        print(repack_repo(path))
+        repack_repo(path)
+        path = os.path.join(self.merger_git_root, "org/project1")
+        if os.path.exists(path):
+            repack_repo(path)
+        path = os.path.join(self.launcher_git_root, "org/project1")
+        if os.path.exists(path):
+            repack_repo(path)
 
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
@@ -2668,7 +2676,11 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.reported, 2)
 
         # Delete org/new-project zuul repo. Should be recloned.
-        shutil.rmtree(os.path.join(self.git_root, "org/delete-project"))
+        p = 'org/delete-project'
+        if os.path.exists(os.path.join(self.merger_git_root, p)):
+            shutil.rmtree(os.path.join(self.merger_git_root, p))
+        if os.path.exists(os.path.join(self.launcher_git_root, p)):
+            shutil.rmtree(os.path.join(self.launcher_git_root, p))
 
         B = self.fake_gerrit.addFakeChange('org/delete-project', 'master', 'B')
 

@@ -208,10 +208,10 @@ class LaunchServer(object):
             unverbose=self.verboseOff,
         )
 
-        if self.config.has_option('merger', 'git_dir'):
-            self.merge_root = self.config.get('merger', 'git_dir')
+        if self.config.has_option('launcher', 'git_dir'):
+            self.merge_root = self.config.get('launcher', 'git_dir')
         else:
-            self.merge_root = '/var/lib/zuul/git'
+            self.merge_root = '/var/lib/zuul/launcher-git'
 
         if self.config.has_option('merger', 'git_user_email'):
             self.merge_email = self.config.get('merger', 'git_user_email')

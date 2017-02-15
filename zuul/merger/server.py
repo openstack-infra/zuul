@@ -32,7 +32,7 @@ class MergeServer(object):
         if self.config.has_option('merger', 'git_dir'):
             merge_root = self.config.get('merger', 'git_dir')
         else:
-            merge_root = '/var/lib/zuul/git'
+            merge_root = '/var/lib/zuul/merger-git'
 
         if self.config.has_option('merger', 'git_user_email'):
             merge_email = self.config.get('merger', 'git_user_email')
