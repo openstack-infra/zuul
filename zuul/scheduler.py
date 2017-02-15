@@ -545,6 +545,8 @@ class Scheduler(threading.Thread):
                     self.log.exception(
                         "Exception while canceling build %s "
                         "for change %s" % (build, item.change))
+                finally:
+                    self.mutex.release(build.build_set.item, build.job)
 
     def _reconfigureTenant(self, tenant):
         # This is called from _doReconfigureEvent while holding the

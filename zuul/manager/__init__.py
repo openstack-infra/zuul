@@ -409,6 +409,9 @@ class PipelineManager(object):
             except:
                 self.log.exception("Exception while canceling build %s "
                                    "for change %s" % (build, item.change))
+            finally:
+                self.sched.mutex.release(build.build_set.item, build.job)
+
             if not was_running:
                 try:
                     nodeset = build.build_set.getJobNodeSet(build.job.name)
