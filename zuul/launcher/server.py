@@ -88,9 +88,8 @@ class JobDir(object):
         self.known_hosts = os.path.join(self.ansible_root, 'known_hosts')
         self.inventory = os.path.join(self.ansible_root, 'inventory')
         self.vars = os.path.join(self.ansible_root, 'vars.yaml')
-        self.playbook_root = os.path.join(self.ansible_root, 'playbook')
-        os.makedirs(self.playbook_root)
-        self.playbook = JobDirPlaybook(self.playbook_root)
+        self.playbooks = []  # The list of candidate playbooks
+        self.playbook = None  # A pointer to the candidate we have chosen
         self.pre_playbooks = []
         self.post_playbooks = []
         self.config = os.path.join(self.ansible_root, 'ansible.cfg')
@@ -110,6 +109,14 @@ class JobDir(object):
         os.makedirs(root)
         playbook = JobDirPlaybook(root)
         self.post_playbooks.append(playbook)
+        return playbook
+
+    def addPlaybook(self):
+        count = len(self.playbooks)
+        root = os.path.join(self.ansible_root, 'playbook_%i' % (count,))
+        os.makedirs(root)
+        playbook = JobDirPlaybook(root)
+        self.playbooks.append(playbook)
         return playbook
 
     def cleanup(self):
@@ -573,26 +580,38 @@ class AnsibleJob(object):
             hosts.append((node['name'], dict(ansible_connection='local')))
         return hosts
 
-    def findPlaybook(self, path):
+    def findPlaybook(self, path, required=False):
         for ext in ['.yaml', '.yml']:
             fn = path + ext
             if os.path.exists(fn):
                 return fn
-        raise Exception("Unable to find playbook %s" % path)
+        if required:
+            raise Exception("Unable to find playbook %s" % path)
+        return None
 
     def preparePlaybookRepos(self, args):
         for playbook in args['pre_playbooks']:
             jobdir_playbook = self.jobdir.addPrePlaybook()
-            self.preparePlaybookRepo(jobdir_playbook, playbook, args)
+            self.preparePlaybookRepo(jobdir_playbook, playbook,
+                                     args, main=False)
 
-        jobdir_playbook = self.jobdir.playbook
-        self.preparePlaybookRepo(jobdir_playbook, args['playbook'], args)
+        for playbook in args['playbooks']:
+            jobdir_playbook = self.jobdir.addPlaybook()
+            self.preparePlaybookRepo(jobdir_playbook, playbook,
+                                     args, main=True)
+            if jobdir_playbook.path is not None:
+                self.jobdir.playbook = jobdir_playbook
+                break
+        if self.jobdir.playbook is None:
+            raise Exception("No valid playbook found")
 
         for playbook in args['post_playbooks']:
             jobdir_playbook = self.jobdir.addPostPlaybook()
-            self.preparePlaybookRepo(jobdir_playbook, playbook, args)
+            self.preparePlaybookRepo(jobdir_playbook, playbook,
+                                     args, main=False)
 
-    def preparePlaybookRepo(self, jobdir_playbook, playbook, args):
+    def preparePlaybookRepo(self, jobdir_playbook, playbook, args, main):
+        self.log.debug("Prepare playbook repo for %s" % (playbook,))
         # Check out the playbook repo if needed and set the path to
         # the playbook that should be run.
         jobdir_playbook.secure = playbook['secure']
@@ -612,7 +631,7 @@ class AnsibleJob(object):
                     path = os.path.join(self.jobdir.git_root,
                                         project.name,
                                         playbook['path'])
-                    jobdir_playbook.path = self.findPlaybook(path)
+                    jobdir_playbook.path = self.findPlaybook(path, main)
                     return
         # The playbook repo is either a config repo, or it isn't in
         # the stack of changes we are testing, so check out the branch
@@ -624,7 +643,7 @@ class AnsibleJob(object):
         path = os.path.join(jobdir_playbook.root,
                             project.name,
                             playbook['path'])
-        jobdir_playbook.path = self.findPlaybook(path)
+        jobdir_playbook.path = self.findPlaybook(path, main)
 
     def prepareAnsibleFiles(self, args):
         with open(self.jobdir.inventory, 'w') as inventory:

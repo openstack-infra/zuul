@@ -378,7 +378,7 @@ class LaunchClient(object):
         params['projects'] = []
 
         if job.name != 'noop':
-            params['playbook'] = job.run.toDict()
+            params['playbooks'] = [x.toDict() for x in job.run]
             params['pre_playbooks'] = [x.toDict() for x in job.pre_run]
             params['post_playbooks'] = [x.toDict() for x in job.post_run]
 

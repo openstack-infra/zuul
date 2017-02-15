@@ -541,6 +541,12 @@ class SourceContext(object):
                                                     self.branch,
                                                     self.secure)
 
+    def __deepcopy__(self, memo):
+        return self.copy()
+
+    def copy(self):
+        return self.__class__(self.project, self.branch, self.secure)
+
     def __ne__(self, other):
         return not self.__eq__(other)
 
@@ -589,20 +595,20 @@ class PlaybookContext(object):
 
 class Job(object):
 
-    """A Job represents the defintion of actions to perform."""
+    """A Job represents the defintion of actions to perform.
+
+    NB: Do not modify attributes of this class, set them directly
+    (e.g., "job.run = ..." rather than "job.run.append(...)").
+    """
 
     def __init__(self, name):
-        self.attributes = dict(
-            timeout=None,
-            # variables={},
-            nodeset=NodeSet(),
-            auth={},
-            workspace=None,
-            pre_run=[],
-            post_run=[],
-            run=None,
-            voting=None,
-            hold_following_changes=None,
+        # These attributes may override even the final form of a job
+        # in the context of a project-pipeline.  They can not affect
+        # the execution of the job, but only whether the job is run
+        # and how it is reported.
+        self.context_attributes = dict(
+            voting=True,
+            hold_following_changes=False,
             failure_message=None,
             success_message=None,
             failure_url=None,
@@ -612,16 +618,44 @@ class Job(object):
             branch_matcher=None,
             file_matcher=None,
             irrelevant_file_matcher=None,  # skip-if
-            tags=set(),
-            mutex=None,
-            attempts=3,
-            source_context=None,
-            inheritance_path=[],
+            tags=frozenset(),
         )
 
+        # These attributes affect how the job is actually run and more
+        # care must be taken when overriding them.  If a job is
+        # declared "final", these may not be overriden in a
+        # project-pipeline.
+        self.execution_attributes = dict(
+            timeout=None,
+            # variables={},
+            nodeset=NodeSet(),
+            auth={},
+            workspace=None,
+            pre_run=(),
+            post_run=(),
+            run=(),
+            implied_run=(),
+            mutex=None,
+            attempts=3,
+            final=False,
+        )
+
+        # These are generally internal attributes which are not
+        # accessible via configuration.
+        self.other_attributes = dict(
+            name=None,
+            source_context=None,
+            inheritance_path=(),
+        )
+
+        self.inheritable_attributes = {}
+        self.inheritable_attributes.update(self.context_attributes)
+        self.inheritable_attributes.update(self.execution_attributes)
+        self.attributes = {}
+        self.attributes.update(self.inheritable_attributes)
+        self.attributes.update(self.other_attributes)
+
         self.name = name
-        for k, v in self.attributes.items():
-            setattr(self, k, v)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -647,24 +681,82 @@ class Job(object):
                                                      self.branch_matcher,
                                                      self.source_context)
 
-    def inheritFrom(self, other, comment='unknown'):
+    def __getattr__(self, name):
+        v = self.__dict__.get(name)
+        if v is None:
+            return copy.deepcopy(self.attributes[name])
+        return v
+
+    def _get(self, name):
+        return self.__dict__.get(name)
+
+    def setRun(self):
+        if not self.run:
+            self.run = self.implied_run
+
+    def inheritFrom(self, other):
         """Copy the inheritable attributes which have been set on the other
         job to this job."""
+        if not isinstance(other, Job):
+            raise Exception("Job unable to inherit from %s" % (other,))
+
+        do_not_inherit = set()
+        if other.auth and not other.auth.get('inherit'):
+            do_not_inherit.add('auth')
+
+        # copy all attributes
+        for k in self.inheritable_attributes:
+            if (other._get(k) is not None and k not in do_not_inherit):
+                setattr(self, k, copy.deepcopy(getattr(other, k)))
+
+        msg = 'inherit from %s' % (repr(other),)
+        self.inheritance_path = other.inheritance_path + (msg,)
+
+    def copy(self):
+        job = Job(self.name)
+        for k in self.attributes:
+            if self._get(k) is not None:
+                setattr(job, k, copy.deepcopy(self._get(k)))
+        return job
+
+    def applyVariant(self, other):
+        """Copy the attributes which have been set on the other job to this
+        job."""
 
         if not isinstance(other, Job):
             raise Exception("Job unable to inherit from %s" % (other,))
-        self.inheritance_path.extend(other.inheritance_path)
-        self.inheritance_path.append('%s %s' % (repr(other), comment))
-        for k, v in self.attributes.items():
-            if (getattr(other, k) != v and k not in
-                set(['auth', 'pre_run', 'post_run', 'inheritance_path'])):
-                setattr(self, k, getattr(other, k))
-        # Inherit auth only if explicitly allowed
-        if other.auth and 'inherit' in other.auth and other.auth['inherit']:
-            setattr(self, 'auth', getattr(other, 'auth'))
-        # Pre and post run are lists; make a copy
-        self.pre_run = other.pre_run + self.pre_run
-        self.post_run = self.post_run + other.post_run
+
+        for k in self.execution_attributes:
+            if (other._get(k) is not None and
+                k not in set(['final'])):
+                if self.final:
+                    raise Exception("Unable to modify final job %s attribute "
+                                    "%s=%s with variant %s" % (
+                                        repr(self), k, other._get(k),
+                                        repr(other)))
+                if k not in set(['pre_run', 'post_run']):
+                    setattr(self, k, copy.deepcopy(other._get(k)))
+
+        # Don't set final above so that we don't trip an error halfway
+        # through assignment.
+        if other.final != self.attributes['final']:
+            self.final = other.final
+
+        if other._get('pre_run') is not None:
+            self.pre_run = self.pre_run + other.pre_run
+        if other._get('post_run') is not None:
+            self.post_run = other.post_run + self.post_run
+
+        for k in self.context_attributes:
+            if (other._get(k) is not None and
+                k not in set(['tags'])):
+                setattr(self, k, copy.deepcopy(other._get(k)))
+
+        if other._get('tags') is not None:
+            self.tags = self.tags.union(other.tags)
+
+        msg = 'apply variant %s' % (repr(other),)
+        self.inheritance_path = self.inheritance_path + (msg,)
 
     def changeMatches(self, change):
         if self.branch_matcher and not self.branch_matcher.matches(change):
@@ -720,16 +812,18 @@ class JobTree(object):
                 return ret
         return None
 
-    def inheritFrom(self, other, comment='unknown'):
+    def inheritFrom(self, other):
         if other.job:
-            self.job = Job(other.job.name)
-            self.job.inheritFrom(other.job, comment)
+            if not self.job:
+                self.job = other.job.copy()
+            else:
+                self.job.applyVariant(other.job)
         for other_tree in other.job_trees:
             this_tree = self.getJobTreeForJob(other_tree.job)
             if not this_tree:
                 this_tree = JobTree(None)
                 self.job_trees.append(this_tree)
-            this_tree.inheritFrom(other_tree, comment)
+            this_tree.inheritFrom(other_tree)
 
 
 class Build(object):
@@ -1994,25 +2088,28 @@ class Layout(object):
             job = tree.job
             if not job.changeMatches(change):
                 continue
-            frozen_job = Job(job.name)
-            frozen_tree = JobTree(frozen_job)
-            inherited = set()
+            frozen_job = None
+            matched = False
             for variant in self.getJobs(job.name):
                 if variant.changeMatches(change):
-                    if variant not in inherited:
-                        frozen_job.inheritFrom(variant,
-                                               'variant while freezing')
-                        inherited.add(variant)
-            if not inherited:
+                    if frozen_job is None:
+                        frozen_job = variant.copy()
+                        frozen_job.setRun()
+                    else:
+                        frozen_job.applyVariant(variant)
+                    matched = True
+            if not matched:
                 # A change must match at least one defined job variant
                 # (that is to say that it must match more than just
                 # the job that is defined in the tree).
                 continue
-            if job not in inherited:
-                # Only update from the job in the tree if it is
-                # unique, otherwise we might unset an attribute we
-                # have overloaded.
-                frozen_job.inheritFrom(job, 'tree job while freezing')
+            # If the job does not allow auth inheritance, do not allow
+            # the project-pipeline variant to update its execution
+            # attributes.
+            if frozen_job.auth and not frozen_job.auth.get('inherit'):
+                frozen_job.final = True
+            frozen_job.applyVariant(job)
+            frozen_tree = JobTree(frozen_job)
             parent.job_trees.append(frozen_tree)
             self._createJobTree(change, tree.job_trees, frozen_tree)
 
