@@ -28,11 +28,15 @@ import yaml
 
 import gear
 
-import zuul.merger
+import zuul.merger.merger
 import zuul.ansible.library
 from zuul.lib import commandsocket
 
 ANSIBLE_WATCHDOG_GRACE = 5 * 60
+
+
+COMMANDS = ['stop', 'pause', 'unpause', 'graceful', 'verbose',
+            'unverbose']
 
 
 class Watchdog(object):
@@ -280,6 +284,7 @@ class LaunchServer(object):
         self.worker.shutdown()
         self._command_running = False
         self.command_socket.stop()
+        self.update_queue.put(None)
         self.log.debug("Stopped")
 
     def pause(self):
@@ -325,6 +330,9 @@ class LaunchServer(object):
     def _innerUpdateLoop(self):
         # Inside of a loop that keeps the main repository up to date
         task = self.update_queue.get()
+        if task is None:
+            # We are asked to stop
+            return
         self.log.info("Updating repo %s from %s" % (task.project, task.url))
         self.merger.updateRepo(task.project, task.url)
         self.log.debug("Finished updating repo %s from %s" %
@@ -360,6 +368,8 @@ class LaunchServer(object):
                 except Exception:
                     self.log.exception("Exception while running job")
                     job.sendWorkException(traceback.format_exc())
+            except gear.InterruptedError:
+                pass
             except Exception:
                 self.log.exception("Exception while getting job")
 
