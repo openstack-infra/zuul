@@ -2887,7 +2887,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.reported, 2)
         self.assertEqual(r, True)
 
-    @skip("Disabled for early v3 development")
     def test_client_enqueue_ref(self):
         "Test that the RPC client can enqueue a ref"
 
