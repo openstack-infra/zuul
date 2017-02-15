@@ -2077,21 +2077,16 @@ class TestScheduler(ZuulTestCase):
         self.sched.testConfig(self.config.get('zuul', 'tenant_config'),
                               self.connections)
 
-    @skip("Disabled for early v3 development")
     def test_queue_names(self):
         "Test shared change queue names"
-        project1 = self.sched.layout.projects['org/project1']
-        project2 = self.sched.layout.projects['org/project2']
-        q1 = self.sched.layout.pipelines['gate'].getQueue(project1)
-        q2 = self.sched.layout.pipelines['gate'].getQueue(project2)
-        self.assertEqual(q1.name, 'integration')
-        self.assertEqual(q2.name, 'integration')
-
-        self.updateConfigLayout(
-            'tests/fixtures/layout-bad-queue.yaml')
-        with testtools.ExpectedException(
-            Exception, "More than one name assigned to change queue"):
-            self.sched.reconfigure(self.config)
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        source = tenant.layout.pipelines['gate'].source
+        project1 = source.getProject('org/project1')
+        project2 = source.getProject('org/project2')
+        q1 = tenant.layout.pipelines['gate'].getQueue(project1)
+        q2 = tenant.layout.pipelines['gate'].getQueue(project2)
+        self.assertEqual(q1.name, 'integrated')
+        self.assertEqual(q2.name, 'integrated')
 
     def test_queue_precedence(self):
         "Test that queue precedence works"
