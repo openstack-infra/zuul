@@ -49,11 +49,14 @@ class GithubReporter(BaseReporter):
         if (self._merge and
             hasattr(item.change, 'number')):
             self.mergePull(item)
+            if not item.change.is_merged:
+                msg = self._formatItemReportMergeFailure(pipeline, item)
+                self.addPullComment(pipeline, item, msg)
         if self._labels or self._unlabels:
             self.setLabels(item)
 
-    def addPullComment(self, pipeline, item):
-        message = self._formatItemReport(pipeline, item)
+    def addPullComment(self, pipeline, item, comment=None):
+        message = comment or self._formatItemReport(pipeline, item)
         project = item.change.project.name
         pr_number = item.change.number
         self.log.debug(
@@ -92,13 +95,21 @@ class GithubReporter(BaseReporter):
         self.log.debug('Reporting change %s, params %s, merging via API' %
                        (item.change, self.config))
         message = self._formatMergeMessage(item.change)
-        try:
-            self.connection.mergePull(project, pr_number, message, sha)
-        except MergeFailure:
-            time.sleep(2)
-            self.log.debug('Trying to merge change %s again...' % item.change)
-            self.connection.mergePull(project, pr_number, message, sha)
-        item.change.is_merged = True
+
+        for i in [1, 2]:
+            try:
+                self.connection.mergePull(project, pr_number, message, sha)
+                item.change.is_merged = True
+                return
+            except MergeFailure:
+                self.log.debug(
+                    'Merge attempt of change %s  %s/2 failed.' %
+                    (i, item.change))
+                if i == 1:
+                    time.sleep(2)
+        self.log.debug(
+            'Merge of change %s failed after 2 attempts, giving up' %
+            item.change)
 
     def setLabels(self, item):
         project = item.change.project.name

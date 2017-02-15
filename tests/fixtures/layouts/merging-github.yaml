@@ -2,6 +2,7 @@
     name: merge
     description: Pipeline for merging the pull request
     manager: independent
+    merge-failure-message: 'Merge failed'
     trigger:
       github:
         - event: pull_request
