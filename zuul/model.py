@@ -787,6 +787,9 @@ class JobTree(object):
         self.job = job
         self.job_trees = []
 
+    def __repr__(self):
+        return '<JobTree %s %s>' % (self.job, self.job_trees)
+
     def addJob(self, job):
         if job not in [x.job for x in self.job_trees]:
             t = JobTree(job)
