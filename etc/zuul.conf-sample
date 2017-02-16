@@ -44,3 +44,7 @@ server=localhost
 port=25
 default_from=zuul@example.com
 default_to=you@example.com
+
+[connection mydatabase]
+driver=sql
+dburi=mysql+pymysql://user@localhost/zuul

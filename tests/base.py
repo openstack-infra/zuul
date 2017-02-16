@@ -34,16 +34,20 @@ import subprocess
 import swiftclient
 import threading
 import time
+import uuid
+
 
 import git
 import gear
 import fixtures
+import pymysql
 import statsd
 import testtools
 from git import GitCommandError
 
 import zuul.connection.gerrit
 import zuul.connection.smtp
+import zuul.connection.sql
 import zuul.scheduler
 import zuul.webapp
 import zuul.rpclistener
@@ -855,6 +859,43 @@ class FakeSwiftClientConnection(swiftclient.client.Connection):
         return endpoint, ''
 
 
+class MySQLSchemaFixture(fixtures.Fixture):
+    def setUp(self):
+        super(MySQLSchemaFixture, self).setUp()
+
+        random_bits = ''.join(random.choice(string.ascii_lowercase +
+                                            string.ascii_uppercase)
+                              for x in range(8))
+        self.name = '%s_%s' % (random_bits, os.getpid())
+        self.passwd = uuid.uuid4().hex
+        db = pymysql.connect(host="localhost",
+                             user="openstack_citest",
+                             passwd="openstack_citest",
+                             db="openstack_citest")
+        cur = db.cursor()
+        cur.execute("create database %s" % self.name)
+        cur.execute(
+            "grant all on %s.* to '%s'@'localhost' identified by '%s'" %
+            (self.name, self.name, self.passwd))
+        cur.execute("flush privileges")
+
+        self.dburi = 'mysql+pymysql://%s:%s@localhost/%s' % (self.name,
+                                                             self.passwd,
+                                                             self.name)
+        self.addDetail('dburi', testtools.content.text_content(self.dburi))
+        self.addCleanup(self.cleanup)
+
+    def cleanup(self):
+        db = pymysql.connect(host="localhost",
+                             user="openstack_citest",
+                             passwd="openstack_citest",
+                             db="openstack_citest")
+        cur = db.cursor()
+        cur.execute("drop database %s" % self.name)
+        cur.execute("drop user '%s'@'localhost'" % self.name)
+        cur.execute("flush privileges")
+
+
 class BaseTestCase(testtools.TestCase):
     log = logging.getLogger("zuul.test")
 
@@ -1039,6 +1080,8 @@ class ZuulTestCase(BaseTestCase):
         self.addCleanup(self.shutdown)
 
     def configure_connections(self):
+        # TODO(jhesketh): This should come from lib.connections for better
+        # coverage
         # Register connections from the config
         self.smtp_messages = []
 
@@ -1087,6 +1130,9 @@ class ZuulTestCase(BaseTestCase):
             elif con_driver == 'smtp':
                 self.connections[con_name] = \
                     zuul.connection.smtp.SMTPConnection(con_name, con_config)
+            elif con_driver == 'sql':
+                self.connections[con_name] = \
+                    zuul.connection.sql.SQLConnection(con_name, con_config)
             else:
                 raise Exception("Unknown driver, %s, for connection %s"
                                 % (con_config['driver'], con_name))
@@ -1429,3 +1475,20 @@ class ZuulTestCase(BaseTestCase):
 
         pprint.pprint(self.statsd.stats)
         raise Exception("Key %s not found in reported stats" % key)
+
+
+class ZuulDBTestCase(ZuulTestCase):
+    def setup_config(self, config_file='zuul-connections-same-gerrit.conf'):
+        super(ZuulDBTestCase, self).setup_config(config_file)
+        for section_name in self.config.sections():
+            con_match = re.match(r'^connection ([\'\"]?)(.*)(\1)$',
+                                 section_name, re.I)
+            if not con_match:
+                continue
+
+            if self.config.get(section_name, 'driver') == 'sql':
+                f = MySQLSchemaFixture()
+                self.useFixture(f)
+                if (self.config.get(section_name, 'dburi') ==
+                    '$MYSQL_FIXTURE_DBURI$'):
+                    self.config.set(section_name, 'dburi', f.dburi)
