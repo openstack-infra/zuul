@@ -3,3 +3,6 @@
     - file:
         path: "{{zuul._test.test_root}}/{{zuul.uuid}}.flag"
         state: touch
+    - copy:
+        src: "{{zuul._test.test_root}}/{{zuul.uuid}}.flag"
+        dest: "{{zuul._test.test_root}}/{{zuul.uuid}}.copied"

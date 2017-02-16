@@ -125,10 +125,18 @@ class TestAnsible(AnsibleZuulTestCase):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
+        build = self.getJobFromHistory('faillocal')
+        self.assertEqual(build.result, 'FAILURE')
         build = self.getJobFromHistory('python27')
         self.assertEqual(build.result, 'SUCCESS')
         flag_path = os.path.join(self.test_root, build.uuid + '.flag')
         self.assertTrue(os.path.exists(flag_path))
+        copied_path = os.path.join(self.test_root, build.uuid +
+                                   '.copied')
+        self.assertTrue(os.path.exists(copied_path))
+        failed_path = os.path.join(self.test_root, build.uuid +
+                                   '.failed')
+        self.assertFalse(os.path.exists(failed_path))
         pre_flag_path = os.path.join(self.test_root, build.uuid +
                                      '.pre.flag')
         self.assertTrue(os.path.exists(pre_flag_path))

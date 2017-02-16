@@ -757,11 +757,12 @@ class RecordingAnsibleJob(zuul.launcher.server.AnsibleJob):
         self.launcher_server.lock.release()
         return result
 
-    def runAnsible(self, cmd, timeout):
+    def runAnsible(self, cmd, timeout, secure=False):
         build = self.launcher_server.job_builds[self.job.unique]
 
         if self.launcher_server._run_ansible:
-            result = super(RecordingAnsibleJob, self).runAnsible(cmd, timeout)
+            result = super(RecordingAnsibleJob, self).runAnsible(
+                cmd, timeout, secure=secure)
         else:
             result = build.run()
         return result
