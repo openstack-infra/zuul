@@ -623,12 +623,12 @@ class AnsibleJob(object):
         for playbook in args['pre_playbooks']:
             jobdir_playbook = self.jobdir.addPrePlaybook()
             self.preparePlaybookRepo(jobdir_playbook, playbook,
-                                     args, main=False)
+                                     args, required=True)
 
         for playbook in args['playbooks']:
             jobdir_playbook = self.jobdir.addPlaybook()
             self.preparePlaybookRepo(jobdir_playbook, playbook,
-                                     args, main=True)
+                                     args, required=False)
             if jobdir_playbook.path is not None:
                 self.jobdir.playbook = jobdir_playbook
                 break
@@ -638,9 +638,9 @@ class AnsibleJob(object):
         for playbook in args['post_playbooks']:
             jobdir_playbook = self.jobdir.addPostPlaybook()
             self.preparePlaybookRepo(jobdir_playbook, playbook,
-                                     args, main=False)
+                                     args, required=True)
 
-    def preparePlaybookRepo(self, jobdir_playbook, playbook, args, main):
+    def preparePlaybookRepo(self, jobdir_playbook, playbook, args, required):
         self.log.debug("Prepare playbook repo for %s" % (playbook,))
         # Check out the playbook repo if needed and set the path to
         # the playbook that should be run.
@@ -663,7 +663,7 @@ class AnsibleJob(object):
                                         playbook['path'])
                     jobdir_playbook.path = self.findPlaybook(
                         path,
-                        required=main,
+                        required=required,
                         secure=playbook['secure'])
                     return
         # The playbook repo is either a config repo, or it isn't in
@@ -678,7 +678,7 @@ class AnsibleJob(object):
                             playbook['path'])
         jobdir_playbook.path = self.findPlaybook(
             path,
-            required=main,
+            required=required,
             secure=playbook['secure'])
 
     def prepareAnsibleFiles(self, args):
