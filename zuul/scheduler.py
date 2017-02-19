@@ -22,6 +22,7 @@ import os
 import pickle
 import six
 from six.moves import queue as Queue
+import socket
 import sys
 import threading
 import time
@@ -256,6 +257,7 @@ class Scheduler(threading.Thread):
     def __init__(self, config, testonly=False):
         threading.Thread.__init__(self)
         self.daemon = True
+        self.hostname = socket.gethostname()
         self.wake_event = threading.Event()
         self.layout_lock = threading.Lock()
         self.run_handler_lock = threading.Lock()
