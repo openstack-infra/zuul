@@ -251,9 +251,12 @@ class TestScheduler(ZuulTestCase):
         C.addApproval('code-review', 2)
 
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
-        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
-        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
+        self.waitUntilSettled()
 
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.waitUntilSettled()
+
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
         self.waitUntilSettled()
 
         # There should be one merge job at the head of each queue running

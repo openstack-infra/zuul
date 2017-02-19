@@ -39,10 +39,12 @@ class DependentPipelineManager(PipelineManager):
         change_queues = {}
         project_configs = self.pipeline.layout.project_configs
 
-        for project in self.pipeline.getProjects():
-            project_config = project_configs[project.name]
-            project_pipeline_config = project_config.pipelines[
-                self.pipeline.name]
+        for project_config in project_configs.values():
+            project_pipeline_config = project_config.pipelines.get(
+                self.pipeline.name)
+            if project_pipeline_config is None:
+                continue
+            project = self.pipeline.source.getProject(project_config.name)
             queue_name = project_pipeline_config.queue_name
             if queue_name and queue_name in change_queues:
                 change_queue = change_queues[queue_name]

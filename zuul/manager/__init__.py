@@ -91,11 +91,13 @@ class PipelineManager(object):
                 log_jobs(x, indent + 2)
 
         for project_name in layout.project_configs.keys():
-            project = self.pipeline.source.getProject(project_name)
-            tree = self.pipeline.getJobTree(project)
-            if tree:
-                self.log.info("    %s" % project)
-                log_jobs(tree)
+            project_config = layout.project_configs.get(project_name)
+            if project_config:
+                project_pipeline_config = project_config.pipelines.get(
+                    self.pipeline.name)
+                if project_pipeline_config:
+                    self.log.info("    %s" % project_name)
+                    log_jobs(project_pipeline_config.job_tree)
         self.log.info("  On start:")
         self.log.info("    %s" % self.pipeline.start_actions)
         self.log.info("  On success:")
