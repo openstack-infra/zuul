@@ -2023,7 +2023,7 @@ class UnparsedTenantConfig(object):
         self.pipelines = []
         self.jobs = []
         self.project_templates = []
-        self.projects = []
+        self.projects = {}
         self.nodesets = []
 
     def copy(self):
@@ -2040,7 +2040,8 @@ class UnparsedTenantConfig(object):
             self.pipelines.extend(conf.pipelines)
             self.jobs.extend(conf.jobs)
             self.project_templates.extend(conf.project_templates)
-            self.projects.extend(conf.projects)
+            for k, v in conf.projects.items():
+                self.projects.setdefault(k, []).extend(v)
             self.nodesets.extend(conf.nodesets)
             return
 
@@ -2066,7 +2067,8 @@ class UnparsedTenantConfig(object):
             if key in ['project', 'project-template', 'job']:
                 value['_source_context'] = source_context
             if key == 'project':
-                self.projects.append(value)
+                name = value['name']
+                self.projects.setdefault(name, []).append(value)
             elif key == 'job':
                 self.jobs.append(value)
             elif key == 'project-template':

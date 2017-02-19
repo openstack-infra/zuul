@@ -17,7 +17,7 @@
 import os
 import textwrap
 
-from tests.base import AnsibleZuulTestCase
+from tests.base import AnsibleZuulTestCase, ZuulTestCase
 
 
 class TestMultipleTenants(AnsibleZuulTestCase):
@@ -63,7 +63,7 @@ class TestMultipleTenants(AnsibleZuulTestCase):
                          "not affect tenant one")
 
 
-class TestInRepoConfig(AnsibleZuulTestCase):
+class TestInRepoConfig(ZuulTestCase):
     # A temporary class to hold new tests while others are disabled
 
     tenant_config_file = 'config/in-repo/main.yaml'
@@ -128,6 +128,62 @@ class TestInRepoConfig(AnsibleZuulTestCase):
         self.assertHistory([
             dict(name='project-test2', result='SUCCESS', changes='1,1'),
             dict(name='project-test2', result='SUCCESS', changes='2,1')])
+
+    def test_in_repo_branch(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test2
+
+            - project:
+                name: org/project
+                tenant-one-gate:
+                  jobs:
+                    - project-test2
+            """)
+
+        in_repo_playbook = textwrap.dedent(
+            """
+            - hosts: all
+              tasks: []
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf,
+                     'playbooks/project-test2.yaml': in_repo_playbook}
+        self.create_branch('org/project', 'stable')
+        A = self.fake_gerrit.addFakeChange('org/project', 'stable', 'A',
+                                           files=file_dict)
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.waitUntilSettled()
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2,
+                         "A should report start and success")
+        self.assertIn('tenant-one-gate', A.messages[1],
+                      "A should transit tenant-one gate")
+        self.assertHistory([
+            dict(name='project-test2', result='SUCCESS', changes='1,1')])
+        self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+
+        # The config change should not affect master.
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        B.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='project-test2', result='SUCCESS', changes='1,1'),
+            dict(name='project-test1', result='SUCCESS', changes='2,1')])
+
+        # The config change should be live for further changes on
+        # stable.
+        C = self.fake_gerrit.addFakeChange('org/project', 'stable', 'C')
+        C.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='project-test2', result='SUCCESS', changes='1,1'),
+            dict(name='project-test1', result='SUCCESS', changes='2,1'),
+            dict(name='project-test2', result='SUCCESS', changes='3,1')])
 
 
 class TestAnsible(AnsibleZuulTestCase):
