@@ -917,7 +917,12 @@ class ConfigLoader(object):
                                          files, False)
 
         layout = model.Layout()
-        # TODOv3(jeblair): copying the pipelines could be dangerous/confusing.
+        # NOTE: the actual pipeline objects (complete with queues and
+        # enqueued items) are copied by reference here.  This allows
+        # our shadow dynamic configuration to continue to interact
+        # with all the other changes, each of which may have their own
+        # version of reality.  We do not support creating, updating,
+        # or deleting pipelines in dynamic layout changes.
         layout.pipelines = tenant.layout.pipelines
 
         for config_job in config.jobs:
