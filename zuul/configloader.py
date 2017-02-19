@@ -406,10 +406,7 @@ class ProjectParser(object):
             with configuration_exceptions('project', conf):
                 ProjectParser.getSchema(layout)(conf)
         project = model.ProjectConfig(conf_list[0]['name'])
-        mode = conf_list[0].get('merge-mode', 'merge-resolve')
-        project.merge_mode = model.MERGER_MAP[mode]
 
-        # TODOv3(jeblair): deal with merge mode setting on multi branches
         configs = []
         for conf in conf_list:
             # Make a copy since we modify this later via pop
@@ -423,6 +420,15 @@ class ProjectParser(object):
             configs.extend([layout.project_templates[name]
                             for name in conf_templates])
             configs.append(project_template)
+            mode = conf.get('merge-mode')
+            if mode and project.merge_mode is None:
+                # Set the merge mode to the first one that we find and
+                # ignore subsequent settings.
+                project.merge_mode = model.MERGER_MAP[mode]
+        if project.merge_mode is None:
+            # If merge mode was not specified in any project stanza,
+            # set it to the default.
+            project.merge_mode = model.MERGER_MAP['merge-resolve']
         for pipeline in layout.pipelines.values():
             project_pipeline = model.ProjectPipelineConfig()
             project_pipeline.job_tree = model.JobTree(None)
