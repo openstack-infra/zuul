@@ -30,6 +30,7 @@ import gear
 
 import zuul.merger.merger
 import zuul.ansible.action
+import zuul.ansible.callback
 import zuul.ansible.library
 from zuul.lib import commandsocket
 
@@ -256,14 +257,24 @@ class LaunchServer(object):
         if not os.path.exists(self.action_dir):
             os.makedirs(self.action_dir)
 
+        self.callback_dir = os.path.join(ansible_dir, 'callback')
+        if not os.path.exists(self.callback_dir):
+            os.makedirs(self.callback_dir)
+
         library_path = os.path.dirname(os.path.abspath(
             zuul.ansible.library.__file__))
         for fn in os.listdir(library_path):
             shutil.copy(os.path.join(library_path, fn), self.library_dir)
+
         action_path = os.path.dirname(os.path.abspath(
             zuul.ansible.action.__file__))
         for fn in os.listdir(action_path):
             shutil.copy(os.path.join(action_path, fn), self.action_dir)
+
+        callback_path = os.path.dirname(os.path.abspath(
+            zuul.ansible.callback.__file__))
+        for fn in os.listdir(callback_path):
+            shutil.copy(os.path.join(callback_path, fn), self.callback_dir)
 
         self.job_workers = {}
 
@@ -800,6 +811,9 @@ class AnsibleJob(object):
             if self.jobdir.roles_path:
                 config.write('roles_path = %s\n' %
                              ':'.join(self.jobdir.roles_path))
+            config.write('callback_plugins = %s\n'
+                         % self.launcher_server.callback_dir)
+            config.write('stdout_callback = zuul_stream\n')
             # bump the timeout because busy nodes may take more than
             # 10s to respond
             config.write('timeout = 30\n')
