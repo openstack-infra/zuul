@@ -39,7 +39,7 @@ class CallbackModule(callback.CallbackBase):
 
         self._play = None
         self._last_task_banner = None
-        self._insecure = C.DISPLAY_ARGS_TO_STDOUT
+        self._untrusted = C.DISPLAY_ARGS_TO_STDOUT
         super(CallbackModule, self).__init__()
 
     def _should_verbose(self, result, level=0):
@@ -178,14 +178,14 @@ class CallbackModule(callback.CallbackBase):
         # argument spec can't be because that is only run on the target
         # machine and we haven't run it there yet at this time.
         #
-        # The zuul runner passes a flag indicating secure status of a job. We
-        # want to not print any args for jobs that are secure, because those
+        # The zuul runner passes a flag indicating trusted status of a job. We
+        # want to not print any args for jobs that are trusted, because those
         # args might have secrets.
         #
-        # Those tasks in the secure jobs should also be explicitly marked
+        # Those tasks in the trusted jobs should also be explicitly marked
         # no_log - but this should be some additional belt and suspenders.
         args = ''
-        if not task.no_log and self._insecure:
+        if not task.no_log and self._untrusted:
             args = u', '.join(u'%s=%s' % a for a in task.args.items())
             args = u' %s' % args
 

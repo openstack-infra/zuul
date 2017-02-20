@@ -535,21 +535,21 @@ class SourceContext(object):
     Jobs and playbooks reference this to keep track of where they
     originate."""
 
-    def __init__(self, project, branch, secure):
+    def __init__(self, project, branch, trusted):
         self.project = project
         self.branch = branch
-        self.secure = secure
+        self.trusted = trusted
 
     def __repr__(self):
-        return '<SourceContext %s:%s secure:%s>' % (self.project,
-                                                    self.branch,
-                                                    self.secure)
+        return '<SourceContext %s:%s trusted:%s>' % (self.project,
+                                                     self.branch,
+                                                     self.trusted)
 
     def __deepcopy__(self, memo):
         return self.copy()
 
     def copy(self):
-        return self.__class__(self.project, self.branch, self.secure)
+        return self.__class__(self.project, self.branch, self.trusted)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -559,7 +559,7 @@ class SourceContext(object):
             return False
         return (self.project == other.project and
                 self.branch == other.branch and
-                self.secure == other.secure)
+                self.trusted == other.trusted)
 
 
 class PlaybookContext(object):
@@ -593,7 +593,7 @@ class PlaybookContext(object):
             connection=self.source_context.project.connection_name,
             project=self.source_context.project.name,
             branch=self.source_context.branch,
-            secure=self.source_context.secure,
+            trusted=self.source_context.trusted,
             path=self.path)
 
 
@@ -626,11 +626,11 @@ class Role(object):
 class ZuulRole(Role):
     """A reference to an ansible role in a Zuul project."""
 
-    def __init__(self, target_name, connection_name, project_name, secure):
+    def __init__(self, target_name, connection_name, project_name, trusted):
         super(ZuulRole, self).__init__(target_name)
         self.connection_name = connection_name
         self.project_name = project_name
-        self.secure = secure
+        self.trusted = trusted
 
     def __repr__(self):
         return '<ZuulRole %s %s>' % (self.project_name, self.target_name)
@@ -641,7 +641,7 @@ class ZuulRole(Role):
         return (super(ZuulRole, self).__eq__(other) and
                 self.connection_name == other.connection_name,
                 self.project_name == other.project_name,
-                self.secure == other.secure)
+                self.trusted == other.trusted)
 
     def toDict(self):
         # Render to a dict to use in passing json to the launcher
@@ -649,7 +649,7 @@ class ZuulRole(Role):
         d['type'] = 'zuul'
         d['connection'] = self.connection_name
         d['project'] = self.project_name
-        d['secure'] = self.secure
+        d['trusted'] = self.trusted
         return d
 
 
@@ -2229,10 +2229,10 @@ class Tenant(object):
     def getRepo(self, source, project_name):
         """Get a project given a source and project name
 
-        Returns a tuple (secure, project) or (None, None) if the
+        Returns a tuple (trusted, project) or (None, None) if the
         project is not found.
 
-        Secure indicates the project is a config repo.
+        Trusted indicates the project is a config repo.
 
         """
 

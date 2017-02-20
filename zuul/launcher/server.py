@@ -75,7 +75,7 @@ class Watchdog(object):
 class JobDirPlaybook(object):
     def __init__(self, root):
         self.root = root
-        self.secure = None
+        self.trusted = None
         self.path = None
 
 
@@ -87,8 +87,8 @@ class JobDir(object):
         os.makedirs(self.git_root)
         self.ansible_root = os.path.join(self.root, 'ansible')
         os.makedirs(self.ansible_root)
-        self.secure_ansible_root = os.path.join(self.ansible_root, 'secure')
-        os.makedirs(self.secure_ansible_root)
+        self.trusted_ansible_root = os.path.join(self.ansible_root, 'trusted')
+        os.makedirs(self.trusted_ansible_root)
         self.known_hosts = os.path.join(self.ansible_root, 'known_hosts')
         self.inventory = os.path.join(self.ansible_root, 'inventory')
         self.vars = os.path.join(self.ansible_root, 'vars.yaml')
@@ -99,8 +99,8 @@ class JobDir(object):
         self.roles = []
         self.roles_path = []
         self.config = os.path.join(self.ansible_root, 'ansible.cfg')
-        self.secure_config = os.path.join(
-            self.secure_ansible_root, 'ansible.cfg')
+        self.trusted_config = os.path.join(
+            self.trusted_ansible_root, 'ansible.cfg')
         self.ansible_log = os.path.join(self.ansible_root, 'ansible_log.txt')
 
     def addPrePlaybook(self):
@@ -628,13 +628,13 @@ class AnsibleJob(object):
             if os.path.isdir(entry) and entry.endswith('_plugins'):
                 raise Exception(
                     "Ansible plugin dir %s found adjacent to playbook %s in"
-                    " non-secure repo." % (entry, path))
+                    " non-trusted repo." % (entry, path))
 
-    def findPlaybook(self, path, required=False, secure=False):
+    def findPlaybook(self, path, required=False, trusted=False):
         for ext in ['.yaml', '.yml']:
             fn = path + ext
             if os.path.exists(fn):
-                if not secure:
+                if not trusted:
                     playbook_dir = os.path.dirname(os.path.abspath(fn))
                     self._blockPluginDirs(playbook_dir)
                 return fn
@@ -667,13 +667,13 @@ class AnsibleJob(object):
         self.log.debug("Prepare playbook repo for %s" % (playbook,))
         # Check out the playbook repo if needed and set the path to
         # the playbook that should be run.
-        jobdir_playbook.secure = playbook['secure']
+        jobdir_playbook.trusted = playbook['trusted']
         source = self.launcher_server.connections.getSource(
             playbook['connection'])
         project = source.getProject(playbook['project'])
         # TODO(jeblair): construct the url in the merger itself
         url = source.getGitUrl(project)
-        if not playbook['secure']:
+        if not playbook['trusted']:
             # This is a project repo, so it is safe to use the already
             # checked out version (from speculative merging) of the
             # playbook
@@ -687,7 +687,7 @@ class AnsibleJob(object):
                     jobdir_playbook.path = self.findPlaybook(
                         path,
                         required=required,
-                        secure=playbook['secure'])
+                        trusted=playbook['trusted'])
                     return
         # The playbook repo is either a config repo, or it isn't in
         # the stack of changes we are testing, so check out the branch
@@ -702,7 +702,7 @@ class AnsibleJob(object):
         jobdir_playbook.path = self.findPlaybook(
             path,
             required=required,
-            secure=playbook['secure'])
+            trusted=playbook['trusted'])
 
     def prepareRoles(self, args):
         for role in args['roles']:
@@ -710,23 +710,23 @@ class AnsibleJob(object):
                 root = self.jobdir.addRole()
                 self.prepareZuulRole(args, role, root)
 
-    def findRole(self, path, secure=False):
+    def findRole(self, path, trusted=False):
         d = os.path.join(path, 'tasks')
         if os.path.isdir(d):
             # This is a bare role
-            if not secure:
+            if not trusted:
                 self._blockPluginDirs(path)
             # None signifies that the repo is a bare role
             return None
         d = os.path.join(path, 'roles')
         if os.path.isdir(d):
             # This repo has a collection of roles
-            if not secure:
+            if not trusted:
                 for entry in os.listdir(d):
                     self._blockPluginDirs(os.path.join(d, entry))
             return d
         # We assume the repository itself is a collection of roles
-        if not secure:
+        if not trusted:
             for entry in os.listdir(path):
                 self._blockPluginDirs(os.path.join(path, entry))
         return path
@@ -740,7 +740,7 @@ class AnsibleJob(object):
         # TODO(jeblair): construct the url in the merger itself
         url = source.getGitUrl(project)
         role_repo = None
-        if not role['secure']:
+        if not role['trusted']:
             # This is a project repo, so it is safe to use the already
             # checked out version (from speculative merging) of the
             # role
@@ -767,7 +767,7 @@ class AnsibleJob(object):
             merger.checkoutBranch(project.name, url, 'master')
             role_repo = os.path.join(root, project.name)
 
-        role_path = self.findRole(role_repo, secure=role['secure'])
+        role_path = self.findRole(role_repo, trusted=role['trusted'])
         if role_path is None:
             # In the case of a bare role, add the containing directory
             role_path = root
@@ -792,9 +792,9 @@ class AnsibleJob(object):
             vars_yaml.write(
                 yaml.safe_dump(zuul_vars, default_flow_style=False))
         self.writeAnsibleConfig(self.jobdir.config)
-        self.writeAnsibleConfig(self.jobdir.secure_config, secure=True)
+        self.writeAnsibleConfig(self.jobdir.trusted_config, trusted=True)
 
-    def writeAnsibleConfig(self, config_path, secure=False):
+    def writeAnsibleConfig(self, config_path, trusted=False):
         with open(config_path, 'w') as config:
             config.write('[defaults]\n')
             config.write('hostfile = %s\n' % self.jobdir.inventory)
@@ -817,17 +817,17 @@ class AnsibleJob(object):
             # bump the timeout because busy nodes may take more than
             # 10s to respond
             config.write('timeout = 30\n')
-            if not secure:
+            if not trusted:
                 config.write('action_plugins = %s\n'
                              % self.launcher_server.action_dir)
 
-            # On secure jobs, we want to prevent the printing of args,
-            # since secure jobs might have access to secrets that they may
+            # On trusted jobs, we want to prevent the printing of args,
+            # since trusted jobs might have access to secrets that they may
             # need to pass to a task or a role. On the other hand, there
-            # should be no sensitive data in insecure jobs, and printing
+            # should be no sensitive data in untrusted jobs, and printing
             # the args could be useful for debugging.
             config.write('display_args_to_stdout = %s\n' %
-                         str(not secure))
+                         str(not trusted))
 
             config.write('[ssh_connection]\n')
             # NB: when setting pipelining = True, keep_remote_files
@@ -861,12 +861,12 @@ class AnsibleJob(object):
                 self.log.exception("Exception while killing "
                                    "ansible process:")
 
-    def runAnsible(self, cmd, timeout, secure=False):
+    def runAnsible(self, cmd, timeout, trusted=False):
         env_copy = os.environ.copy()
         env_copy['LOGNAME'] = 'zuul'
 
-        if secure:
-            cwd = self.jobdir.secure_ansible_root
+        if trusted:
+            cwd = self.jobdir.trusted_ansible_root
         else:
             cwd = self.jobdir.ansible_root
 
@@ -932,4 +932,4 @@ class AnsibleJob(object):
         timeout = 60
 
         return self.runAnsible(
-            cmd=cmd, timeout=timeout, secure=playbook.secure)
+            cmd=cmd, timeout=timeout, trusted=playbook.trusted)

@@ -202,7 +202,7 @@ class JobParser(object):
 
         # If the definition for this job came from a project repo,
         # implicitly apply a branch matcher for the branch it was on.
-        if (not job.source_context.secure):
+        if (not job.source_context.trusted):
             branches = [job.source_context.branch]
         elif 'branches' in conf:
             branches = as_list(conf['branches'])
@@ -233,12 +233,12 @@ class JobParser(object):
         # TODOv3(jeblair): this limits roles to the same
         # source; we should remove that limitation.
         source = job.source_context.project.connection_name
-        (secure, project) = tenant.getRepo(source, role['zuul'])
+        (trusted, project) = tenant.getRepo(source, role['zuul'])
         if project is None:
             return None
 
         return model.ZuulRole(role.get('name', name), source,
-                              project.name, secure)
+                              project.name, trusted)
 
 
 class ProjectTemplateParser(object):
@@ -689,7 +689,7 @@ class TenantParser(object):
                         (job.source_context, fn))
                     project = job.source_context.project
                     branch = job.source_context.branch
-                    if job.source_context.secure:
+                    if job.source_context.trusted:
                         incdata = TenantParser._parseConfigRepoLayout(
                             job.files[fn], job.source_context)
                         config_repos_config.extend(incdata)
