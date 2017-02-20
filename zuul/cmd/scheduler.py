@@ -235,7 +235,7 @@ def main():
     if scheduler.config.has_option('zuul', 'pidfile'):
         pid_fn = os.path.expanduser(scheduler.config.get('zuul', 'pidfile'))
     else:
-        pid_fn = '/var/run/zuul/zuul.pid'
+        pid_fn = '/var/run/zuul-scheduler/zuul-scheduler.pid'
     pid = pid_file_module.TimeoutPIDLockFile(pid_fn, 10)
 
     if scheduler.args.nodaemon:
