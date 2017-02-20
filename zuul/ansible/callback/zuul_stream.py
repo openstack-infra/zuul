@@ -39,6 +39,7 @@ class CallbackModule(callback.CallbackBase):
 
         self._play = None
         self._last_task_banner = None
+        self._insecure = C.DISPLAY_ARGS_TO_STDOUT
         super(CallbackModule, self).__init__()
 
     def _should_verbose(self, result, level=0):
@@ -175,13 +176,16 @@ class CallbackModule(callback.CallbackBase):
         # args can be specified as no_log in several places: in the task or in
         # the argument spec.  We can check whether the task is no_log but the
         # argument spec can't be because that is only run on the target
-        # machine and we haven't run it thereyet at this time.
+        # machine and we haven't run it there yet at this time.
         #
-        # So we give people a config option to affect display of the args so
-        # that they can secure this if they feel that their stdout is insecure
-        # (shoulder surfing, logging stdout straight to a file, etc).
+        # The zuul runner passes a flag indicating secure status of a job. We
+        # want to not print any args for jobs that are secure, because those
+        # args might have secrets.
+        #
+        # Those tasks in the secure jobs should also be explicitly marked
+        # no_log - but this should be some additional belt and suspenders.
         args = ''
-        if not task.no_log and C.DISPLAY_ARGS_TO_STDOUT:
+        if not task.no_log and self._insecure:
             args = u', '.join(u'%s=%s' % a for a in task.args.items())
             args = u' %s' % args
 
