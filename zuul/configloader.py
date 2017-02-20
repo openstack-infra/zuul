@@ -663,6 +663,8 @@ class TenantParser(object):
             # branch selector to each job there.  This makes the
             # in-repo configuration apply only to that branch.
             for branch in source.getProjectBranches(project):
+                project.unparsed_branch_config[branch] = \
+                    model.UnparsedTenantConfig()
                 job = merger.getFiles(project.name, url, branch,
                                       files=['.zuul.yaml'])
                 job.source_context = model.SourceContext(project,
@@ -681,6 +683,8 @@ class TenantParser(object):
                     TenantParser.log.info(
                         "Loading configuration from %s/%s" %
                         (job.source_context, fn))
+                    project = job.source_context.project
+                    branch = job.source_context.branch
                     if job.source_context.secure:
                         incdata = TenantParser._parseConfigRepoLayout(
                             job.files[fn], job.source_context)
@@ -689,7 +693,9 @@ class TenantParser(object):
                         incdata = TenantParser._parseProjectRepoLayout(
                             job.files[fn], job.source_context)
                         project_repos_config.extend(incdata)
-                    job.source_context.project.unparsed_config.extend(incdata)
+                    project.unparsed_config.extend(incdata)
+                    if branch in project.unparsed_branch_config:
+                        project.unparsed_branch_config[branch].extend(incdata)
         return config_repos_config, project_repos_config
 
     @staticmethod
@@ -787,14 +793,15 @@ class ConfigLoader(object):
             # TODOv3(jeblair): config should be branch specific
             for branch in source.getProjectBranches(project):
                 data = files.getFile(project.name, branch, '.zuul.yaml')
-                if not data:
-                    data = project.unparsed_config
-                if not data:
+                if data:
+                    source_context = model.SourceContext(project,
+                                                         branch, False)
+                    incdata = TenantParser._parseProjectRepoLayout(
+                        data, source_context)
+                else:
+                    incdata = project.unparsed_branch_config[branch]
+                if not incdata:
                     continue
-                source_context = model.SourceContext(project,
-                                                     branch, False)
-                incdata = TenantParser._parseProjectRepoLayout(
-                    data, source_context)
                 config.extend(incdata)
 
         layout = model.Layout()
