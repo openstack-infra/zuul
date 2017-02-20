@@ -115,6 +115,8 @@ class TestInRepoConfig(AnsibleZuulTestCase):
         self.assertHistory([
             dict(name='project-test2', result='SUCCESS', changes='1,1')])
 
+        self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+
         # Now that the config change is landed, it should be live for
         # subsequent changes.
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
