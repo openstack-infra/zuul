@@ -44,15 +44,11 @@ class Scheduler(zuul.cmd.ZuulApp):
         parser = argparse.ArgumentParser(description='Project gating system.')
         parser.add_argument('-c', dest='config',
                             help='specify the config file')
-        parser.add_argument('-l', dest='layout',
-                            help='specify the layout file')
         parser.add_argument('-d', dest='nodaemon', action='store_true',
                             help='do not run as a daemon')
-        parser.add_argument('-t', dest='validate', nargs='?', const=True,
-                            metavar='JOB_LIST',
-                            help='validate layout file syntax (optionally '
-                            'providing the path to a file with a list of '
-                            'available job names)')
+        parser.add_argument('-t', dest='validate', action='store_true',
+                            help='validate config file syntax (Does not'
+                            'validate config repo validity)')
         parser.add_argument('--version', dest='version', action='version',
                             version=self._get_version(),
                             help='show zuul version')
@@ -79,38 +75,19 @@ class Scheduler(zuul.cmd.ZuulApp):
         self.stop_gear_server()
         os._exit(0)
 
-    def test_config(self, job_list_path):
+    def test_config(self):
         # See comment at top of file about zuul imports
         import zuul.scheduler
-        import zuul.launcher.gearman
-        import zuul.trigger.gerrit
+        import zuul.launcher.client
 
         logging.basicConfig(level=logging.DEBUG)
-        self.sched = zuul.scheduler.Scheduler(self.config,
-                                              testonly=True)
-        self.configure_connections()
-        self.sched.registerConnections(self.connections, load=False)
-        layout = self.sched.testConfig(self.config.get('zuul',
-                                                       'layout_config'),
-                                       self.connections)
-        if not job_list_path:
-            return False
-
-        failure = False
-        path = os.path.expanduser(job_list_path)
-        if not os.path.exists(path):
-            raise Exception("Unable to find job list: %s" % path)
-        jobs = set()
-        jobs.add('noop')
-        for line in open(path):
-            v = line.strip()
-            if v:
-                jobs.add(v)
-        for job in sorted(layout.jobs):
-            if job not in jobs:
-                print("FAILURE: Job %s not defined" % job)
-                failure = True
-        return failure
+        try:
+            self.sched = zuul.scheduler.Scheduler(self.config,
+                                                  testonly=True)
+        except Exception as e:
+            self.log.error("%s" % e)
+            return -1
+        return 0
 
     def start_gear_server(self):
         pipe_read, pipe_write = os.pipe()
@@ -223,14 +200,8 @@ def main():
 
     scheduler.read_config()
 
-    if scheduler.args.layout:
-        scheduler.config.set('zuul', 'layout_config', scheduler.args.layout)
-
     if scheduler.args.validate:
-        path = scheduler.args.validate
-        if path is True:
-            path = None
-        sys.exit(scheduler.test_config(path))
+        sys.exit(scheduler.test_config())
 
     if scheduler.config.has_option('zuul', 'pidfile'):
         pid_fn = os.path.expanduser(scheduler.config.get('zuul', 'pidfile'))
