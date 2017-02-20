@@ -24,6 +24,7 @@ import signal
 import sys
 import traceback
 
+import yaml
 yappi = extras.try_import('yappi')
 
 import zuul.lib.connections
@@ -86,7 +87,14 @@ class ZuulApp(object):
             if not os.path.exists(fp):
                 raise Exception("Unable to read logging config file at %s" %
                                 fp)
-            logging.config.fileConfig(fp)
+
+            if os.path.splitext(fp)[1] in ('.yml', '.yaml'):
+                with open(fp, 'r') as f:
+                    logging.config.dictConfig(yaml.safe_load(f))
+
+            else:
+                logging.config.fileConfig(fp)
+
         else:
             logging.basicConfig(level=logging.DEBUG)
 
