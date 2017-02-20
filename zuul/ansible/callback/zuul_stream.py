@@ -19,9 +19,31 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import os
+import multiprocessing
+import socket
+import time
+
 from ansible import constants as C
 from ansible.plugins import callback
 from ansible.utils.color import colorize, hostcolor
+
+
+def linesplit(socket):
+    buff = socket.recv(4096)
+    buffering = True
+    while buffering:
+        if "\n" in buff:
+            (line, buff) = buff.split("\n", 1)
+            yield line + "\n"
+        else:
+            more = socket.recv(4096)
+            if not more:
+                buffering = False
+            else:
+                buff += more
+    if buff:
+        yield buff
 
 
 class CallbackModule(callback.CallbackBase):
@@ -38,8 +60,12 @@ class CallbackModule(callback.CallbackBase):
     def __init__(self):
 
         self._play = None
+        self._task = None
         self._last_task_banner = None
         self._untrusted = C.DISPLAY_ARGS_TO_STDOUT
+        self._daemon_running = False
+        self._daemon_stamp = 'daemon-stamp-%s'
+        self._host_dict = {}
         super(CallbackModule, self).__init__()
 
     def _should_verbose(self, result, level=0):
@@ -161,13 +187,36 @@ class CallbackModule(callback.CallbackBase):
     def v2_playbook_on_no_hosts_remaining(self):
         self._display.banner("NO MORE HOSTS LEFT")
 
+    def read_log(self, host, ip):
+        self._display.display("[%s] starting to log" % host)
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        while True:
+            try:
+                s.connect((ip, 19885))
+            except Exception:
+                self._display.display("[%s] Waiting on logger" % host)
+                time.sleep(0.1)
+                continue
+            for line in linesplit(s):
+                self._display.display("[%s] %s " % (host, line.strip()))
+
     def v2_playbook_on_task_start(self, task, is_conditional):
+        self._task = task
 
         if self._play.strategy != 'free':
             self._print_task_banner(task)
         if task.action == 'command':
-            # TODO(mordred): Spawn a reading thread to read the remote logfile
-            self._display.display("Reading logs goes here")
+            play_vars = self._play._variable_manager._hostvars
+            for host in self._play.hosts:
+                ip = play_vars[host]['ansible_host']
+                daemon_stamp = self._daemon_stamp % host
+                if not os.path.exists(daemon_stamp):
+                    self._host_dict[host] = ip
+                    open(daemon_stamp, 'w').write('')
+                    p = multiprocessing.Process(
+                        target=self.read_log, args=(host, ip))
+                    p.daemon = True
+                    p.start()
 
     def _print_task_banner(self, task):
         # args can be specified as no_log in several places: in the task or in
@@ -303,6 +352,10 @@ class CallbackModule(callback.CallbackBase):
                 colorize(u'unreachable', t['unreachable'], None),
                 colorize(u'failed', t['failures'], None)),
             )
+        for host in self._host_dict.keys():
+            daemon_stamp = self._daemon_stamp % host
+            if os.path.exists(daemon_stamp):
+                os.unlink(daemon_stamp)
 
     def v2_playbook_on_start(self, playbook):
         if self._display.verbosity > 1:
