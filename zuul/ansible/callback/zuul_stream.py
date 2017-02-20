@@ -171,6 +171,9 @@ class CallbackModule(callback.CallbackBase):
 
         if self._play.strategy != 'free':
             self._print_task_banner(task)
+        if task.action == 'command':
+            # TODO(mordred): Spawn a reading thread to read the remote logfile
+            self._display.display("Reading logs goes here")
 
     def _print_task_banner(self, task):
         # args can be specified as no_log in several places: in the task or in
