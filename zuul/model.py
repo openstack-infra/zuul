@@ -365,6 +365,7 @@ class Project(object):
         # TODOv3 (jeblair): re-add support for foreign projects if needed
         self.foreign = foreign
         self.unparsed_config = None
+        self.unparsed_branch_config = {}  # branch -> UnparsedTenantConfig
 
     def __str__(self):
         return self.name
