@@ -263,6 +263,16 @@ class FakeChange(object):
                  "comment": "This is a comment"}
         return event
 
+    def getChangeMergedEvent(self):
+        event = {"submitter": {"name": "Jenkins",
+                               "username": "jenkins"},
+                 "newRev": "29ed3b5f8f750a225c5be70235230e3a6ccb04d9",
+                 "patchSet": self.patchsets[-1],
+                 "change": self.data,
+                 "type": "change-merged",
+                 "eventCreatedOn": 1487613810}
+        return event
+
     def addApproval(self, category, value, username='reviewer_john',
                     granted_on=None, message=''):
         if not granted_on:

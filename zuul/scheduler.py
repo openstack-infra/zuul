@@ -744,6 +744,7 @@ class Scheduler(threading.Thread):
         self.log.debug("Processing trigger event %s" % event)
         try:
             for tenant in self.abide.tenants.values():
+                reconfigured_tenant = False
                 for pipeline in tenant.layout.pipelines.values():
                     # Get the change even if the project is unknown to
                     # us for the use of updating the cache if there is
@@ -757,6 +758,16 @@ class Scheduler(threading.Thread):
                                        "connection trigger)",
                                        e.change, pipeline.source)
                         continue
+                    if (event.type == 'change-merged' and
+                        hasattr(change, 'files') and
+                        not reconfigured_tenant and
+                        change.updatesConfig()):
+                        # The change that just landed updates the config.
+                        # Clear out cached data for this project and
+                        # perform a reconfiguration.
+                        change.project.unparsed_config = None
+                        self.reconfigureTenant(tenant)
+                        reconfigured_tenant = True
                     if event.type == 'patchset-created':
                         pipeline.manager.removeOldVersionsOfChange(change)
                     elif event.type == 'change-abandoned':
