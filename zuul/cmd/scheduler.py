@@ -197,10 +197,16 @@ class Scheduler(zuul.cmd.ZuulApp):
         self.sched.setNodepool(nodepool)
 
         self.log.info('Starting scheduler')
-        self.sched.start()
-        self.sched.registerConnections(self.connections)
-        self.sched.reconfigure(self.config)
-        self.sched.resume()
+        try:
+            self.sched.start()
+            self.sched.registerConnections(self.connections)
+            self.sched.reconfigure(self.config)
+            self.sched.resume()
+        except Exception:
+            self.log.exception("Error starting Zuul:")
+            # TODO(jeblair): If we had all threads marked as daemon,
+            # we might be able to have a nicer way of exiting here.
+            sys.exit(1)
         self.log.info('Starting Webapp')
         webapp.start()
         self.log.info('Starting RPC')
