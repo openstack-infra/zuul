@@ -799,6 +799,14 @@ class AnsibleJob(object):
                 config.write('action_plugins = %s\n'
                              % self.launcher_server.action_dir)
 
+            # On secure jobs, we want to prevent the printing of args,
+            # since secure jobs might have access to secrets that they may
+            # need to pass to a task or a role. On the other hand, there
+            # should be no sensitive data in insecure jobs, and printing
+            # the args could be useful for debugging.
+            config.write('display_args_to_stdout = %s\n' %
+                         str(not secure))
+
             config.write('[ssh_connection]\n')
             # NB: when setting pipelining = True, keep_remote_files
             # must be False (the default).  Otherwise it apparently
