@@ -1,4 +1,0 @@
-- project:
-    name: openstack-infra/zuul
-    check:
-      jobs: []
