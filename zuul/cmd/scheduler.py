@@ -153,6 +153,7 @@ class Scheduler(zuul.cmd.ZuulApp):
         import zuul.lib.swift
         import zuul.webapp
         import zuul.rpclistener
+        import zuul.zk
 
         signal.signal(signal.SIGUSR2, zuul.cmd.stack_dump_handler)
         if (self.config.has_option('gearman_server', 'start') and
@@ -170,6 +171,14 @@ class Scheduler(zuul.cmd.ZuulApp):
                                                     self.swift)
         merger = zuul.merger.client.MergeClient(self.config, self.sched)
         nodepool = zuul.nodepool.Nodepool(self.sched)
+
+        zookeeper = zuul.zk.ZooKeeper()
+        if self.config.has_option('zuul', 'zookeeper_hosts'):
+            zookeeper_hosts = self.config.get('zuul', 'zookeeper_hosts')
+        else:
+            zookeeper_hosts = '127.0.0.1:2181'
+
+        zookeeper.connect(zookeeper_hosts)
 
         if self.config.has_option('zuul', 'status_expiry'):
             cache_expiry = self.config.getint('zuul', 'status_expiry')
@@ -195,6 +204,7 @@ class Scheduler(zuul.cmd.ZuulApp):
         self.sched.setLauncher(gearman)
         self.sched.setMerger(merger)
         self.sched.setNodepool(nodepool)
+        self.sched.setZooKeeper(zookeeper)
 
         self.log.info('Starting scheduler')
         try:

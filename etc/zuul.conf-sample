@@ -10,6 +10,7 @@ log_config=/etc/zuul/logging.conf
 pidfile=/var/run/zuul/zuul.pid
 state_dir=/var/lib/zuul
 status_url=https://jenkins.example.com/zuul/status
+zookeeper_hosts=127.0.0.1:2181
 
 [merger]
 git_dir=/var/lib/zuul/git
