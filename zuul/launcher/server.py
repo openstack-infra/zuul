@@ -484,7 +484,8 @@ class AnsibleJob(object):
 
     def launch(self):
         try:
-            self.jobdir = JobDir(root=self.launcher_server.jobdir_root)
+            self.jobdir = JobDir(root=self.launcher_server.jobdir_root,
+                                 keep=self.launcher_server.keep_jobdir)
             self._launch()
         except Exception:
             self.log.exception("Exception while launching job")
