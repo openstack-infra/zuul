@@ -327,25 +327,29 @@ class ProjectParser(object):
         for p in layout.pipelines.values():
             project[p.name] = {'queue': str,
                                'jobs': [vs.Any(str, dict)]}
-        return vs.Schema(project)
+        return vs.Schema([project])
 
     @staticmethod
-    def fromYaml(tenant, layout, conf):
-        # TODOv3(jeblair): This may need some branch-specific
-        # configuration for in-repo configs.
-        ProjectParser.getSchema(layout)(conf)
-        # Make a copy since we modify this later via pop
-        conf = copy.deepcopy(conf)
-        conf_templates = conf.pop('templates', [])
-        # The way we construct a project definition is by parsing the
-        # definition as a template, then applying all of the
-        # templates, including the newly parsed one, in order.
-        project_template = ProjectTemplateParser.fromYaml(tenant, layout, conf)
-        configs = [layout.project_templates[name] for name in conf_templates]
-        configs.append(project_template)
-        project = model.ProjectConfig(conf['name'])
-        mode = conf.get('merge-mode', 'merge-resolve')
+    def fromYaml(tenant, layout, conf_list):
+        ProjectParser.getSchema(layout)(conf_list)
+        project = model.ProjectConfig(conf_list[0]['name'])
+        mode = conf_list[0].get('merge-mode', 'merge-resolve')
         project.merge_mode = model.MERGER_MAP[mode]
+
+        # TODOv3(jeblair): deal with merge mode setting on multi branches
+        configs = []
+        for conf in conf_list:
+            # Make a copy since we modify this later via pop
+            conf = copy.deepcopy(conf)
+            conf_templates = conf.pop('templates', [])
+            # The way we construct a project definition is by parsing the
+            # definition as a template, then applying all of the
+            # templates, including the newly parsed one, in order.
+            project_template = ProjectTemplateParser.fromYaml(
+                tenant, layout, conf)
+            configs.extend([layout.project_templates[name]
+                            for name in conf_templates])
+            configs.append(project_template)
         for pipeline in layout.pipelines.values():
             project_pipeline = model.ProjectPipelineConfig()
             project_pipeline.job_tree = model.JobTree(None)
@@ -733,7 +737,7 @@ class TenantParser(object):
             layout.addProjectTemplate(ProjectTemplateParser.fromYaml(
                 tenant, layout, config_template))
 
-        for config_project in data.projects:
+        for config_project in data.projects.values():
             layout.addProjectConfig(ProjectParser.fromYaml(
                 tenant, layout, config_project))
 
@@ -790,7 +794,6 @@ class ConfigLoader(object):
     def createDynamicLayout(self, tenant, files):
         config = tenant.config_repos_config.copy()
         for source, project in tenant.project_repos:
-            # TODOv3(jeblair): config should be branch specific
             for branch in source.getProjectBranches(project):
                 data = files.getFile(project.name, branch, '.zuul.yaml')
                 if data:
@@ -803,7 +806,6 @@ class ConfigLoader(object):
                 if not incdata:
                     continue
                 config.extend(incdata)
-
         layout = model.Layout()
         # TODOv3(jeblair): copying the pipelines could be dangerous/confusing.
         layout.pipelines = tenant.layout.pipelines
@@ -815,8 +817,7 @@ class ConfigLoader(object):
             layout.addProjectTemplate(ProjectTemplateParser.fromYaml(
                 tenant, layout, config_template))
 
-        for config_project in config.projects:
+        for config_project in config.projects.values():
             layout.addProjectConfig(ProjectParser.fromYaml(
                 tenant, layout, config_project), update_pipeline=False)
-
         return layout

@@ -197,7 +197,7 @@ class TestJob(BaseTestCase):
         })
         layout.addJob(python27essex)
 
-        project_config = configloader.ProjectParser.fromYaml(tenant, layout, {
+        project_config = configloader.ProjectParser.fromYaml(tenant, layout, [{
             '_source_context': context,
             'name': 'project',
             'gate': {
@@ -205,7 +205,7 @@ class TestJob(BaseTestCase):
                     'python27'
                 ]
             }
-        })
+        }])
         layout.addProjectConfig(project_config, update_pipeline=False)
 
         change = model.Change(project)
@@ -406,7 +406,7 @@ class TestJob(BaseTestCase):
         })
         layout.addJob(python27diablo)
 
-        project_config = configloader.ProjectParser.fromYaml(tenant, layout, {
+        project_config = configloader.ProjectParser.fromYaml(tenant, layout, [{
             '_source_context': context,
             'name': 'project',
             'gate': {
@@ -414,7 +414,7 @@ class TestJob(BaseTestCase):
                     {'python27': {'timeout': 70}}
                 ]
             }
-        })
+        }])
         layout.addProjectConfig(project_config, update_pipeline=False)
 
         change = model.Change(project)
@@ -471,7 +471,7 @@ class TestJob(BaseTestCase):
         })
         layout.addJob(python27)
 
-        project_config = configloader.ProjectParser.fromYaml(tenant, layout, {
+        project_config = configloader.ProjectParser.fromYaml(tenant, layout, [{
             '_source_context': context,
             'name': 'project',
             'gate': {
@@ -479,7 +479,7 @@ class TestJob(BaseTestCase):
                     'python27',
                 ]
             }
-        })
+        }])
         layout.addProjectConfig(project_config, update_pipeline=False)
 
         change = model.Change(project)
