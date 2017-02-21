@@ -759,7 +759,7 @@ class RecordingAnsibleJob(zuul.launcher.server.AnsibleJob):
         self.launcher_server.build_history.append(
             BuildHistory(name=build.name, result=result, changes=build.changes,
                          node=build.node, uuid=build.unique,
-                         parameters=build.parameters,
+                         parameters=build.parameters, jobdir=build.jobdir,
                          pipeline=build.parameters['ZUUL_PIPELINE'])
         )
         self.launcher_server.running_builds.remove(build)

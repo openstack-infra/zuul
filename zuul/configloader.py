@@ -115,6 +115,7 @@ class JobParser(object):
                'run': str,
                '_source_context': model.SourceContext,
                'roles': to_list(role),
+               'repos': to_list(str),
                }
 
         return vs.Schema(job)
@@ -184,6 +185,11 @@ class JobParser(object):
                     node = model.Node(conf_node['name'], conf_node['image'])
                     ns.addNode(node)
             job.nodeset = ns
+
+        if 'repos' in conf:
+            # Accumulate repos in a set so that job inheritance
+            # is additive.
+            job.repos = job.repos.union(set(conf.get('repos', [])))
 
         tags = conf.get('tags')
         if tags:

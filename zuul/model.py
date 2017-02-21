@@ -699,6 +699,7 @@ class Job(object):
             attempts=3,
             final=False,
             roles=frozenset(),
+            repos=frozenset(),
         )
 
         # These are generally internal attributes which are not

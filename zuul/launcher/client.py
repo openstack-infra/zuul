@@ -348,6 +348,13 @@ class LaunchClient(object):
         params['nodes'] = nodes
         params['zuul'] = zuul_params
         projects = set()
+        if job.repos:
+            for repo in job.repos:
+                project = item.pipeline.source.getProject(repo)
+                params['projects'].append(
+                    dict(name=repo,
+                         url=item.pipeline.source.getGitUrl(project)))
+                projects.add(project)
         for item in all_items:
             if item.change.project not in projects:
                 params['projects'].append(
