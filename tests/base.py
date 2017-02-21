@@ -777,6 +777,14 @@ class RecordingAnsibleJob(zuul.launcher.server.AnsibleJob):
             result = build.run()
         return result
 
+    def getHostList(self, args):
+        self.log.debug("hostlist")
+        hosts = super(RecordingAnsibleJob, self).getHostList(args)
+        for name, d in hosts:
+            d['ansible_connection'] = 'local'
+        hosts.append(('localhost', dict(ansible_connection='local')))
+        return hosts
+
 
 class FakeGearmanServer(gear.Server):
     """A Gearman server for use in tests.

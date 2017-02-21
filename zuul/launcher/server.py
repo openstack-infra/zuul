@@ -594,13 +594,14 @@ class AnsibleJob(object):
         return result
 
     def getHostList(self, args):
-        # TODOv3: the localhost addition is temporary so we have
-        # something to exercise ansible.
-        hosts = [('localhost', dict(ansible_connection='local'))]
+        # TODO(clarkb): This prefers v4 because we're not sure if we
+        # expect v6 to work.  If we can determine how to prefer v6
+        hosts = []
         for node in args['nodes']:
-            # TODOv3: the connection should almost certainly not be
-            # local.
-            hosts.append((node['name'], dict(ansible_connection='local')))
+            ip = node.get('public_ipv4')
+            if not ip:
+                ip = node.get('public_ipv6')
+            hosts.append((node['name'], dict(ansible_host=ip)))
         return hosts
 
     def _blockPluginDirs(self, path):
