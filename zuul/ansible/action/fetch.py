@@ -15,7 +15,7 @@
 
 
 from zuul.ansible import paths
-from zuul.ansible.plugins.action import fetch
+from ansible.plugins.action import fetch
 
 
 class ActionModule(fetch.ActionModule):

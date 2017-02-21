@@ -15,7 +15,7 @@
 
 
 from zuul.ansible import paths
-from zuul.ansible.plugins.action import copy
+from ansible.plugins.action import copy
 
 
 class ActionModule(copy.ActionModule):

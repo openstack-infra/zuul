@@ -14,7 +14,7 @@
 # along with this software.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from zuul.ansible.plugins.action import normal
+from ansible.plugins.action import normal
 
 
 class ActionModule(normal.ActionModule):

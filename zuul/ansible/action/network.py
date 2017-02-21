@@ -14,7 +14,7 @@
 # along with this software.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from zuul.ansible.plugins.action import network
+from ansible.plugins.action import network
 
 
 class ActionModule(network.ActionModule):

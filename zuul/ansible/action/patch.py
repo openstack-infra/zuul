@@ -15,7 +15,7 @@
 
 
 from zuul.ansible import paths
-from zuul.ansible.plugins.action import patch
+from ansible.plugins.action import patch
 
 
 class ActionModule(patch.ActionModule):
