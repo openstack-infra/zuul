@@ -1300,11 +1300,12 @@ class ZuulTestCase(BaseTestCase):
             self.config, self.sched)
         self.nodepool = zuul.nodepool.Nodepool(self.sched)
         self.zk = zuul.zk.ZooKeeper()
-        self.zk.connect([self.zk_config])
+        self.zk.connect(self.zk_config)
 
-        self.fake_nodepool = FakeNodepool(self.zk_config.host,
-                                          self.zk_config.port,
-                                          self.zk_config.chroot)
+        self.fake_nodepool = FakeNodepool(
+            self.zk_chroot_fixture.zookeeper_host,
+            self.zk_chroot_fixture.zookeeper_port,
+            self.zk_chroot_fixture.zookeeper_chroot)
 
         self.sched.setLauncher(self.launch_client)
         self.sched.setMerger(self.merge_client)
@@ -1380,7 +1381,7 @@ class ZuulTestCase(BaseTestCase):
 
     def setupZK(self):
         self.zk_chroot_fixture = self.useFixture(ChrootedKazooFixture())
-        self.zk_config = zuul.zk.ZooKeeperConnectionConfig(
+        self.zk_config = '%s:%s%s' % (
             self.zk_chroot_fixture.zookeeper_host,
             self.zk_chroot_fixture.zookeeper_port,
             self.zk_chroot_fixture.zookeeper_chroot)

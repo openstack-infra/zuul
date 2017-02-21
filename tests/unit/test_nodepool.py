@@ -30,22 +30,23 @@ class TestNodepool(BaseTestCase):
         super(BaseTestCase, self).setUp()
 
         self.zk_chroot_fixture = self.useFixture(ChrootedKazooFixture())
-        self.zk_config = zuul.zk.ZooKeeperConnectionConfig(
+        self.zk_config = '%s:%s%s' % (
             self.zk_chroot_fixture.zookeeper_host,
             self.zk_chroot_fixture.zookeeper_port,
             self.zk_chroot_fixture.zookeeper_chroot)
 
         self.zk = zuul.zk.ZooKeeper()
-        self.zk.connect([self.zk_config])
+        self.zk.connect(self.zk_config)
 
         self.provisioned_requests = []
         # This class implements the scheduler methods zuul.nodepool
         # needs, so we pass 'self' as the scheduler.
         self.nodepool = zuul.nodepool.Nodepool(self)
 
-        self.fake_nodepool = FakeNodepool(self.zk_config.host,
-                                          self.zk_config.port,
-                                          self.zk_config.chroot)
+        self.fake_nodepool = FakeNodepool(
+            self.zk_chroot_fixture.zookeeper_host,
+            self.zk_chroot_fixture.zookeeper_port,
+            self.zk_chroot_fixture.zookeeper_chroot)
 
     def waitForRequests(self):
         # Wait until all requests are complete.

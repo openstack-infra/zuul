@@ -64,23 +64,6 @@ class ZooKeeperConnectionConfig(object):
         self.chroot = chroot or ''
 
 
-def buildZooKeeperHosts(host_list):
-    '''
-    Build the ZK cluster host list for client connections.
-
-    :param list host_list: A list of
-        :py:class:`~nodepool.zk.ZooKeeperConnectionConfig` objects (one
-        per server) defining the ZooKeeper cluster servers.
-    '''
-    if not isinstance(host_list, list):
-        raise Exception("'host_list' must be a list")
-    hosts = []
-    for host_def in host_list:
-        host = '%s:%s%s' % (host_def.host, host_def.port, host_def.chroot)
-        hosts.append(host)
-    return ",".join(hosts)
-
-
 class ZooKeeper(object):
     '''
     Class implementing the ZooKeeper interface.
@@ -158,8 +141,7 @@ class ZooKeeper(object):
 
         '''
         if self.client is None:
-            hosts = buildZooKeeperHosts(host_list)
-            self.client = KazooClient(hosts=hosts, read_only=read_only)
+            self.client = KazooClient(hosts=host_list, read_only=read_only)
             self.client.add_listener(self._connection_listener)
             self.client.start()
 
@@ -184,8 +166,7 @@ class ZooKeeper(object):
             (one per server) defining the ZooKeeper cluster servers.
         '''
         if self.client is not None:
-            hosts = buildZooKeeperHosts(host_list)
-            self.client.set_hosts(hosts=hosts)
+            self.client.set_hosts(hosts=host_list)
 
     def submitNodeRequest(self, node_request, watcher):
         '''
