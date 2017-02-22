@@ -1,0 +1,12 @@
+- job:
+    name: python-linters
+    pre-run: pre
+    nodes:
+      - name: worker
+        image: ubuntu-xenial
+
+- project:
+    name: openstack-infra/zuul
+    check:
+      jobs:
+        - python-linters

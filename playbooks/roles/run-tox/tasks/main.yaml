@@ -1,0 +1,4 @@
+- name: Run tox
+  shell: "/usr/local/jenkins/slave_scripts/run-tox.sh {{ run_tox_eventlist }}"
+  args:
+    chdir: "/home/zuul/workspace/src/{{ zuul.project }}"
