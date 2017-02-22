@@ -15,7 +15,7 @@
 
 
 from zuul.ansible import paths
-from ansible.plugins.action import include_vars
+include_vars = paths._import_ansible_action_plugin("include_vars")
 
 
 class ActionModule(include_vars.ActionModule):

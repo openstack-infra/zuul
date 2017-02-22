@@ -13,7 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this software.  If not, see <http://www.gnu.org/licenses/>.
 
-from ansible.plugins.action import add_host
+from zuul.ansible import paths
+add_host = paths._import_ansible_action_plugin("add_host")
 
 
 class ActionModule(add_host.ActionModule):

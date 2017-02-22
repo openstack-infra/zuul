@@ -15,7 +15,7 @@
 
 
 from zuul.ansible import paths
-from ansible.plugins.action import unarchive
+unarchive = paths._import_ansible_action_plugin("unarchive")
 
 
 class ActionModule(unarchive.ActionModule):

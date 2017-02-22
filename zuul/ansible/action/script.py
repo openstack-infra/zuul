@@ -15,10 +15,10 @@
 
 
 from zuul.ansible import paths
-from ansible.plugins.action import copy
+script = paths._import_ansible_action_plugin("script")
 
 
-class ActionModule(copy.ActionModule):
+class ActionModule(script.ActionModule):
 
     def run(self, tmp=None, task_vars=None):
 
