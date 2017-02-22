@@ -777,6 +777,7 @@ class AnsibleJob(object):
 
         with open(self.jobdir.vars, 'w') as vars_yaml:
             zuul_vars = dict(zuul=args['zuul'])
+            zuul_vars['zuul']['launcher'] = dict(git_root=self.jobdir.git_root)
             vars_yaml.write(
                 yaml.safe_dump(zuul_vars, default_flow_style=False))
         self.writeAnsibleConfig(self.jobdir.config)
