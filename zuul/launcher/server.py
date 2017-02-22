@@ -770,6 +770,11 @@ class AnsibleJob(object):
                 for k, v in host_vars.items():
                     inventory.write('%s=%s' % (k, v))
                 inventory.write('\n')
+                if 'ansible_host' in host_vars:
+                    os.system("ssh-keyscan %s >> %s" % (
+                        host_vars['ansible_host'],
+                        self.jobdir.known_hosts))
+
         with open(self.jobdir.vars, 'w') as vars_yaml:
             zuul_vars = dict(zuul=args['zuul'])
             vars_yaml.write(
