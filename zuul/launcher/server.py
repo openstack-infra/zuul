@@ -916,7 +916,5 @@ class AnsibleJob(object):
         # TODOv3: get this from the job
         timeout = 60
 
-        # TODO(mordred) Action plugin python import is breaking - troubleshoot
-        # and set this back to secure=True
         return self.runAnsible(
-            cmd=cmd, timeout=timeout, secure=True)
+            cmd=cmd, timeout=timeout, secure=playbook.secure)
