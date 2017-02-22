@@ -15,7 +15,7 @@
 
 
 from zuul.ansible import paths
-from ansible.plugins.action import assemble
+assemble = paths._import_ansible_action_plugin("assemble")
 
 
 class ActionModule(assemble.ActionModule):

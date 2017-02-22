@@ -15,7 +15,7 @@
 
 
 from zuul.ansible import paths
-from ansible.plugins.action import synchronize
+synchronize = paths._import_ansible_action_plugin("synchronize")
 
 
 class ActionModule(synchronize.ActionModule):

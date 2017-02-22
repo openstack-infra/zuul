@@ -15,7 +15,7 @@
 
 
 from zuul.ansible import paths
-from ansible.plugins.action import win_copy
+win_copy = paths._import_ansible_action_plugin("win_copy")
 
 
 class ActionModule(win_copy.ActionModule):

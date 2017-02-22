@@ -15,7 +15,7 @@
 
 
 from zuul.ansible import paths
-from ansible.plugins.action import template
+template = paths._import_ansible_action_plugin("template")
 
 
 class ActionModule(template.ActionModule):
