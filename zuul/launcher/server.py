@@ -81,14 +81,22 @@ class JobDirPlaybook(object):
 
 class JobDir(object):
     def __init__(self, root=None, keep=False):
+        # root
+        #   ansible
+        #     trusted.cfg
+        #     untrusted.cfg
+        #   work
+        #     git
         self.keep = keep
         self.root = tempfile.mkdtemp(dir=root)
+        # Work
+        self.work_root = os.path.join(self.root, 'work')
+        os.makedirs(self.work_root)
         self.git_root = os.path.join(self.root, 'git')
         os.makedirs(self.git_root)
+        # Ansible
         self.ansible_root = os.path.join(self.root, 'ansible')
         os.makedirs(self.ansible_root)
-        self.trusted_ansible_root = os.path.join(self.ansible_root, 'trusted')
-        os.makedirs(self.trusted_ansible_root)
         self.known_hosts = os.path.join(self.ansible_root, 'known_hosts')
         self.inventory = os.path.join(self.ansible_root, 'inventory')
         self.vars = os.path.join(self.ansible_root, 'vars.yaml')
@@ -98,9 +106,9 @@ class JobDir(object):
         self.post_playbooks = []
         self.roles = []
         self.roles_path = []
-        self.config = os.path.join(self.ansible_root, 'ansible.cfg')
-        self.trusted_config = os.path.join(
-            self.trusted_ansible_root, 'ansible.cfg')
+        self.untrusted_config = os.path.join(
+            self.ansible_root, 'untrusted.cfg')
+        self.trusted_config = os.path.join(self.ansible_root, 'trusted.cfg')
         self.ansible_log = os.path.join(self.ansible_root, 'ansible_log.txt')
 
     def addPrePlaybook(self):
@@ -791,7 +799,7 @@ class AnsibleJob(object):
             zuul_vars['zuul']['launcher'] = dict(git_root=self.jobdir.git_root)
             vars_yaml.write(
                 yaml.safe_dump(zuul_vars, default_flow_style=False))
-        self.writeAnsibleConfig(self.jobdir.config)
+        self.writeAnsibleConfig(self.jobdir.untrusted_config)
         self.writeAnsibleConfig(self.jobdir.trusted_config, trusted=True)
 
     def writeAnsibleConfig(self, config_path, trusted=False):
@@ -858,17 +866,16 @@ class AnsibleJob(object):
                 pgid = os.getpgid(self.proc.pid)
                 os.killpg(pgid, signal.SIGKILL)
             except Exception:
-                self.log.exception("Exception while killing "
-                                   "ansible process:")
+                self.log.exception("Exception while killing ansible process:")
 
     def runAnsible(self, cmd, timeout, trusted=False):
         env_copy = os.environ.copy()
         env_copy['LOGNAME'] = 'zuul'
 
         if trusted:
-            cwd = self.jobdir.trusted_ansible_root
+            env_copy['ANSIBLE_CONFIG'] = self.jobdir.trusted_config
         else:
-            cwd = self.jobdir.ansible_root
+            env_copy['ANSIBLE_CONFIG'] = self.jobdir.untrusted_config
 
         with self.proc_lock:
             if self.aborted:
@@ -876,7 +883,7 @@ class AnsibleJob(object):
             self.log.debug("Ansible command: %s" % (cmd,))
             self.proc = subprocess.Popen(
                 cmd,
-                cwd=cwd,
+                cwd=self.jobdir.work_root,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 preexec_fn=os.setsid,
