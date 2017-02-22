@@ -513,10 +513,10 @@ class GerritConnection(BaseConnection):
             time.sleep(self.replication_retry_interval)
         return False
 
-    def getRefSha(self, project, ref):
+    def getRefSha(self, project_name, ref):
         refs = {}
         try:
-            refs = self.getInfoRefs(project)
+            refs = self.getInfoRefs(project_name)
         except:
             self.log.exception("Exception looking for ref %s" %
                                ref)
@@ -578,7 +578,7 @@ class GerritConnection(BaseConnection):
         return changes
 
     def getProjectBranches(self, project):
-        refs = self.getInfoRefs(project)
+        refs = self.getInfoRefs(project.name)
         heads = [str(k[len('refs/heads/'):]) for k in refs.keys()
                  if k.startswith('refs/heads/')]
         return heads
@@ -710,9 +710,9 @@ class GerritConnection(BaseConnection):
             raise Exception("Gerrit error executing %s" % command)
         return (out, err)
 
-    def getInfoRefs(self, project):
+    def getInfoRefs(self, project_name):
         url = "%s/p/%s/info/refs?service=git-upload-pack" % (
-            self.baseurl, project)
+            self.baseurl, project_name)
         try:
             data = urllib.request.urlopen(url).read()
         except:
