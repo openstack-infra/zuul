@@ -1069,6 +1069,7 @@ class ChrootedKazooFixture(fixtures.Fixture):
 
 class BaseTestCase(testtools.TestCase):
     log = logging.getLogger("zuul.test")
+    wait_timeout = 20
 
     def attachLogs(self, *args):
         def reader():
@@ -1611,7 +1612,7 @@ class ZuulTestCase(BaseTestCase):
         self.log.debug("Waiting until settled...")
         start = time.time()
         while True:
-            if time.time() - start > 20:
+            if time.time() - start > self.wait_timeout:
                 self.log.error("Timeout waiting for Zuul to settle")
                 self.log.error("Queue status:")
                 for queue in self.event_queues:
