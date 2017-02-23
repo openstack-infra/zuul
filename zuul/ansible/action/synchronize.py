@@ -24,13 +24,13 @@ class ActionModule(synchronize.ActionModule):
 
         source = self._task.args.get('src', None)
         dest = self._task.args.get('dest', None)
-        pull = self._task.args.get('pull', False)
+        mode = self._task.args.get('mode', 'push')
 
         if '--safe-links' not in self._task.args['rsync_opts']:
             self._task.args['rsync_opts'].append('--safe-links')
 
-        if not pull and not paths._is_safe_path(source):
+        if mode == 'push' and not paths._is_safe_path(source):
             return paths._fail_dict(source, prefix='Syncing files from')
-        if pull and not paths._is_safe_path(dest):
+        if mode == 'pull' and not paths._is_safe_path(dest):
             return paths._fail_dict(dest, prefix='Syncing files to')
         return super(ActionModule, self).run(tmp, task_vars)
