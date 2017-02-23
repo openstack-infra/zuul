@@ -20,6 +20,8 @@ import time
 
 from ansible.plugins.callback import default
 
+LOG_STREAM_PORT = 19885
+
 
 def linesplit(socket):
     buff = socket.recv(4096)
@@ -62,7 +64,7 @@ class CallbackModule(default.CallbackModule):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         while True:
             try:
-                s.connect((ip, 19885))
+                s.connect((ip, LOG_STREAM_PORT))
             except Exception:
                 self._display.display("[%s] Waiting on logger" % host)
                 time.sleep(0.1)

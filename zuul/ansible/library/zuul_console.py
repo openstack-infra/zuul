@@ -20,6 +20,9 @@ import sys
 import socket
 import threading
 
+LOG_STREAM_FILE = '/tmp/console.log'
+LOG_STREAM_PORT = 19885
+
 
 def daemonize():
     # A really basic daemonize method that should work well enough for
@@ -155,15 +158,15 @@ class Server(object):
 
 
 def test():
-    s = Server('/tmp/console.html', 19885)
+    s = Server(LOG_STREAM_PATH, LOG_STREAM_PORT)
     s.run()
 
 
 def main():
     module = AnsibleModule(
         argument_spec=dict(
-            path=dict(default='/tmp/console.html'),
-            port=dict(default=19885, type='int'),
+            path=dict(default=LOG_STREAM_PATH),
+            port=dict(default=LOG_STREAM_PORT, type='int'),
         )
     )
 

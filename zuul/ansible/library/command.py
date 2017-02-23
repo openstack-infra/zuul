@@ -121,12 +121,13 @@ from ansible.module_utils.basic import get_exception
 from ast import literal_eval
 
 
+LOG_STREAM_FILE = '/tmp/console.log'
 PASSWD_ARG_RE = re.compile(r'^[-]{0,2}pass[-]?(word|wd)?')
 
 
 class Console(object):
     def __enter__(self):
-        self.logfile = open('/tmp/console.html', 'a', 0)
+        self.logfile = open(LOG_STREAM_FILE, 'a', 0)
         return self
 
     def __exit__(self, etype, value, tb):
