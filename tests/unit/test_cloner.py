@@ -91,7 +91,7 @@ class TestCloner(ZuulTestCase):
                 workspace=self.workspace_root,
                 zuul_branch=build.parameters['ZUUL_BRANCH'],
                 zuul_ref=build.parameters['ZUUL_REF'],
-                zuul_url=self.git_root,
+                zuul_url=self.src_root,
                 cache_dir=cache_root,
             )
             cloner.execute()
@@ -149,7 +149,7 @@ class TestCloner(ZuulTestCase):
                 workspace=self.workspace_root,
                 zuul_branch=build.parameters['ZUUL_BRANCH'],
                 zuul_ref=build.parameters['ZUUL_REF'],
-                zuul_url=self.git_root,
+                zuul_url=self.src_root,
             )
             cloner.execute()
             work = self.getWorkspaceRepos(projects)
@@ -219,7 +219,7 @@ class TestCloner(ZuulTestCase):
                 workspace=self.workspace_root,
                 zuul_branch=build.parameters['ZUUL_BRANCH'],
                 zuul_ref=build.parameters['ZUUL_REF'],
-                zuul_url=self.git_root,
+                zuul_url=self.src_root,
             )
             cloner.execute()
             work = self.getWorkspaceRepos(projects)
@@ -333,7 +333,7 @@ class TestCloner(ZuulTestCase):
                 workspace=self.workspace_root,
                 zuul_branch=build.parameters['ZUUL_BRANCH'],
                 zuul_ref=build.parameters['ZUUL_REF'],
-                zuul_url=self.git_root,
+                zuul_url=self.src_root,
                 branch='stable/havana',  # Old branch for upgrade
             )
             cloner.execute()
@@ -395,7 +395,7 @@ class TestCloner(ZuulTestCase):
                 workspace=self.workspace_root,
                 zuul_branch=build.parameters['ZUUL_BRANCH'],
                 zuul_ref=build.parameters['ZUUL_REF'],
-                zuul_url=self.git_root,
+                zuul_url=self.src_root,
                 branch='master',  # New branch for upgrade
             )
             cloner.execute()
@@ -481,7 +481,7 @@ class TestCloner(ZuulTestCase):
                 workspace=self.workspace_root,
                 zuul_branch=build.parameters['ZUUL_BRANCH'],
                 zuul_ref=build.parameters['ZUUL_REF'],
-                zuul_url=self.git_root,
+                zuul_url=self.src_root,
                 project_branches={'org/project4': 'master'},
             )
             cloner.execute()
@@ -546,7 +546,7 @@ class TestCloner(ZuulTestCase):
                 workspace=self.workspace_root,
                 zuul_branch=build.parameters.get('ZUUL_BRANCH', None),
                 zuul_ref=build.parameters.get('ZUUL_REF', None),
-                zuul_url=self.git_root,
+                zuul_url=self.src_root,
                 branch='stable/havana',
             )
             cloner.execute()
@@ -581,7 +581,7 @@ class TestCloner(ZuulTestCase):
             workspace=self.workspace_root,
             zuul_branch=None,
             zuul_ref='master',
-            zuul_url=self.git_root,
+            zuul_url=self.src_root,
             zuul_project=project,
             zuul_newrev=newRev,
         )
@@ -607,7 +607,7 @@ class TestCloner(ZuulTestCase):
             workspace=self.workspace_root,
             zuul_branch=None,
             zuul_ref='master',
-            zuul_url=self.git_root,
+            zuul_url=self.src_root,
             zuul_project=project,
             zuul_newrev=newRev
         )

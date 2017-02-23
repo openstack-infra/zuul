@@ -94,8 +94,8 @@ class JobDir(object):
         # Work
         self.work_root = os.path.join(self.root, 'work')
         os.makedirs(self.work_root)
-        self.git_root = os.path.join(self.work_root, 'git')
-        os.makedirs(self.git_root)
+        self.src_root = os.path.join(self.work_root, 'src')
+        os.makedirs(self.src_root)
         self.log_root = os.path.join(self.work_root, 'logs')
         os.makedirs(self.log_root)
         # Ansible
@@ -551,12 +551,12 @@ class AnsibleJob(object):
             repo = git.Repo.clone_from(
                 os.path.join(self.launcher_server.merge_root,
                              project['name']),
-                os.path.join(self.jobdir.git_root,
+                os.path.join(self.jobdir.src_root,
                              project['name']))
             repo.remotes.origin.config_writer.set('url', project['url'])
 
         # Get a merger in order to update the repos involved in this job.
-        merger = self.launcher_server._getMerger(self.jobdir.git_root)
+        merger = self.launcher_server._getMerger(self.jobdir.src_root)
         merge_items = [i for i in args['items'] if i.get('refspec')]
         if merge_items:
             commit = merger.mergeChanges(merge_items)  # noqa
@@ -708,7 +708,7 @@ class AnsibleJob(object):
                 if (i['connection_name'] == playbook['connection'] and
                     i['project'] == playbook['project']):
                     # We already have this repo prepared
-                    path = os.path.join(self.jobdir.git_root,
+                    path = os.path.join(self.jobdir.src_root,
                                         project.name,
                                         playbook['path'])
                     jobdir_playbook.path = self.findPlaybook(
@@ -778,7 +778,7 @@ class AnsibleJob(object):
                     # We already have this repo prepared;
                     # copy it into location.
 
-                    path = os.path.join(self.jobdir.git_root,
+                    path = os.path.join(self.jobdir.src_root,
                                         project.name)
                     link = os.path.join(root, role['name'])
                     os.symlink(path, link)
@@ -815,7 +815,7 @@ class AnsibleJob(object):
 
         with open(self.jobdir.vars, 'w') as vars_yaml:
             zuul_vars = dict(zuul=args['zuul'])
-            zuul_vars['zuul']['launcher'] = dict(git_root=self.jobdir.git_root,
+            zuul_vars['zuul']['launcher'] = dict(src_root=self.jobdir.src_root,
                                                  log_root=self.jobdir.log_root)
             vars_yaml.write(
                 yaml.safe_dump(zuul_vars, default_flow_style=False))
