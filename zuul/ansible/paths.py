@@ -32,8 +32,9 @@ def _fail_dict(path, prefix='Accessing files from'):
     return dict(
         failed=True,
         path=path,
-        msg="{prefix} outside the working dir is prohibited".format(
-            prefix=prefix))
+        msg="{prefix} outside the working dir {curdir} is prohibited".format(
+            prefix=prefix,
+            curdir=os.path.abspath(os.path.curdir)))
 
 
 def _import_ansible_action_plugin(name):
