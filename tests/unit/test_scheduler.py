@@ -1378,10 +1378,10 @@ class TestScheduler(ZuulTestCase):
         self.assertEmptyQueues()
         self.build_history = []
 
-        path = os.path.join(self.merger_git_root, "org/project")
+        path = os.path.join(self.merger_src_root, "org/project")
         if os.path.exists(path):
             repack_repo(path)
-        path = os.path.join(self.launcher_git_root, "org/project")
+        path = os.path.join(self.launcher_src_root, "org/project")
         if os.path.exists(path):
             repack_repo(path)
 
@@ -1410,10 +1410,10 @@ class TestScheduler(ZuulTestCase):
         A.addPatchset(large=True)
         path = os.path.join(self.upstream_root, "org/project1")
         repack_repo(path)
-        path = os.path.join(self.merger_git_root, "org/project1")
+        path = os.path.join(self.merger_src_root, "org/project1")
         if os.path.exists(path):
             repack_repo(path)
-        path = os.path.join(self.launcher_git_root, "org/project1")
+        path = os.path.join(self.launcher_src_root, "org/project1")
         if os.path.exists(path):
             repack_repo(path)
 
@@ -2733,10 +2733,10 @@ class TestScheduler(ZuulTestCase):
 
         # Delete org/new-project zuul repo. Should be recloned.
         p = 'org/delete-project'
-        if os.path.exists(os.path.join(self.merger_git_root, p)):
-            shutil.rmtree(os.path.join(self.merger_git_root, p))
-        if os.path.exists(os.path.join(self.launcher_git_root, p)):
-            shutil.rmtree(os.path.join(self.launcher_git_root, p))
+        if os.path.exists(os.path.join(self.merger_src_root, p)):
+            shutil.rmtree(os.path.join(self.merger_src_root, p))
+        if os.path.exists(os.path.join(self.launcher_src_root, p)):
+            shutil.rmtree(os.path.join(self.launcher_src_root, p))
 
         B = self.fake_gerrit.addFakeChange('org/delete-project', 'master', 'B')
 
@@ -3981,7 +3981,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.launch_server.release('.*-merge')
         self.waitUntilSettled()
 
-        path = os.path.join(self.builds[0].jobdir.git_root, "org/project1")
+        path = os.path.join(self.builds[0].jobdir.src_root, "org/project1")
         repo = git.Repo(path)
         repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
         repo_messages.reverse()
@@ -3989,7 +3989,7 @@ For CI problems and help debugging, contact ci@example.org"""
             'initial commit', 'add content from fixture', 'A-1']
         self.assertEqual(repo_messages, correct_messages)
 
-        path = os.path.join(self.builds[0].jobdir.git_root, "org/project2")
+        path = os.path.join(self.builds[0].jobdir.src_root, "org/project2")
         repo = git.Repo(path)
         repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
         repo_messages.reverse()
@@ -4638,7 +4638,7 @@ class TestSchedulerMerges(ZuulTestCase):
         build = self.builds[-1]
         ref = self.getParameter(build, 'ZUUL_REF')
 
-        path = os.path.join(build.jobdir.git_root, project)
+        path = os.path.join(build.jobdir.src_root, project)
         repo = git.Repo(path)
         repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
         repo_messages.reverse()
@@ -4709,7 +4709,7 @@ class TestSchedulerMerges(ZuulTestCase):
         self.assertEqual(self.getParameter(build, 'ZUUL_BRANCH'), 'mp')
         ref = self.getParameter(build, 'ZUUL_REF')
         path = os.path.join(
-            build.jobdir.git_root, 'org/project-merge-branches')
+            build.jobdir.src_root, 'org/project-merge-branches')
         repo = git.Repo(path)
 
         repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
@@ -4754,7 +4754,7 @@ class TestSchedulerMerges(ZuulTestCase):
         self.log.debug("Got Zuul commit for change A: %s" % commit_A)
 
         path = os.path.join(
-            job_A.jobdir.git_root, "org/project-merge-branches")
+            job_A.jobdir.src_root, "org/project-merge-branches")
         repo = git.Repo(path)
         repo_messages = [c.message.strip()
                          for c in repo.iter_commits(ref_A)]
@@ -4776,7 +4776,7 @@ class TestSchedulerMerges(ZuulTestCase):
         self.log.debug("Got Zuul commit for change B: %s" % commit_B)
 
         path = os.path.join(
-            job_B.jobdir.git_root, "org/project-merge-branches")
+            job_B.jobdir.src_root, "org/project-merge-branches")
         repo = git.Repo(path)
         repo_messages = [c.message.strip()
                          for c in repo.iter_commits(ref_B)]
@@ -4797,7 +4797,7 @@ class TestSchedulerMerges(ZuulTestCase):
         self.log.debug("Got Zuul ref for change C: %s" % ref_C)
         self.log.debug("Got Zuul commit for change C: %s" % commit_C)
         path = os.path.join(
-            job_C.jobdir.git_root, "org/project-merge-branches")
+            job_C.jobdir.src_root, "org/project-merge-branches")
         repo = git.Repo(path)
         repo_messages = [c.message.strip()
                          for c in repo.iter_commits(ref_C)]
