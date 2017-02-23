@@ -293,11 +293,6 @@ class Scheduler(threading.Thread):
         self.stopConnections()
         self.wake_event.set()
 
-    def testConfig(self, config_path, connections):
-        # Take the list of set up connections directly here rather than with
-        # registerConnections as we don't want to do the onLoad event yet.
-        return self._parseConfig(config_path, connections)
-
     def registerConnections(self, connections, load=True):
         # load: whether or not to trigger the onLoad for the connection. This
         # is useful for not doing a full load during layout validation.
