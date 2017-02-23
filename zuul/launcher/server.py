@@ -87,13 +87,16 @@ class JobDir(object):
         #     untrusted.cfg
         #   work
         #     git
+        #     logs
         self.keep = keep
         self.root = tempfile.mkdtemp(dir=root)
         # Work
         self.work_root = os.path.join(self.root, 'work')
         os.makedirs(self.work_root)
-        self.git_root = os.path.join(self.root, 'git')
+        self.git_root = os.path.join(self.work_root, 'git')
         os.makedirs(self.git_root)
+        self.log_root = os.path.join(self.work_root, 'logs')
+        os.makedirs(self.log_root)
         # Ansible
         self.ansible_root = os.path.join(self.root, 'ansible')
         os.makedirs(self.ansible_root)
@@ -109,7 +112,7 @@ class JobDir(object):
         self.untrusted_config = os.path.join(
             self.ansible_root, 'untrusted.cfg')
         self.trusted_config = os.path.join(self.ansible_root, 'trusted.cfg')
-        self.ansible_log = os.path.join(self.ansible_root, 'ansible_log.txt')
+        self.ansible_log = os.path.join(self.log_root, 'ansible_log.txt')
 
     def addPrePlaybook(self):
         count = len(self.pre_playbooks)
@@ -796,7 +799,8 @@ class AnsibleJob(object):
 
         with open(self.jobdir.vars, 'w') as vars_yaml:
             zuul_vars = dict(zuul=args['zuul'])
-            zuul_vars['zuul']['launcher'] = dict(git_root=self.jobdir.git_root)
+            zuul_vars['zuul']['launcher'] = dict(git_root=self.jobdir.git_root,
+                                                 log_root=self.jobdir.log_root)
             vars_yaml.write(
                 yaml.safe_dump(zuul_vars, default_flow_style=False))
         self.writeAnsibleConfig(self.jobdir.untrusted_config)
