@@ -20,10 +20,8 @@ import ansible.plugins.action
 
 
 def _is_safe_path(path):
-    if os.path.isabs(path):
-        return False
-    if not os.path.abspath(os.path.expanduser(path)).startswith(
-            os.path.abspath(os.path.curdir)):
+    full_path = os.path.realpath(os.path.abspath(os.path.expanduser(path)))
+    if not full_path.startswith(os.path.abspath(os.path.curdir)):
         return False
     return True
 
