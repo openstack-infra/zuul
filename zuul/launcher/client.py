@@ -259,7 +259,10 @@ class LaunchClient(object):
         dependent_items.reverse()
         # TODOv3(jeblair): This ansible vars data structure will
         # replace the environment variables below.
-        zuul_params = dict(uuid=uuid)
+        zuul_params = dict(uuid=uuid,
+                           project=item.change.project.name)
+        if hasattr(item.change, 'branch'):
+            zuul_params['branch'] = item.change.branch
         # Legacy environment variables
         params = dict(ZUUL_UUID=uuid,
                       ZUUL_PROJECT=item.change.project.name)
@@ -267,6 +270,7 @@ class LaunchClient(object):
         params['ZUUL_URL'] = item.current_build_set.zuul_url
         params['ZUUL_VOTING'] = job.voting and '1' or '0'
         if hasattr(item.change, 'refspec'):
+            zuul_params['branch'] = item.change.branch
             changes_str = '^'.join(
                 ['%s:%s:%s' % (i.change.project.name, i.change.branch,
                                i.change.refspec)
