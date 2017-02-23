@@ -27,6 +27,7 @@ import traceback
 import yaml
 
 import gear
+import git
 
 import zuul.merger.merger
 import zuul.ansible.action
@@ -250,6 +251,10 @@ class LaunchServer(object):
             self.merge_name = None
 
         self.connections = connections
+        # This merger and its git repos are used to maintain
+        # up-to-date copies of all the repos that are used by jobs, as
+        # well as to support the merger:cat functon to supply
+        # configuration information to Zuul when it starts.
         self.merger = self._getMerger(self.merge_root)
         self.update_queue = DeduplicateQueue()
 
@@ -378,7 +383,7 @@ class LaunchServer(object):
                 self.log.exception("Exception in update thread:")
 
     def _innerUpdateLoop(self):
-        # Inside of a loop that keeps the main repository up to date
+        # Inside of a loop that keeps the main repositories up to date
         task = self.update_queue.get()
         if task is None:
             # We are asked to stop
@@ -390,6 +395,7 @@ class LaunchServer(object):
         task.setComplete()
 
     def update(self, project, url):
+        # Update a repository in the main merger
         task = UpdateTask(project, url)
         task = self.update_queue.put(task)
         return task
@@ -540,6 +546,16 @@ class AnsibleJob(object):
             task.wait()
 
         self.log.debug("Job %s: git updates complete" % (self.job.unique,))
+        for project in args['projects']:
+            self.log.debug("Cloning %s" % (project['name'],))
+            repo = git.Repo.clone_from(
+                os.path.join(self.launcher_server.merge_root,
+                             project['name']),
+                os.path.join(self.jobdir.git_root,
+                             project['name']))
+            repo.remotes.origin.config_writer.set('url', project['url'])
+
+        # Get a merger in order to update the repos involved in this job.
         merger = self.launcher_server._getMerger(self.jobdir.git_root)
         merge_items = [i for i in args['items'] if i.get('refspec')]
         if merge_items:
