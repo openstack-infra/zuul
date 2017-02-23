@@ -165,7 +165,7 @@ def test():
 def main():
     module = AnsibleModule(
         argument_spec=dict(
-            path=dict(default=LOG_STREAM_PATH),
+            path=dict(default=LOG_STREAM_FILE),
             port=dict(default=LOG_STREAM_PORT, type='int'),
         )
     )
