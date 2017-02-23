@@ -1,0 +1,14 @@
+- hosts: all
+  tasks:
+    - name: Collect console log.
+      synchronize:
+        dest: "{{ zuul.launcher.log_root }}"
+        mode: pull
+        src: "/tmp/console.log"
+
+    - name: Collect tox logs.
+      synchronize:
+        dest: "{{ zuul.launcher.log_root }}/tox/"
+        mode: pull
+        src: "/home/zuul/workspace/src/{{ zuul.project }}/.tox/pep8/log/"
+

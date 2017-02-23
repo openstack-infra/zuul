@@ -1,6 +1,7 @@
 - job:
     name: python-linters
     pre-run: pre
+    post-run: post
     nodes:
       - name: worker
         image: ubuntu-xenial
