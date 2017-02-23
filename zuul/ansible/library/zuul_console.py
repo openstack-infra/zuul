@@ -158,7 +158,7 @@ class Server(object):
 
 
 def test():
-    s = Server(LOG_STREAM_PATH, LOG_STREAM_PORT)
+    s = Server(LOG_STREAM_FILE, LOG_STREAM_PORT)
     s.run()
 
 
