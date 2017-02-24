@@ -1246,6 +1246,7 @@ class RecordingExecutorServer(zuul.executor.server.ExecutorServer):
         self.build_history = []
         self.fail_tests = {}
         self.job_builds = {}
+        self.hostname = 'zl.example.com'
 
     def failJob(self, name, change):
         """Instruct the executor to report matching builds as failures.

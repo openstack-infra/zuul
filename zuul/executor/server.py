@@ -800,7 +800,9 @@ class AnsibleJob(object):
 
         data = {
             'manager': self.executor_server.hostname,
-            'url': 'https://server/job/{}/0/'.format(args['job']),
+            'url': 'finger://{server}/{unique}'.format(
+                unique=self.job.unique,
+                server=self.executor_server.hostname),
             'worker_name': 'My Worker',
         }
 
