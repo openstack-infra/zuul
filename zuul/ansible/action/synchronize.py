@@ -26,6 +26,8 @@ class ActionModule(synchronize.ActionModule):
         dest = self._task.args.get('dest', None)
         pull = self._task.args.get('pull', False)
 
+        if 'rsync_opts' not in self._task.args:
+            self._task.args['rsync_opts'] = []
         if '--safe-links' not in self._task.args['rsync_opts']:
             self._task.args['rsync_opts'].append('--safe-links')
 
