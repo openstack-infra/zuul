@@ -96,6 +96,13 @@ def normalizeCategory(name):
     return re.sub(' ', '-', name)
 
 
+class Attributes(object):
+    """A class to hold attributes for string formatting."""
+
+    def __init__(self, **kw):
+        setattr(self, '__dict__', kw)
+
+
 class Pipeline(object):
     """A configuration that ties triggers, reporters, managers and sources.
 
@@ -1433,12 +1440,20 @@ class QueueItem(object):
             if job.failure_url:
                 pattern = job.failure_url
         url = None
+        # Produce safe versions of objects which may be useful in
+        # result formatting, but don't allow users to crawl through
+        # the entire data structure where they might be able to access
+        # secrets, etc.
+        safe_change = self.change.getSafeAttributes()
+        safe_pipeline = Attributes(name=self.pipeline.name)
+        safe_job = Attributes(name=job.name)
+        safe_build = Attributes(uuid=build.uuid)
         if pattern:
             try:
-                url = pattern.format(change=self.change,
-                                     pipeline=self.pipeline,
-                                     job=job,
-                                     build=build)
+                url = pattern.format(change=safe_change,
+                                     pipeline=safe_pipeline,
+                                     job=safe_job,
+                                     build=safe_build)
             except Exception:
                 pass  # FIXME: log this or something?
         if not url:
@@ -1631,6 +1646,12 @@ class Ref(object):
     def updatesConfig(self):
         return False
 
+    def getSafeAttributes(self):
+        return Attributes(project=self.project,
+                          ref=self.ref,
+                          oldrev=self.oldrev,
+                          newrev=self.newrev)
+
 
 class Change(Ref):
     """A proposed new state for a Project."""
@@ -1693,6 +1714,11 @@ class Change(Ref):
         if 'zuul.yaml' in self.files or '.zuul.yaml' in self.files:
             return True
         return False
+
+    def getSafeAttributes(self):
+        return Attributes(project=self.project,
+                          number=self.number,
+                          patchset=self.patchset)
 
 
 class TriggerEvent(object):

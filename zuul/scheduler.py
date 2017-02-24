@@ -897,6 +897,7 @@ class Scheduler(threading.Thread):
             url_pattern = self.config.get('zuul', 'url_pattern')
         else:
             url_pattern = None
+        # TODOv3(jhesketh): url_pattern should be deterministic by zuul
 
         data = {}
 
