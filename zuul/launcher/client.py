@@ -260,9 +260,15 @@ class LaunchClient(object):
         # TODOv3(jeblair): This ansible vars data structure will
         # replace the environment variables below.
         zuul_params = dict(uuid=uuid,
+                           pipeline=pipeline.name,
+                           job=job.name,
                            project=item.change.project.name)
         if hasattr(item.change, 'branch'):
             zuul_params['branch'] = item.change.branch
+        if hasattr(item.change, 'number'):
+            zuul_params['change'] = item.change.number
+        if hasattr(item.change, 'patchset'):
+            zuul_params['patchset'] = item.change.patchset
         # Legacy environment variables
         params = dict(ZUUL_UUID=uuid,
                       ZUUL_PROJECT=item.change.project.name)
