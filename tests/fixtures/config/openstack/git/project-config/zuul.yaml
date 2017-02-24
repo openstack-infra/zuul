@@ -71,12 +71,22 @@
         - python27
         - python35
 
+- job:
+    name: dsvm
+    parent: base
+    repos:
+      - openstack/keystone
+      - openstack/nova
+
 # Project definitions
 
 - project:
     name: openstack/nova
     templates:
       - python-jobs
+    check:
+      jobs:
+        - dsvm
     gate:
       queue: integrated
 
@@ -84,5 +94,8 @@
     name: openstack/keystone
     templates:
       - python-jobs
+    check:
+      jobs:
+        - dsvm
     gate:
       queue: integrated

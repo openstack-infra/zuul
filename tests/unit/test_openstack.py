@@ -14,6 +14,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import os
+
 from tests.base import AnsibleZuulTestCase
 
 
@@ -54,3 +56,45 @@ class TestOpenStack(AnsibleZuulTestCase):
                          "A should report start and success")
         self.assertEqual(self.getJobFromHistory('python27').node,
                          'ubuntu-trusty')
+
+    def test_dsvm_keystone_repo(self):
+        self.launch_server.keep_jobdir = True
+        A = self.fake_gerrit.addFakeChange('openstack/nova', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='dsvm', result='SUCCESS', changes='1,1')])
+        build = self.getJobFromHistory('dsvm')
+
+        # Check that a change to nova triggered a keystone clone
+        launcher_git_dir = os.path.join(self.launcher_src_root,
+                                        'openstack', 'keystone', '.git')
+        self.assertTrue(os.path.exists(launcher_git_dir),
+                        msg='openstack/keystone should be cloned.')
+
+        jobdir_git_dir = os.path.join(build.jobdir.src_root,
+                                      'openstack', 'keystone', '.git')
+        self.assertTrue(os.path.exists(jobdir_git_dir),
+                        msg='openstack/keystone should be cloned.')
+
+    def test_dsvm_nova_repo(self):
+        self.launch_server.keep_jobdir = True
+        A = self.fake_gerrit.addFakeChange('openstack/keystone', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='dsvm', result='SUCCESS', changes='1,1')])
+        build = self.getJobFromHistory('dsvm')
+
+        # Check that a change to keystone triggered a nova clone
+        launcher_git_dir = os.path.join(self.launcher_src_root,
+                                        'openstack', 'nova', '.git')
+        self.assertTrue(os.path.exists(launcher_git_dir),
+                        msg='openstack/nova should be cloned.')
+
+        jobdir_git_dir = os.path.join(build.jobdir.src_root,
+                                      'openstack', 'nova', '.git')
+        self.assertTrue(os.path.exists(jobdir_git_dir),
+                        msg='openstack/nova should be cloned.')

@@ -87,7 +87,7 @@ class JobDir(object):
         #     trusted.cfg
         #     untrusted.cfg
         #   work
-        #     git
+        #     src
         #     logs
         self.keep = keep
         self.root = tempfile.mkdtemp(dir=root)
