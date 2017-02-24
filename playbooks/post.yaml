@@ -8,7 +8,12 @@
 
     - name: Collect tox logs.
       synchronize:
-        dest: "{{ zuul.launcher.log_root }}/tox/"
+        dest: "{{ zuul.launcher.log_root }}/tox"
         mode: pull
         src: "/home/zuul/workspace/src/{{ zuul.project }}/.tox/pep8/log/"
 
+    - name: publish tox logs.
+      copy:
+        dest: "/opt/zuul-logs/{{ zuul.uuid}}"
+        src: "{{ zuul.launcher.log_root }}/"
+      delegate_to: 127.0.0.1
