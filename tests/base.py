@@ -732,7 +732,7 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
         self.running_builds.append(build)
         self.job_builds[job.unique] = build
         args = json.loads(job.arguments)
-        args['zuul']['_test'] = dict(test_root=self._test_root)
+        args['vars']['zuul']['_test'] = dict(test_root=self._test_root)
         job.arguments = json.dumps(args)
         self.job_workers[job.unique] = RecordingAnsibleJob(self, job)
         self.job_workers[job.unique].run()

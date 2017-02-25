@@ -116,6 +116,7 @@ class JobParser(object):
                '_source_context': model.SourceContext,
                'roles': to_list(role),
                'repos': to_list(str),
+               'vars': dict,
                }
 
         return vs.Schema(job)
@@ -205,6 +206,10 @@ class JobParser(object):
                 if r:
                     roles.append(r)
         job.roles = job.roles.union(set(roles))
+
+        variables = conf.get('vars', None)
+        if variables:
+            job.updateVariables(variables)
 
         # If the definition for this job came from a project repo,
         # implicitly apply a branch matcher for the branch it was on.

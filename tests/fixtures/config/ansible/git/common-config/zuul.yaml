@@ -40,5 +40,7 @@
     name: python27
     pre-run: pre
     post-run: post
+    vars:
+      flagpath: "{{zuul._test.test_root}}/{{zuul.uuid}}.flag"
     roles:
       - zuul: bare-role

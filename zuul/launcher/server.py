@@ -814,7 +814,7 @@ class AnsibleJob(object):
                         self.jobdir.known_hosts))
 
         with open(self.jobdir.vars, 'w') as vars_yaml:
-            zuul_vars = dict(zuul=args['zuul'])
+            zuul_vars = dict(args['vars'])
             zuul_vars['zuul']['launcher'] = dict(src_root=self.jobdir.src_root,
                                                  log_root=self.jobdir.log_root)
             vars_yaml.write(
