@@ -1,7 +1,0 @@
-- hosts: all
-  tasks:
-    - name: Run a tox -e pep8.
-      include_role:
-        name: run-tox
-      vars:
-        run_tox_eventlist: pep8
