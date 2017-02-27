@@ -67,6 +67,7 @@ MAP = {
     'inprogress': ['In Progress', 'Blocked'],
     'review': ['In Progress', 'Blocked'],
     'merged': None,
+    'invalid': None,
 }
 
 
