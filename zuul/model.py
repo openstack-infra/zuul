@@ -687,7 +687,7 @@ class Job(object):
         # project-pipeline.
         self.execution_attributes = dict(
             timeout=None,
-            # variables={},
+            variables={},
             nodeset=NodeSet(),
             auth={},
             workspace=None,
@@ -756,6 +756,22 @@ class Job(object):
         if not self.run:
             self.run = self.implied_run
 
+    def updateVariables(self, other_vars):
+        v = self.variables
+        Job._deepUpdate(v, other_vars)
+        self.variables = v
+
+    @staticmethod
+    def _deepUpdate(a, b):
+        # Merge nested dictionaries if possible, otherwise, overwrite
+        # the value in 'a' with the value in 'b'.
+        for k, bv in b.items():
+            av = a.get(k)
+            if isinstance(av, dict) and isinstance(bv, dict):
+                Job._deepUpdate(av, bv)
+            else:
+                a[k] = bv
+
     def inheritFrom(self, other):
         """Copy the inheritable attributes which have been set on the other
         job to this job."""
@@ -796,7 +812,7 @@ class Job(object):
                                     "%s=%s with variant %s" % (
                                         repr(self), k, other._get(k),
                                         repr(other)))
-                if k not in set(['pre_run', 'post_run', 'roles']):
+                if k not in set(['pre_run', 'post_run', 'roles', 'variables']):
                     setattr(self, k, copy.deepcopy(other._get(k)))
 
         # Don't set final above so that we don't trip an error halfway
@@ -810,6 +826,8 @@ class Job(object):
             self.post_run = other.post_run + self.post_run
         if other._get('roles') is not None:
             self.roles = self.roles.union(other.roles)
+        if other._get('variables') is not None:
+            self.updateVariables(other.variables)
 
         for k in self.context_attributes:
             if (other._get(k) is not None and
