@@ -195,6 +195,8 @@ class TestAnsible(AnsibleZuulTestCase):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
+        build = self.getJobFromHistory('timeout')
+        self.assertEqual(build.result, 'ABORTED')
         build = self.getJobFromHistory('faillocal')
         self.assertEqual(build.result, 'FAILURE')
         build = self.getJobFromHistory('python27')

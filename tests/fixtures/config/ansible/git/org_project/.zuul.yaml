@@ -9,3 +9,4 @@
       jobs:
         - python27
         - faillocal
+        - timeout

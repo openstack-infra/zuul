@@ -337,6 +337,7 @@ class LaunchClient(object):
         merger_items = map(make_merger_item, all_items)
 
         params['job'] = job.name
+        params['timeout'] = job.timeout
         params['items'] = merger_items
         params['projects'] = []
 
