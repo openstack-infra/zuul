@@ -1,0 +1,52 @@
+- pipeline:
+    name: check
+    manager: independent
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+- job:
+    name: merge
+    failure-message: Unable to merge change
+    hold-following-changes: true
+    tags:
+      - merge
+
+- job:
+    name: test1
+
+- job:
+    name: test2
+
+- job:
+    name: integration
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - merge:
+            jobs:
+              - test1
+              - test2
+              - integration
+            tags:
+              - extratag
+
+- project:
+    name: org/project2
+    check:
+      jobs:
+        - merge:
+            jobs:
+              - test1
+              - test2
+              - integration

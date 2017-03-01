@@ -2750,11 +2750,9 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(B.reported, 2)
 
-    @skip("Disabled for early v3 development")
     def test_tags(self):
         "Test job tags"
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-tags.yaml')
+        self.updateConfigLayout('layout-tags')
         self.sched.reconfigure(self.config)
 
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -2763,12 +2761,16 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
 
-        results = {'project1-merge': 'extratag merge project1',
-                   'project2-merge': 'merge'}
+        self.assertEqual(len(self.history), 8)
+
+        results = {self.getJobFromHistory('merge',
+                   project='org/project1').uuid: 'extratag merge',
+                   self.getJobFromHistory('merge',
+                   project='org/project2').uuid: 'merge'}
 
         for build in self.history:
-            self.assertEqual(results.get(build.name, ''),
-                             build.parameters.get('BUILD_TAGS'))
+            self.assertEqual(results.get(build.uuid, ''),
+                             build.parameters['vars']['zuul'].get('tags'))
 
     def test_timer(self):
         "Test that a periodic job is triggered"
