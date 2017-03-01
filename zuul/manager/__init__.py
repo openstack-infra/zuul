@@ -265,6 +265,8 @@ class PipelineManager(object):
                 # Similarly, reset the item state.
                 if item.current_build_set.unable_to_merge:
                     item.setUnableToMerge()
+                if item.current_build_set.config_error:
+                    item.setConfigError(item.current_build_set.config_error)
                 if item.dequeued_needing_change:
                     item.setDequeuedNeedingChange()
 
@@ -482,8 +484,21 @@ class PipelineManager(object):
             import zuul.configloader
             loader = zuul.configloader.ConfigLoader()
             self.log.debug("Load dynamic layout with %s" % build_set.files)
-            layout = loader.createDynamicLayout(item.pipeline.layout.tenant,
-                                                build_set.files)
+            try:
+                layout = loader.createDynamicLayout(
+                    item.pipeline.layout.tenant,
+                    build_set.files)
+            except zuul.configloader.ConfigurationSyntaxError as e:
+                self.log.info("Configuration syntax error "
+                              "in dynamic layout %s" %
+                              build_set.files)
+                item.setConfigError(str(e))
+                return None
+            except Exception:
+                self.log.exception("Error in dynamic layout %s" %
+                                   build_set.files)
+                item.setConfigError("Unknown configuration error")
+                return None
             return layout
         build_set.merge_state = build_set.PENDING
         self.log.debug("Preparing dynamic layout for: %s" % item.change)
@@ -556,6 +571,8 @@ class PipelineManager(object):
                 ready = self.prepareLayout(item)
                 if item.current_build_set.unable_to_merge:
                     failing_reasons.append("it has a merge conflict")
+                if item.current_build_set.config_error:
+                    failing_reasons.append("it has an invalid configuration")
                 if ready and self.provisionNodes(item):
                     changed = True
         if actionable and ready and self.launchJobs(item):
@@ -693,7 +710,12 @@ class PipelineManager(object):
     def _reportItem(self, item):
         self.log.debug("Reporting change %s" % item.change)
         ret = True  # Means error as returned by trigger.report
-        if not item.getJobs():
+        if item.getConfigError():
+            self.log.debug("Invalid config for change %s" % item.change)
+            # TODOv3(jeblair): consider a new reporter action for this
+            actions = self.pipeline.merge_failure_actions
+            item.setReportedResult('CONFIG_ERROR')
+        elif not item.getJobs():
             # We don't send empty reports with +1,
             # and the same for -1's (merge failures or transient errors)
             # as they cannot be followed by +1's

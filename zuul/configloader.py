@@ -10,11 +10,13 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from contextlib import contextmanager
 import copy
 import os
 import logging
 import six
 import yaml
+import pprint
 
 import voluptuous as vs
 
@@ -38,6 +40,35 @@ def as_list(item):
     return [item]
 
 
+class ConfigurationSyntaxError(Exception):
+    pass
+
+
+@contextmanager
+def configuration_exceptions(stanza, conf):
+    try:
+        yield
+    except vs.Invalid as e:
+        conf = copy.deepcopy(conf)
+        context = conf.pop('_source_context')
+        m = """
+Zuul encountered a syntax error while parsing its configuration in the
+repo {repo} on branch {branch}.  The error was:
+
+  {error}
+
+The offending content was a {stanza} stanza with the content:
+
+{content}
+"""
+        m = m.format(repo=context.project.name,
+                     branch=context.branch,
+                     error=str(e),
+                     stanza=stanza,
+                     content=pprint.pformat(conf))
+        raise ConfigurationSyntaxError(m)
+
+
 class NodeSetParser(object):
     @staticmethod
     def getSchema():
@@ -47,13 +78,15 @@ class NodeSetParser(object):
 
         nodeset = {vs.Required('name'): str,
                    vs.Required('nodes'): [node],
+                   '_source_context': model.SourceContext,
                    }
 
         return vs.Schema(nodeset)
 
     @staticmethod
     def fromYaml(layout, conf):
-        NodeSetParser.getSchema()(conf)
+        with configuration_exceptions('nodeset', conf):
+            NodeSetParser.getSchema()(conf)
         ns = model.NodeSet(conf['name'])
         for conf_node in as_list(conf['nodes']):
             node = model.Node(conf_node['name'], conf_node['image'])
@@ -136,7 +169,8 @@ class JobParser(object):
 
     @staticmethod
     def fromYaml(tenant, layout, conf):
-        JobParser.getSchema()(conf)
+        with configuration_exceptions('job', conf):
+            JobParser.getSchema()(conf)
 
         # NB: The default detection system in the Job class requires
         # that we always assign values directly rather than modifying
@@ -272,7 +306,8 @@ class ProjectTemplateParser(object):
 
     @staticmethod
     def fromYaml(tenant, layout, conf):
-        ProjectTemplateParser.getSchema(layout)(conf)
+        with configuration_exceptions('project or project-template', conf):
+            ProjectTemplateParser.getSchema(layout)(conf)
         # Make a copy since we modify this later via pop
         conf = copy.deepcopy(conf)
         project_template = model.ProjectConfig(conf['name'])
@@ -338,11 +373,13 @@ class ProjectParser(object):
         for p in layout.pipelines.values():
             project[p.name] = {'queue': str,
                                'jobs': [vs.Any(str, dict)]}
-        return vs.Schema([project])
+        return vs.Schema(project)
 
     @staticmethod
     def fromYaml(tenant, layout, conf_list):
-        ProjectParser.getSchema(layout)(conf_list)
+        for conf in conf_list:
+            with configuration_exceptions('project', conf):
+                ProjectParser.getSchema(layout)(conf)
         project = model.ProjectConfig(conf_list[0]['name'])
         mode = conf_list[0].get('merge-mode', 'merge-resolve')
         project.merge_mode = model.MERGER_MAP[mode]
@@ -461,6 +498,7 @@ class PipelineParser(object):
                     'window-increase-factor': window_factor,
                     'window-decrease-type': window_type,
                     'window-decrease-factor': window_factor,
+                    '_source_context': model.SourceContext,
                     }
         pipeline['trigger'] = vs.Required(
             PipelineParser.getDriverSchema('trigger', connections))
@@ -472,7 +510,8 @@ class PipelineParser(object):
 
     @staticmethod
     def fromYaml(layout, connections, scheduler, conf):
-        PipelineParser.getSchema(layout, connections)(conf)
+        with configuration_exceptions('pipeline', conf):
+            PipelineParser.getSchema(layout, connections)(conf)
         pipeline = model.Pipeline(conf['name'], layout)
         pipeline.description = conf.get('description')
 

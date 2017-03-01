@@ -85,6 +85,8 @@ class BaseReporter(object):
             msg = 'This change depends on a change that failed to merge.\n'
         elif item.didMergerFail():
             msg = pipeline.merge_failure_message
+        elif item.getConfigError():
+            msg = item.getConfigError()
         else:
             msg = (pipeline.failure_message + '\n\n' +
                    self._formatItemReportJobs(pipeline, item))

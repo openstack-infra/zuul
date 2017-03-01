@@ -1012,6 +1012,7 @@ class BuildSet(object):
         self.commit = None
         self.zuul_url = None
         self.unable_to_merge = False
+        self.config_error = None  # None or an error message string.
         self.failing_reasons = []
         self.merge_state = self.NEW
         self.nodesets = {}  # job -> nodeset
@@ -1170,6 +1171,9 @@ class QueueItem(object):
         return True
 
     def areAllJobsComplete(self):
+        if (self.current_build_set.config_error or
+            self.current_build_set.unable_to_merge):
+            return True
         if not self.hasJobTree():
             return False
         for job in self.getJobs():
@@ -1203,9 +1207,10 @@ class QueueItem(object):
         return False
 
     def didMergerFail(self):
-        if self.current_build_set.unable_to_merge:
-            return True
-        return False
+        return self.current_build_set.unable_to_merge
+
+    def getConfigError(self):
+        return self.current_build_set.config_error
 
     def isHoldingFollowingChanges(self):
         if not self.live:
@@ -1323,6 +1328,10 @@ class QueueItem(object):
 
     def setUnableToMerge(self):
         self.current_build_set.unable_to_merge = True
+        self._setAllJobsSkipped()
+
+    def setConfigError(self, error):
+        self.current_build_set.config_error = error
         self._setAllJobsSkipped()
 
     def _setAllJobsSkipped(self):
@@ -2083,8 +2092,7 @@ class UnparsedTenantConfig(object):
                                 "a single key (when parsing %s)" %
                                 (conf,))
             key, value = item.items()[0]
-            if key in ['project', 'project-template', 'job']:
-                value['_source_context'] = source_context
+            value['_source_context'] = source_context
             if key == 'project':
                 name = value['name']
                 self.projects.setdefault(name, []).append(value)
