@@ -17,6 +17,16 @@ More information on pip here: http://www.pip-installer.org/en/latest/
 
   pip install tox
 
+As of zuul v3, a running zookeeper is required to execute tests.
+
+*Install zookeeper*::
+
+  [apt-get | yum] install zookeeperd
+
+*Start zookeeper*::
+
+  service zookeeper start
+
 Run The Tests
 -------------
 
