@@ -749,11 +749,11 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
 
 
 class RecordingAnsibleJob(zuul.launcher.server.AnsibleJob):
-    def runPlaybooks(self):
+    def runPlaybooks(self, args):
         build = self.launcher_server.job_builds[self.job.unique]
         build.jobdir = self.jobdir
 
-        result = super(RecordingAnsibleJob, self).runPlaybooks()
+        result = super(RecordingAnsibleJob, self).runPlaybooks(args)
 
         self.launcher_server.lock.acquire()
         self.launcher_server.build_history.append(

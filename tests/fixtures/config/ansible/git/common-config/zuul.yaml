@@ -44,3 +44,8 @@
       flagpath: "{{zuul._test.test_root}}/{{zuul.uuid}}.flag"
     roles:
       - zuul: bare-role
+
+- job:
+    parent: python27
+    name: timeout
+    timeout: 1
