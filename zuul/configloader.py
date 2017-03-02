@@ -841,21 +841,41 @@ class ConfigLoader(object):
         new_abide.tenants[tenant.name] = new_tenant
         return new_abide
 
-    def createDynamicLayout(self, tenant, files):
-        config = tenant.config_repos_config.copy()
-        for source, project in tenant.project_repos:
-            for branch in source.getProjectBranches(project):
+    def _loadDynamicProjectData(self, config, source, project, files,
+                                config_repo):
+        for branch in source.getProjectBranches(project):
+            data = None
+            if config_repo:
+                data = files.getFile(project.name, branch, 'zuul.yaml')
+            if not data:
                 data = files.getFile(project.name, branch, '.zuul.yaml')
-                if data:
-                    source_context = model.SourceContext(project,
-                                                         branch, False)
-                    incdata = TenantParser._parseProjectRepoLayout(
+            if data:
+                source_context = model.SourceContext(project, branch,
+                                                     config_repo)
+                if config_repo:
+                    incdata = TenantParser._parseConfigRepoLayout(
                         data, source_context)
                 else:
-                    incdata = project.unparsed_branch_config[branch]
-                if not incdata:
-                    continue
-                config.extend(incdata)
+                    incdata = TenantParser._parseProjectRepoLayout(
+                        data, source_context)
+            else:
+                incdata = project.unparsed_branch_config.get(branch)
+            if not incdata:
+                continue
+            config.extend(incdata)
+
+    def createDynamicLayout(self, tenant, files, include_config_repos=False):
+        if include_config_repos:
+            config = model.UnparsedTenantConfig()
+            for source, project in tenant.config_repos:
+                self._loadDynamicProjectData(config, source, project,
+                                             files, True)
+        else:
+            config = tenant.config_repos_config.copy()
+        for source, project in tenant.project_repos:
+            self._loadDynamicProjectData(config, source, project,
+                                         files, False)
+
         layout = model.Layout()
         # TODOv3(jeblair): copying the pipelines could be dangerous/confusing.
         layout.pipelines = tenant.layout.pipelines

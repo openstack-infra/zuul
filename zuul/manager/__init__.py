@@ -466,6 +466,43 @@ class PipelineManager(object):
                     newrev=newrev,
                     )
 
+    def _loadDynamicLayout(self, item):
+        # Load layout
+        # Late import to break an import loop
+        import zuul.configloader
+        loader = zuul.configloader.ConfigLoader()
+
+        build_set = item.current_build_set
+        self.log.debug("Load dynamic layout with %s" % build_set.files)
+        try:
+            # First parse the config with as it will land with the
+            # full set of config and project repos.  This lets us
+            # catch syntax errors in config repos even though we won't
+            # actually run with that config.
+            loader.createDynamicLayout(
+                item.pipeline.layout.tenant,
+                build_set.files,
+                include_config_repos=True)
+
+            # Then create the config a second time but without changes
+            # to config repos so that we actually use this config.
+            layout = loader.createDynamicLayout(
+                item.pipeline.layout.tenant,
+                build_set.files,
+                include_config_repos=False)
+        except zuul.configloader.ConfigurationSyntaxError as e:
+            self.log.info("Configuration syntax error "
+                          "in dynamic layout %s" %
+                          build_set.files)
+            item.setConfigError(str(e))
+            return None
+        except Exception:
+            self.log.exception("Error in dynamic layout %s" %
+                               build_set.files)
+            item.setConfigError("Unknown configuration error")
+            return None
+        return layout
+
     def getLayout(self, item):
         if not item.change.updatesConfig():
             if item.item_ahead:
@@ -479,27 +516,7 @@ class PipelineManager(object):
         if build_set.merge_state == build_set.COMPLETE:
             if build_set.unable_to_merge:
                 return None
-            # Load layout
-            # Late import to break an import loop
-            import zuul.configloader
-            loader = zuul.configloader.ConfigLoader()
-            self.log.debug("Load dynamic layout with %s" % build_set.files)
-            try:
-                layout = loader.createDynamicLayout(
-                    item.pipeline.layout.tenant,
-                    build_set.files)
-            except zuul.configloader.ConfigurationSyntaxError as e:
-                self.log.info("Configuration syntax error "
-                              "in dynamic layout %s" %
-                              build_set.files)
-                item.setConfigError(str(e))
-                return None
-            except Exception:
-                self.log.exception("Error in dynamic layout %s" %
-                                   build_set.files)
-                item.setConfigError("Unknown configuration error")
-                return None
-            return layout
+            return self._loadDynamicLayout(item)
         build_set.merge_state = build_set.PENDING
         self.log.debug("Preparing dynamic layout for: %s" % item.change)
         dependent_items = self.getDependentItems(item)
@@ -508,7 +525,7 @@ class PipelineManager(object):
         merger_items = map(self._makeMergerItem, all_items)
         self.sched.merger.mergeChanges(merger_items,
                                        item.current_build_set,
-                                       ['.zuul.yaml'],
+                                       ['zuul.yaml', '.zuul.yaml'],
                                        self.pipeline.precedence)
 
     def prepareLayout(self, item):
