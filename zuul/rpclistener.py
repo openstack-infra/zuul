@@ -81,6 +81,8 @@ class RPCListener(object):
                         job.sendWorkFail()
                 else:
                     job.sendWorkFail()
+            except gear.InterruptedError:
+                return
             except Exception:
                 self.log.exception("Exception while getting job")
 

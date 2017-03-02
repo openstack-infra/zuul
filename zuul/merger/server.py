@@ -100,6 +100,8 @@ class MergeServer(object):
                 except Exception:
                     self.log.exception("Exception while running job")
                     job.sendWorkException(traceback.format_exc())
+            except gear.InterruptedError:
+                return
             except Exception:
                 self.log.exception("Exception while getting job")
 
