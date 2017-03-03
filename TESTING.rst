@@ -54,12 +54,12 @@ To run individual tests with tox::
 
 For example, to *run the basic Zuul test*::
 
-  tox -e py27 -- tests.test_scheduler.TestScheduler.test_jobs_launched
+  tox -e py27 -- tests.unit.test_scheduler.TestScheduler.test_jobs_launched
 
 To *run one test in the foreground* (after previously having run tox
 to set up the virtualenv)::
 
-  .tox/py27/bin/python -m testtools.run tests.test_scheduler.TestScheduler.test_jobs_launched
+  .tox/py27/bin/python -m testtools.run tests.unit.test_scheduler.TestScheduler.test_jobs_launched
 
 List Failing Tests
 ------------------
