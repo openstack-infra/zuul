@@ -5,6 +5,8 @@
     success-url: http://zuulv3-dev.openstack.org/logs/{build.uuid}/
     failure-url: http://zuulv3-dev.openstack.org/logs/{build.uuid}/
     timeout: 1800
+    vars:
+      zuul_workspace_root: /home/zuul
     nodes:
       - name: ubuntu-xenial
         image: ubuntu-xenial
