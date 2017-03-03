@@ -21,6 +21,10 @@
     voting: false
 
 - job:
+    name: tox-docs
+    parent: tox
+
+- job:
     name: tox-linters
     parent: tox
 
@@ -32,6 +36,7 @@
     name: openstack-infra/zuul
     check:
       jobs:
+        - tox-docs
         - tox-cover
         - tox-linters
         - tox-py27
