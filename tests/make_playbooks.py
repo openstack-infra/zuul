@@ -39,7 +39,11 @@ def handle_repo(path):
         if os.path.exists(os.path.join(path, fn)):
             config_path = os.path.join(path, fn)
             break
-    config = yaml.safe_load(open(config_path))
+    try:
+        config = yaml.safe_load(open(config_path))
+    except Exception:
+        print("  Has yaml errors")
+        return
     for block in config:
         if 'job' not in block:
             continue

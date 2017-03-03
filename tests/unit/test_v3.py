@@ -17,6 +17,9 @@
 import os
 import textwrap
 
+import testtools
+
+import zuul.configloader
 from tests.base import AnsibleZuulTestCase, ZuulTestCase
 
 
@@ -280,3 +283,19 @@ class TestAnsible(AnsibleZuulTestCase):
         bare_role_flag_path = os.path.join(self.test_root,
                                            build.uuid + '.bare-role.flag')
         self.assertTrue(os.path.exists(bare_role_flag_path))
+
+
+class TestBrokenConfig(ZuulTestCase):
+    # Test that we get an appropriate syntax error if we start with a
+    # broken config.
+
+    tenant_config_file = 'config/broken/main.yaml'
+
+    def setUp(self):
+        with testtools.ExpectedException(
+                zuul.configloader.ConfigurationSyntaxError,
+                "\nZuul encountered a syntax error"):
+            super(TestBrokenConfig, self).setUp()
+
+    def test_broken_config_on_startup(self):
+        pass

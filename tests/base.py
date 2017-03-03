@@ -1326,13 +1326,13 @@ class ZuulTestCase(BaseTestCase):
         self.rpc = zuul.rpclistener.RPCListener(self.config, self.sched)
 
         self.sched.start()
-        self.sched.reconfigure(self.config)
-        self.sched.resume()
         self.webapp.start()
         self.rpc.start()
         self.launch_client.gearman.waitForServer()
-
         self.addCleanup(self.shutdown)
+
+        self.sched.reconfigure(self.config)
+        self.sched.resume()
 
     def tearDown(self):
         super(ZuulTestCase, self).tearDown()
