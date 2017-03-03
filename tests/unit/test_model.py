@@ -30,14 +30,15 @@ class TestJob(BaseTestCase):
     def setUp(self):
         super(TestJob, self).setUp()
         self.project = model.Project('project', None)
-        self.context = model.SourceContext(self.project, 'master', True)
+        self.context = model.SourceContext(self.project, 'master',
+                                           'test', True)
 
     @property
     def job(self):
         tenant = model.Tenant('tenant')
         layout = model.Layout()
         project = model.Project('project', None)
-        context = model.SourceContext(project, 'master', True)
+        context = model.SourceContext(project, 'master', 'test', True)
         job = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': context,
             'name': 'job',
@@ -142,7 +143,7 @@ class TestJob(BaseTestCase):
         layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
         project = model.Project('project', None)
-        context = model.SourceContext(project, 'master', True)
+        context = model.SourceContext(project, 'master', 'test', True)
 
         base = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': context,
@@ -296,7 +297,7 @@ class TestJob(BaseTestCase):
         tenant = model.Tenant('tenant')
         layout = model.Layout()
         project = model.Project('project', None)
-        context = model.SourceContext(project, 'master', True)
+        context = model.SourceContext(project, 'master', 'test', True)
 
         base = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': context,
@@ -381,7 +382,7 @@ class TestJob(BaseTestCase):
         layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
         project = model.Project('project', None)
-        context = model.SourceContext(project, 'master', True)
+        context = model.SourceContext(project, 'master', 'test', True)
 
         base = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': context,
@@ -454,7 +455,7 @@ class TestJob(BaseTestCase):
         layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
         project = model.Project('project', None)
-        context = model.SourceContext(project, 'master', True)
+        context = model.SourceContext(project, 'master', 'test', True)
 
         base = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': context,
@@ -498,7 +499,8 @@ class TestJob(BaseTestCase):
         tenant = model.Tenant('tenant')
         layout = model.Layout()
         base_project = model.Project('base_project', None)
-        base_context = model.SourceContext(base_project, 'master', True)
+        base_context = model.SourceContext(base_project, 'master',
+                                           'test', True)
 
         base = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': base_context,
@@ -507,7 +509,8 @@ class TestJob(BaseTestCase):
         layout.addJob(base)
 
         other_project = model.Project('other_project', None)
-        other_context = model.SourceContext(other_project, 'master', True)
+        other_context = model.SourceContext(other_project, 'master',
+                                            'test', True)
         base2 = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': other_context,
             'name': 'base',
