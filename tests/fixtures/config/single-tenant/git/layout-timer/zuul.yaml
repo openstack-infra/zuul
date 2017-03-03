@@ -1,0 +1,52 @@
+- pipeline:
+    name: check
+    manager: independent
+    source:
+      gerrit
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+- pipeline:
+    name: periodic
+    manager: independent
+    source:
+      gerrit
+    trigger:
+      timer:
+        - time: '* * * * * */1'
+
+- job:
+    name: project-test1
+
+- job:
+    name: project-test2
+
+- job:
+    name: project-bitrot-stable-old
+    nodes:
+      - name: static
+        image: ubuntu-xenial
+
+- job:
+    name: project-bitrot-stable-older
+    nodes:
+      - name: static
+        image: ubuntu-trusty
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-test1
+        - project-test2
+    periodic:
+      jobs:
+        - project-bitrot-stable-old
+        - project-bitrot-stable-older
