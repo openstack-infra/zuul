@@ -1,5 +1,3 @@
 - hosts: all
-  vars:
-    run_tox_envlist: cover
   roles:
-    - run-tox
+    - run-cover

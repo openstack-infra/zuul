@@ -1,0 +1,4 @@
+- name: Execute run-cover.sh.
+  shell: "/usr/local/jenkins/slave_scripts/run-cover.sh {{ run_cover_envlist }}"
+  args:
+    chdir: "/home/zuul/workspace/src/{{ zuul.project }}"
