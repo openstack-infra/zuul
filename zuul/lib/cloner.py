@@ -61,7 +61,7 @@ class Cloner(object):
             raise Exception("Unable to read clone map file at %s." %
                             clone_map_file)
         clone_map_file = open(clone_map_file)
-        self.clone_map = yaml.load(clone_map_file).get('clonemap')
+        self.clone_map = yaml.safe_load(clone_map_file).get('clonemap')
         self.log.info("Loaded map containing %s rules", len(self.clone_map))
         return self.clone_map
 

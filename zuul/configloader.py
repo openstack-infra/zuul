@@ -756,7 +756,7 @@ class TenantParser(object):
     def _parseConfigRepoLayout(data, source_context):
         # This is the top-level configuration for a tenant.
         config = model.UnparsedTenantConfig()
-        config.extend(yaml.load(data), source_context)
+        config.extend(yaml.safe_load(data), source_context)
         return config
 
     @staticmethod
@@ -764,7 +764,7 @@ class TenantParser(object):
         # TODOv3(jeblair): this should implement some rules to protect
         # aspects of the config that should not be changed in-repo
         config = model.UnparsedTenantConfig()
-        config.extend(yaml.load(data), source_context)
+        config.extend(yaml.safe_load(data), source_context)
 
         return config
 
@@ -814,7 +814,7 @@ class ConfigLoader(object):
         config_path = self.expandConfigPath(config_path)
         with open(config_path) as config_file:
             self.log.info("Loading configuration from %s" % (config_path,))
-            data = yaml.load(config_file)
+            data = yaml.safe_load(config_file)
         config = model.UnparsedAbideConfig()
         config.extend(data)
         base = os.path.dirname(os.path.realpath(config_path))
