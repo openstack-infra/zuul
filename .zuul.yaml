@@ -38,6 +38,12 @@
     parent: tox
     run: tox/py27
 
+- job:
+    name: tox-tarball
+    parent: tox
+    run: tox/tarball
+    post-run: tox/tarball-post
+
 - project:
     name: openstack-infra/zuul
     check:
@@ -46,3 +52,4 @@
         - tox-cover
         - tox-linters
         - tox-py27
+        - tox-tarball
