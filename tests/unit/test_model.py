@@ -18,6 +18,7 @@ import random
 
 import fixtures
 import testtools
+import yaml
 
 from zuul import model
 from zuul import configloader
@@ -32,15 +33,15 @@ class TestJob(BaseTestCase):
         self.project = model.Project('project', None)
         self.context = model.SourceContext(self.project, 'master',
                                            'test', True)
+        self.start_mark = yaml.Mark('name', 0, 0, 0, '', 0)
 
     @property
     def job(self):
         tenant = model.Tenant('tenant')
         layout = model.Layout()
-        project = model.Project('project', None)
-        context = model.SourceContext(project, 'master', 'test', True)
         job = configloader.JobParser.fromYaml(tenant, layout, {
-            '_source_context': context,
+            '_source_context': self.context,
+            '_start_mark': self.start_mark,
             'name': 'job',
             'irrelevant-files': [
                 '^docs/.*$'
@@ -143,10 +144,10 @@ class TestJob(BaseTestCase):
         layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
         project = model.Project('project', None)
-        context = model.SourceContext(project, 'master', 'test', True)
 
         base = configloader.JobParser.fromYaml(tenant, layout, {
-            '_source_context': context,
+            '_source_context': self.context,
+            '_start_mark': self.start_mark,
             'name': 'base',
             'timeout': 30,
             'pre-run': 'base-pre',
@@ -158,7 +159,8 @@ class TestJob(BaseTestCase):
         })
         layout.addJob(base)
         python27 = configloader.JobParser.fromYaml(tenant, layout, {
-            '_source_context': context,
+            '_source_context': self.context,
+            '_start_mark': self.start_mark,
             'name': 'python27',
             'parent': 'base',
             'pre-run': 'py27-pre',
@@ -171,7 +173,8 @@ class TestJob(BaseTestCase):
         })
         layout.addJob(python27)
         python27diablo = configloader.JobParser.fromYaml(tenant, layout, {
-            '_source_context': context,
+            '_source_context': self.context,
+            '_start_mark': self.start_mark,
             'name': 'python27',
             'branches': [
                 'stable/diablo'
@@ -188,7 +191,8 @@ class TestJob(BaseTestCase):
         layout.addJob(python27diablo)
 
         python27essex = configloader.JobParser.fromYaml(tenant, layout, {
-            '_source_context': context,
+            '_source_context': self.context,
+            '_start_mark': self.start_mark,
             'name': 'python27',
             'branches': [
                 'stable/essex'
@@ -199,7 +203,8 @@ class TestJob(BaseTestCase):
         layout.addJob(python27essex)
 
         project_config = configloader.ProjectParser.fromYaml(tenant, layout, [{
-            '_source_context': context,
+            '_source_context': self.context,
+            '_start_mark': self.start_mark,
             'name': 'project',
             'gate': {
                 'jobs': [
@@ -296,18 +301,18 @@ class TestJob(BaseTestCase):
     def test_job_auth_inheritance(self):
         tenant = model.Tenant('tenant')
         layout = model.Layout()
-        project = model.Project('project', None)
-        context = model.SourceContext(project, 'master', 'test', True)
 
         base = configloader.JobParser.fromYaml(tenant, layout, {
-            '_source_context': context,
+            '_source_context': self.context,
+            '_start_mark': self.start_mark,
             'name': 'base',
             'timeout': 30,
         })
         layout.addJob(base)
         pypi_upload_without_inherit = configloader.JobParser.fromYaml(
             tenant, layout, {
-                '_source_context': context,
+                '_source_context': self.context,
+                '_start_mark': self.start_mark,
                 'name': 'pypi-upload-without-inherit',
                 'parent': 'base',
                 'timeout': 40,
@@ -320,7 +325,8 @@ class TestJob(BaseTestCase):
         layout.addJob(pypi_upload_without_inherit)
         pypi_upload_with_inherit = configloader.JobParser.fromYaml(
             tenant, layout, {
-                '_source_context': context,
+                '_source_context': self.context,
+                '_start_mark': self.start_mark,
                 'name': 'pypi-upload-with-inherit',
                 'parent': 'base',
                 'timeout': 40,
@@ -334,7 +340,8 @@ class TestJob(BaseTestCase):
         layout.addJob(pypi_upload_with_inherit)
         pypi_upload_with_inherit_false = configloader.JobParser.fromYaml(
             tenant, layout, {
-                '_source_context': context,
+                '_source_context': self.context,
+                '_start_mark': self.start_mark,
                 'name': 'pypi-upload-with-inherit-false',
                 'parent': 'base',
                 'timeout': 40,
@@ -348,21 +355,24 @@ class TestJob(BaseTestCase):
         layout.addJob(pypi_upload_with_inherit_false)
         in_repo_job_without_inherit = configloader.JobParser.fromYaml(
             tenant, layout, {
-                '_source_context': context,
+                '_source_context': self.context,
+                '_start_mark': self.start_mark,
                 'name': 'in-repo-job-without-inherit',
                 'parent': 'pypi-upload-without-inherit',
             })
         layout.addJob(in_repo_job_without_inherit)
         in_repo_job_with_inherit = configloader.JobParser.fromYaml(
             tenant, layout, {
-                '_source_context': context,
+                '_source_context': self.context,
+                '_start_mark': self.start_mark,
                 'name': 'in-repo-job-with-inherit',
                 'parent': 'pypi-upload-with-inherit',
             })
         layout.addJob(in_repo_job_with_inherit)
         in_repo_job_with_inherit_false = configloader.JobParser.fromYaml(
             tenant, layout, {
-                '_source_context': context,
+                '_source_context': self.context,
+                '_start_mark': self.start_mark,
                 'name': 'in-repo-job-with-inherit-false',
                 'parent': 'pypi-upload-with-inherit-false',
             })
@@ -381,24 +391,25 @@ class TestJob(BaseTestCase):
         pipeline = model.Pipeline('gate', layout)
         layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
-        project = model.Project('project', None)
-        context = model.SourceContext(project, 'master', 'test', True)
 
         base = configloader.JobParser.fromYaml(tenant, layout, {
-            '_source_context': context,
+            '_source_context': self.context,
+            '_start_mark': self.start_mark,
             'name': 'base',
             'timeout': 30,
         })
         layout.addJob(base)
         python27 = configloader.JobParser.fromYaml(tenant, layout, {
-            '_source_context': context,
+            '_source_context': self.context,
+            '_start_mark': self.start_mark,
             'name': 'python27',
             'parent': 'base',
             'timeout': 40,
         })
         layout.addJob(python27)
         python27diablo = configloader.JobParser.fromYaml(tenant, layout, {
-            '_source_context': context,
+            '_source_context': self.context,
+            '_start_mark': self.start_mark,
             'name': 'python27',
             'branches': [
                 'stable/diablo'
@@ -408,7 +419,8 @@ class TestJob(BaseTestCase):
         layout.addJob(python27diablo)
 
         project_config = configloader.ProjectParser.fromYaml(tenant, layout, [{
-            '_source_context': context,
+            '_source_context': self.context,
+            '_start_mark': self.start_mark,
             'name': 'project',
             'gate': {
                 'jobs': [
@@ -418,7 +430,7 @@ class TestJob(BaseTestCase):
         }])
         layout.addProjectConfig(project_config)
 
-        change = model.Change(project)
+        change = model.Change(self.project)
         change.branch = 'master'
         item = queue.enqueueChange(change)
         item.current_build_set.layout = layout
@@ -455,16 +467,17 @@ class TestJob(BaseTestCase):
         layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
         project = model.Project('project', None)
-        context = model.SourceContext(project, 'master', 'test', True)
 
         base = configloader.JobParser.fromYaml(tenant, layout, {
-            '_source_context': context,
+            '_source_context': self.context,
+            '_start_mark': self.start_mark,
             'name': 'base',
             'timeout': 30,
         })
         layout.addJob(base)
         python27 = configloader.JobParser.fromYaml(tenant, layout, {
-            '_source_context': context,
+            '_source_context': self.context,
+            '_start_mark': self.start_mark,
             'name': 'python27',
             'parent': 'base',
             'timeout': 40,
@@ -473,7 +486,8 @@ class TestJob(BaseTestCase):
         layout.addJob(python27)
 
         project_config = configloader.ProjectParser.fromYaml(tenant, layout, [{
-            '_source_context': context,
+            '_source_context': self.context,
+            '_start_mark': self.start_mark,
             'name': 'project',
             'gate': {
                 'jobs': [
@@ -504,6 +518,7 @@ class TestJob(BaseTestCase):
 
         base = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': base_context,
+            '_start_mark': self.start_mark,
             'name': 'base',
         })
         layout.addJob(base)
@@ -513,6 +528,7 @@ class TestJob(BaseTestCase):
                                             'test', True)
         base2 = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': other_context,
+            '_start_mark': self.start_mark,
             'name': 'base',
         })
         with testtools.ExpectedException(

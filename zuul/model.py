@@ -2051,7 +2051,7 @@ class UnparsedTenantConfig(object):
         r.nodesets = copy.deepcopy(self.nodesets)
         return r
 
-    def extend(self, conf, source_context=None):
+    def extend(self, conf):
         if isinstance(conf, UnparsedTenantConfig):
             self.pipelines.extend(conf.pipelines)
             self.jobs.extend(conf.jobs)
@@ -2066,10 +2066,6 @@ class UnparsedTenantConfig(object):
                             "a list of dictionaries (when parsing %s)" %
                             (conf,))
 
-        if source_context is None:
-            raise Exception("A source context must be provided "
-                            "(when parsing %s)" % (conf,))
-
         for item in conf:
             if not isinstance(item, dict):
                 raise Exception("Configuration items must be in the form of "
@@ -2080,7 +2076,6 @@ class UnparsedTenantConfig(object):
                                 "a single key (when parsing %s)" %
                                 (conf,))
             key, value = item.items()[0]
-            value['_source_context'] = source_context
             if key == 'project':
                 name = value['name']
                 self.projects.setdefault(name, []).append(value)
