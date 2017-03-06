@@ -62,7 +62,7 @@ class SQLConnection(BaseConnection):
 
             config = alembic.config.Config()
             config.set_main_option("script_location",
-                                   "zuul:alembic/sql_reporter")
+                                   "zuul:driver/sql/alembic_reporter")
             config.set_main_option("sqlalchemy.url",
                                    self.connection_config.get('dburi'))
 
