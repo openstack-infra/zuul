@@ -29,9 +29,10 @@ class SQLConnection(BaseConnection):
     driver_name = 'sql'
     log = logging.getLogger("connection.sql")
 
-    def __init__(self, connection_name, connection_config):
+    def __init__(self, driver, connection_name, connection_config):
 
-        super(SQLConnection, self).__init__(connection_name, connection_config)
+        super(SQLConnection, self).__init__(driver, connection_name,
+                                            connection_config)
 
         self.dburi = None
         self.engine = None

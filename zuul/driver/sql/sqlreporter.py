@@ -25,10 +25,10 @@ class SQLReporter(BaseReporter):
     name = 'sql'
     log = logging.getLogger("zuul.reporter.mysql.SQLReporter")
 
-    def __init__(self, reporter_config={}, sched=None, connection=None):
+    def __init__(self, driver, connection, config={}):
         super(SQLReporter, self).__init__(
-            reporter_config, sched, connection)
-        self.result_score = reporter_config.get('score', None)
+            driver, connection, config)
+        self.result_score = config.get('score', None)
 
     def report(self, source, pipeline, item):
         """Create an entry into a database."""
@@ -37,13 +37,12 @@ class SQLReporter(BaseReporter):
             self.log.warn("SQL reporter (%s) is disabled " % self)
             return
 
-        if self.sched.config.has_option('zuul', 'url_pattern'):
-            url_pattern = self.sched.config.get('zuul', 'url_pattern')
+        if self.driver.sched.config.has_option('zuul', 'url_pattern'):
+            url_pattern = self.driver.sched.config.get('zuul', 'url_pattern')
         else:
             url_pattern = None
 
-        score = self.reporter_config['score']\
-            if 'score' in self.reporter_config else 0
+        score = self.config.get('score', 0)
 
         with self.connection.engine.begin() as conn:
             buildset_ins = self.connection.zuul_buildset_table.insert().values(
@@ -60,7 +59,7 @@ class SQLReporter(BaseReporter):
             buildset_ins_result = conn.execute(buildset_ins)
             build_inserts = []
 
-            for job in pipeline.getJobs(item):
+            for job in item.getJobs():
                 build = item.current_build_set.getBuild(job.name)
                 if not build:
                     # build hasn't began. The sql reporter can only send back

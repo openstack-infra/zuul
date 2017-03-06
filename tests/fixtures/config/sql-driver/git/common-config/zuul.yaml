@@ -1,0 +1,38 @@
+- pipeline:
+    name: check
+    manager: independent
+    source: gerrit
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+      resultsdb:
+        score: 1
+    failure:
+      gerrit:
+        verified: -1
+      resultsdb:
+        score: -1
+      resultsdb_failures:
+        score: -1
+
+- job:
+    name: project-merge
+
+- job:
+    name: project-test1
+
+- job:
+    name: project-test2
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
