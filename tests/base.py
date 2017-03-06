@@ -66,7 +66,8 @@ import zuul.zk
 
 FIXTURE_DIR = os.path.join(os.path.dirname(__file__),
                            'fixtures')
-USE_TEMPDIR = True
+
+KEEP_TEMPDIRS = bool(os.environ.get('KEEP_TEMPDIRS', False))
 
 
 def repack_repo(path):
@@ -1204,12 +1205,13 @@ class ZuulTestCase(BaseTestCase):
 
         self.setupZK()
 
-        if USE_TEMPDIR:
+        if not KEEP_TEMPDIRS:
             tmp_root = self.useFixture(fixtures.TempDir(
                 rootdir=os.environ.get("ZUUL_TEST_ROOT"))
             ).path
         else:
-            tmp_root = os.environ.get("ZUUL_TEST_ROOT")
+            tmp_root = tempfile.mkdtemp(
+                dir=os.environ.get("ZUUL_TEST_ROOT", None))
         self.test_root = os.path.join(tmp_root, "zuul-test")
         self.upstream_root = os.path.join(self.test_root, "upstream")
         self.merger_src_root = os.path.join(self.test_root, "merger-git")
@@ -1298,7 +1300,8 @@ class ZuulTestCase(BaseTestCase):
             self.config, self.connections,
             jobdir_root=self.test_root,
             _run_ansible=self.run_ansible,
-            _test_root=self.test_root)
+            _test_root=self.test_root,
+            keep_jobdir=KEEP_TEMPDIRS)
         self.launch_server.start()
         self.history = self.launch_server.build_history
         self.builds = self.launch_server.running_builds
@@ -1747,7 +1750,8 @@ class ZuulTestCase(BaseTestCase):
                 for i, d in enumerate(history):
                     if not matches(self.history[i], d):
                         raise Exception(
-                            "Element %i in history does not match" % (i,))
+                            "Element %i in history does not match %s" %
+                            (i, self.history[i]))
             else:
                 unseen = self.history[:]
                 for i, d in enumerate(history):
