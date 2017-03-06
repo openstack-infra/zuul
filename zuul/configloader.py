@@ -69,6 +69,31 @@ The offending content was a {stanza} stanza with the content:
         raise ConfigurationSyntaxError(m)
 
 
+class ZuulSafeLoader(yaml.SafeLoader):
+    def __init__(self, stream, context):
+        super(ZuulSafeLoader, self).__init__(stream)
+        self.name = str(context)
+
+
+def safe_load_yaml(stream, context):
+    loader = ZuulSafeLoader(stream, context)
+    try:
+        return loader.get_single_data()
+    except yaml.YAMLError as e:
+        m = """
+Zuul encountered a syntax error while parsing its configuration in the
+repo {repo} on branch {branch}.  The error was:
+
+  {error}
+"""
+        m = m.format(repo=context.project.name,
+                     branch=context.branch,
+                     error=str(e))
+        raise ConfigurationSyntaxError(m)
+    finally:
+        loader.dispose()
+
+
 class NodeSetParser(object):
     @staticmethod
     def getSchema():
@@ -695,7 +720,8 @@ class TenantParser(object):
             url = source.getGitUrl(project)
             job = merger.getFiles(project.name, url, 'master',
                                   files=['zuul.yaml', '.zuul.yaml'])
-            job.source_context = model.SourceContext(project, 'master', True)
+            job.source_context = model.SourceContext(project, 'master',
+                                                     '', True)
             jobs.append(job)
 
         for (source, project) in project_repos:
@@ -721,8 +747,8 @@ class TenantParser(object):
                     model.UnparsedTenantConfig()
                 job = merger.getFiles(project.name, url, branch,
                                       files=['.zuul.yaml'])
-                job.source_context = model.SourceContext(project,
-                                                         branch, False)
+                job.source_context = model.SourceContext(
+                    project, branch, '', False)
                 jobs.append(job)
 
         for job in jobs:
@@ -732,11 +758,20 @@ class TenantParser(object):
             # This is important for correct inheritance.
             TenantParser.log.debug("Waiting for cat job %s" % (job,))
             job.wait()
+            loaded = False
             for fn in ['zuul.yaml', '.zuul.yaml']:
                 if job.files.get(fn):
+                    # Don't load from more than one file in a repo-branch
+                    if loaded:
+                        TenantParser.log.warning(
+                            "Multiple configuration files in %s" %
+                            (job.source_context,))
+                        continue
+                    loaded = True
+                    job.source_context.path = fn
                     TenantParser.log.info(
-                        "Loading configuration from %s/%s" %
-                        (job.source_context, fn))
+                        "Loading configuration from %s" %
+                        (job.source_context,))
                     project = job.source_context.project
                     branch = job.source_context.branch
                     if job.source_context.trusted:
@@ -756,7 +791,7 @@ class TenantParser(object):
     def _parseConfigRepoLayout(data, source_context):
         # This is the top-level configuration for a tenant.
         config = model.UnparsedTenantConfig()
-        config.extend(yaml.safe_load(data), source_context)
+        config.extend(safe_load_yaml(data, source_context), source_context)
         return config
 
     @staticmethod
@@ -764,8 +799,7 @@ class TenantParser(object):
         # TODOv3(jeblair): this should implement some rules to protect
         # aspects of the config that should not be changed in-repo
         config = model.UnparsedTenantConfig()
-        config.extend(yaml.safe_load(data), source_context)
-
+        config.extend(safe_load_yaml(data, source_context), source_context)
         return config
 
     @staticmethod
@@ -846,12 +880,14 @@ class ConfigLoader(object):
         for branch in source.getProjectBranches(project):
             data = None
             if config_repo:
-                data = files.getFile(project.name, branch, 'zuul.yaml')
+                fn = 'zuul.yaml'
+                data = files.getFile(project.name, branch, fn)
             if not data:
-                data = files.getFile(project.name, branch, '.zuul.yaml')
+                fn = '.zuul.yaml'
+                data = files.getFile(project.name, branch, fn)
             if data:
                 source_context = model.SourceContext(project, branch,
-                                                     config_repo)
+                                                     fn, config_repo)
                 if config_repo:
                     incdata = TenantParser._parseConfigRepoLayout(
                         data, source_context)

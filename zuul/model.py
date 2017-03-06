@@ -535,21 +535,25 @@ class SourceContext(object):
     Jobs and playbooks reference this to keep track of where they
     originate."""
 
-    def __init__(self, project, branch, trusted):
+    def __init__(self, project, branch, path, trusted):
         self.project = project
         self.branch = branch
+        self.path = path
         self.trusted = trusted
 
+    def __str__(self):
+        return '%s/%s@%s' % (self.project, self.path, self.branch)
+
     def __repr__(self):
-        return '<SourceContext %s:%s trusted:%s>' % (self.project,
-                                                     self.branch,
-                                                     self.trusted)
+        return '<SourceContext %s trusted:%s>' % (str(self),
+                                                  self.trusted)
 
     def __deepcopy__(self, memo):
         return self.copy()
 
     def copy(self):
-        return self.__class__(self.project, self.branch, self.trusted)
+        return self.__class__(self.project, self.branch, self.path,
+                              self.trusted)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -559,6 +563,7 @@ class SourceContext(object):
             return False
         return (self.project == other.project and
                 self.branch == other.branch and
+                self.path == other.path and
                 self.trusted == other.trusted)
 
 
