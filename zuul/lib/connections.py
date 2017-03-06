@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import logging
 import re
 
 import zuul.driver.zuul
@@ -28,6 +29,8 @@ class DefaultConnection(BaseConnection):
 
 class ConnectionRegistry(object):
     """A registry of connections"""
+
+    log = logging.getLogger("zuul.ConnectionRegistry")
 
     def __init__(self):
         self.connections = {}
@@ -92,16 +95,26 @@ class ConnectionRegistry(object):
         # connection named 'gerrit' or 'smtp' respectfully
 
         if 'gerrit' in config.sections():
-            driver = self.drivers['gerrit']
-            connections['gerrit'] = \
-                driver.getConnection(
-                    'gerrit', dict(config.items('gerrit')))
+            if 'gerrit' in connections:
+                self.log.warning(
+                    "The legacy [gerrit] section will be ignored in favour"
+                    " of the [connection gerrit].")
+            else:
+                driver = self.drivers['gerrit']
+                connections['gerrit'] = \
+                    driver.getConnection(
+                        'gerrit', dict(config.items('gerrit')))
 
         if 'smtp' in config.sections():
-            driver = self.drivers['smtp']
-            connections['smtp'] = \
-                driver.getConnection(
-                    'smtp', dict(config.items('smtp')))
+            if 'smtp' in connections:
+                self.log.warning(
+                    "The legacy [smtp] section will be ignored in favour"
+                    " of the [connection smtp].")
+            else:
+                driver = self.drivers['smtp']
+                connections['smtp'] = \
+                    driver.getConnection(
+                        'smtp', dict(config.items('smtp')))
 
         # Create default connections for drivers which need no
         # connection information (e.g., 'timer' or 'zuul').

@@ -226,6 +226,14 @@ class Merger(object):
         else:
             return None
 
+    def _setGitSsh(self, connection_name):
+        wrapper_name = '.ssh_wrapper_%s' % connection_name
+        name = os.path.join(self.working_root, wrapper_name)
+        if os.path.isfile(name):
+            os.environ['GIT_SSH'] = name
+        elif 'GIT_SSH' in os.environ:
+            del os.environ['GIT_SSH']
+
     def addProject(self, project, url):
         repo = None
         try:
@@ -246,6 +254,10 @@ class Merger(object):
         return self.addProject(project, url)
 
     def updateRepo(self, project, url):
+        # TODOv3(jhesketh): Reimplement
+        # da90a50b794f18f74de0e2c7ec3210abf79dda24 after merge..
+        # Likely we'll handle connection context per projects differently.
+        # self._setGitSsh()
         repo = self.getRepo(project, url)
         try:
             self.log.info("Updating local repository %s", project)

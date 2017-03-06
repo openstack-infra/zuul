@@ -37,12 +37,15 @@ import sys
 import tempfile
 import threading
 import time
+import uuid
+
 
 import git
 import gear
 import fixtures
 import kazoo.client
 import kazoo.exceptions
+import pymysql
 import statsd
 import testtools
 import testtools.content
@@ -51,6 +54,7 @@ from git.exc import NoSuchPathError
 
 import zuul.driver.gerrit.gerritsource as gerritsource
 import zuul.driver.gerrit.gerritconnection as gerritconnection
+import zuul.connection.sql
 import zuul.scheduler
 import zuul.webapp
 import zuul.rpclistener
@@ -271,6 +275,25 @@ class FakeChange(object):
                  "change": self.data,
                  "type": "change-merged",
                  "eventCreatedOn": 1487613810}
+        return event
+
+    def getRefUpdatedEvent(self):
+        path = os.path.join(self.upstream_root, self.project)
+        repo = git.Repo(path)
+        oldrev = repo.heads[self.branch].commit.hexsha
+
+        event = {
+            "type": "ref-updated",
+            "submitter": {
+                "name": "User Name",
+            },
+            "refUpdate": {
+                "oldRev": oldrev,
+                "newRev": self.patchsets[-1]['revision'],
+                "refName": self.branch,
+                "project": self.project,
+            }
+        }
         return event
 
     def addApproval(self, category, value, username='reviewer_john',
@@ -1067,6 +1090,43 @@ class ChrootedKazooFixture(fixtures.Fixture):
         _tmp_client.stop()
 
 
+class MySQLSchemaFixture(fixtures.Fixture):
+    def setUp(self):
+        super(MySQLSchemaFixture, self).setUp()
+
+        random_bits = ''.join(random.choice(string.ascii_lowercase +
+                                            string.ascii_uppercase)
+                              for x in range(8))
+        self.name = '%s_%s' % (random_bits, os.getpid())
+        self.passwd = uuid.uuid4().hex
+        db = pymysql.connect(host="localhost",
+                             user="openstack_citest",
+                             passwd="openstack_citest",
+                             db="openstack_citest")
+        cur = db.cursor()
+        cur.execute("create database %s" % self.name)
+        cur.execute(
+            "grant all on %s.* to '%s'@'localhost' identified by '%s'" %
+            (self.name, self.name, self.passwd))
+        cur.execute("flush privileges")
+
+        self.dburi = 'mysql+pymysql://%s:%s@localhost/%s' % (self.name,
+                                                             self.passwd,
+                                                             self.name)
+        self.addDetail('dburi', testtools.content.text_content(self.dburi))
+        self.addCleanup(self.cleanup)
+
+    def cleanup(self):
+        db = pymysql.connect(host="localhost",
+                             user="openstack_citest",
+                             passwd="openstack_citest",
+                             db="openstack_citest")
+        cur = db.cursor()
+        cur.execute("drop database %s" % self.name)
+        cur.execute("drop user '%s'@'localhost'" % self.name)
+        cur.execute("flush privileges")
+
+
 class BaseTestCase(testtools.TestCase):
     log = logging.getLogger("zuul.test")
     wait_timeout = 20
@@ -1358,6 +1418,9 @@ class ZuulTestCase(BaseTestCase):
             getGerritConnection))
 
         # Set up smtp related fakes
+        # TODO(jhesketh): This should come from lib.connections for better
+        # coverage
+        # Register connections from the config
         self.smtp_messages = []
 
         def FakeSMTPFactory(*args, **kw):
@@ -1868,3 +1931,20 @@ class ZuulTestCase(BaseTestCase):
 class AnsibleZuulTestCase(ZuulTestCase):
     """ZuulTestCase but with an actual ansible launcher running"""
     run_ansible = True
+
+
+class ZuulDBTestCase(ZuulTestCase):
+    def setup_config(self, config_file='zuul-connections-same-gerrit.conf'):
+        super(ZuulDBTestCase, self).setup_config(config_file)
+        for section_name in self.config.sections():
+            con_match = re.match(r'^connection ([\'\"]?)(.*)(\1)$',
+                                 section_name, re.I)
+            if not con_match:
+                continue
+
+            if self.config.get(section_name, 'driver') == 'sql':
+                f = MySQLSchemaFixture()
+                self.useFixture(f)
+                if (self.config.get(section_name, 'dburi') ==
+                    '$MYSQL_FIXTURE_DBURI$'):
+                    self.config.set(section_name, 'dburi', f.dburi)

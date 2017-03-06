@@ -20,7 +20,7 @@ from zuul.trigger import BaseTrigger
 
 class GerritTrigger(BaseTrigger):
     name = 'gerrit'
-    log = logging.getLogger("zuul.trigger.Gerrit")
+    log = logging.getLogger("zuul.GerritTrigger")
 
     def getEventFilters(self, trigger_conf):
         def toList(item):
