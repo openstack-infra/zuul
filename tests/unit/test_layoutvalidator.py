@@ -56,7 +56,7 @@ class TestLayoutValidator(testtools.TestCase):
             connections = zuul.lib.connections.configure_connections(config)
 
             layout = os.path.join(FIXTURE_DIR, 'layouts', fn)
-            data = yaml.load(open(layout))
+            data = yaml.safe_load(open(layout))
             validator = zuul.layoutvalidator.LayoutValidator()
             if m.group(1) == 'good':
                 try:
