@@ -35,3 +35,12 @@
       gerrit:
         verified: 0
     precedence: high
+
+- job:
+    name: common-config-test
+
+- project:
+    name: common-config
+    tenant-one-gate:
+      jobs:
+        - common-config-test

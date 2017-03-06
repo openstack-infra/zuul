@@ -185,7 +185,7 @@ class TestInRepoConfig(ZuulTestCase):
             dict(name='project-test1', result='SUCCESS', changes='2,1'),
             dict(name='project-test2', result='SUCCESS', changes='3,1')])
 
-    def test_dynamic_syntax_error(self):
+    def test_untrusted_syntax_error(self):
         in_repo_conf = textwrap.dedent(
             """
             - job:
@@ -195,6 +195,27 @@ class TestInRepoConfig(ZuulTestCase):
 
         file_dict = {'.zuul.yaml': in_repo_conf}
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 2,
+                         "A should report start and failure")
+        self.assertIn('syntax error', A.messages[1],
+                      "A should have a syntax error reported")
+
+    def test_trusted_syntax_error(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test2
+                foo: error
+            """)
+
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A',
                                            files=file_dict)
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
