@@ -475,7 +475,7 @@ class PipelineManager(object):
         build_set = item.current_build_set
         self.log.debug("Load dynamic layout with %s" % build_set.files)
         try:
-            # First parse the config with as it will land with the
+            # First parse the config as it will land with the
             # full set of config and project repos.  This lets us
             # catch syntax errors in config repos even though we won't
             # actually run with that config.
