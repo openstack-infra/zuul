@@ -116,6 +116,7 @@ class TestInRepoConfig(ZuulTestCase):
             dict(name='project-test2', result='SUCCESS', changes='1,1')])
 
         self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+        self.waitUntilSettled()
 
         # Now that the config change is landed, it should be live for
         # subsequent changes.
@@ -164,6 +165,7 @@ class TestInRepoConfig(ZuulTestCase):
         self.assertHistory([
             dict(name='project-test2', result='SUCCESS', changes='1,1')])
         self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+        self.waitUntilSettled()
 
         # The config change should not affect master.
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
