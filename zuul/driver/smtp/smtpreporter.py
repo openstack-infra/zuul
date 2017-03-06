@@ -22,7 +22,7 @@ class SMTPReporter(BaseReporter):
     """Sends off reports to emails via SMTP."""
 
     name = 'smtp'
-    log = logging.getLogger("zuul.reporter.smtp.Reporter")
+    log = logging.getLogger("zuul.SMTPReporter")
 
     def report(self, source, pipeline, item):
         """Send the compiled report message via smtp."""

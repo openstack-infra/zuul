@@ -26,8 +26,7 @@ import timertrigger
 
 class TimerDriver(Driver, TriggerInterface):
     name = 'timer'
-
-    log = logging.getLogger("zuul.Timer")
+    log = logging.getLogger("zuul.TimerDriver")
 
     def __init__(self):
         self.apsched = BackgroundScheduler()

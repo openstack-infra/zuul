@@ -148,11 +148,9 @@
                     case 'skipped':
                         $status.addClass('label-info');
                         break;
-                    case 'in progress':
-                    case 'queued':
-                    case 'lost':
+                    // 'in progress' 'queued' 'lost' 'aborted' ...
+                    default:
                         $status.addClass('label-default');
-                        break;
                 }
                 $status.text(result);
                 return $status;

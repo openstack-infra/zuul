@@ -17,3 +17,5 @@ babel>=1.0
 six>=1.6.0
 ansible>=2.0.0.1
 kazoo
+sqlalchemy
+alembic
