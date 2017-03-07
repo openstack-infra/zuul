@@ -127,7 +127,6 @@ class Scheduler(zuul.cmd.ZuulApp):
         import zuul.launcher.client
         import zuul.merger.client
         import zuul.nodepool
-        import zuul.lib.swift
         import zuul.webapp
         import zuul.rpclistener
         import zuul.zk
@@ -141,11 +140,8 @@ class Scheduler(zuul.cmd.ZuulApp):
         self.log = logging.getLogger("zuul.Scheduler")
 
         self.sched = zuul.scheduler.Scheduler(self.config)
-        # TODO(jhesketh): Move swift into a connection?
-        self.swift = zuul.lib.swift.Swift(self.config)
 
-        gearman = zuul.launcher.client.LaunchClient(self.config, self.sched,
-                                                    self.swift)
+        gearman = zuul.launcher.client.LaunchClient(self.config, self.sched)
         merger = zuul.merger.client.MergeClient(self.config, self.sched)
         nodepool = zuul.nodepool.Nodepool(self.sched)
 

@@ -17,7 +17,6 @@ import gear
 import json
 import logging
 import os
-import six
 import time
 import threading
 from uuid import uuid4
@@ -149,10 +148,9 @@ class LaunchClient(object):
     log = logging.getLogger("zuul.LaunchClient")
     negative_function_cache_ttl = 5
 
-    def __init__(self, config, sched, swift):
+    def __init__(self, config, sched):
         self.config = config
         self.sched = sched
-        self.swift = swift
         self.builds = {}
         self.meta_jobs = {}  # A list of meta-jobs like stop or describe
 
@@ -210,42 +208,6 @@ class LaunchClient(object):
             return True
         self.log.debug("Function %s is not registered" % name)
         return False
-
-    def updateBuildParams(self, job, item, params):
-        """Allow the job to modify and add build parameters"""
-
-        # NOTE(jhesketh): The params need to stay in a key=value data pair
-        # as workers cannot necessarily handle lists.
-
-        if 'swift' in job.auth and self.swift.connection:
-
-            for name, s in job.swift.items():
-                swift_instructions = {}
-                s_config = {}
-                s_config.update((k, v.format(item=item, job=job,
-                                             change=item.change))
-                                if isinstance(v, six.string_types)
-                                else (k, v)
-                                for k, v in s.items())
-
-                (swift_instructions['URL'],
-                 swift_instructions['HMAC_BODY'],
-                 swift_instructions['SIGNATURE']) = \
-                    self.swift.generate_form_post_middleware_params(
-                        params['LOG_PATH'], **s_config)
-
-                if 'logserver_prefix' in s_config:
-                    swift_instructions['LOGSERVER_PREFIX'] = \
-                        s_config['logserver_prefix']
-                elif self.config.has_option('swift',
-                                            'default_logserver_prefix'):
-                    swift_instructions['LOGSERVER_PREFIX'] = \
-                        self.config.get('swift', 'default_logserver_prefix')
-
-                # Create a set of zuul instructions for each instruction-set
-                # given  in the form of NAME_PARAMETER=VALUE
-                for key, value in swift_instructions.items():
-                    params['_'.join(['SWIFT', name, key])] = value
 
     def launch(self, job, item, pipeline, dependent_items=[]):
         uuid = str(uuid4().hex)
@@ -308,9 +270,6 @@ class LaunchClient(object):
                                         pipeline.name, job.name, uuid[:7])
         params['BASE_LOG_PATH'] = item.change.getBasePath()
         params['LOG_PATH'] = destination_path
-
-        # Allow the job to update the params
-        self.updateBuildParams(job, item, params)
 
         # This is what we should be heading toward for parameters:
 
