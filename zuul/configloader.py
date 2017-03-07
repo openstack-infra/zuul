@@ -620,12 +620,10 @@ class PipelineParser(object):
             )
             manager.changeish_filters.append(f)
 
-        for trigger_name, trigger_config\
-            in conf.get('trigger').items():
+        for trigger_name, trigger_config in conf.get('trigger').items():
             trigger = connections.getTrigger(trigger_name, trigger_config)
             pipeline.triggers.append(trigger)
 
-            # TODO: move
             manager.event_filters += trigger.getEventFilters(
                 conf['trigger'][trigger_name])
 
