@@ -123,7 +123,6 @@ class Pipeline(object):
         self.start_message = None
         self.dequeue_on_new_patchset = True
         self.ignore_dependencies = False
-        self.job_trees = {}  # project -> JobTree
         self.manager = None
         self.queues = []
         self.precedence = PRECEDENCE_NORMAL
@@ -160,13 +159,6 @@ class Pipeline(object):
     def setManager(self, manager):
         self.manager = manager
 
-    def getProjects(self):
-        # cmp is not in python3, applied idiom from
-        # http://python-future.org/compatible_idioms.html#cmp
-        return sorted(
-            self.job_trees.keys(),
-            key=lambda p: p.name)
-
     def addQueue(self, queue):
         self.queues.append(queue)
 
@@ -178,10 +170,6 @@ class Pipeline(object):
 
     def removeQueue(self, queue):
         self.queues.remove(queue)
-
-    def getJobTree(self, project):
-        tree = self.job_trees.get(project)
-        return tree
 
     def getChangesInQueue(self):
         changes = []
@@ -2170,18 +2158,8 @@ class Layout(object):
     def addProjectTemplate(self, project_template):
         self.project_templates[project_template.name] = project_template
 
-    def addProjectConfig(self, project_config, update_pipeline=True):
+    def addProjectConfig(self, project_config):
         self.project_configs[project_config.name] = project_config
-        # TODOv3(jeblair): tidy up the relationship between pipelines
-        # and projects and projectconfigs.  Specifically, move
-        # job_trees out of the pipeline since they are more dynamic
-        # than pipelines.  Remove the update_pipeline argument
-        if not update_pipeline:
-            return
-        for pipeline_name, pipeline_config in project_config.pipelines.items():
-            pipeline = self.pipelines[pipeline_name]
-            project = pipeline.source.getProject(project_config.name)
-            pipeline.job_trees[project] = pipeline_config.job_tree
 
     def _createJobTree(self, change, job_trees, parent):
         for tree in job_trees:

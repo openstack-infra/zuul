@@ -925,5 +925,5 @@ class ConfigLoader(object):
 
         for config_project in config.projects.values():
             layout.addProjectConfig(ProjectParser.fromYaml(
-                tenant, layout, config_project), update_pipeline=False)
+                tenant, layout, config_project))
         return layout
