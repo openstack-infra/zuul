@@ -88,6 +88,14 @@ way to get started with this effort:
 
 7) Check storyboard for status of current work items: https://storyboard.openstack.org/#!/board/41
 
+   Work items tagged with ``low-hanging-fruit`` are tasks that have
+   been identified as not requiring an expansive knowledge of the
+   system.  They may still require either some knowledge or
+   investigation into a specific area, but should be suitable for a
+   developer who is becoming acquainted with the system.  Those items
+   can be found at:
+   https://storyboard.openstack.org/#!/story/list?tags=low-hanging-fruit&tags=zuulv3
+
 Once you are up to speed on those items, it will be helpful to know
 the following:
 
@@ -129,14 +137,11 @@ the following:
 Roadmap
 -------
 
-* Implement Zookeeper for Nodepool builders and begin using this in
-  OpenStack Infra
-* Implement Zookeeper for Nodepool launchers
+* Begin using Zuul v3 to run jobs for Zuul itself
 * Implement a shim to translate Zuul v2 demand into Nodepool Zookeeper
   launcher requests
 * Begin using Zookeeper based Nodepool launchers with Zuul v2.5 in
   OpenStack Infra
-* Begin using Zuul v3 to run jobs for Zuul itself
 * Move OpenStack Infra to use Zuul v3
 * Implement Github support
 * Begin using Zuul v3 to run tests on Ansible repos
