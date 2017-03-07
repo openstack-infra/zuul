@@ -26,7 +26,7 @@ class Nodepool(object):
         # Create a copy of the nodeset to represent the actual nodes
         # returned by nodepool.
         nodeset = job.nodeset.copy()
-        req = model.NodeRequest(build_set, job, nodeset)
+        req = model.NodeRequest(self.sched.hostname, build_set, job, nodeset)
         self.requests[req.uid] = req
 
         self.sched.zk.submitNodeRequest(req, self._updateNodeRequest)
