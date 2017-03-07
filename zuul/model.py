@@ -305,12 +305,6 @@ class ChangeQueue(object):
             item.item_ahead.items_behind.append(item)
         return True
 
-    def mergeChangeQueue(self, other):
-        for project in other.projects:
-            self.addProject(project)
-        self.window = min(self.window, other.window)
-        # TODO merge semantics
-
     def isActionable(self, item):
         if self.window:
             return item in self.queue[:self.window]
