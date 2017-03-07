@@ -6,7 +6,6 @@ sphinxcontrib-blockdiag>=1.1.0
 fixtures>=0.3.14
 python-keystoneclient>=0.4.2
 python-subunit
-python-swiftclient>=1.6
 testrepository>=0.0.17
 testtools>=0.9.32
 sphinxcontrib-programoutput

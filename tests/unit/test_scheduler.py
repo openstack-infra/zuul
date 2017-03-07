@@ -3583,52 +3583,6 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertNotIn('logs.example.com', B.messages[1])
         self.assertNotIn('SKIPPED', B.messages[1])
 
-    @skip("Disabled for early v3 development")
-    def test_swift_instructions(self):
-        "Test that the correct swift instructions are sent to the workers"
-        self.updateConfigLayout(
-            'tests/fixtures/layout-swift.yaml')
-        self.sched.reconfigure(self.config)
-        self.registerJobs()
-
-        self.launch_server.hold_jobs_in_build = True
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
-        self.waitUntilSettled()
-
-        self.assertEqual(
-            "https://storage.example.org/V1/AUTH_account/merge_logs/1/1/1/"
-            "gate/test-merge/",
-            self.builds[0].parameters['SWIFT_logs_URL'][:-7])
-        self.assertEqual(5,
-                         len(self.builds[0].parameters['SWIFT_logs_HMAC_BODY'].
-                             split('\n')))
-        self.assertIn('SWIFT_logs_SIGNATURE', self.builds[0].parameters)
-
-        self.assertEqual(
-            "https://storage.example.org/V1/AUTH_account/logs/1/1/1/"
-            "gate/test-test/",
-            self.builds[1].parameters['SWIFT_logs_URL'][:-7])
-        self.assertEqual(5,
-                         len(self.builds[1].parameters['SWIFT_logs_HMAC_BODY'].
-                             split('\n')))
-        self.assertIn('SWIFT_logs_SIGNATURE', self.builds[1].parameters)
-
-        self.assertEqual(
-            "https://storage.example.org/V1/AUTH_account/stash/1/1/1/"
-            "gate/test-test/",
-            self.builds[1].parameters['SWIFT_MOSTLY_URL'][:-7])
-        self.assertEqual(5,
-                         len(self.builds[1].
-                             parameters['SWIFT_MOSTLY_HMAC_BODY'].split('\n')))
-        self.assertIn('SWIFT_MOSTLY_SIGNATURE', self.builds[1].parameters)
-
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
-        self.waitUntilSettled()
-
     def test_client_get_running_jobs(self):
         "Test that the RPC client can get a list of running jobs"
         self.launch_server.hold_jobs_in_build = True

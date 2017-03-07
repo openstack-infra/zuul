@@ -172,76 +172,6 @@ can be found on the :doc:`merger` page.
   Path to PID lock file for the merger process.
   ``pidfile=/var/run/zuul-merger/merger.pid``
 
-.. _swift:
-
-swift
-"""""
-
-To send (optional) swift upload instructions this section must be
-present. Multiple destinations can be defined in the :ref:`jobs` section
-of the layout.
-
-If you are sending the temp-url-key or fetching the x-storage-url, you
-will need the python-swiftclient module installed.
-
-**X-Account-Meta-Temp-Url-Key** (optional)
-  This is the key used to sign the HMAC message. If you do not set a
-  key Zuul will generate one automatically.
-
-**Send-Temp-Url-Key** (optional)
-  Zuul can send the X-Account-Meta-Temp-Url-Key to swift for you if
-  you have set up the appropriate credentials in ``authurl`` below.
-  This isn't necessary if you know and have set your
-  X-Account-Meta-Temp-Url-Key.
-  If set, Zuul requires the python-swiftclient module.
-  ``default: true``
-
-**X-Storage-Url** (optional)
-  The storage URL is the destination to upload files into. If you do
-  not set this the ``authurl`` credentials are used to fetch the url
-  from swift and Zuul will requires the python-swiftclient module.
-
-**authurl** (optional)
-  The (keystone) Auth URL for swift.
-  ``For example, https://identity.api.rackspacecloud.com/v2.0/``
-  This is required if you have Send-Temp-Url-Key set to ``True`` or
-  if you have not supplied the X-Storage-Url.
-
-Any of the `swiftclient connection parameters`_ can also be defined
-here by the same name. Including the os_options by their key name (
-``for example tenant_id``)
-
-.. _swiftclient connection parameters: http://docs.openstack.org/developer/python-swiftclient/swiftclient.html#module-swiftclient.client
-
-**region_name** (optional)
-  The region name holding the swift container
-  ``For example, SYD``
-
-Each destination defined by the :ref:`jobs` will have the following
-default values that it may overwrite.
-
-**default_container** (optional)
-  Container name to place the log into
-  ``For example, logs``
-
-**default_expiry** (optional)
-  How long the signed destination should be available for
-  ``default: 7200 (2hrs)``
-
-**default_max_file_size** (optional)
-  The maximum size of an individual file
-  ``default: 104857600 (100MB)``
-
-**default_max_file_count** (optional)
-  The maximum number of separate files to allow
-  ``default: 10``
-
-**default_logserver_prefix**
-  Provide a URL to the CDN or logserver app so that a worker knows
-  what URL to return. The worker should return the logserver_prefix
-  url and the object path.
-  ``For example: http://logs.example.org/server.app?obj=``
-
 .. _connection:
 
 connection ArbitraryName
@@ -785,48 +715,6 @@ each job as it builds a list from the project specification.
 
 **tags (optional)**
   A list of arbitrary strings which will be associated with the job.
-
-**swift**
-  If :ref:`swift` is configured then each job can define a destination
-  container for the builder to place logs and/or assets into. Multiple
-  containers can be listed for each job by providing a unique ``name``.
-
-  *name*
-    Set an identifying name for the container. This is used in the
-    parameter key sent to the builder. For example if it ``logs`` then
-    one of the parameters sent will be ``SWIFT_logs_CONTAINER``
-    (case-sensitive).
-
-  Each of the defaults defined in :ref:`swift` can be overwritten as:
-
-  *container* (optional)
-    Container name to place the log into
-    ``For example, logs``
-
-  *expiry* (optional)
-    How long the signed destination should be available for
-
-  *max-file-size** (optional)
-    The maximum size of an individual file
-
-  *max_file_size** (optional, deprecated)
-    A deprecated alternate spelling of *max-file-size*.
-
-  *max-file-count* (optional)
-    The maximum number of separate files to allow
-
-  *max_file_count* (optional, deprecated)
-    A deprecated alternate spelling of *max-file-count*.
-
-  *logserver-prefix*
-    Provide a URL to the CDN or logserver app so that a worker knows
-    what URL to return.
-    ``For example: http://logs.example.org/server.app?obj=``
-    The worker should return the logserver-prefix url and the object
-    path as the URL in the results data packet.
-
-  *logserver_prefix* (deprecated)
-    A deprecated alternate spelling of *logserver-prefix*.
 
 Here is an example of setting the failure message for jobs that check
 whether a change merges cleanly::

@@ -32,7 +32,6 @@ from six import StringIO
 import socket
 import string
 import subprocess
-import swiftclient
 import sys
 import tempfile
 import threading
@@ -60,7 +59,6 @@ import zuul.webapp
 import zuul.rpclistener
 import zuul.launcher.server
 import zuul.launcher.client
-import zuul.lib.swift
 import zuul.lib.connections
 import zuul.merger.client
 import zuul.merger.merger
@@ -904,18 +902,6 @@ class FakeSMTP(object):
         return True
 
 
-class FakeSwiftClientConnection(swiftclient.client.Connection):
-    def post_account(self, headers):
-        # Do nothing
-        pass
-
-    def get_auth(self):
-        # Returns endpoint and (unused) auth token
-        endpoint = os.path.join('https://storage.example.org', 'V1',
-                                'AUTH_account')
-        return endpoint, ''
-
-
 class FakeNodepool(object):
     REQUEST_ROOT = '/nodepool/requests'
     NODE_ROOT = '/nodepool/nodes'
@@ -1332,11 +1318,6 @@ class ZuulTestCase(BaseTestCase):
 
         self.sched = zuul.scheduler.Scheduler(self.config)
 
-        self.useFixture(fixtures.MonkeyPatch('swiftclient.client.Connection',
-                                             FakeSwiftClientConnection))
-
-        self.swift = zuul.lib.swift.Swift(self.config)
-
         self.event_queues = [
             self.sched.result_event_queue,
             self.sched.trigger_event_queue,
@@ -1367,7 +1348,7 @@ class ZuulTestCase(BaseTestCase):
         self.builds = self.launch_server.running_builds
 
         self.launch_client = zuul.launcher.client.LaunchClient(
-            self.config, self.sched, self.swift)
+            self.config, self.sched)
         self.merge_client = zuul.merger.client.MergeClient(
             self.config, self.sched)
         self.nodepool = zuul.nodepool.Nodepool(self.sched)
