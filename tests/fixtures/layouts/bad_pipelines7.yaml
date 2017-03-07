@@ -1,6 +1,0 @@
-pipelines:
-  # The pipeline must have a name.
-  - manager: IndependentPipelineManager
-
-projects:
-  - name: foo

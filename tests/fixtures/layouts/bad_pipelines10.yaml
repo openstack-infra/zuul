@@ -1,8 +1,0 @@
-pipelines:
-  - name: check
-    manager: IndependentPipelineManager
-
-projects:
-  - name: foo
-    # merge-mode must be one of merge, merge-resolve, cherry-pick.
-    merge-mode: foo
