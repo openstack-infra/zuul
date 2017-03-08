@@ -225,7 +225,9 @@ class LaunchClient(object):
         zuul_params = dict(uuid=uuid,
                            pipeline=pipeline.name,
                            job=job.name,
-                           project=item.change.project.name)
+                           project=item.change.project.name,
+                           tags=' '.join(sorted(job.tags)))
+
         if hasattr(item.change, 'branch'):
             zuul_params['branch'] = item.change.branch
         if hasattr(item.change, 'number'):
