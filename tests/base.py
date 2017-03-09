@@ -1476,8 +1476,6 @@ class ZuulTestCase(BaseTestCase):
         for obj in gc.get_objects():
             if isinstance(obj, git.Repo):
                 self.log.debug("Leaked git repo object: %s" % repr(obj))
-                for r in gc.get_referrers(obj):
-                    self.log.debug("  referrer: %s" % repr(r))
                 repos.append(obj)
         self.assertEqual(len(repos), 0)
         self.assertEmptyQueues()
