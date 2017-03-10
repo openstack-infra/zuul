@@ -17,6 +17,7 @@ import logging
 import six
 import yaml
 import pprint
+import textwrap
 
 import voluptuous as vs
 
@@ -44,6 +45,10 @@ class ConfigurationSyntaxError(Exception):
     pass
 
 
+def indent(s):
+    return '\n'.join(['  ' + x for x in s.split('\n')])
+
+
 @contextmanager
 def configuration_exceptions(stanza, conf):
     try:
@@ -51,28 +56,51 @@ def configuration_exceptions(stanza, conf):
     except vs.Invalid as e:
         conf = copy.deepcopy(conf)
         context = conf.pop('_source_context')
-        m = """
-Zuul encountered a syntax error while parsing its configuration in the
-repo {repo} on branch {branch}.  The error was:
+        start_mark = conf.pop('_start_mark')
+        intro = textwrap.fill(textwrap.dedent("""\
+        Zuul encountered a syntax error while parsing its configuration in the
+        repo {repo} on branch {branch}.  The error was:""".format(
+            repo=context.project.name,
+            branch=context.branch,
+        )))
 
-  {error}
+        m = textwrap.dedent("""\
+        {intro}
 
-The offending content was a {stanza} stanza with the content:
+        {error}
 
-{content}
-"""
-        m = m.format(repo=context.project.name,
-                     branch=context.branch,
-                     error=str(e),
+        The error appears in a {stanza} stanza with the content:
+
+        {content}
+
+        {start_mark}""")
+
+        m = m.format(intro=intro,
+                     error=indent(str(e)),
                      stanza=stanza,
-                     content=pprint.pformat(conf))
+                     content=indent(pprint.pformat(conf)),
+                     start_mark=str(start_mark))
         raise ConfigurationSyntaxError(m)
 
 
 class ZuulSafeLoader(yaml.SafeLoader):
+    zuul_node_types = frozenset(('job', 'nodeset', 'pipeline',
+                                 'project', 'project-template'))
+
     def __init__(self, stream, context):
         super(ZuulSafeLoader, self).__init__(stream)
         self.name = str(context)
+        self.zuul_context = context
+
+    def construct_mapping(self, node, deep=False):
+        r = super(ZuulSafeLoader, self).construct_mapping(node, deep)
+        keys = frozenset(r.keys())
+        if len(keys) == 1 and keys.intersection(self.zuul_node_types):
+            d = r.values()[0]
+            if isinstance(d, dict):
+                d['_start_mark'] = node.start_mark
+                d['_source_context'] = self.zuul_context
+        return r
 
 
 def safe_load_yaml(stream, context):
@@ -104,6 +132,7 @@ class NodeSetParser(object):
         nodeset = {vs.Required('name'): str,
                    vs.Required('nodes'): [node],
                    '_source_context': model.SourceContext,
+                   '_start_mark': yaml.Mark,
                    }
 
         return vs.Schema(nodeset)
@@ -160,6 +189,7 @@ class JobParser(object):
                'post-run': to_list(str),
                'run': str,
                '_source_context': model.SourceContext,
+               '_start_mark': yaml.Mark,
                'roles': to_list(role),
                'repos': to_list(str),
                'vars': dict,
@@ -310,6 +340,7 @@ class ProjectTemplateParser(object):
                 'merge', 'merge-resolve',
                 'cherry-pick'),
             '_source_context': model.SourceContext,
+            '_start_mark': yaml.Mark,
         }
 
         for p in layout.pipelines.values():
@@ -325,6 +356,7 @@ class ProjectTemplateParser(object):
         conf = copy.deepcopy(conf)
         project_template = model.ProjectConfig(conf['name'])
         source_context = conf['_source_context']
+        start_mark = conf['_start_mark']
         for pipeline in layout.pipelines.values():
             conf_pipeline = conf.get(pipeline.name)
             if not conf_pipeline:
@@ -334,11 +366,12 @@ class ProjectTemplateParser(object):
             project_pipeline.queue_name = conf_pipeline.get('queue')
             project_pipeline.job_tree = ProjectTemplateParser._parseJobTree(
                 tenant, layout, conf_pipeline.get('jobs', []),
-                source_context)
+                source_context, start_mark)
         return project_template
 
     @staticmethod
-    def _parseJobTree(tenant, layout, conf, source_context, tree=None):
+    def _parseJobTree(tenant, layout, conf, source_context,
+                      start_mark, tree=None):
         if not tree:
             tree = model.JobTree(None)
         for conf_job in conf:
@@ -354,6 +387,7 @@ class ProjectTemplateParser(object):
                     # We are overriding params, so make a new job def
                     attrs['name'] = jobname
                     attrs['_source_context'] = source_context
+                    attrs['_start_mark'] = start_mark
                     subtree = tree.addJob(JobParser.fromYaml(
                         tenant, layout, attrs))
                 else:
@@ -364,7 +398,8 @@ class ProjectTemplateParser(object):
                 if jobs:
                     # This is the root of a sub tree
                     ProjectTemplateParser._parseJobTree(
-                        tenant, layout, jobs, source_context, subtree)
+                        tenant, layout, jobs, source_context,
+                        start_mark, subtree)
             else:
                 raise Exception("Job must be a string or dictionary")
         return tree
@@ -381,6 +416,7 @@ class ProjectParser(object):
             'merge-mode': vs.Any('merge', 'merge-resolve',
                                  'cherry-pick'),
             '_source_context': model.SourceContext,
+            '_start_mark': yaml.Mark,
         }
 
         for p in layout.pipelines.values():
@@ -518,6 +554,7 @@ class PipelineParser(object):
                     'window-decrease-type': window_type,
                     'window-decrease-factor': window_factor,
                     '_source_context': model.SourceContext,
+                    '_start_mark': yaml.Mark,
                     }
         pipeline['trigger'] = vs.Required(
             PipelineParser.getDriverSchema('trigger', connections))
@@ -783,7 +820,7 @@ class TenantParser(object):
     def _parseConfigRepoLayout(data, source_context):
         # This is the top-level configuration for a tenant.
         config = model.UnparsedTenantConfig()
-        config.extend(safe_load_yaml(data, source_context), source_context)
+        config.extend(safe_load_yaml(data, source_context))
         return config
 
     @staticmethod
@@ -791,7 +828,7 @@ class TenantParser(object):
         # TODOv3(jeblair): this should implement some rules to protect
         # aspects of the config that should not be changed in-repo
         config = model.UnparsedTenantConfig()
-        config.extend(safe_load_yaml(data, source_context), source_context)
+        config.extend(safe_load_yaml(data, source_context))
         return config
 
     @staticmethod
