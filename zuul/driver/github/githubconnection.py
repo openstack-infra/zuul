@@ -381,8 +381,12 @@ class GithubConnection(BaseConnection):
             self._github.login(token=api_token)
 
         if app_key_file:
-            with open(app_key_file, 'r') as f:
-                app_key = f.read()
+            try:
+                with open(app_key_file, 'r') as f:
+                    app_key = f.read()
+            except IOError:
+                m = "Failed to open app key file for reading: %s"
+                self.log.error(m, app_key_file)
 
         if (app_id or app_key) and \
                 not (app_id and app_key):
