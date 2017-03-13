@@ -1,0 +1,5 @@
+- hosts: all
+  vars:
+    run_tox_envlist: py27
+  roles:
+    - run-tox

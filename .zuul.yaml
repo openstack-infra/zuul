@@ -1,15 +1,37 @@
 - job:
-    name: python-linters
-    pre-run: pre
-    post-run: post
+    name: base
+    pre-run: base-pre
+    post-run: base-post
     success-url: http://zuulv3-dev.openstack.org/logs/{build.uuid}/
     failure-url: http://zuulv3-dev.openstack.org/logs/{build.uuid}/
+    timeout: 1800
     nodes:
-      - name: worker
+      - name: ubuntu-xenial
         image: ubuntu-xenial
+
+- job:
+    name: tox
+    parent: base
+    pre-run: tox-pre
+    post-run: tox-post
+
+- job:
+    name: tox-cover
+    parent: tox
+    voting: false
+
+- job:
+    name: tox-linters
+    parent: tox
+
+- job:
+    name: tox-py27
+    parent: tox
 
 - project:
     name: openstack-infra/zuul
     check:
       jobs:
-        - python-linters
+        - tox-cover
+        - tox-linters
+        - tox-py27

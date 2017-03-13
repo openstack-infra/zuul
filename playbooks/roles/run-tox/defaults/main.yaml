@@ -1,3 +1,2 @@
 ---
-# tasks/main.yaml
-run_tox_eventlist:
+run_tox_envlist:

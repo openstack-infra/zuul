@@ -1,0 +1,17 @@
+- hosts: all
+  tasks:
+    - name: Find tox directories to synchrionize.
+      find:
+        file_type: directory
+        paths: "/home/zuul/workspace/src/{{ zuul.project }}/.tox"
+        # NOTE(pabelanger): The .tox/log folder is empty, ignore it.
+        patterns: ^(?!log).*$
+        use_regex: yes
+      register: result
+
+    - name: Collect tox logs.
+      synchronize:
+        dest: "{{ zuul.launcher.log_root }}/tox"
+        mode: pull
+        src: "{{ item.path }}/log/"
+      with_items: "{{ result.files }}"

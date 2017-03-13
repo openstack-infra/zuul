@@ -1,0 +1,5 @@
+---
+- name: Run install-distro-packages.sh
+  shell: /usr/local/jenkins/slave_scripts/install-distro-packages.sh
+  args:
+    chdir: "/home/zuul/workspace/src/{{ zuul.project }}"
