@@ -239,8 +239,8 @@ class Client(zuul.cmd.ZuulApp):
             'uuid': {
                 'title': 'UUID'
             },
-            'launch_time': {
-                'title': 'Launch Time',
+            'execute_time': {
+                'title': 'Execute Time',
                 'transform': self._epoch_to_relative_time,
                 'append': ' ago'
             },

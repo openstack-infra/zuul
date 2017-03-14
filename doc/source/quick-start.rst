@@ -19,7 +19,7 @@ Zuul Components
 Zuul provides the following components:
 
     - **zuul-server**: scheduler daemon which communicates with Gerrit and
-      Gearman. Handles receiving events, launching jobs, collecting results
+      Gearman. Handles receiving events, executing jobs, collecting results
       and postingreports.
     - **zuul-merger**: speculative-merger which communicates with Gearman.
       Prepares Git repositories for jobs to test against. This additionally

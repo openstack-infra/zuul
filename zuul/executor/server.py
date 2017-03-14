@@ -211,15 +211,15 @@ class DeduplicateQueue(object):
             self.condition.release()
 
 
-class LaunchServer(object):
-    log = logging.getLogger("zuul.LaunchServer")
+class ExecutorServer(object):
+    log = logging.getLogger("zuul.ExecutorServer")
 
     def __init__(self, config, connections={}, jobdir_root=None,
                  keep_jobdir=False):
         self.config = config
         self.keep_jobdir = keep_jobdir
         self.jobdir_root = jobdir_root
-        # TODOv3(mordred): make the launcher name more unique --
+        # TODOv3(mordred): make the executor name more unique --
         # perhaps hostname+pid.
         self.hostname = socket.gethostname()
         self.zuul_url = config.get('merger', 'zuul_url')
@@ -232,10 +232,10 @@ class LaunchServer(object):
             unverbose=self.verboseOff,
         )
 
-        if self.config.has_option('launcher', 'git_dir'):
-            self.merge_root = self.config.get('launcher', 'git_dir')
+        if self.config.has_option('executor', 'git_dir'):
+            self.merge_root = self.config.get('executor', 'git_dir')
         else:
-            self.merge_root = '/var/lib/zuul/launcher-git'
+            self.merge_root = '/var/lib/zuul/executor-git'
 
         if self.config.has_option('merger', 'git_user_email'):
             self.merge_email = self.config.get('merger', 'git_user_email')
@@ -260,7 +260,7 @@ class LaunchServer(object):
                 self.config.get('zuul', 'state_dir'))
         else:
             state_dir = '/var/lib/zuul'
-        path = os.path.join(state_dir, 'launcher.socket')
+        path = os.path.join(state_dir, 'executor.socket')
         self.command_socket = commandsocket.CommandSocket(path)
         ansible_dir = os.path.join(state_dir, 'ansible')
         self.library_dir = os.path.join(ansible_dir, 'library')
@@ -303,7 +303,7 @@ class LaunchServer(object):
             port = self.config.get('gearman', 'port')
         else:
             port = 4730
-        self.worker = gear.Worker('Zuul Launch Server')
+        self.worker = gear.Worker('Zuul Executor Server')
         self.worker.addServer(server, port)
         self.log.debug("Waiting for server")
         self.worker.waitForServer()
@@ -325,8 +325,8 @@ class LaunchServer(object):
         self.thread.start()
 
     def register(self):
-        self.worker.registerFunction("launcher:launch")
-        self.worker.registerFunction("launcher:stop:%s" % self.hostname)
+        self.worker.registerFunction("executor:execute")
+        self.worker.registerFunction("executor:stop:%s" % self.hostname)
         self.worker.registerFunction("merger:merge")
         self.worker.registerFunction("merger:cat")
 
@@ -398,15 +398,15 @@ class LaunchServer(object):
         return task
 
     def run(self):
-        self.log.debug("Starting launch listener")
+        self.log.debug("Starting executor listener")
         while self._running:
             try:
                 job = self.worker.getJob()
                 try:
-                    if job.name == 'launcher:launch':
-                        self.log.debug("Got launch job: %s" % job.unique)
-                        self.launchJob(job)
-                    elif job.name.startswith('launcher:stop'):
+                    if job.name == 'executor:execute':
+                        self.log.debug("Got execute job: %s" % job.unique)
+                        self.executeJob(job)
+                    elif job.name.startswith('executor:stop'):
                         self.log.debug("Got stop job: %s" % job.unique)
                         self.stopJob(job)
                     elif job.name == 'merger:cat':
@@ -426,7 +426,7 @@ class LaunchServer(object):
             except Exception:
                 self.log.exception("Exception while getting job")
 
-    def launchJob(self, job):
+    def executeJob(self, job):
         self.job_workers[job.unique] = AnsibleJob(self, job)
         self.job_workers[job.unique].run()
 
@@ -481,8 +481,8 @@ class AnsibleJob(object):
     RESULT_UNREACHABLE = 3
     RESULT_ABORTED = 4
 
-    def __init__(self, launcher_server, job):
-        self.launcher_server = launcher_server
+    def __init__(self, executor_server, job):
+        self.executor_server = executor_server
         self.job = job
         self.jobdir = None
         self.proc = None
@@ -490,16 +490,16 @@ class AnsibleJob(object):
         self.running = False
         self.aborted = False
 
-        if self.launcher_server.config.has_option(
-            'launcher', 'private_key_file'):
-            self.private_key_file = self.launcher_server.config.get(
-                'launcher', 'private_key_file')
+        if self.executor_server.config.has_option(
+            'executor', 'private_key_file'):
+            self.private_key_file = self.executor_server.config.get(
+                'executor', 'private_key_file')
         else:
             self.private_key_file = '~/.ssh/id_rsa'
 
     def run(self):
         self.running = True
-        self.thread = threading.Thread(target=self.launch)
+        self.thread = threading.Thread(target=self.execute)
         self.thread.start()
 
     def stop(self):
@@ -507,13 +507,13 @@ class AnsibleJob(object):
         self.abortRunningProc()
         self.thread.join()
 
-    def launch(self):
+    def execute(self):
         try:
-            self.jobdir = JobDir(root=self.launcher_server.jobdir_root,
-                                 keep=self.launcher_server.keep_jobdir)
-            self._launch()
+            self.jobdir = JobDir(root=self.executor_server.jobdir_root,
+                                 keep=self.executor_server.keep_jobdir)
+            self._execute()
         except Exception:
-            self.log.exception("Exception while launching job")
+            self.log.exception("Exception while executing job")
             self.job.sendWorkException(traceback.format_exc())
         finally:
             self.running = False
@@ -522,11 +522,11 @@ class AnsibleJob(object):
             except Exception:
                 self.log.exception("Error cleaning up jobdir:")
             try:
-                self.launcher_server.finishJob(self.job.unique)
+                self.executor_server.finishJob(self.job.unique)
             except Exception:
                 self.log.exception("Error finalizing job thread:")
 
-    def _launch(self):
+    def _execute(self):
         self.log.debug("Job %s: beginning" % (self.job.unique,))
         self.log.debug("Job %s: args: %s" % (self.job.unique,
                                              self.job.arguments,))
@@ -537,7 +537,7 @@ class AnsibleJob(object):
         for project in args['projects']:
             self.log.debug("Job %s: updating project %s" %
                            (self.job.unique, project['name']))
-            tasks.append(self.launcher_server.update(
+            tasks.append(self.executor_server.update(
                 project['name'], project['url']))
         for task in tasks:
             task.wait()
@@ -546,14 +546,14 @@ class AnsibleJob(object):
         for project in args['projects']:
             self.log.debug("Cloning %s" % (project['name'],))
             repo = git.Repo.clone_from(
-                os.path.join(self.launcher_server.merge_root,
+                os.path.join(self.executor_server.merge_root,
                              project['name']),
                 os.path.join(self.jobdir.src_root,
                              project['name']))
             repo.remotes.origin.config_writer.set('url', project['url'])
 
         # Get a merger in order to update the repos involved in this job.
-        merger = self.launcher_server._getMerger(self.jobdir.src_root)
+        merger = self.executor_server._getMerger(self.jobdir.src_root)
         merge_items = [i for i in args['items'] if i.get('refspec')]
         if merge_items:
             commit = merger.mergeChanges(merge_items)  # noqa
@@ -569,14 +569,14 @@ class AnsibleJob(object):
         self.prepareAnsibleFiles(args)
 
         data = {
-            'manager': self.launcher_server.hostname,
+            'manager': self.executor_server.hostname,
             'url': 'https://server/job/{}/0/'.format(args['job']),
             'worker_name': 'My Worker',
         }
 
         # TODOv3:
         # 'name': self.name,
-        # 'manager': self.launch_server.hostname,
+        # 'manager': self.executor_server.hostname,
         # 'worker_name': 'My Worker',
         # 'worker_hostname': 'localhost',
         # 'worker_ips': ['127.0.0.1', '192.168.1.1'],
@@ -696,7 +696,7 @@ class AnsibleJob(object):
         # Check out the playbook repo if needed and set the path to
         # the playbook that should be run.
         jobdir_playbook.trusted = playbook['trusted']
-        source = self.launcher_server.connections.getSource(
+        source = self.executor_server.connections.getSource(
             playbook['connection'])
         project = source.getProject(playbook['project'])
         # TODO(jeblair): construct the url in the merger itself
@@ -721,7 +721,7 @@ class AnsibleJob(object):
         # the stack of changes we are testing, so check out the branch
         # tip into a dedicated space.
 
-        merger = self.launcher_server._getMerger(jobdir_playbook.root)
+        merger = self.executor_server._getMerger(jobdir_playbook.root)
         merger.checkoutBranch(project.name, url, playbook['branch'])
 
         path = os.path.join(jobdir_playbook.root,
@@ -762,7 +762,7 @@ class AnsibleJob(object):
     def prepareZuulRole(self, args, role, root):
         self.log.debug("Prepare zuul role for %s" % (role,))
         # Check out the role repo if needed
-        source = self.launcher_server.connections.getSource(
+        source = self.executor_server.connections.getSource(
             role['connection'])
         project = source.getProject(role['project'])
         # TODO(jeblair): construct the url in the merger itself
@@ -791,7 +791,7 @@ class AnsibleJob(object):
         # tip into a dedicated space.
 
         if not role_repo:
-            merger = self.launcher_server._getMerger(root)
+            merger = self.executor_server._getMerger(root)
             merger.checkoutBranch(project.name, url, 'master')
             role_repo = os.path.join(root, project.name)
 
@@ -816,7 +816,7 @@ class AnsibleJob(object):
 
         with open(self.jobdir.vars, 'w') as vars_yaml:
             zuul_vars = dict(args['vars'])
-            zuul_vars['zuul']['launcher'] = dict(src_root=self.jobdir.src_root,
+            zuul_vars['zuul']['executor'] = dict(src_root=self.jobdir.src_root,
                                                  log_root=self.jobdir.log_root)
             vars_yaml.write(
                 yaml.safe_dump(zuul_vars, default_flow_style=False))
@@ -836,19 +836,19 @@ class AnsibleJob(object):
             config.write('log_path = %s\n' % self.jobdir.ansible_log)
             config.write('gathering = explicit\n')
             config.write('library = %s\n'
-                         % self.launcher_server.library_dir)
+                         % self.executor_server.library_dir)
             if self.jobdir.roles_path:
                 config.write('roles_path = %s\n' %
                              ':'.join(self.jobdir.roles_path))
             config.write('callback_plugins = %s\n'
-                         % self.launcher_server.callback_dir)
+                         % self.executor_server.callback_dir)
             config.write('stdout_callback = zuul_stream\n')
             # bump the timeout because busy nodes may take more than
             # 10s to respond
             config.write('timeout = 30\n')
             if not trusted:
                 config.write('action_plugins = %s\n'
-                             % self.launcher_server.action_dir)
+                             % self.executor_server.action_dir)
 
             # On trusted jobs, we want to prevent the printing of args,
             # since trusted jobs might have access to secrets that they may

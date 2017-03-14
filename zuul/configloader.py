@@ -782,7 +782,7 @@ class TenantParser(object):
 
         for job in jobs:
             # Note: this is an ordered list -- we wait for cat jobs to
-            # complete in the order they were launched which is the
+            # complete in the order they were executed which is the
             # same order they were defined in the main config file.
             # This is important for correct inheritance.
             TenantParser.log.debug("Waiting for cat job %s" % (job,))

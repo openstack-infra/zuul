@@ -102,7 +102,7 @@ def getJobData(job):
 
 class ZuulGearmanClient(gear.Client):
     def __init__(self, zuul_gearman):
-        super(ZuulGearmanClient, self).__init__('Zuul Launch Client')
+        super(ZuulGearmanClient, self).__init__('Zuul Executor Client')
         self.__zuul_gearman = zuul_gearman
 
     def handleWorkComplete(self, packet):
@@ -144,8 +144,8 @@ class ZuulGearmanClient(gear.Client):
                     self.__zuul_gearman.onUnknownJob(job)
 
 
-class LaunchClient(object):
-    log = logging.getLogger("zuul.LaunchClient")
+class ExecutorClient(object):
+    log = logging.getLogger("zuul.ExecutorClient")
     negative_function_cache_ttl = 5
 
     def __init__(self, config, sched):
@@ -209,10 +209,10 @@ class LaunchClient(object):
         self.log.debug("Function %s is not registered" % name)
         return False
 
-    def launch(self, job, item, pipeline, dependent_items=[]):
+    def execute(self, job, item, pipeline, dependent_items=[]):
         uuid = str(uuid4().hex)
         self.log.info(
-            "Launch job %s (uuid: %s) on nodes %s for change %s "
+            "Execute job %s (uuid: %s) on nodes %s for change %s "
             "with dependent changes %s" % (
                 job, uuid,
                 item.current_build_set.getJobNodeSet(job.name),
@@ -339,7 +339,7 @@ class LaunchClient(object):
             self.sched.onBuildCompleted(build, 'SUCCESS')
             return build
 
-        gearman_job = gear.Job('launcher:launch', json.dumps(params),
+        gearman_job = gear.Job('executor:execute', json.dumps(params),
                                unique=uuid)
         build.__gearman_job = gearman_job
         build.__gearman_manager = None
@@ -433,7 +433,7 @@ class LaunchClient(object):
             # internal dict after it's added to the report queue.
             del self.builds[job.unique]
         else:
-            if not job.name.startswith("launcher:stop:"):
+            if not job.name.startswith("executor:stop:"):
                 self.log.error("Unable to find build %s" % job.unique)
 
     def onWorkStatus(self, job):
@@ -483,7 +483,7 @@ class LaunchClient(object):
                            (build,))
         stop_uuid = str(uuid4().hex)
         data = dict(uuid=build.__gearman_job.unique)
-        stop_job = gear.Job("launcher:stop:%s" % build.__gearman_manager,
+        stop_job = gear.Job("executor:stop:%s" % build.__gearman_manager,
                             json.dumps(data), unique=stop_uuid)
         self.meta_jobs[stop_uuid] = stop_job
         self.log.debug("Submitting stop job: %s", stop_job)

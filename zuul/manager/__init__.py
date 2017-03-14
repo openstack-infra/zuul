@@ -365,33 +365,33 @@ class PipelineManager(object):
             build_set.setJobNodeRequest(job.name, req)
         return True
 
-    def _launchJobs(self, item, jobs):
-        self.log.debug("Launching jobs for change %s" % item.change)
+    def _executeJobs(self, item, jobs):
+        self.log.debug("Executing jobs for change %s" % item.change)
         dependent_items = self.getDependentItems(item)
         for job in jobs:
             self.log.debug("Found job %s for change %s" % (job, item.change))
             try:
                 nodeset = item.current_build_set.getJobNodeSet(job.name)
                 self.sched.nodepool.useNodeSet(nodeset)
-                build = self.sched.launcher.launch(job, item,
-                                                   self.pipeline,
-                                                   dependent_items)
+                build = self.sched.executor.execute(job, item,
+                                                    self.pipeline,
+                                                    dependent_items)
                 self.log.debug("Adding build %s of job %s to item %s" %
                                (build, job, item))
                 item.addBuild(build)
             except:
-                self.log.exception("Exception while launching job %s "
+                self.log.exception("Exception while executing job %s "
                                    "for change %s:" % (job, item.change))
 
-    def launchJobs(self, item):
+    def executeJobs(self, item):
         # TODO(jeblair): This should return a value indicating a job
-        # was launched.  Appears to be a longstanding bug.
+        # was executed.  Appears to be a longstanding bug.
         if not item.current_build_set.layout:
             return False
 
         jobs = item.findJobsToRun(self.sched.mutex)
         if jobs:
-            self._launchJobs(item, jobs)
+            self._executeJobs(item, jobs)
 
     def cancelJobs(self, item, prime=True):
         self.log.debug("Cancel jobs for change %s" % item.change)
@@ -409,7 +409,7 @@ class PipelineManager(object):
                 continue
             was_running = False
             try:
-                was_running = self.sched.launcher.cancel(build)
+                was_running = self.sched.executor.cancel(build)
             except:
                 self.log.exception("Exception while canceling build %s "
                                    "for change %s" % (build, item.change))
@@ -594,7 +594,7 @@ class PipelineManager(object):
                     failing_reasons.append("it has an invalid configuration")
                 if ready and self.provisionNodes(item):
                     changed = True
-        if actionable and ready and self.launchJobs(item):
+        if actionable and ready and self.executeJobs(item):
             changed = True
         if item.didAnyJobFail():
             failing_reasons.append("at least one job failed")

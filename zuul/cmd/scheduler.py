@@ -78,7 +78,7 @@ class Scheduler(zuul.cmd.ZuulApp):
     def test_config(self):
         # See comment at top of file about zuul imports
         import zuul.scheduler
-        import zuul.launcher.client
+        import zuul.executor.client
 
         logging.basicConfig(level=logging.DEBUG)
         try:
@@ -124,7 +124,7 @@ class Scheduler(zuul.cmd.ZuulApp):
     def main(self):
         # See comment at top of file about zuul imports
         import zuul.scheduler
-        import zuul.launcher.client
+        import zuul.executor.client
         import zuul.merger.client
         import zuul.nodepool
         import zuul.webapp
@@ -141,7 +141,7 @@ class Scheduler(zuul.cmd.ZuulApp):
 
         self.sched = zuul.scheduler.Scheduler(self.config)
 
-        gearman = zuul.launcher.client.LaunchClient(self.config, self.sched)
+        gearman = zuul.executor.client.LaunchClient(self.config, self.sched)
         merger = zuul.merger.client.MergeClient(self.config, self.sched)
         nodepool = zuul.nodepool.Nodepool(self.sched)
 
@@ -174,7 +174,7 @@ class Scheduler(zuul.cmd.ZuulApp):
         rpc = zuul.rpclistener.RPCListener(self.config, self.sched)
 
         self.configure_connections()
-        self.sched.setLauncher(gearman)
+        self.sched.setExecutor(gearman)
         self.sched.setMerger(merger)
         self.sched.setNodepool(nodepool)
         self.sched.setZooKeeper(zookeeper)

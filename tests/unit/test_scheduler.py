@@ -39,8 +39,8 @@ from tests.base import (
 class TestScheduler(ZuulTestCase):
     tenant_config_file = 'config/single-tenant/main.yaml'
 
-    def test_jobs_launched(self):
-        "Test that jobs are launched and a change is merged"
+    def test_jobs_executed(self):
+        "Test that jobs are executed and a change is merged"
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
@@ -106,7 +106,7 @@ class TestScheduler(ZuulTestCase):
     def test_parallel_changes(self):
         "Test that changes are tested in parallel and merged in series"
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
@@ -123,7 +123,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[0].name, 'project-merge')
         self.assertTrue(self.builds[0].hasChanges(A))
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
         self.assertEqual(len(self.builds), 3)
         self.assertEqual(self.builds[0].name, 'project-test1')
@@ -133,7 +133,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[2].name, 'project-merge')
         self.assertTrue(self.builds[2].hasChanges(A, B))
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
         self.assertEqual(len(self.builds), 5)
         self.assertEqual(self.builds[0].name, 'project-test1')
@@ -149,7 +149,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[4].name, 'project-merge')
         self.assertTrue(self.builds[4].hasChanges(A, B, C))
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
         self.assertEqual(len(self.builds), 6)
         self.assertEqual(self.builds[0].name, 'project-test1')
@@ -167,8 +167,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[5].name, 'project-test2')
         self.assertTrue(self.builds[5].hasChanges(A, B, C))
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
         self.assertEqual(len(self.builds), 0)
 
@@ -182,21 +182,21 @@ class TestScheduler(ZuulTestCase):
 
     def test_failed_changes(self):
         "Test that a change behind a failed change is retested"
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         A.addApproval('code-review', 2)
         B.addApproval('code-review', 2)
 
-        self.launch_server.failJob('project-test1', A)
+        self.executor_server.failJob('project-test1', A)
 
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
         self.assertBuilds([dict(name='project-merge', changes='1,1')])
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
         # A/project-merge is complete
         self.assertBuilds([
@@ -205,7 +205,7 @@ class TestScheduler(ZuulTestCase):
             dict(name='project-merge', changes='1,1 2,1'),
         ])
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
         # A/project-merge is complete
         # B/project-merge is complete
@@ -217,7 +217,7 @@ class TestScheduler(ZuulTestCase):
         ])
 
         # Release project-test1 for A which will fail.  This will
-        # abort both running B jobs and relaunch project-merge for B.
+        # abort both running B jobs and reexecute project-merge for B.
         self.builds[0].release()
         self.waitUntilSettled()
 
@@ -242,7 +242,7 @@ class TestScheduler(ZuulTestCase):
     def test_independent_queues(self):
         "Test that changes end up in the right queues"
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
@@ -271,7 +271,7 @@ class TestScheduler(ZuulTestCase):
         self.builds[0].release()
         self.waitUntilSettled()
         # Release the merge job for project2 which is behind project1
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         # All the test builds should be running:
@@ -316,7 +316,7 @@ class TestScheduler(ZuulTestCase):
     def test_failed_change_at_head(self):
         "Test that if a change at the head fails, jobs behind it are canceled"
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
@@ -324,7 +324,7 @@ class TestScheduler(ZuulTestCase):
         B.addApproval('code-review', 2)
         C.addApproval('code-review', 2)
 
-        self.launch_server.failJob('project-test1', A)
+        self.executor_server.failJob('project-test1', A)
 
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.fake_gerrit.addEvent(B.addApproval('approved', 1))
@@ -336,11 +336,11 @@ class TestScheduler(ZuulTestCase):
             dict(name='project-merge', changes='1,1'),
         ])
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         self.assertBuilds([
@@ -381,9 +381,9 @@ class TestScheduler(ZuulTestCase):
                  changes='1,1 2,1 3,1'),
         ], ordered=False)
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
         self.orderedRelease()
 
@@ -431,7 +431,7 @@ class TestScheduler(ZuulTestCase):
     def test_failed_change_in_middle(self):
         "Test a failed change in the middle of the queue"
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
@@ -439,7 +439,7 @@ class TestScheduler(ZuulTestCase):
         B.addApproval('code-review', 2)
         C.addApproval('code-review', 2)
 
-        self.launch_server.failJob('project-test1', B)
+        self.executor_server.failJob('project-test1', B)
 
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.fake_gerrit.addEvent(B.addApproval('approved', 1))
@@ -447,11 +447,11 @@ class TestScheduler(ZuulTestCase):
 
         self.waitUntilSettled()
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 6)
@@ -471,7 +471,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.builds), 4)
         self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 2)
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         # project-test1 and project-test2 for A
@@ -492,8 +492,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.countJobResults(builds, 'SUCCESS'), 1)
         self.assertEqual(self.countJobResults(builds, None), 2)
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 0)
@@ -516,7 +516,7 @@ class TestScheduler(ZuulTestCase):
         B.addApproval('code-review', 2)
         C.addApproval('code-review', 2)
 
-        self.launch_server.failJob('project-test1', A)
+        self.executor_server.failJob('project-test1', A)
 
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.fake_gerrit.addEvent(B.addApproval('approved', 1))
@@ -526,7 +526,7 @@ class TestScheduler(ZuulTestCase):
         queue = self.gearman_server.getQueue()
         self.assertEqual(len(self.builds), 0)
         self.assertEqual(len(queue), 1)
-        self.assertEqual(queue[0].name, 'launcher:launch')
+        self.assertEqual(queue[0].name, 'executor:execute')
         job_args = json.loads(queue[0].arguments)
         self.assertEqual(job_args['job'], 'project-merge')
         self.assertEqual(job_args['items'][0]['number'], '%d' % A.number)
@@ -578,7 +578,7 @@ class TestScheduler(ZuulTestCase):
 
     @skip("Disabled for early v3 development")
     def _test_time_database(self, iteration):
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
@@ -607,8 +607,8 @@ class TestScheduler(ZuulTestCase):
             self.assertTrue(found_job['estimated_time'] >= 2)
             self.assertIsNotNone(found_job['remaining_time'])
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
     @skip("Disabled for early v3 development")
@@ -621,7 +621,7 @@ class TestScheduler(ZuulTestCase):
     def test_two_failed_changes_at_head(self):
         "Test that changes are reparented correctly if 2 fail at head"
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
@@ -629,19 +629,19 @@ class TestScheduler(ZuulTestCase):
         B.addApproval('code-review', 2)
         C.addApproval('code-review', 2)
 
-        self.launch_server.failJob('project-test1', A)
-        self.launch_server.failJob('project-test1', B)
+        self.executor_server.failJob('project-test1', A)
+        self.executor_server.failJob('project-test1', B)
 
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.fake_gerrit.addEvent(C.addApproval('approved', 1))
         self.waitUntilSettled()
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 6)
@@ -664,7 +664,7 @@ class TestScheduler(ZuulTestCase):
         self.waitUntilSettled()
 
         # restart of C after B failure
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 5)
@@ -689,9 +689,9 @@ class TestScheduler(ZuulTestCase):
         self.waitUntilSettled()
 
         # restart of B,C after A failure
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 4)
@@ -710,8 +710,8 @@ class TestScheduler(ZuulTestCase):
         self.assertTrue(self.builds[2].hasChanges(B))
         self.assertTrue(self.builds[2].hasChanges(C))
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 0)
@@ -819,7 +819,7 @@ class TestScheduler(ZuulTestCase):
         for connection in self.connections.connections.values():
             connection.maintainCache([])
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A.addApproval('approved', 1)
         B.addApproval('approved', 1)
         D.addApproval('approved', 1)
@@ -829,10 +829,10 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(C.addApproval('approved', 1))
 
         for x in range(8):
-            self.launch_server.release('.*-merge')
+            self.executor_server.release('.*-merge')
             self.waitUntilSettled()
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')
@@ -854,7 +854,7 @@ class TestScheduler(ZuulTestCase):
 
     def test_source_cache(self):
         "Test that the source cache operates correctly"
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
@@ -889,8 +889,8 @@ class TestScheduler(ZuulTestCase):
         # there should still be changes in the cache
         self.assertNotEqual(len(self.fake_gerrit._change_cache.keys()), 0)
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')
@@ -1069,7 +1069,7 @@ class TestScheduler(ZuulTestCase):
         B.setDependsOn(A, 1)
         A.setDependsOn(M1, 1)
 
-        self.launch_server.failJob('project-merge', A)
+        self.executor_server.failJob('project-merge', A)
 
         self.fake_gerrit.addEvent(C.addApproval('approved', 1))
         self.fake_gerrit.addEvent(B.addApproval('approved', 1))
@@ -1087,7 +1087,7 @@ class TestScheduler(ZuulTestCase):
 
     def test_failing_dependent_changes(self):
         "Test that failing dependent patches are taken out of stream"
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
@@ -1104,7 +1104,7 @@ class TestScheduler(ZuulTestCase):
         D.setDependsOn(C, 1)
         C.setDependsOn(B, 1)
 
-        self.launch_server.failJob('project-test1', B)
+        self.executor_server.failJob('project-test1', B)
 
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.fake_gerrit.addEvent(D.addApproval('approved', 1))
@@ -1113,24 +1113,24 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(E.addApproval('approved', 1))
 
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
-        self.launch_server.hold_jobs_in_build = False
+        self.executor_server.hold_jobs_in_build = False
         for build in self.builds:
             if build.parameters['ZUUL_CHANGE'] != '1':
                 build.release()
                 self.waitUntilSettled()
 
-        self.launch_server.release()
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')
@@ -1155,7 +1155,7 @@ class TestScheduler(ZuulTestCase):
         # If it's dequeued more than once, we should see extra
         # aborted jobs.
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project1', 'master', 'C')
@@ -1163,9 +1163,9 @@ class TestScheduler(ZuulTestCase):
         B.addApproval('code-review', 2)
         C.addApproval('code-review', 2)
 
-        self.launch_server.failJob('project-test1', A)
-        self.launch_server.failJob('project-test2', A)
-        self.launch_server.failJob('project1-project2-integration', A)
+        self.executor_server.failJob('project-test1', A)
+        self.executor_server.failJob('project-test2', A)
+        self.executor_server.failJob('project1-project2-integration', A)
 
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.fake_gerrit.addEvent(B.addApproval('approved', 1))
@@ -1177,11 +1177,11 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[0].name, 'project-merge')
         self.assertTrue(self.builds[0].hasChanges(A))
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 9)
@@ -1201,8 +1201,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.builds), 3)  # test2,integration, merge for B
         self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 6)
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 0)
@@ -1221,7 +1221,7 @@ class TestScheduler(ZuulTestCase):
         A = self.fake_gerrit.addFakeChange('org/nonvoting-project',
                                            'master', 'A')
         A.addApproval('code-review', 2)
-        self.launch_server.failJob('nonvoting-project-test2', A)
+        self.executor_server.failJob('nonvoting-project-test2', A)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
 
         self.waitUntilSettled()
@@ -1262,7 +1262,7 @@ class TestScheduler(ZuulTestCase):
         "Test failed check queue jobs."
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        self.launch_server.failJob('project-test2', A)
+        self.executor_server.failJob('project-test2', A)
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
 
         self.waitUntilSettled()
@@ -1284,7 +1284,7 @@ class TestScheduler(ZuulTestCase):
         # This complicated test is a reproduction of a real life bug
         self.sched.reconfigure(self.config)
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
@@ -1310,9 +1310,9 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         self.fake_gerrit.addEvent(C.addApproval('approved', 1))
@@ -1324,13 +1324,13 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(F.addApproval('approved', 1))
         self.waitUntilSettled()
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         # all jobs running
@@ -1344,8 +1344,8 @@ class TestScheduler(ZuulTestCase):
         c.release()
         self.waitUntilSettled()
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -1386,7 +1386,7 @@ class TestScheduler(ZuulTestCase):
         path = os.path.join(self.merger_src_root, "org/project")
         if os.path.exists(path):
             repack_repo(path)
-        path = os.path.join(self.launcher_src_root, "org/project")
+        path = os.path.join(self.executor_src_root, "org/project")
         if os.path.exists(path):
             repack_repo(path)
 
@@ -1405,7 +1405,7 @@ class TestScheduler(ZuulTestCase):
 
     def test_merger_repack_large_change(self):
         "Test that the merger works with large changes after a repack"
-        # https://bugs.launchpad.net/zuul/+bug/1078946
+        # https://bugs.executepad.net/zuul/+bug/1078946
         # This test assumes the repo is already cloned; make sure it is
         tenant = self.sched.abide.tenants.get('tenant-one')
         url = self.fake_gerrit.getGitUrl(
@@ -1418,7 +1418,7 @@ class TestScheduler(ZuulTestCase):
         path = os.path.join(self.merger_src_root, "org/project1")
         if os.path.exists(path):
             repack_repo(path)
-        path = os.path.join(self.launcher_src_root, "org/project1")
+        path = os.path.join(self.executor_src_root, "org/project1")
         if os.path.exists(path):
             repack_repo(path)
 
@@ -1437,7 +1437,7 @@ class TestScheduler(ZuulTestCase):
     def test_new_patchset_dequeues_old(self):
         "Test that a new patchset causes the old to be dequeued"
         # D -> C (depends on B) -> B (depends on A) -> A -> M
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         M = self.fake_gerrit.addFakeChange('org/project', 'master', 'M')
         M.setMerged()
 
@@ -1464,8 +1464,8 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(2))
         self.waitUntilSettled()
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')
@@ -1481,7 +1481,7 @@ class TestScheduler(ZuulTestCase):
     def test_new_patchset_check(self):
         "Test a new patchset in check"
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
@@ -1559,8 +1559,8 @@ class TestScheduler(ZuulTestCase):
         self.waitUntilSettled()
         self.builds[0].release()
         self.waitUntilSettled()
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.reported, 1)
@@ -1577,7 +1577,7 @@ class TestScheduler(ZuulTestCase):
     def test_abandoned_gate(self):
         "Test that an abandoned change is dequeued from gate"
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
@@ -1589,7 +1589,7 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(A.getChangeAbandonedEvent())
         self.waitUntilSettled()
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         self.assertBuilds([])
@@ -1602,7 +1602,7 @@ class TestScheduler(ZuulTestCase):
     def test_abandoned_check(self):
         "Test that an abandoned change is dequeued from check"
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
@@ -1643,8 +1643,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(items[1].change.number, '2')
         self.assertTrue(items[1].live)
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(len(self.history), 4)
@@ -1656,7 +1656,7 @@ class TestScheduler(ZuulTestCase):
     def test_abandoned_not_timer(self):
         "Test that an abandoned change does not cancel timer jobs"
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
 
         # Start timer trigger - also org/project
         self.updateConfigLayout('layout-idle')
@@ -1683,13 +1683,13 @@ class TestScheduler(ZuulTestCase):
 
         self.assertEqual(len(self.builds), 2, "Two timer jobs remain")
 
-        self.launch_server.release()
+        self.executor_server.release()
         self.waitUntilSettled()
 
     def test_zuul_url_return(self):
         "Test if ZUUL_URL is returning when zuul_url is set in zuul.conf"
         self.assertTrue(self.sched.config.has_option('merger', 'zuul_url'))
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
@@ -1700,14 +1700,14 @@ class TestScheduler(ZuulTestCase):
         for build in self.builds:
             self.assertTrue('ZUUL_URL' in build.parameters)
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
     def test_new_patchset_dequeues_old_on_head(self):
         "Test that a new patchset causes the old to be dequeued (at head)"
         # D -> C (depends on B) -> B (depends on A) -> A -> M
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         M = self.fake_gerrit.addFakeChange('org/project', 'master', 'M')
         M.setMerged()
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -1733,8 +1733,8 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(2))
         self.waitUntilSettled()
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -1749,7 +1749,7 @@ class TestScheduler(ZuulTestCase):
 
     def test_new_patchset_dequeues_old_without_dependents(self):
         "Test that a new patchset causes only the old to be dequeued"
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
@@ -1766,8 +1766,8 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(2))
         self.waitUntilSettled()
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')
@@ -1780,7 +1780,7 @@ class TestScheduler(ZuulTestCase):
 
     def test_new_patchset_dequeues_old_independent_queue(self):
         "Test that a new patchset causes the old to be dequeued (independent)"
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
@@ -1793,8 +1793,8 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(2))
         self.waitUntilSettled()
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -1839,7 +1839,7 @@ class TestScheduler(ZuulTestCase):
 
     def test_zuul_refs(self):
         "Test that zuul refs exist and have the right changes"
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         M1 = self.fake_gerrit.addFakeChange('org/project1', 'master', 'M1')
         M1.setMerged()
         M2 = self.fake_gerrit.addFakeChange('org/project2', 'master', 'M2')
@@ -1859,13 +1859,13 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(D.addApproval('approved', 1))
 
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         a_zref = b_zref = c_zref = d_zref = None
@@ -1911,8 +1911,8 @@ class TestScheduler(ZuulTestCase):
         # should have a and b in 1, c and d in 2
         self.assertTrue(d_build.hasChanges(A, B, C, D))
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')
@@ -1926,15 +1926,15 @@ class TestScheduler(ZuulTestCase):
 
     def test_rerun_on_error(self):
         "Test that if a worker fails to run a job, it is run again"
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
         self.builds[0].requeue = True
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
         self.assertEqual(self.countJobResults(self.history, None), 1)
         self.assertEqual(self.countJobResults(self.history, 'SUCCESS'), 3)
@@ -2094,7 +2094,7 @@ class TestScheduler(ZuulTestCase):
         "Test that queue precedence works"
 
         self.gearman_server.hold_jobs_in_queue = True
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         A.addApproval('code-review', 2)
@@ -2107,7 +2107,7 @@ class TestScheduler(ZuulTestCase):
 
         # Run one build at a time to ensure non-race order:
         self.orderedRelease()
-        self.launch_server.hold_jobs_in_build = False
+        self.executor_server.hold_jobs_in_build = False
         self.waitUntilSettled()
 
         self.log.debug(self.history)
@@ -2120,13 +2120,13 @@ class TestScheduler(ZuulTestCase):
 
     def test_json_status(self):
         "Test that we can retrieve JSON status info"
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
-        self.launch_server.release('project-merge')
+        self.executor_server.release('project-merge')
         self.waitUntilSettled()
 
         port = self.webapp.server.socket.getsockname()[1]
@@ -2145,8 +2145,8 @@ class TestScheduler(ZuulTestCase):
         self.assertIn('Expires', headers)
         data = f.read()
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         data = json.loads(data)
@@ -2193,7 +2193,7 @@ class TestScheduler(ZuulTestCase):
         self.updateConfigLayout('layout-mutex')
         self.sched.reconfigure(self.config)
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         self.assertFalse('test-mutex' in self.sched.mutex.mutexes)
@@ -2206,7 +2206,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[1].name, 'mutex-one')
         self.assertEqual(self.builds[2].name, 'project-test1')
 
-        self.launch_server.release('mutex-one')
+        self.executor_server.release('mutex-one')
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 3)
@@ -2215,7 +2215,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[2].name, 'mutex-two')
         self.assertTrue('test-mutex' in self.sched.mutex.mutexes)
 
-        self.launch_server.release('mutex-two')
+        self.executor_server.release('mutex-two')
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 3)
@@ -2224,7 +2224,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[2].name, 'mutex-one')
         self.assertTrue('test-mutex' in self.sched.mutex.mutexes)
 
-        self.launch_server.release('mutex-one')
+        self.executor_server.release('mutex-one')
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 3)
@@ -2233,7 +2233,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[2].name, 'mutex-two')
         self.assertTrue('test-mutex' in self.sched.mutex.mutexes)
 
-        self.launch_server.release('mutex-two')
+        self.executor_server.release('mutex-two')
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 2)
@@ -2241,8 +2241,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[1].name, 'project-test1')
         self.assertFalse('test-mutex' in self.sched.mutex.mutexes)
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
 
         self.waitUntilSettled()
         self.assertEqual(len(self.builds), 0)
@@ -2256,7 +2256,7 @@ class TestScheduler(ZuulTestCase):
         self.updateConfigLayout('layout-mutex')
         self.sched.reconfigure(self.config)
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
 
         tenant = self.sched.abide.tenants.get('openstack')
         check_pipeline = tenant.layout.pipelines['check']
@@ -2279,8 +2279,8 @@ class TestScheduler(ZuulTestCase):
         # The mutex should be released
         self.assertFalse('test-mutex' in self.sched.mutex.mutexes)
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
     def test_mutex_reconfigure(self):
@@ -2288,7 +2288,7 @@ class TestScheduler(ZuulTestCase):
         self.updateConfigLayout('layout-mutex')
         self.sched.reconfigure(self.config)
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.assertFalse('test-mutex' in self.sched.mutex.mutexes)
@@ -2302,7 +2302,7 @@ class TestScheduler(ZuulTestCase):
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
-        self.launch_server.release('project-test1')
+        self.executor_server.release('project-test1')
         self.waitUntilSettled()
 
         # There should be no builds anymore
@@ -2313,7 +2313,7 @@ class TestScheduler(ZuulTestCase):
 
     def test_live_reconfiguration(self):
         "Test that live reconfiguration works"
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
@@ -2322,8 +2322,8 @@ class TestScheduler(ZuulTestCase):
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project-merge').result,
                          'SUCCESS')
@@ -2341,7 +2341,7 @@ class TestScheduler(ZuulTestCase):
         # sitting in the queue.  The job gets added to the change and
         # enqueued and the change gets stuck.
         self.worker.registerFunction('build:project-test3')
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
 
         # This change is fine.  It's here to stop the queue long
         # enough for the next change to be subject to the
@@ -2376,8 +2376,8 @@ class TestScheduler(ZuulTestCase):
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')
@@ -2400,7 +2400,7 @@ class TestScheduler(ZuulTestCase):
         # that tests a job added to a job tree with a failed root does
         # not run.
         self.worker.registerFunction('build:project-test3')
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
 
         # This change is fine.  It's here to stop the queue long
         # enough for the next change to be subject to the
@@ -2410,16 +2410,16 @@ class TestScheduler(ZuulTestCase):
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
-        self.launch_server.failJob('project-merge', B)
+        self.executor_server.failJob('project-merge', B)
         B.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         # Both -merge jobs have run, but no others.
@@ -2439,8 +2439,8 @@ class TestScheduler(ZuulTestCase):
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')
@@ -2464,18 +2464,18 @@ class TestScheduler(ZuulTestCase):
         # bug where the code to re-set build statuses would run on
         # that build and raise an exception because the job no longer
         # existed.
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
 
         # This change will fail and later be removed by the reconfiguration.
-        self.launch_server.failJob('project-test1', A)
+        self.executor_server.failJob('project-test1', A)
 
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('project-test1')
+        self.executor_server.release('project-test1')
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -2493,8 +2493,8 @@ class TestScheduler(ZuulTestCase):
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(self.getJobFromHistory('project-test2').result,
@@ -2515,17 +2515,17 @@ class TestScheduler(ZuulTestCase):
         # this project but otherwise still exists in the system does
         # not disrupt reconfiguration.
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
 
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
 
-        self.launch_server.failJob('project1-project2-integration', A)
+        self.executor_server.failJob('project1-project2-integration', A)
 
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('project1-project2-integration')
+        self.executor_server.release('project1-project2-integration')
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -2543,8 +2543,8 @@ class TestScheduler(ZuulTestCase):
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(self.getJobFromHistory('project1-merge').result,
@@ -2572,7 +2572,7 @@ class TestScheduler(ZuulTestCase):
 
         # A failure may indicate incorrect caching or cleaning up of
         # references during a reconfiguration.
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
 
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
@@ -2583,7 +2583,7 @@ class TestScheduler(ZuulTestCase):
         # Add the parent change.
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         # Reconfigure (with only one change in the pipeline).
@@ -2593,15 +2593,15 @@ class TestScheduler(ZuulTestCase):
         # Add the child change.
         self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         # Reconfigure (with both in the pipeline).
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(len(self.history), 8)
@@ -2616,7 +2616,7 @@ class TestScheduler(ZuulTestCase):
         # Test project deletion from layout
         # while changes are enqueued
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project1', 'master', 'C')
@@ -2629,7 +2629,7 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
         self.assertEqual(len(self.builds), 5)
 
@@ -2645,8 +2645,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(job_c.changes, '3,1')
         self.assertEqual(job_c.result, 'ABORTED')
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(self.getJobFromHistory('project-test1').changes,
@@ -2736,8 +2736,8 @@ class TestScheduler(ZuulTestCase):
         p = 'org/delete-project'
         if os.path.exists(os.path.join(self.merger_src_root, p)):
             shutil.rmtree(os.path.join(self.merger_src_root, p))
-        if os.path.exists(os.path.join(self.launcher_src_root, p)):
-            shutil.rmtree(os.path.join(self.launcher_src_root, p))
+        if os.path.exists(os.path.join(self.executor_src_root, p)):
+            shutil.rmtree(os.path.join(self.executor_src_root, p))
 
         B = self.fake_gerrit.addFakeChange('org/delete-project', 'master', 'B')
 
@@ -2777,7 +2777,7 @@ class TestScheduler(ZuulTestCase):
 
     def test_timer(self):
         "Test that a periodic job is triggered"
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         self.updateConfigLayout('layout-timer')
         self.sched.reconfigure(self.config)
 
@@ -2795,12 +2795,12 @@ class TestScheduler(ZuulTestCase):
         f = urllib.request.urlopen(req)
         data = f.read()
 
-        self.launch_server.hold_jobs_in_build = False
+        self.executor_server.hold_jobs_in_build = False
         # Stop queuing timer triggered jobs so that the assertions
         # below don't race against more jobs being queued.
         self.commitLayoutUpdate('layout-timer', 'layout-no-timer')
         self.sched.reconfigure(self.config)
-        self.launch_server.release()
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(self.getJobFromHistory(
@@ -2822,7 +2822,7 @@ class TestScheduler(ZuulTestCase):
 
     def test_idle(self):
         "Test that frequent periodic jobs work"
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         self.updateConfigLayout('layout-idle')
 
         for x in range(1, 3):
@@ -2843,7 +2843,7 @@ class TestScheduler(ZuulTestCase):
             self.waitUntilSettled()
             self.assertEqual(len(self.builds), 2,
                              'Timer builds iteration #%d' % x)
-            self.launch_server.release('.*')
+            self.executor_server.release('.*')
             self.waitUntilSettled()
             self.assertEqual(len(self.builds), 0)
             self.assertEqual(len(self.history), x * 2)
@@ -2885,7 +2885,7 @@ class TestScheduler(ZuulTestCase):
 
     def test_timer_smtp(self):
         "Test that a periodic job is triggered"
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         self.updateConfigLayout('layout-timer-smtp')
         self.sched.reconfigure(self.config)
 
@@ -2895,7 +2895,7 @@ class TestScheduler(ZuulTestCase):
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 2)
-        self.launch_server.release('.*')
+        self.executor_server.release('.*')
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 2)
 
@@ -2922,7 +2922,7 @@ class TestScheduler(ZuulTestCase):
         self.commitLayoutUpdate('layout-timer-smtp', 'layout-no-timer')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
-        self.launch_server.release('.*')
+        self.executor_server.release('.*')
         self.waitUntilSettled()
 
     @skip("Disabled for early v3 development")
@@ -3072,7 +3072,7 @@ class TestScheduler(ZuulTestCase):
 
     def test_client_promote(self):
         "Test that the RPC client can promote a change"
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
@@ -3105,11 +3105,11 @@ class TestScheduler(ZuulTestCase):
                 enqueue_times[str(item.change)], item.enqueue_time)
 
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 6)
@@ -3132,7 +3132,7 @@ class TestScheduler(ZuulTestCase):
         self.assertTrue(self.builds[4].hasChanges(C))
         self.assertTrue(self.builds[4].hasChanges(A))
 
-        self.launch_server.release()
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')
@@ -3149,7 +3149,7 @@ class TestScheduler(ZuulTestCase):
         "Test that the RPC client can promote a dependent change"
         # C (depends on B) -> B -> A ; then promote C to get:
         # A -> C (depends on B) -> B
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
@@ -3173,11 +3173,11 @@ class TestScheduler(ZuulTestCase):
                            change_ids=['3,1'])
 
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 6)
@@ -3200,7 +3200,7 @@ class TestScheduler(ZuulTestCase):
         self.assertTrue(self.builds[4].hasChanges(C))
         self.assertTrue(self.builds[4].hasChanges(A))
 
-        self.launch_server.release()
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')
@@ -3215,7 +3215,7 @@ class TestScheduler(ZuulTestCase):
 
     def test_client_promote_negative(self):
         "Test that the RPC client returns errors for promotion"
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
@@ -3238,8 +3238,8 @@ class TestScheduler(ZuulTestCase):
             client.shutdown()
             self.assertEqual(r, False)
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
     @skip("Disabled for early v3 development")
@@ -3248,13 +3248,13 @@ class TestScheduler(ZuulTestCase):
         self.updateConfigLayout(
             'tests/fixtures/layout-rate-limit.yaml')
         self.sched.reconfigure(self.config)
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
 
         C.setDependsOn(B, 1)
-        self.launch_server.failJob('project-test1', A)
+        self.executor_server.failJob('project-test1', A)
 
         A.addApproval('code-review', 2)
         B.addApproval('code-review', 2)
@@ -3271,9 +3271,9 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[0].name, 'project-merge')
         self.assertEqual(self.builds[1].name, 'project-merge')
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         # Only A and B will have their test jobs queued because
@@ -3284,7 +3284,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[2].name, 'project-test1')
         self.assertEqual(self.builds[3].name, 'project-test2')
 
-        self.launch_server.release('project-.*')
+        self.executor_server.release('project-.*')
         self.waitUntilSettled()
 
         queue = self.sched.layout.pipelines['gate'].queues[0]
@@ -3298,7 +3298,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.builds), 1)
         self.assertEqual(self.builds[0].name, 'project-merge')
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         # Only B's test jobs are queued because window is still 1.
@@ -3306,7 +3306,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[0].name, 'project-test1')
         self.assertEqual(self.builds[1].name, 'project-test2')
 
-        self.launch_server.release('project-.*')
+        self.executor_server.release('project-.*')
         self.waitUntilSettled()
 
         # B was successfully merged so window is increased to 2.
@@ -3318,7 +3318,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.builds), 1)
         self.assertEqual(self.builds[0].name, 'project-merge')
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         # After successful merge job the test jobs for C are queued.
@@ -3326,7 +3326,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[0].name, 'project-test1')
         self.assertEqual(self.builds[1].name, 'project-test2')
 
-        self.launch_server.release('project-.*')
+        self.executor_server.release('project-.*')
         self.waitUntilSettled()
 
         # C successfully merged so window is bumped to 3.
@@ -3340,14 +3340,14 @@ class TestScheduler(ZuulTestCase):
         self.updateConfigLayout(
             'tests/fixtures/layout-rate-limit.yaml')
         self.sched.reconfigure(self.config)
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
 
         B.setDependsOn(A, 1)
 
-        self.launch_server.failJob('project-test1', A)
+        self.executor_server.failJob('project-test1', A)
 
         A.addApproval('code-review', 2)
         B.addApproval('code-review', 2)
@@ -3364,9 +3364,9 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[0].name, 'project-merge')
         self.assertEqual(self.builds[1].name, 'project-merge')
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         # Only A and B will have their test jobs queued because
@@ -3377,7 +3377,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[2].name, 'project-test1')
         self.assertEqual(self.builds[3].name, 'project-test2')
 
-        self.launch_server.release('project-.*')
+        self.executor_server.release('project-.*')
         self.waitUntilSettled()
 
         queue = self.sched.layout.pipelines['gate'].queues[0]
@@ -3392,7 +3392,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.builds), 1)
         self.assertEqual(self.builds[0].name, 'project-merge')
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         # Only C's test jobs are queued because window is still 1.
@@ -3400,7 +3400,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[0].name, 'project-test1')
         self.assertEqual(self.builds[1].name, 'project-test2')
 
-        self.launch_server.release('project-.*')
+        self.executor_server.release('project-.*')
         self.waitUntilSettled()
 
         # C was successfully merged so window is increased to 2.
@@ -3411,24 +3411,24 @@ class TestScheduler(ZuulTestCase):
     @skip("Disabled for early v3 development")
     def test_worker_update_metadata(self):
         "Test if a worker can send back metadata about itself"
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
-        self.assertEqual(len(self.launcher.builds), 1)
+        self.assertEqual(len(self.executor.builds), 1)
 
         self.log.debug('Current builds:')
-        self.log.debug(self.launcher.builds)
+        self.log.debug(self.executor.builds)
 
         start = time.time()
         while True:
             if time.time() - start > 10:
                 raise Exception("Timeout waiting for gearman server to report "
                                 + "back to the client")
-            build = self.launcher.builds.values()[0]
+            build = self.executor.builds.values()[0]
             if build.worker.name == "My Worker":
                 break
             else:
@@ -3443,8 +3443,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual("v1.1", build.worker.version)
         self.assertEqual({'something': 'else'}, build.worker.extra)
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
     def test_footer_message(self):
@@ -3454,7 +3454,7 @@ class TestScheduler(ZuulTestCase):
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
-        self.launch_server.failJob('project-test1', A)
+        self.executor_server.failJob('project-test1', A)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
@@ -3535,7 +3535,7 @@ For CI problems and help debugging, contact ci@example.org"""
         # Check a test failure isn't reported to SMTP
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
-        self.launch_server.failJob('project-test1', A)
+        self.executor_server.failJob('project-test1', A)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
@@ -3587,7 +3587,7 @@ For CI problems and help debugging, contact ci@example.org"""
 
     def test_client_get_running_jobs(self):
         "Test that the RPC client can get a list of running jobs"
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
@@ -3602,7 +3602,7 @@ For CI problems and help debugging, contact ci@example.org"""
             if time.time() - start > 10:
                 raise Exception("Timeout waiting for gearman server to report "
                                 + "back to the client")
-            build = self.launch_client.builds.values()[0]
+            build = self.executor_client.builds.values()[0]
             if build.worker.name == "My Worker":
                 break
             else:
@@ -3636,8 +3636,8 @@ For CI problems and help debugging, contact ci@example.org"""
                 self.assertEqual('gate', job['pipeline'])
                 break
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         running_items = client.get_running_jobs()
@@ -3700,17 +3700,17 @@ For CI problems and help debugging, contact ci@example.org"""
         for connection in self.connections.connections.values():
             connection.maintainCache([])
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         B.addApproval('approved', 1)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(AM2.queried, 0)
@@ -3740,20 +3740,20 @@ For CI problems and help debugging, contact ci@example.org"""
         A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
             A.subject, B.data['id'])
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         B.addApproval('approved', 1)
         C.addApproval('approved', 1)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')
@@ -3780,20 +3780,20 @@ For CI problems and help debugging, contact ci@example.org"""
         A.data['commitMessage'] = '%s\n\nDepends-On: %s\nDepends-On: %s\n' % (
             A.subject, B.data['id'], C.data['id'])
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         B.addApproval('approved', 1)
         C.addApproval('approved', 1)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')
@@ -3863,17 +3863,17 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(B.data['status'], 'NEW')
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A.addApproval('approved', 1)
         self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')
@@ -3952,7 +3952,7 @@ For CI problems and help debugging, contact ci@example.org"""
     def test_crd_check(self):
         "Test cross-repo dependencies in independent pipelines"
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         self.gearman_server.hold_jobs_in_queue = True
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
@@ -3970,7 +3970,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.gearman_server.release()
         self.waitUntilSettled()
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         path = os.path.join(self.builds[0].jobdir.src_root, "org/project1")
@@ -3989,8 +3989,8 @@ For CI problems and help debugging, contact ci@example.org"""
             'initial commit', 'add content from fixture', 'B-1']
         self.assertEqual(repo_messages, correct_messages)
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -4035,7 +4035,7 @@ For CI problems and help debugging, contact ci@example.org"""
 
     def test_crd_check_duplicate(self):
         "Test duplicate check in independent pipelines"
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
         tenant = self.sched.abide.tenants.get('tenant-one')
@@ -4060,8 +4060,8 @@ For CI problems and help debugging, contact ci@example.org"""
         # Release jobs in order to avoid races with change A jobs
         # finishing before change B jobs.
         self.orderedRelease()
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -4305,17 +4305,17 @@ For CI problems and help debugging, contact ci@example.org"""
         J = self.fake_gerrit.addFakeChange('org/project', 'master', 'J')
         K = self.fake_gerrit.addFakeChange('org/project', 'master', 'K')
 
-        self.launch_server.failJob('project-test1', A)
-        self.launch_server.failJob('project-test1', B)
+        self.executor_server.failJob('project-test1', A)
+        self.executor_server.failJob('project-test1', B)
         # Let C pass, resetting the counter
-        self.launch_server.failJob('project-test1', D)
-        self.launch_server.failJob('project-test1', E)
-        self.launch_server.failJob('project-test1', F)
-        self.launch_server.failJob('project-test1', G)
-        self.launch_server.failJob('project-test1', H)
+        self.executor_server.failJob('project-test1', D)
+        self.executor_server.failJob('project-test1', E)
+        self.executor_server.failJob('project-test1', F)
+        self.executor_server.failJob('project-test1', G)
+        self.executor_server.failJob('project-test1', H)
         # I also passes but should only report to the disabled reporters
-        self.launch_server.failJob('project-test1', J)
-        self.launch_server.failJob('project-test1', K)
+        self.executor_server.failJob('project-test1', J)
+        self.executor_server.failJob('project-test1', K)
 
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
@@ -4409,30 +4409,30 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(3, len(self.smtp_messages))
 
     def test_rerun_on_abort(self):
-        "Test that if a launch server fails to run a job, it is run again"
+        "Test that if a execute server fails to run a job, it is run again"
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 2)
         self.builds[0].requeue = True
-        self.launch_server.release('.*-test*')
+        self.executor_server.release('.*-test*')
         self.waitUntilSettled()
 
         for x in range(3):
             self.assertEqual(len(self.builds), 1,
                              'len of builds at x=%d is wrong' % x)
             self.builds[0].requeue = True
-            self.launch_server.release('.*-test1')
+            self.executor_server.release('.*-test1')
             self.waitUntilSettled()
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 6)
         self.assertEqual(self.countJobResults(self.history, 'SUCCESS'), 2)
@@ -4440,7 +4440,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertIn('RETRY_LIMIT', A.messages[0])
 
     def test_zookeeper_disconnect(self):
-        "Test that jobs are launched after a zookeeper disconnect"
+        "Test that jobs are executed after a zookeeper disconnect"
 
         self.fake_nodepool.paused = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -4537,8 +4537,8 @@ class TestSchedulerOneJobProject(ZuulTestCase):
 class TestSchedulerTemplatedProject(ZuulTestCase):
     tenant_config_file = 'config/templated-project/main.yaml'
 
-    def test_job_from_templates_launched(self):
-        "Test whether a job generated via a template can be launched"
+    def test_job_from_templates_executed(self):
+        "Test whether a job generated via a template can be executed"
 
         A = self.fake_gerrit.addFakeChange(
             'org/templated-project', 'master', 'A')
@@ -4551,7 +4551,7 @@ class TestSchedulerTemplatedProject(ZuulTestCase):
                          'SUCCESS')
 
     def test_layered_templates(self):
-        "Test whether a job generated via a template can be launched"
+        "Test whether a job generated via a template can be executed"
 
         A = self.fake_gerrit.addFakeChange(
             'org/layered-project', 'master', 'A')
@@ -4603,7 +4603,7 @@ class TestSchedulerSuccessURL(ZuulTestCase):
             'docs-draft-test/%s/publish-docs/' % uuid,
             body[2])
 
-        # NOTE: This default URL is currently hard-coded in launcher/server.py
+        # NOTE: This default URL is currently hard-coded in executor/server.py
         self.assertIn(
             '- docs-draft-test2 https://server/job',
             body[3])
@@ -4613,9 +4613,9 @@ class TestSchedulerMerges(ZuulTestCase):
     tenant_config_file = 'config/merges/main.yaml'
 
     def _test_project_merge_mode(self, mode):
-        self.launch_server.keep_jobdir = False
+        self.executor_server.keep_jobdir = False
         project = 'org/project-%s' % mode
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
         B = self.fake_gerrit.addFakeChange(project, 'master', 'B')
         C = self.fake_gerrit.addFakeChange(project, 'master', 'C')
@@ -4635,8 +4635,8 @@ class TestSchedulerMerges(ZuulTestCase):
         repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
         repo_messages.reverse()
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         return repo_messages
@@ -4675,7 +4675,7 @@ class TestSchedulerMerges(ZuulTestCase):
         "Test that the right commits are on alternate branches"
         self.create_branch('org/project-merge-branches', 'mp')
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange(
             'org/project-merge-branches', 'mp', 'A')
         B = self.fake_gerrit.addFakeChange(
@@ -4690,11 +4690,11 @@ class TestSchedulerMerges(ZuulTestCase):
         self.fake_gerrit.addEvent(C.addApproval('approved', 1))
         self.waitUntilSettled()
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         build = self.builds[-1]
@@ -4713,15 +4713,15 @@ class TestSchedulerMerges(ZuulTestCase):
             'A-1', 'B-1', 'C-1']
         self.assertEqual(repo_messages, correct_messages)
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
     def test_merge_multi_branch(self):
         "Test that dependent changes on multiple branches are merged"
         self.create_branch('org/project-merge-branches', 'mp')
 
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange(
             'org/project-merge-branches', 'master', 'A')
         B = self.fake_gerrit.addFakeChange(
@@ -4755,7 +4755,7 @@ class TestSchedulerMerges(ZuulTestCase):
             'initial commit', 'add content from fixture', 'A-1']
         self.assertEqual(repo_messages, correct_messages)
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         job_B = None
@@ -4777,7 +4777,7 @@ class TestSchedulerMerges(ZuulTestCase):
             'initial commit', 'add content from fixture', 'mp commit', 'B-1']
         self.assertEqual(repo_messages, correct_messages)
 
-        self.launch_server.release('.*-merge')
+        self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
         job_C = None
@@ -4801,6 +4801,6 @@ class TestSchedulerMerges(ZuulTestCase):
         # Ensure the right commits are in the history for this ref
         self.assertEqual(repo_messages, correct_messages)
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()

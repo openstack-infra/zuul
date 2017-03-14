@@ -27,7 +27,7 @@ class TestZuulTriggerParentChangeEnqueued(ZuulTestCase):
         # When A is enqueued in the gate, B1 and B2 should both attempt
         # to be enqueued in both pipelines.  B1 should end up in check
         # and B2 in gate because of differing pipeline requirements.
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B1 = self.fake_gerrit.addFakeChange('org/project', 'master', 'B1')
         B2 = self.fake_gerrit.addFakeChange('org/project', 'master', 'B2')
@@ -46,8 +46,8 @@ class TestZuulTriggerParentChangeEnqueued(ZuulTestCase):
         # to enqueue behind 1,1 so that the test is more
         # deterministic.
         self.waitUntilSettled()
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(len(self.history), 3)

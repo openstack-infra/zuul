@@ -236,7 +236,7 @@ class Scheduler(threading.Thread):
 
     The Scheduler is reponsible for recieving events and dispatching
     them to appropriate components (including pipeline managers,
-    mergers and launchers).
+    mergers and executors).
 
     It runs a single threaded main loop which processes events
     received one at a time and takes action as appropriate.  Other
@@ -264,7 +264,7 @@ class Scheduler(threading.Thread):
         self._pause = False
         self._exit = False
         self._stopped = False
-        self.launcher = None
+        self.executor = None
         self.merger = None
         self.connections = None
         self.statsd = extras.try_import('statsd.statsd')
@@ -304,8 +304,8 @@ class Scheduler(threading.Thread):
     def stopConnections(self):
         self.connections.stop()
 
-    def setLauncher(self, launcher):
-        self.launcher = launcher
+    def setExecutor(self, executor):
+        self.executor = executor
 
     def setMerger(self, merger):
         self.merger = merger
@@ -355,7 +355,7 @@ class Scheduler(threading.Thread):
                     # interesting.
                     if label == build.node_name:
                         continue
-                    dt = int((build.start_time - build.launch_time) * 1000)
+                    dt = int((build.start_time - build.execute_time) * 1000)
                     key = 'zuul.pipeline.%s.label.%s.wait_time' % (
                         build.pipeline.name, label)
                     self.statsd.timing(key, dt)
@@ -368,7 +368,7 @@ class Scheduler(threading.Thread):
 
                 key = 'zuul.pipeline.%s.job.%s.wait_time' % (
                     build.pipeline.name, jobname)
-                dt = int((build.start_time - build.launch_time) * 1000)
+                dt = int((build.start_time - build.execute_time) * 1000)
                 self.statsd.timing(key, dt)
         except:
             self.log.exception("Exception reporting runtime stats")
@@ -572,7 +572,7 @@ class Scheduler(threading.Thread):
                 self.log.warning(
                     "Canceling build %s during reconfiguration" % (build,))
                 try:
-                    self.launcher.cancel(build)
+                    self.executor.cancel(build)
                 except Exception:
                     self.log.exception(
                         "Exception while canceling build %s "
@@ -695,7 +695,7 @@ class Scheduler(threading.Thread):
                     self.process_management_queue()
 
                 # Give result events priority -- they let us stop builds,
-                # whereas trigger events cause us to launch builds.
+                # whereas trigger events cause us to execute builds.
                 while not self.result_event_queue.empty():
                     self.process_result_queue()
 

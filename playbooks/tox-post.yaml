@@ -11,7 +11,7 @@
 
     - name: Collect tox logs.
       synchronize:
-        dest: "{{ zuul.launcher.log_root }}/tox"
+        dest: "{{ zuul.executor.log_root }}/tox"
         mode: pull
         src: "{{ item.path }}/log/"
       with_items: "{{ result.files }}"

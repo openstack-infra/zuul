@@ -1,4 +1,4 @@
-:title: Launchers
+:title: Executors
 
 .. _Gearman: http://gearman.org/
 
@@ -11,27 +11,27 @@
 .. _`Turbo-Hipster Documentation`:
    http://turbo-hipster.rtfd.org/
 
-.. _launchers:
+.. _executors:
 
-Launchers
+Executors
 =========
 
-Zuul has a modular architecture for launching jobs.  Currently, the
+Zuul has a modular architecture for executing jobs.  Currently, the
 only supported module interfaces with Gearman_.  This design allows
 any system to run jobs for Zuul simply by interfacing with a Gearman
 server.  The recommended way of integrating a new job-runner with Zuul
 is via this method.
 
-If Gearman is unsuitable, Zuul may be extended with a new launcher
+If Gearman is unsuitable, Zuul may be extended with a new executor
 module.  Zuul makes very few assumptions about the interface to a
-launcher -- if it can trigger jobs, cancel them, and receive success
+executor -- if it can trigger jobs, cancel them, and receive success
 or failure reports, it should be able to be used with Zuul.  Patches
 to this effect are welcome.
 
 Zuul Parameters
 ---------------
 
-Zuul will pass some parameters with every job it launches.  These are
+Zuul will pass some parameters with every job it executes.  These are
 for workers to be able to get the repositories into the state they are
 intended to be tested in.  Builds can be triggered either by an action
 on a change or by a reference update.  Both events share a common set

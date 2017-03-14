@@ -57,8 +57,8 @@ import zuul.connection.sql
 import zuul.scheduler
 import zuul.webapp
 import zuul.rpclistener
-import zuul.launcher.server
-import zuul.launcher.client
+import zuul.executor.server
+import zuul.executor.client
 import zuul.lib.connections
 import zuul.merger.client
 import zuul.merger.merger
@@ -570,9 +570,9 @@ class FakeStatsd(threading.Thread):
 class FakeBuild(object):
     log = logging.getLogger("zuul.test")
 
-    def __init__(self, launch_server, job):
+    def __init__(self, executor_server, job):
         self.daemon = True
-        self.launch_server = launch_server
+        self.executor_server = executor_server
         self.job = job
         self.jobdir = None
         self.uuid = job.unique
@@ -638,7 +638,7 @@ class FakeBuild(object):
     def run(self):
         self.log.debug('Running build %s' % self.unique)
 
-        if self.launch_server.hold_jobs_in_build:
+        if self.executor_server.hold_jobs_in_build:
             self.log.debug('Holding build %s' % self.unique)
             self._wait()
         self.log.debug("Build %s continuing" % self.unique)
@@ -654,7 +654,7 @@ class FakeBuild(object):
         return result
 
     def shouldFail(self):
-        changes = self.launch_server.fail_tests.get(self.name, [])
+        changes = self.executor_server.fail_tests.get(self.name, [])
         for change in changes:
             if self.hasChanges(change):
                 return True
@@ -691,21 +691,21 @@ class FakeBuild(object):
         return True
 
 
-class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
-    """An Ansible launcher to be used in tests.
+class RecordingExecutorServer(zuul.executor.server.ExecutorServer):
+    """An Ansible executor to be used in tests.
 
-    :ivar bool hold_jobs_in_build: If true, when jobs are launched
+    :ivar bool hold_jobs_in_build: If true, when jobs are executed
         they will report that they have started but then pause until
         released before reporting completion.  This attribute may be
         changed at any time and will take effect for subsequently
-        launched builds, but previously held builds will still need to
+        executed builds, but previously held builds will still need to
         be explicitly released.
 
     """
     def __init__(self, *args, **kw):
         self._run_ansible = kw.pop('_run_ansible', False)
         self._test_root = kw.pop('_test_root', False)
-        super(RecordingLaunchServer, self).__init__(*args, **kw)
+        super(RecordingExecutorServer, self).__init__(*args, **kw)
         self.hold_jobs_in_build = False
         self.lock = threading.Lock()
         self.running_builds = []
@@ -714,7 +714,7 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
         self.job_builds = {}
 
     def failJob(self, name, change):
-        """Instruct the launcher to report matching builds as failures.
+        """Instruct the executor to report matching builds as failures.
 
         :arg str name: The name of the job to fail.
         :arg Change change: The :py:class:`~tests.base.FakeChange`
@@ -748,7 +748,7 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
         self.log.debug("Done releasing builds %s (%s)" %
                        (regex, len(self.running_builds)))
 
-    def launchJob(self, job):
+    def executeJob(self, job):
         build = FakeBuild(self, job)
         job.build = build
         self.running_builds.append(build)
@@ -767,32 +767,32 @@ class RecordingLaunchServer(zuul.launcher.server.LaunchServer):
             if build.unique == uuid:
                 build.aborted = True
                 build.release()
-        super(RecordingLaunchServer, self).stopJob(job)
+        super(RecordingExecutorServer, self).stopJob(job)
 
 
-class RecordingAnsibleJob(zuul.launcher.server.AnsibleJob):
+class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
     def runPlaybooks(self, args):
-        build = self.launcher_server.job_builds[self.job.unique]
+        build = self.executor_server.job_builds[self.job.unique]
         build.jobdir = self.jobdir
 
         result = super(RecordingAnsibleJob, self).runPlaybooks(args)
 
-        self.launcher_server.lock.acquire()
-        self.launcher_server.build_history.append(
+        self.executor_server.lock.acquire()
+        self.executor_server.build_history.append(
             BuildHistory(name=build.name, result=result, changes=build.changes,
                          node=build.node, uuid=build.unique,
                          parameters=build.parameters, jobdir=build.jobdir,
                          pipeline=build.parameters['ZUUL_PIPELINE'])
         )
-        self.launcher_server.running_builds.remove(build)
-        del self.launcher_server.job_builds[self.job.unique]
-        self.launcher_server.lock.release()
+        self.executor_server.running_builds.remove(build)
+        del self.executor_server.job_builds[self.job.unique]
+        self.executor_server.lock.release()
         return result
 
     def runAnsible(self, cmd, timeout, trusted=False):
-        build = self.launcher_server.job_builds[self.job.unique]
+        build = self.executor_server.job_builds[self.job.unique]
 
-        if self.launcher_server._run_ansible:
+        if self.executor_server._run_ansible:
             result = super(RecordingAnsibleJob, self).runAnsible(
                 cmd, timeout, trusted=trusted)
         else:
@@ -828,7 +828,7 @@ class FakeGearmanServer(gear.Server):
         for queue in [self.high_queue, self.normal_queue, self.low_queue]:
             for job in queue:
                 if not hasattr(job, 'waiting'):
-                    if job.name.startswith('launcher:launch'):
+                    if job.name.startswith('executor:execute'):
                         job.waiting = self.hold_jobs_in_queue
                     else:
                         job.waiting = False
@@ -855,7 +855,7 @@ class FakeGearmanServer(gear.Server):
                 len(self.low_queue))
         self.log.debug("releasing queued job %s (%s)" % (regex, qlen))
         for job in self.getQueue():
-            if job.name != 'launcher:launch':
+            if job.name != 'executor:execute':
                 continue
             parameters = json.loads(job.arguments)
             if not regex or re.match(regex, parameters.get('job')):
@@ -991,7 +991,7 @@ class FakeNodepool(object):
                     created_time=now,
                     updated_time=now,
                     image_id=None,
-                    launcher='fake-nodepool')
+                    executor='fake-nodepool')
         data = json.dumps(data)
         path = self.client.create(path, data,
                                   makepath=True,
@@ -1223,13 +1223,13 @@ class ZuulTestCase(BaseTestCase):
         server that all of the Zuul components in this test use to
         communicate with each other.
 
-    :ivar RecordingLaunchServer launch_server: An instance of
-        :py:class:`~tests.base.RecordingLaunchServer` which is the
-        Ansible launch server used to run jobs for this test.
+    :ivar RecordingExecutorServer executor_server: An instance of
+        :py:class:`~tests.base.RecordingExecutorServer` which is the
+        Ansible execute server used to run jobs for this test.
 
     :ivar list builds: A list of :py:class:`~tests.base.FakeBuild` objects
         representing currently running builds.  They are appended to
-        the list in the order they are launched, and removed from this
+        the list in the order they are executed, and removed from this
         list upon completion.
 
     :ivar list history: A list of :py:class:`~tests.base.BuildHistory`
@@ -1261,7 +1261,7 @@ class ZuulTestCase(BaseTestCase):
         self.test_root = os.path.join(tmp_root, "zuul-test")
         self.upstream_root = os.path.join(self.test_root, "upstream")
         self.merger_src_root = os.path.join(self.test_root, "merger-git")
-        self.launcher_src_root = os.path.join(self.test_root, "launcher-git")
+        self.executor_src_root = os.path.join(self.test_root, "executor-git")
         self.state_root = os.path.join(self.test_root, "lib")
 
         if os.path.exists(self.test_root):
@@ -1276,7 +1276,7 @@ class ZuulTestCase(BaseTestCase):
                         os.path.join(FIXTURE_DIR,
                                      self.config.get('zuul', 'tenant_config')))
         self.config.set('merger', 'git_dir', self.merger_src_root)
-        self.config.set('launcher', 'git_dir', self.launcher_src_root)
+        self.config.set('executor', 'git_dir', self.executor_src_root)
         self.config.set('zuul', 'state_dir', self.state_root)
 
         # For each project in config:
@@ -1337,17 +1337,17 @@ class ZuulTestCase(BaseTestCase):
 
         self._startMerger()
 
-        self.launch_server = RecordingLaunchServer(
+        self.executor_server = RecordingExecutorServer(
             self.config, self.connections,
             jobdir_root=self.test_root,
             _run_ansible=self.run_ansible,
             _test_root=self.test_root,
             keep_jobdir=KEEP_TEMPDIRS)
-        self.launch_server.start()
-        self.history = self.launch_server.build_history
-        self.builds = self.launch_server.running_builds
+        self.executor_server.start()
+        self.history = self.executor_server.build_history
+        self.builds = self.executor_server.running_builds
 
-        self.launch_client = zuul.launcher.client.LaunchClient(
+        self.executor_client = zuul.executor.client.ExecutorClient(
             self.config, self.sched)
         self.merge_client = zuul.merger.client.MergeClient(
             self.config, self.sched)
@@ -1360,7 +1360,7 @@ class ZuulTestCase(BaseTestCase):
             self.zk_chroot_fixture.zookeeper_port,
             self.zk_chroot_fixture.zookeeper_chroot)
 
-        self.sched.setLauncher(self.launch_client)
+        self.sched.setExecutor(self.executor_client)
         self.sched.setMerger(self.merge_client)
         self.sched.setNodepool(self.nodepool)
         self.sched.setZooKeeper(self.zk)
@@ -1372,7 +1372,7 @@ class ZuulTestCase(BaseTestCase):
         self.sched.start()
         self.webapp.start()
         self.rpc.start()
-        self.launch_client.gearman.waitForServer()
+        self.executor_client.gearman.waitForServer()
         self.addCleanup(self.shutdown)
 
         self.sched.reconfigure(self.config)
@@ -1488,11 +1488,11 @@ class ZuulTestCase(BaseTestCase):
 
     def shutdown(self):
         self.log.debug("Shutting down after tests")
-        self.launch_client.stop()
+        self.executor_client.stop()
         self.merge_server.stop()
         self.merge_server.join()
         self.merge_client.stop()
-        self.launch_server.stop()
+        self.executor_server.stop()
         self.sched.stop()
         self.sched.join()
         self.statsd.stop()
@@ -1579,29 +1579,29 @@ class ZuulTestCase(BaseTestCase):
 
     def haveAllBuildsReported(self):
         # See if Zuul is waiting on a meta job to complete
-        if self.launch_client.meta_jobs:
+        if self.executor_client.meta_jobs:
             return False
         # Find out if every build that the worker has completed has been
         # reported back to Zuul.  If it hasn't then that means a Gearman
         # event is still in transit and the system is not stable.
         for build in self.history:
-            zbuild = self.launch_client.builds.get(build.uuid)
+            zbuild = self.executor_client.builds.get(build.uuid)
             if not zbuild:
                 # It has already been reported
                 continue
             # It hasn't been reported yet.
             return False
         # Make sure that none of the worker connections are in GRAB_WAIT
-        for connection in self.launch_server.worker.active_connections:
+        for connection in self.executor_server.worker.active_connections:
             if connection.state == 'GRAB_WAIT':
                 return False
         return True
 
     def areAllBuildsWaiting(self):
-        builds = self.launch_client.builds.values()
+        builds = self.executor_client.builds.values()
         for build in builds:
             client_job = None
-            for conn in self.launch_client.gearman.active_connections:
+            for conn in self.executor_client.gearman.active_connections:
                 for j in conn.related_jobs.values():
                     if j.unique == build.uuid:
                         client_job = j
@@ -1626,7 +1626,8 @@ class ZuulTestCase(BaseTestCase):
             if build.url is None:
                 self.log.debug("%s has not reported start" % build)
                 return False
-            worker_build = self.launch_server.job_builds.get(server_job.unique)
+            worker_build = self.executor_server.job_builds.get(
+                server_job.unique)
             if worker_build:
                 if worker_build.isWaiting():
                     continue
@@ -1673,7 +1674,7 @@ class ZuulTestCase(BaseTestCase):
                 raise Exception("Timeout waiting for Zuul to settle")
             # Make sure no new events show up while we're checking
 
-            self.launch_server.lock.acquire()
+            self.executor_server.lock.acquire()
             # have all build states propogated to zuul?
             if self.haveAllBuildsReported():
                 # Join ensures that the queue is empty _and_ events have been
@@ -1691,11 +1692,11 @@ class ZuulTestCase(BaseTestCase):
                     # components were stable, we don't erroneously
                     # report that we are settled.
                     self.sched.run_handler_lock.release()
-                    self.launch_server.lock.release()
+                    self.executor_server.lock.release()
                     self.log.debug("...settled.")
                     return
                 self.sched.run_handler_lock.release()
-            self.launch_server.lock.release()
+            self.executor_server.lock.release()
             self.sched.wake_event.wait(0.1)
 
     def countJobResults(self, jobs, result):
@@ -1912,7 +1913,7 @@ class ZuulTestCase(BaseTestCase):
 
 
 class AnsibleZuulTestCase(ZuulTestCase):
-    """ZuulTestCase but with an actual ansible launcher running"""
+    """ZuulTestCase but with an actual ansible executor running"""
     run_ansible = True
 
 

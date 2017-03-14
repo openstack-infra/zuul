@@ -46,7 +46,7 @@ class TestConnections(ZuulTestCase):
                          'jenkins')
 
         B = self.fake_review_gerrit.addFakeChange('org/project', 'master', 'B')
-        self.launch_server.failJob('project-test2', B)
+        self.executor_server.failJob('project-test2', B)
         self.addEvent('review_gerrit', B.getPatchsetCreatedEvent(1))
 
         self.waitUntilSettled()
@@ -239,7 +239,7 @@ class TestMultipleGerrits(ZuulTestCase):
     tenant_config_file = 'config/zuul-connections-multiple-gerrits/main.yaml'
 
     def test_multiple_project_separate_gerrits(self):
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
 
         A = self.fake_another_gerrit.addFakeChange(
             'org/project1', 'master', 'A')
@@ -276,6 +276,6 @@ class TestMultipleGerrits(ZuulTestCase):
                  pipeline='review_check'),
         ])
 
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()

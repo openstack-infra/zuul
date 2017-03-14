@@ -21,7 +21,7 @@ Contents:
    zuul
    merger
    cloner
-   launchers
+   executors
    statsd
    client
    developer

@@ -17,7 +17,7 @@ the statsd python module, so an existing Zuul installation may be missing it.
 The configuration is done via environment variables STATSD_HOST and
 STATSD_PORT. They are interpreted by the statsd module directly and there is no
 such parameter in zuul.conf yet. Your init script will have to initialize both
-of them before launching Zuul.
+of them before executing Zuul.
 
 Your init script most probably loads a configuration file named
 ``/etc/default/zuul`` which would contain the environment variables::
@@ -61,7 +61,7 @@ The metrics are emitted by the Zuul scheduler (`zuul/scheduler.py`):
       #. **job.<jobname>** subtree detailing per job statistics:
 
         #. **wait_time** counter and timer of the wait time, with the
-                   difference of the job start time and the launch time, in
+                   difference of the job start time and the execute time, in
                    milliseconds.
 
 **zuul.pipeline.**
@@ -88,7 +88,7 @@ The metrics are emitted by the Zuul scheduler (`zuul/scheduler.py`):
       #. **total_changes** counter of the number of change proceeding since
                Zuul started.
       #. **wait_time** counter and timer of the wait time, with the difference
-               of the job start time and the launch time, in milliseconds.
+               of the job start time and the execute time, in milliseconds.
 
   Additionally, the `zuul.pipeline.<pipeline name>` hierarchy contains
   `current_changes` (gauge), `resident_time` (timing) and `total_changes`

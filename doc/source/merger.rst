@@ -30,7 +30,7 @@ cherry-picking changes as required and identifies the result with a
 Git reference of the form ``refs/zuul/<branch>/Z<random sha1>``.
 Preparing the workspace is then a simple matter of fetching that ref
 and checking it out.  The parameters that provide this information are
-described in :ref:`launchers`.
+described in :ref:`executors`.
 
 These references need to be made available via a Git repository that
 is available to workers (such as Jenkins).  This is accomplished by

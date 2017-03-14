@@ -610,7 +610,7 @@ class TestCloner(ZuulTestCase):
 
         # Start a periodic job
         self.worker.hold_jobs_in_build = True
-        self.launcher.negative_function_cache_ttl = 0
+        self.executor.negative_function_cache_ttl = 0
         self.config.set('zuul', 'layout_config',
                         'tests/fixtures/layout-timer.yaml')
         self.sched.reconfigure(self.config)

@@ -576,7 +576,7 @@ class PlaybookContext(object):
                 self.path == other.path)
 
     def toDict(self):
-        # Render to a dict to use in passing json to the launcher
+        # Render to a dict to use in passing json to the executor
         return dict(
             connection=self.source_context.project.connection_name,
             project=self.source_context.project.name,
@@ -607,7 +607,7 @@ class Role(object):
 
     @abc.abstractmethod
     def toDict(self):
-        # Render to a dict to use in passing json to the launcher
+        # Render to a dict to use in passing json to the executor
         return dict(target_name=self.target_name)
 
 
@@ -632,7 +632,7 @@ class ZuulRole(Role):
                 self.trusted == other.trusted)
 
     def toDict(self):
-        # Render to a dict to use in passing json to the launcher
+        # Render to a dict to use in passing json to the executor
         d = super(ZuulRole, self).toDict()
         d['type'] = 'zuul'
         d['connection'] = self.connection_name
@@ -918,7 +918,7 @@ class Build(object):
         self.url = None
         self.result = None
         self.build_set = None
-        self.launch_time = time.time()
+        self.execute_time = time.time()
         self.start_time = None
         self.end_time = None
         self.estimated_time = None
@@ -994,9 +994,9 @@ class BuildSet(object):
     """A collection of Builds for one specific potential future repository
     state.
 
-    When Zuul launches Builds for a change, it creates a Build to
+    When Zuul executes Builds for a change, it creates a Build to
     represent each execution of each job and a BuildSet to keep track
-    of all the Builds running for that Change.  When Zuul re-launches
+    of all the Builds running for that Change.  When Zuul re-executes
     Builds for a Change with a different configuration, all of the
     running Builds in the BuildSet for that change are aborted, and a
     new BuildSet is created to hold the Builds for the Jobs being
@@ -1459,7 +1459,7 @@ class QueueItem(object):
                 'result': result,
                 'voting': job.voting,
                 'uuid': build.uuid if build else None,
-                'launch_time': build.launch_time if build else None,
+                'execute_time': build.execute_time if build else None,
                 'start_time': build.start_time if build else None,
                 'end_time': build.end_time if build else None,
                 'estimated_time': build.estimated_time if build else None,

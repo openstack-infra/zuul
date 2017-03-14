@@ -635,9 +635,9 @@ each job as it builds a list from the project specification.
 **hold-following-changes (optional)**
   This is a boolean that indicates that changes that follow this
   change in a dependent change pipeline should wait until this job
-  succeeds before launching.  If this is applied to a very short job
+  succeeds before executing.  If this is applied to a very short job
   that can predict whether longer jobs will fail early, this can be
-  used to reduce the number of jobs that Zuul will launch and
+  used to reduce the number of jobs that Zuul will execute and
   ultimately have to cancel.  In that case, a small amount of
   parallelization of jobs is traded for more efficient use of testing
   resources.  On the other hand, to apply this to a long running job
@@ -709,7 +709,7 @@ each job as it builds a list from the project specification.
   a job is voting or not.  Default: ``true``.
 
 **attempts (optional)**
-  Number of attempts zuul will launch a job. Once reached, zuul will report
+  Number of attempts zuul will execute a job. Once reached, zuul will report
   RETRY_LIMIT as the job result.
   Defaults to 3.
 

@@ -58,7 +58,7 @@ class TestOpenStack(AnsibleZuulTestCase):
                          'ubuntu-trusty')
 
     def test_dsvm_keystone_repo(self):
-        self.launch_server.keep_jobdir = True
+        self.executor_server.keep_jobdir = True
         A = self.fake_gerrit.addFakeChange('openstack/nova', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
@@ -68,9 +68,9 @@ class TestOpenStack(AnsibleZuulTestCase):
         build = self.getJobFromHistory('dsvm')
 
         # Check that a change to nova triggered a keystone clone
-        launcher_git_dir = os.path.join(self.launcher_src_root,
+        executor_git_dir = os.path.join(self.executor_src_root,
                                         'openstack', 'keystone', '.git')
-        self.assertTrue(os.path.exists(launcher_git_dir),
+        self.assertTrue(os.path.exists(executor_git_dir),
                         msg='openstack/keystone should be cloned.')
 
         jobdir_git_dir = os.path.join(build.jobdir.src_root,
@@ -79,7 +79,7 @@ class TestOpenStack(AnsibleZuulTestCase):
                         msg='openstack/keystone should be cloned.')
 
     def test_dsvm_nova_repo(self):
-        self.launch_server.keep_jobdir = True
+        self.executor_server.keep_jobdir = True
         A = self.fake_gerrit.addFakeChange('openstack/keystone', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
@@ -89,9 +89,9 @@ class TestOpenStack(AnsibleZuulTestCase):
         build = self.getJobFromHistory('dsvm')
 
         # Check that a change to keystone triggered a nova clone
-        launcher_git_dir = os.path.join(self.launcher_src_root,
+        executor_git_dir = os.path.join(self.executor_src_root,
                                         'openstack', 'nova', '.git')
-        self.assertTrue(os.path.exists(launcher_git_dir),
+        self.assertTrue(os.path.exists(executor_git_dir),
                         msg='openstack/nova should be cloned.')
 
         jobdir_git_dir = os.path.join(build.jobdir.src_root,

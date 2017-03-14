@@ -18,7 +18,7 @@
 - name: Synchronize src repos to workspace directory.
   synchronize:
     dest: "{{ prepare_workspace_root }}"
-    src: "{{ zuul.launcher.src_root }}"
+    src: "{{ zuul.executor.src_root }}"
 
 - name: Run configure_mirror.sh
   shell: /opt/nodepool-scripts/configure_mirror.sh

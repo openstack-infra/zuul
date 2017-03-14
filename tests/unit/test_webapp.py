@@ -27,7 +27,7 @@ class TestWebapp(ZuulTestCase):
 
     def setUp(self):
         super(TestWebapp, self).setUp()
-        self.launch_server.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
@@ -38,8 +38,8 @@ class TestWebapp(ZuulTestCase):
         self.port = self.webapp.server.socket.getsockname()[1]
 
     def tearDown(self):
-        self.launch_server.hold_jobs_in_build = False
-        self.launch_server.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
         super(TestWebapp, self).tearDown()
 
