@@ -87,7 +87,7 @@ def configuration_exceptions(stanza, conf):
 
 
 class ZuulSafeLoader(yaml.SafeLoader):
-    zuul_node_types = frozenset(('job', 'nodeset', 'pipeline',
+    zuul_node_types = frozenset(('job', 'nodeset', 'secret', 'pipeline',
                                  'project', 'project-template'))
 
     def __init__(self, stream, context):
@@ -125,6 +125,18 @@ repo {repo} on branch {branch}.  The error was:
         loader.dispose()
 
 
+class EncryptedPKCS1(yaml.YAMLObject):
+    yaml_tag = u'!encrypted/pkcs1'
+    yaml_loader = yaml.SafeLoader
+
+    def __init__(self, ciphertext):
+        self.ciphertext = ciphertext
+
+    @classmethod
+    def from_yaml(cls, loader, node):
+        return cls(node.value)
+
+
 class NodeSetParser(object):
     @staticmethod
     def getSchema():
@@ -149,6 +161,28 @@ class NodeSetParser(object):
             node = model.Node(conf_node['name'], conf_node['image'])
             ns.addNode(node)
         return ns
+
+
+class SecretParser(object):
+    @staticmethod
+    def getSchema():
+        data = {str: vs.Any(str, EncryptedPKCS1)}
+
+        secret = {vs.Required('name'): str,
+                  vs.Required('data'): data,
+                  '_source_context': model.SourceContext,
+                  '_start_mark': yaml.Mark,
+                  }
+
+        return vs.Schema(secret)
+
+    @staticmethod
+    def fromYaml(layout, conf):
+        with configuration_exceptions('secret', conf):
+            SecretParser.getSchema()(conf)
+        s = model.Secret(conf['name'])
+        s.secret_data = conf['data']
+        return s
 
 
 class JobParser(object):
@@ -905,6 +939,9 @@ class TenantParser(object):
 
         for config_nodeset in data.nodesets:
             layout.addNodeSet(NodeSetParser.fromYaml(layout, config_nodeset))
+
+        for config_secret in data.secrets:
+            layout.addSecret(SecretParser.fromYaml(layout, config_secret))
 
         for config_job in data.jobs:
             layout.addJob(JobParser.fromYaml(tenant, layout, config_job))
