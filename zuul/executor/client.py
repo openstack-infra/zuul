@@ -318,6 +318,9 @@ class ExecutorClient(object):
                               public_ipv4=node.public_ipv4))
         params['nodes'] = nodes
         params['vars'] = copy.deepcopy(job.variables)
+        if job.auth:
+            for secret in job.auth.secrets:
+                params['vars'][secret.name] = copy.deepcopy(secret.secret_data)
         params['vars']['zuul'] = zuul_params
         projects = set()
         if job.repos:

@@ -545,6 +545,20 @@ class Secret(object):
     def __repr__(self):
         return '<Secret %s>' % (self.name,)
 
+    def decrypt(self, private_key):
+        """Return a copy of this secret with any encrypted data decrypted.
+        Note that the original remains encrypted."""
+
+        r = copy.deepcopy(self)
+        decrypted_secret_data = {}
+        for k, v in r.secret_data.items():
+            if hasattr(v, 'decrypt'):
+                decrypted_secret_data[k] = v.decrypt(private_key)
+            else:
+                decrypted_secret_data[k] = v
+        r.secret_data = decrypted_secret_data
+        return r
+
 
 class SourceContext(object):
     """A reference to the branch of a project in configuration.

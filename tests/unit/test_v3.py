@@ -290,6 +290,11 @@ class TestAnsible(AnsibleZuulTestCase):
                                            build.uuid + '.bare-role.flag')
         self.assertTrue(os.path.exists(bare_role_flag_path))
 
+        secrets_path = os.path.join(self.test_root,
+                                    build.uuid + '.secrets')
+        with open(secrets_path) as f:
+            self.assertEqual(f.read(), "test-username test-password")
+
 
 class TestBrokenConfig(ZuulTestCase):
     # Test that we get an appropriate syntax error if we start with a

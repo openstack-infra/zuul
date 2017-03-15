@@ -6,5 +6,8 @@
     - copy:
         src: "{{zuul._test.test_root}}/{{zuul.uuid}}.flag"
         dest: "{{zuul._test.test_root}}/{{zuul.uuid}}.copied"
+    - copy:
+        content: "{{test_secret.username}} {{test_secret.password}}"
+        dest: "{{zuul._test.test_root}}/{{zuul.uuid}}.secrets"
   roles:
     - bare-role
