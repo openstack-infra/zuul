@@ -141,7 +141,7 @@ class Scheduler(zuul.cmd.ZuulApp):
 
         self.sched = zuul.scheduler.Scheduler(self.config)
 
-        gearman = zuul.executor.client.LaunchClient(self.config, self.sched)
+        gearman = zuul.executor.client.ExecutorClient(self.config, self.sched)
         merger = zuul.merger.client.MergeClient(self.config, self.sched)
         nodepool = zuul.nodepool.Nodepool(self.sched)
 
