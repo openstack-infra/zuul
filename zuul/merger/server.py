@@ -111,7 +111,10 @@ class MergeServer(object):
         result = dict(merged=(ret is not None),
                       zuul_url=self.zuul_url)
         if args.get('files'):
-            result['commit'], result['files'] = ret
+            if ret:
+                result['commit'], result['files'] = ret
+            else:
+                result['commit'], result['files'] = (None, None)
         else:
             result['commit'] = ret
         job.sendWorkComplete(json.dumps(result))

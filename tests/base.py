@@ -770,12 +770,15 @@ class RecordingExecutorServer(zuul.executor.server.ExecutorServer):
 
 
 class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
-    def runPlaybooks(self, args):
+    def doMergeChanges(self, items):
+        # Get a merger in order to update the repos involved in this job.
+        commit = super(RecordingAnsibleJob, self).doMergeChanges(items)
+        if not commit:  # merge conflict
+            self.recordResult('MERGER_FAILURE')
+        return commit
+
+    def recordResult(self, result):
         build = self.executor_server.job_builds[self.job.unique]
-        build.jobdir = self.jobdir
-
-        result = super(RecordingAnsibleJob, self).runPlaybooks(args)
-
         self.executor_server.lock.acquire()
         self.executor_server.build_history.append(
             BuildHistory(name=build.name, result=result, changes=build.changes,
@@ -786,6 +789,13 @@ class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
         self.executor_server.running_builds.remove(build)
         del self.executor_server.job_builds[self.job.unique]
         self.executor_server.lock.release()
+
+    def runPlaybooks(self, args):
+        build = self.executor_server.job_builds[self.job.unique]
+        build.jobdir = self.jobdir
+
+        result = super(RecordingAnsibleJob, self).runPlaybooks(args)
+        self.recordResult(result)
         return result
 
     def runAnsible(self, cmd, timeout, trusted=False):
