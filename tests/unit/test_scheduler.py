@@ -2180,14 +2180,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual('https://server/job/project-test2/0/',
                          status_jobs[2]['report_url'])
 
-    @skip("Disabled for early v3 development")
-    def test_merging_queues(self):
-        "Test that transitively-connected change queues are merged"
-        self.updateConfigLayout(
-            'tests/fixtures/layout-merge-queues.yaml')
-        self.sched.reconfigure(self.config)
-        self.assertEqual(len(self.sched.layout.pipelines['gate'].queues), 1)
-
     def test_mutex(self):
         "Test job mutexes"
         self.updateConfigLayout('layout-mutex')
