@@ -22,6 +22,7 @@ import time
 from paste import httpserver
 import webob
 from webob import dec
+from cryptography.hazmat.primitives import serialization
 
 """Zuul main web app.
 
@@ -34,6 +35,7 @@ The supported urls are:
    queue / pipeline structure of the system
  - /status.json (backwards compatibility): same as /status
  - /status/change/X,Y: return status just for gerrit change X,Y
+ - /keys/SOURCE/PROJECT.pub: return the public key for PROJECT
 
 When returning status for a single gerrit change you will get an
 array of changes, they will not include the queue structure.
@@ -96,9 +98,34 @@ class WebApp(threading.Thread):
             return m.group(1)
         return None
 
+    def _handle_keys(self, request, path):
+        m = re.match('/keys/(.*?)/(.*?).pub', path)
+        if not m:
+            raise webob.exc.HTTPNotFound()
+        source_name = m.group(1)
+        project_name = m.group(2)
+        source = self.scheduler.connections.getSource(source_name)
+        if not source:
+            raise webob.exc.HTTPNotFound()
+        project = source.getProject(project_name)
+        if not project:
+            raise webob.exc.HTTPNotFound()
+
+        # Serialize public key
+        pem_public_key = project.public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+
+        response = webob.Response(body=pem_public_key,
+                                  content_type='text/plain')
+        return response.conditional_response_app
+
     def app(self, request):
         tenant_name = request.path.split('/')[1]
         path = request.path.replace('/' + tenant_name, '')
+        if path.startswith('/keys'):
+            return self._handle_keys(request, path)
         path = self._normalize_path(path)
         if path is None:
             raise webob.exc.HTTPNotFound()
