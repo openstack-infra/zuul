@@ -108,6 +108,7 @@ class GerritEventConnector(threading.Thread):
             'reviewer-added': 'reviewer',  # Gerrit 2.5/2.6
             'ref-replicated': None,
             'ref-replication-done': None,
+            'ref-replication-scheduled': None,
             'topic-changed': 'changer',
         }
         event.account = None
