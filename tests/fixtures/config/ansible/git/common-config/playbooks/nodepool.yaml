@@ -1,0 +1,8 @@
+- hosts: ubuntu-xenial
+  tasks:
+    - name: Assert nodepool variables are valid.
+      assert:
+        that:
+          - nodepool_az == 'test-az'
+          - nodepool_region == 'test-region'
+          - nodepool_provider == 'test-provider'

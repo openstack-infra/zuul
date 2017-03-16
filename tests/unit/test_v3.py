@@ -266,6 +266,8 @@ class TestAnsible(AnsibleZuulTestCase):
         self.assertEqual(build.result, 'ABORTED')
         build = self.getJobFromHistory('faillocal')
         self.assertEqual(build.result, 'FAILURE')
+        build = self.getJobFromHistory('nodepool')
+        self.assertEqual(build.result, 'SUCCESS')
         build = self.getJobFromHistory('python27')
         self.assertEqual(build.result, 'SUCCESS')
         flag_path = os.path.join(self.test_root, build.uuid + '.flag')

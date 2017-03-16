@@ -311,6 +311,9 @@ class ExecutorClient(object):
         nodes = []
         for node in item.current_build_set.getJobNodeSet(job.name).getNodes():
             nodes.append(dict(name=node.name, image=node.image,
+                              az=node.az,
+                              provider=node.provider,
+                              region=node.region,
                               public_ipv6=node.public_ipv6,
                               public_ipv4=node.public_ipv4))
         params['nodes'] = nodes

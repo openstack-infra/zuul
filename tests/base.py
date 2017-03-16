@@ -981,7 +981,7 @@ class FakeNodepool(object):
         data = dict(type=node_type,
                     provider='test-provider',
                     region='test-region',
-                    az=None,
+                    az='test-az',
                     public_ipv4='127.0.0.1',
                     private_ipv4=None,
                     public_ipv6=None,

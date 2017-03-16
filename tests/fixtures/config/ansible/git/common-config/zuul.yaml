@@ -49,3 +49,10 @@
     parent: python27
     name: timeout
     timeout: 1
+
+- job:
+    parent: python27
+    name: nodepool
+    nodes:
+      - name: ubuntu-xenial
+        image: ubuntu-xenial

@@ -9,4 +9,5 @@
       jobs:
         - python27
         - faillocal
+        - nodepool
         - timeout
