@@ -239,6 +239,12 @@ class ExecutorServer(object):
         else:
             self.merge_root = '/var/lib/zuul/executor-git'
 
+        if self.config.has_option('executor', 'default_username'):
+            self.default_username = self.config.get('executor',
+                                                    'default_username')
+        else:
+            self.default_username = 'zuul'
+
         if self.config.has_option('merger', 'git_user_email'):
             self.merge_email = self.config.get('merger', 'git_user_email')
         else:
@@ -672,6 +678,7 @@ class AnsibleJob(object):
             ip = node.get('interface_ip')
             host_vars = dict(
                 ansible_host=ip,
+                ansible_user=self.executor_server.default_username,
                 nodepool_az=node.get('az'),
                 nodepool_provider=node.get('provider'),
                 nodepool_region=node.get('region'))
