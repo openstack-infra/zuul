@@ -317,6 +317,24 @@ executor
 
      user=zuul
 
+.. _admin_sitewide_variables:
+
+**variables**
+  Path to an Ansible variables file to supply site-wide variables.
+  This should be a YAML-formatted file consisting of a single
+  dictionary.  The contents will be made available to all jobs as
+  Ansible variables.  These variables take precedence over all other
+  forms (job variables and secrets).  Care should be taken when naming
+  these variables to avoid potential collisions with those used by
+  jobs.  Prefixing variable names with a site-specific identifier is
+  recommended.  The default is not to add any site-wide variables.
+  See the :ref:`User's Guide <user_sitewide_variables>` for more
+  information.
+
+  Example::
+
+     variables=/etc/zuul/variables.yaml
+
 merger
 """"""
 

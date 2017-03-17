@@ -73,6 +73,24 @@ behavior.
 Variables
 ---------
 
+There are several sources of variables which are available to Ansible:
+variables defined in jobs, secrets, and site-wide variables.  The
+order of precedence is:
+
+* Site-wide variables
+
+* Secrets
+
+* Job variables
+
+Meaning that a site-wide variable with the same name as any other will
+override its value, and similarly, secrets override job variables of
+the same name.  Each of the three sources is described below.
+
+
+Job Variables
+~~~~~~~~~~~~~
+
 Any variables specified in the job definition are available as Ansible
 host variables.  They are added to the `vars` section of the inventory
 file under the `all` hosts group, so they are available to all hosts.
@@ -292,6 +310,19 @@ executor running the job is available:
 
 **zuul.executor.log_root**
   The path to the logs directory.
+
+
+.. _user_sitewide_variables:
+
+Site-wide Variables
+~~~~~~~~~~~~~~~~~~~
+
+The Zuul administrator may define variables which will be available to
+all jobs running in the system.  These are statically defined and may
+not be altered by jobs.  See the :ref:`Administrator's Guide
+<admin_sitewide_variables>` for information on how a site
+administrator may define these variables.
+
 
 SSH Keys
 --------

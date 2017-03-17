@@ -48,6 +48,27 @@
         Z3QSO1NjbBxWnaHKZYT7nkrJm8AMCgZU0ZArFLpaufKCeiK5ECSsDxic4FIsY1OkWT42qEUfL0Wd
         +150AKGNZpPJnnP3QYY4W/MWcKH/zdO400+zWN52WevbSqZy90tqKDJrBkMl1ydqbuw1E4ZHvIs=
 
+# This is used by the check-vars job to evaluate variable precedence.
+# The name of this secret conflicts with a site variable.
+- secret:
+    name: vartest_site
+    data:
+      value: vartest_secret
+
+# This is used by the check-vars job to evaluate variable precedence.
+# The name of this secret conflicts with a job variable.
+- secret:
+    name: vartest_job
+    data:
+      value: vartest_secret
+
+# This is used by the check-vars job to evaluate variable precedence.
+# The name of this secret should not conflict.
+- secret:
+    name: vartest_secret
+    data:
+      value: vartest_secret
+
 - job:
     name: base-urls
     success-url: https://success.example.com/zuul-logs/{build.uuid}/
@@ -77,6 +98,14 @@
     nodes:
       - name: ubuntu-xenial
         label: ubuntu-xenial
+    vars:
+      vartest_job: vartest_job
+      vartest_secret: vartest_job
+      vartest_site: vartest_job
+    auth:
+      secrets:
+        - vartest_site
+        - vartest_secret
 
 - job:
     parent: base-urls

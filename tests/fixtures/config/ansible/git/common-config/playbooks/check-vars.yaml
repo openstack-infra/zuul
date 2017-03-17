@@ -20,3 +20,13 @@
           - zuul.project.name == 'org/project'
           - zuul.project.canonical_hostname == 'review.example.com'
           - zuul.project.canonical_name == 'review.example.com/org/project'
+
+    - debug:
+        msg: "vartest secret {{ vartest_secret }}"
+
+    - name: Assert variable precedence.
+      assert:
+        that:
+          - vartest_job == 'vartest_job'
+          - vartest_secret.value == 'vartest_secret'
+          - vartest_site == 'vartest_site'
