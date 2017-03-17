@@ -190,7 +190,7 @@ class Pipeline(object):
             items.extend(shared_queue.queue)
         return items
 
-    def formatStatusJSON(self, url_pattern=None):
+    def formatStatusJSON(self):
         j_pipeline = dict(name=self.name,
                           description=self.description)
         j_queues = []
@@ -207,7 +207,7 @@ class Pipeline(object):
                     if j_changes:
                         j_queue['heads'].append(j_changes)
                     j_changes = []
-                j_changes.append(e.formatJSON(url_pattern))
+                j_changes.append(e.formatJSON())
                 if (len(j_changes) > 1 and
                         (j_changes[-2]['remaining_time'] is not None) and
                         (j_changes[-1]['remaining_time'] is not None)):
@@ -1425,10 +1425,10 @@ class QueueItem(object):
             fakebuild.result = 'SKIPPED'
             self.addBuild(fakebuild)
 
-    def formatJobResult(self, job, url_pattern=None):
+    def formatJobResult(self, job):
         build = self.current_build_set.getBuild(job.name)
         result = build.result
-        pattern = url_pattern
+        pattern = None
         if result == 'SUCCESS':
             if job.success_message:
                 result = job.success_message
@@ -1460,7 +1460,7 @@ class QueueItem(object):
             url = build.url or job.name
         return (result, url)
 
-    def formatJSON(self, url_pattern=None):
+    def formatJSON(self):
         changeish = self.change
         ret = {}
         ret['active'] = self.active
@@ -1503,7 +1503,7 @@ class QueueItem(object):
             if build:
                 result = build.result
                 build_url = build.url
-                (unused, report_url) = self.formatJobResult(job, url_pattern)
+                (unused, report_url) = self.formatJobResult(job)
                 if build.start_time:
                     if build.end_time:
                         elapsed = int((build.end_time -
