@@ -608,6 +608,7 @@ class PipelineParser(object):
                     'footer-message': str,
                     'dequeue-on-new-patchset': bool,
                     'ignore-dependencies': bool,
+                    'allow-secrets': bool,
                     'disable-after-consecutive-failures':
                         vs.All(int, vs.Range(min=1)),
                     'window': window,
@@ -655,6 +656,7 @@ class PipelineParser(object):
             'dequeue-on-new-patchset', True)
         pipeline.ignore_dependencies = conf.get(
             'ignore-dependencies', False)
+        pipeline.allow_secrets = conf.get('allow-secrets', False)
 
         for conf_key, action in PipelineParser.reporter_actions.items():
             reporter_set = []

@@ -2,6 +2,7 @@
     name: check
     manager: independent
     source: gerrit
+    allow-secrets: true
     trigger:
       gerrit:
         - event: patchset-created
