@@ -4,6 +4,7 @@
 mysql-client [test]
 mysql-server [test]
 libjpeg-dev [test]
+openssl [test]
 zookeeperd [platform:dpkg]
 build-essential [platform:dpkg]
 gcc [platform:rpm]

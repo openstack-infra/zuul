@@ -21,15 +21,11 @@ import textwrap
 
 import voluptuous as vs
 
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives import hashes
 from zuul import model
 import zuul.manager.dependent
 import zuul.manager.independent
 from zuul import change_matcher
+from zuul.lib import encryption
 
 
 # Several forms accept either a single item or a list, this makes
@@ -147,16 +143,7 @@ class EncryptedPKCS1(yaml.YAMLObject):
         return cls(node.value)
 
     def decrypt(self, private_key):
-        # https://cryptography.io/en/latest/hazmat/primitives/asymmetric/rsa/#decryption
-        plaintext = private_key.decrypt(
-            self.ciphertext,
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA1()),
-                algorithm=hashes.SHA1(),
-                label=None
-            )
-        )
-        return plaintext
+        return encryption.decrypt_pkcs1(self.ciphertext, private_key)
 
 
 class NodeSetParser(object):
@@ -793,26 +780,15 @@ class TenantParser(object):
         TenantParser.log.info(
             "Generating RSA keypair for project %s" % (project.name,)
         )
+        private_key, public_key = encryption.generate_rsa_keypair()
+        pem_private_key = encryption.serialize_rsa_private_key(private_key)
 
-        # Generate private RSA key
-        private_key = rsa.generate_private_key(
-            public_exponent=65537,
-            key_size=4096,
-            backend=default_backend()
-        )
-        # Serialize private key
-        pem_private_key = private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption()
-        )
-
+        # Dump keys to filesystem.  We only save the private key
+        # because the public key can be constructed from it.
         TenantParser.log.info(
             "Saving RSA keypair for project %s to %s" % (
                 project.name, project.private_key_file)
         )
-
-        # Dump keys to filesystem
         with open(project.private_key_file, 'wb') as f:
             f.write(pem_private_key)
 
@@ -824,16 +800,10 @@ class TenantParser(object):
                 'Private key file {0} not found'.format(
                     project.private_key_file))
 
-        # Load private key
+        # Load keypair
         with open(project.private_key_file, "rb") as f:
-            project.private_key = serialization.load_pem_private_key(
-                f.read(),
-                password=None,
-                backend=default_backend()
-            )
-
-        # Extract public key from private
-        project.public_key = project.private_key.public_key()
+            (project.private_key, project.public_key) = \
+                encryption.deserialize_rsa_keypair(f.read())
 
     @staticmethod
     def _loadTenantConfigRepos(project_key_dir, connections, conf_tenant):
