@@ -123,8 +123,8 @@ repo {repo} on branch {branch}.  The error was:
         loader.dispose()
 
 
-class EncryptedPKCS1(yaml.YAMLObject):
-    yaml_tag = u'!encrypted/pkcs1'
+class EncryptedPKCS1_OAEP(yaml.YAMLObject):
+    yaml_tag = u'!encrypted/pkcs1-oaep'
     yaml_loader = yaml.SafeLoader
 
     def __init__(self, ciphertext):
@@ -134,7 +134,7 @@ class EncryptedPKCS1(yaml.YAMLObject):
         return not self.__eq__(other)
 
     def __eq__(self, other):
-        if not isinstance(other, EncryptedPKCS1):
+        if not isinstance(other, EncryptedPKCS1_OAEP):
             return False
         return (self.ciphertext == other.ciphertext)
 
@@ -143,7 +143,7 @@ class EncryptedPKCS1(yaml.YAMLObject):
         return cls(node.value)
 
     def decrypt(self, private_key):
-        return encryption.decrypt_pkcs1(self.ciphertext, private_key)
+        return encryption.decrypt_pkcs1_oaep(self.ciphertext, private_key)
 
 
 class NodeSetParser(object):
@@ -175,7 +175,7 @@ class NodeSetParser(object):
 class SecretParser(object):
     @staticmethod
     def getSchema():
-        data = {str: vs.Any(str, EncryptedPKCS1)}
+        data = {str: vs.Any(str, EncryptedPKCS1_OAEP)}
 
         secret = {vs.Required('name'): str,
                   vs.Required('data'): data,

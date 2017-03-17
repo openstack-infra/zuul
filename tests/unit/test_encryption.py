@@ -39,14 +39,14 @@ class TestEncryption(BaseTestCase):
         self.assertEqual(self.public.public_numbers(),
                          public2.public_numbers())
 
-    def test_pkcs1(self):
+    def test_pkcs1_oaep(self):
         "Verify encryption and decryption"
         orig_plaintext = "some text to encrypt"
-        ciphertext = encryption.encrypt_pkcs1(orig_plaintext, self.public)
-        plaintext = encryption.decrypt_pkcs1(ciphertext, self.private)
+        ciphertext = encryption.encrypt_pkcs1_oaep(orig_plaintext, self.public)
+        plaintext = encryption.decrypt_pkcs1_oaep(ciphertext, self.private)
         self.assertEqual(orig_plaintext, plaintext)
 
-    def test_openssl_pkcs1(self):
+    def test_openssl_pkcs1_oaep(self):
         "Verify that we can decrypt something encrypted with OpenSSL"
         orig_plaintext = "some text to encrypt"
         pem_public = encryption.serialize_rsa_public_key(self.public)
@@ -65,5 +65,5 @@ class TestEncryption(BaseTestCase):
         finally:
             os.unlink(public_file.name)
 
-        plaintext = encryption.decrypt_pkcs1(ciphertext, self.private)
+        plaintext = encryption.decrypt_pkcs1_oaep(ciphertext, self.private)
         self.assertEqual(orig_plaintext, plaintext)

@@ -27,7 +27,7 @@ def main():
         private_key, public_key = \
             encryption.deserialize_rsa_keypair(f.read())
 
-    ciphertext = encryption.encrypt_pkcs1(sys.argv[1], public_key)
+    ciphertext = encryption.encrypt_pkcs1_oaep(sys.argv[1], public_key)
     print(ciphertext.encode('base64'))
 
 if __name__ == '__main__':
