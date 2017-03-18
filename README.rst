@@ -118,7 +118,7 @@ the following:
   Construct a test to fully simulate the series of events you want to
   see, then run it in the foreground.  For example::
 
-    .tox/py27/bin/python -m testtools.run tests.test_scheduler.TestScheduler.test_jobs_executed
+    .tox/py27/bin/python -m testtools.run tests.unit.test_scheduler.TestScheduler.test_jobs_executed
 
   See TESTING.rst for more information.
 
