@@ -1,0 +1,13 @@
+- job:
+    name: project1-test1
+    semaphore: test-semaphore
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - project1-test1
+
+- semaphore:
+    name: test-semaphore
+    max: 1

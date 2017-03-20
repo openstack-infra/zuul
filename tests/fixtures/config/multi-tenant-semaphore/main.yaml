@@ -1,0 +1,15 @@
+- tenant:
+    name: tenant-one
+    source:
+      gerrit:
+        config-repos:
+          - common-config
+          - tenant-one-config
+
+- tenant:
+    name: tenant-two
+    source:
+      gerrit:
+        config-repos:
+          - common-config
+          - tenant-two-config

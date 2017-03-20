@@ -86,7 +86,8 @@ def configuration_exceptions(stanza, conf):
 
 class ZuulSafeLoader(yaml.SafeLoader):
     zuul_node_types = frozenset(('job', 'nodeset', 'secret', 'pipeline',
-                                 'project', 'project-template'))
+                                 'project', 'project-template',
+                                 'semaphore'))
 
     def __init__(self, stream, context):
         super(ZuulSafeLoader, self).__init__(stream)
@@ -222,7 +223,7 @@ class JobParser(object):
                'success-url': str,
                'hold-following-changes': bool,
                'voting': bool,
-               'mutex': str,
+               'semaphore': str,
                'tags': to_list(str),
                'branches': to_list(str),
                'files': to_list(str),
@@ -250,7 +251,7 @@ class JobParser(object):
         'workspace',
         'voting',
         'hold-following-changes',
-        'mutex',
+        'semaphore',
         'attempts',
         'failure-message',
         'success-message',
@@ -720,6 +721,25 @@ class PipelineParser(object):
         return pipeline
 
 
+class SemaphoreParser(object):
+    @staticmethod
+    def getSchema():
+        semaphore = {vs.Required('name'): str,
+                     'max': int,
+                     '_source_context': model.SourceContext,
+                     '_start_mark': yaml.Mark,
+                     }
+
+        return vs.Schema(semaphore)
+
+    @staticmethod
+    def fromYaml(conf):
+        SemaphoreParser.getSchema()(conf)
+        semaphore = model.Semaphore(conf['name'], conf.get('max', 1))
+        semaphore.source_context = conf.get('_source_context')
+        return semaphore
+
+
 class TenantParser(object):
     log = logging.getLogger("zuul.TenantParser")
 
@@ -966,6 +986,9 @@ class TenantParser(object):
         for config_job in data.jobs:
             layout.addJob(JobParser.fromYaml(tenant, layout, config_job))
 
+        for config_semaphore in data.semaphores:
+            layout.addSemaphore(SemaphoreParser.fromYaml(config_semaphore))
+
         for config_template in data.project_templates:
             layout.addProjectTemplate(ProjectTemplateParser.fromYaml(
                 tenant, layout, config_template))
@@ -1071,6 +1094,12 @@ class ConfigLoader(object):
         # version of reality.  We do not support creating, updating,
         # or deleting pipelines in dynamic layout changes.
         layout.pipelines = tenant.layout.pipelines
+
+        # NOTE: the semaphore definitions are copied from the static layout
+        # here. For semaphores there should be no per patch max value but
+        # exactly one value at any time. So we do not support dynamic semaphore
+        # configuration changes.
+        layout.semaphores = tenant.layout.semaphores
 
         for config_job in config.jobs:
             layout.addJob(JobParser.fromYaml(tenant, layout, config_job))

@@ -644,10 +644,12 @@ each job as it builds a list from the project specification.
   would largely defeat the parallelization of dependent change testing
   that is the main feature of Zuul.  Default: ``false``.
 
-**mutex (optional)**
-  This is a string that names a mutex that should be observed by this
-  job.  Only one build of any job that references the same named mutex
-  will be enqueued at a time.  This applies across all pipelines.
+**semaphore (optional)**
+  This is a string that names a semaphore that should be observed by this
+  job.  The semaphore defines how many jobs which reference that semaphore
+  can be enqueued at a time.  This applies across all pipelines in the same
+  tenant.  The max value of the semaphore can be specified in the config
+  repositories and defaults to 1.
 
 **branch (optional)**
   This job should only be run on matching branches.  This field is
@@ -849,6 +851,21 @@ Note that if multiple templates are used for a project and one
 template specifies a job that is also specified in another template,
 or specified in the project itself, the configuration defined by
 either the last template or the project itself will take priority.
+
+
+Semaphores
+""""""""""
+
+When using semaphores the maximum value of each one can be specified in their
+respective config repositories.  Unspecified semaphores default to 1::
+
+  - semaphore:
+      name: semaphore-foo
+      max: 5
+  - semaphore:
+      name: semaphore-bar
+      max: 3
+
 
 logging.conf
 ~~~~~~~~~~~~
