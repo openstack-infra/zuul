@@ -12,7 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-
+import socket
 import time
 from unittest import skip
 
@@ -32,6 +32,7 @@ class TestNodepoolIntegration(BaseTestCase):
 
         self.zk = zuul.zk.ZooKeeper()
         self.zk.connect('localhost:2181')
+        self.hostname = socket.gethostname()
 
         self.provisioned_requests = []
         # This class implements the scheduler methods zuul.nodepool
