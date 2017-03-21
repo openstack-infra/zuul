@@ -83,7 +83,16 @@ class CallbackModule(default.CallbackModule):
             self._print_task_banner(task)
         if task.action == 'command':
             play_vars = self._play._variable_manager._hostvars
-            for host in self._play.hosts:
+
+            hosts = self._play.hosts
+            if 'all' in hosts:
+                # NOTE(jamielennox): play.hosts is purely the list of hosts
+                # that was provided not interpretted by inventory. We don't
+                # have inventory access here but we can assume that 'all' is
+                # everything in hostvars.
+                hosts = play_vars.keys()
+
+            for host in hosts:
                 ip = play_vars[host]['ansible_host']
                 daemon_stamp = self._daemon_stamp % host
                 if not os.path.exists(daemon_stamp):
