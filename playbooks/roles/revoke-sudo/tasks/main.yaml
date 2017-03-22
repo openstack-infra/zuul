@@ -1,0 +1,8 @@
+- name: Remove sudo access for zuul user.
+  become: yes
+  file:
+    path: /etc/sudoers.d/zuul-sudo
+    state: absent
+
+- name: Prove that general sudo access is actually revoked.
+  shell: ! sudo -n true
