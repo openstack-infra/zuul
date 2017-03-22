@@ -1,7 +1,7 @@
 - job:
     name: base
-    pre-run: base-pre
-    post-run: base-post
+    pre-run: base/pre
+    post-run: base/post
     success-url: http://zuulv3-dev.openstack.org/logs/{build.uuid}/
     failure-url: http://zuulv3-dev.openstack.org/logs/{build.uuid}/
     timeout: 1800
@@ -14,25 +14,29 @@
 - job:
     name: tox
     parent: base
-    pre-run: tox-pre
-    post-run: tox-post
+    pre-run: tox/pre
+    post-run: tox/post
 
 - job:
     name: tox-cover
     parent: tox
+    run: tox/cover
     voting: false
 
 - job:
     name: tox-docs
     parent: tox
+    run: tox/docs
 
 - job:
     name: tox-linters
     parent: tox
+    run: tox/docs
 
 - job:
     name: tox-py27
     parent: tox
+    run: tox/py27
 
 - project:
     name: openstack-infra/zuul
