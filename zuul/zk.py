@@ -34,36 +34,6 @@ class LockException(Exception):
     pass
 
 
-class ZooKeeperConnectionConfig(object):
-    '''
-    Represents the connection parameters for a ZooKeeper server.
-    '''
-
-    def __eq__(self, other):
-        if isinstance(other, ZooKeeperConnectionConfig):
-            if other.__dict__ == self.__dict__:
-                return True
-        return False
-
-    def __init__(self, host, port=2181, chroot=None):
-        '''Initialize the ZooKeeperConnectionConfig object.
-
-        :param str host: The hostname of the ZooKeeper server.
-        :param int port: The port on which ZooKeeper is listening.
-            Optional, default: 2181.
-        :param str chroot: A chroot for this connection.  All
-            ZooKeeper nodes will be underneath this root path.
-            Optional, default: None.
-
-        (one per server) defining the ZooKeeper cluster servers. Only
-        the 'host' attribute is required.'.
-
-        '''
-        self.host = host
-        self.port = port
-        self.chroot = chroot or ''
-
-
 class ZooKeeper(object):
     '''
     Class implementing the ZooKeeper interface.
@@ -127,21 +97,20 @@ class ZooKeeper(object):
     def resetLostFlag(self):
         self._became_lost = False
 
-    def connect(self, host_list, read_only=False):
+    def connect(self, hosts, read_only=False):
         '''
         Establish a connection with ZooKeeper cluster.
 
         Convenience method if a pre-existing ZooKeeper connection is not
         supplied to the ZooKeeper object at instantiation time.
 
-        :param list host_list: A list of
-            :py:class:`~nodepool.zk.ZooKeeperConnectionConfig` objects
-            (one per server) defining the ZooKeeper cluster servers.
+        :param str hosts: Comma-separated list of hosts to connect to (e.g.
+            127.0.0.1:2181,127.0.0.1:2182,[::1]:2183).
         :param bool read_only: If True, establishes a read-only connection.
 
         '''
         if self.client is None:
-            self.client = KazooClient(hosts=host_list, read_only=read_only)
+            self.client = KazooClient(hosts=hosts, read_only=read_only)
             self.client.add_listener(self._connection_listener)
             self.client.start()
 
@@ -157,16 +126,15 @@ class ZooKeeper(object):
             self.client.close()
             self.client = None
 
-    def resetHosts(self, host_list):
+    def resetHosts(self, hosts):
         '''
         Reset the ZooKeeper cluster connection host list.
 
-        :param list host_list: A list of
-            :py:class:`~nodepool.zk.ZooKeeperConnectionConfig` objects
-            (one per server) defining the ZooKeeper cluster servers.
+        :param str hosts: Comma-separated list of hosts to connect to (e.g.
+            127.0.0.1:2181,127.0.0.1:2182,[::1]:2183).
         '''
         if self.client is not None:
-            self.client.set_hosts(hosts=host_list)
+            self.client.set_hosts(hosts=hosts)
 
     def submitNodeRequest(self, node_request, watcher):
         '''
