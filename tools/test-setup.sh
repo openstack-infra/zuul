@@ -6,6 +6,10 @@
 
 # This setup needs to be run as a user that can run sudo.
 
+# Be sure mysql and zookeeper are started.
+sudo service mysql start
+sudo service zookeeper start
+
 # The root password for the MySQL database; pass it in via
 # MYSQL_ROOT_PW.
 DB_ROOT_PW=${MYSQL_ROOT_PW:-insecure_slave}
