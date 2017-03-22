@@ -50,7 +50,7 @@
 
 - job:
     parent: python27
-    name: nodepool
+    name: check-vars
     nodes:
       - name: ubuntu-xenial
         image: ubuntu-xenial

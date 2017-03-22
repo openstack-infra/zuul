@@ -6,3 +6,10 @@
           - nodepool_az == 'test-az'
           - nodepool_region == 'test-region'
           - nodepool_provider == 'test-provider'
+
+    - name: Assert zuul-executor variables are valid.
+      assert:
+        that:
+          - zuul.executor.hostname is defined
+          - zuul.executor.src_root is defined
+          - zuul.executor.log_root is defined

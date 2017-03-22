@@ -819,8 +819,10 @@ class AnsibleJob(object):
 
         with open(self.jobdir.vars, 'w') as vars_yaml:
             zuul_vars = dict(args['vars'])
-            zuul_vars['zuul']['executor'] = dict(src_root=self.jobdir.src_root,
-                                                 log_root=self.jobdir.log_root)
+            zuul_vars['zuul']['executor'] = dict(
+                hostname=self.executor_server.hostname,
+                src_root=self.jobdir.src_root,
+                log_root=self.jobdir.log_root)
             vars_yaml.write(
                 yaml.safe_dump(zuul_vars, default_flow_style=False))
         self.writeAnsibleConfig(self.jobdir.untrusted_config)

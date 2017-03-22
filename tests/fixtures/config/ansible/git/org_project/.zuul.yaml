@@ -8,5 +8,5 @@
       jobs:
         - python27
         - faillocal
-        - nodepool
+        - check-vars
         - timeout
