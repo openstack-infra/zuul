@@ -1,0 +1,13 @@
+---
+- name: Check if tools/test-setup.sh exists.
+  stat:
+    path: "/home/zuul/workspace/src/{{ zuul.project }}/tools/test-setup.sh"
+  register: p
+
+- name: Run tools/test-setup.sh.
+  shell: tools/test-setup.sh
+  args:
+    chdir: "/home/zuul/workspace/src/{{ zuul.project }}"
+  when:
+    - p.stat.exists
+    - p.stat.executable
