@@ -3,7 +3,7 @@
     - name: Find tox directories to synchrionize.
       find:
         file_type: directory
-        paths: "/home/zuul/workspace/src/{{ zuul.project }}/.tox"
+        paths: "{{ zuul_workspace_root }}/src/{{ zuul.project }}/.tox"
         # NOTE(pabelanger): The .tox/log folder is empty, ignore it.
         patterns: ^(?!log).*$
         use_regex: yes
