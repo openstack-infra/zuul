@@ -258,7 +258,7 @@ class ExecutorClient(object):
             params['ZUUL_CHANGE_IDS'] = zuul_changes
             params['ZUUL_CHANGE'] = str(item.change.number)
             params['ZUUL_PATCHSET'] = str(item.change.patchset)
-        if hasattr(item.change, 'ref'):
+        if hasattr(item.change, 'ref') and item.change.ref is not None:
             params['ZUUL_REFNAME'] = item.change.ref
             params['ZUUL_OLDREV'] = item.change.oldrev
             params['ZUUL_NEWREV'] = item.change.newrev

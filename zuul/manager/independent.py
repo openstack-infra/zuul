@@ -62,7 +62,7 @@ class IndependentPipelineManager(PipelineManager):
         # Return true if okay to proceed enqueing this change,
         # false if the change should not be enqueued.
         if not hasattr(change, 'needs_changes'):
-            self.log.debug("  Changeish does not support dependencies")
+            self.log.debug("  %s does not support dependencies" % type(change))
             return True
         if not change.needs_changes:
             self.log.debug("  No changes needed")
