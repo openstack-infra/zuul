@@ -634,13 +634,17 @@ class AnsibleJob(object):
         return result
 
     def getHostList(self, args):
-        # TODO(clarkb): This prefers v4 because we're not sure if we
-        # expect v6 to work.  If we can determine how to prefer v6
         hosts = []
         for node in args['nodes']:
-            ip = node.get('public_ipv4')
-            if not ip:
-                ip = node.get('public_ipv6')
+            # NOTE(mordred): This assumes that the nodepool launcher
+            # and the zuul executor both have similar network
+            # characteristics, as the launcher will do a test for ipv6
+            # viability and if so, and if the node has an ipv6
+            # address, it will be the interface_ip.  force-ipv4 can be
+            # set to True in the clouds.yaml for a cloud if this
+            # results in the wrong thing being in interface_ip
+            # TODO(jeblair): Move this notice to the docs.
+            ip = node.get('interface_ip')
             host_vars = dict(
                 ansible_host=ip,
                 nodepool_az=node.get('az'),
