@@ -1695,25 +1695,6 @@ class Change(Ref):
         return False
 
 
-class NullChange(Ref):
-    # TODOv3(jeblair): remove this in favor of enqueueing Refs (eg
-    # current master) instead.
-    def __repr__(self):
-        return '<NullChange for %s>' % (self.project)
-
-    def _id(self):
-        return None
-
-    def equals(self, other):
-        if (self.project == other.project
-            and other._id() is None):
-            return True
-        return False
-
-    def isUpdateOf(self, other):
-        return False
-
-
 class TriggerEvent(object):
     """Incoming event from an external system."""
     def __init__(self):
