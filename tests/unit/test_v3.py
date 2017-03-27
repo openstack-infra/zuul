@@ -266,7 +266,7 @@ class TestAnsible(AnsibleZuulTestCase):
         self.assertEqual(build.result, 'ABORTED')
         build = self.getJobFromHistory('faillocal')
         self.assertEqual(build.result, 'FAILURE')
-        build = self.getJobFromHistory('nodepool')
+        build = self.getJobFromHistory('check-vars')
         self.assertEqual(build.result, 'SUCCESS')
         build = self.getJobFromHistory('python27')
         self.assertEqual(build.result, 'SUCCESS')
