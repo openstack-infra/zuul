@@ -843,6 +843,7 @@ class AnsibleJob(object):
             if self.jobdir.roles_path:
                 config.write('roles_path = %s\n' %
                              ':'.join(self.jobdir.roles_path))
+            config.write('command_warnings = False\n')
             config.write('callback_plugins = %s\n'
                          % self.executor_server.callback_dir)
             config.write('stdout_callback = zuul_stream\n')
