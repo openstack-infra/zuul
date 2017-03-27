@@ -163,6 +163,9 @@ class Pipeline(object):
     def __repr__(self):
         return '<Pipeline %s>' % self.name
 
+    def getSafeAttributes(self):
+        return Attributes(name=self.name)
+
     def setManager(self, manager):
         self.manager = manager
 
@@ -756,6 +759,9 @@ class Job(object):
     def _get(self, name):
         return self.__dict__.get(name)
 
+    def getSafeAttributes(self):
+        return Attributes(name=self.name)
+
     def setRun(self):
         if not self.run:
             self.run = self.implied_run
@@ -984,6 +990,9 @@ class Build(object):
     def __repr__(self):
         return ('<Build %s of %s on %s>' %
                 (self.uuid, self.job.name, self.worker))
+
+    def getSafeAttributes(self):
+        return Attributes(uuid=self.uuid)
 
 
 class Worker(object):
@@ -1445,9 +1454,9 @@ class QueueItem(object):
         # the entire data structure where they might be able to access
         # secrets, etc.
         safe_change = self.change.getSafeAttributes()
-        safe_pipeline = Attributes(name=self.pipeline.name)
-        safe_job = Attributes(name=job.name)
-        safe_build = Attributes(uuid=build.uuid)
+        safe_pipeline = self.pipeline.getSafeAttributes()
+        safe_job = job.getSafeAttributes()
+        safe_build = build.getSafeAttributes()
         if pattern:
             try:
                 url = pattern.format(change=safe_change,
