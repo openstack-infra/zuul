@@ -13,7 +13,6 @@
 import logging
 
 from zuul import exceptions
-from zuul.model import NullChange
 
 
 class DynamicChangeQueueContextManager(object):
@@ -682,9 +681,8 @@ class PipelineManager(object):
             build_set.commit = event.commit
             build_set.files.setFiles(event.files)
         elif event.updated:
-            if not isinstance(item.change, NullChange):
-                build_set.commit = item.change.newrev
-        if not build_set.commit and not isinstance(item.change, NullChange):
+            build_set.commit = item.change.newrev
+        if not build_set.commit:
             self.log.info("Unable to merge change %s" % item.change)
             item.setUnableToMerge()
 
