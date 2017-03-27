@@ -1950,28 +1950,25 @@ class TestScheduler(ZuulTestCase):
         self.assertReportedStat('test-timing', '3|ms')
         self.assertReportedStat('test-gauge', '12|g')
 
-    @skip("Disabled for early v3 development")
     def test_stuck_job_cleanup(self):
         "Test that pending jobs are cleaned up if removed from layout"
-        # This job won't be registered at startup because it is not in
-        # the standard layout, but we need it to already be registerd
-        # for when we reconfigure, as that is when Zuul will attempt
-        # to run the new job.
-        self.worker.registerFunction('build:gate-noop')
+
+        # We want to hold the project-merge job that the fake change enqueues
         self.gearman_server.hold_jobs_in_queue = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
+        # The assertion is that we have one job in the queue, project-merge
         self.assertEqual(len(self.gearman_server.getQueue()), 1)
 
-        self.updateConfigLayout(
-            'tests/fixtures/layout-no-jobs.yaml')
+        self.commitLayoutUpdate('common-config', 'layout-no-jobs')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
         self.gearman_server.release('gate-noop')
         self.waitUntilSettled()
+        # asserting that project-merge is removed from queue
         self.assertEqual(len(self.gearman_server.getQueue()), 0)
         self.assertTrue(self.sched._areAllBuildsComplete())
 
