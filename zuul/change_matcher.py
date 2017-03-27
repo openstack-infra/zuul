@@ -62,7 +62,8 @@ class BranchMatcher(AbstractChangeMatcher):
     def matches(self, change):
         return (
             (hasattr(change, 'branch') and self.regex.match(change.branch)) or
-            (hasattr(change, 'ref') and self.regex.match(change.ref))
+            (hasattr(change, 'ref') and
+             change.ref is not None and self.regex.match(change.ref))
         )
 
 

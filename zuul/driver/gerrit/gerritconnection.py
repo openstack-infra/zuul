@@ -26,7 +26,7 @@ import pprint
 import voluptuous as v
 
 from zuul.connection import BaseConnection
-from zuul.model import TriggerEvent, Project, Change, Ref, NullChange
+from zuul.model import TriggerEvent, Project, Change, Ref
 from zuul import exceptions
 
 
@@ -293,7 +293,13 @@ class GerritConnection(BaseConnection):
             change.url = self._getGitwebUrl(project, sha=event.newrev)
         else:
             project = self.getProject(event.project_name)
-            change = NullChange(project)
+            change = Ref(project)
+            branch = event.branch or 'master'
+            change.ref = 'refs/heads/%s' % branch
+            refs = self.getInfoRefs(project)
+            change.oldrev = refs[change.ref]
+            change.newrev = refs[change.ref]
+            change.url = self._getGitwebUrl(project, sha=change.newrev)
         return change
 
     def _getChange(self, number, patchset, refresh=False, history=None):
