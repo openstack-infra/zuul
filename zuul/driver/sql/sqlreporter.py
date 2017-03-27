@@ -29,8 +29,7 @@ class SQLReporter(BaseReporter):
         super(SQLReporter, self).__init__(
             driver, connection, config)
         # TODO(jeblair): document this is stored as NULL if unspecified
-        # TODO(jhesketh): actually make this null in a followup change
-        self.result_score = config.get('score', 0)
+        self.result_score = config.get('score', None)
 
     def report(self, source, pipeline, item):
         """Create an entry into a database."""
