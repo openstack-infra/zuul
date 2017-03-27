@@ -641,11 +641,15 @@ class AnsibleJob(object):
             ip = node.get('public_ipv4')
             if not ip:
                 ip = node.get('public_ipv6')
-            hosts.append((node['name'], dict(
+            host_vars = dict(
                 ansible_host=ip,
                 nodepool_az=node.get('az'),
                 nodepool_provider=node.get('provider'),
-                nodepool_region=node.get('region'))))
+                nodepool_region=node.get('region'))
+            hosts.append(dict(
+                name=node['name'],
+                host_vars=host_vars,
+                host_keys=node.get('host_keys')))
         return hosts
 
     def _blockPluginDirs(self, path):
@@ -806,16 +810,19 @@ class AnsibleJob(object):
         self.jobdir.roles_path.append(role_path)
 
     def prepareAnsibleFiles(self, args):
+        keys = []
         with open(self.jobdir.inventory, 'w') as inventory:
-            for host_name, host_vars in self.getHostList(args):
-                inventory.write(host_name)
-                for k, v in host_vars.items():
+            for item in self.getHostList(args):
+                inventory.write(item['name'])
+                for k, v in item['host_vars'].items():
                     inventory.write(' %s=%s' % (k, v))
                 inventory.write('\n')
-                if 'ansible_host' in host_vars:
-                    os.system("ssh-keyscan %s >> %s" % (
-                        host_vars['ansible_host'],
-                        self.jobdir.known_hosts))
+                for key in item['host_keys']:
+                    keys.append(key)
+
+        with open(self.jobdir.known_hosts, 'w') as known_hosts:
+            for key in keys:
+                known_hosts.write('%s\n' % key)
 
         with open(self.jobdir.vars, 'w') as vars_yaml:
             zuul_vars = dict(args['vars'])
