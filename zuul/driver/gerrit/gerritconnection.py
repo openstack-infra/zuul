@@ -30,20 +30,6 @@ from zuul.model import TriggerEvent, Change, Ref
 from zuul import exceptions
 
 
-# Walk the change dependency tree to find a cycle
-def detect_cycle(change, history=None):
-    if history is None:
-        history = []
-    else:
-        history = history[:]
-    history.append(change.number)
-    for dep in change.needs_changes:
-        if dep.number in history:
-            raise Exception("Dependency cycle detected: %s in %s" % (
-                dep.number, history))
-        detect_cycle(dep, history)
-
-
 class GerritEventConnector(threading.Thread):
     """Move events from Gerrit to the scheduler."""
 
@@ -369,6 +355,13 @@ class GerritConnection(BaseConnection):
         return records
 
     def _updateChange(self, change, history=None):
+
+        # In case this change is already in the history we have a cyclic
+        # dependency and don't need to update ourselves again as this gets
+        # done in a previous frame of the call stack.
+        if history and change.number in history:
+            return change
+
         self.log.info("Updating %s" % (change,))
         data = self.query(change.number)
         change._data = data
@@ -418,18 +411,9 @@ class GerritConnection(BaseConnection):
         if 'dependsOn' in data:
             parts = data['dependsOn'][0]['ref'].split('/')
             dep_num, dep_ps = parts[3], parts[4]
-            if dep_num in history:
-                raise Exception("Dependency cycle detected: %s in %s" % (
-                    dep_num, history))
             self.log.debug("Updating %s: Getting git-dependent change %s,%s" %
                            (change, dep_num, dep_ps))
             dep = self._getChange(dep_num, dep_ps, history=history)
-            # Because we are not forcing a refresh in _getChange, it
-            # may return without executing this code, so if we are
-            # updating our change to add ourselves to a dependency
-            # cycle, we won't detect it.  By explicitly performing a
-            # walk of the dependency tree, we will.
-            detect_cycle(dep, history)
             if (not dep.is_merged) and dep not in needs_changes:
                 needs_changes.append(dep)
 
@@ -437,19 +421,10 @@ class GerritConnection(BaseConnection):
                                                    change):
             dep_num = record['number']
             dep_ps = record['currentPatchSet']['number']
-            if dep_num in history:
-                raise Exception("Dependency cycle detected: %s in %s" % (
-                    dep_num, history))
             self.log.debug("Updating %s: Getting commit-dependent "
                            "change %s,%s" %
                            (change, dep_num, dep_ps))
             dep = self._getChange(dep_num, dep_ps, history=history)
-            # Because we are not forcing a refresh in _getChange, it
-            # may return without executing this code, so if we are
-            # updating our change to add ourselves to a dependency
-            # cycle, we won't detect it.  By explicitly performing a
-            # walk of the dependency tree, we will.
-            detect_cycle(dep, history)
             if (not dep.is_merged) and dep not in needs_changes:
                 needs_changes.append(dep)
         change.needs_changes = needs_changes
@@ -461,7 +436,7 @@ class GerritConnection(BaseConnection):
                 dep_num, dep_ps = parts[3], parts[4]
                 self.log.debug("Updating %s: Getting git-needed change %s,%s" %
                                (change, dep_num, dep_ps))
-                dep = self._getChange(dep_num, dep_ps)
+                dep = self._getChange(dep_num, dep_ps, history=history)
                 if (not dep.is_merged) and dep.is_current_patchset:
                     needed_by_changes.append(dep)
 
@@ -473,8 +448,11 @@ class GerritConnection(BaseConnection):
             # Because a commit needed-by may be a cross-repo
             # dependency, cause that change to refresh so that it will
             # reference the latest patchset of its Depends-On (this
-            # change).
-            dep = self._getChange(dep_num, dep_ps, refresh=True)
+            # change). In case the dep is already in history we already
+            # refreshed this change so refresh is not needed in this case.
+            refresh = dep_num not in history
+            dep = self._getChange(
+                dep_num, dep_ps, refresh=refresh, history=history)
             if (not dep.is_merged) and dep.is_current_patchset:
                 needed_by_changes.append(dep)
         change.needed_by_changes = needed_by_changes

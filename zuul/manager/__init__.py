@@ -179,7 +179,7 @@ class PipelineManager(object):
         return True
 
     def enqueueChangesAhead(self, change, quiet, ignore_requirements,
-                            change_queue):
+                            change_queue, history=None):
         return True
 
     def enqueueChangesBehind(self, change, quiet, ignore_requirements,
@@ -278,7 +278,7 @@ class PipelineManager(object):
 
     def addChange(self, change, quiet=False, enqueue_time=None,
                   ignore_requirements=False, live=True,
-                  change_queue=None):
+                  change_queue=None, history=None):
         self.log.debug("Considering adding change %s" % change)
 
         # If we are adding a live change, check if it's a live item
@@ -309,7 +309,7 @@ class PipelineManager(object):
                 return False
 
             if not self.enqueueChangesAhead(change, quiet, ignore_requirements,
-                                            change_queue):
+                                            change_queue, history=history):
                 self.log.debug("Failed to enqueue changes "
                                "ahead of %s" % change)
                 return False
