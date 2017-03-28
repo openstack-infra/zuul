@@ -58,7 +58,7 @@ way to get started with this effort:
    Some of the information in the specs may be effectively superceded
    by changes here, which are still undergoing review.
 
-4) Read documentation on the internal data model and testing: http://docs.openstack.org/infra/zuul/feature/zuulv3/internals.html
+4) Read developer documentation on the internal data model and testing: http://docs.openstack.org/infra/zuul/feature/zuulv3/developer.html
 
    The general philosophy for Zuul tests is to perform functional
    testing of either the individual component or the entire end-to-end
