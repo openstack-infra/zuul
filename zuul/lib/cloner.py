@@ -17,13 +17,13 @@ import git
 import logging
 import os
 import re
-import yaml
 
 import six
 
 from git import GitCommandError
 from zuul import exceptions
 from zuul.lib.clonemapper import CloneMapper
+from zuul.lib import yamlutil as yaml
 from zuul.merger.merger import Repo
 
 

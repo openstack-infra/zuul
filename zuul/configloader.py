@@ -15,13 +15,13 @@ import copy
 import os
 import logging
 import six
-import yaml
 import pprint
 import textwrap
 
 import voluptuous as vs
 
 from zuul import model
+from zuul.lib import yamlutil as yaml
 import zuul.manager.dependent
 import zuul.manager.independent
 from zuul import change_matcher

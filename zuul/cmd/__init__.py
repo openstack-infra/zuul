@@ -24,10 +24,10 @@ import signal
 import sys
 import traceback
 
-import yaml
 yappi = extras.try_import('yappi')
 
 import zuul.lib.connections
+from zuul.lib import yamlutil as yaml
 
 # Do not import modules that will pull in paramiko which must not be
 # imported until after the daemonization.

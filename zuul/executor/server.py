@@ -24,7 +24,7 @@ import tempfile
 import threading
 import time
 import traceback
-import yaml
+from zuul.lib.yamlutil import yaml
 
 import gear
 import git
