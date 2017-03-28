@@ -27,9 +27,10 @@ class BaseSource(object):
 
     Defines the exact public methods that must be supplied."""
 
-    def __init__(self, source_config={}, connection=None):
-        self.source_config = source_config
+    def __init__(self, driver, connection, config=None):
+        self.driver = driver
         self.connection = connection
+        self.config = config or {}
 
     @abc.abstractmethod
     def getRefSha(self, project, ref):
