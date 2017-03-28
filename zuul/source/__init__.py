@@ -27,9 +27,10 @@ class BaseSource(object):
 
     Defines the exact public methods that must be supplied."""
 
-    def __init__(self, driver, connection, config=None):
+    def __init__(self, driver, connection, canonical_hostname, config=None):
         self.driver = driver
         self.connection = connection
+        self.canonical_hostname = canonical_hostname
         self.config = config or {}
 
     @abc.abstractmethod

@@ -20,6 +20,11 @@ class GerritSource(BaseSource):
     name = 'gerrit'
     log = logging.getLogger("zuul.source.Gerrit")
 
+    def __init__(self, driver, connection, config=None):
+        hostname = connection.canonical_hostname
+        super(GerritSource, self).__init__(driver, connection,
+                                           hostname, config)
+
     def getRefSha(self, project, ref):
         return self.connection.getRefSha(project, ref)
 

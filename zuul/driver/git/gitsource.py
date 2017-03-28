@@ -20,6 +20,11 @@ class GitSource(BaseSource):
     name = 'git'
     log = logging.getLogger("zuul.source.Git")
 
+    def __init__(self, driver, connection, config=None):
+        hostname = connection.canonical_hostname
+        super(GitSource, self).__init__(driver, connection,
+                                        hostname, config)
+
     def getRefSha(self, project, ref):
         raise NotImplemented()
 

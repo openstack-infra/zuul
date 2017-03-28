@@ -22,6 +22,13 @@ Create a connection with gerrit.
   FQDN of Gerrit server.
   ``server=review.example.com``
 
+**canonical_hostname**
+  The canonical hostname associated with the git repos on the Gerrit
+  server.  Defaults to the value of **server**.  This is used to
+  identify repos from this connection by name and in preparing repos
+  on the filesystem for use by jobs.
+  ``canonical_hostname=git.example.com``
+
 **port**
   Optional: Gerrit server port.
   ``port=29418``
