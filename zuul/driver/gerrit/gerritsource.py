@@ -14,6 +14,7 @@
 
 import logging
 from zuul.source import BaseSource
+from zuul.model import Project
 
 
 class GerritSource(BaseSource):
@@ -41,7 +42,11 @@ class GerritSource(BaseSource):
         return self.connection.getChange(event, refresh)
 
     def getProject(self, name):
-        return self.connection.getProject(name)
+        p = self.connection.getProject(name)
+        if not p:
+            p = Project(name, self)
+            self.connection.addProject(p)
+        return p
 
     def getProjectOpenChanges(self, project):
         return self.connection.getProjectOpenChanges(project)

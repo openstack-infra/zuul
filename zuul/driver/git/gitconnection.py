@@ -19,7 +19,6 @@ from six.moves import urllib
 import voluptuous as v
 
 from zuul.connection import BaseConnection
-from zuul.model import Project
 
 
 class GitConnection(BaseConnection):
@@ -44,9 +43,10 @@ class GitConnection(BaseConnection):
         self.projects = {}
 
     def getProject(self, name):
-        if name not in self.projects:
-            self.projects[name] = Project(name, self.connection_name)
-        return self.projects[name]
+        return self.projects.get(name)
+
+    def addProject(self, project):
+        self.projects[project.name] = project
 
     def getProjectBranches(self, project):
         # TODO(jeblair): implement; this will need to handle local or
