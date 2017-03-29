@@ -774,12 +774,12 @@ class TenantParser(object):
         tenant = model.Tenant(conf['name'])
         tenant.unparsed_config = conf
         unparsed_config = model.UnparsedTenantConfig()
-        tenant.config_repos, tenant.project_repos = \
+        config_repos, project_repos = \
             TenantParser._loadTenantConfigRepos(
                 project_key_dir, connections, conf)
-        for source, repo in tenant.config_repos:
+        for source, repo in config_repos:
             tenant.addConfigRepo(source, repo)
-        for source, repo in tenant.project_repos:
+        for source, repo in project_repos:
             tenant.addProjectRepo(source, repo)
         tenant.config_repos_config, tenant.project_repos_config = \
             TenantParser._loadTenantInRepoLayouts(merger, connections,

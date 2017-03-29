@@ -781,3 +781,137 @@ class TestGraph(BaseTestCase):
         graph.addJob(jobs[3])
         jobs[6].dependencies = frozenset([jobs[2].name])
         graph.addJob(jobs[6])
+
+
+class TestTenant(BaseTestCase):
+    def test_add_project(self):
+        tenant = model.Tenant('tenant')
+        connection1 = Dummy(connection_name='dummy_connection1')
+        source1 = Dummy(canonical_hostname='git1.example.com',
+                        name='dummy',  # TODOv3(jeblair): remove
+                        connection=connection1)
+
+        source1_project1 = model.Project('project1', source1)
+        tenant.addConfigRepo(source1, source1_project1)
+        d = {'project1':
+             {'git1.example.com': source1_project1}}
+        self.assertEqual(d, tenant.projects)
+        self.assertEqual((True, source1_project1),
+                         tenant.getProject('project1'))
+        self.assertEqual((True, source1_project1),
+                         tenant.getProject('git1.example.com/project1'))
+
+        source1_project2 = model.Project('project2', source1)
+        tenant.addProjectRepo(source1, source1_project2)
+        d = {'project1':
+             {'git1.example.com': source1_project1},
+             'project2':
+             {'git1.example.com': source1_project2}}
+        self.assertEqual(d, tenant.projects)
+        self.assertEqual((False, source1_project2),
+                         tenant.getProject('project2'))
+        self.assertEqual((False, source1_project2),
+                         tenant.getProject('git1.example.com/project2'))
+
+        connection2 = Dummy(connection_name='dummy_connection2')
+        source2 = Dummy(canonical_hostname='git2.example.com',
+                        name='dummy',  # TODOv3(jeblair): remove
+                        connection=connection2)
+
+        source2_project1 = model.Project('project1', source2)
+        tenant.addProjectRepo(source2, source2_project1)
+        d = {'project1':
+             {'git1.example.com': source1_project1,
+              'git2.example.com': source2_project1},
+             'project2':
+             {'git1.example.com': source1_project2}}
+        self.assertEqual(d, tenant.projects)
+        with testtools.ExpectedException(
+                Exception,
+                "Project name 'project1' is ambiguous"):
+            tenant.getProject('project1')
+        self.assertEqual((False, source1_project2),
+                         tenant.getProject('project2'))
+        self.assertEqual((True, source1_project1),
+                         tenant.getProject('git1.example.com/project1'))
+        self.assertEqual((False, source2_project1),
+                         tenant.getProject('git2.example.com/project1'))
+
+        source2_project2 = model.Project('project2', source2)
+        tenant.addConfigRepo(source2, source2_project2)
+        d = {'project1':
+             {'git1.example.com': source1_project1,
+              'git2.example.com': source2_project1},
+             'project2':
+             {'git1.example.com': source1_project2,
+              'git2.example.com': source2_project2}}
+        self.assertEqual(d, tenant.projects)
+        with testtools.ExpectedException(
+                Exception,
+                "Project name 'project1' is ambiguous"):
+            tenant.getProject('project1')
+        with testtools.ExpectedException(
+                Exception,
+                "Project name 'project2' is ambiguous"):
+            tenant.getProject('project2')
+        self.assertEqual((True, source1_project1),
+                         tenant.getProject('git1.example.com/project1'))
+        self.assertEqual((False, source2_project1),
+                         tenant.getProject('git2.example.com/project1'))
+        self.assertEqual((False, source1_project2),
+                         tenant.getProject('git1.example.com/project2'))
+        self.assertEqual((True, source2_project2),
+                         tenant.getProject('git2.example.com/project2'))
+
+        source1_project2b = model.Project('subpath/project2', source1)
+        tenant.addConfigRepo(source1, source1_project2b)
+        d = {'project1':
+             {'git1.example.com': source1_project1,
+              'git2.example.com': source2_project1},
+             'project2':
+             {'git1.example.com': source1_project2,
+              'git2.example.com': source2_project2},
+             'subpath/project2':
+             {'git1.example.com': source1_project2b}}
+        self.assertEqual(d, tenant.projects)
+        self.assertEqual((False, source1_project2),
+                         tenant.getProject('git1.example.com/project2'))
+        self.assertEqual((True, source2_project2),
+                         tenant.getProject('git2.example.com/project2'))
+        self.assertEqual((True, source1_project2b),
+                         tenant.getProject('subpath/project2'))
+        self.assertEqual(
+            (True, source1_project2b),
+            tenant.getProject('git1.example.com/subpath/project2'))
+
+        source2_project2b = model.Project('subpath/project2', source2)
+        tenant.addConfigRepo(source2, source2_project2b)
+        d = {'project1':
+             {'git1.example.com': source1_project1,
+              'git2.example.com': source2_project1},
+             'project2':
+             {'git1.example.com': source1_project2,
+              'git2.example.com': source2_project2},
+             'subpath/project2':
+             {'git1.example.com': source1_project2b,
+              'git2.example.com': source2_project2b}}
+        self.assertEqual(d, tenant.projects)
+        self.assertEqual((False, source1_project2),
+                         tenant.getProject('git1.example.com/project2'))
+        self.assertEqual((True, source2_project2),
+                         tenant.getProject('git2.example.com/project2'))
+        with testtools.ExpectedException(
+                Exception,
+                "Project name 'subpath/project2' is ambiguous"):
+            tenant.getProject('subpath/project2')
+        self.assertEqual(
+            (True, source1_project2b),
+            tenant.getProject('git1.example.com/subpath/project2'))
+        self.assertEqual(
+            (True, source2_project2b),
+            tenant.getProject('git2.example.com/subpath/project2'))
+
+        with testtools.ExpectedException(
+                Exception,
+                "Project project1 is already in project index"):
+            tenant._addProject(source1_project1)

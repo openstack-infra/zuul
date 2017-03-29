@@ -355,6 +355,7 @@ class Project(object):
         self.name = name
         self.connection_name = source.connection.connection_name
         self.canonical_hostname = source.canonical_hostname
+        self.canonical_name = source.canonical_hostname + '/' + name
         # foreign projects are those referenced in dependencies
         # of layout projects, this should matter
         # when deciding whether to enqueue their changes
@@ -2504,29 +2505,103 @@ class Tenant(object):
         # The list of repos from which we will read main
         # configuration.  (source, project)
         self.config_repos = []
+        # TODOv3(jeblair): This will replace the above list but drops the
+        # source element of the tuple.
+        self._config_repos = set()
         # The unparsed config from those repos.
         self.config_repos_config = None
         # The list of projects from which we will read in-repo
         # configuration.  (source, project)
         self.project_repos = []
+        # TODOv3(jeblair): This will replace the above list but drops the
+        # source element of the tuple.
+        self._project_repos = set()
         # The unparsed config from those repos.
         self.project_repos_config = None
         # A mapping of source -> {config_repos: {}, project_repos: {}}
         self.sources = {}
-
         self.semaphore_handler = SemaphoreHandler()
+
+        # A mapping of project names to projects.  project_name ->
+        # VALUE where VALUE is a further dictionary of
+        # canonical_hostname -> Project.
+        self.projects = {}
+        self.canonical_hostnames = set()
+
+    def _addProject(self, project):
+        """Add a project to the project index
+
+        :arg Project project: The project to add.
+        """
+        self.canonical_hostnames.add(project.canonical_hostname)
+        hostname_dict = self.projects.setdefault(project.name, {})
+        if project.canonical_hostname in hostname_dict:
+            raise Exception("Project %s is already in project index" %
+                            (project,))
+        hostname_dict[project.canonical_hostname] = project
+
+    def getProject(self, name):
+        """Return a project given its name.
+
+        :arg str name: The name of the project.  It may be fully
+            qualified (E.g., "git.example.com/subpath/project") or may
+            contain only the project name name may be supplied (E.g.,
+            "subpath/project").
+
+        :returns: A tuple (trusted, project) or (None, None) if the
+            project is not found or ambiguous.  The "trusted" boolean
+            indicates whether or not the project is trusted by this
+            tenant.
+        :rtype: (bool, Project)
+
+        """
+        path = name.split('/', 1)
+        if path[0] in self.canonical_hostnames:
+            hostname = path[0]
+            project_name = path[1]
+        else:
+            hostname = None
+            project_name = name
+        hostname_dict = self.projects.get(project_name)
+        project = None
+        if hostname_dict:
+            if hostname:
+                project = hostname_dict.get(hostname)
+            else:
+                values = hostname_dict.values()
+                if len(values) == 1:
+                    project = values[0]
+                else:
+                    raise Exception("Project name '%s' is ambiguous, "
+                                    "please fully qualify the project "
+                                    "with a hostname" % (name,))
+        if project is None:
+            return (None, None)
+        if project in self._config_repos:
+            return (True, project)
+        if project in self._project_repos:
+            return (False, project)
+        # This should never happen:
+        raise Exception("Project %s is neither trusted nor untrusted" %
+                        (project,))
 
     def addConfigRepo(self, source, project):
         sd = self.sources.setdefault(source.name,
                                      {'config_repos': {},
                                       'project_repos': {}})
         sd['config_repos'][project.name] = project
+        self.config_repos.append((source, project))
+        self._config_repos.add(project)
+        self._addProject(project)
 
     def addProjectRepo(self, source, project):
         sd = self.sources.setdefault(source.name,
                                      {'config_repos': {},
                                       'project_repos': {}})
         sd['project_repos'][project.name] = project
+        self.project_repos.append((source, project))
+        self._project_repos.add(project)
+        self._addProject(project)
 
     def getRepo(self, source, project_name):
         """Get a project given a source and project name
