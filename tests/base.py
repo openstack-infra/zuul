@@ -1927,7 +1927,9 @@ class ZuulTestCase(BaseTestCase):
     def getPipeline(self, name):
         return self.sched.abide.tenants.values()[0].layout.pipelines.get(name)
 
-    def updateConfigLayout(self, path):
+    def updateConfigLayout(self, path, project_repos=None):
+        if project_repos is None:
+            project_repos = []
         root = os.path.join(self.test_root, "config")
         if not os.path.exists(root):
             os.makedirs(root)
@@ -1939,7 +1941,26 @@ class ZuulTestCase(BaseTestCase):
       gerrit:
         config-repos:
           - %s
-        """ % path)
+        project-repos:
+          - org/project
+          - org/project1
+          - org/project2
+          - org/project3
+          - org/project4
+          - org/project5
+          - org/project6
+          - org/one-job-project
+          - org/nonvoting-project
+          - org/templated-project
+          - org/layered-project
+          - org/node-project
+          - org/conflict-project
+          - org/noop-project
+          - org/experimental-project
+          - org/no-jobs-project\n""" % path)
+
+        for repo in project_repos:
+            f.write("          - %s\n" % repo)
         f.close()
         self.config.set('zuul', 'tenant_config',
                         os.path.join(FIXTURE_DIR, f.name))

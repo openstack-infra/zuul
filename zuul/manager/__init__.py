@@ -461,7 +461,7 @@ class PipelineManager(object):
                     url=self.pipeline.source.getGitUrl(
                         item.change.project),
                     connection_name=connection_name,
-                    merge_mode=item.current_build_set.getMergeMode(project),
+                    merge_mode=item.current_build_set.getMergeMode(),
                     refspec=refspec,
                     branch=branch,
                     ref=item.current_build_set.ref,

@@ -1239,10 +1239,14 @@ class BuildSet(object):
     def getTries(self, job_name):
         return self.tries.get(job_name)
 
-    def getMergeMode(self, job_name):
-        if not self.layout or job_name not in self.layout.project_configs:
-            return MERGER_MERGE_RESOLVE
-        return self.layout.project_configs[job_name].merge_mode
+    def getMergeMode(self):
+        if self.layout:
+            project = self.item.change.project
+            project_config = self.layout.project_configs.get(
+                project.canonical_name)
+            if project_config:
+                return project_config.merge_mode
+        return MERGER_MERGE_RESOLVE
 
 
 class QueueItem(object):
@@ -1843,7 +1847,7 @@ class TriggerEvent(object):
         return self.project_hostname + '/' + self.project_name
 
     def __repr__(self):
-        ret = '<TriggerEvent %s %s' % (self.type, self.project_name)
+        ret = '<TriggerEvent %s %s' % (self.type, self.canonical_project_name)
 
         if self.branch:
             ret += " %s" % self.branch
@@ -2401,7 +2405,7 @@ class Layout(object):
 
     def createJobGraph(self, item):
         project_config = self.project_configs.get(
-            item.change.project.name, None)
+            item.change.project.canonical_name, None)
         ret = JobGraph()
         # NOTE(pabelanger): It is possible for a foreign project not to have a
         # configured pipeline, if so return an empty JobGraph.

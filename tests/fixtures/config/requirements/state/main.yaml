@@ -4,3 +4,7 @@
       gerrit:
         config-repos:
           - common-config
+        project-repos:
+          - current-project
+          - open-project
+          - status-project

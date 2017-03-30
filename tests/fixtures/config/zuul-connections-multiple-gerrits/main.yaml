@@ -4,3 +4,8 @@
       review_gerrit:
         config-repos:
           - common-config
+        project-repos:
+          - org/project1
+      another_gerrit:
+        project-repos:
+          - org/project1

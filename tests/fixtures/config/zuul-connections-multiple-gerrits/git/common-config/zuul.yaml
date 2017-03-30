@@ -33,10 +33,13 @@
     name: project-test2
 
 - project:
-    name: org/project1
+    name: review.example.com/org/project1
     review_check:
       jobs:
         - project-test1
+
+- project:
+    name: another.example.com/org/project1
     another_check:
       jobs:
         - project-test2

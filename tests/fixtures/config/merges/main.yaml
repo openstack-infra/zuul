@@ -4,3 +4,9 @@
       gerrit:
         config-repos:
           - common-config
+        project-repos:
+          - org/project-cherry-pick
+          - org/project-merge
+          - org/project-merge-branches
+          - org/project-merge-resolve
+

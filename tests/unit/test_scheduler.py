@@ -1498,8 +1498,8 @@ class TestScheduler(ZuulTestCase):
         # https://bugs.executepad.net/zuul/+bug/1078946
         # This test assumes the repo is already cloned; make sure it is
         tenant = self.sched.abide.tenants.get('tenant-one')
-        url = self.fake_gerrit.getGitUrl(
-            tenant.layout.project_configs.get('org/project1'))
+        trusted, project = tenant.getProject('org/project1')
+        url = self.fake_gerrit.getGitUrl(project)
         self.merge_server.merger.addProject('org/project1', url)
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         A.addPatchset(large=True)
@@ -2881,7 +2881,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.reported, 2)
 
     def test_repo_deleted(self):
-        self.updateConfigLayout('layout-repo-deleted')
+        self.updateConfigLayout('layout-repo-deleted', ['org/delete-project'])
         self.sched.reconfigure(self.config)
 
         self.init_repo("org/delete-project")

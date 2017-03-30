@@ -5,6 +5,9 @@
         config-repos:
           - common-config
           - tenant-one-config
+        project-repos:
+          - org/project1
+          - org/project2
 
 - tenant:
     name: tenant-two
@@ -13,3 +16,6 @@
         config-repos:
           - common-config
           - tenant-two-config
+        project-repos:
+          - org/project1
+          - org/project2
