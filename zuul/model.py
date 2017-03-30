@@ -2518,8 +2518,6 @@ class Tenant(object):
         self._project_repos = set()
         # The unparsed config from those repos.
         self.project_repos_config = None
-        # A mapping of source -> {config_repos: {}, project_repos: {}}
-        self.sources = {}
         self.semaphore_handler = SemaphoreHandler()
 
         # A mapping of project names to projects.  project_name ->
@@ -2586,41 +2584,14 @@ class Tenant(object):
                         (project,))
 
     def addConfigRepo(self, source, project):
-        sd = self.sources.setdefault(source.name,
-                                     {'config_repos': {},
-                                      'project_repos': {}})
-        sd['config_repos'][project.name] = project
         self.config_repos.append((source, project))
         self._config_repos.add(project)
         self._addProject(project)
 
     def addProjectRepo(self, source, project):
-        sd = self.sources.setdefault(source.name,
-                                     {'config_repos': {},
-                                      'project_repos': {}})
-        sd['project_repos'][project.name] = project
         self.project_repos.append((source, project))
         self._project_repos.add(project)
         self._addProject(project)
-
-    def getRepo(self, source, project_name):
-        """Get a project given a source and project name
-
-        Returns a tuple (trusted, project) or (None, None) if the
-        project is not found.
-
-        Trusted indicates the project is a config repo.
-
-        """
-
-        sd = self.sources.get(source)
-        if not sd:
-            return (None, None)
-        if project_name in sd['config_repos']:
-            return (True, sd['config_repos'][project_name])
-        if project_name in sd['project_repos']:
-            return (False, sd['project_repos'][project_name])
-        return (None, None)
 
 
 class Abide(object):
