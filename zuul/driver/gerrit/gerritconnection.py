@@ -76,6 +76,7 @@ class GerritEventConnector(threading.Thread):
         event.type = data.get('type')
         event.trigger_name = 'gerrit'
         change = data.get('change')
+        event.project_hostname = self.connection.canonical_hostname
         if change:
             event.project_name = change.get('project')
             event.branch = change.get('branch')

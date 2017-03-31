@@ -76,6 +76,7 @@ class ZuulDriver(Driver, TriggerInterface):
         event = TriggerEvent()
         event.type = PROJECT_CHANGE_MERGED
         event.trigger_name = self.name
+        event.project_hostname = change.project.canonical_hostname
         event.project_name = change.project.name
         event.change_number = change.number
         event.branch = change.branch
@@ -97,6 +98,7 @@ class ZuulDriver(Driver, TriggerInterface):
         event.type = PARENT_CHANGE_ENQUEUED
         event.trigger_name = self.name
         event.pipeline_name = pipeline.name
+        event.project_hostname = change.project.canonical_hostname
         event.project_name = change.project.name
         event.change_number = change.number
         event.branch = change.branch

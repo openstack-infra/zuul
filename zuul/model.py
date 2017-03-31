@@ -1813,6 +1813,7 @@ class TriggerEvent(object):
         self.type = None
         # For management events (eg: enqueue / promote)
         self.tenant_name = None
+        self.project_hostname = None
         self.project_name = None
         self.trigger_name = None
         # Representation of the user account that performed the event.
@@ -1836,6 +1837,10 @@ class TriggerEvent(object):
         # For events that arrive with a destination pipeline (eg, from
         # an admin command, etc):
         self.forced_pipeline = None
+
+    @property
+    def canonical_project_name(self):
+        return self.project_hostname + '/' + self.project_name
 
     def __repr__(self):
         ret = '<TriggerEvent %s %s' % (self.type, self.project_name)
