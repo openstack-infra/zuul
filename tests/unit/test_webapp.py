@@ -15,11 +15,12 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import os
 import json
 
 from six.moves import urllib
 
-from tests.base import ZuulTestCase
+from tests.base import ZuulTestCase, FIXTURE_DIR
 
 
 class TestWebapp(ZuulTestCase):
@@ -85,3 +86,13 @@ class TestWebapp(ZuulTestCase):
 
         self.assertEqual(1, len(data), data)
         self.assertEqual("org/project1", data[0]['project'], data)
+
+    def test_webapp_keys(self):
+        with open(os.path.join(FIXTURE_DIR, 'public.pem')) as f:
+            public_pem = f.read()
+
+        req = urllib.request.Request(
+            "http://localhost:%s/tenant-one/keys/gerrit/org/project.pub" %
+            self.port)
+        f = urllib.request.urlopen(req)
+        self.assertEqual(f.read(), public_pem)
