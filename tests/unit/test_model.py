@@ -27,11 +27,24 @@ from zuul.lib import encryption
 from tests.base import BaseTestCase, FIXTURE_DIR
 
 
+class FakeSource(object):
+    def __init__(self, name):
+        self.name = name
+
+
 class TestJob(BaseTestCase):
 
     def setUp(self):
         super(TestJob, self).setUp()
-        self.project = model.Project('project', None)
+        self.tenant = model.Tenant('tenant')
+        self.layout = model.Layout()
+        self.project = model.Project('project', 'connection')
+        self.source = FakeSource('connection')
+        self.tenant.addProjectRepo(self.source, self.project)
+        self.pipeline = model.Pipeline('gate', self.layout)
+        self.layout.addPipeline(self.pipeline)
+        self.queue = model.ChangeQueue(self.pipeline)
+
         private_key_file = os.path.join(FIXTURE_DIR, 'private.pem')
         with open(private_key_file, "rb") as f:
             self.project.private_key, self.project.public_key = \
@@ -565,6 +578,43 @@ class TestJob(BaseTestCase):
                 "Job base in other_project is not permitted "
                 "to shadow job base in base_project"):
             layout.addJob(base2)
+
+    def test_job_allowed_projects(self):
+        job = configloader.JobParser.fromYaml(self.tenant, self.layout, {
+            '_source_context': self.context,
+            '_start_mark': self.start_mark,
+            'name': 'job',
+            'allowed-projects': ['project'],
+        })
+        self.layout.addJob(job)
+
+        project2 = model.Project('project2', None)
+        context2 = model.SourceContext(project2, 'master',
+                                       'test', True)
+
+        project2_config = configloader.ProjectParser.fromYaml(
+            self.tenant, self.layout, [{
+                '_source_context': context2,
+                '_start_mark': self.start_mark,
+                'name': 'project2',
+                'gate': {
+                    'jobs': [
+                        'job'
+                    ]
+                }
+            }]
+        )
+        self.layout.addProjectConfig(project2_config)
+
+        change = model.Change(project2)
+        # Test master
+        change.branch = 'master'
+        item = self.queue.enqueueChange(change)
+        item.current_build_set.layout = self.layout
+        with testtools.ExpectedException(
+                Exception,
+                "Project project2 is not allowed to run job job"):
+            item.freezeJobGraph()
 
 
 class TestJobTimeData(BaseTestCase):

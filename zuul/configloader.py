@@ -240,6 +240,7 @@ class JobParser(object):
                'repos': to_list(str),
                'vars': dict,
                'dependencies': to_list(str),
+               'allowed-projects': to_list(str),
                }
 
         return vs.Schema(job)
@@ -348,6 +349,19 @@ class JobParser(object):
         variables = conf.get('vars', None)
         if variables:
             job.updateVariables(variables)
+
+        allowed_projects = conf.get('allowed-projects', None)
+        if allowed_projects:
+            allowed = []
+            for p in as_list(allowed_projects):
+                # TODOv3(jeblair): this limits allowed_projects to the same
+                # source; we should remove that limitation.
+                source = job.source_context.project.connection_name
+                (trusted, project) = tenant.getRepo(source, p)
+                if project is None:
+                    raise Exception("Unknown project %s" % (p,))
+                allowed.append(project.name)
+            job.allowed_projects = frozenset(allowed)
 
         # If the definition for this job came from a project repo,
         # implicitly apply a branch matcher for the branch it was on.

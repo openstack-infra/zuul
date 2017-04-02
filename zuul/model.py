@@ -764,6 +764,7 @@ class Job(object):
             final=False,
             roles=frozenset(),
             repos=frozenset(),
+            allowed_projects=None,
         )
 
         # These are generally internal attributes which are not
@@ -2327,6 +2328,10 @@ class Layout(object):
                 # A change must match at least one project pipeline
                 # job variant.
                 continue
+            if (frozen_job.allowed_projects and
+                change.project.name not in frozen_job.allowed_projects):
+                raise Exception("Project %s is not allowed to run job %s" %
+                                (change.project.name, frozen_job.name))
             job_graph.addJob(frozen_job)
 
     def createJobGraph(self, item):
