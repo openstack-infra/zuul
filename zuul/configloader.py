@@ -24,6 +24,8 @@ import voluptuous as vs
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import hashes
 from zuul import model
 import zuul.manager.dependent
 import zuul.manager.independent
@@ -130,11 +132,31 @@ class EncryptedPKCS1(yaml.YAMLObject):
     yaml_loader = yaml.SafeLoader
 
     def __init__(self, ciphertext):
-        self.ciphertext = ciphertext
+        self.ciphertext = ciphertext.decode('base64')
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        if not isinstance(other, EncryptedPKCS1):
+            return False
+        return (self.ciphertext == other.ciphertext)
 
     @classmethod
     def from_yaml(cls, loader, node):
         return cls(node.value)
+
+    def decrypt(self, private_key):
+        # https://cryptography.io/en/latest/hazmat/primitives/asymmetric/rsa/#decryption
+        plaintext = private_key.decrypt(
+            self.ciphertext,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                algorithm=hashes.SHA1(),
+                label=None
+            )
+        )
+        return plaintext
 
 
 class NodeSetParser(object):
@@ -272,7 +294,8 @@ class JobParser(object):
                         "Unable to use secret %s.  Secrets must be "
                         "defined in the same project in which they "
                         "are used" % secret_name)
-                job.auth.secrets.append(secret)
+                job.auth.secrets.append(secret.decrypt(
+                    job.source_context.project.private_key))
 
         if 'parent' in conf:
             parent = layout.getJob(conf['parent'])

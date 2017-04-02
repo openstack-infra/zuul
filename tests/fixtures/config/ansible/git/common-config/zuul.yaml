@@ -57,6 +57,9 @@
       flagpath: '{{zuul._test.test_root}}/{{zuul.uuid}}.flag'
     roles:
       - zuul: bare-role
+    auth:
+      secrets:
+        - test_secret
 
 - job:
     parent: python27
