@@ -616,6 +616,43 @@ class TestJob(BaseTestCase):
                 "Project project2 is not allowed to run job job"):
             item.freezeJobGraph()
 
+    def test_job_pipeline_allow_secrets(self):
+        self.pipeline.allow_secrets = False
+        job = configloader.JobParser.fromYaml(self.tenant, self.layout, {
+            '_source_context': self.context,
+            '_start_mark': self.start_mark,
+            'name': 'job',
+        })
+        auth = model.AuthContext()
+        auth.secrets.append('foo')
+        job.auth = auth
+
+        self.layout.addJob(job)
+
+        project_config = configloader.ProjectParser.fromYaml(
+            self.tenant, self.layout, [{
+                '_source_context': self.context,
+                '_start_mark': self.start_mark,
+                'name': 'project',
+                'gate': {
+                    'jobs': [
+                        'job'
+                    ]
+                }
+            }]
+        )
+        self.layout.addProjectConfig(project_config)
+
+        change = model.Change(self.project)
+        # Test master
+        change.branch = 'master'
+        item = self.queue.enqueueChange(change)
+        item.current_build_set.layout = self.layout
+        with testtools.ExpectedException(
+                Exception,
+                "Pipeline gate does not allow jobs with secrets"):
+            item.freezeJobGraph()
+
 
 class TestJobTimeData(BaseTestCase):
     def setUp(self):

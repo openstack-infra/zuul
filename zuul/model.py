@@ -121,6 +121,7 @@ class Pipeline(object):
         self.success_message = None
         self.footer_message = None
         self.start_message = None
+        self.allow_secrets = False
         self.dequeue_on_new_patchset = True
         self.ignore_dependencies = False
         self.manager = None
@@ -2293,7 +2294,9 @@ class Layout(object):
     def addProjectConfig(self, project_config):
         self.project_configs[project_config.name] = project_config
 
-    def _createJobGraph(self, change, job_list, job_graph):
+    def _createJobGraph(self, item, job_list, job_graph):
+        change = item.change
+        pipeline = item.pipeline
         for jobname in job_list.jobs:
             # This is the final job we are constructing
             frozen_job = None
@@ -2332,6 +2335,11 @@ class Layout(object):
                 change.project.name not in frozen_job.allowed_projects):
                 raise Exception("Project %s is not allowed to run job %s" %
                                 (change.project.name, frozen_job.name))
+            if ((not pipeline.allow_secrets) and frozen_job.auth and
+                frozen_job.auth.secrets):
+                raise Exception("Pipeline %s does not allow jobs with "
+                                "secrets (job %s)" % (
+                                    pipeline.name, frozen_job.name))
             job_graph.addJob(frozen_job)
 
     def createJobGraph(self, item):
@@ -2343,7 +2351,7 @@ class Layout(object):
         if project_config and item.pipeline.name in project_config.pipelines:
             project_job_list = \
                 project_config.pipelines[item.pipeline.name].job_list
-            self._createJobGraph(item.change, project_job_list, ret)
+            self._createJobGraph(item, project_job_list, ret)
         return ret
 
 
