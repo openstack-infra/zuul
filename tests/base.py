@@ -50,6 +50,7 @@ import testtools
 import testtools.content
 import testtools.content_type
 from git.exc import NoSuchPathError
+import yaml
 
 import zuul.driver.gerrit.gerritsource as gerritsource
 import zuul.driver.gerrit.gerritconnection as gerritconnection
@@ -1213,6 +1214,11 @@ class ZuulTestCase(BaseTestCase):
         different tenant/project layout while using the standard main
         configuration.
 
+    :cvar bool create_project_keys: Indicates whether Zuul should
+        auto-generate keys for each project, or whether the test
+        infrastructure should insert dummy keys to save time during
+        startup.  Defaults to False.
+
     The following are instance variables that are useful within test
     methods:
 
@@ -1244,6 +1250,7 @@ class ZuulTestCase(BaseTestCase):
 
     config_file = 'zuul.conf'
     run_ansible = False
+    create_project_keys = False
 
     def _startMerger(self):
         self.merge_server = zuul.merger.server.MergeServer(self.config,
@@ -1438,6 +1445,39 @@ class ZuulTestCase(BaseTestCase):
                     project = reponame.replace('_', '/')
                     self.copyDirToRepo(project,
                                        os.path.join(git_path, reponame))
+        self.setupAllProjectKeys()
+
+    def setupAllProjectKeys(self):
+        if self.create_project_keys:
+            return
+
+        path = self.config.get('zuul', 'tenant_config')
+        with open(os.path.join(FIXTURE_DIR, path)) as f:
+            tenant_config = yaml.safe_load(f.read())
+        for tenant in tenant_config:
+            sources = tenant['tenant']['source']
+            for source, conf in sources.items():
+                for project in conf.get('config-repos', []):
+                    self.setupProjectKeys(source, project)
+                for project in conf.get('project-repos', []):
+                    self.setupProjectKeys(source, project)
+
+    def setupProjectKeys(self, source, project):
+        # Make sure we set up an RSA key for the project so that we
+        # don't spend time generating one:
+
+        key_root = os.path.join(self.state_root, 'keys')
+        if not os.path.isdir(key_root):
+            os.mkdir(key_root, 0o700)
+        private_key_file = os.path.join(key_root, source, project + '.pem')
+        private_key_dir = os.path.dirname(private_key_file)
+        self.log.debug("Installing test keys for project %s at %s" % (
+            project, private_key_file))
+        if not os.path.isdir(private_key_dir):
+            os.makedirs(private_key_dir)
+        with open(os.path.join(FIXTURE_DIR, 'private.pem')) as i:
+            with open(private_key_file, 'w') as o:
+                o.write(i.read())
 
     def setupZK(self):
         self.zk_chroot_fixture = self.useFixture(ChrootedKazooFixture())
@@ -1473,6 +1513,22 @@ class ZuulTestCase(BaseTestCase):
             self.assertFalse(node['_lock'], "Node %s is locked" %
                              (node['_oid'],))
 
+    def assertNoGeneratedKeys(self):
+        # Make sure that Zuul did not generate any project keys
+        # (unless it was supposed to).
+
+        if self.create_project_keys:
+            return
+
+        with open(os.path.join(FIXTURE_DIR, 'private.pem')) as i:
+            test_key = i.read()
+
+        key_root = os.path.join(self.state_root, 'keys')
+        for root, dirname, files in os.walk(key_root):
+            for fn in files:
+                with open(os.path.join(root, fn)) as f:
+                    self.assertEqual(test_key, f.read())
+
     def assertFinalState(self):
         # Make sure that git.Repo objects have been garbage collected.
         repos = []
@@ -1484,6 +1540,7 @@ class ZuulTestCase(BaseTestCase):
         self.assertEqual(len(repos), 0)
         self.assertEmptyQueues()
         self.assertNodepoolState()
+        self.assertNoGeneratedKeys()
         ipm = zuul.manager.independent.IndependentPipelineManager
         for tenant in self.sched.abide.tenants.values():
             for pipeline in tenant.layout.pipelines.values():
@@ -1850,6 +1907,7 @@ class ZuulTestCase(BaseTestCase):
         f.close()
         self.config.set('zuul', 'tenant_config',
                         os.path.join(FIXTURE_DIR, f.name))
+        self.setupAllProjectKeys()
 
     def addCommitToRepo(self, project, message, files,
                         branch='master', tag=None):

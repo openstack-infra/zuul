@@ -19,3 +19,4 @@ ansible>=2.0.0.1
 kazoo
 sqlalchemy
 alembic
+cryptography>=1.6
