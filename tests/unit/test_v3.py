@@ -17,11 +17,10 @@
 import os
 import textwrap
 
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.backends import default_backend
 import testtools
 
 import zuul.configloader
+from zuul.lib import encryption
 from tests.base import AnsibleZuulTestCase, ZuulTestCase, FIXTURE_DIR
 
 
@@ -328,11 +327,8 @@ class TestProjectKeys(ZuulTestCase):
         private_key_file = os.path.join(key_root, 'gerrit/org/project.pem')
         # Make sure that a proper key was created on startup
         with open(private_key_file, "rb") as f:
-            private_key = serialization.load_pem_private_key(
-                f.read(),
-                password=None,
-                backend=default_backend()
-            )
+            private_key, public_key = \
+                encryption.deserialize_rsa_keypair(f.read())
 
         with open(os.path.join(FIXTURE_DIR, 'private.pem')) as i:
             fixture_private_key = i.read()

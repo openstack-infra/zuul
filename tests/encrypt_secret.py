@@ -15,10 +15,7 @@
 import sys
 import os
 
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives import hashes
+from zuul.lib import encryption
 
 FIXTURE_DIR = os.path.join(os.path.dirname(__file__),
                            'fixtures')
@@ -27,24 +24,10 @@ FIXTURE_DIR = os.path.join(os.path.dirname(__file__),
 def main():
     private_key_file = os.path.join(FIXTURE_DIR, 'private.pem')
     with open(private_key_file, "rb") as f:
-        private_key = serialization.load_pem_private_key(
-            f.read(),
-            password=None,
-            backend=default_backend()
-        )
+        private_key, public_key = \
+            encryption.deserialize_rsa_keypair(f.read())
 
-    # Extract public key from private
-    public_key = private_key.public_key()
-
-    # https://cryptography.io/en/stable/hazmat/primitives/asymmetric/rsa/#encryption
-    ciphertext = public_key.encrypt(
-        sys.argv[1],
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA1()),
-            algorithm=hashes.SHA1(),
-            label=None
-        )
-    )
+    ciphertext = encryption.encrypt_pkcs1(sys.argv[1], public_key)
     print(ciphertext.encode('base64'))
 
 if __name__ == '__main__':

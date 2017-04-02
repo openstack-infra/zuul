@@ -19,11 +19,10 @@ import random
 import fixtures
 import testtools
 import yaml
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.backends import default_backend
 
 from zuul import model
 from zuul import configloader
+from zuul.lib import encryption
 
 from tests.base import BaseTestCase, FIXTURE_DIR
 
@@ -35,11 +34,8 @@ class TestJob(BaseTestCase):
         self.project = model.Project('project', None)
         private_key_file = os.path.join(FIXTURE_DIR, 'private.pem')
         with open(private_key_file, "rb") as f:
-            self.project.private_key = serialization.load_pem_private_key(
-                f.read(),
-                password=None,
-                backend=default_backend()
-            )
+            self.project.private_key, self.project.public_key = \
+                encryption.deserialize_rsa_keypair(f.read())
         self.context = model.SourceContext(self.project, 'master',
                                            'test', True)
         self.start_mark = yaml.Mark('name', 0, 0, 0, '', 0)
