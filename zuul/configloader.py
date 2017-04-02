@@ -180,7 +180,7 @@ class SecretParser(object):
     def fromYaml(layout, conf):
         with configuration_exceptions('secret', conf):
             SecretParser.getSchema()(conf)
-        s = model.Secret(conf['name'])
+        s = model.Secret(conf['name'], conf['_source_context'])
         s.secret_data = conf['data']
         return s
 
@@ -261,7 +261,18 @@ class JobParser(object):
         job = model.Job(conf['name'])
         job.source_context = conf.get('_source_context')
         if 'auth' in conf:
-            job.auth = conf.get('auth')
+            job.auth = model.AuthContext()
+            if 'inherit' in conf['auth']:
+                job.auth.inherit = conf['auth']['inherit']
+
+            for secret_name in conf['auth'].get('secrets', []):
+                secret = layout.secrets[secret_name]
+                if secret.source_context != job.source_context:
+                    raise Exception(
+                        "Unable to use secret %s.  Secrets must be "
+                        "defined in the same project in which they "
+                        "are used" % secret_name)
+                job.auth.secrets.append(secret)
 
         if 'parent' in conf:
             parent = layout.getJob(conf['parent'])

@@ -73,7 +73,7 @@ class TestJob(BaseTestCase):
         base.pre_run = [base_pre]
         base.run = [base_run]
         base.post_run = [base_post]
-        base.auth = dict(foo='bar', inherit=False)
+        base.auth = model.AuthContext()
 
         py27 = model.Job('py27')
         self.assertEqual(None, py27.timeout)
@@ -85,7 +85,7 @@ class TestJob(BaseTestCase):
                          [x.path for x in py27.run])
         self.assertEqual(['base-post'],
                          [x.path for x in py27.post_run])
-        self.assertEqual({}, py27.auth)
+        self.assertEqual(None, py27.auth)
 
     def test_job_variants(self):
         # This simulates freezing a job.
@@ -99,7 +99,8 @@ class TestJob(BaseTestCase):
         py27.pre_run = [py27_pre]
         py27.run = [py27_run]
         py27.post_run = [py27_post]
-        auth = dict(foo='bar', inherit=False)
+        auth = model.AuthContext()
+        auth.secrets.append('foo')
         py27.auth = auth
 
         job = py27.copy()
@@ -401,11 +402,11 @@ class TestJob(BaseTestCase):
             })
         layout.addJob(in_repo_job_with_inherit_false)
 
-        self.assertNotIn('auth', in_repo_job_without_inherit.auth)
-        self.assertIn('secrets', in_repo_job_with_inherit.auth)
-        self.assertEquals(in_repo_job_with_inherit.auth['secrets'],
-                          ['pypi-credentials'])
-        self.assertNotIn('auth', in_repo_job_with_inherit_false.auth)
+        self.assertEqual(None, in_repo_job_without_inherit.auth)
+        self.assertEqual(1, len(in_repo_job_with_inherit.auth.secrets))
+        self.assertEqual(in_repo_job_with_inherit.auth.secrets[0].name,
+                         'pypi-credentials')
+        self.assertEqual(None, in_repo_job_with_inherit_false.auth)
 
     def test_job_inheritance_job_tree(self):
         tenant = model.Tenant('tenant')
