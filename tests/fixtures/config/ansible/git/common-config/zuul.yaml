@@ -38,7 +38,7 @@
     name: test_secret
     data:
       username: test-username
-      password: !encrypted/pkcs1 |
+      password: !encrypted/pkcs1-oaep |
         BFhtdnm8uXx7kn79RFL/zJywmzLkT1GY78P3bOtp4WghUFWobkifSu7ZpaV4NeO0s71YUsi1wGZZ
         L0LveZjUN0t6OU1VZKSG8R5Ly7urjaSo1pPVIq5Rtt/H7W14Lecd+cUeKb4joeusC9drN3AA8a4o
         ykcVpt1wVqUnTbMGC9ARMCQP6eopcs1l7tzMseprW4RDNhIuz3CRgd0QBMPl6VDoFgBPB8vxtJw+

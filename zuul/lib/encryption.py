@@ -95,10 +95,10 @@ def deserialize_rsa_keypair(data):
 
 
 # https://cryptography.io/en/latest/hazmat/primitives/asymmetric/rsa/#decryption
-def decrypt_pkcs1(ciphertext, private_key):
-    """Decrypt PKCS1 (RSAES-OAEP) encoded ciphertext
+def decrypt_pkcs1_oaep(ciphertext, private_key):
+    """Decrypt PKCS#1 (RSAES-OAEP) encoded ciphertext
 
-    :arg ciphertext: A string previously encrypted with PKCS1
+    :arg ciphertext: A string previously encrypted with PKCS#1
         (RSAES-OAEP).
     :arg private_key: A private key object as returned by
         :func:generate_rsa_keypair()
@@ -117,10 +117,10 @@ def decrypt_pkcs1(ciphertext, private_key):
 
 
 # https://cryptography.io/en/latest/hazmat/primitives/asymmetric/rsa/#encryption
-def encrypt_pkcs1(plaintext, public_key):
-    """Encrypt data with PKCS1 (RSAES-OAEP)
+def encrypt_pkcs1_oaep(plaintext, public_key):
+    """Encrypt data with PKCS#1 (RSAES-OAEP)
 
-    :arg plaintext: A string to encrypt with PKCS1 (RSAES-OAEP).
+    :arg plaintext: A string to encrypt with PKCS#1 (RSAES-OAEP).
 
     :arg public_key: A public key object as returned by
         :func:generate_rsa_keypair()
