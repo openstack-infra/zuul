@@ -151,6 +151,15 @@
 
 - project:
     name: org/project2
+    check:
+      jobs:
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
+        - project1-project2-integration:
+            dependencies: project-merge
     gate:
       queue: integrated
       jobs:
