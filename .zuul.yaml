@@ -31,7 +31,7 @@
 - job:
     name: tox-linters
     parent: tox
-    run: tox/docs
+    run: tox/linters
 
 - job:
     name: tox-py27
