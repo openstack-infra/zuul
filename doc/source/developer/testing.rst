@@ -19,7 +19,7 @@ the environment being simulated in the test:
 .. autoclass:: tests.base.FakeGearmanServer
    :members:
 
-.. autoclass:: tests.base.RecordingLaunchServer
+.. autoclass:: tests.base.RecordingExecutorServer
    :members:
 
 .. autoclass:: tests.base.FakeBuild

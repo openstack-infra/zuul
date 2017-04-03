@@ -26,12 +26,12 @@ A :py:class:`~zuul.model.Pipeline` has one or more
 
 A :py:class:`~zuul.model.Job` represents the definition of what to do. A
 :py:class:`~zuul.model.Build` represents a single run of a
-:py:class:`~zuul.model.Job`. A :py:class:`~zuul.model.JobTree` is used to
+:py:class:`~zuul.model.Job`. A :py:class:`~zuul.model.JobGraph` is used to
 encapsulate the dependencies between one or more :py:class:`~zuul.model.Job`
 objects.
 
 .. autoclass:: zuul.model.Job
-.. autoclass:: zuul.model.JobTree
+.. autoclass:: zuul.model.JobGraph
 .. autoclass:: zuul.model.Build
 
 The :py:class:`~zuul.manager.base.PipelineManager` enqueues each
@@ -48,7 +48,6 @@ a :py:class:`~zuul.model.BuildSet`
 Changes
 ~~~~~~~
 
-.. autoclass:: zuul.model.Changeish
 .. autoclass:: zuul.model.Change
 .. autoclass:: zuul.model.Ref
 

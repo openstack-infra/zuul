@@ -664,8 +664,8 @@ class FakeBuild(object):
         """Return whether this build has certain changes in its git repos.
 
         :arg FakeChange changes: One or more changes (varargs) that
-        are expected to be present (in order) in the git repository of
-        the active project.
+            are expected to be present (in order) in the git repository of
+            the active project.
 
         :returns: Whether the build has the indicated changes.
         :rtype: bool
@@ -1970,7 +1970,7 @@ class ZuulTestCase(BaseTestCase):
             this method.
 
         :arg str connection: The name of the connection corresponding
-        to the gerrit server.
+            to the gerrit server.
         :arg str event: The JSON-encoded event.
 
         """
