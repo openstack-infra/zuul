@@ -27,10 +27,10 @@ class TestGitDriver(ZuulTestCase):
         tenant = self.sched.abide.tenants.get('tenant-one')
         # Check that we have the git source for common-config and the
         # gerrit source for the project.
-        self.assertEqual('git', tenant.config_repos[0].source.name)
-        self.assertEqual('common-config', tenant.config_repos[0].name)
-        self.assertEqual('gerrit', tenant.project_repos[0].source.name)
-        self.assertEqual('org/project', tenant.project_repos[0].name)
+        self.assertEqual('git', tenant.config_projects[0].source.name)
+        self.assertEqual('common-config', tenant.config_projects[0].name)
+        self.assertEqual('gerrit', tenant.untrusted_projects[0].source.name)
+        self.assertEqual('org/project', tenant.untrusted_projects[0].name)
 
         # The configuration for this test is accessed via the git
         # driver (in common-config), rather than the gerrit driver, so

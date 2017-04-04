@@ -2,9 +2,9 @@
     name: tenant-one
     source:
       gerrit:
-        config-repos:
+        config-projects:
           - common-config
-        project-repos:
+        untrusted-projects:
           - current-project
           - open-project
           - status-project

@@ -2,8 +2,8 @@
     name: tenant-one
     source:
       git:
-        config-repos:
+        config-projects:
           - common-config
       gerrit:
-        project-repos:
+        untrusted-projects:
           - org/project

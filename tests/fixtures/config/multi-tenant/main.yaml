@@ -2,18 +2,18 @@
     name: tenant-one
     source:
       gerrit:
-        config-repos:
+        config-projects:
           - common-config
           - tenant-one-config
-        project-repos:
+        untrusted-projects:
           - org/project1
 
 - tenant:
     name: tenant-two
     source:
       gerrit:
-        config-repos:
+        config-projects:
           - common-config
           - tenant-two-config
-        project-repos:
+        untrusted-projects:
           - org/project2

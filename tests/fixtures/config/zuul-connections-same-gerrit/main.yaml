@@ -2,7 +2,7 @@
     name: tenant-one
     source:
       review_gerrit:
-        config-repos:
+        config-projects:
           - common-config
-        project-repos:
+        untrusted-projects:
           - org/project

@@ -1475,9 +1475,9 @@ class ZuulTestCase(BaseTestCase):
         for tenant in tenant_config:
             sources = tenant['tenant']['source']
             for source, conf in sources.items():
-                for project in conf.get('config-repos', []):
+                for project in conf.get('config-projects', []):
                     self.setupProjectKeys(source, project)
-                for project in conf.get('project-repos', []):
+                for project in conf.get('untrusted-projects', []):
                     self.setupProjectKeys(source, project)
 
     def setupProjectKeys(self, source, project):
@@ -1927,9 +1927,9 @@ class ZuulTestCase(BaseTestCase):
     def getPipeline(self, name):
         return self.sched.abide.tenants.values()[0].layout.pipelines.get(name)
 
-    def updateConfigLayout(self, path, project_repos=None):
-        if project_repos is None:
-            project_repos = []
+    def updateConfigLayout(self, path, untrusted_projects=None):
+        if untrusted_projects is None:
+            untrusted_projects = []
         root = os.path.join(self.test_root, "config")
         if not os.path.exists(root):
             os.makedirs(root)
@@ -1939,9 +1939,9 @@ class ZuulTestCase(BaseTestCase):
     name: openstack
     source:
       gerrit:
-        config-repos:
+        config-projects:
           - %s
-        project-repos:
+        untrusted-projects:
           - org/project
           - org/project1
           - org/project2
@@ -1959,7 +1959,7 @@ class ZuulTestCase(BaseTestCase):
           - org/experimental-project
           - org/no-jobs-project\n""" % path)
 
-        for repo in project_repos:
+        for repo in untrusted_projects:
             f.write("          - %s\n" % repo)
         f.close()
         self.config.set('zuul', 'tenant_config',
