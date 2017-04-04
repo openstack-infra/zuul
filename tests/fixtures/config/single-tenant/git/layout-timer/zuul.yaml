@@ -1,7 +1,6 @@
 - pipeline:
     name: check
     manager: independent
-    source: gerrit
     trigger:
       gerrit:
         - event: patchset-created
@@ -15,7 +14,6 @@
 - pipeline:
     name: periodic
     manager: independent
-    source: gerrit
     trigger:
       timer:
         - time: '* * * * * */1'

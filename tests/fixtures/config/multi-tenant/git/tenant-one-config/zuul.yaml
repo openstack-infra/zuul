@@ -2,7 +2,6 @@
     name: tenant-one-gate
     manager: dependent
     success-message: Build succeeded (tenant-one-gate).
-    source: gerrit
     trigger:
       gerrit:
         - event: comment-added

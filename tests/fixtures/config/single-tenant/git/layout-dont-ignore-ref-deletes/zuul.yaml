@@ -1,7 +1,6 @@
 - pipeline:
     name: post
     manager: independent
-    source: gerrit
     trigger:
       gerrit:
         - event: ref-updated
