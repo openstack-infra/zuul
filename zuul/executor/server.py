@@ -337,6 +337,13 @@ class ExecutorServer(object):
         else:
             self.merge_name = None
 
+        if self.config.has_option('executor', 'untrusted_wrapper'):
+            untrusted_wrapper_name = self.config.get(
+                'executor', 'untrusted_wrapper').split()
+        else:
+            untrusted_wrapper_name = 'bubblewrap'
+        self.untrusted_wrapper = connections.drivers[untrusted_wrapper_name]
+
         self.connections = connections
         # This merger and its git repos are used to maintain
         # up-to-date copies of all the repos that are used by jobs, as
@@ -353,6 +360,7 @@ class ExecutorServer(object):
         path = os.path.join(state_dir, 'executor.socket')
         self.command_socket = commandsocket.CommandSocket(path)
         ansible_dir = os.path.join(state_dir, 'ansible')
+        self.ansible_dir = ansible_dir
         self.library_dir = os.path.join(ansible_dir, 'library')
         if not os.path.exists(self.library_dir):
             os.makedirs(self.library_dir)
@@ -1120,8 +1128,14 @@ class AnsibleJob(object):
 
         if trusted:
             config_file = self.jobdir.trusted_config
+            popen = subprocess.Popen
         else:
             config_file = self.jobdir.untrusted_config
+            driver = self.executor_server.untrusted_wrapper
+            popen = driver.getPopen(
+                work_dir=self.jobdir.root,
+                ansible_dir=self.executor_server.ansible_dir,
+                ssh_auth_sock=env_copy.get('SSH_AUTH_SOCK'))
 
         env_copy['ANSIBLE_CONFIG'] = config_file
 
@@ -1130,7 +1144,7 @@ class AnsibleJob(object):
                 return (self.RESULT_ABORTED, None)
             self.log.debug("Ansible command: ANSIBLE_CONFIG=%s %s",
                            config_file, " ".join(shlex_quote(c) for c in cmd))
-            self.proc = subprocess.Popen(
+            self.proc = popen(
                 cmd,
                 cwd=self.jobdir.work_root,
                 stdout=subprocess.PIPE,

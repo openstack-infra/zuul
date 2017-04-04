@@ -254,3 +254,27 @@ class ReporterInterface(object):
 
         """
         pass
+
+
+@six.add_metaclass(abc.ABCMeta)
+class WrapperInterface(object):
+    """The wrapper interface to be implmeneted by a driver.
+
+    A driver which wraps execution of commands executed by Zuul should
+    implement this interface.
+
+    """
+
+    @abc.abstractmethod
+    def getPopen(self, **kwargs):
+        """Create and return a subprocess.Popen factory wrapped however the
+        driver sees fit.
+
+        This method is required by the interface
+
+        :arg dict kwargs: key/values for use by driver as needed
+
+        :returns: a callable that takes the same args as subprocess.Popen
+        :rtype: Callable
+        """
+        pass
