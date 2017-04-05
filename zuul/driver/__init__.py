@@ -117,16 +117,19 @@ class ConnectionInterface(object):
 class TriggerInterface(object):
     """The trigger interface.
 
-    A driver which is able to supply a Trigger should implement this
+    A driver which is able to supply a trigger should implement this
     interface.
 
     """
 
     @abc.abstractmethod
     def getTrigger(self, connection, config=None):
-        """Create and return a new Trigger object.
+        """Create and return a new trigger object.
 
         This method is required by the interface.
+
+        The trigger object returned should inherit from the
+        :py:class:`~zuul.trigger.BaseTrigger` class.
 
         :arg Connection connection: The Connection object associated
             with the trigger (as previously returned by getConnection)
@@ -134,8 +137,8 @@ class TriggerInterface(object):
         :arg dict config: The configuration information supplied along
             with the trigger in the layout.
 
-        :returns: A new Trigger object.
-        :rtype: Trigger
+        :returns: A new trigger object.
+        :rtype: :py:class:`~zuul.trigger.BaseTrigger`
 
         """
         pass
