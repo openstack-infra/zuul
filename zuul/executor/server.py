@@ -646,10 +646,15 @@ class AnsibleJob(object):
                 nodepool_az=node.get('az'),
                 nodepool_provider=node.get('provider'),
                 nodepool_region=node.get('region'))
+
+            host_keys = []
+            for key in node.get('host_keys'):
+                host_keys.append("%s %s" % (ip, key))
+
             hosts.append(dict(
                 name=node['name'],
                 host_vars=host_vars,
-                host_keys=node.get('host_keys')))
+                host_keys=host_keys))
         return hosts
 
     def _blockPluginDirs(self, path):
