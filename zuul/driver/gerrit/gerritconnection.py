@@ -93,6 +93,9 @@ class GerritEventConnector(threading.Thread):
             event.ref = refupdate.get('refName')
             event.oldrev = refupdate.get('oldRev')
             event.newrev = refupdate.get('newRev')
+        if event.project_name is None:
+            # ref-replica* events
+            event.project_name = data.get('project')
         # Map the event types to a field name holding a Gerrit
         # account attribute. See Gerrit stream-event documentation
         # in cmd-stream-events.html
