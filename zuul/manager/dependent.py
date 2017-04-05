@@ -79,16 +79,17 @@ class DependentPipelineManager(PipelineManager):
             self.pipeline.getQueue(change.project))
 
     def isChangeReadyToBeEnqueued(self, change):
-        if not self.pipeline.source.canMerge(change,
-                                             self.getSubmitAllowNeeds()):
+        source = change.project.source
+        if not source.canMerge(change, self.getSubmitAllowNeeds()):
             self.log.debug("Change %s can not merge, ignoring" % change)
             return False
         return True
 
     def enqueueChangesBehind(self, change, quiet, ignore_requirements,
                              change_queue):
-        to_enqueue = []
         self.log.debug("Checking for changes needing %s:" % change)
+        to_enqueue = []
+        source = change.project.source
         if not hasattr(change, 'needed_by_changes'):
             self.log.debug("  %s does not support dependencies" % type(change))
             return
@@ -100,8 +101,7 @@ class DependentPipelineManager(PipelineManager):
                                    (other_change, other_change.project,
                                     change_queue))
                     continue
-            if self.pipeline.source.canMerge(other_change,
-                                             self.getSubmitAllowNeeds()):
+            if source.canMerge(other_change, self.getSubmitAllowNeeds()):
                 self.log.debug("  Change %s needs %s and is ready to merge" %
                                (other_change, change))
                 to_enqueue.append(other_change)
@@ -131,6 +131,7 @@ class DependentPipelineManager(PipelineManager):
 
     def checkForChangesNeededBy(self, change, change_queue):
         self.log.debug("Checking for changes needed by %s:" % change)
+        source = change.project.source
         # Return true if okay to proceed enqueing this change,
         # false if the change should not be enqueued.
         if not hasattr(change, 'needs_changes'):
@@ -164,8 +165,7 @@ class DependentPipelineManager(PipelineManager):
                     self.log.debug("  Needed change is already ahead "
                                    "in the queue")
                     continue
-                if self.pipeline.source.canMerge(needed_change,
-                                                 self.getSubmitAllowNeeds()):
+                if source.canMerge(needed_change, self.getSubmitAllowNeeds()):
                     self.log.debug("  Change %s is needed" % needed_change)
                     if needed_change not in changes_needed:
                         changes_needed.append(needed_change)

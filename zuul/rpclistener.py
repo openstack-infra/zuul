@@ -120,15 +120,15 @@ class RPCListener(object):
         else:
             errors += 'Invalid tenant: %s\n' % (args['tenant'],)
 
-        return (args, event, errors, pipeline, project)
+        return (args, event, errors, project)
 
     def handle_enqueue(self, job):
-        (args, event, errors, pipeline, project) = self._common_enqueue(job)
+        (args, event, errors, project) = self._common_enqueue(job)
 
         if not errors:
             event.change_number, event.patch_number = args['change'].split(',')
             try:
-                pipeline.source.getChange(event, project)
+                project.source.getChange(event, project)
             except Exception:
                 errors += 'Invalid change: %s\n' % (args['change'],)
 
@@ -139,7 +139,7 @@ class RPCListener(object):
             job.sendWorkComplete()
 
     def handle_enqueue_ref(self, job):
-        (args, event, errors, pipeline, project) = self._common_enqueue(job)
+        (args, event, errors, project) = self._common_enqueue(job)
 
         if not errors:
             event.ref = args['ref']

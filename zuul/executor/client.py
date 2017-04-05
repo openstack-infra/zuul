@@ -45,12 +45,12 @@ def make_merger_item(item):
         oldrev = None
         newrev = None
         branch = None
-    connection_name = item.pipeline.source.connection.connection_name
+    source = item.change.project.source
+    connection_name = source.connection.connection_name
     project = item.change.project.name
 
     return dict(project=project,
-                url=item.pipeline.source.getGitUrl(
-                    item.change.project),
+                url=source.getGitUrl(item.change.project),
                 connection_name=connection_name,
                 merge_mode=item.current_build_set.getMergeMode(),
                 refspec=refspec,
@@ -209,6 +209,7 @@ class ExecutorClient(object):
         return False
 
     def execute(self, job, item, pipeline, dependent_items=[]):
+        tenant = pipeline.layout.tenant
         uuid = str(uuid4().hex)
         self.log.info(
             "Execute job %s (uuid: %s) on nodes %s for change %s "
@@ -319,18 +320,22 @@ class ExecutorClient(object):
         projects = set()
         if job.repos:
             for repo in job.repos:
-                project = item.pipeline.source.getProject(repo)
+                (trusted, project) = tenant.getProject(repo)
+                connection = project.source.connection
                 params['projects'].append(
-                    dict(name=repo,
-                         url=item.pipeline.source.getGitUrl(project)))
+                    dict(name=project.name,
+                         connection_name=connection.connection_name,
+                         url=project.source.getGitUrl(project)))
                 projects.add(project)
         for item in all_items:
             if item.change.project not in projects:
+                project = item.change.project
+                connection = item.change.project.source.connection
                 params['projects'].append(
-                    dict(name=item.change.project.name,
-                         url=item.pipeline.source.getGitUrl(
-                             item.change.project)))
-                projects.add(item.change.project)
+                    dict(name=project.name,
+                         connection_name=connection.connection_name,
+                         url=project.source.getGitUrl(project)))
+                projects.add(project)
 
         build = Build(job, uuid)
         build.parameters = params
