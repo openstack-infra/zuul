@@ -3349,11 +3349,9 @@ class TestScheduler(ZuulTestCase):
         self.executor_server.release()
         self.waitUntilSettled()
 
-    @skip("Disabled for early v3 development")
     def test_queue_rate_limiting(self):
         "Test that DependentPipelines are rate limited with dep across window"
-        self.updateConfigLayout(
-            'tests/fixtures/layout-rate-limit.yaml')
+        self.updateConfigLayout('layout-rate-limit')
         self.sched.reconfigure(self.config)
         self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -3394,7 +3392,8 @@ class TestScheduler(ZuulTestCase):
         self.executor_server.release('project-.*')
         self.waitUntilSettled()
 
-        queue = self.sched.layout.pipelines['gate'].queues[0]
+        tenant = self.sched.abide.tenants.get('openstack')
+        queue = tenant.layout.pipelines['gate'].queues[0]
         # A failed so window is reduced by 1 to 1.
         self.assertEqual(queue.window, 1)
         self.assertEqual(queue.window_floor, 1)
