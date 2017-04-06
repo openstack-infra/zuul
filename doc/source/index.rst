@@ -24,7 +24,7 @@ Contents:
    executors
    statsd
    client
-   developer
+   developer/index
 
 Indices and tables
 ==================

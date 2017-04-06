@@ -12,4 +12,5 @@ Zuul, though advanced users may find it interesting.
 
    datamodel
    drivers
+   triggers
    testing
