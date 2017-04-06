@@ -33,68 +33,6 @@ from zuul import exceptions
 from zuul import version as zuul_version
 
 
-class MutexHandler(object):
-    log = logging.getLogger("zuul.MutexHandler")
-
-    def __init__(self):
-        self.mutexes = {}
-
-    def acquire(self, item, job):
-        if not job.mutex:
-            return True
-        mutex_name = job.mutex
-        m = self.mutexes.get(mutex_name)
-        if not m:
-            # The mutex is not held, acquire it
-            self._acquire(mutex_name, item, job.name)
-            return True
-        held_item, held_job_name = m
-        if held_item is item and held_job_name == job.name:
-            # This item already holds the mutex
-            return True
-        held_build = held_item.current_build_set.getBuild(held_job_name)
-        if held_build and held_build.result:
-            # The build that held the mutex is complete, release it
-            # and let the new item have it.
-            self.log.error("Held mutex %s being released because "
-                           "the build that holds it is complete" %
-                           (mutex_name,))
-            self._release(mutex_name, item, job.name)
-            self._acquire(mutex_name, item, job.name)
-            return True
-        return False
-
-    def release(self, item, job):
-        if not job.mutex:
-            return
-        mutex_name = job.mutex
-        m = self.mutexes.get(mutex_name)
-        if not m:
-            # The mutex is not held, nothing to do
-            self.log.error("Mutex can not be released for %s "
-                           "because the mutex is not held" %
-                           (item,))
-            return
-        held_item, held_job_name = m
-        if held_item is item and held_job_name == job.name:
-            # This item holds the mutex
-            self._release(mutex_name, item, job.name)
-            return
-        self.log.error("Mutex can not be released for %s "
-                       "which does not hold it" %
-                       (item,))
-
-    def _acquire(self, mutex_name, item, job_name):
-        self.log.debug("Job %s of item %s acquiring mutex %s" %
-                       (job_name, item, mutex_name))
-        self.mutexes[mutex_name] = (item, job_name)
-
-    def _release(self, mutex_name, item, job_name):
-        self.log.debug("Job %s of item %s releasing mutex %s" %
-                       (job_name, item, mutex_name))
-        del self.mutexes[mutex_name]
-
-
 class ManagementEvent(object):
     """An event that should be processed within the main queue run loop"""
     def __init__(self):
@@ -269,7 +207,6 @@ class Scheduler(threading.Thread):
         self.connections = None
         self.statsd = extras.try_import('statsd.statsd')
         # TODO(jeblair): fix this
-        self.mutex = MutexHandler()
         # Despite triggers being part of the pipeline, there is one trigger set
         # per scheduler. The pipeline handles the trigger filters but since
         # the events are handled by the scheduler itself it needs to handle
@@ -593,19 +530,27 @@ class Scheduler(threading.Thread):
                 except Exception:
                     self.log.exception(
                         "Exception while canceling build %s "
-                        "for change %s" % (build, item.change))
+                        "for change %s" % (build, build.build_set.item.change))
                 finally:
-                    self.mutex.release(build.build_set.item, build.job)
+                    tenant.semaphore_handler.release(
+                        build.build_set.item, build.job)
 
     def _reconfigureTenant(self, tenant):
         # This is called from _doReconfigureEvent while holding the
         # layout lock
         old_tenant = self.abide.tenants.get(tenant.name)
+
         if old_tenant:
+            # Copy over semaphore handler so we don't loose the currently
+            # held semaphores.
+            tenant.semaphore_handler = old_tenant.semaphore_handler
+
             self._reenqueueTenant(old_tenant, tenant)
+
         # TODOv3(jeblair): update for tenants
         # self.maintainConnectionCache()
         self.connections.reconfigureDrivers(tenant)
+
         # TODOv3(jeblair): remove postconfig calls?
         for pipeline in tenant.layout.pipelines.values():
             pipeline.source.postConfig()

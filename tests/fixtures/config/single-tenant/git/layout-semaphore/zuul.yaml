@@ -1,0 +1,52 @@
+- pipeline:
+    name: check
+    manager: independent
+    source: gerrit
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+- job:
+    name: project-test1
+
+- job:
+    name: semaphore-one-test1
+    semaphore: test-semaphore
+
+- job:
+    name: semaphore-one-test2
+    semaphore: test-semaphore
+
+- job:
+    name: semaphore-two-test1
+    semaphore: test-semaphore-two
+
+- job:
+    name: semaphore-two-test2
+    semaphore: test-semaphore-two
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-test1
+        - semaphore-one-test1
+        - semaphore-one-test2
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - project-test1
+        - semaphore-two-test1
+        - semaphore-two-test2
+
+- semaphore:
+    name: test-semaphore-two
+    max: 2

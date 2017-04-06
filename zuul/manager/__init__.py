@@ -81,8 +81,8 @@ class PipelineManager(object):
                         tags.append('[hold]')
                     if not variant.voting:
                         tags.append('[nonvoting]')
-                    if variant.mutex:
-                        tags.append('[mutex: %s]' % variant.mutex)
+                    if variant.semaphore:
+                        tags.append('[semaphore: %s]' % variant.semaphore)
                     tags = ' '.join(tags)
                     self.log.info("      %s%s %s" % (repr(variant),
                                                      efilters, tags))
@@ -386,7 +386,8 @@ class PipelineManager(object):
         if not item.current_build_set.layout:
             return False
 
-        jobs = item.findJobsToRun(self.sched.mutex)
+        jobs = item.findJobsToRun(
+            item.pipeline.layout.tenant.semaphore_handler)
         if jobs:
             self._executeJobs(item, jobs)
 
@@ -411,7 +412,8 @@ class PipelineManager(object):
                 self.log.exception("Exception while canceling build %s "
                                    "for change %s" % (build, item.change))
             finally:
-                self.sched.mutex.release(build.build_set.item, build.job)
+                old_build_set.layout.tenant.semaphore_handler.release(
+                    old_build_set.item, build.job)
 
             if not was_running:
                 try:
@@ -663,7 +665,7 @@ class PipelineManager(object):
         item = build.build_set.item
 
         item.setResult(build)
-        self.sched.mutex.release(item, build.job)
+        item.pipeline.layout.tenant.semaphore_handler.release(item, build.job)
         self.log.debug("Item %s status is now:\n %s" %
                        (item, item.formatStatus()))
 
