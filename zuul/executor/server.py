@@ -28,6 +28,7 @@ import yaml
 
 import gear
 import git
+from six.moves import shlex_quote
 
 import zuul.merger.merger
 import zuul.ansible.action
@@ -928,14 +929,17 @@ class AnsibleJob(object):
         env_copy['LOGNAME'] = 'zuul'
 
         if trusted:
-            env_copy['ANSIBLE_CONFIG'] = self.jobdir.trusted_config
+            config_file = self.jobdir.trusted_config
         else:
-            env_copy['ANSIBLE_CONFIG'] = self.jobdir.untrusted_config
+            config_file = self.jobdir.untrusted_config
+
+        env_copy['ANSIBLE_CONFIG'] = config_file
 
         with self.proc_lock:
             if self.aborted:
                 return (self.RESULT_ABORTED, None)
-            self.log.debug("Ansible command: %s" % (cmd,))
+            self.log.debug("Ansible command: ANSIBLE_CONFIG=%s %s",
+                           config_file, " ".join(shlex_quote(c) for c in cmd))
             self.proc = subprocess.Popen(
                 cmd,
                 cwd=self.jobdir.work_root,
