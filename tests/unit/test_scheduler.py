@@ -4231,13 +4231,10 @@ For CI problems and help debugging, contact ci@example.org"""
         self.init_repo("org/unknown")
         self._test_crd_check_reconfiguration('org/project1', 'org/unknown')
 
-    @skip("Disabled for early v3 development")
     def test_crd_check_ignore_dependencies(self):
         "Test cross-repo dependencies can be ignored"
-        self.updateConfigLayout(
-            'tests/fixtures/layout-ignore-dependencies.yaml')
+        self.updateConfigLayout('layout-ignore-dependencies')
         self.sched.reconfigure(self.config)
-        self.registerJobs()
 
         self.gearman_server.hold_jobs_in_queue = True
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -4256,7 +4253,8 @@ For CI problems and help debugging, contact ci@example.org"""
 
         # Make sure none of the items share a change queue, and all
         # are live.
-        check_pipeline = self.sched.layout.pipelines['check']
+        tenant = self.sched.abide.tenants.get('openstack')
+        check_pipeline = tenant.layout.pipelines['check']
         self.assertEqual(len(check_pipeline.queues), 3)
         self.assertEqual(len(check_pipeline.getAllItems()), 3)
         for item in check_pipeline.getAllItems():
@@ -4277,7 +4275,6 @@ For CI problems and help debugging, contact ci@example.org"""
         for job in self.history:
             self.assertEqual(len(job.changes.split()), 1)
 
-    @skip("Disabled for early v3 development")
     def test_crd_check_transitive(self):
         "Test transitive cross-repo dependencies"
         # Specifically, if A -> B -> C, and C gets a new patchset and

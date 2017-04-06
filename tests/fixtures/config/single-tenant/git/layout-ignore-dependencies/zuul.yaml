@@ -1,0 +1,66 @@
+- pipeline:
+    name: check
+    manager: independent
+    ignore-dependencies: true
+    source: gerrit
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+- job:
+    name: project1-merge
+
+- job:
+    name: project1-test1
+
+- job:
+    name: project1-test2
+
+- job:
+    name: project2-merge
+
+- job:
+    name: project2-test1
+
+- job:
+    name: project2-test2
+
+- job:
+    name: project1-project2-integration
+    queue-name: integration
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - project1-merge
+        - project1-test1:
+            dependencies:
+              - project1-merge
+        - project1-test2:
+            dependencies:
+              - project1-merge
+        - project1-project2-integration:
+            dependencies:
+              - project1-merge
+
+- project:
+    name: org/project2
+    check:
+      jobs:
+        - project2-merge
+        - project2-test1:
+            dependencies:
+              - project2-merge
+        - project2-test2:
+            dependencies:
+              - project2-merge
+        - project1-project2-integration:
+            dependencies:
+              - project2-merge
