@@ -31,6 +31,14 @@
           - compute1
           - compute2
 
+- nodeset:
+    name: nodeset2
+    nodes:
+      - name: default
+        label: default-label
+      - name: fakeuser
+        label: fakeuser-label
+
 - job:
     name: base
     parent: null
@@ -47,3 +55,8 @@
     name: group-inventory
     nodeset: nodeset1
     run: playbooks/group-inventory.yaml
+
+- job:
+    name: hostvars-inventory
+    run: playbooks/hostvars-inventory.yaml
+    nodeset: nodeset2

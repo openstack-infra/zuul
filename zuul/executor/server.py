@@ -920,6 +920,10 @@ class AnsibleJob(object):
                     private_ipv4=node.get('private_ipv4'),
                     public_ipv6=node.get('public_ipv6')))
 
+            username = node.get('username')
+            if username:
+                host_vars['ansible_user'] = username
+
             host_keys = []
             for key in node.get('host_keys'):
                 if port != 22:
