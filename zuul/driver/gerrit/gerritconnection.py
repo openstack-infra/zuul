@@ -253,6 +253,8 @@ class GerritConnection(BaseConnection):
 
         self.user = self.connection_config.get('user')
         self.server = self.connection_config.get('server')
+        self.canonical_hostname = self.connection_config.get(
+            'canonical_hostname', self.server)
         self.port = int(self.connection_config.get('port', 29418))
         self.keyfile = self.connection_config.get('sshkey', None)
         self.keepalive = int(self.connection_config.get('keepalive', 60))
