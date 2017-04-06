@@ -18,11 +18,11 @@ import random
 
 import fixtures
 import testtools
-import yaml
 
 from zuul import model
 from zuul import configloader
 from zuul.lib import encryption
+from zuul.lib import yamlutil as yaml
 
 from tests.base import BaseTestCase, FIXTURE_DIR
 

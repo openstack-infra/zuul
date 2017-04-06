@@ -35,13 +35,13 @@ import uuid
 import Queue
 
 import gear
-import yaml
 import jenkins_jobs.builder
 import jenkins_jobs.formatter
 import zmq
 
 import zuul.ansible.library
 from zuul.lib import commandsocket
+from zuul.lib import yamlutil as yaml
 
 ANSIBLE_WATCHDOG_GRACE = 5 * 60
 ANSIBLE_DEFAULT_TIMEOUT = 2 * 60 * 60
