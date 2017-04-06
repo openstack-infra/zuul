@@ -33,6 +33,7 @@ import zuul.merger.merger
 import zuul.ansible.action
 import zuul.ansible.callback
 import zuul.ansible.library
+import zuul.ansible.lookup
 from zuul.lib import commandsocket
 
 COMMANDS = ['stop', 'pause', 'unpause', 'graceful', 'verbose',
@@ -274,6 +275,10 @@ class ExecutorServer(object):
         if not os.path.exists(self.callback_dir):
             os.makedirs(self.callback_dir)
 
+        self.lookup_dir = os.path.join(ansible_dir, 'lookup')
+        if not os.path.exists(self.lookup_dir):
+            os.makedirs(self.lookup_dir)
+
         library_path = os.path.dirname(os.path.abspath(
             zuul.ansible.library.__file__))
         for fn in os.listdir(library_path):
@@ -288,6 +293,11 @@ class ExecutorServer(object):
             zuul.ansible.callback.__file__))
         for fn in os.listdir(callback_path):
             shutil.copy(os.path.join(callback_path, fn), self.callback_dir)
+
+        lookup_path = os.path.dirname(os.path.abspath(
+            zuul.ansible.lookup.__file__))
+        for fn in os.listdir(lookup_path):
+            shutil.copy(os.path.join(lookup_path, fn), self.lookup_dir)
 
         self.job_workers = {}
 
@@ -867,6 +877,8 @@ class AnsibleJob(object):
             if not trusted:
                 config.write('action_plugins = %s\n'
                              % self.executor_server.action_dir)
+                config.write('lookup_plugins = %s\n'
+                             % self.executor_server.lookup_dir)
 
             # On trusted jobs, we want to prevent the printing of args,
             # since trusted jobs might have access to secrets that they may
