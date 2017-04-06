@@ -19,7 +19,7 @@
 
 - job:
     name: docs-draft-test
-    success-url: http://docs-draft.example.org/{build.parameters[LOG_PATH]}/publish-docs/
+    success-url: http://docs-draft.example.org/{change.number:.2}/{change.number}/{change.patchset}/{pipeline.name}/{job.name}/{build.uuid:.7}/publish-docs/
 
 - job:
     name: docs-draft-test2

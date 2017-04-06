@@ -16,7 +16,6 @@ import copy
 import gear
 import json
 import logging
-import os
 import time
 import threading
 from uuid import uuid4
@@ -265,13 +264,6 @@ class ExecutorClient(object):
 
             params['ZUUL_REF'] = item.change.ref
             params['ZUUL_COMMIT'] = item.change.newrev
-
-        # The destination_path is a unique path for this build request
-        # and generally where the logs are expected to be placed
-        destination_path = os.path.join(item.change.getBasePath(),
-                                        pipeline.name, job.name, uuid[:7])
-        params['BASE_LOG_PATH'] = item.change.getBasePath()
-        params['LOG_PATH'] = destination_path
 
         # This is what we should be heading toward for parameters:
 
