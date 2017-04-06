@@ -28,7 +28,9 @@ class SQLReporter(BaseReporter):
     def __init__(self, driver, connection, config={}):
         super(SQLReporter, self).__init__(
             driver, connection, config)
-        self.result_score = config.get('score', None)
+        # TODO(jeblair): document this is stored as NULL if unspecified
+        # TODO(jhesketh): actually make this null in a followup change
+        self.result_score = config.get('score', 0)
 
     def report(self, source, pipeline, item):
         """Create an entry into a database."""
@@ -36,13 +38,6 @@ class SQLReporter(BaseReporter):
         if not self.connection.tables_established:
             self.log.warn("SQL reporter (%s) is disabled " % self)
             return
-
-        if self.driver.sched.config.has_option('zuul', 'url_pattern'):
-            url_pattern = self.driver.sched.config.get('zuul', 'url_pattern')
-        else:
-            url_pattern = None
-
-        score = self.config.get('score', 0)
 
         with self.connection.engine.begin() as conn:
             buildset_ins = self.connection.zuul_buildset_table.insert().values(
@@ -52,7 +47,7 @@ class SQLReporter(BaseReporter):
                 change=item.change.number,
                 patchset=item.change.patchset,
                 ref=item.change.refspec,
-                score=score,
+                score=self.result_score,
                 message=self._formatItemReport(
                     pipeline, item, with_jobs=False),
             )
@@ -67,7 +62,7 @@ class SQLReporter(BaseReporter):
                     # information about the change.
                     continue
 
-                (result, url) = item.formatJobResult(job, url_pattern)
+                (result, url) = item.formatJobResult(job)
 
                 build_inserts.append({
                     'buildset_id': buildset_ins_result.inserted_primary_key,

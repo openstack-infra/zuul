@@ -911,12 +911,6 @@ class Scheduler(threading.Thread):
 
     def formatStatusJSON(self, tenant_name):
         # TODOv3(jeblair): use tenants
-        if self.config.has_option('zuul', 'url_pattern'):
-            url_pattern = self.config.get('zuul', 'url_pattern')
-        else:
-            url_pattern = None
-        # TODOv3(jhesketh): url_pattern should be deterministic by zuul
-
         data = {}
 
         data['zuul_version'] = self.zuul_version
@@ -943,5 +937,5 @@ class Scheduler(threading.Thread):
         data['pipelines'] = pipelines
         tenant = self.abide.tenants.get(tenant_name)
         for pipeline in tenant.layout.pipelines.values():
-            pipelines.append(pipeline.formatStatusJSON(url_pattern))
+            pipelines.append(pipeline.formatStatusJSON())
         return json.dumps(data)

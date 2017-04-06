@@ -111,14 +111,10 @@ class BaseReporter(object):
         ret = ''
 
         config = self.connection.sched.config
-        if config.has_option('zuul', 'url_pattern'):
-            url_pattern = config.get('zuul', 'url_pattern')
-        else:
-            url_pattern = None
 
         for job in item.getJobs():
             build = item.current_build_set.getBuild(job.name)
-            (result, url) = item.formatJobResult(job, url_pattern)
+            (result, url) = item.formatJobResult(job)
             if not job.voting:
                 voting = ' (non-voting)'
             else:

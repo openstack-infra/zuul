@@ -124,13 +124,6 @@ layout.yaml to be useful.
   optional value and ``1`` is used by default.
   ``status_expiry=1``
 
-**url_pattern**
-  If you are storing build logs external to the system that originally
-  ran jobs and wish to link to those logs when Zuul makes comments on
-  Gerrit changes for completed jobs this setting configures what the
-  URLs for those links should be.  Used by zuul-server only.
-  ``http://logs.example.com/{change.number}/{change.patchset}/{pipeline.name}/{job.name}/{build.number}``
-
 **job_name_in_report**
   Boolean value (``true`` or ``false``) that indicates whether the
   job name should be included in the report (normally only the URL
