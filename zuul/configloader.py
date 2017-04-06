@@ -1051,14 +1051,16 @@ class ConfigLoader(object):
 
     def _loadDynamicProjectData(self, config, source, project, files,
                                 config_repo):
-        for branch in source.getProjectBranches(project):
-            data = None
-            if config_repo:
-                fn = 'zuul.yaml'
-                data = files.getFile(project.name, branch, fn)
-            if not data:
-                fn = '.zuul.yaml'
-                data = files.getFile(project.name, branch, fn)
+        if config_repo:
+            branches = ['master']
+            fn = 'zuul.yaml'
+        else:
+            branches = source.getProjectBranches(project)
+            fn = '.zuul.yaml'
+
+        for branch in branches:
+            incdata = None
+            data = files.getFile(project.name, branch, fn)
             if data:
                 source_context = model.SourceContext(project, branch,
                                                      fn, config_repo)
@@ -1069,10 +1071,12 @@ class ConfigLoader(object):
                     incdata = TenantParser._parseProjectRepoLayout(
                         data, source_context)
             else:
-                incdata = project.unparsed_branch_config.get(branch)
-            if not incdata:
-                continue
-            config.extend(incdata)
+                if config_repo:
+                    incdata = project.unparsed_config
+                else:
+                    incdata = project.unparsed_branch_config.get(branch)
+            if incdata:
+                config.extend(incdata)
 
     def createDynamicLayout(self, tenant, files, include_config_repos=False):
         if include_config_repos:
@@ -1100,6 +1104,12 @@ class ConfigLoader(object):
         # exactly one value at any time. So we do not support dynamic semaphore
         # configuration changes.
         layout.semaphores = tenant.layout.semaphores
+
+        for config_nodeset in config.nodesets:
+            layout.addNodeSet(NodeSetParser.fromYaml(layout, config_nodeset))
+
+        for config_secret in config.secrets:
+            layout.addSecret(SecretParser.fromYaml(layout, config_secret))
 
         for config_job in config.jobs:
             layout.addJob(JobParser.fromYaml(tenant, layout, config_job))
