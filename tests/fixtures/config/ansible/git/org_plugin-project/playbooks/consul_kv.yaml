@@ -1,0 +1,5 @@
+- hosts: all
+  tasks:
+    - debug: msg='key contains {{item}}'
+      with_consul_kv:
+        - 'key/to/retrieve'

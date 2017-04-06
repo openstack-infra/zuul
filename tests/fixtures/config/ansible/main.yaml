@@ -6,4 +6,5 @@
           - common-config
         untrusted-projects:
           - org/project
+          - org/plugin-project
           - bare-role
