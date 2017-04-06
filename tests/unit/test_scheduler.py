@@ -2719,7 +2719,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(B.reported, 2)
 
-    @skip("Disabled for early v3 development")
     def test_live_reconfiguration_del_project(self):
         # Test project deletion from layout
         # while changes are enqueued
@@ -2742,14 +2741,14 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.builds), 5)
 
         # This layout defines only org/project, not org/project1
-        self.updateConfigLayout(
-            'tests/fixtures/layout-live-reconfiguration-del-project.yaml')
+        self.commitLayoutUpdate('common-config',
+                                'layout-live-reconfiguration-del-project')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
         # Builds for C aborted, builds for A succeed,
         # and have change B applied ahead
-        job_c = self.getJobFromHistory('project1-test1')
+        job_c = self.getJobFromHistory('project-test1')
         self.assertEqual(job_c.changes, '3,1')
         self.assertEqual(job_c.result, 'ABORTED')
 
@@ -2757,8 +2756,9 @@ class TestScheduler(ZuulTestCase):
         self.executor_server.release()
         self.waitUntilSettled()
 
-        self.assertEqual(self.getJobFromHistory('project-test1').changes,
-                         '2,1 1,1')
+        self.assertEqual(
+            self.getJobFromHistory('project-test1', 'org/project').changes,
+            '2,1 1,1')
 
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(B.data['status'], 'NEW')
@@ -2767,38 +2767,9 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.reported, 0)
         self.assertEqual(C.reported, 0)
 
-        self.assertEqual(len(self.sched.layout.pipelines['check'].queues), 0)
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        self.assertEqual(len(tenant.layout.pipelines['check'].queues), 0)
         self.assertIn('Build succeeded', A.messages[0])
-
-    @skip("Disabled for early v3 development")
-    def test_live_reconfiguration_functions(self):
-        "Test live reconfiguration with a custom function"
-        self.worker.registerFunction('build:node-project-test1:debian')
-        self.worker.registerFunction('build:node-project-test1:wheezy')
-        A = self.fake_gerrit.addFakeChange('org/node-project', 'master', 'A')
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
-        self.waitUntilSettled()
-
-        self.assertIsNone(self.getJobFromHistory('node-project-merge').node)
-        self.assertEqual(self.getJobFromHistory('node-project-test1').node,
-                         'debian')
-        self.assertIsNone(self.getJobFromHistory('node-project-test2').node)
-
-        self.updateConfigLayout(
-            'tests/fixtures/layout-live-reconfiguration-functions.yaml')
-        self.sched.reconfigure(self.config)
-        self.worker.build_history = []
-
-        B = self.fake_gerrit.addFakeChange('org/node-project', 'master', 'B')
-        B.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
-        self.waitUntilSettled()
-
-        self.assertIsNone(self.getJobFromHistory('node-project-merge').node)
-        self.assertEqual(self.getJobFromHistory('node-project-test1').node,
-                         'wheezy')
-        self.assertIsNone(self.getJobFromHistory('node-project-test2').node)
 
     @skip("Disabled for early v3 development")
     def test_delayed_repo_init(self):
