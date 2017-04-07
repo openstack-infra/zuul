@@ -131,6 +131,11 @@ class JobDir(object):
 
     def __exit__(self, etype, value, tb):
         if not self.keep:
+            # Ensure directories are writeable so that files can be removed
+            # from them.
+            for root, dirs, files in os.walk(self.root):
+                for d in dirs:
+                    os.chmod(os.path.join(root, d), 0o755)
             shutil.rmtree(self.root)
 
 
