@@ -1042,7 +1042,7 @@ class FakeNodepool(object):
 
 
 class ChrootedKazooFixture(fixtures.Fixture):
-    def __init__(self):
+    def __init__(self, test_id):
         super(ChrootedKazooFixture, self).__init__()
 
         zk_host = os.environ.get('NODEPOOL_ZK_HOST', 'localhost')
@@ -1059,13 +1059,15 @@ class ChrootedKazooFixture(fixtures.Fixture):
         else:
             self.zookeeper_port = int(port)
 
+        self.test_id = test_id
+
     def _setUp(self):
         # Make sure the test chroot paths do not conflict
         random_bits = ''.join(random.choice(string.ascii_lowercase +
                                             string.ascii_uppercase)
                               for x in range(8))
 
-        rand_test_path = '%s_%s' % (random_bits, os.getpid())
+        rand_test_path = '%s_%s_%s' % (random_bits, os.getpid(), self.test_id)
         self.zookeeper_chroot = "/nodepool_test/%s" % rand_test_path
 
         self.addCleanup(self._cleanup)
@@ -1491,7 +1493,8 @@ class ZuulTestCase(BaseTestCase):
                 o.write(i.read())
 
     def setupZK(self):
-        self.zk_chroot_fixture = self.useFixture(ChrootedKazooFixture())
+        self.zk_chroot_fixture = self.useFixture(
+            ChrootedKazooFixture(self.id()))
         self.zk_config = '%s:%s%s' % (
             self.zk_chroot_fixture.zookeeper_host,
             self.zk_chroot_fixture.zookeeper_port,
