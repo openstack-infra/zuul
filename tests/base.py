@@ -1068,6 +1068,8 @@ class ChrootedKazooFixture(fixtures.Fixture):
         rand_test_path = '%s_%s' % (random_bits, os.getpid())
         self.zookeeper_chroot = "/nodepool_test/%s" % rand_test_path
 
+        self.addCleanup(self._cleanup)
+
         # Ensure the chroot path exists and clean up any pre-existing znodes.
         _tmp_client = kazoo.client.KazooClient(
             hosts='%s:%s' % (self.zookeeper_host, self.zookeeper_port))
@@ -1080,8 +1082,6 @@ class ChrootedKazooFixture(fixtures.Fixture):
         _tmp_client.stop()
         _tmp_client.close()
 
-        self.addCleanup(self._cleanup)
-
     def _cleanup(self):
         '''Remove the chroot path.'''
         # Need a non-chroot'ed client to remove the chroot path
@@ -1090,6 +1090,7 @@ class ChrootedKazooFixture(fixtures.Fixture):
         _tmp_client.start()
         _tmp_client.delete(self.zookeeper_chroot, recursive=True)
         _tmp_client.stop()
+        _tmp_client.close()
 
 
 class MySQLSchemaFixture(fixtures.Fixture):
