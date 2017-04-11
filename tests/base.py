@@ -996,6 +996,7 @@ class FakeNodepool(object):
                     provider='test-provider',
                     region='test-region',
                     az='test-az',
+                    interface_ip='127.0.0.1',
                     public_ipv4='127.0.0.1',
                     private_ipv4=None,
                     public_ipv6=None,
