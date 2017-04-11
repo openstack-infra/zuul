@@ -33,7 +33,7 @@ class GerritReporter(BaseReporter):
                        (item.change, self.config, message))
         changeid = '%s,%s' % (item.change.number, item.change.patchset)
         item.change._ref_sha = source.getRefSha(
-            item.change.project.name, 'refs/heads/' + item.change.branch)
+            item.change.project, 'refs/heads/' + item.change.branch)
 
         return self.connection.review(item.change.project.name, changeid,
                                       message, self.config)
