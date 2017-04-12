@@ -494,5 +494,5 @@ class GerritConnection(BaseConnection):
 
 
 def getSchema():
-    gerrit_connection = v.Any(str, v.Schema({}, extra=True))
+    gerrit_connection = v.Any(str, v.Schema(dict))
     return gerrit_connection
