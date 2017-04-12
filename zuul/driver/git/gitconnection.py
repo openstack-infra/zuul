@@ -59,5 +59,5 @@ class GitConnection(BaseConnection):
 
 
 def getSchema():
-    git_connection = v.Any(str, v.Schema({}, extra=True))
+    git_connection = v.Any(str, v.Schema(dict))
     return git_connection

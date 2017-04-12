@@ -82,14 +82,14 @@ def validate_conf(trigger_conf):
 def getSchema():
     def toList(x):
         return v.Any([x], x)
-    variable_dict = v.Schema({}, extra=True)
+    variable_dict = v.Schema(dict)
 
     approval = v.Schema({'username': str,
                          'email-filter': str,
                          'email': str,
                          'older-than': str,
                          'newer-than': str,
-                         }, extra=True)
+                         }, extra=v.ALLOW_EXTRA)
 
     gerrit_trigger = {
         v.Required('event'):

@@ -63,7 +63,7 @@ def getSchema():
                          'email': str,
                          'older-than': str,
                          'newer-than': str,
-                         }, extra=True)
+                         }, extra=v.ALLOW_EXTRA)
 
     zuul_trigger = {
         v.Required('event'):

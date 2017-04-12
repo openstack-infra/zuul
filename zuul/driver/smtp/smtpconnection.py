@@ -58,5 +58,5 @@ class SMTPConnection(BaseConnection):
 
 
 def getSchema():
-    smtp_connection = v.Any(str, v.Schema({}, extra=True))
+    smtp_connection = v.Any(str, v.Schema(dict))
     return smtp_connection

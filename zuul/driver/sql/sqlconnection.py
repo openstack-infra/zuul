@@ -101,5 +101,5 @@ class SQLConnection(BaseConnection):
 
 
 def getSchema():
-    sql_connection = v.Any(str, v.Schema({}, extra=True))
+    sql_connection = v.Any(str, v.Schema(dict))
     return sql_connection

@@ -582,7 +582,7 @@ class PipelineParser(object):
                               'email': str,
                               'older-than': str,
                               'newer-than': str,
-                              }, extra=True)
+                              }, extra=vs.ALLOW_EXTRA)
 
         require = {'approval': to_list(approval),
                    'open': bool,

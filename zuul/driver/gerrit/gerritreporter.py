@@ -48,5 +48,5 @@ class GerritReporter(BaseReporter):
 
 
 def getSchema():
-    gerrit_reporter = v.Any(str, v.Schema({}, extra=True))
+    gerrit_reporter = v.Any(str, v.Schema(dict))
     return gerrit_reporter
