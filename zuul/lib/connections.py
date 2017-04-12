@@ -69,7 +69,6 @@ class ConnectionRegistry(object):
 
     def configure(self, config):
         # Register connections from the config
-        # TODO(jhesketh): import connection modules dynamically
         connections = {}
 
         for section_name in config.sections():
