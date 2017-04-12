@@ -133,24 +133,41 @@ class GerritEventConnector(threading.Thread):
                 event.branch_deleted = True
                 event.branch = event.ref
 
-        if event.change_number:
-            # TODO(jhesketh): Check if the project exists?
-            # and self.connection.sched.getProject(event.project_name):
-
-            # Call _getChange for the side effect of updating the
-            # cache.  Note that this modifies Change objects outside
-            # the main thread.
-            # NOTE(jhesketh): Ideally we'd just remove the change from the
-            # cache to denote that it needs updating. However the change
-            # object is already used by Items and hence BuildSets etc. and
-            # we need to update those objects by reference so that they have
-            # the correct/new information and also avoid hitting gerrit
-            # multiple times.
-            self.connection._getChange(event.change_number,
-                                       event.patch_number,
-                                       refresh=True)
+        self._getChange(event)
         self.connection.logEvent(event)
         self.connection.sched.addEvent(event)
+
+    def _getChange(self, event):
+        # Grab the change if we are managing the project or if it exists in the
+        # cache as it may be a dependency
+        if event.change_number:
+            refresh = True
+            if event.change_number not in self.connection._change_cache:
+                refresh = False
+                for tenant in self.connection.sched.abide.tenants.values():
+                    # TODO(fungi): it would be better to have some simple means
+                    # of inferring the hostname from the connection, or at
+                    # least split this into separate method arguments, rather
+                    # than assembling and passing in a baked string.
+                    if (None, None) != tenant.getProject('/'.join((
+                            self.connection.canonical_hostname,
+                            event.project_name))):
+                        refresh = True
+                        break
+
+            if refresh:
+                # Call _getChange for the side effect of updating the
+                # cache.  Note that this modifies Change objects outside
+                # the main thread.
+                # NOTE(jhesketh): Ideally we'd just remove the change from the
+                # cache to denote that it needs updating. However the change
+                # object is already used by Items and hence BuildSets etc. and
+                # we need to update those objects by reference so that they
+                # have the correct/new information and also avoid hitting
+                # gerrit multiple times.
+                self.connection._getChange(event.change_number,
+                                           event.patch_number,
+                                           refresh=True)
 
     def run(self):
         while True:
