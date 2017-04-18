@@ -344,10 +344,17 @@ class ExecutorServer(object):
     def stop(self):
         self.log.debug("Stopping")
         self._running = False
-        self.worker.shutdown()
         self._command_running = False
         self.command_socket.stop()
         self.update_queue.put(None)
+
+        for job_worker in self.job_workers.values():
+            try:
+                job_worker.stop()
+            except Exception:
+                self.log.exception("Exception sending stop command "
+                                   "to worker:")
+        self.worker.shutdown()
         self.log.debug("Stopped")
 
     def pause(self):
