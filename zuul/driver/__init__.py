@@ -68,6 +68,17 @@ class Driver(object):
         """
         pass
 
+    def stop(self):
+        """Stop the driver from running.
+
+        This method is optional; the base implementation does nothing.
+
+        This method is called when the connection registry is stopped
+        allowing you additionally stop any running Driver computation
+        not specific to a connection.
+        """
+        pass
+
 
 @six.add_metaclass(abc.ABCMeta)
 class ConnectionInterface(object):

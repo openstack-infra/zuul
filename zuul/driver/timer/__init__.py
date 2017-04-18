@@ -38,6 +38,10 @@ class TimerDriver(Driver, TriggerInterface):
 
     def reconfigure(self, tenant):
         self._removeJobs(tenant)
+        if not self.apsched:
+            # Handle possible reuse of the driver without connection objects.
+            self.apsched = BackgroundScheduler()
+            self.apsched.start()
         self._addJobs(tenant)
 
     def _removeJobs(self, tenant):
@@ -87,7 +91,9 @@ class TimerDriver(Driver, TriggerInterface):
             self.sched.addEvent(event)
 
     def stop(self):
-        self.apsched.shutdown()
+        if self.apsched:
+            self.apsched.shutdown()
+            self.apsched = None
 
     def getTrigger(self, connection_name, config=None):
         return timertrigger.TimerTrigger(self, config)

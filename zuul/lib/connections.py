@@ -67,6 +67,8 @@ class ConnectionRegistry(object):
     def stop(self):
         for connection_name, connection in self.connections.items():
             connection.onStop()
+        for driver in self.drivers.values():
+            driver.stop()
 
     def configure(self, config):
         # Register connections from the config
