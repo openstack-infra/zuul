@@ -9,6 +9,8 @@ Test classes that subclass :py:class:`~tests.base.ZuulTestCase` have
 access to a number of attributes useful for manipulating or inspecting
 the environment being simulated in the test:
 
+.. autofunction:: tests.base.simple_layout
+
 .. autoclass:: tests.base.ZuulTestCase
    :members:
 

@@ -97,6 +97,30 @@ def iterate_timeout(max_seconds, purpose):
     raise Exception("Timeout waiting for %s" % purpose)
 
 
+def simple_layout(path):
+    """Specify a layout file for use by a test method.
+
+    :arg str path: The path to the layout file.
+
+    Some tests require only a very simple configuration.  For those,
+    establishing a complete config directory hierachy is too much
+    work.  In those cases, you can add a simple zuul.yaml file to the
+    test fixtures directory (in fixtures/layouts/foo.yaml) and use
+    this decorator to indicate the test method should use that rather
+    than the tenant config file specified by the test class.
+
+    The decorator will cause that layout file to be added to a
+    config-project called "common-config" and each "project" instance
+    referenced in the layout file will have a git repo automatically
+    initialized.
+    """
+
+    def decorator(test):
+        test.__simple_layout__ = path
+        return test
+    return decorator
+
+
 class ChangeReference(git.Reference):
     _common_path_default = "refs/changes"
     _points_to_commits_only = True
@@ -1231,7 +1255,8 @@ class ZuulTestCase(BaseTestCase):
         be loaded).  It defaults to the value specified in
         `config_file` but can be overidden by subclasses to obtain a
         different tenant/project layout while using the standard main
-        configuration.
+        configuration.  See also the :py:func:`simple_layout`
+        decorator.
 
     :cvar bool create_project_keys: Indicates whether Zuul should
         auto-generate keys for each project, or whether the test
@@ -1324,7 +1349,6 @@ class ZuulTestCase(BaseTestCase):
         self.init_repo("org/conflict-project")
         self.init_repo("org/noop-project")
         self.init_repo("org/experimental-project")
-        self.init_repo("org/no-jobs-project")
 
         self.statsd = FakeStatsd()
         # note, use 127.0.0.1 rather than localhost to avoid getting ipv6
@@ -1452,18 +1476,69 @@ class ZuulTestCase(BaseTestCase):
         # obeys the config_file and tenant_config_file attributes.
         self.config = ConfigParser.ConfigParser()
         self.config.read(os.path.join(FIXTURE_DIR, self.config_file))
-        if hasattr(self, 'tenant_config_file'):
-            self.config.set('zuul', 'tenant_config', self.tenant_config_file)
-            git_path = os.path.join(
-                os.path.dirname(
-                    os.path.join(FIXTURE_DIR, self.tenant_config_file)),
-                'git')
-            if os.path.exists(git_path):
-                for reponame in os.listdir(git_path):
-                    project = reponame.replace('_', '/')
-                    self.copyDirToRepo(project,
-                                       os.path.join(git_path, reponame))
+
+        if not self.setupSimpleLayout():
+            if hasattr(self, 'tenant_config_file'):
+                self.config.set('zuul', 'tenant_config',
+                                self.tenant_config_file)
+                git_path = os.path.join(
+                    os.path.dirname(
+                        os.path.join(FIXTURE_DIR, self.tenant_config_file)),
+                    'git')
+                if os.path.exists(git_path):
+                    for reponame in os.listdir(git_path):
+                        project = reponame.replace('_', '/')
+                        self.copyDirToRepo(project,
+                                           os.path.join(git_path, reponame))
         self.setupAllProjectKeys()
+
+    def setupSimpleLayout(self):
+        # If the test method has been decorated with a simple_layout,
+        # use that instead of the class tenant_config_file.  Set up a
+        # single config-project with the specified layout, and
+        # initialize repos for all of the 'project' entries which
+        # appear in the layout.
+        test_name = self.id().split('.')[-1]
+        test = getattr(self, test_name)
+        if hasattr(test, '__simple_layout__'):
+            path = getattr(test, '__simple_layout__')
+        else:
+            return False
+
+        path = os.path.join(FIXTURE_DIR, path)
+        with open(path) as f:
+            layout = yaml.safe_load(f.read())
+        untrusted_projects = []
+        for item in layout:
+            if 'project' in item:
+                name = item['project']['name']
+                untrusted_projects.append(name)
+                self.init_repo(name)
+                self.addCommitToRepo(name, 'initial commit',
+                                     files={'README': ''},
+                                     branch='master', tag='init')
+
+        root = os.path.join(self.test_root, "config")
+        if not os.path.exists(root):
+            os.makedirs(root)
+        f = tempfile.NamedTemporaryFile(dir=root, delete=False)
+        config = [{'tenant':
+                   {'name': 'tenant-one',
+                    'source': {'gerrit':
+                               {'config-projects': ['common-config'],
+                                'untrusted-projects': untrusted_projects}}}}]
+        f.write(yaml.dump(config))
+        f.close()
+        self.config.set('zuul', 'tenant_config',
+                        os.path.join(FIXTURE_DIR, f.name))
+
+        self.init_repo('common-config')
+        with open(path) as f:
+            files = {'zuul.yaml': f.read()}
+        self.addCommitToRepo('common-config', 'add content from fixture',
+                             files, branch='master', tag='init')
+
+        return True
 
     def setupAllProjectKeys(self):
         if self.create_project_keys:
@@ -1956,8 +2031,7 @@ class ZuulTestCase(BaseTestCase):
           - org/node-project
           - org/conflict-project
           - org/noop-project
-          - org/experimental-project
-          - org/no-jobs-project\n""" % path)
+          - org/experimental-project\n""" % path)
 
         for repo in untrusted_projects:
             f.write("          - %s\n" % repo)

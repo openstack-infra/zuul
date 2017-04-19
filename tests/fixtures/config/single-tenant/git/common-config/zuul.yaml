@@ -225,9 +225,3 @@
             dependencies: nonvoting-project-merge
         - nonvoting-project-test2:
             dependencies: nonvoting-project-merge
-
-- project:
-    name: org/no-jobs-project
-    check:
-      jobs:
-        - project-testfile
