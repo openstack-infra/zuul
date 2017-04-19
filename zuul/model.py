@@ -353,6 +353,7 @@ class Project(object):
 
     def __init__(self, name, source, foreign=False):
         self.name = name
+        self.source = source
         self.connection_name = source.connection.connection_name
         self.canonical_hostname = source.canonical_hostname
         self.canonical_name = source.canonical_hostname + '/' + name
@@ -2503,19 +2504,13 @@ class Tenant(object):
         # this tenant.
         self.unparsed_config = None
         # The list of repos from which we will read main
-        # configuration.  (source, project)
+        # configuration.
         self.config_repos = []
-        # TODOv3(jeblair): This will replace the above list but drops the
-        # source element of the tuple.
-        self._config_repos = set()
         # The unparsed config from those repos.
         self.config_repos_config = None
         # The list of projects from which we will read in-repo
-        # configuration.  (source, project)
+        # configuration.
         self.project_repos = []
-        # TODOv3(jeblair): This will replace the above list but drops the
-        # source element of the tuple.
-        self._project_repos = set()
         # The unparsed config from those repos.
         self.project_repos_config = None
         self.semaphore_handler = SemaphoreHandler()
@@ -2575,22 +2570,20 @@ class Tenant(object):
                                     "with a hostname" % (name,))
         if project is None:
             return (None, None)
-        if project in self._config_repos:
+        if project in self.config_repos:
             return (True, project)
-        if project in self._project_repos:
+        if project in self.project_repos:
             return (False, project)
         # This should never happen:
         raise Exception("Project %s is neither trusted nor untrusted" %
                         (project,))
 
-    def addConfigRepo(self, source, project):
-        self.config_repos.append((source, project))
-        self._config_repos.add(project)
+    def addConfigRepo(self, project):
+        self.config_repos.append(project)
         self._addProject(project)
 
-    def addProjectRepo(self, source, project):
-        self.project_repos.append((source, project))
-        self._project_repos.add(project)
+    def addProjectRepo(self, project):
+        self.project_repos.append(project)
         self._addProject(project)
 
 

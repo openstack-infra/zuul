@@ -772,10 +772,10 @@ class TenantParser(object):
         config_repos, project_repos = \
             TenantParser._loadTenantConfigRepos(
                 project_key_dir, connections, conf)
-        for source, repo in config_repos:
-            tenant.addConfigRepo(source, repo)
-        for source, repo in project_repos:
-            tenant.addProjectRepo(source, repo)
+        for repo in config_repos:
+            tenant.addConfigRepo(repo)
+        for repo in project_repos:
+            tenant.addProjectRepo(repo)
         tenant.config_repos_config, tenant.project_repos_config = \
             TenantParser._loadTenantInRepoLayouts(merger, connections,
                                                   tenant.config_repos,
@@ -848,13 +848,13 @@ class TenantParser(object):
                 project = source.getProject(conf_repo)
                 TenantParser._loadProjectKeys(
                     project_key_dir, source_name, project)
-                config_repos.append((source, project))
+                config_repos.append(project)
 
             for conf_repo in conf_source.get('project-repos', []):
                 project = source.getProject(conf_repo)
                 TenantParser._loadProjectKeys(
                     project_key_dir, source_name, project)
-                project_repos.append((source, project))
+                project_repos.append(project)
 
         return config_repos, project_repos
 
@@ -865,7 +865,7 @@ class TenantParser(object):
         project_repos_config = model.UnparsedTenantConfig()
         jobs = []
 
-        for (source, project) in config_repos:
+        for project in config_repos:
             # If we have cached data (this is a reconfiguration) use it.
             if cached and project.unparsed_config:
                 TenantParser.log.info(
@@ -878,14 +878,14 @@ class TenantParser(object):
             project.unparsed_config = model.UnparsedTenantConfig()
             # Get main config files.  These files are permitted the
             # full range of configuration.
-            url = source.getGitUrl(project)
+            url = project.source.getGitUrl(project)
             job = merger.getFiles(project.name, url, 'master',
                                   files=['zuul.yaml', '.zuul.yaml'])
             job.source_context = model.SourceContext(project, 'master',
                                                      '', True)
             jobs.append(job)
 
-        for (source, project) in project_repos:
+        for project in project_repos:
             # If we have cached data (this is a reconfiguration) use it.
             if cached and project.unparsed_config:
                 TenantParser.log.info(
@@ -898,12 +898,12 @@ class TenantParser(object):
             project.unparsed_config = model.UnparsedTenantConfig()
             # Get in-project-repo config files which have a restricted
             # set of options.
-            url = source.getGitUrl(project)
+            url = project.source.getGitUrl(project)
             # For each branch in the repo, get the zuul.yaml for that
             # branch.  Remember the branch and then implicitly add a
             # branch selector to each job there.  This makes the
             # in-repo configuration apply only to that branch.
-            for branch in source.getProjectBranches(project):
+            for branch in project.source.getProjectBranches(project):
                 project.unparsed_branch_config[branch] = \
                     model.UnparsedTenantConfig()
                 job = merger.getFiles(project.name, url, branch,
@@ -1044,13 +1044,13 @@ class ConfigLoader(object):
         new_abide.tenants[tenant.name] = new_tenant
         return new_abide
 
-    def _loadDynamicProjectData(self, config, source, project, files,
+    def _loadDynamicProjectData(self, config, project, files,
                                 config_repo):
         if config_repo:
             branches = ['master']
             fn = 'zuul.yaml'
         else:
-            branches = source.getProjectBranches(project)
+            branches = project.source.getProjectBranches(project)
             fn = '.zuul.yaml'
 
         for branch in branches:
@@ -1076,14 +1076,12 @@ class ConfigLoader(object):
     def createDynamicLayout(self, tenant, files, include_config_repos=False):
         if include_config_repos:
             config = model.UnparsedTenantConfig()
-            for source, project in tenant.config_repos:
-                self._loadDynamicProjectData(config, source, project,
-                                             files, True)
+            for project in tenant.config_repos:
+                self._loadDynamicProjectData(config, project, files, True)
         else:
             config = tenant.config_repos_config.copy()
-        for source, project in tenant.project_repos:
-            self._loadDynamicProjectData(config, source, project,
-                                         files, False)
+        for project in tenant.project_repos:
+            self._loadDynamicProjectData(config, project, files, False)
 
         layout = model.Layout()
         # NOTE: the actual pipeline objects (complete with queues and
