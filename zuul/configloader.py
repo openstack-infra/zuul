@@ -227,7 +227,7 @@ class JobParser(object):
                'tags': to_list(str),
                'branches': to_list(str),
                'files': to_list(str),
-               'auth': to_list(auth),
+               'auth': auth,
                'irrelevant-files': to_list(str),
                'nodes': vs.Any([node], str),
                'timeout': int,
