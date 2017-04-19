@@ -1369,6 +1369,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.getJobFromHistory('project-test2').result,
                          'FAILURE')
 
+    @simple_layout('layouts/three-projects.yaml')
     def test_dependent_behind_dequeue(self):
         # This particular test does a large amount of merges and needs a little
         # more time to complete
@@ -4335,6 +4336,7 @@ For CI problems and help debugging, contact ci@example.org"""
         for job in self.history:
             self.assertEqual(len(job.changes.split()), 1)
 
+    @simple_layout('layouts/three-projects.yaml')
     def test_crd_check_transitive(self):
         "Test transitive cross-repo dependencies"
         # Specifically, if A -> B -> C, and C gets a new patchset and
