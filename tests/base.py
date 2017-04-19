@@ -1658,7 +1658,7 @@ class ZuulTestCase(BaseTestCase):
     def assertCleanShutdown(self):
         pass
 
-    def init_repo(self, project):
+    def init_repo(self, project, tag=None):
         parts = project.split('/')
         path = os.path.join(self.upstream_root, *parts[:-1])
         if not os.path.exists(path):
@@ -1672,6 +1672,8 @@ class ZuulTestCase(BaseTestCase):
 
         repo.index.commit('initial commit')
         master = repo.create_head('master')
+        if tag:
+            repo.create_tag(tag)
 
         repo.head.reference = master
         zuul.merger.merger.reset_repo_to_head(repo)
