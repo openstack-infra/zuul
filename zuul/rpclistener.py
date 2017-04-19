@@ -98,9 +98,10 @@ class RPCListener(object):
         if tenant:
             event.tenant_name = args['tenant']
 
-            project = tenant.layout.project_configs.get(args['project'])
+            (trusted, project) = tenant.getProject(args['project'])
             if project:
-                event.project_name = args['project']
+                event.project_hostname = project.canonical_hostname
+                event.project_name = project.name
             else:
                 errors += 'Invalid project: %s\n' % (args['project'],)
 
