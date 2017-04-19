@@ -3527,10 +3527,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[0].name, 'project-merge')
         self.assertEqual(self.builds[1].name, 'project-merge')
 
-        self.executor_server.release('.*-merge')
-        self.waitUntilSettled()
-        self.executor_server.release('.*-merge')
-        self.waitUntilSettled()
+        self.orderedRelease(2)
 
         # Only A and B will have their test jobs queued because
         # window is 2.
@@ -3556,8 +3553,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.builds), 1)
         self.assertEqual(self.builds[0].name, 'project-merge')
 
-        self.executor_server.release('.*-merge')
-        self.waitUntilSettled()
+        self.orderedRelease(1)
 
         # Only C's test jobs are queued because window is still 1.
         self.assertEqual(len(self.builds), 2)
