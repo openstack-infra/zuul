@@ -76,12 +76,12 @@ class TimerDriver(Driver, TriggerInterface):
 
     def _onTrigger(self, tenant, pipeline_name, timespec):
         for project_name in tenant.layout.project_configs.keys():
+            project_hostname, project_name = project_name.split('/', 1)
             event = TriggerEvent()
             event.type = 'timer'
             event.timespec = timespec
             event.forced_pipeline = pipeline_name
-            # TODOv3(jeblair): add project hostname in future change
-            event.project_hostname = ''
+            event.project_hostname = project_hostname
             event.project_name = project_name
             self.log.debug("Adding event %s" % event)
             self.sched.addEvent(event)

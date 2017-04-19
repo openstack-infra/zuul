@@ -46,6 +46,17 @@ class ConfigurationSyntaxError(Exception):
     pass
 
 
+class ProjectNotFoundError(Exception):
+    def __init__(self, project):
+        message = textwrap.dedent("""\
+        The project {project} was not found.  All projects
+        referenced within a Zuul configuration must first be
+        added to the main configuration file by the Zuul
+        administrator.""")
+        message = textwrap.fill(message.format(project=project))
+        super(ProjectNotFoundError, self).__init__(message)
+
+
 def indent(s):
     return '\n'.join(['  ' + x for x in s.split('\n')])
 
@@ -54,7 +65,7 @@ def indent(s):
 def configuration_exceptions(stanza, conf):
     try:
         yield
-    except vs.Invalid as e:
+    except Exception as e:
         conf = copy.deepcopy(conf)
         context = conf.pop('_source_context')
         start_mark = conf.pop('_start_mark')
@@ -488,7 +499,13 @@ class ProjectParser(object):
         for conf in conf_list:
             with configuration_exceptions('project', conf):
                 ProjectParser.getSchema(layout)(conf)
-        project = model.ProjectConfig(conf_list[0]['name'])
+
+        with configuration_exceptions('project', conf_list[0]):
+            project_name = conf_list[0]['name']
+            (trusted, project) = tenant.getProject(project_name)
+            if project is None:
+                raise ProjectNotFoundError(project_name)
+            project_config = model.ProjectConfig(project.canonical_name)
 
         configs = []
         for conf in conf_list:
@@ -504,14 +521,14 @@ class ProjectParser(object):
                             for name in conf_templates])
             configs.append(project_template)
             mode = conf.get('merge-mode')
-            if mode and project.merge_mode is None:
+            if mode and project_config.merge_mode is None:
                 # Set the merge mode to the first one that we find and
                 # ignore subsequent settings.
-                project.merge_mode = model.MERGER_MAP[mode]
-        if project.merge_mode is None:
+                project_config.merge_mode = model.MERGER_MAP[mode]
+        if project_config.merge_mode is None:
             # If merge mode was not specified in any project stanza,
             # set it to the default.
-            project.merge_mode = model.MERGER_MAP['merge-resolve']
+            project_config.merge_mode = model.MERGER_MAP['merge-resolve']
         for pipeline in layout.pipelines.values():
             project_pipeline = model.ProjectPipelineConfig()
             queue_name = None
@@ -532,9 +549,8 @@ class ProjectParser(object):
             if queue_name:
                 project_pipeline.queue_name = queue_name
             if pipeline_defined:
-                project.pipelines[pipeline.name] = project_pipeline
-
-        return project
+                project_config.pipelines[pipeline.name] = project_pipeline
+        return project_config
 
 
 class PipelineParser(object):
@@ -787,7 +803,6 @@ class TenantParser(object):
                                                   unparsed_config,
                                                   scheduler,
                                                   connections)
-        tenant.layout.tenant = tenant
         return tenant
 
     @staticmethod
@@ -991,6 +1006,8 @@ class TenantParser(object):
         for config_project in data.projects.values():
             layout.addProjectConfig(ProjectParser.fromYaml(
                 tenant, layout, config_project))
+
+        layout.tenant = tenant
 
         for pipeline in layout.pipelines.values():
             pipeline.manager._postConfig(layout)

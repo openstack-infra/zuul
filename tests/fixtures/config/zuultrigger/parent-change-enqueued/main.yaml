@@ -4,3 +4,5 @@
       gerrit:
         config-repos:
           - common-config
+        project-repos:
+          - org/project
