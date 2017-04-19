@@ -1106,12 +1106,9 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.history), 0)
         self.assertNotIn('project-post', job_names)
 
+    @simple_layout('layouts/dont-ignore-ref-deletes.yaml')
     def test_post_ignore_deletes_negative(self):
         "Test that deleting refs does trigger post jobs"
-
-        self.updateConfigLayout('layout-dont-ignore-ref-deletes')
-        self.sched.reconfigure(self.config)
-
         e = {
             "type": "ref-updated",
             "submitter": {
@@ -2115,9 +2112,6 @@ class TestScheduler(ZuulTestCase):
 
     def _test_irrelevant_files_jobs(self, should_skip):
         "Test that jobs with irrelevant-files filter run only when appropriate"
-        self.updateConfigLayout('layout-irrelevant-files')
-        self.sched.reconfigure(self.config)
-
         if should_skip:
             files = {'ignoreme': 'ignored\n'}
         else:
@@ -2138,16 +2132,16 @@ class TestScheduler(ZuulTestCase):
         else:
             self.assertIn(change.data['number'], tested_change_ids)
 
+    @simple_layout('layouts/irrelevant-files.yaml')
     def test_irrelevant_files_match_skips_job(self):
         self._test_irrelevant_files_jobs(should_skip=True)
 
+    @simple_layout('layouts/irrelevant-files.yaml')
     def test_irrelevant_files_no_match_runs_job(self):
         self._test_irrelevant_files_jobs(should_skip=False)
 
+    @simple_layout('layouts/inheritance.yaml')
     def test_inherited_jobs_keep_matchers(self):
-        self.updateConfigLayout('layout-inheritance')
-        self.sched.reconfigure(self.config)
-
         files = {'ignoreme': 'ignored\n'}
 
         change = self.fake_gerrit.addFakeChange('org/project',
@@ -3018,10 +3012,8 @@ class TestScheduler(ZuulTestCase):
                                          'layout-idle'))
             repo.git.reset('--hard', before)
 
+    @simple_layout('layouts/smtp.yaml')
     def test_check_smtp_pool(self):
-        self.updateConfigLayout('layout-smtp')
-        self.sched.reconfigure(self.config)
-
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.waitUntilSettled()
 
@@ -3407,10 +3399,9 @@ class TestScheduler(ZuulTestCase):
         self.executor_server.release()
         self.waitUntilSettled()
 
+    @simple_layout('layouts/rate-limit.yaml')
     def test_queue_rate_limiting(self):
         "Test that DependentPipelines are rate limited with dep across window"
-        self.updateConfigLayout('layout-rate-limit')
-        self.sched.reconfigure(self.config)
         self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
@@ -3450,7 +3441,7 @@ class TestScheduler(ZuulTestCase):
         self.executor_server.release('project-.*')
         self.waitUntilSettled()
 
-        tenant = self.sched.abide.tenants.get('openstack')
+        tenant = self.sched.abide.tenants.get('tenant-one')
         queue = tenant.layout.pipelines['gate'].queues[0]
         # A failed so window is reduced by 1 to 1.
         self.assertEqual(queue.window, 1)
@@ -3498,10 +3489,9 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(queue.window_floor, 1)
         self.assertEqual(C.data['status'], 'MERGED')
 
+    @simple_layout('layouts/rate-limit.yaml')
     def test_queue_rate_limiting_dependent(self):
         "Test that DependentPipelines are rate limited with dep in window"
-        self.updateConfigLayout('layout-rate-limit')
-        self.sched.reconfigure(self.config)
         self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
@@ -3539,7 +3529,7 @@ class TestScheduler(ZuulTestCase):
         self.executor_server.release('project-.*')
         self.waitUntilSettled()
 
-        tenant = self.sched.abide.tenants.get('openstack')
+        tenant = self.sched.abide.tenants.get('tenant-one')
         queue = tenant.layout.pipelines['gate'].queues[0]
         # A failed so window is reduced by 1 to 1.
         self.assertEqual(queue.window, 1)
@@ -3606,11 +3596,9 @@ class TestScheduler(ZuulTestCase):
         self.executor_server.release()
         self.waitUntilSettled()
 
+    @simple_layout('layouts/footer-message.yaml')
     def test_footer_message(self):
         "Test a pipeline's footer message is correctly added to the report."
-        self.updateConfigLayout('layout-footer-message')
-        self.sched.reconfigure(self.config)
-
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('code-review', 2)
         self.executor_server.failJob('project-test1', A)

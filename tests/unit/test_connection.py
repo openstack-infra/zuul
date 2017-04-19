@@ -147,9 +147,6 @@ class TestSQLConnection(ZuulDBTestCase):
 
     def test_multiple_sql_connections(self):
         "Test putting results in different databases"
-        self.updateConfigLayout(
-            'tests/fixtures/layout-sql-reporter.yaml')
-
         # Add a successful result
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
