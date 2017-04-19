@@ -14,6 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import gc
 import json
 import textwrap
 
@@ -4636,6 +4637,39 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertIn('project-merge : NODE_FAILURE', A.messages[1])
         self.assertIn('project-test1 : SKIPPED', A.messages[1])
         self.assertIn('project-test2 : SKIPPED', A.messages[1])
+
+
+class TestExecutor(ZuulTestCase):
+    tenant_config_file = 'config/single-tenant/main.yaml'
+
+    def assertFinalState(self):
+        # In this test, we expect to shut down in a non-final state,
+        # so skip these checks.
+        pass
+
+    def assertCleanShutdown(self):
+        self.log.debug("Assert clean shutdown")
+
+        # After shutdown, make sure no jobs are running
+        self.assertEqual({}, self.executor_server.job_workers)
+
+        # Make sure that git.Repo objects have been garbage collected.
+        repos = []
+        gc.collect()
+        for obj in gc.get_objects():
+            if isinstance(obj, git.Repo):
+                self.log.debug("Leaked git repo object: %s" % repr(obj))
+                repos.append(obj)
+        self.assertEqual(len(repos), 0)
+
+    def test_executor_shutdown(self):
+        "Test that the executor can shut down with jobs running"
+
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.waitUntilSettled()
 
 
 class TestDependencyGraph(ZuulTestCase):
