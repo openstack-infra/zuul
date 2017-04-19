@@ -1338,13 +1338,6 @@ class ZuulTestCase(BaseTestCase):
         # TODOv3(jeblair): remove these and replace with new git
         # filesystem fixtures
         self.init_repo("org/project3")
-        self.init_repo("org/project4")
-        self.init_repo("org/project5")
-        self.init_repo("org/project6")
-        self.init_repo("org/templated-project")
-        self.init_repo("org/layered-project")
-        self.init_repo("org/node-project")
-        self.init_repo("org/conflict-project")
 
         self.statsd = FakeStatsd()
         # note, use 127.0.0.1 rather than localhost to avoid getting ipv6
@@ -2020,14 +2013,7 @@ class ZuulTestCase(BaseTestCase):
           - org/project
           - org/project1
           - org/project2
-          - org/project3
-          - org/project4
-          - org/project5
-          - org/project6
-          - org/templated-project
-          - org/layered-project
-          - org/node-project
-          - org/conflict-project\n""" % path)
+          - org/project3\n""" % path)
 
         for repo in untrusted_projects:
             f.write("          - %s\n" % repo)
