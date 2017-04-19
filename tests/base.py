@@ -1990,9 +1990,7 @@ class ZuulTestCase(BaseTestCase):
     def getPipeline(self, name):
         return self.sched.abide.tenants.values()[0].layout.pipelines.get(name)
 
-    def updateConfigLayout(self, path, untrusted_projects=None):
-        if untrusted_projects is None:
-            untrusted_projects = []
+    def updateConfigLayout(self, path):
         root = os.path.join(self.test_root, "config")
         if not os.path.exists(root):
             os.makedirs(root)
@@ -2008,9 +2006,6 @@ class ZuulTestCase(BaseTestCase):
           - org/project
           - org/project1
           - org/project2\n""" % path)
-
-        for repo in untrusted_projects:
-            f.write("          - %s\n" % repo)
         f.close()
         self.config.set('zuul', 'tenant_config',
                         os.path.join(FIXTURE_DIR, f.name))
