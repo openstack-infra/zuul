@@ -26,7 +26,7 @@ import pprint
 import voluptuous as v
 
 from zuul.connection import BaseConnection
-from zuul.model import TriggerEvent, Project, Change, Ref
+from zuul.model import TriggerEvent, Change, Ref
 from zuul import exceptions
 
 
@@ -268,11 +268,13 @@ class GerritConnection(BaseConnection):
         self._change_cache = {}
         self.projects = {}
         self.gerrit_event_connector = None
+        self.source = driver.getSource(self)
 
     def getProject(self, name):
-        if name not in self.projects:
-            self.projects[name] = Project(name, self.connection_name)
-        return self.projects[name]
+        return self.projects.get(name)
+
+    def addProject(self, project):
+        self.projects[project.name] = project
 
     def maintainCache(self, relevant):
         # This lets the user supply a list of change objects that are
@@ -290,14 +292,14 @@ class GerritConnection(BaseConnection):
             change = self._getChange(event.change_number, event.patch_number,
                                      refresh=refresh)
         elif event.ref:
-            project = self.getProject(event.project_name)
+            project = self.source.getProject(event.project_name)
             change = Ref(project)
             change.ref = event.ref
             change.oldrev = event.oldrev
             change.newrev = event.newrev
             change.url = self._getGitwebUrl(project, sha=event.newrev)
         else:
-            project = self.getProject(event.project_name)
+            project = self.source.getProject(event.project_name)
             change = Ref(project)
             branch = event.branch or 'master'
             change.ref = 'refs/heads/%s' % branch
@@ -375,7 +377,7 @@ class GerritConnection(BaseConnection):
 
         if 'project' not in data:
             raise exceptions.ChangeNotFound(change.number, change.patchset)
-        change.project = self.getProject(data['project'])
+        change.project = self.source.getProject(data['project'])
         change.branch = data['branch']
         change.url = data['url']
         max_ps = 0

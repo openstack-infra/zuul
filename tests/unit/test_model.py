@@ -27,19 +27,22 @@ from zuul.lib import yamlutil as yaml
 from tests.base import BaseTestCase, FIXTURE_DIR
 
 
-class FakeSource(object):
-    def __init__(self, name):
-        self.name = name
+class Dummy(object):
+    def __init__(self, **kw):
+        for k, v in kw.items():
+            setattr(self, k, v)
 
 
 class TestJob(BaseTestCase):
-
     def setUp(self):
         super(TestJob, self).setUp()
+        self.connection = Dummy(connection_name='dummy_connection')
+        self.source = Dummy(canonical_hostname='git.example.com',
+                            name='dummy_connection',  # TODOv3(jeblair): remove
+                            connection=self.connection)
         self.tenant = model.Tenant('tenant')
         self.layout = model.Layout()
-        self.project = model.Project('project', 'connection')
-        self.source = FakeSource('connection')
+        self.project = model.Project('project', self.source)
         self.tenant.addProjectRepo(self.source, self.project)
         self.pipeline = model.Pipeline('gate', self.layout)
         self.layout.addPipeline(self.pipeline)
@@ -162,7 +165,7 @@ class TestJob(BaseTestCase):
         pipeline = model.Pipeline('gate', layout)
         layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
-        project = model.Project('project', None)
+        project = model.Project('project', self.source)
 
         base = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': self.context,
@@ -508,7 +511,7 @@ class TestJob(BaseTestCase):
         pipeline = model.Pipeline('gate', layout)
         layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
-        project = model.Project('project', None)
+        project = model.Project('project', self.source)
 
         base = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': self.context,
@@ -554,7 +557,7 @@ class TestJob(BaseTestCase):
     def test_job_source_project(self):
         tenant = model.Tenant('tenant')
         layout = model.Layout()
-        base_project = model.Project('base_project', None)
+        base_project = model.Project('base_project', self.source)
         base_context = model.SourceContext(base_project, 'master',
                                            'test', True)
 
@@ -565,7 +568,7 @@ class TestJob(BaseTestCase):
         })
         layout.addJob(base)
 
-        other_project = model.Project('other_project', None)
+        other_project = model.Project('other_project', self.source)
         other_context = model.SourceContext(other_project, 'master',
                                             'test', True)
         base2 = configloader.JobParser.fromYaml(tenant, layout, {
@@ -588,7 +591,7 @@ class TestJob(BaseTestCase):
         })
         self.layout.addJob(job)
 
-        project2 = model.Project('project2', None)
+        project2 = model.Project('project2', self.source)
         context2 = model.SourceContext(project2, 'master',
                                        'test', True)
 

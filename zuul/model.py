@@ -351,9 +351,10 @@ class Project(object):
     # This makes a Project instance a unique identifier for a given
     # project from a given source.
 
-    def __init__(self, name, connection_name, foreign=False):
+    def __init__(self, name, source, foreign=False):
         self.name = name
-        self.connection_name = connection_name
+        self.connection_name = source.connection.connection_name
+        self.canonical_hostname = source.canonical_hostname
         # foreign projects are those referenced in dependencies
         # of layout projects, this should matter
         # when deciding whether to enqueue their changes

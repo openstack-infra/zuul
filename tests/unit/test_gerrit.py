@@ -22,6 +22,7 @@ except ImportError:
 
 import tests.base
 from tests.base import BaseTestCase
+from zuul.driver.gerrit import GerritDriver
 from zuul.driver.gerrit.gerritconnection import GerritConnection
 
 FIXTURE_DIR = os.path.join(tests.base.FIXTURE_DIR, 'gerrit')
@@ -53,7 +54,8 @@ class TestGerrit(BaseTestCase):
             'user': 'gerrit',
             'server': 'localhost',
         }
-        gerrit = GerritConnection(None, 'review_gerrit', gerrit_config)
+        driver = GerritDriver()
+        gerrit = GerritConnection(driver, 'review_gerrit', gerrit_config)
 
         calls, values = read_fixtures(files)
         _ssh_mock.side_effect = values
