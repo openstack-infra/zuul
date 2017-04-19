@@ -2512,16 +2512,16 @@ class Tenant(object):
         # The unparsed configuration from the main zuul config for
         # this tenant.
         self.unparsed_config = None
-        # The list of repos from which we will read main
+        # The list of projects from which we will read full
         # configuration.
-        self.config_repos = []
-        # The unparsed config from those repos.
-        self.config_repos_config = None
-        # The list of projects from which we will read in-repo
-        # configuration.
-        self.project_repos = []
-        # The unparsed config from those repos.
-        self.project_repos_config = None
+        self.config_projects = []
+        # The unparsed config from those projects.
+        self.config_projects_config = None
+        # The list of projects from which we will read untrusted
+        # in-repo configuration.
+        self.untrusted_projects = []
+        # The unparsed config from those projects.
+        self.untrusted_projects_config = None
         self.semaphore_handler = SemaphoreHandler()
 
         # A mapping of project names to projects.  project_name ->
@@ -2579,20 +2579,20 @@ class Tenant(object):
                                     "with a hostname" % (name,))
         if project is None:
             return (None, None)
-        if project in self.config_repos:
+        if project in self.config_projects:
             return (True, project)
-        if project in self.project_repos:
+        if project in self.untrusted_projects:
             return (False, project)
         # This should never happen:
         raise Exception("Project %s is neither trusted nor untrusted" %
                         (project,))
 
-    def addConfigRepo(self, project):
-        self.config_repos.append(project)
+    def addConfigProject(self, project):
+        self.config_projects.append(project)
         self._addProject(project)
 
-    def addProjectRepo(self, project):
-        self.project_repos.append(project)
+    def addUntrustedProject(self, project):
+        self.untrusted_projects.append(project)
         self._addProject(project)
 
 

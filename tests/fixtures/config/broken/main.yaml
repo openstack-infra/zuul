@@ -2,5 +2,5 @@
     name: tenant-one
     source:
       gerrit:
-        config-repos:
+        config-projects:
           - common-config

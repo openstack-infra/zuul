@@ -754,8 +754,8 @@ class SemaphoreParser(object):
 class TenantParser(object):
     log = logging.getLogger("zuul.TenantParser")
 
-    tenant_source = vs.Schema({'config-repos': [str],
-                               'project-repos': [str]})
+    tenant_source = vs.Schema({'config-projects': [str],
+                               'untrusted-projects': [str]})
 
     @staticmethod
     def validateTenantSources(connections):
@@ -785,20 +785,20 @@ class TenantParser(object):
         tenant = model.Tenant(conf['name'])
         tenant.unparsed_config = conf
         unparsed_config = model.UnparsedTenantConfig()
-        config_repos, project_repos = \
-            TenantParser._loadTenantConfigRepos(
+        config_projects, untrusted_projects = \
+            TenantParser._loadTenantProjects(
                 project_key_dir, connections, conf)
-        for repo in config_repos:
-            tenant.addConfigRepo(repo)
-        for repo in project_repos:
-            tenant.addProjectRepo(repo)
-        tenant.config_repos_config, tenant.project_repos_config = \
+        for project in config_projects:
+            tenant.addConfigProject(project)
+        for project in untrusted_projects:
+            tenant.addUntrustedProject(project)
+        tenant.config_projects_config, tenant.untrusted_projects_config = \
             TenantParser._loadTenantInRepoLayouts(merger, connections,
-                                                  tenant.config_repos,
-                                                  tenant.project_repos,
+                                                  tenant.config_projects,
+                                                  tenant.untrusted_projects,
                                                   cached)
-        unparsed_config.extend(tenant.config_repos_config)
-        unparsed_config.extend(tenant.project_repos_config)
+        unparsed_config.extend(tenant.config_projects_config)
+        unparsed_config.extend(tenant.untrusted_projects_config)
         tenant.layout = TenantParser._parseLayout(base, tenant,
                                                   unparsed_config,
                                                   scheduler,
@@ -852,41 +852,41 @@ class TenantParser(object):
                 encryption.deserialize_rsa_keypair(f.read())
 
     @staticmethod
-    def _loadTenantConfigRepos(project_key_dir, connections, conf_tenant):
-        config_repos = []
-        project_repos = []
+    def _loadTenantProjects(project_key_dir, connections, conf_tenant):
+        config_projects = []
+        untrusted_projects = []
 
         for source_name, conf_source in conf_tenant.get('source', {}).items():
             source = connections.getSource(source_name)
 
-            for conf_repo in conf_source.get('config-repos', []):
+            for conf_repo in conf_source.get('config-projects', []):
                 project = source.getProject(conf_repo)
                 TenantParser._loadProjectKeys(
                     project_key_dir, source_name, project)
-                config_repos.append(project)
+                config_projects.append(project)
 
-            for conf_repo in conf_source.get('project-repos', []):
+            for conf_repo in conf_source.get('untrusted-projects', []):
                 project = source.getProject(conf_repo)
                 TenantParser._loadProjectKeys(
                     project_key_dir, source_name, project)
-                project_repos.append(project)
+                untrusted_projects.append(project)
 
-        return config_repos, project_repos
+        return config_projects, untrusted_projects
 
     @staticmethod
-    def _loadTenantInRepoLayouts(merger, connections, config_repos,
-                                 project_repos, cached):
-        config_repos_config = model.UnparsedTenantConfig()
-        project_repos_config = model.UnparsedTenantConfig()
+    def _loadTenantInRepoLayouts(merger, connections, config_projects,
+                                 untrusted_projects, cached):
+        config_projects_config = model.UnparsedTenantConfig()
+        untrusted_projects_config = model.UnparsedTenantConfig()
         jobs = []
 
-        for project in config_repos:
+        for project in config_projects:
             # If we have cached data (this is a reconfiguration) use it.
             if cached and project.unparsed_config:
                 TenantParser.log.info(
                     "Loading previously parsed configuration from %s" %
                     (project,))
-                config_repos_config.extend(project.unparsed_config)
+                config_projects_config.extend(project.unparsed_config)
                 continue
             # Otherwise, prepare an empty unparsed config object to
             # hold cached data later.
@@ -900,13 +900,13 @@ class TenantParser(object):
                                                      '', True)
             jobs.append(job)
 
-        for project in project_repos:
+        for project in untrusted_projects:
             # If we have cached data (this is a reconfiguration) use it.
             if cached and project.unparsed_config:
                 TenantParser.log.info(
                     "Loading previously parsed configuration from %s" %
                     (project,))
-                project_repos_config.extend(project.unparsed_config)
+                untrusted_projects_config.extend(project.unparsed_config)
                 continue
             # Otherwise, prepare an empty unparsed config object to
             # hold cached data later.
@@ -951,27 +951,27 @@ class TenantParser(object):
                     project = job.source_context.project
                     branch = job.source_context.branch
                     if job.source_context.trusted:
-                        incdata = TenantParser._parseConfigRepoLayout(
+                        incdata = TenantParser._parseConfigProjectLayout(
                             job.files[fn], job.source_context)
-                        config_repos_config.extend(incdata)
+                        config_projects_config.extend(incdata)
                     else:
-                        incdata = TenantParser._parseProjectRepoLayout(
+                        incdata = TenantParser._parseUntrustedProjectLayout(
                             job.files[fn], job.source_context)
-                        project_repos_config.extend(incdata)
+                        untrusted_projects_config.extend(incdata)
                     project.unparsed_config.extend(incdata)
                     if branch in project.unparsed_branch_config:
                         project.unparsed_branch_config[branch].extend(incdata)
-        return config_repos_config, project_repos_config
+        return config_projects_config, untrusted_projects_config
 
     @staticmethod
-    def _parseConfigRepoLayout(data, source_context):
+    def _parseConfigProjectLayout(data, source_context):
         # This is the top-level configuration for a tenant.
         config = model.UnparsedTenantConfig()
         config.extend(safe_load_yaml(data, source_context))
         return config
 
     @staticmethod
-    def _parseProjectRepoLayout(data, source_context):
+    def _parseUntrustedProjectLayout(data, source_context):
         # TODOv3(jeblair): this should implement some rules to protect
         # aspects of the config that should not be changed in-repo
         config = model.UnparsedTenantConfig()
@@ -1061,9 +1061,8 @@ class ConfigLoader(object):
         new_abide.tenants[tenant.name] = new_tenant
         return new_abide
 
-    def _loadDynamicProjectData(self, config, project, files,
-                                config_repo):
-        if config_repo:
+    def _loadDynamicProjectData(self, config, project, files, trusted):
+        if trusted:
             branches = ['master']
             fn = 'zuul.yaml'
         else:
@@ -1075,29 +1074,30 @@ class ConfigLoader(object):
             data = files.getFile(project.name, branch, fn)
             if data:
                 source_context = model.SourceContext(project, branch,
-                                                     fn, config_repo)
-                if config_repo:
-                    incdata = TenantParser._parseConfigRepoLayout(
+                                                     fn, trusted)
+                if trusted:
+                    incdata = TenantParser._parseConfigProjectLayout(
                         data, source_context)
                 else:
-                    incdata = TenantParser._parseProjectRepoLayout(
+                    incdata = TenantParser._parseUntrustedProjectLayout(
                         data, source_context)
             else:
-                if config_repo:
+                if trusted:
                     incdata = project.unparsed_config
                 else:
                     incdata = project.unparsed_branch_config.get(branch)
             if incdata:
                 config.extend(incdata)
 
-    def createDynamicLayout(self, tenant, files, include_config_repos=False):
-        if include_config_repos:
+    def createDynamicLayout(self, tenant, files,
+                            include_config_projects=False):
+        if include_config_projects:
             config = model.UnparsedTenantConfig()
-            for project in tenant.config_repos:
+            for project in tenant.config_projects:
                 self._loadDynamicProjectData(config, project, files, True)
         else:
-            config = tenant.config_repos_config.copy()
-        for project in tenant.project_repos:
+            config = tenant.config_projects_config.copy()
+        for project in tenant.untrusted_projects:
             self._loadDynamicProjectData(config, project, files, False)
 
         layout = model.Layout()

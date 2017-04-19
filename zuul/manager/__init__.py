@@ -487,14 +487,14 @@ class PipelineManager(object):
             loader.createDynamicLayout(
                 item.pipeline.layout.tenant,
                 build_set.files,
-                include_config_repos=True)
+                include_config_projects=True)
 
             # Then create the config a second time but without changes
             # to config repos so that we actually use this config.
             layout = loader.createDynamicLayout(
                 item.pipeline.layout.tenant,
                 build_set.files,
-                include_config_repos=False)
+                include_config_projects=False)
         except zuul.configloader.ConfigurationSyntaxError as e:
             self.log.info("Configuration syntax error "
                           "in dynamic layout %s" %
