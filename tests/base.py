@@ -1341,13 +1341,10 @@ class ZuulTestCase(BaseTestCase):
         self.init_repo("org/project4")
         self.init_repo("org/project5")
         self.init_repo("org/project6")
-        self.init_repo("org/one-job-project")
-        self.init_repo("org/nonvoting-project")
         self.init_repo("org/templated-project")
         self.init_repo("org/layered-project")
         self.init_repo("org/node-project")
         self.init_repo("org/conflict-project")
-        self.init_repo("org/noop-project")
 
         self.statsd = FakeStatsd()
         # note, use 127.0.0.1 rather than localhost to avoid getting ipv6
@@ -2027,13 +2024,10 @@ class ZuulTestCase(BaseTestCase):
           - org/project4
           - org/project5
           - org/project6
-          - org/one-job-project
-          - org/nonvoting-project
           - org/templated-project
           - org/layered-project
           - org/node-project
-          - org/conflict-project
-          - org/noop-project\n""" % path)
+          - org/conflict-project\n""" % path)
 
         for repo in untrusted_projects:
             f.write("          - %s\n" % repo)

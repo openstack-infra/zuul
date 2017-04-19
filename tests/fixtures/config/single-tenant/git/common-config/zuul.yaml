@@ -72,17 +72,6 @@
     queue-name: integration
 
 - job:
-    name: nonvoting-project-merge
-    hold-following-changes: true
-
-- job:
-    name: nonvoting-project-test1
-
-- job:
-    name: nonvoting-project-test2
-    voting: false
-
-- job:
     name: project-testfile
     files:
       - .*-requires
@@ -177,29 +166,3 @@
     post:
       jobs:
         - project-post
-
-- project:
-    name: org/noop-project
-    check:
-      jobs:
-        - noop
-    gate:
-      jobs:
-        - noop
-
-- project:
-    name: org/nonvoting-project
-    check:
-      jobs:
-        - nonvoting-project-merge
-        - nonvoting-project-test1:
-            dependencies: nonvoting-project-merge
-        - nonvoting-project-test2:
-            dependencies: nonvoting-project-merge
-    gate:
-      jobs:
-        - nonvoting-project-merge
-        - nonvoting-project-test1:
-            dependencies: nonvoting-project-merge
-        - nonvoting-project-test2:
-            dependencies: nonvoting-project-merge

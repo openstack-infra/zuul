@@ -1307,6 +1307,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
+    @simple_layout('layouts/nonvoting-job.yaml')
     def test_nonvoting_job(self):
         "Test that non-voting jobs don't vote."
 
@@ -1898,6 +1899,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.history), 10)
         self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 1)
 
+    @simple_layout('layouts/noop-job.yaml')
     def test_noop_job(self):
         "Test that the internal noop job works"
         A = self.fake_gerrit.addFakeChange('org/noop-project', 'master', 'A')
@@ -4569,6 +4571,24 @@ For CI problems and help debugging, contact ci@example.org"""
         # No more messages reported via smtp
         self.assertEqual(3, len(self.smtp_messages))
 
+    @simple_layout('layouts/one-job-project.yaml')
+    def test_one_job_project(self):
+        "Test that queueing works with one job"
+        A = self.fake_gerrit.addFakeChange('org/one-job-project',
+                                           'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/one-job-project',
+                                           'master', 'B')
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(B.reported, 2)
+
     def test_rerun_on_abort(self):
         "Test that if a execute server fails to run a job, it is run again"
 
@@ -4816,27 +4836,6 @@ class TestDuplicatePipeline(ZuulTestCase):
             self.assertIn('dup2', A.messages[0])
             self.assertNotIn('dup1', A.messages[0])
             self.assertIn('project-test1', A.messages[0])
-
-
-class TestSchedulerOneJobProject(ZuulTestCase):
-    tenant_config_file = 'config/one-job-project/main.yaml'
-
-    def test_one_job_project(self):
-        "Test that queueing works with one job"
-        A = self.fake_gerrit.addFakeChange('org/one-job-project',
-                                           'master', 'A')
-        B = self.fake_gerrit.addFakeChange('org/one-job-project',
-                                           'master', 'B')
-        A.addApproval('code-review', 2)
-        B.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
-        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
-        self.waitUntilSettled()
-
-        self.assertEqual(A.data['status'], 'MERGED')
-        self.assertEqual(A.reported, 2)
-        self.assertEqual(B.data['status'], 'MERGED')
-        self.assertEqual(B.reported, 2)
 
 
 class TestSchedulerTemplatedProject(ZuulTestCase):

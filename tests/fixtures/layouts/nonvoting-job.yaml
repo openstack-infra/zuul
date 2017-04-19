@@ -1,0 +1,41 @@
+- pipeline:
+    name: gate
+    manager: dependent
+    success-message: Build succeeded (gate).
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - approved: 1
+    success:
+      gerrit:
+        verified: 2
+        submit: true
+    failure:
+      gerrit:
+        verified: -2
+    start:
+      gerrit:
+        verified: 0
+    precedence: high
+
+- job:
+    name: nonvoting-project-merge
+    hold-following-changes: true
+
+- job:
+    name: nonvoting-project-test1
+
+- job:
+    name: nonvoting-project-test2
+    voting: false
+
+- project:
+    name: org/nonvoting-project
+    gate:
+      jobs:
+        - nonvoting-project-merge
+        - nonvoting-project-test1:
+            dependencies: nonvoting-project-merge
+        - nonvoting-project-test2:
+            dependencies: nonvoting-project-merge
