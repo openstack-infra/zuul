@@ -906,7 +906,8 @@ class TestScheduler(ZuulTestCase):
         # TODO: move to test_gerrit (this is a unit test!)
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         tenant = self.sched.abide.tenants.get('tenant-one')
-        source = tenant.layout.pipelines['gate'].source
+        (trusted, project) = tenant.getProject('org/project')
+        source = project.source
 
         # TODO(pabelanger): As we add more source / trigger APIs we should make
         # it easier for users to create events for testing.
@@ -2169,9 +2170,8 @@ class TestScheduler(ZuulTestCase):
     def test_queue_names(self):
         "Test shared change queue names"
         tenant = self.sched.abide.tenants.get('tenant-one')
-        source = tenant.layout.pipelines['gate'].source
-        project1 = source.getProject('org/project1')
-        project2 = source.getProject('org/project2')
+        (trusted, project1) = tenant.getProject('org/project1')
+        (trusted, project2) = tenant.getProject('org/project2')
         q1 = tenant.layout.pipelines['gate'].getQueue(project1)
         q2 = tenant.layout.pipelines['gate'].getQueue(project2)
         self.assertEqual(q1.name, 'integrated')
@@ -4415,7 +4415,8 @@ For CI problems and help debugging, contact ci@example.org"""
         # processing.
 
         tenant = self.sched.abide.tenants.get('tenant-one')
-        source = tenant.layout.pipelines['gate'].source
+        (trusted, project) = tenant.getProject('org/project')
+        source = project.source
 
         # TODO(pabelanger): As we add more source / trigger APIs we should make
         # it easier for users to create events for testing.

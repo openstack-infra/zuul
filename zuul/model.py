@@ -106,11 +106,7 @@ class Attributes(object):
 
 
 class Pipeline(object):
-    """A configuration that ties triggers, reporters, managers and sources.
-
-    Source
-        Where changes should come from. It is a named connection to
-        an external service defined in zuul.conf
+    """A configuration that ties together triggers, reporters and managers
 
     Trigger
         A description of which events should be processed
@@ -136,7 +132,6 @@ class Pipeline(object):
         self.manager = None
         self.queues = []
         self.precedence = PRECEDENCE_NORMAL
-        self.source = None
         self.triggers = []
         self.start_actions = []
         self.success_actions = []

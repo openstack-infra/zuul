@@ -35,6 +35,7 @@ class ConnectionRegistry(object):
 
     def __init__(self):
         self.connections = {}
+        self.sources = {}
         self.drivers = {}
 
         self.registerDriver(zuul.driver.zuul.ZuulDriver())
@@ -71,6 +72,7 @@ class ConnectionRegistry(object):
         # Register connections from the config
         # TODO(jhesketh): import connection modules dynamically
         connections = {}
+        sources = {}
 
         for section_name in config.sections():
             con_match = re.match(r'^connection ([\'\"]?)(.*)(\1)$',
@@ -92,6 +94,9 @@ class ConnectionRegistry(object):
             driver = self.drivers[con_driver]
             connection = driver.getConnection(con_name, con_config)
             connections[con_name] = connection
+            if hasattr(driver, 'getSource'):
+                source = driver.getSource(connection)
+                sources[source.canonical_hostname] = source
 
         # If the [gerrit] or [smtp] sections still exist, load them in as a
         # connection named 'gerrit' or 'smtp' respectfully
@@ -126,6 +131,10 @@ class ConnectionRegistry(object):
                     driver, driver.name, {})
 
         self.connections = connections
+        self.sources = sources
+
+    def getSourceByHostname(self, hostname):
+        return self.sources[hostname]
 
     def getSource(self, connection_name):
         connection = self.connections[connection_name]

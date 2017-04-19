@@ -54,7 +54,6 @@ class PipelineManager(object):
 
     def _postConfig(self, layout):
         self.log.info("Configured Pipeline Manager %s" % self.pipeline.name)
-        self.log.info("  Source: %s" % self.pipeline.source)
         self.log.info("  Requirements:")
         for f in self.changeish_filters:
             self.log.info("    %s" % f)
@@ -147,11 +146,12 @@ class PipelineManager(object):
 
     def reportStart(self, item):
         if not self.pipeline._disabled:
+            source = item.change.project.source
             try:
                 self.log.info("Reporting start, action %s item %s" %
                               (self.pipeline.start_actions, item))
                 ret = self.sendReport(self.pipeline.start_actions,
-                                      self.pipeline.source, item)
+                                      source, item)
                 if ret:
                     self.log.error("Reporting item start %s received: %s" %
                                    (item, ret))
@@ -454,12 +454,12 @@ class PipelineManager(object):
         elif hasattr(item.change, 'newrev'):
             oldrev = item.change.oldrev
             newrev = item.change.newrev
-        connection_name = self.pipeline.source.connection.connection_name
+        source = item.change.project.source
+        connection_name = source.connection.connection_name
 
         project = item.change.project.name
         return dict(project=project,
-                    url=self.pipeline.source.getGitUrl(
-                        item.change.project),
+                    url=source.getGitUrl(item.change.project),
                     connection_name=connection_name,
                     merge_mode=item.current_build_set.getMergeMode(),
                     refspec=refspec,
@@ -742,9 +742,9 @@ class PipelineManager(object):
         if self.changes_merge:
             succeeded = item.didAllJobsSucceed()
             merged = item.reported
+            source = item.change.project.source
             if merged:
-                merged = self.pipeline.source.isMerged(item.change,
-                                                       item.change.branch)
+                merged = source.isMerged(item.change, item.change.branch)
             self.log.info("Reported change %s status: all-succeeded: %s, "
                           "merged: %s" % (item.change, succeeded, merged))
             change_queue = item.queue
@@ -763,11 +763,11 @@ class PipelineManager(object):
 
                 zuul_driver = self.sched.connections.drivers['zuul']
                 tenant = self.pipeline.layout.tenant
-                zuul_driver.onChangeMerged(tenant, item.change,
-                                           self.pipeline.source)
+                zuul_driver.onChangeMerged(tenant, item.change, source)
 
     def _reportItem(self, item):
         self.log.debug("Reporting change %s" % item.change)
+        source = item.change.project.source
         ret = True  # Means error as returned by trigger.report
         if item.getConfigError():
             self.log.debug("Invalid config for change %s" % item.change)
@@ -802,7 +802,7 @@ class PipelineManager(object):
             try:
                 self.log.info("Reporting item %s, actions: %s" %
                               (item, actions))
-                ret = self.sendReport(actions, self.pipeline.source, item)
+                ret = self.sendReport(actions, source, item)
                 if ret:
                     self.log.error("Reporting item %s received: %s" %
                                    (item, ret))

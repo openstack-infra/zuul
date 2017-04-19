@@ -647,8 +647,6 @@ class PipelineParser(object):
         pipeline = model.Pipeline(conf['name'], layout)
         pipeline.description = conf.get('description')
 
-        pipeline.source = connections.getSource(conf['source'])
-
         precedence = model.PRECEDENCE_MAP[conf.get('precedence')]
         pipeline.precedence = precedence
         pipeline.failure_message = conf.get('failure-message',
