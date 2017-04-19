@@ -4428,13 +4428,11 @@ For CI problems and help debugging, contact ci@example.org"""
         event.change_number = '2'
         source.getChange(event, True)
 
+    @simple_layout('layouts/disable_at.yaml')
     def test_disable_at(self):
         "Test a pipeline will only report to the disabled trigger when failing"
 
-        self.updateConfigLayout('layout-disabled-at')
-        self.sched.reconfigure(self.config)
-
-        tenant = self.sched.abide.tenants.get('openstack')
+        tenant = self.sched.abide.tenants.get('tenant-one')
         self.assertEqual(3, tenant.layout.pipelines['check'].disable_at)
         self.assertEqual(
             0, tenant.layout.pipelines['check']._consecutive_failures)
@@ -4532,7 +4530,7 @@ For CI problems and help debugging, contact ci@example.org"""
         # comes out of disabled
         self.sched.reconfigure(self.config)
 
-        tenant = self.sched.abide.tenants.get('openstack')
+        tenant = self.sched.abide.tenants.get('tenant-one')
 
         self.assertEqual(3, tenant.layout.pipelines['check'].disable_at)
         self.assertEqual(
