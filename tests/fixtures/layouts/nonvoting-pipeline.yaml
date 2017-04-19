@@ -1,0 +1,25 @@
+- pipeline:
+    name: experimental
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit: {}
+    failure:
+      gerrit: {}
+
+- job:
+    name: project-merge
+    hold-following-changes: true
+
+- job:
+    name: experimental-project-test
+
+- project:
+    name: org/experimental-project
+    experimental:
+      jobs:
+        - project-merge
+        - experimental-project-test:
+            dependencies: project-merge

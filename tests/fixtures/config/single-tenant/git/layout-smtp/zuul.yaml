@@ -58,9 +58,6 @@
 - job:
     name: project-test2
 
-- job:
-    name: experimental-project-test
-
 - project:
     name: org/project
     check:
