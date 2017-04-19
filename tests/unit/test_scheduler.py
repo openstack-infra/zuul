@@ -3805,6 +3805,7 @@ For CI problems and help debugging, contact ci@example.org"""
         running_items = client.get_running_jobs()
         self.assertEqual(0, len(running_items))
 
+    @simple_layout('layouts/nonvoting-pipeline.yaml')
     def test_nonvoting_pipeline(self):
         "Test that a nonvoting pipeline (experimental) can still report"
 

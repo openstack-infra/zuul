@@ -1348,7 +1348,6 @@ class ZuulTestCase(BaseTestCase):
         self.init_repo("org/node-project")
         self.init_repo("org/conflict-project")
         self.init_repo("org/noop-project")
-        self.init_repo("org/experimental-project")
 
         self.statsd = FakeStatsd()
         # note, use 127.0.0.1 rather than localhost to avoid getting ipv6
@@ -1505,9 +1504,12 @@ class ZuulTestCase(BaseTestCase):
         else:
             return False
 
+        files = {}
         path = os.path.join(FIXTURE_DIR, path)
         with open(path) as f:
-            layout = yaml.safe_load(f.read())
+            data = f.read()
+            layout = yaml.safe_load(data)
+            files['zuul.yaml'] = data
         untrusted_projects = []
         for item in layout:
             if 'project' in item:
@@ -1517,6 +1519,9 @@ class ZuulTestCase(BaseTestCase):
                 self.addCommitToRepo(name, 'initial commit',
                                      files={'README': ''},
                                      branch='master', tag='init')
+            if 'job' in item:
+                jobname = item['job']['name']
+                files['playbooks/%s.yaml' % jobname] = ''
 
         root = os.path.join(self.test_root, "config")
         if not os.path.exists(root):
@@ -1533,8 +1538,6 @@ class ZuulTestCase(BaseTestCase):
                         os.path.join(FIXTURE_DIR, f.name))
 
         self.init_repo('common-config')
-        with open(path) as f:
-            files = {'zuul.yaml': f.read()}
         self.addCommitToRepo('common-config', 'add content from fixture',
                              files, branch='master', tag='init')
 
@@ -2030,8 +2033,7 @@ class ZuulTestCase(BaseTestCase):
           - org/layered-project
           - org/node-project
           - org/conflict-project
-          - org/noop-project
-          - org/experimental-project\n""" % path)
+          - org/noop-project\n""" % path)
 
         for repo in untrusted_projects:
             f.write("          - %s\n" % repo)

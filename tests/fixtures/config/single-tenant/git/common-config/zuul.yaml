@@ -40,17 +40,6 @@
         - event: ref-updated
           ref: ^(?!refs/).*$
 
-- pipeline:
-    name: experimental
-    manager: independent
-    trigger:
-      gerrit:
-        - event: patchset-created
-    success:
-      gerrit: {}
-    failure:
-      gerrit: {}
-
 - job:
     name: project-merge
     hold-following-changes: true
@@ -81,9 +70,6 @@
 - job:
     name: project1-project2-integration
     queue-name: integration
-
-- job:
-    name: experimental-project-test
 
 - job:
     name: nonvoting-project-merge
@@ -191,14 +177,6 @@
     post:
       jobs:
         - project-post
-
-- project:
-    name: org/experimental-project
-    experimental:
-      jobs:
-        - project-merge
-        - experimental-project-test:
-            dependencies: project-merge
 
 - project:
     name: org/noop-project
