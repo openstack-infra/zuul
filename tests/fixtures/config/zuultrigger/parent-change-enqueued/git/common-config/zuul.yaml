@@ -1,7 +1,6 @@
 - pipeline:
     name: check
     manager: independent
-    source: gerrit
     require:
       approval:
         - verified: -1
@@ -21,7 +20,6 @@
 - pipeline:
     name: gate
     manager: dependent
-    source: gerrit
     require:
       approval:
         - verified: 1

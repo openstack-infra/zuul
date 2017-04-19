@@ -1,7 +1,6 @@
 - pipeline:
     name: check
     manager: independent
-    source: review_gerrit
     trigger:
       review_gerrit:
         - event: patchset-created

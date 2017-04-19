@@ -1,7 +1,6 @@
 - pipeline:
     name: check
     manager: independent
-    source: gerrit
     trigger:
       gerrit:
         - event: patchset-created
@@ -22,7 +21,6 @@
     name: gate
     manager: dependent
     success-message: Build succeeded (gate).
-    source: gerrit
     trigger:
       gerrit:
         - event: comment-added

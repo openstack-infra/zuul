@@ -2,7 +2,6 @@
     name: check
     manager: independent
     ignore-dependencies: true
-    source: gerrit
     trigger:
       gerrit:
         - event: patchset-created

@@ -1,7 +1,6 @@
 - pipeline:
     name: current-check
     manager: independent
-    source: gerrit
     require:
       current-patchset: true
     trigger:
@@ -18,7 +17,6 @@
 - pipeline:
     name: open-check
     manager: independent
-    source: gerrit
     require:
       open: true
     trigger:
@@ -35,7 +33,6 @@
 - pipeline:
     name: status-check
     manager: independent
-    source: gerrit
     require:
       status: NEW
     trigger:
