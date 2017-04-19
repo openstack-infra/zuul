@@ -36,6 +36,7 @@ import zuul.model
 from tests.base import (
     ZuulTestCase,
     repack_repo,
+    simple_layout,
 )
 
 
@@ -1910,6 +1911,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
+    @simple_layout('layouts/no-jobs-project.yaml')
     def test_no_job_project(self):
         "Test that reports with no jobs don't get sent"
         A = self.fake_gerrit.addFakeChange('org/no-jobs-project',
