@@ -97,10 +97,11 @@ def iterate_timeout(max_seconds, purpose):
     raise Exception("Timeout waiting for %s" % purpose)
 
 
-def simple_layout(path):
+def simple_layout(path, driver='gerrit'):
     """Specify a layout file for use by a test method.
 
     :arg str path: The path to the layout file.
+    :arg str driver: The source driver to use, defaults to gerrit.
 
     Some tests require only a very simple configuration.  For those,
     establishing a complete config directory hierachy is too much
@@ -116,7 +117,7 @@ def simple_layout(path):
     """
 
     def decorator(test):
-        test.__simple_layout__ = path
+        test.__simple_layout__ = (path, driver)
         return test
     return decorator
 
@@ -1485,7 +1486,7 @@ class ZuulTestCase(BaseTestCase):
         test_name = self.id().split('.')[-1]
         test = getattr(self, test_name)
         if hasattr(test, '__simple_layout__'):
-            path = getattr(test, '__simple_layout__')
+            path, driver = getattr(test, '__simple_layout__')
         else:
             return False
 
@@ -1514,7 +1515,7 @@ class ZuulTestCase(BaseTestCase):
         f = tempfile.NamedTemporaryFile(dir=root, delete=False)
         config = [{'tenant':
                    {'name': 'tenant-one',
-                    'source': {'gerrit':
+                    'source': {driver:
                                {'config-projects': ['common-config'],
                                 'untrusted-projects': untrusted_projects}}}}]
         f.write(yaml.dump(config))
