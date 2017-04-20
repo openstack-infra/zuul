@@ -2053,7 +2053,7 @@ class TestScheduler(ZuulTestCase):
         # The assertion is that we have one job in the queue, project-merge
         self.assertEqual(len(self.gearman_server.getQueue()), 1)
 
-        self.commitLayoutUpdate('common-config', 'layout-no-jobs')
+        self.commitConfigUpdate('common-config', 'layouts/no-jobs.yaml')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
@@ -2586,8 +2586,9 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.builds), 5)
 
         # This layout defines only org/project, not org/project1
-        self.commitLayoutUpdate('common-config',
-                                'layout-live-reconfiguration-del-project')
+        self.commitConfigUpdate(
+            'common-config',
+            'layouts/live-reconfiguration-del-project.yaml')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
