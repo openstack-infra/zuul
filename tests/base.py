@@ -1334,11 +1334,6 @@ class ZuulTestCase(BaseTestCase):
         self.config.set('executor', 'git_dir', self.executor_src_root)
         self.config.set('zuul', 'state_dir', self.state_root)
 
-        # For each project in config:
-        # TODOv3(jeblair): remove these and replace with new git
-        # filesystem fixtures
-        self.init_repo("org/project3")
-
         self.statsd = FakeStatsd()
         # note, use 127.0.0.1 rather than localhost to avoid getting ipv6
         # see: https://github.com/jsocol/pystatsd/issues/61
@@ -2012,8 +2007,7 @@ class ZuulTestCase(BaseTestCase):
         untrusted-projects:
           - org/project
           - org/project1
-          - org/project2
-          - org/project3\n""" % path)
+          - org/project2\n""" % path)
 
         for repo in untrusted_projects:
             f.write("          - %s\n" % repo)
