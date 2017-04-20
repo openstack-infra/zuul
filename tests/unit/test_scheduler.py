@@ -1248,16 +1248,15 @@ class TestScheduler(ZuulTestCase):
         # aborted jobs.
 
         self.executor_server.hold_jobs_in_build = True
-        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
-        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
-        C = self.fake_gerrit.addFakeChange('org/project1', 'master', 'C')
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
         A.addApproval('code-review', 2)
         B.addApproval('code-review', 2)
         C.addApproval('code-review', 2)
 
         self.executor_server.failJob('project-test1', A)
         self.executor_server.failJob('project-test2', A)
-        self.executor_server.failJob('project1-project2-integration', A)
 
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.fake_gerrit.addEvent(B.addApproval('approved', 1))
@@ -1276,29 +1275,26 @@ class TestScheduler(ZuulTestCase):
         self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
-        self.assertEqual(len(self.builds), 9)
+        self.assertEqual(len(self.builds), 6)
         self.assertEqual(self.builds[0].name, 'project-test1')
         self.assertEqual(self.builds[1].name, 'project-test2')
-        self.assertEqual(self.builds[2].name, 'project1-project2-integration')
-        self.assertEqual(self.builds[3].name, 'project-test1')
-        self.assertEqual(self.builds[4].name, 'project-test2')
-        self.assertEqual(self.builds[5].name, 'project1-project2-integration')
-        self.assertEqual(self.builds[6].name, 'project-test1')
-        self.assertEqual(self.builds[7].name, 'project-test2')
-        self.assertEqual(self.builds[8].name, 'project1-project2-integration')
+        self.assertEqual(self.builds[2].name, 'project-test1')
+        self.assertEqual(self.builds[3].name, 'project-test2')
+        self.assertEqual(self.builds[4].name, 'project-test1')
+        self.assertEqual(self.builds[5].name, 'project-test2')
 
         self.release(self.builds[0])
         self.waitUntilSettled()
 
-        self.assertEqual(len(self.builds), 3)  # test2,integration, merge for B
-        self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 6)
+        self.assertEqual(len(self.builds), 2)  # test2, merge for B
+        self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 4)
 
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 0)
-        self.assertEqual(len(self.history), 20)
+        self.assertEqual(len(self.history), 15)
 
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(B.data['status'], 'MERGED')
@@ -1502,17 +1498,17 @@ class TestScheduler(ZuulTestCase):
         # https://bugs.executepad.net/zuul/+bug/1078946
         # This test assumes the repo is already cloned; make sure it is
         tenant = self.sched.abide.tenants.get('tenant-one')
-        trusted, project = tenant.getProject('org/project1')
+        trusted, project = tenant.getProject('org/project')
         url = self.fake_gerrit.getGitUrl(project)
-        self.merge_server.merger.addProject('org/project1', url)
-        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        self.merge_server.merger.addProject('org/project', url)
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addPatchset(large=True)
-        path = os.path.join(self.upstream_root, "org/project1")
+        path = os.path.join(self.upstream_root, "org/project")
         repack_repo(path)
-        path = os.path.join(self.merger_src_root, "org/project1")
+        path = os.path.join(self.merger_src_root, "org/project")
         if os.path.exists(path):
             repack_repo(path)
-        path = os.path.join(self.executor_src_root, "org/project1")
+        path = os.path.join(self.executor_src_root, "org/project")
         if os.path.exists(path):
             repack_repo(path)
 
