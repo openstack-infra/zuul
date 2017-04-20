@@ -2262,246 +2262,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual('https://server/job/project-test2/0/',
                          status_jobs[2]['report_url'])
 
-    def test_semaphore_one(self):
-        "Test semaphores with max=1 (mutex)"
-        self.updateConfigLayout('layout-semaphore')
-        self.sched.reconfigure(self.config)
-
-        self.waitUntilSettled()
-        tenant = self.sched.abide.tenants.get('openstack')
-
-        self.executor_server.hold_jobs_in_build = True
-
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
-        self.assertFalse('test-semaphore' in
-                         tenant.semaphore_handler.semaphores)
-
-        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
-        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
-        self.waitUntilSettled()
-
-        self.assertEqual(len(self.builds), 3)
-        self.assertEqual(self.builds[0].name, 'project-test1')
-        self.assertEqual(self.builds[1].name, 'semaphore-one-test1')
-        self.assertEqual(self.builds[2].name, 'project-test1')
-
-        self.executor_server.release('semaphore-one-test1')
-        self.waitUntilSettled()
-
-        self.assertEqual(len(self.builds), 3)
-        self.assertEqual(self.builds[0].name, 'project-test1')
-        self.assertEqual(self.builds[1].name, 'project-test1')
-        self.assertEqual(self.builds[2].name, 'semaphore-one-test2')
-        self.assertTrue('test-semaphore' in
-                        tenant.semaphore_handler.semaphores)
-
-        self.executor_server.release('semaphore-one-test2')
-        self.waitUntilSettled()
-
-        self.assertEqual(len(self.builds), 3)
-        self.assertEqual(self.builds[0].name, 'project-test1')
-        self.assertEqual(self.builds[1].name, 'project-test1')
-        self.assertEqual(self.builds[2].name, 'semaphore-one-test1')
-        self.assertTrue('test-semaphore' in
-                        tenant.semaphore_handler.semaphores)
-
-        self.executor_server.release('semaphore-one-test1')
-        self.waitUntilSettled()
-
-        self.assertEqual(len(self.builds), 3)
-        self.assertEqual(self.builds[0].name, 'project-test1')
-        self.assertEqual(self.builds[1].name, 'project-test1')
-        self.assertEqual(self.builds[2].name, 'semaphore-one-test2')
-        self.assertTrue('test-semaphore' in
-                        tenant.semaphore_handler.semaphores)
-
-        self.executor_server.release('semaphore-one-test2')
-        self.waitUntilSettled()
-
-        self.assertEqual(len(self.builds), 2)
-        self.assertEqual(self.builds[0].name, 'project-test1')
-        self.assertEqual(self.builds[1].name, 'project-test1')
-        self.assertFalse('test-semaphore' in
-                         tenant.semaphore_handler.semaphores)
-
-        self.executor_server.hold_jobs_in_build = False
-        self.executor_server.release()
-
-        self.waitUntilSettled()
-        self.assertEqual(len(self.builds), 0)
-
-        self.assertEqual(A.reported, 1)
-        self.assertEqual(B.reported, 1)
-        self.assertFalse('test-semaphore' in
-                         tenant.semaphore_handler.semaphores)
-
-    def test_semaphore_two(self):
-        "Test semaphores with max>1"
-        self.updateConfigLayout('layout-semaphore')
-        self.sched.reconfigure(self.config)
-
-        self.waitUntilSettled()
-        tenant = self.sched.abide.tenants.get('openstack')
-
-        self.executor_server.hold_jobs_in_build = True
-        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
-        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
-        self.assertFalse('test-semaphore-two' in
-                         tenant.semaphore_handler.semaphores)
-
-        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
-        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
-        self.waitUntilSettled()
-
-        self.assertEqual(len(self.builds), 4)
-        self.assertEqual(self.builds[0].name, 'project-test1')
-        self.assertEqual(self.builds[1].name, 'semaphore-two-test1')
-        self.assertEqual(self.builds[2].name, 'semaphore-two-test2')
-        self.assertEqual(self.builds[3].name, 'project-test1')
-        self.assertTrue('test-semaphore-two' in
-                        tenant.semaphore_handler.semaphores)
-        self.assertEqual(len(tenant.semaphore_handler.semaphores.get(
-            'test-semaphore-two', [])), 2)
-
-        self.executor_server.release('semaphore-two-test1')
-        self.waitUntilSettled()
-
-        self.assertEqual(len(self.builds), 4)
-        self.assertEqual(self.builds[0].name, 'project-test1')
-        self.assertEqual(self.builds[1].name, 'semaphore-two-test2')
-        self.assertEqual(self.builds[2].name, 'project-test1')
-        self.assertEqual(self.builds[3].name, 'semaphore-two-test1')
-        self.assertTrue('test-semaphore-two' in
-                        tenant.semaphore_handler.semaphores)
-        self.assertEqual(len(tenant.semaphore_handler.semaphores.get(
-            'test-semaphore-two', [])), 2)
-
-        self.executor_server.release('semaphore-two-test2')
-        self.waitUntilSettled()
-
-        self.assertEqual(len(self.builds), 4)
-        self.assertEqual(self.builds[0].name, 'project-test1')
-        self.assertEqual(self.builds[1].name, 'project-test1')
-        self.assertEqual(self.builds[2].name, 'semaphore-two-test1')
-        self.assertEqual(self.builds[3].name, 'semaphore-two-test2')
-        self.assertTrue('test-semaphore-two' in
-                        tenant.semaphore_handler.semaphores)
-        self.assertEqual(len(tenant.semaphore_handler.semaphores.get(
-            'test-semaphore-two', [])), 2)
-
-        self.executor_server.release('semaphore-two-test1')
-        self.waitUntilSettled()
-
-        self.assertEqual(len(self.builds), 3)
-        self.assertEqual(self.builds[0].name, 'project-test1')
-        self.assertEqual(self.builds[1].name, 'project-test1')
-        self.assertEqual(self.builds[2].name, 'semaphore-two-test2')
-        self.assertTrue('test-semaphore-two' in
-                        tenant.semaphore_handler.semaphores)
-        self.assertEqual(len(tenant.semaphore_handler.semaphores.get(
-            'test-semaphore-two', [])), 1)
-
-        self.executor_server.release('semaphore-two-test2')
-        self.waitUntilSettled()
-
-        self.assertEqual(len(self.builds), 2)
-        self.assertEqual(self.builds[0].name, 'project-test1')
-        self.assertEqual(self.builds[1].name, 'project-test1')
-        self.assertFalse('test-semaphore-two' in
-                         tenant.semaphore_handler.semaphores)
-
-        self.executor_server.hold_jobs_in_build = False
-        self.executor_server.release()
-
-        self.waitUntilSettled()
-        self.assertEqual(len(self.builds), 0)
-
-        self.assertEqual(A.reported, 1)
-        self.assertEqual(B.reported, 1)
-
-    def test_semaphore_abandon(self):
-        "Test abandon with job semaphores"
-        self.updateConfigLayout('layout-semaphore')
-        self.sched.reconfigure(self.config)
-
-        self.waitUntilSettled()
-        tenant = self.sched.abide.tenants.get('openstack')
-
-        self.executor_server.hold_jobs_in_build = True
-
-        tenant = self.sched.abide.tenants.get('openstack')
-        check_pipeline = tenant.layout.pipelines['check']
-
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        self.assertFalse('test-semaphore' in
-                         tenant.semaphore_handler.semaphores)
-
-        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
-        self.waitUntilSettled()
-
-        self.assertTrue('test-semaphore' in
-                        tenant.semaphore_handler.semaphores)
-
-        self.fake_gerrit.addEvent(A.getChangeAbandonedEvent())
-        self.waitUntilSettled()
-
-        # The check pipeline should be empty
-        items = check_pipeline.getAllItems()
-        self.assertEqual(len(items), 0)
-
-        # The semaphore should be released
-        self.assertFalse('test-semaphore' in
-                         tenant.semaphore_handler.semaphores)
-
-        self.executor_server.hold_jobs_in_build = False
-        self.executor_server.release()
-        self.waitUntilSettled()
-
-    def test_semaphore_reconfigure(self):
-        "Test reconfigure with job semaphores"
-        self.updateConfigLayout('layout-semaphore')
-        self.sched.reconfigure(self.config)
-
-        self.waitUntilSettled()
-        tenant = self.sched.abide.tenants.get('openstack')
-
-        self.executor_server.hold_jobs_in_build = True
-
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        self.assertFalse('test-semaphore' in
-                         tenant.semaphore_handler.semaphores)
-
-        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
-        self.waitUntilSettled()
-
-        self.assertTrue('test-semaphore' in
-                        tenant.semaphore_handler.semaphores)
-
-        # reconfigure without layout change
-        self.sched.reconfigure(self.config)
-        self.waitUntilSettled()
-        tenant = self.sched.abide.tenants.get('openstack')
-
-        # semaphore still must be held
-        self.assertTrue('test-semaphore' in
-                        tenant.semaphore_handler.semaphores)
-
-        self.updateConfigLayout('layout-semaphore-reconfiguration')
-        self.sched.reconfigure(self.config)
-        self.waitUntilSettled()
-        tenant = self.sched.abide.tenants.get('openstack')
-
-        self.executor_server.release('project-test1')
-        self.waitUntilSettled()
-
-        # There should be no builds anymore
-        self.assertEqual(len(self.builds), 0)
-
-        # The semaphore should be released
-        self.assertFalse('test-semaphore' in
-                         tenant.semaphore_handler.semaphores)
-
     def test_live_reconfiguration(self):
         "Test that live reconfiguration works"
         self.executor_server.hold_jobs_in_build = True
@@ -5087,6 +4847,231 @@ class TestSchedulerMerges(ZuulTestCase):
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
         self.waitUntilSettled()
+
+
+class TestSemaphore(ZuulTestCase):
+    tenant_config_file = 'config/semaphore/main.yaml'
+
+    def test_semaphore_one(self):
+        "Test semaphores with max=1 (mutex)"
+        tenant = self.sched.abide.tenants.get('tenant-one')
+
+        self.executor_server.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        self.assertFalse('test-semaphore' in
+                         tenant.semaphore_handler.semaphores)
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 3)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'semaphore-one-test1')
+        self.assertEqual(self.builds[2].name, 'project-test1')
+
+        self.executor_server.release('semaphore-one-test1')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 3)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test1')
+        self.assertEqual(self.builds[2].name, 'semaphore-one-test2')
+        self.assertTrue('test-semaphore' in
+                        tenant.semaphore_handler.semaphores)
+
+        self.executor_server.release('semaphore-one-test2')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 3)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test1')
+        self.assertEqual(self.builds[2].name, 'semaphore-one-test1')
+        self.assertTrue('test-semaphore' in
+                        tenant.semaphore_handler.semaphores)
+
+        self.executor_server.release('semaphore-one-test1')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 3)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test1')
+        self.assertEqual(self.builds[2].name, 'semaphore-one-test2')
+        self.assertTrue('test-semaphore' in
+                        tenant.semaphore_handler.semaphores)
+
+        self.executor_server.release('semaphore-one-test2')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 2)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test1')
+        self.assertFalse('test-semaphore' in
+                         tenant.semaphore_handler.semaphores)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 0)
+
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.reported, 1)
+        self.assertFalse('test-semaphore' in
+                         tenant.semaphore_handler.semaphores)
+
+    def test_semaphore_two(self):
+        "Test semaphores with max>1"
+        tenant = self.sched.abide.tenants.get('tenant-one')
+
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
+        self.assertFalse('test-semaphore-two' in
+                         tenant.semaphore_handler.semaphores)
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 4)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'semaphore-two-test1')
+        self.assertEqual(self.builds[2].name, 'semaphore-two-test2')
+        self.assertEqual(self.builds[3].name, 'project-test1')
+        self.assertTrue('test-semaphore-two' in
+                        tenant.semaphore_handler.semaphores)
+        self.assertEqual(len(tenant.semaphore_handler.semaphores.get(
+            'test-semaphore-two', [])), 2)
+
+        self.executor_server.release('semaphore-two-test1')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 4)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'semaphore-two-test2')
+        self.assertEqual(self.builds[2].name, 'project-test1')
+        self.assertEqual(self.builds[3].name, 'semaphore-two-test1')
+        self.assertTrue('test-semaphore-two' in
+                        tenant.semaphore_handler.semaphores)
+        self.assertEqual(len(tenant.semaphore_handler.semaphores.get(
+            'test-semaphore-two', [])), 2)
+
+        self.executor_server.release('semaphore-two-test2')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 4)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test1')
+        self.assertEqual(self.builds[2].name, 'semaphore-two-test1')
+        self.assertEqual(self.builds[3].name, 'semaphore-two-test2')
+        self.assertTrue('test-semaphore-two' in
+                        tenant.semaphore_handler.semaphores)
+        self.assertEqual(len(tenant.semaphore_handler.semaphores.get(
+            'test-semaphore-two', [])), 2)
+
+        self.executor_server.release('semaphore-two-test1')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 3)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test1')
+        self.assertEqual(self.builds[2].name, 'semaphore-two-test2')
+        self.assertTrue('test-semaphore-two' in
+                        tenant.semaphore_handler.semaphores)
+        self.assertEqual(len(tenant.semaphore_handler.semaphores.get(
+            'test-semaphore-two', [])), 1)
+
+        self.executor_server.release('semaphore-two-test2')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 2)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test1')
+        self.assertFalse('test-semaphore-two' in
+                         tenant.semaphore_handler.semaphores)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 0)
+
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.reported, 1)
+
+    def test_semaphore_abandon(self):
+        "Test abandon with job semaphores"
+        self.executor_server.hold_jobs_in_build = True
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        check_pipeline = tenant.layout.pipelines['check']
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.assertFalse('test-semaphore' in
+                         tenant.semaphore_handler.semaphores)
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertTrue('test-semaphore' in
+                        tenant.semaphore_handler.semaphores)
+
+        self.fake_gerrit.addEvent(A.getChangeAbandonedEvent())
+        self.waitUntilSettled()
+
+        # The check pipeline should be empty
+        items = check_pipeline.getAllItems()
+        self.assertEqual(len(items), 0)
+
+        # The semaphore should be released
+        self.assertFalse('test-semaphore' in
+                         tenant.semaphore_handler.semaphores)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+    def test_semaphore_reconfigure(self):
+        "Test reconfigure with job semaphores"
+        self.executor_server.hold_jobs_in_build = True
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.assertFalse('test-semaphore' in
+                         tenant.semaphore_handler.semaphores)
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertTrue('test-semaphore' in
+                        tenant.semaphore_handler.semaphores)
+
+        # reconfigure without layout change
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+        tenant = self.sched.abide.tenants.get('tenant-one')
+
+        # semaphore still must be held
+        self.assertTrue('test-semaphore' in
+                        tenant.semaphore_handler.semaphores)
+
+        self.commitConfigUpdate(
+            'common-config',
+            'config/semaphore/zuul-reconfiguration.yaml')
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+        tenant = self.sched.abide.tenants.get('tenant-one')
+
+        self.executor_server.release('project-test1')
+        self.waitUntilSettled()
+
+        # There should be no builds anymore
+        self.assertEqual(len(self.builds), 0)
+
+        # The semaphore should be released
+        self.assertFalse('test-semaphore' in
+                         tenant.semaphore_handler.semaphores)
 
 
 class TestSemaphoreMultiTenant(ZuulTestCase):
