@@ -2921,18 +2921,16 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(B.reported, 2)
 
+    @simple_layout('layouts/tags.yaml')
     def test_tags(self):
         "Test job tags"
-        self.updateConfigLayout('layout-tags')
-        self.sched.reconfigure(self.config)
-
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
 
-        self.assertEqual(len(self.history), 8)
+        self.assertEqual(len(self.history), 2)
 
         results = {self.getJobFromHistory('merge',
                    project='org/project1').uuid: 'extratag merge',
