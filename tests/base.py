@@ -2039,22 +2039,6 @@ class ZuulTestCase(BaseTestCase):
             repo.create_tag(tag)
         return before
 
-    def commitLayoutUpdate(self, orig_name, source_name):
-        source_path = os.path.join(self.test_root, 'upstream',
-                                   source_name)
-        to_copy = ['zuul.yaml']
-        for playbook in os.listdir(os.path.join(source_path, 'playbooks')):
-            to_copy.append('playbooks/{}'.format(playbook))
-        commit_data = {}
-        for source_file in to_copy:
-            source_file_path = os.path.join(source_path, source_file)
-            with open(source_file_path, 'r') as nt:
-                commit_data[source_file] = nt.read()
-        before = self.addCommitToRepo(
-            orig_name, 'Pulling content from %s' % source_name,
-            commit_data)
-        return before
-
     def commitConfigUpdate(self, project_name, source_name):
         """Commit an update to zuul.yaml
 
