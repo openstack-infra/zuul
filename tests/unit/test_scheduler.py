@@ -3194,9 +3194,10 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.builds[0].name, 'project-merge')
         self.assertEqual(self.builds[1].name, 'project-merge')
 
-        self.executor_server.release('.*-merge')
+        # Release the merge jobs one at a time.
+        self.builds[0].release()
         self.waitUntilSettled()
-        self.executor_server.release('.*-merge')
+        self.builds[0].release()
         self.waitUntilSettled()
 
         # Only A and B will have their test jobs queued because
