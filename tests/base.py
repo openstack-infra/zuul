@@ -2055,7 +2055,31 @@ class ZuulTestCase(BaseTestCase):
             commit_data)
         return before
 
+    def commitConfigUpdate(self, project_name, source_name):
+        """Commit an update to zuul.yaml
+
+        This overwrites the zuul.yaml in the specificed project with
+        the contents specified.
+
+        :arg str project_name: The name of the project containing
+            zuul.yaml (e.g., common-config)
+
+        :arg str source_name: The path to the file (underneath the
+            test fixture directory) whose contents should be used to
+            replace zuul.yaml.
+        """
+
+        source_path = os.path.join(FIXTURE_DIR, source_name)
+        commit_data = {}
+        with open(source_path, 'r') as nt:
+            commit_data['zuul.yaml'] = nt.read()
+        before = self.addCommitToRepo(
+            project_name, 'Pulling content from %s' % source_name,
+            commit_data)
+        return before
+
     def addEvent(self, connection, event):
+
         """Inject a Fake (Gerrit) event.
 
         This method accepts a JSON-encoded event and simulates Zuul

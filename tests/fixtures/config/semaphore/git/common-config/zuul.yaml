@@ -11,6 +11,14 @@
       gerrit:
         verified: -1
 
+# TODOv3(jeblair, tobiash): make semaphore definitions required, which
+# will cause these tests to fail until we define test-semaphore
+# here.
+
+- semaphore:
+    name: test-semaphore-two
+    max: 2
+
 - job:
     name: project-test1
 
@@ -45,7 +53,3 @@
         - project-test1
         - semaphore-two-test1
         - semaphore-two-test2
-
-- semaphore:
-    name: test-semaphore-two
-    max: 2
