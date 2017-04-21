@@ -4055,7 +4055,7 @@ For CI problems and help debugging, contact ci@example.org"""
 
     def test_crd_gate_unknown(self):
         "Test unknown projects in dependent pipeline"
-        self.init_repo("org/unknown")
+        self.init_repo("org/unknown", tag='init')
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/unknown', 'master', 'B')
         A.addApproval('code-review', 2)
@@ -4269,7 +4269,7 @@ For CI problems and help debugging, contact ci@example.org"""
         independent pipelines"""
         # It's a hack for fake gerrit,
         # as it implies repo creation upon the creation of any change
-        self.init_repo("org/unknown")
+        self.init_repo("org/unknown", tag='init')
         self._test_crd_check_reconfiguration('org/project1', 'org/unknown')
 
     @simple_layout('layouts/ignore-dependencies.yaml')
@@ -4358,7 +4358,7 @@ For CI problems and help debugging, contact ci@example.org"""
 
     def test_crd_check_unknown(self):
         "Test unknown projects in independent pipeline"
-        self.init_repo("org/unknown")
+        self.init_repo("org/unknown", tag='init')
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/unknown', 'master', 'D')
         # A Depends-On: B
