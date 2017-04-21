@@ -1742,11 +1742,13 @@ class TestScheduler(ZuulTestCase):
 
     def test_abandoned_not_timer(self):
         "Test that an abandoned change does not cancel timer jobs"
-
+        # This test can not use simple_layout because it must start
+        # with a configuration which does not include a
+        # timer-triggered job so that we have an opportunity to set
+        # the hold flag before the first job.
         self.executor_server.hold_jobs_in_build = True
-
         # Start timer trigger - also org/project
-        self.updateConfigLayout('layout-idle')
+        self.commitConfigUpdate('common-config', 'layouts/idle.yaml')
         self.sched.reconfigure(self.config)
         # The pipeline triggers every second, so we should have seen
         # several by now.
@@ -1755,9 +1757,9 @@ class TestScheduler(ZuulTestCase):
         # Stop queuing timer triggered jobs so that the assertions
         # below don't race against more jobs being queued.
         # Must be in same repo, so overwrite config with another one
-        self.commitLayoutUpdate('layout-idle', 'layout-no-timer')
-
+        self.commitConfigUpdate('common-config', 'layouts/no-timer.yaml')
         self.sched.reconfigure(self.config)
+
         self.assertEqual(len(self.builds), 2, "Two timer jobs")
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -2695,8 +2697,12 @@ class TestScheduler(ZuulTestCase):
 
     def test_timer(self):
         "Test that a periodic job is triggered"
+        # This test can not use simple_layout because it must start
+        # with a configuration which does not include a
+        # timer-triggered job so that we have an opportunity to set
+        # the hold flag before the first job.
         self.executor_server.hold_jobs_in_build = True
-        self.updateConfigLayout('layout-timer')
+        self.commitConfigUpdate('common-config', 'layouts/timer.yaml')
         self.sched.reconfigure(self.config)
 
         # The pipeline triggers every second, so we should have seen
@@ -2709,14 +2715,14 @@ class TestScheduler(ZuulTestCase):
         port = self.webapp.server.socket.getsockname()[1]
 
         req = urllib.request.Request(
-            "http://localhost:%s/openstack/status" % port)
+            "http://localhost:%s/tenant-one/status" % port)
         f = urllib.request.urlopen(req)
         data = f.read()
 
         self.executor_server.hold_jobs_in_build = False
         # Stop queuing timer triggered jobs so that the assertions
         # below don't race against more jobs being queued.
-        self.commitLayoutUpdate('layout-timer', 'layout-no-timer')
+        self.commitConfigUpdate('common-config', 'layouts/no-timer.yaml')
         self.sched.reconfigure(self.config)
         self.executor_server.release()
         self.waitUntilSettled()
@@ -2739,13 +2745,18 @@ class TestScheduler(ZuulTestCase):
 
     def test_idle(self):
         "Test that frequent periodic jobs work"
+        # This test can not use simple_layout because it must start
+        # with a configuration which does not include a
+        # timer-triggered job so that we have an opportunity to set
+        # the hold flag before the first job.
         self.executor_server.hold_jobs_in_build = True
-        self.updateConfigLayout('layout-idle')
 
         for x in range(1, 3):
             # Test that timer triggers periodic jobs even across
             # layout config reloads.
             # Start timer trigger
+            self.commitConfigUpdate('common-config',
+                                    'layouts/idle.yaml')
             self.sched.reconfigure(self.config)
             self.waitUntilSettled()
 
@@ -2755,7 +2766,8 @@ class TestScheduler(ZuulTestCase):
 
             # Stop queuing timer triggered jobs so that the assertions
             # below don't race against more jobs being queued.
-            before = self.commitLayoutUpdate('layout-idle', 'layout-no-timer')
+            self.commitConfigUpdate('common-config',
+                                    'layouts/no-timer.yaml')
             self.sched.reconfigure(self.config)
             self.waitUntilSettled()
             self.assertEqual(len(self.builds), 2,
@@ -2764,11 +2776,6 @@ class TestScheduler(ZuulTestCase):
             self.waitUntilSettled()
             self.assertEqual(len(self.builds), 0)
             self.assertEqual(len(self.history), x * 2)
-            # Revert back to layout-idle
-            repo = git.Repo(os.path.join(self.test_root,
-                                         'upstream',
-                                         'layout-idle'))
-            repo.git.reset('--hard', before)
 
     @simple_layout('layouts/smtp.yaml')
     def test_check_smtp_pool(self):
@@ -2800,8 +2807,12 @@ class TestScheduler(ZuulTestCase):
 
     def test_timer_smtp(self):
         "Test that a periodic job is triggered"
+        # This test can not use simple_layout because it must start
+        # with a configuration which does not include a
+        # timer-triggered job so that we have an opportunity to set
+        # the hold flag before the first job.
         self.executor_server.hold_jobs_in_build = True
-        self.updateConfigLayout('layout-timer-smtp')
+        self.commitConfigUpdate('common-config', 'layouts/timer-smtp.yaml')
         self.sched.reconfigure(self.config)
 
         # The pipeline triggers every second, so we should have seen
@@ -2834,7 +2845,7 @@ class TestScheduler(ZuulTestCase):
 
         # Stop queuing timer triggered jobs and let any that may have
         # queued through so that end of test assertions pass.
-        self.commitLayoutUpdate('layout-timer-smtp', 'layout-no-timer')
+        self.commitConfigUpdate('common-config', 'layouts/no-timer.yaml')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
         self.executor_server.release('.*')
