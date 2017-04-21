@@ -2875,10 +2875,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
+    @simple_layout('layouts/repo-deleted.yaml')
     def test_repo_deleted(self):
-        self.updateConfigLayout('layout-repo-deleted', ['org/delete-project'])
-        self.sched.reconfigure(self.config)
-
         self.init_repo("org/delete-project")
         A = self.fake_gerrit.addFakeChange('org/delete-project', 'master', 'A')
 
