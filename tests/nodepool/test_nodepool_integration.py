@@ -28,7 +28,7 @@ class TestNodepoolIntegration(BaseTestCase):
     # fake scheduler.
 
     def setUp(self):
-        super(BaseTestCase, self).setUp()
+        super(TestNodepoolIntegration, self).setUp()
 
         self.zk = zuul.zk.ZooKeeper()
         self.zk.connect('localhost:2181')

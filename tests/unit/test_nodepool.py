@@ -27,7 +27,7 @@ class TestNodepool(BaseTestCase):
     # scheduler.
 
     def setUp(self):
-        super(BaseTestCase, self).setUp()
+        super(TestNodepool, self).setUp()
 
         self.zk_chroot_fixture = self.useFixture(
             ChrootedKazooFixture(self.id()))
