@@ -28,7 +28,10 @@ import re
 import select
 import shutil
 from six.moves import reload_module
-from six import StringIO
+try:
+    from cStringIO import StringIO
+except Exception:
+    from six import StringIO
 import socket
 import string
 import subprocess
