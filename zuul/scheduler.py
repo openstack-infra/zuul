@@ -486,18 +486,40 @@ class Scheduler(threading.Thread):
         finally:
             self.layout_lock.release()
 
-    def _reenqueueGetProject(self, tenant, project):
+    def _reenqueueGetProject(self, tenant, item):
+        project = item.change.project
         # Attempt to get the same project as the one passed in.  If
         # the project is now found on a different connection, return
         # the new version of the project.  If it is no longer
         # available (due to a connection being removed), return None.
-        project_name = project.canonical_name
-        (trusted, new_project) = tenant.getProject(project_name)
+        (trusted, new_project) = tenant.getProject(project.canonical_name)
         if new_project:
             return new_project
-        source = self.connections.getSourceByHostname(
-            project.canonical_hostname)
-        return source.getProject(project.name)
+        # If this is a non-live item we may be looking at a
+        # "foreign" project, ie, one which is not defined in the
+        # config but is constructed ad-hoc to satisfy a
+        # cross-repo-dependency.  Find the corresponding live item
+        # and use its source.
+        child = item
+        while child and not child.live:
+            # This assumes that the queue does not branch behind this
+            # item, which is currently true for non-live items; if
+            # that changes, this traversal will need to be more
+            # complex.
+            if child.items_behind:
+                child = child.items_behind[0]
+            else:
+                child = None
+        if child is item:
+            return None
+        if child and child.live:
+            (child_trusted, child_project) = tenant.getProject(
+                child.change.project.canonical_name)
+            if child_project:
+                source = child_project.source
+                new_project = source.getProject(project.name)
+                return new_project
+        return None
 
     def _reenqueueTenant(self, old_tenant, tenant):
         for name, new_pipeline in tenant.layout.pipelines.items():
@@ -514,12 +536,12 @@ class Scheduler(threading.Thread):
                 for item in shared_queue.queue:
                     if not item.item_ahead:
                         last_head = item
-                    item.item_ahead = None
-                    item.items_behind = []
                     item.pipeline = None
                     item.queue = None
                     item.change.project = self._reenqueueGetProject(
-                        tenant, item.change.project)
+                        tenant, item)
+                    item.item_ahead = None
+                    item.items_behind = []
                     if (item.change.project and
                         new_pipeline.manager.reEnqueueItem(item,
                                                            last_head)):
@@ -714,16 +736,19 @@ class Scheduler(threading.Thread):
         event = self.trigger_event_queue.get()
         self.log.debug("Processing trigger event %s" % event)
         try:
-            source = self.connections.getSourceByHostname(
-                event.project_hostname)
-            try:
-                change = source.getChange(event)
-            except exceptions.ChangeNotFound as e:
-                self.log.debug("Unable to get change %s from "
-                               "source %s",
-                               e.change, source)
-                return
+            full_project_name = ('/'.join([event.project_hostname,
+                                           event.project_name]))
             for tenant in self.abide.tenants.values():
+                (trusted, project) = tenant.getProject(full_project_name)
+                if project is None:
+                    continue
+                try:
+                    change = project.source.getChange(event)
+                except exceptions.ChangeNotFound as e:
+                    self.log.debug("Unable to get change %s from "
+                                   "source %s",
+                                   e.change, project.source)
+                    continue
                 if (event.type == 'change-merged' and
                     hasattr(change, 'files') and
                     change.updatesConfig()):
