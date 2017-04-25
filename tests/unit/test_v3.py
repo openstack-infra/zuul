@@ -264,7 +264,7 @@ class TestAnsible(AnsibleZuulTestCase):
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
         build = self.getJobFromHistory('timeout')
-        self.assertEqual(build.result, 'ABORTED')
+        self.assertEqual(build.result, 'TIMED_OUT')
         build = self.getJobFromHistory('faillocal')
         self.assertEqual(build.result, 'FAILURE')
         build = self.getJobFromHistory('check-vars')

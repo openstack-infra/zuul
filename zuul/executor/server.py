@@ -57,7 +57,11 @@ class Watchdog(object):
         if self._running:
             self.timed_out = True
             self.function(*self.args)
-        self.timed_out = False
+        else:
+            # Only set timed_out to false if we aren't _running
+            # anymore. This means that we stopped running not because
+            # of a timeout but because normal execution ended.
+            self.timed_out = False
 
     def start(self):
         self._running = True
