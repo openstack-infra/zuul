@@ -1654,7 +1654,10 @@ class ZuulTestCase(BaseTestCase):
         self.gearman_server.shutdown()
         self.fake_nodepool.stop()
         self.zk.disconnect()
-        threads = threading.enumerate()
+        # we whitelist watchdog threads as they have relatively long delays
+        # before noticing they should exit, but they should exit on their own.
+        threads = [t for t in threading.enumerate()
+                   if t.name != 'executor-watchdog']
         if len(threads) > 1:
             self.log.error("More than one thread is running: %s" % threads)
         self.printHistory()

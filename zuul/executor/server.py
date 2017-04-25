@@ -46,7 +46,8 @@ class Watchdog(object):
         self.timeout = timeout
         self.function = function
         self.args = args
-        self.thread = threading.Thread(target=self._run)
+        self.thread = threading.Thread(target=self._run,
+                                       name='executor-watchdog')
         self.thread.daemon = True
         self.timed_out = None
 
