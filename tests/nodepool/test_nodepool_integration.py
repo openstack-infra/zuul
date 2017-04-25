@@ -31,6 +31,7 @@ class TestNodepoolIntegration(BaseTestCase):
         super(TestNodepoolIntegration, self).setUp()
 
         self.zk = zuul.zk.ZooKeeper()
+        self.addCleanup(self.zk.disconnect)
         self.zk.connect('localhost:2181')
         self.hostname = socket.gethostname()
 

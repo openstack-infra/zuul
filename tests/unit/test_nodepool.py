@@ -37,6 +37,7 @@ class TestNodepool(BaseTestCase):
             self.zk_chroot_fixture.zookeeper_chroot)
 
         self.zk = zuul.zk.ZooKeeper()
+        self.addCleanup(self.zk.disconnect)
         self.zk.connect(self.zk_config)
         self.hostname = 'nodepool-test-hostname'
 
@@ -49,6 +50,7 @@ class TestNodepool(BaseTestCase):
             self.zk_chroot_fixture.zookeeper_host,
             self.zk_chroot_fixture.zookeeper_port,
             self.zk_chroot_fixture.zookeeper_chroot)
+        self.addCleanup(self.fake_nodepool.stop)
 
     def waitForRequests(self):
         # Wait until all requests are complete.
