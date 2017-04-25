@@ -2904,6 +2904,7 @@ class TestScheduler(ZuulTestCase):
 
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
+        self.addCleanup(client.shutdown)
         r = client.enqueue(tenant='tenant-one',
                            pipeline='gate',
                            project='org/project',
@@ -2925,6 +2926,7 @@ class TestScheduler(ZuulTestCase):
 
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
+        self.addCleanup(client.shutdown)
         r = client.enqueue_ref(
             tenant='tenant-one',
             pipeline='post',
@@ -2943,6 +2945,7 @@ class TestScheduler(ZuulTestCase):
         "Test that the RPC client returns errors"
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
+        self.addCleanup(client.shutdown)
         with testtools.ExpectedException(zuul.rpcclient.RPCFailure,
                                          "Invalid tenant"):
             r = client.enqueue(tenant='tenant-foo',
@@ -2950,7 +2953,6 @@ class TestScheduler(ZuulTestCase):
                                project='org/project',
                                trigger='gerrit',
                                change='1,1')
-            client.shutdown()
             self.assertEqual(r, False)
 
         with testtools.ExpectedException(zuul.rpcclient.RPCFailure,
@@ -2960,7 +2962,6 @@ class TestScheduler(ZuulTestCase):
                                project='project-does-not-exist',
                                trigger='gerrit',
                                change='1,1')
-            client.shutdown()
             self.assertEqual(r, False)
 
         with testtools.ExpectedException(zuul.rpcclient.RPCFailure,
@@ -2970,7 +2971,6 @@ class TestScheduler(ZuulTestCase):
                                project='org/project',
                                trigger='gerrit',
                                change='1,1')
-            client.shutdown()
             self.assertEqual(r, False)
 
         with testtools.ExpectedException(zuul.rpcclient.RPCFailure,
@@ -2980,7 +2980,6 @@ class TestScheduler(ZuulTestCase):
                                project='org/project',
                                trigger='trigger-does-not-exist',
                                change='1,1')
-            client.shutdown()
             self.assertEqual(r, False)
 
         with testtools.ExpectedException(zuul.rpcclient.RPCFailure,
@@ -2990,7 +2989,6 @@ class TestScheduler(ZuulTestCase):
                                project='org/project',
                                trigger='gerrit',
                                change='1,1')
-            client.shutdown()
             self.assertEqual(r, False)
 
         self.waitUntilSettled()
@@ -3021,6 +3019,7 @@ class TestScheduler(ZuulTestCase):
 
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
+        self.addCleanup(client.shutdown)
         r = client.promote(tenant='tenant-one',
                            pipeline='gate',
                            change_ids=['2,1', '3,1'])
@@ -3069,7 +3068,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(C.data['status'], 'MERGED')
         self.assertEqual(C.reported, 2)
 
-        client.shutdown()
         self.assertEqual(r, True)
 
     def test_client_promote_dependent(self):
@@ -3095,6 +3093,7 @@ class TestScheduler(ZuulTestCase):
 
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
+        self.addCleanup(client.shutdown)
         r = client.promote(tenant='tenant-one',
                            pipeline='gate',
                            change_ids=['3,1'])
@@ -3137,7 +3136,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(C.data['status'], 'MERGED')
         self.assertEqual(C.reported, 2)
 
-        client.shutdown()
         self.assertEqual(r, True)
 
     def test_client_promote_negative(self):
@@ -3150,19 +3148,18 @@ class TestScheduler(ZuulTestCase):
 
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
+        self.addCleanup(client.shutdown)
 
         with testtools.ExpectedException(zuul.rpcclient.RPCFailure):
             r = client.promote(tenant='tenant-one',
                                pipeline='nonexistent',
                                change_ids=['2,1', '3,1'])
-            client.shutdown()
             self.assertEqual(r, False)
 
         with testtools.ExpectedException(zuul.rpcclient.RPCFailure):
             r = client.promote(tenant='tenant-one',
                                pipeline='gate',
                                change_ids=['4,1'])
-            client.shutdown()
             self.assertEqual(r, False)
 
         self.executor_server.hold_jobs_in_build = False
@@ -3513,6 +3510,7 @@ For CI problems and help debugging, contact ci@example.org"""
 
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
+        self.addCleanup(client.shutdown)
 
         # Wait for gearman server to send the initial workData back to zuul
         start = time.time()
