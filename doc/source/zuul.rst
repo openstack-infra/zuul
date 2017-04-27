@@ -169,6 +169,29 @@ can be found on the :doc:`merger` page.
   Path to PID lock file for the merger process.
   ``pidfile=/var/run/zuul-merger/merger.pid``
 
+executor
+""""""""
+
+The zuul-executor process configuration.
+
+**git_dir**
+  Directory that Zuul should clone local git repositories to.
+  ``git_dir=/var/lib/zuul/git``
+
+**log_config**
+  Path to log config file for the executor process.
+  ``log_config=/etc/zuul/logging.yaml``
+
+**private_key_file**
+  SSH private key file to be used when logging into worker nodes.
+  ``private_key_file=~/.ssh/id_rsa``
+
+**user**
+  User ID for the zuul-executor process. In normal operation as a daemon,
+  the executor should be started as the ``root`` user, but it will drop
+  privileges to this user during startup.
+  ``user=zuul``
+
 .. _connection:
 
 connection ArbitraryName

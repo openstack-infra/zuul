@@ -39,9 +39,6 @@ import zuul.executor.server
 # Similar situation with gear and statsd.
 
 
-# TODO(Shrews): Get this from the config file
-USER = 'zuul'
-
 FINGER_PORT = 79
 
 
@@ -89,7 +86,7 @@ class Executor(zuul.cmd.ZuulApp):
 
             self.log.info("Starting log streamer")
             streamer = zuul.lib.log_streamer.LogStreamer(
-                USER, '0.0.0.0', FINGER_PORT, self.jobdir_root)
+                self.user, '0.0.0.0', FINGER_PORT, self.jobroot_dir)
 
             # Keep running until the parent dies:
             pipe_read = os.fdopen(pipe_read)
@@ -107,7 +104,7 @@ class Executor(zuul.cmd.ZuulApp):
         '''
         if os.getuid() != 0:
             return
-        pw = pwd.getpwnam(USER)
+        pw = pwd.getpwnam(self.user)
         os.setgroups([])
         os.setgid(pw.pw_gid)
         os.setuid(pw.pw_uid)
@@ -116,12 +113,16 @@ class Executor(zuul.cmd.ZuulApp):
     def main(self, daemon=True):
         # See comment at top of file about zuul imports
 
-        self.jobroot_dir = None
+        if self.config.has_option('executor', 'user'):
+            self.user = self.config.get('executor', 'user')
+        else:
+            self.user = 'zuul'
+
         if self.config.has_option('zuul', 'jobroot_dir'):
             self.jobroot_dir = os.path.expanduser(
                 self.config.get('zuul', 'jobroot_dir'))
         else:
-            self.jobdir_root = tempfile.gettempdir()
+            self.jobroot_dir = tempfile.gettempdir()
 
         self.setup_logging('executor', 'log_config')
         self.log = logging.getLogger("zuul.Executor")
