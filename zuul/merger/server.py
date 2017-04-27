@@ -121,16 +121,15 @@ class MergeServer(object):
 
     def update(self, job):
         args = json.loads(job.arguments)
-        self.merger.updateRepo(args['project'],
-                               args['url'])
+        self.merger.updateRepo(args['connection'], args['project'])
         result = dict(updated=True,
                       zuul_url=self.zuul_url)
         job.sendWorkComplete(json.dumps(result))
 
     def cat(self, job):
         args = json.loads(job.arguments)
-        self.merger.updateRepo(args['project'], args['url'])
-        files = self.merger.getFiles(args['project'], args['url'],
+        self.merger.updateRepo(args['connection'], args['project'])
+        files = self.merger.getFiles(args['connection'], args['project'],
                                      args['branch'], args['files'])
         result = dict(updated=True,
                       files=files,

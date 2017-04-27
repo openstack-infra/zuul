@@ -890,9 +890,10 @@ class TenantParser(object):
             project.unparsed_config = model.UnparsedTenantConfig()
             # Get main config files.  These files are permitted the
             # full range of configuration.
-            url = project.source.getGitUrl(project)
-            job = merger.getFiles(project.name, url, 'master',
-                                  files=['zuul.yaml', '.zuul.yaml'])
+            job = merger.getFiles(
+                project.source.connection.connection_name,
+                project.name, 'master',
+                files=['zuul.yaml', '.zuul.yaml'])
             job.source_context = model.SourceContext(project, 'master',
                                                      '', True)
             jobs.append(job)
@@ -910,7 +911,6 @@ class TenantParser(object):
             project.unparsed_config = model.UnparsedTenantConfig()
             # Get in-project-repo config files which have a restricted
             # set of options.
-            url = project.source.getGitUrl(project)
             # For each branch in the repo, get the zuul.yaml for that
             # branch.  Remember the branch and then implicitly add a
             # branch selector to each job there.  This makes the
@@ -918,8 +918,10 @@ class TenantParser(object):
             for branch in project.source.getProjectBranches(project):
                 project.unparsed_branch_config[branch] = \
                     model.UnparsedTenantConfig()
-                job = merger.getFiles(project.name, url, branch,
-                                      files=['.zuul.yaml'])
+                job = merger.getFiles(
+                    project.source.connection.connection_name,
+                    project.name, branch,
+                    files=['.zuul.yaml'])
                 job.source_context = model.SourceContext(
                     project, branch, '', False)
                 jobs.append(job)
@@ -1068,7 +1070,8 @@ class ConfigLoader(object):
 
         for branch in branches:
             incdata = None
-            data = files.getFile(project.name, branch, fn)
+            data = files.getFile(project.source.connection.connection_name,
+                                 project.name, branch, fn)
             if data:
                 source_context = model.SourceContext(project, branch,
                                                      fn, trusted)

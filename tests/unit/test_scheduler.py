@@ -1470,10 +1470,12 @@ class TestScheduler(ZuulTestCase):
         self.assertEmptyQueues()
         self.build_history = []
 
-        path = os.path.join(self.merger_src_root, "org/project")
+        path = os.path.join(self.merger_src_root, "review.example.com",
+                            "org/project")
         if os.path.exists(path):
             repack_repo(path)
-        path = os.path.join(self.executor_src_root, "org/project")
+        path = os.path.join(self.executor_src_root, "review.example.com",
+                            "org/project")
         if os.path.exists(path):
             repack_repo(path)
 
@@ -1497,15 +1499,19 @@ class TestScheduler(ZuulTestCase):
         tenant = self.sched.abide.tenants.get('tenant-one')
         trusted, project = tenant.getProject('org/project')
         url = self.fake_gerrit.getGitUrl(project)
-        self.merge_server.merger.addProject('org/project', url)
+        self.merge_server.merger._addProject('review.example.com',
+                                             'org/project', url)
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addPatchset(large=True)
-        path = os.path.join(self.upstream_root, "org/project")
+        # TODOv3(jeblair): add hostname to upstream root
+        path = os.path.join(self.upstream_root, 'org/project')
         repack_repo(path)
-        path = os.path.join(self.merger_src_root, "org/project")
+        path = os.path.join(self.merger_src_root, 'review.example.com',
+                            'org/project')
         if os.path.exists(path):
             repack_repo(path)
-        path = os.path.join(self.executor_src_root, "org/project")
+        path = os.path.join(self.executor_src_root, 'review.example.com',
+                            'org/project')
         if os.path.exists(path):
             repack_repo(path)
 
@@ -3881,8 +3887,6 @@ For CI problems and help debugging, contact ci@example.org"""
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
 
-        queue = self.gearman_server.getQueue()
-        ref = self.getParameter(queue[-1], 'ZUUL_REF')
         self.gearman_server.hold_jobs_in_queue = False
         self.gearman_server.release()
         self.waitUntilSettled()
@@ -3890,21 +3894,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
-        path = os.path.join(self.builds[0].jobdir.src_root, "org/project1")
-        repo = git.Repo(path)
-        repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
-        repo_messages.reverse()
-        correct_messages = [
-            'initial commit', 'add content from fixture', 'A-1']
-        self.assertEqual(repo_messages, correct_messages)
-
-        path = os.path.join(self.builds[0].jobdir.src_root, "org/project2")
-        repo = git.Repo(path)
-        repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
-        repo_messages.reverse()
-        correct_messages = [
-            'initial commit', 'add content from fixture', 'B-1']
-        self.assertEqual(repo_messages, correct_messages)
+        self.assertTrue(self.builds[0].hasChanges(A, B))
 
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
@@ -4684,7 +4674,8 @@ class TestSchedulerMerges(ZuulTestCase):
         build = self.builds[-1]
         ref = self.getParameter(build, 'ZUUL_REF')
 
-        path = os.path.join(build.jobdir.src_root, project)
+        path = os.path.join(build.jobdir.src_root, 'review.example.com',
+                            project)
         repo = git.Repo(path)
         repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
         repo_messages.reverse()
@@ -4754,8 +4745,8 @@ class TestSchedulerMerges(ZuulTestCase):
         build = self.builds[-1]
         self.assertEqual(self.getParameter(build, 'ZUUL_BRANCH'), 'mp')
         ref = self.getParameter(build, 'ZUUL_REF')
-        path = os.path.join(
-            build.jobdir.src_root, 'org/project-merge-branches')
+        path = os.path.join(build.jobdir.src_root, 'review.example.com',
+                            'org/project-merge-branches')
         repo = git.Repo(path)
 
         repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
@@ -4799,8 +4790,8 @@ class TestSchedulerMerges(ZuulTestCase):
         self.log.debug("Got Zuul ref for change A: %s" % ref_A)
         self.log.debug("Got Zuul commit for change A: %s" % commit_A)
 
-        path = os.path.join(
-            job_A.jobdir.src_root, "org/project-merge-branches")
+        path = os.path.join(job_A.jobdir.src_root, 'review.example.com',
+                            'org/project-merge-branches')
         repo = git.Repo(path)
         repo_messages = [c.message.strip()
                          for c in repo.iter_commits(ref_A)]
@@ -4821,8 +4812,8 @@ class TestSchedulerMerges(ZuulTestCase):
         self.log.debug("Got Zuul ref for change B: %s" % ref_B)
         self.log.debug("Got Zuul commit for change B: %s" % commit_B)
 
-        path = os.path.join(
-            job_B.jobdir.src_root, "org/project-merge-branches")
+        path = os.path.join(job_B.jobdir.src_root, 'review.example.com',
+                            'org/project-merge-branches')
         repo = git.Repo(path)
         repo_messages = [c.message.strip()
                          for c in repo.iter_commits(ref_B)]
@@ -4842,8 +4833,8 @@ class TestSchedulerMerges(ZuulTestCase):
         commit_C = self.getParameter(job_C, 'ZUUL_COMMIT')
         self.log.debug("Got Zuul ref for change C: %s" % ref_C)
         self.log.debug("Got Zuul commit for change C: %s" % commit_C)
-        path = os.path.join(
-            job_C.jobdir.src_root, "org/project-merge-branches")
+        path = os.path.join(job_C.jobdir.src_root, 'review.example.com',
+                            'org/project-merge-branches')
         repo = git.Repo(path)
         repo_messages = [c.message.strip()
                          for c in repo.iter_commits(ref_C)]

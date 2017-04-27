@@ -284,18 +284,16 @@ class ExecutorClient(object):
                 (trusted, project) = tenant.getProject(repo)
                 connection = project.source.connection
                 params['projects'].append(
-                    dict(name=project.name,
-                         connection_name=connection.connection_name,
-                         url=project.source.getGitUrl(project)))
+                    dict(connection=connection.connection_name,
+                         name=project.name))
                 projects.add(project)
         for item in all_items:
             if item.change.project not in projects:
                 project = item.change.project
                 connection = item.change.project.source.connection
                 params['projects'].append(
-                    dict(name=project.name,
-                         connection_name=connection.connection_name,
-                         url=project.source.getGitUrl(project)))
+                    dict(connection=connection.connection_name,
+                         name=project.name))
                 projects.add(project)
 
         build = Build(job, uuid)

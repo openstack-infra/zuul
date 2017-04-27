@@ -234,49 +234,60 @@ class Merger(object):
         elif 'GIT_SSH' in os.environ:
             del os.environ['GIT_SSH']
 
-    def addProject(self, project, url):
+    def _addProject(self, hostname, project_name, url):
         repo = None
+        key = '/'.join([hostname, project_name])
         try:
-            path = os.path.join(self.working_root, project)
+            path = os.path.join(self.working_root, hostname, project_name)
             repo = Repo(url, path, self.email, self.username)
 
-            self.repos[project] = repo
+            self.repos[key] = repo
         except Exception:
-            self.log.exception("Unable to add project %s" % project)
+            self.log.exception("Unable to add project %s/%s" %
+                               (hostname, project_name))
         return repo
 
-    def getRepo(self, project, url):
-        if project in self.repos:
-            return self.repos[project]
+    def getRepo(self, connection_name, project_name):
+        source = self.connections.getSource(connection_name)
+        project = source.getProject(project_name)
+        hostname = project.canonical_hostname
+        url = source.getGitUrl(project)
+        key = '/'.join([hostname, project_name])
+        if key in self.repos:
+            return self.repos[key]
         if not url:
-            raise Exception("Unable to set up repo for project %s"
-                            " without a url" % (project,))
-        return self.addProject(project, url)
+            raise Exception("Unable to set up repo for project %s/%s"
+                            " without a url" %
+                            (connection_name, project_name,))
+        return self._addProject(hostname, project_name, url)
 
-    def updateRepo(self, project, url):
+    def updateRepo(self, connection_name, project_name):
         # TODOv3(jhesketh): Reimplement
         # da90a50b794f18f74de0e2c7ec3210abf79dda24 after merge..
         # Likely we'll handle connection context per projects differently.
         # self._setGitSsh()
-        repo = self.getRepo(project, url)
+        repo = self.getRepo(connection_name, project_name)
         try:
-            self.log.info("Updating local repository %s", project)
+            self.log.info("Updating local repository %s/%s",
+                          connection_name, project_name)
             repo.reset()
         except Exception:
-            self.log.exception("Unable to update %s", project)
+            self.log.exception("Unable to update %s/%s",
+                               connection_name, project_name)
 
-    def checkoutBranch(self, project, url, branch):
-        repo = self.getRepo(project, url)
+    def checkoutBranch(self, connection_name, project_name, branch):
+        repo = self.getRepo(connection_name, project_name)
         if repo.hasBranch(branch):
-            self.log.info("Checking out branch %s of %s" % (branch, project))
+            self.log.info("Checking out branch %s of %s/%s" %
+                          (branch, connection_name, project_name))
             head = repo.getBranchHead(branch)
             repo.checkout(head)
         else:
-            raise Exception("Project %s does not have branch %s" %
-                            (project, branch))
+            raise Exception("Project %s/%s does not have branch %s" %
+                            (connection_name, project_name, branch))
 
     def _mergeChange(self, item, ref):
-        repo = self.getRepo(item['project'], item['url'])
+        repo = self.getRepo(item['connection'], item['project'])
         try:
             repo.checkout(ref)
         except Exception:
@@ -305,16 +316,16 @@ class Merger(object):
         return commit
 
     def _mergeItem(self, item, recent):
-        self.log.debug("Processing refspec %s for project %s / %s ref %s" %
-                       (item['refspec'], item['project'], item['branch'],
-                        item['ref']))
-        repo = self.getRepo(item['project'], item['url'])
-        key = (item['project'], item['branch'])
+        self.log.debug("Processing refspec %s for project %s/%s / %s ref %s" %
+                       (item['refspec'], item['connection'],
+                        item['project'], item['branch'], item['ref']))
+        repo = self.getRepo(item['connection'], item['project'])
+        key = (item['connection'], item['project'], item['branch'])
 
         # See if we have a commit for this change already in this repo
         zuul_ref = item['branch'] + '/' + item['ref']
         with repo.createRepoObject().git.custom_environment(
-            GIT_SSH_COMMAND=self._get_ssh_cmd(item['connection_name'])):
+            GIT_SSH_COMMAND=self._get_ssh_cmd(item['connection'])):
             commit = repo.getCommitFromRef(zuul_ref)
             if commit:
                 self.log.debug(
@@ -342,7 +353,7 @@ class Merger(object):
             self.log.debug("Found base commit %s for %s" % (base, key,))
         # Merge the change
         with repo.createRepoObject().git.custom_environment(
-            GIT_SSH_COMMAND=self._get_ssh_cmd(item['connection_name'])):
+            GIT_SSH_COMMAND=self._get_ssh_cmd(item['connection'])):
             commit = self._mergeChange(item, base)
             if not commit:
                 return None
@@ -351,9 +362,9 @@ class Merger(object):
             # Set the Zuul ref for this item to point to the most recent
             # commits of each project-branch
             for key, mrc in recent.items():
-                project, branch = key
+                connection, project, branch = key
                 try:
-                    repo = self.getRepo(project, None)
+                    repo = self.getRepo(connection, project)
                     zuul_ref = branch + '/' + item['ref']
                     repo.createZuulRef(zuul_ref, mrc)
                 except Exception:
@@ -377,15 +388,17 @@ class Merger(object):
             if not commit:
                 return None
             if files:
-                repo = self.getRepo(item['project'], item['url'])
+                repo = self.getRepo(item['connection'], item['project'])
                 repo_files = repo.getFiles(files, commit=commit)
-                read_files.append(dict(project=item['project'],
-                                       branch=item['branch'],
-                                       files=repo_files))
+                read_files.append(dict(
+                    connection=item['connection'],
+                    project=item['project'],
+                    branch=item['branch'],
+                    files=repo_files))
         if files:
             return commit.hexsha, read_files
         return commit.hexsha
 
-    def getFiles(self, project, url, branch, files):
-        repo = self.getRepo(project, url)
+    def getFiles(self, connection_name, project_name, branch, files):
+        repo = self.getRepo(connection_name, project_name)
         return repo.getFiles(files, branch=branch)

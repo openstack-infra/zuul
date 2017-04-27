@@ -701,7 +701,8 @@ class FakeBuild(object):
 
         """
         for change in changes:
-            path = os.path.join(self.jobdir.src_root, change.project)
+            hostname = change.gerrit.canonical_hostname
+            path = os.path.join(self.jobdir.src_root, hostname, change.project)
             try:
                 repo = git.Repo(path)
             except NoSuchPathError as e:
