@@ -437,40 +437,6 @@ class PipelineManager(object):
                 canceled = True
         return canceled
 
-    def _makeMergerItem(self, item):
-        # Create a dictionary with all info about the item needed by
-        # the merger.
-        number = None
-        patchset = None
-        refspec = None
-        branch = None
-        oldrev = None
-        newrev = None
-        if hasattr(item.change, 'number'):
-            number = item.change.number
-            patchset = item.change.patchset
-            refspec = item.change.refspec
-            branch = item.change.branch
-        elif hasattr(item.change, 'newrev'):
-            oldrev = item.change.oldrev
-            newrev = item.change.newrev
-        source = item.change.project.source
-        connection_name = source.connection.connection_name
-
-        project = item.change.project.name
-        return dict(project=project,
-                    url=source.getGitUrl(item.change.project),
-                    connection_name=connection_name,
-                    merge_mode=item.current_build_set.getMergeMode(),
-                    refspec=refspec,
-                    branch=branch,
-                    ref=item.current_build_set.ref,
-                    number=number,
-                    patchset=patchset,
-                    oldrev=oldrev,
-                    newrev=newrev,
-                    )
-
     def _loadDynamicLayout(self, item):
         # Load layout
         # Late import to break an import loop
@@ -539,7 +505,7 @@ class PipelineManager(object):
         dependent_items = self.getDependentItems(item)
         dependent_items.reverse()
         all_items = dependent_items + [item]
-        merger_items = map(self._makeMergerItem, all_items)
+        merger_items = [i.makeMergerItem() for i in all_items]
         build_set = item.current_build_set
         build_set.merge_state = build_set.PENDING
         self.sched.merger.mergeChanges(merger_items,

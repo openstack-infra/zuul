@@ -1690,6 +1690,44 @@ class QueueItem(object):
             ret += '\n'
         return ret
 
+    def makeMergerItem(self):
+        # Create a dictionary with all info about the item needed by
+        # the merger.
+        number = None
+        patchset = None
+        oldrev = None
+        newrev = None
+        refspec = None
+        if hasattr(self.change, 'number'):
+            number = self.change.number
+            patchset = self.change.patchset
+            refspec = self.change.refspec
+            branch = self.change.branch
+        elif hasattr(self.change, 'newrev'):
+            oldrev = self.change.oldrev
+            newrev = self.change.newrev
+            branch = self.change.ref
+        else:
+            oldrev = None
+            newrev = None
+            branch = None
+        source = self.change.project.source
+        connection_name = source.connection.connection_name
+        project = self.change.project.name
+
+        return dict(project=project,
+                    url=source.getGitUrl(self.change.project),
+                    connection_name=connection_name,
+                    merge_mode=self.current_build_set.getMergeMode(),
+                    refspec=refspec,
+                    branch=branch,
+                    ref=self.current_build_set.ref,
+                    number=number,
+                    patchset=patchset,
+                    oldrev=oldrev,
+                    newrev=newrev,
+                    )
+
 
 class Ref(object):
     """An existing state of a Project."""

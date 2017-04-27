@@ -24,45 +24,6 @@ import zuul.model
 from zuul.model import Build
 
 
-def make_merger_item(item):
-    # Create a dictionary with all info about the item needed by
-    # the merger.
-    number = None
-    patchset = None
-    oldrev = None
-    newrev = None
-    refspec = None
-    if hasattr(item.change, 'number'):
-        number = item.change.number
-        patchset = item.change.patchset
-        refspec = item.change.refspec
-        branch = item.change.branch
-    elif hasattr(item.change, 'newrev'):
-        oldrev = item.change.oldrev
-        newrev = item.change.newrev
-        branch = item.change.ref
-    else:
-        oldrev = None
-        newrev = None
-        branch = None
-    source = item.change.project.source
-    connection_name = source.connection.connection_name
-    project = item.change.project.name
-
-    return dict(project=project,
-                url=source.getGitUrl(item.change.project),
-                connection_name=connection_name,
-                merge_mode=item.current_build_set.getMergeMode(),
-                refspec=refspec,
-                branch=branch,
-                ref=item.current_build_set.ref,
-                number=number,
-                patchset=patchset,
-                oldrev=oldrev,
-                newrev=newrev,
-                )
-
-
 class GearmanCleanup(threading.Thread):
     """ A thread that checks to see if outstanding builds have
     completed without reporting back. """
@@ -288,7 +249,7 @@ class ExecutorClient(object):
         # ZUUL_NEWREV
 
         all_items = dependent_items + [item]
-        merger_items = map(make_merger_item, all_items)
+        merger_items = [i.makeMergerItem() for i in all_items]
 
         params['job'] = job.name
         params['timeout'] = job.timeout
