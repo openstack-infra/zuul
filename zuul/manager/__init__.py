@@ -509,9 +509,8 @@ class PipelineManager(object):
         build_set = item.current_build_set
         build_set.merge_state = build_set.PENDING
         self.sched.merger.mergeChanges(merger_items,
-                                       item.current_build_set,
-                                       files,
-                                       self.pipeline.precedence)
+                                       item.current_build_set, files,
+                                       precedence=self.pipeline.precedence)
         return False
 
     def prepareItem(self, item):

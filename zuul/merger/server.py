@@ -103,16 +103,14 @@ class MergeServer(object):
 
     def merge(self, job):
         args = json.loads(job.arguments)
-        ret = self.merger.mergeChanges(args['items'], args.get('files'))
+        ret = self.merger.mergeChanges(args['items'], args.get('files'),
+                                       args.get('repo_state'))
         result = dict(merged=(ret is not None),
                       zuul_url=self.zuul_url)
-        if args.get('files'):
-            if ret:
-                result['commit'], result['files'] = ret
-            else:
-                result['commit'], result['files'] = (None, None)
+        if ret is None:
+            result['commit'] = result['files'] = result['repo_state'] = None
         else:
-            result['commit'] = ret
+            result['commit'], result['files'], result['repo_state'] = ret
         job.sendWorkComplete(json.dumps(result))
 
     def cat(self, job):
