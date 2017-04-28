@@ -130,6 +130,7 @@ class MergeClient(object):
         updated = data.get('updated', False)
         commit = data.get('commit')
         files = data.get('files', {})
+        repo_state = data.get('repo_state', {})
         job.files = files
         self.log.info("Merge %s complete, merged: %s, updated: %s, "
                       "commit: %s" %
@@ -137,7 +138,8 @@ class MergeClient(object):
         job.setComplete()
         if job.build_set:
             self.sched.onMergeCompleted(job.build_set, zuul_url,
-                                        merged, updated, commit, files)
+                                        merged, updated, commit, files,
+                                        repo_state)
         # The test suite expects the job to be removed from the
         # internal account after the wake flag is set.
         self.jobs.remove(job)

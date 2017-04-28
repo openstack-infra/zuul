@@ -138,16 +138,18 @@ class MergeCompletedEvent(ResultEvent):
     :arg bool merged: Whether the merge succeeded (changes with refs).
     :arg bool updated: Whether the repo was updated (changes without refs).
     :arg str commit: The SHA of the merged commit (changes with refs).
+    :arg dict repo_state: The starting repo state before the merge.
     """
 
     def __init__(self, build_set, zuul_url, merged, updated, commit,
-                 files):
+                 files, repo_state):
         self.build_set = build_set
         self.zuul_url = zuul_url
         self.merged = merged
         self.updated = updated
         self.commit = commit
         self.files = files
+        self.repo_state = repo_state
 
 
 class NodesProvisionedEvent(ResultEvent):
@@ -316,11 +318,11 @@ class Scheduler(threading.Thread):
         self.log.debug("Done adding complete event for build: %s" % build)
 
     def onMergeCompleted(self, build_set, zuul_url, merged, updated,
-                         commit, files):
+                         commit, files, repo_state):
         self.log.debug("Adding merge complete event for build set: %s" %
                        build_set)
         event = MergeCompletedEvent(build_set, zuul_url, merged,
-                                    updated, commit, files)
+                                    updated, commit, files, repo_state)
         self.result_event_queue.put(event)
         self.wake_event.set()
 
