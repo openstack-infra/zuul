@@ -108,7 +108,8 @@ class JobDir(object):
         self.pre_playbooks = []
         self.post_playbooks = []
         self.roles = []
-        self.roles_path = []
+        self.trusted_roles_path = []
+        self.untrusted_roles_path = []
         self.untrusted_config = os.path.join(
             self.ansible_root, 'untrusted.cfg')
         self.trusted_config = os.path.join(self.ansible_root, 'trusted.cfg')
@@ -142,6 +143,10 @@ class JobDir(object):
         count = len(self.roles)
         root = os.path.join(self.ansible_root, 'role_%i' % (count,))
         os.makedirs(root)
+        trusted = os.path.join(root, 'trusted')
+        os.makedirs(trusted)
+        untrusted = os.path.join(root, 'untrusted')
+        os.makedirs(untrusted)
         self.roles.append(root)
         return root
 
@@ -601,9 +606,9 @@ class AnsibleJob(object):
             repo.delete_remote(repo.remotes.origin)
 
         # is the playbook in a repo that we have already prepared?
-        self.preparePlaybookRepos(args)
+        trusted, untrusted = self.preparePlaybookRepos(args)
 
-        self.prepareRoles(args)
+        self.prepareRoles(args, trusted, untrusted)
 
         # TODOv3: Ansible the ansible thing here.
         self.prepareAnsibleFiles(args)
@@ -737,15 +742,24 @@ class AnsibleJob(object):
         return None
 
     def preparePlaybookRepos(self, args):
+        trusted = untrusted = False
         for playbook in args['pre_playbooks']:
             jobdir_playbook = self.jobdir.addPrePlaybook()
             self.preparePlaybookRepo(jobdir_playbook, playbook,
                                      args, required=True)
+            if playbook['trusted']:
+                trusted = True
+            else:
+                untrusted = True
 
         for playbook in args['playbooks']:
             jobdir_playbook = self.jobdir.addPlaybook()
             self.preparePlaybookRepo(jobdir_playbook, playbook,
                                      args, required=False)
+            if playbook['trusted']:
+                trusted = True
+            else:
+                untrusted = True
             if jobdir_playbook.path is not None:
                 self.jobdir.playbook = jobdir_playbook
                 break
@@ -756,6 +770,11 @@ class AnsibleJob(object):
             jobdir_playbook = self.jobdir.addPostPlaybook()
             self.preparePlaybookRepo(jobdir_playbook, playbook,
                                      args, required=True)
+            if playbook['trusted']:
+                trusted = True
+            else:
+                untrusted = True
+        return (trusted, untrusted)
 
     def preparePlaybookRepo(self, jobdir_playbook, playbook, args, required):
         self.log.debug("Prepare playbook repo for %s" % (playbook,))
@@ -799,11 +818,11 @@ class AnsibleJob(object):
             required=required,
             trusted=playbook['trusted'])
 
-    def prepareRoles(self, args):
+    def prepareRoles(self, args, trusted, untrusted):
         for role in args['roles']:
             if role['type'] == 'zuul':
                 root = self.jobdir.addRole()
-                self.prepareZuulRole(args, role, root)
+                self.prepareZuulRole(args, role, root, trusted, untrusted)
 
     def findRole(self, path, trusted=False):
         d = os.path.join(path, 'tasks')
@@ -826,17 +845,22 @@ class AnsibleJob(object):
                 self._blockPluginDirs(os.path.join(path, entry))
         return path
 
-    def prepareZuulRole(self, args, role, root):
+    def prepareZuulRole(self, args, role, root, trusted, untrusted):
         self.log.debug("Prepare zuul role for %s" % (role,))
         # Check out the role repo if needed
         source = self.executor_server.connections.getSource(
             role['connection'])
         project = source.getProject(role['project'])
-        role_repo = None
-        if not role['trusted']:
-            # This is a project repo, so it is safe to use the already
-            # checked out version (from speculative merging) of the
-            # role
+        untrusted_role_repo = None
+        trusted_role_repo = None
+        trusted_root = os.path.join(root, 'trusted')
+        untrusted_root = os.path.join(root, 'untrusted')
+        name = role['target_name']
+
+        if untrusted:
+            # There is at least one untrusted playbook.  For that
+            # case, use the already checked out version (from
+            # speculative merging) of the role.
 
             for i in args['items']:
                 if (i['connection'] == role['connection'] and
@@ -847,27 +871,70 @@ class AnsibleJob(object):
                     path = os.path.join(self.jobdir.src_root,
                                         project.canonical_hostname,
                                         project.name)
-                    link = os.path.join(root, role['name'])
+                    # The name of the symlink is the requested name of
+                    # the role (which may be the repo name or may be
+                    # something else; this can come into play if this
+                    # is a bare role).
+                    link = os.path.join(untrusted_root, name)
+                    link = os.path.realpath(link)
+                    if not link.startswith(os.path.realpath(untrusted_root)):
+                        raise Exception("Invalid role name %s", name)
                     os.symlink(path, link)
-                    role_repo = link
+                    untrusted_role_repo = link
                     break
 
-        # The role repo is either a config repo, or it isn't in
-        # the stack of changes we are testing, so check out the branch
-        # tip into a dedicated space.
-
-        if not role_repo:
-            merger = self.executor_server._getMerger(root)
+        if trusted or not untrusted_role_repo:
+            # There is at least one trusted playbook which will need a
+            # trusted checkout of the role, or the role did not appear
+            # in the dependency chain for the change (in which case,
+            # there is no existing untrusted checkout of it).  Check
+            # out the branch tip into a dedicated space.
+            merger = self.executor_server._getMerger(trusted_root)
             merger.checkoutBranch(role['connection'], project.name,
                                   'master')
-            role_repo = os.path.join(root, project.canonical_hostname,
-                                     project.name)
+            orig_repo_path = os.path.join(trusted_root,
+                                          project.canonical_hostname,
+                                          project.name)
+            if name != project.name:
+                # The requested name of the role is not the same as
+                # the project name, so rename the git repo as the
+                # requested name.  It is the only item in this
+                # directory, so we don't need to worry about
+                # collisions.
+                target = os.path.join(trusted_root,
+                                      project.canonical_hostname,
+                                      name)
+                target = os.path.realpath(target)
+                if not target.startswith(os.path.realpath(trusted_root)):
+                    raise Exception("Invalid role name %s", name)
+                os.rename(orig_repo_path, target)
+                trusted_role_repo = target
+            else:
+                trusted_role_repo = orig_repo_path
 
-        role_path = self.findRole(role_repo, trusted=role['trusted'])
-        if role_path is None:
-            # In the case of a bare role, add the containing directory
-            role_path = os.path.join(root, project.canonical_hostname)
-        self.jobdir.roles_path.append(role_path)
+            if not untrusted_role_repo:
+                # In the case that there was no untrusted checkout,
+                # use the trusted checkout.
+                untrusted_role_repo = trusted_role_repo
+                untrusted_root = trusted_root
+
+        if untrusted:
+            untrusted_role_path = self.findRole(untrusted_role_repo,
+                                                trusted=False)
+            if untrusted_role_path is None:
+                # In the case of a bare role, add the containing directory
+                untrusted_role_path = os.path.join(untrusted_root,
+                                                   project.canonical_hostname)
+            self.jobdir.untrusted_roles_path.append(untrusted_role_path)
+
+        if trusted:
+            trusted_role_path = self.findRole(trusted_role_repo,
+                                              trusted=True)
+            if trusted_role_path is None:
+                # In the case of a bare role, add the containing directory
+                trusted_role_path = os.path.join(trusted_root,
+                                                 project.canonical_hostname)
+            self.jobdir.trusted_roles_path.append(trusted_role_path)
 
     def prepareAnsibleFiles(self, args):
         keys = []
@@ -909,9 +976,6 @@ class AnsibleJob(object):
             config.write('gathering = explicit\n')
             config.write('library = %s\n'
                          % self.executor_server.library_dir)
-            if self.jobdir.roles_path:
-                config.write('roles_path = %s\n' %
-                             ':'.join(self.jobdir.roles_path))
             config.write('command_warnings = False\n')
             config.write('callback_plugins = %s\n'
                          % self.executor_server.callback_dir)
@@ -924,6 +988,12 @@ class AnsibleJob(object):
                              % self.executor_server.action_dir)
                 config.write('lookup_plugins = %s\n'
                              % self.executor_server.lookup_dir)
+                roles_path = self.jobdir.untrusted_roles_path
+            else:
+                roles_path = self.jobdir.trusted_roles_path
+
+            if roles_path:
+                config.write('roles_path = %s\n' % ':'.join(roles_path))
 
             # On trusted jobs, we want to prevent the printing of args,
             # since trusted jobs might have access to secrets that they may

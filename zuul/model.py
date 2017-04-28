@@ -673,11 +673,10 @@ class Role(object):
 class ZuulRole(Role):
     """A reference to an ansible role in a Zuul project."""
 
-    def __init__(self, target_name, connection_name, project_name, trusted):
+    def __init__(self, target_name, connection_name, project_name):
         super(ZuulRole, self).__init__(target_name)
         self.connection_name = connection_name
         self.project_name = project_name
-        self.trusted = trusted
 
     def __repr__(self):
         return '<ZuulRole %s %s>' % (self.project_name, self.target_name)
@@ -687,8 +686,7 @@ class ZuulRole(Role):
             return False
         return (super(ZuulRole, self).__eq__(other) and
                 self.connection_name == other.connection_name,
-                self.project_name == other.project_name,
-                self.trusted == other.trusted)
+                self.project_name == other.project_name)
 
     def toDict(self):
         # Render to a dict to use in passing json to the executor
@@ -696,7 +694,6 @@ class ZuulRole(Role):
         d['type'] = 'zuul'
         d['connection'] = self.connection_name
         d['project'] = self.project_name
-        d['trusted'] = self.trusted
         return d
 
 

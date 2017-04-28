@@ -408,7 +408,7 @@ class JobParser(object):
 
         return model.ZuulRole(role.get('name', name),
                               project.connection_name,
-                              project.name, trusted)
+                              project.name)
 
 
 class ProjectTemplateParser(object):
