@@ -40,7 +40,7 @@ class Scheduler(zuul.cmd.ZuulApp):
         super(Scheduler, self).__init__()
         self.gear_server_pid = None
 
-    def parse_arguments(self):
+    def parse_arguments(self, args=None):
         parser = argparse.ArgumentParser(description='Project gating system.')
         parser.add_argument('-c', dest='config',
                             help='specify the config file')
@@ -52,7 +52,7 @@ class Scheduler(zuul.cmd.ZuulApp):
         parser.add_argument('--version', dest='version', action='version',
                             version=self._get_version(),
                             help='show zuul version')
-        self.args = parser.parse_args()
+        self.args = parser.parse_args(args)
 
     def reconfigure_handler(self, signum, frame):
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
