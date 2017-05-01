@@ -2463,7 +2463,6 @@ class TestScheduler(ZuulTestCase):
         # Ensure the removed job was not included in the report.
         self.assertNotIn('project-test1', A.messages[0])
 
-    @skip("Disabled for early v3 development")
     def test_live_reconfiguration_shared_queue(self):
         # Test that a change with a failing job which was removed from
         # this project but otherwise still exists in the system does
@@ -2485,15 +2484,16 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(A.reported, 0)
 
-        self.assertEqual(self.getJobFromHistory('project1-merge').result,
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
                          'SUCCESS')
         self.assertEqual(self.getJobFromHistory(
             'project1-project2-integration').result, 'FAILURE')
         self.assertEqual(len(self.history), 2)
 
         # Remove the integration job.
-        self.updateConfigLayout(
-            'tests/fixtures/layout-live-reconfiguration-shared-queue.yaml')
+        self.commitConfigUpdate(
+            'common-config',
+            'layouts/live-reconfiguration-shared-queue.yaml')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
@@ -2501,11 +2501,11 @@ class TestScheduler(ZuulTestCase):
         self.executor_server.release()
         self.waitUntilSettled()
 
-        self.assertEqual(self.getJobFromHistory('project1-merge').result,
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
                          'SUCCESS')
-        self.assertEqual(self.getJobFromHistory('project1-test1').result,
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
                          'SUCCESS')
-        self.assertEqual(self.getJobFromHistory('project1-test2').result,
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
                          'SUCCESS')
         self.assertEqual(self.getJobFromHistory(
             'project1-project2-integration').result, 'FAILURE')
@@ -2517,7 +2517,6 @@ class TestScheduler(ZuulTestCase):
         # Ensure the removed job was not included in the report.
         self.assertNotIn('project1-project2-integration', A.messages[0])
 
-    @skip("Disabled for early v3 development")
     def test_double_live_reconfiguration_shared_queue(self):
         # This was a real-world regression.  A change is added to
         # gate; a reconfigure happens, a second change which depends
