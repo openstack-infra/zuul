@@ -2411,7 +2411,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.history[4].result, 'SUCCESS')
         self.assertEqual(len(self.history), 5)
 
-    @skip("Disabled for early v3 development")
     def test_live_reconfiguration_failed_job(self):
         # Test that a change with a removed failing job does not
         # disrupt reconfiguration.  If a change has a failed job and
@@ -2443,8 +2442,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.history), 2)
 
         # Remove the test1 job.
-        self.updateConfigLayout(
-            'tests/fixtures/layout-live-reconfiguration-failed-job.yaml')
+        self.commitConfigUpdate('common-config',
+                                'layouts/live-reconfiguration-failed-job.yaml')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 

@@ -1,0 +1,35 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+- job:
+    name: project-merge
+    hold-following-changes: true
+
+- job:
+    name: project-test2
+
+- job:
+    name: project-testfile
+
+- project:
+    name: org/project
+    merge-mode: cherry-pick
+    check:
+      jobs:
+      - project-merge
+      - project-test2:
+          dependencies:
+            - project-merge
+      - project-testfile:
+          dependencies:
+            - project-merge
