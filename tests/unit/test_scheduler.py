@@ -2351,19 +2351,17 @@ class TestScheduler(ZuulTestCase):
                          'SUCCESS')
         self.assertEqual(len(self.history), 4)
 
-    @skip("Disabled for early v3 development")
     def test_live_reconfiguration_failed_root(self):
         # An extrapolation of test_live_reconfiguration_merge_conflict
         # that tests a job added to a job tree with a failed root does
         # not run.
-        self.worker.registerFunction('build:project-test3')
         self.executor_server.hold_jobs_in_build = True
 
         # This change is fine.  It's here to stop the queue long
         # enough for the next change to be subject to the
         # reconfiguration.  This change will succeed and merge.
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addPatchset(['conflict'])
+        A.addPatchset({'conflict': 'A'})
         A.addApproval('code-review', 2)
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
@@ -2391,8 +2389,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.history), 2)
 
         # Add the "project-test3" job.
-        self.updateConfigLayout(
-            'tests/fixtures/layout-live-reconfiguration-add-job.yaml')
+        self.commitConfigUpdate('common-config',
+                                'layouts/live-reconfiguration-add-job.yaml')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
