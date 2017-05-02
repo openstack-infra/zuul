@@ -25,6 +25,6 @@ class ActionModule(copy.ActionModule):
         source = self._task.args.get('src', None)
         remote_src = self._task.args.get('remote_src', False)
 
-        if not remote_src and not paths._is_safe_path(source):
+        if not remote_src and source and not paths._is_safe_path(source):
             return paths._fail_dict(source)
         return super(ActionModule, self).run(tmp, task_vars)

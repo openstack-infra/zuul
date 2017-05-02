@@ -22,6 +22,8 @@ import pwd
 import subprocess
 import sys
 
+from six.moves import shlex_quote
+
 from zuul.driver import (Driver, WrapperInterface)
 
 
@@ -140,6 +142,9 @@ class BubblewrapDriver(Driver, WrapperInterface):
         kwargs['gid_fd'] = group_r
         kwargs['user_home'] = passwd.pw_dir
         command = [x.format(**kwargs) for x in bwrap_command]
+
+        self.log.debug("Bubblewrap command: %s",
+                       " ".join(shlex_quote(c) for c in command))
 
         wrapped_popen = WrappedPopen(command, passwd_r, group_r)
 

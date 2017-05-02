@@ -72,3 +72,7 @@
     nodes:
       - name: ubuntu-xenial
         image: ubuntu-xenial
+
+- job:
+    name: hello
+    post-run: hello-post
