@@ -15,7 +15,7 @@
 import logging
 import voluptuous as v
 
-
+from zuul.driver.gerrit.gerritsource import GerritSource
 from zuul.reporter import BaseReporter
 
 
@@ -27,6 +27,17 @@ class GerritReporter(BaseReporter):
 
     def report(self, pipeline, item):
         """Send a message to gerrit."""
+
+        # If the source is no GerritSource we cannot report anything here.
+        if not isinstance(item.change.project.source, GerritSource):
+            return
+
+        # For supporting several Gerrit connections we also must filter by
+        # the canonical hostname.
+        if item.change.project.source.connection.canonical_hostname != \
+                self.connection.canonical_hostname:
+            return
+
         message = self._formatItemReport(pipeline, item)
 
         self.log.debug("Report change %s, params %s, message: %s" %
