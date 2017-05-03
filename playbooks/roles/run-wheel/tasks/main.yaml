@@ -1,4 +1,0 @@
-- name: Execute run-wheel.sh.
-  shell: "/usr/local/jenkins/slave_scripts/run-wheel.sh {{ run_wheel_envlist }}"
-  args:
-    chdir: "{{ zuul_workspace_root }}/src/{{ zuul.project }}"

@@ -1,4 +1,0 @@
-- name: Execute run-docs.sh.
-  shell: "/usr/local/jenkins/slave_scripts/run-docs.sh {{ run_docs_envlist }}"
-  args:
-    chdir: "{{ zuul_workspace_root }}/src/{{ zuul.project }}"
