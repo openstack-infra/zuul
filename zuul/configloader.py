@@ -65,6 +65,8 @@ def indent(s):
 def configuration_exceptions(stanza, conf):
     try:
         yield
+    except ConfigurationSyntaxError:
+        raise
     except Exception as e:
         conf = copy.deepcopy(conf)
         context = conf.pop('_source_context')
@@ -1024,7 +1026,8 @@ class TenantParser(object):
             layout.addSecret(SecretParser.fromYaml(layout, config_secret))
 
         for config_job in data.jobs:
-            layout.addJob(JobParser.fromYaml(tenant, layout, config_job))
+            with configuration_exceptions('job', config_job):
+                layout.addJob(JobParser.fromYaml(tenant, layout, config_job))
 
         for config_semaphore in data.semaphores:
             layout.addSemaphore(SemaphoreParser.fromYaml(config_semaphore))
@@ -1153,7 +1156,8 @@ class ConfigLoader(object):
             layout.addSecret(SecretParser.fromYaml(layout, config_secret))
 
         for config_job in config.jobs:
-            layout.addJob(JobParser.fromYaml(tenant, layout, config_job))
+            with configuration_exceptions('job', config_job):
+                layout.addJob(JobParser.fromYaml(tenant, layout, config_job))
 
         for config_template in config.project_templates:
             layout.addProjectTemplate(ProjectTemplateParser.fromYaml(
