@@ -271,7 +271,29 @@ class JobParser(object):
     ]
 
     @staticmethod
-    def fromYaml(tenant, layout, conf):
+    def _getImpliedBranches(reference, job, project_pipeline):
+        # If the current job definition is not in the same branch as
+        # the reference definition of this job, and this is a project
+        # repo, add an implicit branch matcher for this branch
+        # (assuming there are no explicit branch matchers).  But only
+        # for top-level job definitions and variants.
+        # Project-pipeline job variants should more closely attach to
+        # their branch if they appear in a project-repo.
+        if (reference and
+            reference.source_context and
+            reference.source_context.branch != job.source_context.branch):
+            same_context = False
+        else:
+            same_context = True
+
+        if (job.source_context and
+            (not job.source_context.trusted) and
+            ((not same_context) or project_pipeline)):
+            return [job.source_context.branch]
+        return None
+
+    @staticmethod
+    def fromYaml(tenant, layout, conf, project_pipeline=False):
         with configuration_exceptions('job', conf):
             JobParser.getSchema()(conf)
 
@@ -279,6 +301,8 @@ class JobParser(object):
         # that we always assign values directly rather than modifying
         # them (e.g., "job.run = ..." rather than
         # "job.run.append(...)").
+
+        reference = layout.jobs.get(conf['name'], [None])[0]
 
         job = model.Job(conf['name'])
         job.source_context = conf.get('_source_context')
@@ -316,9 +340,10 @@ class JobParser(object):
             run = model.PlaybookContext(job.source_context, run_name)
             job.run = (run,)
         else:
-            run_name = os.path.join('playbooks', job.name)
-            run = model.PlaybookContext(job.source_context, run_name)
-            job.implied_run = (run,) + job.implied_run
+            if not project_pipeline:
+                run_name = os.path.join('playbooks', job.name)
+                run = model.PlaybookContext(job.source_context, run_name)
+                job.implied_run = (run,) + job.implied_run
 
         for k in JobParser.simple_attributes:
             a = k.replace('-', '_')
@@ -350,13 +375,14 @@ class JobParser(object):
 
         job.dependencies = frozenset(as_list(conf.get('dependencies')))
 
-        roles = []
-        for role in conf.get('roles', []):
-            if 'zuul' in role:
-                r = JobParser._makeZuulRole(tenant, job, role)
-                if r:
-                    roles.append(r)
-        job.roles = job.roles.union(set(roles))
+        if 'roles' in conf:
+            roles = []
+            for role in conf.get('roles', []):
+                if 'zuul' in role:
+                    r = JobParser._makeZuulRole(tenant, job, role)
+                    if r:
+                        roles.append(r)
+            job.roles = job.roles.union(set(roles))
 
         variables = conf.get('vars', None)
         if variables:
@@ -372,14 +398,20 @@ class JobParser(object):
                 allowed.append(project.name)
             job.allowed_projects = frozenset(allowed)
 
-        # If the definition for this job came from a project repo,
-        # implicitly apply a branch matcher for the branch it was on.
-        if (not job.source_context.trusted):
-            branches = [job.source_context.branch]
-        elif 'branches' in conf:
+        # If the current job definition is not in the same branch as
+        # the reference definition of this job, and this is a project
+        # repo, add an implicit branch matcher for this branch
+        # (assuming there are no explicit branch matchers).  But only
+        # for top-level job definitions and variants.
+        # Project-pipeline job variants should more closely attach to
+        # their branch if they appear in a project-repo.
+
+        branches = None
+        if (project_pipeline or 'branches' not in conf):
+            branches = JobParser._getImpliedBranches(
+                reference, job, project_pipeline)
+        if (not branches) and ('branches' in conf):
             branches = as_list(conf['branches'])
-        else:
-            branches = None
         if branches:
             matchers = []
             for branch in branches:
@@ -456,23 +488,22 @@ class ProjectTemplateParser(object):
                       start_mark, job_list):
         for conf_job in conf:
             if isinstance(conf_job, six.string_types):
-                job = model.Job(conf_job)
-                job_list.addJob(job)
+                attrs = dict(name=conf_job)
             elif isinstance(conf_job, dict):
                 # A dictionary in a job tree may override params
                 jobname, attrs = conf_job.items()[0]
                 if attrs:
                     # We are overriding params, so make a new job def
                     attrs['name'] = jobname
-                    attrs['_source_context'] = source_context
-                    attrs['_start_mark'] = start_mark
-                    job_list.addJob(JobParser.fromYaml(tenant, layout, attrs))
                 else:
                     # Not overriding, so add a blank job
-                    job = model.Job(jobname)
-                    job_list.addJob(job)
+                    attrs = dict(name=jobname)
             else:
                 raise Exception("Job must be a string or dictionary")
+            attrs['_source_context'] = source_context
+            attrs['_start_mark'] = start_mark
+            job_list.addJob(JobParser.fromYaml(tenant, layout, attrs,
+                                               project_pipeline=True))
 
 
 class ProjectParser(object):
