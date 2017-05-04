@@ -13,3 +13,10 @@
           - zuul.executor.hostname is defined
           - zuul.executor.src_root is defined
           - zuul.executor.log_root is defined
+
+    - name: Assert zuul.project variables are valid.
+      assert:
+        that:
+          - zuul.project.name == 'org/project'
+          - zuul.project.canonical_hostname == 'review.example.com'
+          - zuul.project.canonical_name == 'review.example.com/org/project'
