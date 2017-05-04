@@ -79,6 +79,78 @@ class JobDirPlaybook(object):
         self.path = None
 
 
+class SshAgent(object):
+    log = logging.getLogger("zuul.ExecutorServer")
+
+    def __init__(self):
+        self.env = {}
+        self.ssh_agent = None
+
+    def start(self):
+        if self.ssh_agent:
+            return
+        with open('/dev/null', 'r+') as devnull:
+            ssh_agent = subprocess.Popen(['ssh-agent'], close_fds=True,
+                                         stdout=subprocess.PIPE,
+                                         stderr=devnull,
+                                         stdin=devnull)
+        (output, _) = ssh_agent.communicate()
+        output = output.decode('utf8')
+        for line in output.split("\n"):
+            if '=' in line:
+                line = line.split(";", 1)[0]
+                (key, value) = line.split('=')
+                self.env[key] = value
+        self.log.info('Started SSH Agent, {}'.format(self.env))
+
+    def stop(self):
+        if 'SSH_AGENT_PID' in self.env:
+            try:
+                os.kill(int(self.env['SSH_AGENT_PID']), signal.SIGTERM)
+            except OSError:
+                self.log.exception(
+                    'Problem sending SIGTERM to agent {}'.format(self.env))
+            self.log.info('Sent SIGTERM to SSH Agent, {}'.format(self.env))
+            self.env = {}
+
+    def add(self, key_path):
+        env = os.environ.copy()
+        env.update(self.env)
+        key_path = os.path.expanduser(key_path)
+        self.log.debug('Adding SSH Key {}'.format(key_path))
+        output = ''
+        try:
+            output = subprocess.check_output(['ssh-add', key_path], env=env,
+                                             stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError:
+            self.log.error('ssh-add failed: {}'.format(output))
+            raise
+        self.log.info('Added SSH Key {}'.format(key_path))
+
+    def remove(self, key_path):
+        env = os.environ.copy()
+        env.update(self.env)
+        key_path = os.path.expanduser(key_path)
+        self.log.debug('Removing SSH Key {}'.format(key_path))
+        subprocess.check_output(['ssh-add', '-d', key_path], env=env,
+                                stderr=subprocess.PIPE)
+        self.log.info('Removed SSH Key {}'.format(key_path))
+
+    def list(self):
+        if 'SSH_AUTH_SOCK' not in self.env:
+            return None
+        env = os.environ.copy()
+        env.update(self.env)
+        result = []
+        for line in subprocess.Popen(['ssh-add', '-L'], env=env,
+                                     stdout=subprocess.PIPE).stdout:
+            line = line.decode('utf8')
+            if line.strip() == 'The agent has no identities.':
+                break
+            result.append(line.strip())
+        return result
+
+
 class JobDir(object):
     def __init__(self, root=None, keep=False):
         # root
@@ -168,7 +240,7 @@ class UpdateTask(object):
         self.event = threading.Event()
 
     def __eq__(self, other):
-        if (other.connection_name == self.connection_name and
+        if (other and other.connection_name == self.connection_name and
             other.project_name == self.project_name):
             return True
         return False
@@ -513,6 +585,8 @@ class AnsibleJob(object):
         self.proc_lock = threading.Lock()
         self.running = False
         self.aborted = False
+        self.thread = None
+        self.ssh_agent = None
 
         if self.executor_server.config.has_option(
             'executor', 'private_key_file'):
@@ -520,8 +594,11 @@ class AnsibleJob(object):
                 'executor', 'private_key_file')
         else:
             self.private_key_file = '~/.ssh/id_rsa'
+        self.ssh_agent = SshAgent()
 
     def run(self):
+        self.ssh_agent.start()
+        self.ssh_agent.add(self.private_key_file)
         self.running = True
         self.thread = threading.Thread(target=self.execute)
         self.thread.start()
@@ -529,7 +606,8 @@ class AnsibleJob(object):
     def stop(self):
         self.aborted = True
         self.abortRunningProc()
-        self.thread.join()
+        if self.thread:
+            self.thread.join()
 
     def execute(self):
         try:
@@ -549,6 +627,11 @@ class AnsibleJob(object):
                 self.executor_server.finishJob(self.job.unique)
             except Exception:
                 self.log.exception("Error finalizing job thread:")
+            if self.ssh_agent:
+                try:
+                    self.ssh_agent.stop()
+                except Exception:
+                    self.log.exception("Error stopping SSH agent:")
 
     def _execute(self):
         self.log.debug("Job %s: beginning" % (self.job.unique,))
@@ -1032,6 +1115,7 @@ class AnsibleJob(object):
 
     def runAnsible(self, cmd, timeout, trusted=False):
         env_copy = os.environ.copy()
+        env_copy.update(self.ssh_agent.env)
         env_copy['LOGNAME'] = 'zuul'
 
         if trusted:

@@ -1837,12 +1837,20 @@ class ZuulTestCase(BaseTestCase):
 
         # Make per test copy of Configuration.
         self.setup_config()
+        self.private_key_file = os.path.join(self.test_root, 'test_id_rsa')
+        if not os.path.exists(self.private_key_file):
+            src_private_key_file = os.path.join(FIXTURE_DIR, 'test_id_rsa')
+            shutil.copy(src_private_key_file, self.private_key_file)
+            shutil.copy('{}.pub'.format(src_private_key_file),
+                        '{}.pub'.format(self.private_key_file))
+            os.chmod(self.private_key_file, 0o0600)
         self.config.set('zuul', 'tenant_config',
                         os.path.join(FIXTURE_DIR,
                                      self.config.get('zuul', 'tenant_config')))
         self.config.set('merger', 'git_dir', self.merger_src_root)
         self.config.set('executor', 'git_dir', self.executor_src_root)
         self.config.set('zuul', 'state_dir', self.state_root)
+        self.config.set('executor', 'private_key_file', self.private_key_file)
 
         self.statsd = FakeStatsd()
         # note, use 127.0.0.1 rather than localhost to avoid getting ipv6
