@@ -339,3 +339,21 @@ class TestProjectKeys(ZuulTestCase):
 
         # Make sure it's the right length
         self.assertEqual(4096, private_key.key_size)
+
+
+class TestRoles(ZuulTestCase):
+    tenant_config_file = 'config/roles/main.yaml'
+
+    def test_role(self):
+        # This exercises a proposed change to a role being checked out
+        # and used.
+        A = self.fake_gerrit.addFakeChange('bare-role', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            B.subject, A.data['id'])
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='project-test', result='SUCCESS', changes='1,1 2,1'),
+        ])
