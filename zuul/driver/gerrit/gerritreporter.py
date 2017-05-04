@@ -25,14 +25,14 @@ class GerritReporter(BaseReporter):
     name = 'gerrit'
     log = logging.getLogger("zuul.GerritReporter")
 
-    def report(self, source, pipeline, item):
+    def report(self, pipeline, item):
         """Send a message to gerrit."""
         message = self._formatItemReport(pipeline, item)
 
         self.log.debug("Report change %s, params %s, message: %s" %
                        (item.change, self.config, message))
         changeid = '%s,%s' % (item.change.number, item.change.patchset)
-        item.change._ref_sha = source.getRefSha(
+        item.change._ref_sha = item.change.project.source.getRefSha(
             item.change.project, 'refs/heads/' + item.change.branch)
 
         return self.connection.review(item.change.project.name, changeid,

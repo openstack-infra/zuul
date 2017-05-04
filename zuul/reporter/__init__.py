@@ -37,7 +37,7 @@ class BaseReporter(object):
         self._action = action
 
     @abc.abstractmethod
-    def report(self, source, pipeline, item):
+    def report(self, pipeline, item):
         """Send the compiled report message."""
 
     def getSubmitAllowNeeds(self):

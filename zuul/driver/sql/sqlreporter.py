@@ -31,7 +31,7 @@ class SQLReporter(BaseReporter):
         # TODO(jeblair): document this is stored as NULL if unspecified
         self.result_score = config.get('score', None)
 
-    def report(self, source, pipeline, item):
+    def report(self, pipeline, item):
         """Create an entry into a database."""
 
         if not self.connection.tables_established:

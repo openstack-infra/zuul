@@ -38,7 +38,7 @@ class GithubReporter(BaseReporter):
         if not isinstance(self._unlabels, list):
             self._unlabels = [self._unlabels]
 
-    def report(self, source, pipeline, item):
+    def report(self, pipeline, item):
         """Comment on PR and set commit status."""
         if self._create_comment:
             self.addPullComment(pipeline, item)

@@ -146,20 +146,17 @@ class PipelineManager(object):
 
     def reportStart(self, item):
         if not self.pipeline._disabled:
-            source = item.change.project.source
             try:
                 self.log.info("Reporting start, action %s item %s" %
                               (self.pipeline.start_actions, item))
-                ret = self.sendReport(self.pipeline.start_actions,
-                                      source, item)
+                ret = self.sendReport(self.pipeline.start_actions, item)
                 if ret:
                     self.log.error("Reporting item start %s received: %s" %
                                    (item, ret))
             except:
                 self.log.exception("Exception while reporting start:")
 
-    def sendReport(self, action_reporters, source, item,
-                   message=None):
+    def sendReport(self, action_reporters, item, message=None):
         """Sends the built message off to configured reporters.
 
         Takes the action_reporters, item, message and extra options and
@@ -168,7 +165,7 @@ class PipelineManager(object):
         report_errors = []
         if len(action_reporters) > 0:
             for reporter in action_reporters:
-                ret = reporter.report(source, self.pipeline, item)
+                ret = reporter.report(self.pipeline, item)
                 if ret:
                     report_errors.append(ret)
             if len(report_errors) == 0:
@@ -737,7 +734,6 @@ class PipelineManager(object):
 
     def _reportItem(self, item):
         self.log.debug("Reporting change %s" % item.change)
-        source = item.change.project.source
         ret = True  # Means error as returned by trigger.report
         if item.getConfigError():
             self.log.debug("Invalid config for change %s" % item.change)
@@ -772,7 +768,7 @@ class PipelineManager(object):
             try:
                 self.log.info("Reporting item %s, actions: %s" %
                               (item, actions))
-                ret = self.sendReport(actions, source, item)
+                ret = self.sendReport(actions, item)
                 if ret:
                     self.log.error("Reporting item %s received: %s" %
                                    (item, ret))
