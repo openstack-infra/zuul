@@ -14,6 +14,19 @@
         comment: true
 
 - pipeline:
+    name: trigger_status
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: 'trigger me'
+          require-status: "zuul:check:success"
+    success:
+      github:
+        comment: true
+
+- pipeline:
     name: trigger
     manager: independent
     trigger:
@@ -144,6 +157,9 @@
 - project:
     name: org/project1
     pipeline:
+      jobs:
+        - project1-pipeline
+    trigger_status:
       jobs:
         - project1-pipeline
 

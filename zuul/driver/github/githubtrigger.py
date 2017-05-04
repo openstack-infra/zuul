@@ -42,7 +42,8 @@ class GithubTrigger(BaseTrigger):
                 labels=toList(trigger.get('label')),
                 unlabels=toList(trigger.get('unlabel')),
                 states=toList(trigger.get('state')),
-                statuses=toList(trigger.get('status'))
+                statuses=toList(trigger.get('status')),
+                required_statuses=toList(trigger.get('require-status'))
             )
             efilters.append(f)
 
@@ -68,6 +69,7 @@ def getSchema():
         'label': toList(str),
         'unlabel': toList(str),
         'state': toList(str),
+        'require-status': toList(str),
         'status': toList(str)
     }
 
