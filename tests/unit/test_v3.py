@@ -191,6 +191,61 @@ class TestInRepoConfig(ZuulTestCase):
             dict(name='project-test1', result='SUCCESS', changes='2,1'),
             dict(name='project-test2', result='SUCCESS', changes='3,1')])
 
+    def test_crd_dynamic_config_branch(self):
+        # Test that we can create a job in one repo and be able to use
+        # it from a different branch on a different repo.
+
+        self.create_branch('org/project1', 'stable')
+
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test2
+
+            - project:
+                name: org/project
+                check:
+                  jobs:
+                    - project-test2
+            """)
+
+        in_repo_playbook = textwrap.dedent(
+            """
+            - hosts: all
+              tasks: []
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf,
+                     'playbooks/project-test2.yaml': in_repo_playbook}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+
+        second_repo_conf = textwrap.dedent(
+            """
+            - project:
+                name: org/project1
+                check:
+                  jobs:
+                    - project-test2
+            """)
+
+        second_file_dict = {'.zuul.yaml': second_repo_conf}
+        B = self.fake_gerrit.addFakeChange('org/project1', 'stable', 'B',
+                                           files=second_file_dict)
+        B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            B.subject, A.data['id'])
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.reported, 1, "A should report")
+        self.assertHistory([
+            dict(name='project-test2', result='SUCCESS', changes='1,1'),
+            dict(name='project-test2', result='SUCCESS', changes='1,1 2,1'),
+        ])
+
     def test_untrusted_syntax_error(self):
         in_repo_conf = textwrap.dedent(
             """
