@@ -522,6 +522,10 @@ class PipelineManager(object):
             build_set.setConfiguration()
         if build_set.merge_state == build_set.NEW:
             return self.scheduleMerge(item, ['zuul.yaml', '.zuul.yaml'])
+        if build_set.merge_state == build_set.PENDING:
+            return False
+        if build_set.unable_to_merge:
+            return False
         if build_set.config_error:
             return False
         return True

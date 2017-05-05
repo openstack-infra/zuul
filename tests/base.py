@@ -1777,8 +1777,6 @@ class ZuulTestCase(BaseTestCase):
         old_urlopen = urllib.request.urlopen
         urllib.request.urlopen = URLOpenerFactory
 
-        self._startMerger()
-
         self.executor_server = RecordingExecutorServer(
             self.config, self.connections,
             jobdir_root=self.test_root,
@@ -2047,8 +2045,6 @@ class ZuulTestCase(BaseTestCase):
     def shutdown(self):
         self.log.debug("Shutting down after tests")
         self.executor_client.stop()
-        self.merge_server.stop()
-        self.merge_server.join()
         self.merge_client.stop()
         self.executor_server.stop()
         self.sched.stop()
