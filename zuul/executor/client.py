@@ -193,6 +193,7 @@ class ExecutorClient(object):
             canonical_name=item.change.project.canonical_name)
 
         zuul_params = dict(uuid=uuid,
+                           ref=item.current_build_set.ref,
                            pipeline=pipeline.name,
                            job=job.name,
                            project=project,

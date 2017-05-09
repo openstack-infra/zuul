@@ -1194,7 +1194,7 @@ class BuildSet(object):
         self.result = None
         self.next_build_set = None
         self.previous_build_set = None
-        self.ref = None
+        self.uuid = None
         self.commit = None
         self.zuul_url = None
         self.dependent_items = None
@@ -1209,6 +1209,13 @@ class BuildSet(object):
         self.repo_state = {}
         self.layout = None
         self.tries = {}
+
+    @property
+    def ref(self):
+        # NOTE(jamielennox): The concept of buildset ref is to be removed and a
+        # buildset UUID identifier available instead. Currently the ref is
+        # checked to see if the BuildSet has been configured.
+        return 'Z' + self.uuid if self.uuid else None
 
     def __repr__(self):
         return '<BuildSet item: %s #builds: %s merge state: %s>' % (
@@ -1227,8 +1234,8 @@ class BuildSet(object):
                 items.append(next_item)
                 next_item = next_item.item_ahead
             self.dependent_items = items
-        if not self.ref:
-            self.ref = 'Z' + uuid4().hex
+        if not self.uuid:
+            self.uuid = uuid4().hex
         if self.merger_items is None:
             items = [self.item] + self.dependent_items
             items.reverse()
@@ -1308,6 +1315,9 @@ class BuildSet(object):
             if project_config:
                 return project_config.merge_mode
         return MERGER_MERGE_RESOLVE
+
+    def getSafeAttributes(self):
+        return Attributes(uuid=self.uuid)
 
 
 class QueueItem(object):
@@ -1589,12 +1599,14 @@ class QueueItem(object):
         safe_change = self.change.getSafeAttributes()
         safe_pipeline = self.pipeline.getSafeAttributes()
         safe_tenant = self.pipeline.layout.tenant.getSafeAttributes()
+        safe_buildset = self.current_build_set.getSafeAttributes()
         safe_job = job.getSafeAttributes() if job else {}
         safe_build = build.getSafeAttributes() if build else {}
         try:
             url = url_pattern.format(change=safe_change,
                                      pipeline=safe_pipeline,
                                      tenant=safe_tenant,
+                                     buildset=safe_buildset,
                                      job=safe_job,
                                      build=safe_build)
         except KeyError as e:
