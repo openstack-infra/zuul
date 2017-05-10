@@ -67,7 +67,7 @@ class GithubReporter(BaseReporter):
     def setPullStatus(self, pipeline, item):
         project = item.change.project.name
         sha = item.change.patchset
-        context = pipeline.name
+        context = '%s/%s' % (pipeline.layout.tenant.name, pipeline.name)
         state = self._commit_status
         url = ''
         if self.connection.sched.config.has_option('zuul', 'status_url'):

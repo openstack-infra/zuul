@@ -260,7 +260,7 @@ class TestGithubDriver(ZuulTestCase):
         check_status = A.statuses[A.head_sha][0]
         check_url = ('http://zuul.example.com/status/#%s,%s' %
                      (A.number, A.head_sha))
-        self.assertEqual('check', check_status['context'])
+        self.assertEqual('tenant-one/check', check_status['context'])
         self.assertEqual('Standard check', check_status['description'])
         self.assertEqual('pending', check_status['state'])
         self.assertEqual(check_url, check_status['url'])
@@ -274,7 +274,7 @@ class TestGithubDriver(ZuulTestCase):
         check_status = A.statuses[A.head_sha][0]
         check_url = ('http://zuul.example.com/status/#%s,%s' %
                      (A.number, A.head_sha))
-        self.assertEqual('check', check_status['context'])
+        self.assertEqual('tenant-one/check', check_status['context'])
         self.assertEqual('success', check_status['state'])
         self.assertEqual(check_url, check_status['url'])
         self.assertEqual(1, len(A.comments))
@@ -297,7 +297,7 @@ class TestGithubDriver(ZuulTestCase):
         # pipeline reports success status
         self.assertEqual(3, len(A.statuses[A.head_sha]))
         report_status = A.statuses[A.head_sha][0]
-        self.assertEqual('reporting', report_status['context'])
+        self.assertEqual('tenant-one/reporting', report_status['context'])
         self.assertEqual('success', report_status['state'])
         self.assertEqual(2, len(A.comments))
 
