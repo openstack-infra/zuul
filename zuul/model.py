@@ -681,6 +681,8 @@ class ZuulRole(Role):
     def __repr__(self):
         return '<ZuulRole %s %s>' % (self.project_name, self.target_name)
 
+    __hash__ = object.__hash__
+
     def __eq__(self, other):
         if not isinstance(other, ZuulRole):
             return False
@@ -807,6 +809,8 @@ class Job(object):
             if getattr(self, k) != getattr(other, k):
                 return False
         return True
+
+    __hash__ = object.__hash__
 
     def __str__(self):
         return self.name
