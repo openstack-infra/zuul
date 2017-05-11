@@ -981,7 +981,7 @@ class FakeStatsd(threading.Thread):
                     return
 
     def stop(self):
-        os.write(self.wake_write, '1\n')
+        os.write(self.wake_write, b'1\n')
 
 
 class FakeBuild(object):
@@ -1265,7 +1265,7 @@ class FakeGearmanServer(gear.Server):
         for queue in [self.high_queue, self.normal_queue, self.low_queue]:
             for job in queue:
                 if not hasattr(job, 'waiting'):
-                    if job.name.startswith('executor:execute'):
+                    if job.name.startswith(b'executor:execute'):
                         job.waiting = self.hold_jobs_in_queue
                     else:
                         job.waiting = False
@@ -1383,7 +1383,7 @@ class FakeNodepool(object):
             path = self.REQUEST_ROOT + '/' + oid
             try:
                 data, stat = self.client.get(path)
-                data = json.loads(data)
+                data = json.loads(data.decode('utf8'))
                 data['_oid'] = oid
                 reqs.append(data)
             except kazoo.exceptions.NoNodeError:
@@ -1399,7 +1399,7 @@ class FakeNodepool(object):
         for oid in sorted(nodeids):
             path = self.NODE_ROOT + '/' + oid
             data, stat = self.client.get(path)
-            data = json.loads(data)
+            data = json.loads(data.decode('utf8'))
             data['_oid'] = oid
             try:
                 lockfiles = self.client.get_children(path + '/lock')
@@ -1431,7 +1431,7 @@ class FakeNodepool(object):
                     image_id=None,
                     host_keys=["fake-key1", "fake-key2"],
                     executor='fake-nodepool')
-        data = json.dumps(data)
+        data = json.dumps(data).encode('utf8')
         path = self.client.create(path, data,
                                   makepath=True,
                                   sequence=True)
@@ -1460,7 +1460,7 @@ class FakeNodepool(object):
 
         request['state_time'] = time.time()
         path = self.REQUEST_ROOT + '/' + oid
-        data = json.dumps(request)
+        data = json.dumps(request).encode('utf8')
         self.log.debug("Fulfilling node request: %s %s" % (oid, data))
         self.client.set(path, data)
 
@@ -2202,8 +2202,9 @@ class ZuulTestCase(BaseTestCase):
             if build.url is None:
                 self.log.debug("%s has not reported start" % build)
                 return False
+            # using internal ServerJob which offers no Text interface
             worker_build = self.executor_server.job_builds.get(
-                server_job.unique)
+                server_job.unique.decode('utf8'))
             if worker_build:
                 if worker_build.isWaiting():
                     continue
@@ -2307,7 +2308,7 @@ class ZuulTestCase(BaseTestCase):
         start = time.time()
         while time.time() < (start + 5):
             for stat in self.statsd.stats:
-                k, v = stat.split(':')
+                k, v = stat.decode('utf-8').split(':')
                 if key == k:
                     if value is None and kind is None:
                         return
