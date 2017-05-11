@@ -10,6 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import base64
 from contextlib import contextmanager
 import copy
 import os
@@ -142,7 +143,7 @@ class EncryptedPKCS1_OAEP(yaml.YAMLObject):
     yaml_loader = yaml.SafeLoader
 
     def __init__(self, ciphertext):
-        self.ciphertext = ciphertext.decode('base64')
+        self.ciphertext = base64.b64decode(ciphertext)
 
     def __ne__(self, other):
         return not self.__eq__(other)
