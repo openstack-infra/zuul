@@ -438,7 +438,7 @@ class ExecutorClient(object):
         job.connection.sendAdminRequest(req, timeout=300)
         self.log.debug("Response to cancel build %s request: %s" %
                        (build, req.response.strip()))
-        if req.response.startswith("OK"):
+        if req.response.startswith(b"OK"):
             try:
                 del self.builds[job.unique]
             except:

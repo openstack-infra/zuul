@@ -1530,11 +1530,11 @@ class QueueItem(object):
         except KeyError as e:
             self.log.error("Error while formatting url for job %s: unknown "
                            "key %s in pattern %s"
-                           % (job, e.message, url_pattern))
+                           % (job, e.args[0], url_pattern))
         except AttributeError as e:
             self.log.error("Error while formatting url for job %s: unknown "
                            "attribute %s in pattern %s"
-                           % (job, e.message, url_pattern))
+                           % (job, e.args[0], url_pattern))
         except Exception:
             self.log.exception("Error while formatting url for job %s with "
                                "pattern %s:" % (job, url_pattern))
