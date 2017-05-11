@@ -158,7 +158,8 @@ class EncryptedPKCS1_OAEP(yaml.YAMLObject):
         return cls(node.value)
 
     def decrypt(self, private_key):
-        return encryption.decrypt_pkcs1_oaep(self.ciphertext, private_key)
+        return encryption.decrypt_pkcs1_oaep(self.ciphertext,
+                                             private_key).decode('utf8')
 
 
 class NodeSetParser(object):
