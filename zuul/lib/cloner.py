@@ -102,7 +102,8 @@ class Cloner(object):
             new_repo = git.Repo.clone_from(git_cache, dest)
             self.log.info("Updating origin remote in repo %s to %s",
                           project, git_upstream)
-            new_repo.remotes.origin.config_writer.set('url', git_upstream)
+            new_repo.remotes.origin.config_writer.set('url',
+                                                      git_upstream).release()
         else:
             self.log.info("Creating repo %s from upstream %s",
                           project, git_upstream)
