@@ -14,10 +14,10 @@
 
 from zuul.driver import Driver, ConnectionInterface, TriggerInterface
 from zuul.driver import SourceInterface, ReporterInterface
-import gerritconnection
-import gerrittrigger
-import gerritsource
-import gerritreporter
+from zuul.driver.gerrit import gerritconnection
+from zuul.driver.gerrit import gerrittrigger
+from zuul.driver.gerrit import gerritsource
+from zuul.driver.gerrit import gerritreporter
 
 
 class GerritDriver(Driver, ConnectionInterface, TriggerInterface,

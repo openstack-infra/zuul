@@ -18,7 +18,7 @@ import logging
 import os
 import socket
 import threading
-import Queue
+from six.moves import queue
 
 
 class CommandSocket(object):
@@ -27,7 +27,7 @@ class CommandSocket(object):
     def __init__(self, path):
         self.running = False
         self.path = path
-        self.queue = Queue.Queue()
+        self.queue = queue.Queue()
 
     def start(self):
         self.running = True

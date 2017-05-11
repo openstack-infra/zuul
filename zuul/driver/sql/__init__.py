@@ -13,8 +13,8 @@
 # under the License.
 
 from zuul.driver import Driver, ConnectionInterface, ReporterInterface
-import sqlconnection
-import sqlreporter
+from zuul.driver.sql import sqlconnection
+from zuul.driver.sql import sqlreporter
 
 
 class SQLDriver(Driver, ConnectionInterface, ReporterInterface):

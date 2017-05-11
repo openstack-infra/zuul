@@ -21,7 +21,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from zuul.driver import Driver, TriggerInterface
 from zuul.model import TriggerEvent
-import timertrigger
+from zuul.driver.timer import timertrigger
 
 
 class TimerDriver(Driver, TriggerInterface):

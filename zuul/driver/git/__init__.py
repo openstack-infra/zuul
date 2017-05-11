@@ -13,8 +13,8 @@
 # under the License.
 
 from zuul.driver import Driver, ConnectionInterface, SourceInterface
-import gitconnection
-import gitsource
+from zuul.driver.git import gitconnection
+from zuul.driver.git import gitsource
 
 
 class GitDriver(Driver, ConnectionInterface, SourceInterface):

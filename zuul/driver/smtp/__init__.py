@@ -13,8 +13,8 @@
 # under the License.
 
 from zuul.driver import Driver, ConnectionInterface, ReporterInterface
-import smtpconnection
-import smtpreporter
+from zuul.driver.smtp import smtpconnection
+from zuul.driver.smtp import smtpreporter
 
 
 class SMTPDriver(Driver, ConnectionInterface, ReporterInterface):
