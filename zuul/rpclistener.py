@@ -38,7 +38,7 @@ class RPCListener(object):
             port = self.config.get('gearman', 'port')
         else:
             port = 4730
-        self.worker = gear.Worker('Zuul RPC Listener')
+        self.worker = gear.TextWorker('Zuul RPC Listener')
         self.worker.addServer(server, port)
         self.worker.waitForServer()
         self.register()

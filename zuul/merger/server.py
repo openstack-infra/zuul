@@ -54,7 +54,7 @@ class MergeServer(object):
             port = self.config.get('gearman', 'port')
         else:
             port = 4730
-        self.worker = gear.Worker('Zuul Merger')
+        self.worker = gear.TextWorker('Zuul Merger')
         self.worker.addServer(server, port)
         self.log.debug("Waiting for server")
         self.worker.waitForServer()

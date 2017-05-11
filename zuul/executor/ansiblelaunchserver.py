@@ -59,7 +59,7 @@ def boolify(x):
     return bool(x)
 
 
-class LaunchGearWorker(gear.Worker):
+class LaunchGearWorker(gear.TextWorker):
     def __init__(self, *args, **kw):
         self.__launch_server = kw.pop('launch_server')
         super(LaunchGearWorker, self).__init__(*args, **kw)
@@ -71,7 +71,7 @@ class LaunchGearWorker(gear.Worker):
         return super(LaunchGearWorker, self).handleNoop(packet)
 
 
-class NodeGearWorker(gear.Worker):
+class NodeGearWorker(gear.TextWorker):
     MASS_DO = 101
 
     def sendMassDo(self, functions):

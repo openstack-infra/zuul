@@ -56,7 +56,7 @@ class MergeGearmanClient(gear.Client):
         self.__merge_client.onBuildCompleted(job)
 
 
-class MergeJob(gear.Job):
+class MergeJob(gear.TextJob):
     def __init__(self, *args, **kw):
         super(MergeJob, self).__init__(*args, **kw)
         self.__event = threading.Event()
