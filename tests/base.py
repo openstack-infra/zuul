@@ -2282,7 +2282,7 @@ class ZuulTestCase(BaseTestCase):
 
     def countJobResults(self, jobs, result):
         jobs = filter(lambda x: x.result == result, jobs)
-        return len(jobs)
+        return len(list(jobs))
 
     def getJobFromHistory(self, name, project=None):
         for job in self.history:

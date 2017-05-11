@@ -1206,7 +1206,7 @@ class BuildSet(object):
         return self.builds.get(job_name)
 
     def getBuilds(self):
-        keys = self.builds.keys()
+        keys = list(self.builds.keys())
         keys.sort()
         return [self.builds.get(x) for x in keys]
 
@@ -2332,7 +2332,7 @@ class UnparsedAbideConfig(object):
                 raise Exception("Configuration item dictionaries must have "
                                 "a single key (when parsing %s)" %
                                 (conf,))
-            key, value = item.items()[0]
+            key, value = list(item.items())[0]
             if key == 'tenant':
                 self.tenants.append(value)
             else:
@@ -2390,7 +2390,7 @@ class UnparsedTenantConfig(object):
                 raise Exception("Configuration item dictionaries must have "
                                 "a single key (when parsing %s)" %
                                 (conf,))
-            key, value = item.items()[0]
+            key, value = list(item.items())[0]
             if key == 'project':
                 name = value['name']
                 self.projects.setdefault(name, []).append(value)
@@ -2697,7 +2697,7 @@ class Tenant(object):
             if hostname:
                 project = hostname_dict.get(hostname)
             else:
-                values = hostname_dict.values()
+                values = list(hostname_dict.values())
                 if len(values) == 1:
                     project = values[0]
                 else:
