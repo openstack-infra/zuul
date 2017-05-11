@@ -1928,7 +1928,7 @@ class ZuulTestCase(BaseTestCase):
                     'source': {driver:
                                {'config-projects': ['common-config'],
                                 'untrusted-projects': untrusted_projects}}}}]
-        f.write(yaml.dump(config))
+        f.write(yaml.dump(config).encode('utf8'))
         f.close()
         self.config.set('zuul', 'tenant_config',
                         os.path.join(FIXTURE_DIR, f.name))
