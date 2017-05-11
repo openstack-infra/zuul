@@ -467,7 +467,7 @@ class NodeSet(object):
         self.nodes[node.name] = node
 
     def getNodes(self):
-        return self.nodes.values()
+        return list(self.nodes.values())
 
     def __repr__(self):
         if self.name:
@@ -989,7 +989,7 @@ class JobGraph(object):
             raise
 
     def getJobs(self):
-        return self.jobs.values()  # Report in the order of the layout config
+        return list(self.jobs.values())  # Report in the order of layout cfg
 
     def _getDirectDependentJobs(self, parent_job):
         ret = set()
@@ -2741,7 +2741,7 @@ class JobTimeData(object):
     def load(self):
         if not os.path.exists(self.path):
             return
-        with open(self.path) as f:
+        with open(self.path, 'rb') as f:
             data = struct.unpack(self.format, f.read())
         version = data[0]
         if version != self.version:
@@ -2757,7 +2757,7 @@ class JobTimeData(object):
         data.extend(self.failure_times)
         data.extend(self.results)
         data = struct.pack(self.format, *data)
-        with open(tmpfile, 'w') as f:
+        with open(tmpfile, 'wb') as f:
             f.write(data)
         os.rename(tmpfile, self.path)
 
