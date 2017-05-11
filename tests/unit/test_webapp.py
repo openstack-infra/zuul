@@ -51,7 +51,7 @@ class TestWebapp(ZuulTestCase):
         req = urllib.request.Request(
             "http://localhost:%s/tenant-one/status" % self.port)
         f = urllib.request.urlopen(req)
-        data = json.loads(f.read())
+        data = json.loads(f.read().decode('utf8'))
 
         self.assertIn('pipelines', data)
 
@@ -60,7 +60,7 @@ class TestWebapp(ZuulTestCase):
         req = urllib.request.Request(
             "http://localhost:%s/tenant-one/status.json" % self.port)
         f = urllib.request.urlopen(req)
-        data = json.loads(f.read())
+        data = json.loads(f.read().decode('utf8'))
 
         self.assertIn('pipelines', data)
 
@@ -75,7 +75,7 @@ class TestWebapp(ZuulTestCase):
         req = urllib.request.Request(
             "http://localhost:%s/tenant-one/status/change/1,1" % self.port)
         f = urllib.request.urlopen(req)
-        data = json.loads(f.read())
+        data = json.loads(f.read().decode('utf8'))
 
         self.assertEqual(1, len(data), data)
         self.assertEqual("org/project", data[0]['project'])
@@ -83,13 +83,13 @@ class TestWebapp(ZuulTestCase):
         req = urllib.request.Request(
             "http://localhost:%s/tenant-one/status/change/2,1" % self.port)
         f = urllib.request.urlopen(req)
-        data = json.loads(f.read())
+        data = json.loads(f.read().decode('utf8'))
 
         self.assertEqual(1, len(data), data)
         self.assertEqual("org/project1", data[0]['project'], data)
 
     def test_webapp_keys(self):
-        with open(os.path.join(FIXTURE_DIR, 'public.pem')) as f:
+        with open(os.path.join(FIXTURE_DIR, 'public.pem'), 'rb') as f:
             public_pem = f.read()
 
         req = urllib.request.Request(
@@ -106,7 +106,7 @@ class TestWebapp(ZuulTestCase):
         req = urllib.request.Request(
             "http://localhost:%s/custom" % self.port)
         f = urllib.request.urlopen(req)
-        self.assertEqual('ok', f.read())
+        self.assertEqual(b'ok', f.read())
 
         self.webapp.unregister_path('/custom')
         self.assertRaises(urllib.error.HTTPError, urllib.request.urlopen, req)
