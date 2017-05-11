@@ -289,22 +289,37 @@ class ExecutorServer(object):
         library_path = os.path.dirname(os.path.abspath(
             zuul.ansible.library.__file__))
         for fn in os.listdir(library_path):
-            shutil.copy(os.path.join(library_path, fn), self.library_dir)
-
+            full_path = os.path.join(library_path, fn)
+            if os.path.isdir(full_path):
+                shutil.copytree(full_path, os.path.join(self.library_dir, fn))
+            else:
+                shutil.copy(os.path.join(library_path, fn), self.library_dir)
         action_path = os.path.dirname(os.path.abspath(
-            zuul.ansible.action.__file__))
+                                      zuul.ansible.action.__file__))
         for fn in os.listdir(action_path):
-            shutil.copy(os.path.join(action_path, fn), self.action_dir)
+            full_path = os.path.join(action_path, fn)
+            if os.path.isdir(full_path):
+                shutil.copytree(full_path, os.path.join(self.action_dir, fn))
+            else:
+                shutil.copy(full_path, self.action_dir)
 
         callback_path = os.path.dirname(os.path.abspath(
             zuul.ansible.callback.__file__))
         for fn in os.listdir(callback_path):
-            shutil.copy(os.path.join(callback_path, fn), self.callback_dir)
+            full_path = os.path.join(callback_path, fn)
+            if os.path.isdir(full_path):
+                shutil.copytree(full_path, os.path.join(self.callback_dir, fn))
+            else:
+                shutil.copy(os.path.join(callback_path, fn), self.callback_dir)
 
         lookup_path = os.path.dirname(os.path.abspath(
             zuul.ansible.lookup.__file__))
         for fn in os.listdir(lookup_path):
-            shutil.copy(os.path.join(lookup_path, fn), self.lookup_dir)
+            full_path = os.path.join(lookup_path, fn)
+            if os.path.isdir(full_path):
+                shutil.copytree(full_path, os.path.join(self.lookup_dir, fn))
+            else:
+                shutil.copy(os.path.join(lookup_path, fn), self.lookup_dir)
 
         self.job_workers = {}
 
