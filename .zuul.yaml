@@ -2,4 +2,8 @@
     name: openstack-infra/zuul
     check:
       jobs:
-        - noop
+        - tox-docs
+        - tox-cover
+        - tox-linters
+        - tox-py27
+        - tox-tarball
