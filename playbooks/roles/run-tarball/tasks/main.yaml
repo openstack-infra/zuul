@@ -1,4 +1,0 @@
-- name: Execute run-tarball.sh.
-  shell: "/usr/local/jenkins/slave_scripts/run-tarball.sh {{ run_tarball_envlist }}"
-  args:
-    chdir: "{{ zuul_workspace_root }}/src/{{ zuul.project }}"

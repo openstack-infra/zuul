@@ -1,7 +1,0 @@
-- hosts: all
-  vars:
-    run_tox_envlist: py27
-  roles:
-    - extra-test-setup
-    - revoke-sudo
-    - run-tox
