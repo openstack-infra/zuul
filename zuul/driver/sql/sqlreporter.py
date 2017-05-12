@@ -31,7 +31,7 @@ class SQLReporter(BaseReporter):
         # TODO(jeblair): document this is stored as NULL if unspecified
         self.result_score = config.get('score', None)
 
-    def report(self, pipeline, item):
+    def report(self, item):
         """Create an entry into a database."""
 
         if not self.connection.tables_established:
@@ -48,7 +48,7 @@ class SQLReporter(BaseReporter):
                 ref=item.change.refspec,
                 score=self.result_score,
                 message=self._formatItemReport(
-                    pipeline, item, with_jobs=False),
+                    item, with_jobs=False),
             )
             buildset_ins_result = conn.execute(buildset_ins)
             build_inserts = []

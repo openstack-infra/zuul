@@ -24,9 +24,9 @@ class SMTPReporter(BaseReporter):
     name = 'smtp'
     log = logging.getLogger("zuul.SMTPReporter")
 
-    def report(self, pipeline, item):
+    def report(self, item):
         """Send the compiled report message via smtp."""
-        message = self._formatItemReport(pipeline, item)
+        message = self._formatItemReport(item)
 
         self.log.debug("Report change %s, params %s, message: %s" %
                        (item.change, self.config, message))

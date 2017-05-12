@@ -165,7 +165,7 @@ class PipelineManager(object):
         report_errors = []
         if len(action_reporters) > 0:
             for reporter in action_reporters:
-                ret = reporter.report(self.pipeline, item)
+                ret = reporter.report(item)
                 if ret:
                     report_errors.append(ret)
             if len(report_errors) == 0:

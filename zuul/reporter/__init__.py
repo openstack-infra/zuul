@@ -37,7 +37,7 @@ class BaseReporter(object):
         self._action = action
 
     @abc.abstractmethod
-    def report(self, pipeline, item):
+    def report(self, item):
         """Send the compiled report message."""
 
     def getSubmitAllowNeeds(self):
@@ -61,57 +61,55 @@ class BaseReporter(object):
         }
         return format_methods[self._action]
 
-    # TODOv3(jeblair): Consider removing pipeline argument in favor of
-    # item.pipeline
-    def _formatItemReport(self, pipeline, item, with_jobs=True):
+    def _formatItemReport(self, item, with_jobs=True):
         """Format a report from the given items. Usually to provide results to
         a reporter taking free-form text."""
-        ret = self._getFormatter()(pipeline, item, with_jobs)
+        ret = self._getFormatter()(item, with_jobs)
 
-        if pipeline.footer_message:
-            ret += '\n' + pipeline.footer_message
+        if item.pipeline.footer_message:
+            ret += '\n' + item.pipeline.footer_message
 
         return ret
 
-    def _formatItemReportStart(self, pipeline, item, with_jobs=True):
+    def _formatItemReportStart(self, item, with_jobs=True):
         status_url = ''
         if self.connection.sched.config.has_option('zuul', 'status_url'):
             status_url = self.connection.sched.config.get('zuul',
                                                           'status_url')
-        return pipeline.start_message.format(pipeline=pipeline,
-                                             status_url=status_url)
+        return item.pipeline.start_message.format(pipeline=item.pipeline,
+                                                  status_url=status_url)
 
-    def _formatItemReportSuccess(self, pipeline, item, with_jobs=True):
-        msg = pipeline.success_message
+    def _formatItemReportSuccess(self, item, with_jobs=True):
+        msg = item.pipeline.success_message
         if with_jobs:
-            msg += '\n\n' + self._formatItemReportJobs(pipeline, item)
+            msg += '\n\n' + self._formatItemReportJobs(item)
         return msg
 
-    def _formatItemReportFailure(self, pipeline, item, with_jobs=True):
+    def _formatItemReportFailure(self, item, with_jobs=True):
         if item.dequeued_needing_change:
             msg = 'This change depends on a change that failed to merge.\n'
         elif item.didMergerFail():
-            msg = pipeline.merge_failure_message
+            msg = item.pipeline.merge_failure_message
         elif item.getConfigError():
             msg = item.getConfigError()
         else:
-            msg = pipeline.failure_message
+            msg = item.pipeline.failure_message
             if with_jobs:
-                msg += '\n\n' + self._formatItemReportJobs(pipeline, item)
+                msg += '\n\n' + self._formatItemReportJobs(item)
         return msg
 
-    def _formatItemReportMergeFailure(self, pipeline, item, with_jobs=True):
-        return pipeline.merge_failure_message
+    def _formatItemReportMergeFailure(self, item, with_jobs=True):
+        return item.pipeline.merge_failure_message
 
-    def _formatItemReportDisabled(self, pipeline, item, with_jobs=True):
+    def _formatItemReportDisabled(self, item, with_jobs=True):
         if item.current_build_set.result == 'SUCCESS':
-            return self._formatItemReportSuccess(pipeline, item)
+            return self._formatItemReportSuccess(item)
         elif item.current_build_set.result == 'FAILURE':
-            return self._formatItemReportFailure(pipeline, item)
+            return self._formatItemReportFailure(item)
         else:
-            return self._formatItemReport(pipeline, item)
+            return self._formatItemReport(item)
 
-    def _formatItemReportJobs(self, pipeline, item):
+    def _formatItemReportJobs(self, item):
         # Return the list of jobs portion of the report
         ret = ''
 
