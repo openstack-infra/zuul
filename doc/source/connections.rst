@@ -83,6 +83,10 @@ Create a connection with GitHub.
   See `Securing your webhooks
   <https://developer.github.com/webhooks/securing/>`_.
 
+**sshkey**
+  Path to SSH key to use when cloning github repositories.
+  ``sshkey=/home/zuul/.ssh/id_rsa``
+
 SMTP
 ----
 

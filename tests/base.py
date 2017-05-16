@@ -736,6 +736,9 @@ class FakeGithubConnection(githubconnection.GithubConnection):
     def getGitUrl(self, project):
         return os.path.join(self.upstream_root, str(project))
 
+    def real_getGitUrl(self, project):
+        return super(FakeGithubConnection, self).getGitUrl(project)
+
     def getProjectBranches(self, project):
         """Masks getProjectBranches since we don't have a real github"""
 
