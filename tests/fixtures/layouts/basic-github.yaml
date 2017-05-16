@@ -8,6 +8,9 @@
             - opened
             - changed
             - reopened
+        - event: pull_request
+          action: comment
+          comment: 'test me'
     success:
       github: {}
     failure:
