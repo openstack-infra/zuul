@@ -1,0 +1,22 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request
+          action:
+            - opened
+            - changed
+            - reopened
+
+- job:
+    name: project-test1
+- job:
+    name: project-test2
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-test1
+        - project-test2

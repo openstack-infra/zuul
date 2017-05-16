@@ -4,7 +4,7 @@ Triggers
 ========
 
 The process of merging a change starts with proposing a change to be
-merged.  Primarily, Zuul supports Gerrit as a triggering system.
+merged. Zuul supports Gerrit and GitHub as triggering systems.
 Zuul's design is modular, so alternate triggering and reporting
 systems can be supported.
 
@@ -100,6 +100,38 @@ the following options.
   *require-approval* but will fail to enter the pipeline if there is
   a matching approval.
 
+GitHub
+------
+
+Github webhook events can be configured as triggers.
+
+A connection name with the github driver can take multiple events with the
+following options.
+
+  **event**
+  The pull request event from github. A ``pull_request`` event will
+  have associated action(s) to trigger from. The supported actions are:
+
+    *opened* - pull request opened
+
+    *changed* - pull request synchronized
+
+    *closed* - pull request closed
+
+    *reopened* - pull request reopened
+
+GitHub Configuration
+~~~~~~~~~~~~~~~~~~~~
+
+Configure GitHub `webhook events
+<https://developer.github.com/webhooks/creating/>`_.
+
+Set *Payload URL* to
+``http://<zuul-hostname>/connection/<connection-name>/payload``.
+
+Set *Content Type* to ``application/json``.
+
+Select *Events* you are interested in. See above for the supported events.
 
 Timer
 -----
