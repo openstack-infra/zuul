@@ -120,6 +120,9 @@ following options.
 
     *reopened* - pull request reopened
 
+  Additionally a ``push`` event can be configured, with an
+  associated ``ref`` represented as a regex to match branches or tags.
+
 GitHub Configuration
 ~~~~~~~~~~~~~~~~~~~~
 

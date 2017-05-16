@@ -34,9 +34,11 @@ class GithubTrigger(BaseTrigger):
         for trigger in self._toList(trigger_config):
             types = trigger.get('event', None)
             actions = trigger.get('action')
+            refs = trigger.get('refs')
             f = EventFilter(trigger=self,
                             types=self._toList(types),
-                            actions=self._toList(actions))
+                            actions=self._toList(actions),
+                            refs=self._toList(refs))
             efilters.append(f)
 
         return efilters
@@ -51,8 +53,10 @@ def getSchema():
 
     github_trigger = {
         v.Required('event'):
-            toList(v.Any('pull_request')),
+            toList(v.Any('pull_request',
+                         'push')),
         'action': toList(str),
+        'ref': toList(str),
     }
 
     return github_trigger
