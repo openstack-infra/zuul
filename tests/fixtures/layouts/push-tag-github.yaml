@@ -4,7 +4,7 @@
     trigger:
       github:
         - event: push
-          ref: ^refs/heads/.*$
+          ref: '^refs/heads/master$'
 
 - pipeline:
     name: tag

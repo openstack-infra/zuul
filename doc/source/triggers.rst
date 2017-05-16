@@ -128,6 +128,11 @@ following options.
 
     *push* - head reference updated (pushed to branch)
 
+  **branch**
+  The branch associated with the event. Example: ``master``.  This
+  field is treated as a regular expression, and multiple branches may
+  be listed. Used for ``pull-request`` events.
+
   **comment**
   This is only used for ``pull_request`` ``comment`` events.  It accepts a list
   of regexes that are searched for in the comment string. If any of these
@@ -143,8 +148,10 @@ following options.
   ``unlabeled`` action when a label with name ``do not test`` is removed from
   the pull request.
 
-  Additionally a ``push`` event can be configured, with an
-  associated ``ref`` represented as a regex to match branches or tags.
+  Additionally a ``push`` event can be configured, with an ``ref`` field. This
+  field is treated as a regular expression and multiple refs may be listed.
+  Github always sends full ref name, eg. ``refs/tags/bar`` and this string is
+  matched against the regexp.
 
 GitHub Configuration
 ~~~~~~~~~~~~~~~~~~~~
