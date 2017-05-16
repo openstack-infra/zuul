@@ -942,7 +942,7 @@ class AnsibleJob(object):
             for item in self.getHostList(args):
                 inventory.write(item['name'])
                 for k, v in item['host_vars'].items():
-                    inventory.write(' %s=%s' % (k, v))
+                    inventory.write(' %s="%s"' % (k, v))
                 inventory.write('\n')
                 for key in item['host_keys']:
                     keys.append(key)
