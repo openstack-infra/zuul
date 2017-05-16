@@ -34,7 +34,7 @@ class GithubDriver(Driver, ConnectionInterface, TriggerInterface,
         return githubsource.GithubSource(self, connection)
 
     def getReporter(self, connection, config=None):
-        return githubreporter.GithubReporter(self, connection)
+        return githubreporter.GithubReporter(self, connection, config)
 
     def getTriggerSchema(self):
         return githubtrigger.getSchema()

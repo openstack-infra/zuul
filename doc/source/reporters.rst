@@ -32,7 +32,23 @@ GitHub
 ------
 
 Zuul reports back to GitHub pull requests via GitHub API.
-It will create a comment containing the job status.
+On success and failure, it creates a comment containing the build results.
+It also sets the status on start, success and failure. Status name and
+description is taken from the pipeline.
+
+A :ref:`connection` that uses the github driver must be supplied to the
+reporter. It has the following options:
+
+  **status**
+  String value (``pending``, ``success``, ``failure``) that the reporter should
+  set as the commit status on github.
+  ``status: 'success'``
+
+  **comment**
+  Boolean value (``true`` or ``false``) that determines if the reporter should
+  add a comment to the pipeline status to the github pull request. Defaults
+  to ``true``.
+  ``comment: false``
 
 SMTP
 ----

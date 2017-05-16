@@ -277,11 +277,17 @@ class GithubConnection(BaseConnection):
         owner, proj = project_name.split('/')
         return self.github.pull_request(owner, proj, number).as_dict()
 
-    def report(self, project, pr_number, message):
-        owner, proj = project.name.split('/')
+    def commentPull(self, project, pr_number, message):
+        owner, proj = project.split('/')
         repository = self.github.repository(owner, proj)
         pull_request = repository.issue(pr_number)
         pull_request.create_comment(message)
+
+    def setCommitStatus(self, project, sha, state, url='', description='',
+                        context=''):
+        owner, proj = project.split('/')
+        repository = self.github.repository(owner, proj)
+        repository.create_status(sha, state, url, description, context)
 
     def _ghTimestampToDate(self, timestamp):
         return time.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
