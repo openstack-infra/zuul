@@ -312,9 +312,7 @@ class PipelineManager(object):
                 item.enqueue_time = enqueue_time
             item.live = live
             self.reportStats(item)
-            if not quiet:
-                if len(self.pipeline.start_actions) > 0:
-                    self.reportStart(item)
+            item.quiet = quiet
             self.enqueueChangesBehind(change, quiet, ignore_requirements,
                                       change_queue)
             zuul_driver = self.sched.connections.drivers['zuul']
@@ -580,6 +578,14 @@ class PipelineManager(object):
                 self.cancelJobs(item)
             if actionable:
                 ready = self.prepareItem(item) and self.prepareJobs(item)
+                # Starting jobs reporting should only be done once if there are
+                # jobs to run for this item.
+                if ready and len(self.pipeline.start_actions) > 0 \
+                        and len(item.job_graph.jobs) > 0 \
+                        and not item.reported_start \
+                        and not item.quiet:
+                    self.reportStart(item)
+                    item.reported_start = True
                 if item.current_build_set.unable_to_merge:
                     failing_reasons.append("it has a merge conflict")
                 if item.current_build_set.config_error:

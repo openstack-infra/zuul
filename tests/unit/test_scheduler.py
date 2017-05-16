@@ -956,7 +956,6 @@ class TestScheduler(ZuulTestCase):
         self.waitUntilSettled()
 
         self.assertEqual(A.reported, 1)
-        self.assertEqual(B.reported, 1)
         self.assertEqual(C.reported, 1)
 
         self.gearman_server.release('project-merge')
@@ -974,7 +973,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.data['status'], 'NEW')
         self.assertEqual(C.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
-        self.assertEqual(B.reported, 2)
+        self.assertIn('Merge Failed', B.messages[-1])
         self.assertEqual(C.reported, 2)
 
         self.assertHistory([
@@ -2329,7 +2328,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(A.reported, 1)
         self.assertEqual(B.data['status'], 'NEW')
-        self.assertEqual(B.reported, 1)
         self.assertEqual(len(self.history), 0)
 
         # Add the "project-test3" job.
@@ -2345,7 +2343,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
         self.assertEqual(B.data['status'], 'NEW')
-        self.assertEqual(B.reported, 2)
+        self.assertIn('Merge Failed', B.messages[-1])
         self.assertEqual(self.getJobFromHistory('project-merge').result,
                          'SUCCESS')
         self.assertEqual(self.getJobFromHistory('project-test1').result,
@@ -3396,6 +3394,16 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertTrue(self.smtp_messages[0]['body'].endswith(footer_msg))
         self.assertFalse(self.smtp_messages[1]['body'].startswith(failure_msg))
         self.assertTrue(self.smtp_messages[1]['body'].endswith(footer_msg))
+
+    @simple_layout('layouts/unmanaged-project.yaml')
+    def test_unmanaged_project_start_message(self):
+        "Test start reporting is not done for unmanaged projects."
+        self.init_repo("org/project", tag='init')
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(0, len(A.messages))
 
     @skip("Disabled for early v3 development")
     def test_merge_failure_reporters(self):

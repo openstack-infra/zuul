@@ -1,0 +1,25 @@
+- pipeline:
+    name: check
+    manager: independent
+    require:
+      gerrit:
+        open: True
+        current-patchset: True
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+    start:
+      gerrit:
+        verified: 0
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - noop
