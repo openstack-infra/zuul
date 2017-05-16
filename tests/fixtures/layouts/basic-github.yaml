@@ -8,6 +8,10 @@
             - opened
             - changed
             - reopened
+    success:
+      github: {}
+    failure:
+      github: {}
 
 - job:
     name: project-test1
