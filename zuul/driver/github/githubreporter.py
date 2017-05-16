@@ -14,8 +14,10 @@
 
 import logging
 import voluptuous as v
+import time
 
 from zuul.reporter import BaseReporter
+from zuul.exceptions import MergeFailure
 
 
 class GithubReporter(BaseReporter):
@@ -28,6 +30,7 @@ class GithubReporter(BaseReporter):
         super(GithubReporter, self).__init__(driver, connection, config)
         self._commit_status = self.config.get('status', None)
         self._create_comment = self.config.get('comment', True)
+        self._merge = self.config.get('merge', False)
 
     def report(self, source, pipeline, item):
         """Comment on PR and set commit status."""
@@ -37,6 +40,9 @@ class GithubReporter(BaseReporter):
             hasattr(item.change, 'patchset') and
             item.change.patchset is not None):
             self.setPullStatus(pipeline, item)
+        if (self._merge and
+            hasattr(item.change, 'number')):
+            self.mergePull(item)
 
     def addPullComment(self, pipeline, item):
         message = self._formatItemReport(pipeline, item)
@@ -68,10 +74,25 @@ class GithubReporter(BaseReporter):
         self.connection.setCommitStatus(
             project, sha, state, url, description, context)
 
+    def mergePull(self, item):
+        project = item.change.project.name
+        pr_number = item.change.number
+        sha = item.change.patchset
+        self.log.debug('Reporting change %s, params %s, merging via API' %
+                       (item.change, self.config))
+        try:
+            self.connection.mergePull(project, pr_number, sha)
+        except MergeFailure:
+            time.sleep(2)
+            self.log.debug('Trying to merge change %s again...' % item.change)
+            self.connection.mergePull(project, pr_number, sha)
+        item.change.is_merged = True
+
 
 def getSchema():
     github_reporter = v.Schema({
         'status': v.Any('pending', 'success', 'failure'),
-        'comment': bool
+        'comment': bool,
+        'merge': bool
     })
     return github_reporter

@@ -165,3 +165,35 @@ class TestGithubDriver(ZuulTestCase):
         self.waitUntilSettled()
         self.assertNotIn('reporting', pr.statuses)
         self.assertEqual(2, len(pr.comments))
+
+    @simple_layout('layouts/merging-github.yaml', driver='github')
+    def test_report_pull_merge(self):
+        # pipeline merges the pull request on success
+        A = self.fake_github.openFakePullRequest('org/project', 'master')
+        self.fake_github.emitEvent(A.getCommentAddedEvent('merge me'))
+        self.waitUntilSettled()
+        self.assertTrue(A.is_merged)
+
+        # pipeline merges the pull request on success after failure
+        self.fake_github.merge_failure = True
+        B = self.fake_github.openFakePullRequest('org/project', 'master')
+        self.fake_github.emitEvent(B.getCommentAddedEvent('merge me'))
+        self.waitUntilSettled()
+        self.assertFalse(B.is_merged)
+        self.fake_github.merge_failure = False
+
+        # pipeline merges the pull request on second run of merge
+        # first merge failed on 405 Method Not Allowed error
+        self.fake_github.merge_not_allowed_count = 1
+        C = self.fake_github.openFakePullRequest('org/project', 'master')
+        self.fake_github.emitEvent(C.getCommentAddedEvent('merge me'))
+        self.waitUntilSettled()
+        self.assertTrue(C.is_merged)
+
+        # pipeline does not merge the pull request
+        # merge failed on 405 Method Not Allowed error - twice
+        self.fake_github.merge_not_allowed_count = 2
+        D = self.fake_github.openFakePullRequest('org/project', 'master')
+        self.fake_github.emitEvent(D.getCommentAddedEvent('merge me'))
+        self.waitUntilSettled()
+        self.assertFalse(D.is_merged)

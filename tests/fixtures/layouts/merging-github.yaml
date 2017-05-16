@@ -1,0 +1,19 @@
+- pipeline:
+    name: merge
+    description: Pipeline for merging the pull request
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: 'merge me'
+    success:
+      github:
+        merge: true
+        comment: false
+
+- project:
+    name: org/project
+    merge:
+      jobs:
+        - noop
