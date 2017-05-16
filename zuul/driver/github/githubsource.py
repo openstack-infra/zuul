@@ -38,11 +38,18 @@ class GithubSource(BaseSource):
 
     def isMerged(self, change, head=None):
         """Determine if change is merged."""
-        raise NotImplementedError()
+        if not change.number:
+            # Not a pull request, considering merged.
+            return True
+        return change.is_merged
 
     def canMerge(self, change, allow_needs):
         """Determine if change can merge."""
-        raise NotImplementedError()
+
+        if not change.number:
+            # Not a pull request, considering merged.
+            return True
+        return self.connection.canMerge(change, allow_needs)
 
     def postConfig(self):
         """Called after configuration has been processed."""
