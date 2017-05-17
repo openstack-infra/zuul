@@ -2287,13 +2287,11 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
-    @skip("Disabled for early v3 development")
     def test_live_reconfiguration_merge_conflict(self):
         # A real-world bug: a change in a gate queue has a merge
         # conflict and a job is added to its project while it's
         # sitting in the queue.  The job gets added to the change and
         # enqueued and the change gets stuck.
-        self.worker.registerFunction('build:project-test3')
         self.executor_server.hold_jobs_in_build = True
 
         # This change is fine.  It's here to stop the queue long
@@ -2301,14 +2299,14 @@ class TestScheduler(ZuulTestCase):
         # reconfiguration, as well as to provide a conflict for the
         # next change.  This change will succeed and merge.
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addPatchset(['conflict'])
+        A.addPatchset({'conflict': 'A'})
         A.addApproval('code-review', 2)
 
         # This change will be in merge conflict.  During the
         # reconfiguration, we will add a job.  We want to make sure
         # that doesn't cause it to get stuck.
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
-        B.addPatchset(['conflict'])
+        B.addPatchset({'conflict': 'B'})
         B.addApproval('code-review', 2)
 
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
@@ -2324,8 +2322,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.history), 0)
 
         # Add the "project-test3" job.
-        self.updateConfigLayout(
-            'tests/fixtures/layout-live-reconfiguration-add-job.yaml')
+        self.commitConfigUpdate('common-config',
+                                'layouts/live-reconfiguration-add-job.yaml')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
