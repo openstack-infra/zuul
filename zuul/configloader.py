@@ -773,12 +773,12 @@ class PipelineParser(object):
 
         for source_name, require_config in conf.get('require', {}).items():
             source = connections.getSource(source_name)
-            manager.changeish_filters.extend(
+            manager.ref_filters.extend(
                 source.getRequireFilters(require_config))
 
         for source_name, reject_config in conf.get('reject', {}).items():
             source = connections.getSource(source_name)
-            manager.changeish_filters.extend(
+            manager.ref_filters.extend(
                 source.getRejectFilters(reject_config))
 
         for trigger_name, trigger_config in conf.get('trigger').items():
