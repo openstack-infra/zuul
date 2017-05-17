@@ -52,6 +52,10 @@
 
         var collapsed_exceptions = [];
         var current_filter = read_cookie('zuul_filter_string', '');
+        var change_set_in_url = window.location.href.split('#')[1];
+        if (change_set_in_url) {
+           current_filter = change_set_in_url;
+        }
         var $jq;
 
         var xhr,

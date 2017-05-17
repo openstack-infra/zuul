@@ -74,7 +74,12 @@ class BaseReporter(object):
         return ret
 
     def _formatItemReportStart(self, pipeline, item, with_jobs=True):
-        return pipeline.start_message.format(pipeline=pipeline)
+        status_url = ''
+        if self.connection.sched.config.has_option('zuul', 'status_url'):
+            status_url = self.connection.sched.config.get('zuul',
+                                                          'status_url')
+        return pipeline.start_message.format(pipeline=pipeline,
+                                             status_url=status_url)
 
     def _formatItemReportSuccess(self, pipeline, item, with_jobs=True):
         msg = pipeline.success_message
