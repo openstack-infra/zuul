@@ -2164,12 +2164,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(set(['project-test-nomatch-starts-empty',
                               'project-test-nomatch-starts-full']), run_jobs)
 
-    @skip("Disabled for early v3 development")
-    def test_test_config(self):
-        "Test that we can test the config"
-        self.sched.testConfig(self.config.get('zuul', 'tenant_config'),
-                              self.connections)
-
     def test_queue_names(self):
         "Test shared change queue names"
         tenant = self.sched.abide.tenants.get('tenant-one')
