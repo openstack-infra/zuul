@@ -143,6 +143,24 @@ class GithubWebhookListener():
         event.action = 'comment'
         return event
 
+    def _event_pull_request_review(self, request):
+        """Handles pull request reviews"""
+        body = request.json_body
+        pr_body = body.get('pull_request')
+        if pr_body is None:
+            return
+
+        review = body.get('review')
+        if review is None:
+            return
+
+        event = self._pull_request_to_event(pr_body)
+        event.state = review.get('state')
+        event.account = self._get_sender(body)
+        event.type = 'pull_request_review'
+        event.action = body.get('action')
+        return event
+
     def _issue_to_pull_request(self, body):
         number = body.get('issue').get('number')
         project_name = body.get('repository').get('full_name')
