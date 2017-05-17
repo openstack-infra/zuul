@@ -1,0 +1,18 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request
+          action: opened
+
+- job:
+    name: project-test1
+    files:
+      - '.*-requires'
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-test1

@@ -73,9 +73,19 @@ class TestJob(BaseTestCase):
         change.files = ['/COMMIT_MSG', 'docs/foo']
         self.assertFalse(self.job.changeMatches(change))
 
+    def test_change_matches_returns_false_for_single_matched_skip_if(self):
+        change = model.Change('project')
+        change.files = ['docs/foo']
+        self.assertFalse(self.job.changeMatches(change))
+
     def test_change_matches_returns_true_for_unmatched_skip_if(self):
         change = model.Change('project')
         change.files = ['/COMMIT_MSG', 'foo']
+        self.assertTrue(self.job.changeMatches(change))
+
+    def test_change_matches_returns_true_for_single_unmatched_skip_if(self):
+        change = model.Change('project')
+        change.files = ['foo']
         self.assertTrue(self.job.changeMatches(change))
 
     def test_job_sets_defaults_for_boolean_attributes(self):

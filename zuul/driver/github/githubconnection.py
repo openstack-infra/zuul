@@ -288,6 +288,7 @@ class GithubConnection(BaseConnection):
             change.url = event.change_url
             change.updated_at = self._ghTimestampToDate(event.updated_at)
             change.patchset = event.patch_number
+            change.files = self.getPullFileNames(project, change.number)
             change.title = event.title
             change.source_event = event
         elif event.ref:
@@ -346,6 +347,11 @@ class GithubConnection(BaseConnection):
         # Zuul whether or not those protections have been met
         # For now, just send back a True value.
         return True
+
+    def getPullFileNames(self, project, number):
+        owner, proj = project.name.split('/')
+        return [f.filename for f in
+                self.github.pull_request(owner, proj, number).files()]
 
     def getUser(self, login):
         return GithubUser(self.github, login)
