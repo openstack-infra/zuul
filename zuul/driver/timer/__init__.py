@@ -20,8 +20,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from zuul.driver import Driver, TriggerInterface
-from zuul.model import TriggerEvent
 from zuul.driver.timer import timertrigger
+from zuul.driver.timer.timermodel import TimerTriggerEvent
 
 
 class TimerDriver(Driver, TriggerInterface):
@@ -81,7 +81,7 @@ class TimerDriver(Driver, TriggerInterface):
     def _onTrigger(self, tenant, pipeline_name, timespec):
         for project_name in tenant.layout.project_configs.keys():
             project_hostname, project_name = project_name.split('/', 1)
-            event = TriggerEvent()
+            event = TimerTriggerEvent()
             event.type = 'timer'
             event.timespec = timespec
             event.forced_pipeline = pipeline_name

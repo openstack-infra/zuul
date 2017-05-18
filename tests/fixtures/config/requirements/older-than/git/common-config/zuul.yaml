@@ -11,9 +11,10 @@
       gerrit:
         verified: -1
     require:
-      approval:
-        - username: jenkins
-          older-than: 48h
+      gerrit:
+        approval:
+          - username: jenkins
+            older-than: 48h
 
 - pipeline:
     name: trigger

@@ -69,3 +69,13 @@ class BaseSource(object):
     @abc.abstractmethod
     def getProjectBranches(self, project):
         """Get branches for a project"""
+
+    @abc.abstractmethod
+    def getRequireFilters(self, config):
+        """Return a list of ChangeFilters for the scheduler to match against.
+        """
+
+    @abc.abstractmethod
+    def getRejectFilters(self, config):
+        """Return a list of ChangeFilters for the scheduler to match against.
+        """

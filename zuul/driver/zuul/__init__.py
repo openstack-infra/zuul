@@ -15,7 +15,7 @@
 import logging
 
 from zuul.driver import Driver, TriggerInterface
-from zuul.model import TriggerEvent
+from zuul.driver.zuul.zuulmodel import ZuulTriggerEvent
 
 from zuul.driver.zuul import zuultrigger
 
@@ -73,7 +73,7 @@ class ZuulDriver(Driver, TriggerInterface):
             self._createProjectChangeMergedEvent(open_change)
 
     def _createProjectChangeMergedEvent(self, change):
-        event = TriggerEvent()
+        event = ZuulTriggerEvent()
         event.type = PROJECT_CHANGE_MERGED
         event.trigger_name = self.name
         event.project_hostname = change.project.canonical_hostname
@@ -94,7 +94,7 @@ class ZuulDriver(Driver, TriggerInterface):
             self._createParentChangeEnqueuedEvent(needs, pipeline)
 
     def _createParentChangeEnqueuedEvent(self, change, pipeline):
-        event = TriggerEvent()
+        event = ZuulTriggerEvent()
         event.type = PARENT_CHANGE_ENQUEUED
         event.trigger_name = self.name
         event.pipeline_name = pipeline.name

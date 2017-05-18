@@ -53,3 +53,9 @@ class GitSource(BaseSource):
 
     def getProjectOpenChanges(self, project):
         raise NotImplemented()
+
+    def getRequireFilters(self, config):
+        return []
+
+    def getRejectFilters(self, config):
+        return []

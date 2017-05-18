@@ -25,3 +25,9 @@ class GitDriver(Driver, ConnectionInterface, SourceInterface):
 
     def getSource(self, connection):
         return gitsource.GitSource(self, connection)
+
+    def getRequireSchema(self):
+        return {}
+
+    def getRejectSchema(self):
+        return {}

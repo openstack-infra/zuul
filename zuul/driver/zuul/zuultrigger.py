@@ -15,8 +15,9 @@
 
 import logging
 import voluptuous as v
-from zuul.model import EventFilter
 from zuul.trigger import BaseTrigger
+from zuul.driver.zuul.zuulmodel import ZuulEventFilter
+from zuul.driver.util import scalar_or_list, to_list
 
 
 class ZuulTrigger(BaseTrigger):
@@ -29,25 +30,12 @@ class ZuulTrigger(BaseTrigger):
         self._handle_project_change_merged_events = False
 
     def getEventFilters(self, trigger_conf):
-        def toList(item):
-            if not item:
-                return []
-            if isinstance(item, list):
-                return item
-            return [item]
-
         efilters = []
-        for trigger in toList(trigger_conf):
-            f = EventFilter(
+        for trigger in to_list(trigger_conf):
+            f = ZuulEventFilter(
                 trigger=self,
-                types=toList(trigger['event']),
-                pipelines=toList(trigger.get('pipeline')),
-                required_approvals=(
-                    toList(trigger.get('require-approval'))
-                ),
-                reject_approvals=toList(
-                    trigger.get('reject-approval')
-                ),
+                types=to_list(trigger['event']),
+                pipelines=to_list(trigger.get('pipeline')),
             )
             efilters.append(f)
 
@@ -55,9 +43,6 @@ class ZuulTrigger(BaseTrigger):
 
 
 def getSchema():
-    def toList(x):
-        return v.Any([x], x)
-
     approval = v.Schema({'username': str,
                          'email-filter': str,
                          'email': str,
@@ -67,11 +52,11 @@ def getSchema():
 
     zuul_trigger = {
         v.Required('event'):
-        toList(v.Any('parent-change-enqueued',
-                     'project-change-merged')),
-        'pipeline': toList(str),
-        'require-approval': toList(approval),
-        'reject-approval': toList(approval),
+        scalar_or_list(v.Any('parent-change-enqueued',
+                             'project-change-merged')),
+        'pipeline': scalar_or_list(str),
+        'require-approval': scalar_or_list(approval),
+        'reject-approval': scalar_or_list(approval),
     }
 
     return zuul_trigger

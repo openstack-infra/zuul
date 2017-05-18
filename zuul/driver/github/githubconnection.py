@@ -25,8 +25,9 @@ import github3
 from github3.exceptions import MethodNotAllowed
 
 from zuul.connection import BaseConnection
-from zuul.model import PullRequest, Ref, GithubTriggerEvent
+from zuul.model import Ref
 from zuul.exceptions import MergeFailure
+from zuul.driver.github.githubmodel import PullRequest, GithubTriggerEvent
 
 
 class GithubWebhookListener():

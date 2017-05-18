@@ -90,3 +90,17 @@ class GithubSource(BaseSource):
 
     def _ghTimestampToDate(self, timestamp):
         return time.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
+
+    def getRequireFilters(self, config):
+        return []
+
+    def getRejectFilters(self, config):
+        return []
+
+
+def getRequireSchema():
+    return {}
+
+
+def getRejectSchema():
+    return {}

@@ -14,8 +14,9 @@
 
 import logging
 import voluptuous as v
-from zuul.model import EventFilter
 from zuul.trigger import BaseTrigger
+from zuul.driver.gerrit.gerritmodel import GerritEventFilter
+from zuul.driver.util import scalar_or_list, to_list
 
 
 class GerritTrigger(BaseTrigger):
@@ -23,43 +24,36 @@ class GerritTrigger(BaseTrigger):
     log = logging.getLogger("zuul.GerritTrigger")
 
     def getEventFilters(self, trigger_conf):
-        def toList(item):
-            if not item:
-                return []
-            if isinstance(item, list):
-                return item
-            return [item]
-
         efilters = []
-        for trigger in toList(trigger_conf):
+        for trigger in to_list(trigger_conf):
             approvals = {}
-            for approval_dict in toList(trigger.get('approval')):
+            for approval_dict in to_list(trigger.get('approval')):
                 for key, val in approval_dict.items():
                     approvals[key] = val
             # Backwards compat for *_filter versions of these args
-            comments = toList(trigger.get('comment'))
+            comments = to_list(trigger.get('comment'))
             if not comments:
-                comments = toList(trigger.get('comment_filter'))
-            emails = toList(trigger.get('email'))
+                comments = to_list(trigger.get('comment_filter'))
+            emails = to_list(trigger.get('email'))
             if not emails:
-                emails = toList(trigger.get('email_filter'))
-            usernames = toList(trigger.get('username'))
+                emails = to_list(trigger.get('email_filter'))
+            usernames = to_list(trigger.get('username'))
             if not usernames:
-                usernames = toList(trigger.get('username_filter'))
+                usernames = to_list(trigger.get('username_filter'))
             ignore_deletes = trigger.get('ignore-deletes', True)
-            f = EventFilter(
+            f = GerritEventFilter(
                 trigger=self,
-                types=toList(trigger['event']),
-                branches=toList(trigger.get('branch')),
-                refs=toList(trigger.get('ref')),
+                types=to_list(trigger['event']),
+                branches=to_list(trigger.get('branch')),
+                refs=to_list(trigger.get('ref')),
                 event_approvals=approvals,
                 comments=comments,
                 emails=emails,
                 usernames=usernames,
                 required_approvals=(
-                    toList(trigger.get('require-approval'))
+                    to_list(trigger.get('require-approval'))
                 ),
-                reject_approvals=toList(
+                reject_approvals=to_list(
                     trigger.get('reject-approval')
                 ),
                 ignore_deletes=ignore_deletes
@@ -80,8 +74,6 @@ def validate_conf(trigger_conf):
 
 
 def getSchema():
-    def toList(x):
-        return v.Any([x], x)
     variable_dict = v.Schema(dict)
 
     approval = v.Schema({'username': str,
@@ -93,25 +85,25 @@ def getSchema():
 
     gerrit_trigger = {
         v.Required('event'):
-            toList(v.Any('patchset-created',
-                         'draft-published',
-                         'change-abandoned',
-                         'change-restored',
-                         'change-merged',
-                         'comment-added',
-                         'ref-updated')),
-        'comment_filter': toList(str),
-        'comment': toList(str),
-        'email_filter': toList(str),
-        'email': toList(str),
-        'username_filter': toList(str),
-        'username': toList(str),
-        'branch': toList(str),
-        'ref': toList(str),
+            scalar_or_list(v.Any('patchset-created',
+                                 'draft-published',
+                                 'change-abandoned',
+                                 'change-restored',
+                                 'change-merged',
+                                 'comment-added',
+                                 'ref-updated')),
+        'comment_filter': scalar_or_list(str),
+        'comment': scalar_or_list(str),
+        'email_filter': scalar_or_list(str),
+        'email': scalar_or_list(str),
+        'username_filter': scalar_or_list(str),
+        'username': scalar_or_list(str),
+        'branch': scalar_or_list(str),
+        'ref': scalar_or_list(str),
         'ignore-deletes': bool,
-        'approval': toList(variable_dict),
-        'require-approval': toList(approval),
-        'reject-approval': toList(approval),
+        'approval': scalar_or_list(variable_dict),
+        'require-approval': scalar_or_list(approval),
+        'reject-approval': scalar_or_list(approval),
     }
 
     return gerrit_trigger

@@ -2,11 +2,12 @@
     name: pipeline
     manager: independent
     require:
-      approval:
-        - username: jenkins
-          verified:
-            - 1
-            - 2
+      gerrit:
+        approval:
+          - username: jenkins
+            verified:
+              - 1
+              - 2
     trigger:
       gerrit:
         - event: comment-added

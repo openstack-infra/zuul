@@ -2,7 +2,8 @@
     name: current-check
     manager: independent
     require:
-      current-patchset: true
+      gerrit:
+        current-patchset: true
     trigger:
       gerrit:
         - event: patchset-created
@@ -18,7 +19,8 @@
     name: open-check
     manager: independent
     require:
-      open: true
+      gerrit:
+        open: true
     trigger:
       gerrit:
         - event: patchset-created
@@ -34,7 +36,8 @@
     name: status-check
     manager: independent
     require:
-      status: NEW
+      gerrit:
+        status: NEW
     trigger:
       gerrit:
         - event: patchset-created

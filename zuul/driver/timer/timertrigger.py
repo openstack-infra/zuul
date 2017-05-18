@@ -15,26 +15,20 @@
 
 import voluptuous as v
 
-from zuul.model import EventFilter
 from zuul.trigger import BaseTrigger
+from zuul.driver.timer.timermodel import TimerEventFilter
+from zuul.driver.util import to_list
 
 
 class TimerTrigger(BaseTrigger):
     name = 'timer'
 
     def getEventFilters(self, trigger_conf):
-        def toList(item):
-            if not item:
-                return []
-            if isinstance(item, list):
-                return item
-            return [item]
-
         efilters = []
-        for trigger in toList(trigger_conf):
-            f = EventFilter(trigger=self,
-                            types=['timer'],
-                            timespecs=toList(trigger['time']))
+        for trigger in to_list(trigger_conf):
+            f = TimerEventFilter(trigger=self,
+                                 types=['timer'],
+                                 timespecs=to_list(trigger['time']))
 
             efilters.append(f)
 
