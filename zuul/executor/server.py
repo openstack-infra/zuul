@@ -369,7 +369,7 @@ class ExecutorServer(object):
         self.command_socket.stop()
         self.update_queue.put(None)
 
-        for job_worker in self.job_workers.values():
+        for job_worker in list(self.job_workers.values()):
             try:
                 job_worker.stop()
             except Exception:

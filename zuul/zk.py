@@ -168,7 +168,7 @@ class ZooKeeper(object):
             if data:
                 data = self._strToDict(data)
                 node_request.updateFromDict(data)
-                request_nodes = node_request.nodeset.getNodes()
+                request_nodes = list(node_request.nodeset.getNodes())
                 for i, nodeid in enumerate(data.get('nodes', [])):
                     node_path = '%s/%s' % (self.NODE_ROOT, nodeid)
                     node_data, node_stat = self.client.get(node_path)

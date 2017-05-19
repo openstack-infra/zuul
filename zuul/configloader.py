@@ -111,7 +111,7 @@ class ZuulSafeLoader(yaml.SafeLoader):
         r = super(ZuulSafeLoader, self).construct_mapping(node, deep)
         keys = frozenset(r.keys())
         if len(keys) == 1 and keys.intersection(self.zuul_node_types):
-            d = r.values()[0]
+            d = list(r.values())[0]
             if isinstance(d, dict):
                 d['_start_mark'] = node.start_mark
                 d['_source_context'] = self.zuul_context
@@ -493,7 +493,7 @@ class ProjectTemplateParser(object):
                 attrs = dict(name=conf_job)
             elif isinstance(conf_job, dict):
                 # A dictionary in a job tree may override params
-                jobname, attrs = conf_job.items()[0]
+                jobname, attrs = list(conf_job.items())[0]
                 if attrs:
                     # We are overriding params, so make a new job def
                     attrs['name'] = jobname
