@@ -530,8 +530,8 @@ class TestScheduler(ZuulTestCase):
         queue = self.gearman_server.getQueue()
         self.assertEqual(len(self.builds), 0)
         self.assertEqual(len(queue), 1)
-        self.assertEqual(queue[0].name, 'executor:execute')
-        job_args = json.loads(queue[0].arguments)
+        self.assertEqual(queue[0].name, b'executor:execute')
+        job_args = json.loads(queue[0].arguments.decode('utf8'))
         self.assertEqual(job_args['job'], 'project-merge')
         self.assertEqual(job_args['items'][0]['number'], '%d' % A.number)
 
@@ -547,17 +547,23 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(queue), 6)
 
         self.assertEqual(
-            json.loads(queue[0].arguments)['job'], 'project-test1')
+            json.loads(queue[0].arguments.decode('utf8'))['job'],
+            'project-test1')
         self.assertEqual(
-            json.loads(queue[1].arguments)['job'], 'project-test2')
+            json.loads(queue[1].arguments.decode('utf8'))['job'],
+            'project-test2')
         self.assertEqual(
-            json.loads(queue[2].arguments)['job'], 'project-test1')
+            json.loads(queue[2].arguments.decode('utf8'))['job'],
+            'project-test1')
         self.assertEqual(
-            json.loads(queue[3].arguments)['job'], 'project-test2')
+            json.loads(queue[3].arguments.decode('utf8'))['job'],
+            'project-test2')
         self.assertEqual(
-            json.loads(queue[4].arguments)['job'], 'project-test1')
+            json.loads(queue[4].arguments.decode('utf8'))['job'],
+            'project-test1')
         self.assertEqual(
-            json.loads(queue[5].arguments)['job'], 'project-test2')
+            json.loads(queue[5].arguments.decode('utf8'))['job'],
+            'project-test2')
 
         self.release(queue[0])
         self.waitUntilSettled()
@@ -2227,7 +2233,7 @@ class TestScheduler(ZuulTestCase):
         self.assertIn('Cache-Control', headers)
         self.assertIn('Last-Modified', headers)
         self.assertIn('Expires', headers)
-        data = f.read()
+        data = f.read().decode('utf8')
 
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
@@ -2712,7 +2718,7 @@ class TestScheduler(ZuulTestCase):
         req = urllib.request.Request(
             "http://localhost:%s/tenant-one/status" % port)
         f = urllib.request.urlopen(req)
-        data = f.read()
+        data = f.read().decode('utf8')
 
         self.executor_server.hold_jobs_in_build = False
         # Stop queuing timer triggered jobs so that the assertions

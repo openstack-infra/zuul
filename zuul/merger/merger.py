@@ -199,7 +199,7 @@ class Repo(object):
             tree = repo.commit(commit).tree
         for fn in files:
             if fn in tree:
-                ret[fn] = tree[fn].data_stream.read()
+                ret[fn] = tree[fn].data_stream.read().decode('utf8')
             else:
                 ret[fn] = None
         return ret

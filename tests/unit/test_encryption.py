@@ -41,14 +41,14 @@ class TestEncryption(BaseTestCase):
 
     def test_pkcs1_oaep(self):
         "Verify encryption and decryption"
-        orig_plaintext = "some text to encrypt"
+        orig_plaintext = b"some text to encrypt"
         ciphertext = encryption.encrypt_pkcs1_oaep(orig_plaintext, self.public)
         plaintext = encryption.decrypt_pkcs1_oaep(ciphertext, self.private)
         self.assertEqual(orig_plaintext, plaintext)
 
     def test_openssl_pkcs1_oaep(self):
         "Verify that we can decrypt something encrypted with OpenSSL"
-        orig_plaintext = "some text to encrypt"
+        orig_plaintext = b"some text to encrypt"
         pem_public = encryption.serialize_rsa_public_key(self.public)
         public_file = tempfile.NamedTemporaryFile(delete=False)
         try:

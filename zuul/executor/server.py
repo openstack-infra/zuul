@@ -405,7 +405,7 @@ class ExecutorServer(object):
     def runCommand(self):
         while self._command_running:
             try:
-                command = self.command_socket.get()
+                command = self.command_socket.get().decode('utf8')
                 if command != '_stop':
                     self.command_map[command]()
             except Exception:
@@ -460,7 +460,8 @@ class ExecutorServer(object):
                         job.sendWorkFail()
                 except Exception:
                     self.log.exception("Exception while running job")
-                    job.sendWorkException(traceback.format_exc())
+                    job.sendWorkException(
+                        traceback.format_exc().encode('utf8'))
             except gear.InterruptedError:
                 pass
             except Exception:
