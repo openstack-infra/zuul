@@ -840,7 +840,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         """Emulates sending the GitHub webhook event to the connection."""
         port = self.webapp.server.socket.getsockname()[1]
         name, data = event
-        payload = json.dumps(data)
+        payload = json.dumps(data).encode('utf8')
         headers = {'X-Github-Event': name}
         req = urllib.request.Request(
             'http://localhost:%s/connection/%s/payload'

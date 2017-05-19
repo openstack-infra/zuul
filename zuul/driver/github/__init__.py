@@ -14,10 +14,10 @@
 
 from zuul.driver import Driver, ConnectionInterface, TriggerInterface
 from zuul.driver import SourceInterface
-import githubconnection
-import githubtrigger
-import githubsource
-import githubreporter
+from zuul.driver.github import githubconnection
+from zuul.driver.github import githubtrigger
+from zuul.driver.github import githubsource
+from zuul.driver.github import githubreporter
 
 
 class GithubDriver(Driver, ConnectionInterface, TriggerInterface,
