@@ -123,6 +123,8 @@ from ast import literal_eval
 
 LOG_STREAM_FILE = '/tmp/console.log'
 PASSWD_ARG_RE = re.compile(r'^[-]{0,2}pass[-]?(word|wd)?')
+# List to save stdout log lines in as we collect them
+_log_lines = []
 
 
 class Console(object):
@@ -150,6 +152,7 @@ def follow(fd):
             line = fd.readline()
             if not line:
                 break
+            _log_lines.append(line)
             if not line.endswith('\n'):
                 line += '\n'
                 newline_warning = True
@@ -330,7 +333,8 @@ def zuul_run_command(self, args, check_rc=False, close_fds=True, executable=None
         # cmd.stdout.close()
 
         # ZUUL: stdout and stderr are in the console log file
-        stdout = ''
+        # ZUUL: return the saved log lines so we can ship them back
+        stdout = ''.join(_log_lines)
         stderr = ''
 
         rc = cmd.returncode
