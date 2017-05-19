@@ -20,6 +20,7 @@ import threading
 import time
 from six.moves import queue as Queue
 from six.moves import urllib
+from six.moves import shlex_quote
 import paramiko
 import logging
 import pprint
@@ -614,7 +615,7 @@ class GerritConnection(BaseConnection):
     def review(self, project, change, message, action={}):
         cmd = 'gerrit review --project %s' % project
         if message:
-            cmd += ' --message "%s"' % message
+            cmd += ' --message %s' % shlex_quote(message)
         for key, val in action.items():
             if val is True:
                 cmd += ' --%s' % key
