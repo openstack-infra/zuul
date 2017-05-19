@@ -116,6 +116,7 @@ def main():
     module.exit_json(changed=True, build_roots=output)
 
 from ansible.module_utils.basic import *  # noqa
+from ansible.module_utils.basic import AnsibleModule
 
 if __name__ == '__main__':
     main()
