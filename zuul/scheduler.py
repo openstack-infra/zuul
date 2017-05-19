@@ -871,6 +871,8 @@ class Scheduler(threading.Thread):
         build_set = request.build_set
 
         self.nodepool.acceptNodes(request)
+        if request.canceled:
+            return
 
         if build_set is not build_set.item.current_build_set:
             self.log.warning("Build set %s is not current" % (build_set,))
