@@ -12,16 +12,11 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import logging
 import re
 from testtools.matchers import MatchesRegex
 import time
 
 from tests.base import ZuulTestCase, simple_layout, random_sha1
-
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(name)-32s '
-                    '%(levelname)-8s %(message)s')
 
 
 class TestGithubDriver(ZuulTestCase):
