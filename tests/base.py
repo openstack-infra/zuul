@@ -90,7 +90,7 @@ def repack_repo(path):
 
 
 def random_sha1():
-    return hashlib.sha1(str(random.random())).hexdigest()
+    return hashlib.sha1(str(random.random()).encode('ascii')).hexdigest()
 
 
 def iterate_timeout(max_seconds, purpose):
