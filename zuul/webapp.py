@@ -128,7 +128,7 @@ class WebApp(threading.Thread):
     def app(self, request):
         # Try registered paths without a tenant_name first
         path = request.path
-        for path_re, handler in self.routes.itervalues():
+        for path_re, handler in self.routes.values():
             if path_re.match(path):
                 return handler(path, '', request)
 
@@ -138,7 +138,7 @@ class WebApp(threading.Thread):
         # Handle keys
         if path.startswith('/keys'):
             return self._handle_keys(request, path)
-        for path_re, handler in self.routes.itervalues():
+        for path_re, handler in self.routes.values():
             if path_re.match(path):
                 return handler(path, tenant_name, request)
         else:
