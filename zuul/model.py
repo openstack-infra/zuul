@@ -490,9 +490,10 @@ class NodeRequest(object):
         self.stat = None
         self.uid = uuid4().hex
         self.id = None
-        # Zuul internal failure flag (not stored in ZK so it's not
+        # Zuul internal flags (not stored in ZK so they are not
         # overwritten).
         self.failed = False
+        self.canceled = False
 
     @property
     def fulfilled(self):

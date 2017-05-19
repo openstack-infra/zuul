@@ -1364,7 +1364,10 @@ class FakeNodepool(object):
 
     def run(self):
         while self._running:
-            self._run()
+            try:
+                self._run()
+            except Exception:
+                self.log.exception("Error in fake nodepool:")
             time.sleep(0.1)
 
     def _run(self):
@@ -1462,7 +1465,10 @@ class FakeNodepool(object):
         path = self.REQUEST_ROOT + '/' + oid
         data = json.dumps(request)
         self.log.debug("Fulfilling node request: %s %s" % (oid, data))
-        self.client.set(path, data)
+        try:
+            self.client.set(path, data)
+        except kazoo.exceptions.NoNodeError:
+            self.log.debug("Node request %s %s disappeared" % (oid, data))
 
 
 class ChrootedKazooFixture(fixtures.Fixture):

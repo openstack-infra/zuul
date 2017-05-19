@@ -38,11 +38,11 @@ class Nodepool(object):
     def cancelRequest(self, request):
         self.log.info("Canceling node request %s" % (request,))
         if request.uid in self.requests:
+            request.canceled = True
             try:
                 self.sched.zk.deleteNodeRequest(request)
             except Exception:
                 self.log.exception("Error deleting node request:")
-            del self.requests[request.uid]
 
     def useNodeSet(self, nodeset):
         self.log.info("Setting nodeset %s in use" % (nodeset,))
@@ -98,6 +98,10 @@ class Nodepool(object):
         if request.uid not in self.requests:
             return False
 
+        if request.canceled:
+            del self.requests[request.uid]
+            return False
+
         if request.state in (model.STATE_FULFILLED, model.STATE_FAILED):
             self.log.info("Node request %s %s" % (request, request.state))
 
@@ -118,6 +122,11 @@ class Nodepool(object):
         # nodes for (potential) use.
 
         self.log.info("Accepting node request %s" % (request,))
+
+        if request.canceled:
+            self.log.info("Ignoring canceled node request %s" % (request,))
+            # The request was already deleted when it was canceled
+            return
 
         locked = False
         if request.fulfilled:
