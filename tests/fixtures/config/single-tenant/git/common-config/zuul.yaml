@@ -69,7 +69,6 @@
 
 - job:
     name: project1-project2-integration
-    queue-name: integration
 
 - job:
     name: project-testfile

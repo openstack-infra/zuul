@@ -32,7 +32,6 @@
 
 - job:
     name: project1-project2-integration
-    queue-name: integration
 
 - project:
     name: org/project1

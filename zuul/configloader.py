@@ -231,7 +231,6 @@ class JobParser(object):
 
         job = {vs.Required('name'): str,
                'parent': str,
-               'queue-name': str,
                'failure-message': str,
                'success-message': str,
                'failure-url': str,
