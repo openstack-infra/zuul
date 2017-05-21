@@ -77,7 +77,7 @@ def main():
     server.parse_arguments()
 
     server.read_config()
-    server.configure_connections()
+    server.configure_connections(source_only=True)
 
     if server.config.has_option('zuul', 'state_dir'):
         state_dir = os.path.expanduser(server.config.get('zuul', 'state_dir'))

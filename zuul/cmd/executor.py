@@ -106,7 +106,7 @@ def main():
         server.send_command(server.args.command)
         sys.exit(0)
 
-    server.configure_connections()
+    server.configure_connections(source_only=True)
 
     if server.config.has_option('executor', 'pidfile'):
         pid_fn = os.path.expanduser(server.config.get('executor', 'pidfile'))

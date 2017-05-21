@@ -23,6 +23,7 @@ import zuul.driver.smtp
 import zuul.driver.timer
 import zuul.driver.sql
 from zuul.connection import BaseConnection
+from zuul.driver import SourceInterface
 
 
 class DefaultConnection(BaseConnection):
@@ -78,7 +79,7 @@ class ConnectionRegistry(object):
         for driver in self.drivers.values():
             driver.stop()
 
-    def configure(self, config):
+    def configure(self, config, source_only=False):
         # Register connections from the config
         connections = {}
 
@@ -100,6 +101,13 @@ class ConnectionRegistry(object):
                                 % (con_config['driver'], con_name))
 
             driver = self.drivers[con_driver]
+
+            # The merger and the reporter only needs source driver.
+            # This makes sure Reporter like the SQLDriver are only created by
+            # the scheduler process
+            if source_only and not issubclass(driver, SourceInterface):
+                continue
+
             connection = driver.getConnection(con_name, con_config)
             connections[con_name] = connection
 
