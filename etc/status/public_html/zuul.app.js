@@ -1,5 +1,8 @@
 // Client script for Zuul status page
 //
+// @licstart  The following is the entire license notice for the
+// JavaScript code in this page.
+//
 // Copyright 2013 OpenStack Foundation
 // Copyright 2013 Timo Tijhof
 // Copyright 2013 Wikimedia Foundation
@@ -16,6 +19,9 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
+//
+// @licend  The above is the entire license notice
+// for the JavaScript code in this page.
 
 /*exported zuul_build_dom, zuul_start */
 
