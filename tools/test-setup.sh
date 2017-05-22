@@ -35,3 +35,9 @@ mysql -u $DB_USER -p$DB_PW -h 127.0.0.1 -e "
     SET default_storage_engine=MYISAM;
     DROP DATABASE IF EXISTS openstack_citest;
     CREATE DATABASE openstack_citest CHARACTER SET utf8;"
+
+# TODO(pabelanger): Move this into bindep after we figure out how to enable our
+# PPA.
+sudo add-apt-repository ppa:openstack-ci-core/bubblewrap
+sudo apt-get update
+sudo apt-get --assume-yes install bubblewrap
