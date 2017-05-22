@@ -496,11 +496,6 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
             if cat != 'submit':
                 change.addApproval(cat, action[cat], username=self.user)
 
-        # TODOv3(jeblair): can this be removed?
-        if 'label' in action:
-            parts = action['label'].split('=')
-            change.addApproval(parts[0], parts[2], username=self.user)
-
         change.messages.append(message)
 
         if 'submit' in action:
