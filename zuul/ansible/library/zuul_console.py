@@ -17,8 +17,10 @@
 
 import os
 import sys
+import select
 import socket
 import threading
+import time
 
 LOG_STREAM_FILE = '/tmp/console.log'
 LOG_STREAM_PORT = 19885
@@ -181,6 +183,7 @@ def main():
     s.run()
 
 from ansible.module_utils.basic import *  # noqa
+from ansible.module_utils.basic import AnsibleModule
 
 if __name__ == '__main__':
     main()
