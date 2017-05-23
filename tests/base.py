@@ -68,6 +68,7 @@ import zuul.lib.connections
 import zuul.merger.client
 import zuul.merger.merger
 import zuul.merger.server
+import zuul.model
 import zuul.nodepool
 import zuul.zk
 from zuul.exceptions import MergeFailure
@@ -530,6 +531,18 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
     def _start_watcher_thread(self, *args, **kw):
         pass
 
+    def _uploadPack(self, project):
+        ret = ('00a31270149696713ba7e06f1beb760f20d359c4abed HEAD\x00'
+               'multi_ack thin-pack side-band side-band-64k ofs-delta '
+               'shallow no-progress include-tag multi_ack_detailed no-done\n')
+        path = os.path.join(self.upstream_root, project.name)
+        repo = git.Repo(path)
+        for ref in repo.refs:
+            r = ref.object.hexsha + ' ' + ref.path + '\n'
+            ret += '%04x%s' % (len(r) + 4, r)
+        ret += '0000'
+        return ret
+
     def getGitUrl(self, project):
         return os.path.join(self.upstream_root, project.name)
 
@@ -950,28 +963,6 @@ class BuildHistory(object):
     def __repr__(self):
         return ("<Completed build, result: %s name: %s uuid: %s changes: %s>" %
                 (self.result, self.name, self.uuid, self.changes))
-
-
-class FakeURLOpener(object):
-    def __init__(self, upstream_root, url):
-        self.upstream_root = upstream_root
-        self.url = url
-
-    def read(self):
-        res = urllib.parse.urlparse(self.url)
-        path = res.path
-        project = '/'.join(path.split('/')[2:-2])
-        ret = '001e# service=git-upload-pack\n'
-        ret += ('000000a31270149696713ba7e06f1beb760f20d359c4abed HEAD\x00'
-                'multi_ack thin-pack side-band side-band-64k ofs-delta '
-                'shallow no-progress include-tag multi_ack_detailed no-done\n')
-        path = os.path.join(self.upstream_root, project)
-        repo = git.Repo(path)
-        for ref in repo.refs:
-            r = ref.object.hexsha + ' ' + ref.path + '\n'
-            ret += '%04x%s' % (len(r) + 4, r)
-        ret += '0000'
-        return ret
 
 
 class FakeStatsd(threading.Thread):
@@ -1804,14 +1795,6 @@ class ZuulTestCase(BaseTestCase):
 
         self.configure_connections()
         self.sched.registerConnections(self.connections, self.webapp)
-
-        def URLOpenerFactory(*args, **kw):
-            if isinstance(args[0], urllib.request.Request):
-                return old_urlopen(*args, **kw)
-            return FakeURLOpener(self.upstream_root, *args, **kw)
-
-        old_urlopen = urllib.request.urlopen
-        urllib.request.urlopen = URLOpenerFactory
 
         self.executor_server = RecordingExecutorServer(
             self.config, self.connections,
