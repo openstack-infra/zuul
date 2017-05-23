@@ -752,7 +752,7 @@ class Job(object):
             attempts=3,
             final=False,
             roles=frozenset(),
-            repos=frozenset(),
+            repos={},
             allowed_projects=None,
         )
 
@@ -820,6 +820,11 @@ class Job(object):
         Job._deepUpdate(v, other_vars)
         self.variables = v
 
+    def updateRepos(self, other_repos):
+        repos = self.repos
+        Job._deepUpdate(repos, other_repos)
+        self.repos = repos
+
     @staticmethod
     def _deepUpdate(a, b):
         # Merge nested dictionaries if possible, otherwise, overwrite
@@ -871,7 +876,8 @@ class Job(object):
                                     "%s=%s with variant %s" % (
                                         repr(self), k, other._get(k),
                                         repr(other)))
-                if k not in set(['pre_run', 'post_run', 'roles', 'variables']):
+                if k not in set(['pre_run', 'post_run', 'roles', 'variables',
+                                 'repos']):
                     setattr(self, k, copy.deepcopy(other._get(k)))
 
         # Don't set final above so that we don't trip an error halfway
@@ -887,6 +893,8 @@ class Job(object):
             self.roles = self.roles.union(other.roles)
         if other._get('variables') is not None:
             self.updateVariables(other.variables)
+        if other._get('repos') is not None:
+            self.updateRepos(other.repos)
 
         for k in self.context_attributes:
             if (other._get(k) is not None and
@@ -912,6 +920,14 @@ class Job(object):
             return False
 
         return True
+
+
+class JobRepo(object):
+    """ A reference to a project from a job. """
+
+    def __init__(self, project_name, override_branch=None):
+        self.project_name = project_name
+        self.override_branch = override_branch
 
 
 class JobList(object):
