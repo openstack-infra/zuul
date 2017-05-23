@@ -259,6 +259,7 @@ class JobParser(object):
                'vars': dict,
                'dependencies': to_list(str),
                'allowed-projects': to_list(str),
+               'override-branch': str,
                }
 
         return vs.Schema(job)
@@ -274,6 +275,7 @@ class JobParser(object):
         'success-message',
         'failure-url',
         'success-url',
+        'override-branch',
     ]
 
     @staticmethod

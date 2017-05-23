@@ -261,6 +261,7 @@ class ExecutorClient(object):
         params['timeout'] = job.timeout
         params['items'] = merger_items
         params['projects'] = []
+        params['override_branch'] = job.override_branch
         params['repo_state'] = item.current_build_set.repo_state
 
         if job.name != 'noop':
