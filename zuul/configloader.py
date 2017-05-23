@@ -519,6 +519,7 @@ class ProjectParser(object):
             'templates': [str],
             'merge-mode': vs.Any('merge', 'merge-resolve',
                                  'cherry-pick'),
+            'default-branch': str,
             '_source_context': model.SourceContext,
             '_start_mark': yaml.Mark,
         }
@@ -554,15 +555,20 @@ class ProjectParser(object):
             configs.extend([layout.project_templates[name]
                             for name in conf_templates])
             configs.append(project_template)
+            # Set the following values to the first one that we find and
+            # ignore subsequent settings.
             mode = conf.get('merge-mode')
             if mode and project_config.merge_mode is None:
-                # Set the merge mode to the first one that we find and
-                # ignore subsequent settings.
                 project_config.merge_mode = model.MERGER_MAP[mode]
+            default_branch = conf.get('default-branch')
+            if default_branch and project_config.default_branch is None:
+                project_config.default_branch = default_branch
         if project_config.merge_mode is None:
             # If merge mode was not specified in any project stanza,
             # set it to the default.
             project_config.merge_mode = model.MERGER_MAP['merge-resolve']
+        if project_config.default_branch is None:
+            project_config.default_branch = 'master'
         for pipeline in layout.pipelines.values():
             project_pipeline = model.ProjectPipelineConfig()
             queue_name = None
