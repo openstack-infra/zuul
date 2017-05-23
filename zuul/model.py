@@ -16,7 +16,6 @@ import abc
 import copy
 import logging
 import os
-import re
 import struct
 import time
 from uuid import uuid4
@@ -27,8 +26,6 @@ import six
 OrderedDict = extras.try_imports(['collections.OrderedDict',
                                   'ordereddict.OrderedDict'])
 
-
-EMPTY_GIT_REF = '0' * 40  # git sha of all zeros, used during creates/deletes
 
 MERGER_MERGE = 1          # "git merge"
 MERGER_MERGE_RESOLVE = 2  # "git merge -s resolve"
@@ -76,25 +73,6 @@ NODE_STATES = set([STATE_BUILDING,
                    STATE_USED,
                    STATE_HOLD,
                    STATE_DELETING])
-
-
-def time_to_seconds(s):
-    if s.endswith('s'):
-        return int(s[:-1])
-    if s.endswith('m'):
-        return int(s[:-1]) * 60
-    if s.endswith('h'):
-        return int(s[:-1]) * 60 * 60
-    if s.endswith('d'):
-        return int(s[:-1]) * 24 * 60 * 60
-    if s.endswith('w'):
-        return int(s[:-1]) * 7 * 24 * 60 * 60
-    raise Exception("Unable to parse time value: %s" % s)
-
-
-def normalizeCategory(name):
-    name = name.lower()
-    return re.sub(' ', '-', name)
 
 
 class Attributes(object):
@@ -1810,7 +1788,6 @@ class Change(Ref):
         self.can_merge = False
         self.is_merged = False
         self.failed_to_merge = False
-        self.approvals = []
         self.open = None
         self.status = None
         self.owner = None
@@ -1863,24 +1840,10 @@ class Change(Ref):
                           patchset=self.patchset)
 
 
-class PullRequest(Change):
-    def __init__(self, project):
-        super(PullRequest, self).__init__(project)
-        self.updated_at = None
-        self.title = None
-
-    def isUpdateOf(self, other):
-        if (hasattr(other, 'number') and self.number == other.number and
-            hasattr(other, 'patchset') and self.patchset != other.patchset and
-            hasattr(other, 'updated_at') and
-            self.updated_at > other.updated_at):
-            return True
-        return False
-
-
 class TriggerEvent(object):
     """Incoming event from an external system."""
     def __init__(self):
+        # TODO(jeblair): further reduce this list
         self.data = None
         # common
         self.type = None
@@ -1896,20 +1859,13 @@ class TriggerEvent(object):
         self.change_url = None
         self.patch_number = None
         self.refspec = None
-        self.approvals = []
         self.branch = None
         self.comment = None
-        self.label = None
-        self.unlabel = None
         self.state = None
         # ref-updated
         self.ref = None
         self.oldrev = None
         self.newrev = None
-        # timer
-        self.timespec = None
-        # zuultrigger
-        self.pipeline_name = None
         # For events that arrive with a destination pipeline (eg, from
         # an admin command, etc):
         self.forced_pipeline = None
@@ -1918,374 +1874,35 @@ class TriggerEvent(object):
     def canonical_project_name(self):
         return self.project_hostname + '/' + self.project_name
 
-    def __repr__(self):
-        ret = '<TriggerEvent %s %s' % (self.type, self.canonical_project_name)
-
-        if self.branch:
-            ret += " %s" % self.branch
-        if self.change_number:
-            ret += " %s,%s" % (self.change_number, self.patch_number)
-        if self.approvals:
-            ret += ' ' + ', '.join(
-                ['%s:%s' % (a['type'], a['value']) for a in self.approvals])
-        ret += '>'
-
-        return ret
-
     def isPatchsetCreated(self):
-        return 'patchset-created' == self.type
-
-    def isChangeAbandoned(self):
-        return 'change-abandoned' == self.type
-
-
-class GithubTriggerEvent(TriggerEvent):
-
-    def __init__(self):
-        super(GithubTriggerEvent, self).__init__()
-        self.title = None
-
-    def isPatchsetCreated(self):
-        if self.type == 'pull_request':
-            return self.action in ['opened', 'changed']
         return False
 
     def isChangeAbandoned(self):
-        if self.type == 'pull_request':
-            return 'closed' == self.action
         return False
 
 
 class BaseFilter(object):
     """Base Class for filtering which Changes and Events to process."""
-    def __init__(self, required_approvals=[], reject_approvals=[]):
-        self._required_approvals = copy.deepcopy(required_approvals)
-        self.required_approvals = self._tidy_approvals(required_approvals)
-        self._reject_approvals = copy.deepcopy(reject_approvals)
-        self.reject_approvals = self._tidy_approvals(reject_approvals)
-
-    def _tidy_approvals(self, approvals):
-        for a in approvals:
-            for k, v in a.items():
-                if k == 'username':
-                    a['username'] = re.compile(v)
-                elif k in ['email', 'email-filter']:
-                    a['email'] = re.compile(v)
-                elif k == 'newer-than':
-                    a[k] = time_to_seconds(v)
-                elif k == 'older-than':
-                    a[k] = time_to_seconds(v)
-            if 'email-filter' in a:
-                del a['email-filter']
-        return approvals
-
-    def _match_approval_required_approval(self, rapproval, approval):
-        # Check if the required approval and approval match
-        if 'description' not in approval:
-            return False
-        now = time.time()
-        by = approval.get('by', {})
-        for k, v in rapproval.items():
-            if k == 'username':
-                if (not v.search(by.get('username', ''))):
-                        return False
-            elif k == 'email':
-                if (not v.search(by.get('email', ''))):
-                        return False
-            elif k == 'newer-than':
-                t = now - v
-                if (approval['grantedOn'] < t):
-                        return False
-            elif k == 'older-than':
-                t = now - v
-                if (approval['grantedOn'] >= t):
-                    return False
-            else:
-                if not isinstance(v, list):
-                    v = [v]
-                if (normalizeCategory(approval['description']) != k or
-                        int(approval['value']) not in v):
-                    return False
-        return True
-
-    def matchesApprovals(self, change):
-        if (self.required_approvals and not change.approvals
-                or self.reject_approvals and not change.approvals):
-            # A change with no approvals can not match
-            return False
-
-        # TODO(jhesketh): If we wanted to optimise this slightly we could
-        # analyse both the REQUIRE and REJECT filters by looping over the
-        # approvals on the change and keeping track of what we have checked
-        # rather than needing to loop on the change approvals twice
-        return (self.matchesRequiredApprovals(change) and
-                self.matchesNoRejectApprovals(change))
-
-    def matchesRequiredApprovals(self, change):
-        # Check if any approvals match the requirements
-        for rapproval in self.required_approvals:
-            matches_rapproval = False
-            for approval in change.approvals:
-                if self._match_approval_required_approval(rapproval, approval):
-                    # We have a matching approval so this requirement is
-                    # fulfilled
-                    matches_rapproval = True
-                    break
-            if not matches_rapproval:
-                return False
-        return True
-
-    def matchesNoRejectApprovals(self, change):
-        # Check to make sure no approvals match a reject criteria
-        for rapproval in self.reject_approvals:
-            for approval in change.approvals:
-                if self._match_approval_required_approval(rapproval, approval):
-                    # A reject approval has been matched, so we reject
-                    # immediately
-                    return False
-        # To get here no rejects can have been matched so we should be good to
-        # queue
-        return True
+    pass
 
 
 class EventFilter(BaseFilter):
     """Allows a Pipeline to only respond to certain events."""
-    def __init__(self, trigger, types=[], branches=[], refs=[],
-                 event_approvals={}, comments=[], emails=[], usernames=[],
-                 timespecs=[], required_approvals=[], reject_approvals=[],
-                 pipelines=[], actions=[], labels=[], unlabels=[], states=[],
-                 ignore_deletes=True):
-        super(EventFilter, self).__init__(
-            required_approvals=required_approvals,
-            reject_approvals=reject_approvals)
+    def __init__(self, trigger):
+        super(EventFilter, self).__init__()
         self.trigger = trigger
-        self._types = types
-        self._branches = branches
-        self._refs = refs
-        self._comments = comments
-        self._emails = emails
-        self._usernames = usernames
-        self._pipelines = pipelines
-        self.types = [re.compile(x) for x in types]
-        self.branches = [re.compile(x) for x in branches]
-        self.refs = [re.compile(x) for x in refs]
-        self.comments = [re.compile(x) for x in comments]
-        self.emails = [re.compile(x) for x in emails]
-        self.usernames = [re.compile(x) for x in usernames]
-        self.pipelines = [re.compile(x) for x in pipelines]
-        self.actions = actions
-        self.event_approvals = event_approvals
-        self.timespecs = timespecs
-        self.labels = labels
-        self.unlabels = unlabels
-        self.states = states
-        self.ignore_deletes = ignore_deletes
 
-    def __repr__(self):
-        ret = '<EventFilter'
-
-        if self._types:
-            ret += ' types: %s' % ', '.join(self._types)
-        if self._pipelines:
-            ret += ' pipelines: %s' % ', '.join(self._pipelines)
-        if self._branches:
-            ret += ' branches: %s' % ', '.join(self._branches)
-        if self._refs:
-            ret += ' refs: %s' % ', '.join(self._refs)
-        if self.ignore_deletes:
-            ret += ' ignore_deletes: %s' % self.ignore_deletes
-        if self.event_approvals:
-            ret += ' event_approvals: %s' % ', '.join(
-                ['%s:%s' % a for a in self.event_approvals.items()])
-        if self.required_approvals:
-            ret += ' required_approvals: %s' % ', '.join(
-                ['%s' % a for a in self._required_approvals])
-        if self.reject_approvals:
-            ret += ' reject_approvals: %s' % ', '.join(
-                ['%s' % a for a in self._reject_approvals])
-        if self._comments:
-            ret += ' comments: %s' % ', '.join(self._comments)
-        if self._emails:
-            ret += ' emails: %s' % ', '.join(self._emails)
-        if self._usernames:
-            ret += ' username_filters: %s' % ', '.join(self._usernames)
-        if self.timespecs:
-            ret += ' timespecs: %s' % ', '.join(self.timespecs)
-        if self.actions:
-            ret += ' actions: %s' % ', '.join(self.actions)
-        if self.labels:
-            ret += ' labels: %s' % ', '.join(self.labels)
-        if self.unlabels:
-            ret += ' unlabels: %s' % ', '.join(self.unlabels)
-        if self.states:
-            ret += ' states: %s' % ', '.join(self.states)
-        ret += '>'
-
-        return ret
-
-    def matches(self, event, change):
-        # event types are ORed
-        matches_type = False
-        for etype in self.types:
-            if etype.match(event.type):
-                matches_type = True
-        if self.types and not matches_type:
-            return False
-
-        # pipelines are ORed
-        matches_pipeline = False
-        for epipe in self.pipelines:
-            if epipe.match(event.pipeline_name):
-                matches_pipeline = True
-        if self.pipelines and not matches_pipeline:
-            return False
-
-        # branches are ORed
-        matches_branch = False
-        for branch in self.branches:
-            if branch.match(event.branch):
-                matches_branch = True
-        if self.branches and not matches_branch:
-            return False
-
-        # refs are ORed
-        matches_ref = False
-        if event.ref is not None:
-            for ref in self.refs:
-                if ref.match(event.ref):
-                    matches_ref = True
-        if self.refs and not matches_ref:
-            return False
-        if self.ignore_deletes and event.newrev == EMPTY_GIT_REF:
-            # If the updated ref has an empty git sha (all 0s),
-            # then the ref is being deleted
-            return False
-
-        # comments are ORed
-        matches_comment_re = False
-        for comment_re in self.comments:
-            if (event.comment is not None and
-                comment_re.search(event.comment)):
-                matches_comment_re = True
-        if self.comments and not matches_comment_re:
-            return False
-
-        # We better have an account provided by Gerrit to do
-        # email filtering.
-        if event.account is not None:
-            account_email = event.account.get('email')
-            # emails are ORed
-            matches_email_re = False
-            for email_re in self.emails:
-                if (account_email is not None and
-                        email_re.search(account_email)):
-                    matches_email_re = True
-            if self.emails and not matches_email_re:
-                return False
-
-            # usernames are ORed
-            account_username = event.account.get('username')
-            matches_username_re = False
-            for username_re in self.usernames:
-                if (account_username is not None and
-                    username_re.search(account_username)):
-                    matches_username_re = True
-            if self.usernames and not matches_username_re:
-                return False
-
-        # approvals are ANDed
-        for category, value in self.event_approvals.items():
-            matches_approval = False
-            for eapproval in event.approvals:
-                if (normalizeCategory(eapproval['description']) == category and
-                    int(eapproval['value']) == int(value)):
-                    matches_approval = True
-            if not matches_approval:
-                return False
-
-        # required approvals are ANDed (reject approvals are ORed)
-        if not self.matchesApprovals(change):
-            return False
-
-        # timespecs are ORed
-        matches_timespec = False
-        for timespec in self.timespecs:
-            if (event.timespec == timespec):
-                matches_timespec = True
-        if self.timespecs and not matches_timespec:
-            return False
-
-        # actions are ORed
-        matches_action = False
-        for action in self.actions:
-            if (event.action == action):
-                matches_action = True
-        if self.actions and not matches_action:
-            return False
-
-        # labels are ORed
-        if self.labels and event.label not in self.labels:
-            return False
-
-        # unlabels are ORed
-        if self.unlabels and event.unlabel not in self.unlabels:
-            return False
-
-        # states are ORed
-        if self.states and event.state not in self.states:
-            return False
-
+    def matches(self, event, ref):
+        # TODO(jeblair): consider removing ref argument
         return True
 
 
-class ChangeishFilter(BaseFilter):
+class RefFilter(BaseFilter):
     """Allows a Manager to only enqueue Changes that meet certain criteria."""
-    def __init__(self, open=None, current_patchset=None,
-                 statuses=[], required_approvals=[],
-                 reject_approvals=[]):
-        super(ChangeishFilter, self).__init__(
-            required_approvals=required_approvals,
-            reject_approvals=reject_approvals)
-        self.open = open
-        self.current_patchset = current_patchset
-        self.statuses = statuses
-
-    def __repr__(self):
-        ret = '<ChangeishFilter'
-
-        if self.open is not None:
-            ret += ' open: %s' % self.open
-        if self.current_patchset is not None:
-            ret += ' current-patchset: %s' % self.current_patchset
-        if self.statuses:
-            ret += ' statuses: %s' % ', '.join(self.statuses)
-        if self.required_approvals:
-            ret += (' required_approvals: %s' %
-                    str(self.required_approvals))
-        if self.reject_approvals:
-            ret += (' reject_approvals: %s' %
-                    str(self.reject_approvals))
-        ret += '>'
-
-        return ret
+    def __init__(self):
+        super(RefFilter, self).__init__()
 
     def matches(self, change):
-        if self.open is not None:
-            if self.open != change.open:
-                return False
-
-        if self.current_patchset is not None:
-            if self.current_patchset != change.is_current_patchset:
-                return False
-
-        if self.statuses:
-            if change.status not in self.statuses:
-                return False
-
-        # required approvals are ANDed (reject approvals are ORed)
-        if not self.matchesApprovals(change):
-            return False
-
         return True
 
 

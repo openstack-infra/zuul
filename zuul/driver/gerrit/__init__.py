@@ -41,3 +41,9 @@ class GerritDriver(Driver, ConnectionInterface, TriggerInterface,
 
     def getReporterSchema(self):
         return gerritreporter.getSchema()
+
+    def getRequireSchema(self):
+        return gerritsource.getRequireSchema()
+
+    def getRejectSchema(self):
+        return gerritsource.getRejectSchema()

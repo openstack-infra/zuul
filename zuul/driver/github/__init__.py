@@ -41,3 +41,9 @@ class GithubDriver(Driver, ConnectionInterface, TriggerInterface,
 
     def getReporterSchema(self):
         return githubreporter.getSchema()
+
+    def getRequireSchema(self):
+        return githubsource.getRequireSchema()
+
+    def getRejectSchema(self):
+        return githubsource.getRejectSchema()

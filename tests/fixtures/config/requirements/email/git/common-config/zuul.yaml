@@ -11,8 +11,9 @@
       gerrit:
         verified: -1
     require:
-      approval:
-        - email: jenkins@example.com
+      gerrit:
+        approval:
+          - email: jenkins@example.com
 
 - pipeline:
     name: trigger

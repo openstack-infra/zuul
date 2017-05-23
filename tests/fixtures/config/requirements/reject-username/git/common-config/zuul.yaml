@@ -2,8 +2,9 @@
     name: pipeline
     manager: independent
     reject:
-      approval:
-        - username: jenkins
+      gerrit:
+        approval:
+          - username: jenkins
     trigger:
       gerrit:
         - event: comment-added

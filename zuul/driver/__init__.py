@@ -191,6 +191,30 @@ class SourceInterface(object):
         """
         pass
 
+    @abc.abstractmethod
+    def getRequireSchema(self):
+        """Get the schema for this driver's pipeline requirement filter.
+
+        This method is required by the interface.
+
+        :returns: A voluptuous schema.
+        :rtype: dict or Schema
+
+        """
+        pass
+
+    @abc.abstractmethod
+    def getRejectSchema(self):
+        """Get the schema for this driver's pipeline reject filter.
+
+        This method is required by the interface.
+
+        :returns: A voluptuous schema.
+        :rtype: dict or Schema
+
+        """
+        pass
+
 
 @six.add_metaclass(abc.ABCMeta)
 class ReporterInterface(object):

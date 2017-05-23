@@ -14,8 +14,8 @@
 
 import logging
 import voluptuous as v
-from zuul.model import EventFilter
 from zuul.trigger import BaseTrigger
+from zuul.driver.github.githubmodel import GithubEventFilter
 
 
 class GithubTrigger(BaseTrigger):
@@ -32,7 +32,7 @@ class GithubTrigger(BaseTrigger):
 
         efilters = []
         for trigger in toList(trigger_config):
-            f = EventFilter(
+            f = GithubEventFilter(
                 trigger=self,
                 types=toList(trigger['event']),
                 actions=toList(trigger.get('action')),

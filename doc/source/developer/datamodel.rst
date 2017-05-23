@@ -54,7 +54,7 @@ Changes
 Filters
 ~~~~~~~
 
-.. autoclass:: zuul.model.ChangeishFilter
+.. autoclass:: zuul.model.RefFilter
 .. autoclass:: zuul.model.EventFilter
 
 

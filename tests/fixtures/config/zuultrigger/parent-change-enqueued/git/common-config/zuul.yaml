@@ -2,8 +2,9 @@
     name: check
     manager: independent
     require:
-      approval:
-        - verified: -1
+      gerrit:
+        approval:
+          - verified: -1
     trigger:
       gerrit:
         - event: patchset-created
@@ -21,8 +22,9 @@
     name: gate
     manager: dependent
     require:
-      approval:
-        - verified: 1
+      gerrit:
+        approval:
+          - verified: 1
     trigger:
       gerrit:
         - event: comment-added

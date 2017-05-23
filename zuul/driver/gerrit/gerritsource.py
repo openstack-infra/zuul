@@ -13,8 +13,11 @@
 # under the License.
 
 import logging
+import voluptuous as vs
 from zuul.source import BaseSource
 from zuul.model import Project
+from zuul.driver.gerrit.gerritmodel import GerritRefFilter
+from zuul.driver.util import scalar_or_list, to_list
 
 
 class GerritSource(BaseSource):
@@ -59,3 +62,41 @@ class GerritSource(BaseSource):
 
     def _getGitwebUrl(self, project, sha=None):
         return self.connection._getGitwebUrl(project, sha)
+
+    def getRequireFilters(self, config):
+        f = GerritRefFilter(
+            open=config.get('open'),
+            current_patchset=config.get('current-patchset'),
+            statuses=to_list(config.get('status')),
+            required_approvals=to_list(config.get('approval')),
+        )
+        return [f]
+
+    def getRejectFilters(self, config):
+        f = GerritRefFilter(
+            reject_approvals=to_list(config.get('approval')),
+        )
+        return [f]
+
+
+approval = vs.Schema({'username': str,
+                      'email-filter': str,
+                      'email': str,
+                      'older-than': str,
+                      'newer-than': str,
+                      }, extra=vs.ALLOW_EXTRA)
+
+
+def getRequireSchema():
+    require = {'approval': scalar_or_list(approval),
+               'open': bool,
+               'current-patchset': bool,
+               'status': scalar_or_list(str)}
+
+    return require
+
+
+def getRejectSchema():
+    reject = {'approval': scalar_or_list(approval)}
+
+    return reject

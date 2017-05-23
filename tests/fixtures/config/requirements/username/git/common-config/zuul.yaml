@@ -11,8 +11,9 @@
       gerrit:
         verified: -1
     require:
-      approval:
-        - username: ^(jenkins|zuul)$
+      gerrit:
+        approval:
+          - username: ^(jenkins|zuul)$
 
 - pipeline:
     name: trigger
