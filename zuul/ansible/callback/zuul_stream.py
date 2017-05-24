@@ -137,10 +137,29 @@ class CallbackModule(default.CallbackModule):
             result, ignore_errors=ignore_errors)
 
     def v2_runner_on_ok(self, result):
-        # TODO(mordred) Showing the result dict with start, end, rc and delta
-        #               is cool and all - but we could probably just do a more
-        #               direct banner formatted nicer and not call the super
-        #               class method at all here.
         if result._task.action in ('command', 'shell'):
             zuul_filter_result(result._result)
-        super(CallbackModule, self).v2_runner_on_ok(result)
+        else:
+            return super(CallbackModule, self).v2_runner_on_ok(result)
+
+        if self._play.strategy == 'free':
+            return super(CallbackModule, self).v2_runner_on_ok(result)
+
+        delegated_vars = result._result.get('_ansible_delegated_vars', None)
+
+        if delegated_vars:
+            msg = "ok: [{host} -> {delegated_host} %s]".format(
+                host=result._host.get_name(),
+                delegated_host=delegated_vars['ansible_host'])
+        else:
+            msg = "ok: [{host}]".format(host=result._host.get_name())
+
+        if result._task.loop and 'results' in result._result:
+            self._process_items(result)
+        else:
+            msg += "Ran in {delta} seconds. Start: {start} end: {end}".format(
+                **result._result)
+
+        self._handle_warnings(result._result)
+
+        self._display.display(msg)
