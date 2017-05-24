@@ -298,6 +298,7 @@ class ExecutorClient(object):
             connection = project.source.connection
             return dict(connection=connection.connection_name,
                         name=project.name,
+                        canonical_name=project.canonical_name,
                         override_branch=override_branch,
                         default_branch=project_default_branch)
 

@@ -1189,10 +1189,10 @@ class RecordingExecutorServer(zuul.executor.server.ExecutorServer):
 
 
 class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
-    def doMergeChanges(self, items, repo_state):
+    def doMergeChanges(self, merger, items, repo_state):
         # Get a merger in order to update the repos involved in this job.
         commit = super(RecordingAnsibleJob, self).doMergeChanges(
-            items, repo_state)
+            merger, items, repo_state)
         if not commit:  # merge conflict
             self.recordResult('MERGER_FAILURE')
         return commit
