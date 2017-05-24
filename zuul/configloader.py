@@ -47,6 +47,16 @@ class ConfigurationSyntaxError(Exception):
     pass
 
 
+class NodeFromGroupNotFoundError(Exception):
+    def __init__(self, nodeset, node, group):
+        message = textwrap.dedent("""\
+        In nodeset {nodeset} the group {group} contains a
+        node named {node} which is not defined in the nodeset.""")
+        message = textwrap.fill(message.format(nodeset=nodeset,
+                                               node=node, group=group))
+        super(NodeFromGroupNotFoundError, self).__init__(message)
+
+
 class ProjectNotFoundError(Exception):
     def __init__(self, project):
         message = textwrap.dedent("""\
@@ -169,8 +179,13 @@ class NodeSetParser(object):
                 vs.Required('image'): str,
                 }
 
+        group = {vs.Required('name'): str,
+                 vs.Required('nodes'): [str]
+                 }
+
         nodeset = {vs.Required('name'): str,
                    vs.Required('nodes'): [node],
+                   'groups': [group],
                    '_source_context': model.SourceContext,
                    '_start_mark': yaml.Mark,
                    }
@@ -182,9 +197,18 @@ class NodeSetParser(object):
         with configuration_exceptions('nodeset', conf):
             NodeSetParser.getSchema()(conf)
         ns = model.NodeSet(conf['name'])
+        node_names = []
         for conf_node in as_list(conf['nodes']):
             node = model.Node(conf_node['name'], conf_node['image'])
             ns.addNode(node)
+            node_names.append(conf_node['name'])
+        for conf_group in as_list(conf.get('groups', [])):
+            for node_name in conf_group['nodes']:
+                if node_name not in node_names:
+                    raise NodeFromGroupNotFoundError(conf['name'], node_name,
+                                                     conf_group['name'])
+            group = model.Group(conf_group['name'], conf_group['nodes'])
+            ns.addGroup(group)
         return ns
 
 

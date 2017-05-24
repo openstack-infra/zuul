@@ -270,8 +270,9 @@ class ExecutorClient(object):
             params['post_playbooks'] = [x.toDict() for x in job.post_run]
             params['roles'] = [x.toDict() for x in job.roles]
 
+        nodeset = item.current_build_set.getJobNodeSet(job.name)
         nodes = []
-        for node in item.current_build_set.getJobNodeSet(job.name).getNodes():
+        for node in nodeset.getNodes():
             nodes.append(dict(name=node.name, image=node.image,
                               az=node.az,
                               host_keys=node.host_keys,
@@ -281,6 +282,7 @@ class ExecutorClient(object):
                               public_ipv6=node.public_ipv6,
                               public_ipv4=node.public_ipv4))
         params['nodes'] = nodes
+        params['groups'] = [group.toDict() for group in nodeset.getGroups()]
         params['vars'] = copy.deepcopy(job.variables)
         if job.auth:
             for secret in job.auth.secrets:

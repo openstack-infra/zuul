@@ -410,6 +410,37 @@ class Node(object):
         self._keys = keys
 
 
+class Group(object):
+    """A logical group of nodes for use by a job.
+
+    A Group is a named set of node names that will be provided to
+    jobs in the inventory to describe logical units where some subset of tasks
+    run.
+    """
+
+    def __init__(self, name, nodes):
+        self.name = name
+        self.nodes = nodes
+
+    def __repr__(self):
+        return '<Group %s %s>' % (self.name, str(self.nodes))
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        if not isinstance(other, Group):
+            return False
+        return (self.name == other.name and
+                self.nodes == other.nodes)
+
+    def toDict(self):
+        return {
+            'name': self.name,
+            'nodes': self.nodes
+        }
+
+
 class NodeSet(object):
     """A set of nodes.
 
@@ -423,6 +454,7 @@ class NodeSet(object):
     def __init__(self, name=None):
         self.name = name or ''
         self.nodes = OrderedDict()
+        self.groups = OrderedDict()
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -437,6 +469,8 @@ class NodeSet(object):
         n = NodeSet(self.name)
         for name, node in self.nodes.items():
             n.addNode(Node(node.name, node.image))
+        for name, group in self.groups.items():
+            n.addGroup(Group(group.name, group.nodes[:]))
         return n
 
     def addNode(self, node):
@@ -447,12 +481,20 @@ class NodeSet(object):
     def getNodes(self):
         return list(self.nodes.values())
 
+    def addGroup(self, group):
+        if group.name in self.groups:
+            raise Exception("Duplicate group in %s" % (self,))
+        self.groups[group.name] = group
+
+    def getGroups(self):
+        return list(self.groups.values())
+
     def __repr__(self):
         if self.name:
             name = self.name + ' '
         else:
             name = ''
-        return '<NodeSet %s%s>' % (name, self.nodes)
+        return '<NodeSet %s%s%s>' % (name, self.nodes, self.groups)
 
 
 class NodeRequest(object):
