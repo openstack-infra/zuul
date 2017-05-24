@@ -184,7 +184,6 @@ class JobDir(object):
         os.makedirs(self.ansible_root)
         self.known_hosts = os.path.join(self.ansible_root, 'known_hosts')
         self.inventory = os.path.join(self.ansible_root, 'inventory.yaml')
-        self.vars = os.path.join(self.ansible_root, 'vars.yaml')
         self.playbooks = []  # The list of candidate playbooks
         self.playbook = None  # A pointer to the candidate we have chosen
         self.pre_playbooks = []
@@ -313,7 +312,7 @@ def _copy_ansible_files(python_module, target_dir):
                 shutil.copy(os.path.join(library_path, fn), target_dir)
 
 
-def make_inventory_dict(nodes, groups):
+def make_inventory_dict(nodes, groups, all_vars):
 
     hosts = {}
     for node in nodes:
@@ -322,6 +321,7 @@ def make_inventory_dict(nodes, groups):
     inventory = {
         'all': {
             'hosts': hosts,
+            'vars': all_vars,
         }
     }
 
@@ -1103,8 +1103,14 @@ class AnsibleJob(object):
             self.jobdir.trusted_roles_path.append(trusted_role_path)
 
     def prepareAnsibleFiles(self, args):
+        all_vars = dict(args['vars'])
+        all_vars['zuul']['executor'] = dict(
+            hostname=self.executor_server.hostname,
+            src_root=self.jobdir.src_root,
+            log_root=self.jobdir.log_root)
+
         nodes = self.getHostList(args)
-        inventory = make_inventory_dict(nodes, args['groups'])
+        inventory = make_inventory_dict(nodes, args['groups'], all_vars)
 
         with open(self.jobdir.inventory, 'w') as inventory_yaml:
             inventory_yaml.write(
@@ -1115,14 +1121,6 @@ class AnsibleJob(object):
                 for key in node['host_keys']:
                     known_hosts.write('%s\n' % key)
 
-        with open(self.jobdir.vars, 'w') as vars_yaml:
-            zuul_vars = dict(args['vars'])
-            zuul_vars['zuul']['executor'] = dict(
-                hostname=self.executor_server.hostname,
-                src_root=self.jobdir.src_root,
-                log_root=self.jobdir.log_root)
-            vars_yaml.write(
-                yaml.safe_dump(zuul_vars, default_flow_style=False))
         self.writeAnsibleConfig(self.jobdir.untrusted_config)
         self.writeAnsibleConfig(self.jobdir.trusted_config, trusted=True)
 
@@ -1276,12 +1274,10 @@ class AnsibleJob(object):
         else:
             verbose = '-v'
 
-        cmd = ['ansible-playbook', playbook.path]
+        cmd = ['ansible-playbook', verbose, playbook.path]
 
         if success is not None:
             cmd.extend(['-e', 'success=%s' % str(bool(success))])
-
-        cmd.extend(['-e@%s' % self.jobdir.vars, verbose])
 
         return self.runAnsible(
             cmd=cmd, timeout=timeout, trusted=playbook.trusted)
