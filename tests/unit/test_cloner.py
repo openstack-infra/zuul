@@ -19,44 +19,21 @@ import logging
 import os
 import shutil
 import time
+from unittest import skip
 
 import git
 
 import zuul.lib.cloner
 
-from tests.base import ZuulTestCase
+from tests.base import ZuulTestCase, simple_layout
 
 
 class TestCloner(ZuulTestCase):
+    tenant_config_file = 'config/single-tenant/main.yaml'
 
     log = logging.getLogger("zuul.test.cloner")
-    workspace_root = None
 
-    def setUp(self):
-        self.skip("Disabled for early v3 development")
-
-        super(TestCloner, self).setUp()
-        self.workspace_root = os.path.join(self.test_root, 'workspace')
-
-        self.updateConfigLayout(
-            'tests/fixtures/layout-cloner.yaml')
-        self.sched.reconfigure(self.config)
-        self.registerJobs()
-
-    def getWorkspaceRepos(self, projects):
-        repos = {}
-        for project in projects:
-            repos[project] = git.Repo(
-                os.path.join(self.workspace_root, project))
-        return repos
-
-    def getUpstreamRepos(self, projects):
-        repos = {}
-        for project in projects:
-            repos[project] = git.Repo(
-                os.path.join(self.upstream_root, project))
-        return repos
-
+    @skip("Disabled for early v3 development")
     def test_cache_dir(self):
         projects = ['org/project1', 'org/project2']
         cache_root = os.path.join(self.test_root, "cache")
@@ -140,16 +117,19 @@ class TestCloner(ZuulTestCase):
         self.worker.release()
         self.waitUntilSettled()
 
+    @simple_layout('layouts/repo-checkout-two-project.yaml')
     def test_one_branch(self):
-        self.worker.hold_jobs_in_build = True
+        self.executor_server.hold_jobs_in_build = True
 
-        projects = ['org/project1', 'org/project2']
+        p1 = 'review.example.com/org/project1'
+        p2 = 'review.example.com/org/project2'
+        projects = [p1, p2]
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
 
         self.waitUntilSettled()
 
@@ -157,27 +137,17 @@ class TestCloner(ZuulTestCase):
 
         upstream = self.getUpstreamRepos(projects)
         states = [
-            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
-             'org/project2': str(upstream['org/project2'].commit('master')),
+            {p1: self.builds[0].parameters['ZUUL_COMMIT'],
+             p2: str(upstream[p2].commit('master')),
              },
-            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
-             'org/project2': self.builds[1].parameters['ZUUL_COMMIT'],
+            {p1: self.builds[0].parameters['ZUUL_COMMIT'],
+             p2: self.builds[1].parameters['ZUUL_COMMIT'],
              },
         ]
 
         for number, build in enumerate(self.builds):
             self.log.debug("Build parameters: %s", build.parameters)
-            cloner = zuul.lib.cloner.Cloner(
-                git_base_url=self.upstream_root,
-                projects=projects,
-                workspace=self.workspace_root,
-                zuul_project=build.parameters.get('ZUUL_PROJECT', None),
-                zuul_branch=build.parameters['ZUUL_BRANCH'],
-                zuul_ref=build.parameters['ZUUL_REF'],
-                zuul_url=self.src_root,
-            )
-            cloner.execute()
-            work = self.getWorkspaceRepos(projects)
+            work = build.getWorkspaceRepos(projects)
             state = states[number]
 
             for project in projects:
@@ -186,12 +156,11 @@ class TestCloner(ZuulTestCase):
                                   'Project %s commit for build %s should '
                                   'be correct' % (project, number))
 
-            shutil.rmtree(self.workspace_root)
-
-        self.worker.hold_jobs_in_build = False
-        self.worker.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
+    @skip("Disabled for early v3 development")
     def test_multi_branch(self):
         self.worker.hold_jobs_in_build = True
         projects = ['org/project1', 'org/project2',
@@ -262,6 +231,7 @@ class TestCloner(ZuulTestCase):
         self.worker.release()
         self.waitUntilSettled()
 
+    @skip("Disabled for early v3 development")
     def test_upgrade(self):
         # Simulates an upgrade test
         self.worker.hold_jobs_in_build = True
@@ -442,6 +412,7 @@ class TestCloner(ZuulTestCase):
         self.worker.release()
         self.waitUntilSettled()
 
+    @skip("Disabled for early v3 development")
     def test_project_override(self):
         self.worker.hold_jobs_in_build = True
         projects = ['org/project1', 'org/project2', 'org/project3',
@@ -528,6 +499,7 @@ class TestCloner(ZuulTestCase):
         self.worker.release()
         self.waitUntilSettled()
 
+    @skip("Disabled for early v3 development")
     def test_periodic(self):
         self.worker.hold_jobs_in_build = True
         self.create_branch('org/project', 'stable/havana')
@@ -595,6 +567,7 @@ class TestCloner(ZuulTestCase):
         self.worker.release()
         self.waitUntilSettled()
 
+    @skip("Disabled for early v3 development")
     def test_periodic_update(self):
         # Test that the merger correctly updates its local repository
         # before running a periodic job.
@@ -676,6 +649,7 @@ class TestCloner(ZuulTestCase):
         self.worker.release()
         self.waitUntilSettled()
 
+    @skip("Disabled for early v3 development")
     def test_post_checkout(self):
         self.worker.hold_jobs_in_build = True
         project = "org/project1"
@@ -710,6 +684,7 @@ class TestCloner(ZuulTestCase):
                           'be correct' % (project, 0))
         shutil.rmtree(self.workspace_root)
 
+    @skip("Disabled for early v3 development")
     def test_post_and_master_checkout(self):
         self.worker.hold_jobs_in_build = True
         projects = ["org/project1", "org/project2"]

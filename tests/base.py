@@ -1103,6 +1103,25 @@ class FakeBuild(object):
         self.log.debug("  OK")
         return True
 
+    def getWorkspaceRepos(self, projects):
+        """Return workspace git repo objects for the listed projects
+
+        :arg list projects: A list of strings, each the canonical name
+                            of a project.
+
+        :returns: A dictionary of {name: repo} for every listed
+                  project.
+        :rtype: dict
+
+        """
+
+        repos = {}
+        for project in projects:
+            path = os.path.join(self.jobdir.src_root, project)
+            repo = git.Repo(path)
+            repos[project] = repo
+        return repos
+
 
 class RecordingExecutorServer(zuul.executor.server.ExecutorServer):
     """An Ansible executor to be used in tests.
@@ -2515,6 +2534,29 @@ class ZuulTestCase(BaseTestCase):
             if (isinstance(conn, specified_conn.__class__) and
                 specified_conn.server == conn.server):
                 conn.addEvent(event)
+
+    def getUpstreamRepos(self, projects):
+        """Return upstream git repo objects for the listed projects
+
+        :arg list projects: A list of strings, each the canonical name
+                            of a project.
+
+        :returns: A dictionary of {name: repo} for every listed
+                  project.
+        :rtype: dict
+
+        """
+
+        repos = {}
+        for project in projects:
+            # FIXME(jeblair): the upstream root does not yet have a
+            # hostname component; that needs to be added, and this
+            # line removed:
+            tmp_project_name = '/'.join(project.split('/')[1:])
+            path = os.path.join(self.upstream_root, tmp_project_name)
+            repo = git.Repo(path)
+            repos[project] = repo
+        return repos
 
 
 class AnsibleZuulTestCase(ZuulTestCase):
