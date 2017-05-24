@@ -587,6 +587,15 @@ class AnsibleJob(object):
                 # a work complete result, don't run any jobs
                 return
 
+        for project in args['projects']:
+            repo = repos[project['canonical_name']]
+            self.checkoutBranch(repo,
+                                project['name'],
+                                args['branch'],
+                                args['override_branch'],
+                                project['override_branch'],
+                                project['default_branch'])
+
         # Delete the origin remote from each repo we set up since
         # it will not be valid within the jobs.
         for repo in repos.values():
@@ -640,6 +649,30 @@ class AnsibleJob(object):
             repo = merger.getRepo(connection, project)
             repo.setRef('refs/heads/' + branch, commit)
         return True
+
+    def checkoutBranch(self, repo, project_name, zuul_branch,
+                       job_branch, project_override_branch,
+                       project_default_branch):
+        branches = repo.getBranches()
+        if project_override_branch in branches:
+            self.log.info("Checking out %s project override branch %s",
+                          project_name, project_override_branch)
+            repo.checkoutLocalBranch(project_override_branch)
+        elif job_branch in branches:
+            self.log.info("Checking out %s job branch %s",
+                          project_name, job_branch)
+            repo.checkoutLocalBranch(job_branch)
+        elif zuul_branch and zuul_branch in branches:
+            self.log.info("Checking out %s zuul branch %s",
+                          project_name, zuul_branch)
+            repo.checkoutLocalBranch(zuul_branch)
+        elif project_default_branch in branches:
+            self.log.info("Checking out %s project default branch %s",
+                          project_name, project_default_branch)
+            repo.checkoutLocalBranch(project_default_branch)
+        else:
+            raise Exception("Project %s does not have the default branch %s" %
+                            (project_name, project_default_branch))
 
     def runPlaybooks(self, args):
         result = None
