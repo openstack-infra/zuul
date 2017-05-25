@@ -121,4 +121,5 @@ def getRequireSchema():
 
 
 def getRejectSchema():
-    return {}
+    reject = {'review': scalar_or_list(review)}
+    return reject

@@ -13,6 +13,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import time
+
 from tests.base import ZuulTestCase, simple_layout
 
 
@@ -171,3 +173,94 @@ class TestGithubRequirements(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, 'project5-reviewuserstate')
+
+# TODO: Implement reject on approval username/state
+
+    @simple_layout('layouts/requirements-github.yaml', driver='github')
+    def test_pipeline_require_review_latest_user_state(self):
+        "Test pipeline requirement: review state from user"
+
+        A = self.fake_github.openFakePullRequest('org/project5', 'master', 'A')
+        # Add derp and herp to writers
+        A.writers.extend(('derp', 'herp'))
+        # A comment event that we will keep submitting to trigger
+        comment = A.getCommentAddedEvent('test me')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        # No positive review from derp so should not be enqueued
+        self.assertEqual(len(self.history), 0)
+
+        # The first negative review from derp should not cause it to be
+        # enqueued
+        for i in range(1, 4):
+            submitted_at = time.time() - 72 * 60 * 60
+            A.addReview('derp', 'CHANGES_REQUESTED',
+                        submitted_at)
+            self.fake_github.emitEvent(comment)
+            self.waitUntilSettled()
+            self.assertEqual(len(self.history), 0)
+
+        # A positive review from derp should cause it to be enqueued
+        A.addReview('derp', 'APPROVED')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+        self.assertEqual(self.history[0].name, 'project5-reviewuserstate')
+
+    @simple_layout('layouts/requirements-github.yaml', driver='github')
+    def test_require_review_newer_than(self):
+
+        A = self.fake_github.openFakePullRequest('org/project6', 'master', 'A')
+        # Add derp and herp to writers
+        A.writers.extend(('derp', 'herp'))
+        # A comment event that we will keep submitting to trigger
+        comment = A.getCommentAddedEvent('test me')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        # No positive review from derp so should not be enqueued
+        self.assertEqual(len(self.history), 0)
+
+        # Add a too-old positive review, should not be enqueued
+        submitted_at = time.time() - 72 * 60 * 60
+        A.addReview('derp', 'APPROVED',
+                    submitted_at)
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+
+        # Add a recent positive review
+        submitted_at = time.time() - 12 * 60 * 60
+        A.addReview('derp', 'APPROVED', submitted_at)
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+        self.assertEqual(self.history[0].name, 'project6-newerthan')
+
+    @simple_layout('layouts/requirements-github.yaml', driver='github')
+    def test_require_review_older_than(self):
+
+        A = self.fake_github.openFakePullRequest('org/project7', 'master', 'A')
+        # Add derp and herp to writers
+        A.writers.extend(('derp', 'herp'))
+        # A comment event that we will keep submitting to trigger
+        comment = A.getCommentAddedEvent('test me')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        # No positive review from derp so should not be enqueued
+        self.assertEqual(len(self.history), 0)
+
+        # Add a too-new positive, should not be enqueued
+        submitted_at = time.time() - 12 * 60 * 60
+        A.addReview('derp', 'APPROVED',
+                    submitted_at)
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+
+        # Add an old enough positive, should enqueue
+        submitted_at = time.time() - 72 * 60 * 60
+        A.addReview('herp', 'APPROVED', submitted_at)
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+        self.assertEqual(self.history[0].name, 'project7-olderthan')

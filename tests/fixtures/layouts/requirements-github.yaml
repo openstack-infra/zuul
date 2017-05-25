@@ -53,6 +53,11 @@
         review:
           - type: approved
             permission: write
+    reject:
+      github:
+        review:
+          - type: changes_requested
+            permission: write
     trigger:
       github:
         - event: pull_request
@@ -71,6 +76,47 @@
           - username: 'derp'
             type: approved
             permission: write
+    reject:
+      github:
+        review:
+          - type: changes_requested
+            permission: write
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: 'test me'
+    success:
+      github:
+        comment: true
+
+- pipeline:
+    name: newer_than
+    manager: independent
+    require:
+      github:
+        review:
+          - type: approved
+            permission: write
+            newer-than: 1d
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: 'test me'
+    success:
+      github:
+        comment: true
+
+- pipeline:
+    name: older_than
+    manager: independent
+    require:
+      github:
+        review:
+          - type: approved
+            permission: write
+            older-than: 1d
     trigger:
       github:
         - event: pull_request
@@ -90,6 +136,10 @@
     name: project4-reviewreq
 - job:
     name: project5-reviewuserstate
+- job:
+    name: project6-newerthan
+- job:
+    name: project7-olderthan
 
 - project:
     name: org/project1
@@ -120,3 +170,15 @@
     reviewuserstate:
       jobs:
         - project5-reviewuserstate
+
+- project:
+    name: org/project6
+    newer_than:
+      jobs:
+        - project6-newerthan
+
+- project:
+    name: org/project7
+    older_than:
+      jobs:
+        - project7-olderthan
