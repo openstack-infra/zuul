@@ -1601,6 +1601,18 @@ class BaseTestCase(testtools.TestCase):
         else:
             self._log_stream = sys.stdout
 
+        # NOTE(jeblair): this is temporary extra debugging to try to
+        # track down a possible leak.
+        orig_git_repo_init = git.Repo.__init__
+
+        def git_repo_init(myself, *args, **kw):
+            orig_git_repo_init(myself, *args, **kw)
+            self.log.debug("Created git repo 0x%x %s" %
+                           (id(myself), repr(myself)))
+
+        self.useFixture(fixtures.MonkeyPatch('git.Repo.__init__',
+                                             git_repo_init))
+
         handler = logging.StreamHandler(self._log_stream)
         formatter = logging.Formatter('%(asctime)s %(name)-32s '
                                       '%(levelname)-8s %(message)s')
@@ -2029,12 +2041,19 @@ class ZuulTestCase(BaseTestCase):
         self.assertEqual({}, self.executor_server.job_workers)
         # Make sure that git.Repo objects have been garbage collected.
         repos = []
+        gc.disable()
         gc.collect()
         for obj in gc.get_objects():
             if isinstance(obj, git.Repo):
-                self.log.debug("Leaked git repo object: %s" % repr(obj))
+                self.log.debug("Leaked git repo object: 0x%x %s" %
+                               (id(obj), repr(obj)))
+                for ref in gc.get_referrers(obj):
+                    self.log.debug("  Referrer %s" % (repr(ref)))
                 repos.append(obj)
-        self.assertEqual(len(repos), 0)
+        if repos:
+            for obj in gc.garbage:
+                self.log.debug("  Garbage %s" % (repr(obj)))
+        gc.enable()
         self.assertEmptyQueues()
         self.assertNodepoolState()
         self.assertNoGeneratedKeys()
