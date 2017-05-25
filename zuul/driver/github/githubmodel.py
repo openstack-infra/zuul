@@ -16,7 +16,7 @@
 
 import re
 
-from zuul.model import Change, TriggerEvent, EventFilter
+from zuul.model import Change, TriggerEvent, EventFilter, RefFilter
 
 
 EMPTY_GIT_REF = '0' * 40  # git sha of all zeros, used during creates/deletes
@@ -159,5 +159,33 @@ class GithubEventFilter(EventFilter):
         # states are ORed
         if self.states and event.state not in self.states:
             return False
+
+        return True
+
+
+class GithubRefFilter(RefFilter):
+    def __init__(self, statuses=[]):
+        RefFilter.__init__(self)
+
+        self.statuses = statuses
+
+    def __repr__(self):
+        ret = '<GithubRefFilter'
+
+        if self.statuses:
+            ret += ' statuses: %s' % ', '.join(self.statuses)
+
+        ret += '>'
+
+        return ret
+
+    def matches(self, change):
+        # statuses are ORed
+        # A PR head can have multiple statuses on it. If the change
+        # statuses and the filter statuses are a null intersection, there
+        # are no matches and we return false
+        if self.statuses:
+            if set(change.status).isdisjoint(set(self.statuses)):
+                return False
 
         return True

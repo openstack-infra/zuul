@@ -1,0 +1,23 @@
+- pipeline:
+    name: pipeline
+    manager: independent
+    require:
+      github:
+        status: "zuul:check:success"
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: 'test me'
+    success:
+      github:
+        comment: true
+
+- job:
+    name: project1-pipeline
+
+- project:
+    name: org/project1
+    pipeline:
+      jobs:
+        - project1-pipeline

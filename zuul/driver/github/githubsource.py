@@ -17,6 +17,8 @@ import time
 
 from zuul.source import BaseSource
 from zuul.model import Project
+from zuul.driver.github.githubmodel import GithubRefFilter
+from zuul.driver.util import scalar_or_list, to_list
 
 
 class GithubSource(BaseSource):
@@ -92,14 +94,18 @@ class GithubSource(BaseSource):
         return time.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
 
     def getRequireFilters(self, config):
-        return []
+        f = GithubRefFilter(
+            statuses=to_list(config.get('status')),
+        )
+        return [f]
 
     def getRejectFilters(self, config):
         return []
 
 
 def getRequireSchema():
-    return {}
+    require = {'status': scalar_or_list(str)}
+    return require
 
 
 def getRejectSchema():

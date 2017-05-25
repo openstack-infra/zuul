@@ -28,6 +28,7 @@
     success:
       github:
         comment: false
+        status: 'success'
     failure:
       github:
         comment: false

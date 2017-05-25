@@ -315,6 +315,7 @@ class GithubConnection(BaseConnection):
             change.patchset = event.patch_number
             change.files = self.getPullFileNames(project, change.number)
             change.title = event.title
+            change.status = self._get_statuses(project, event.patch_number)
             change.source_event = event
         elif event.ref:
             change = Ref(project)
@@ -408,6 +409,17 @@ class GithubConnection(BaseConnection):
         if not result:
             raise Exception('Pull request was not merged')
 
+    def getCommitStatuses(self, project, sha):
+        owner, proj = project.split('/')
+        repository = self.github.repository(owner, proj)
+        commit = repository.commit(sha)
+        # make a list out of the statuses so that we complete our
+        # API transaction
+        statuses = [status.as_dict() for status in commit.statuses()]
+
+        log_rate_limit(self.log, self.github)
+        return statuses
+
     def setCommitStatus(self, project, sha, state, url='', description='',
                         context=''):
         owner, proj = project.split('/')
@@ -429,6 +441,30 @@ class GithubConnection(BaseConnection):
 
     def _ghTimestampToDate(self, timestamp):
         return time.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
+
+    def _get_statuses(self, project, sha):
+        # A ref can have more than one status from each context,
+        # however the API returns them in order, newest first.
+        # So we can keep track of which contexts we've already seen
+        # and throw out the rest. Our unique key is based on
+        # the user and the context, since context is free form and anybody
+        # can put whatever they want there. We want to ensure we track it
+        # by user, so that we can require/trigger by user too.
+        seen = []
+        statuses = []
+        for status in self.getCommitStatuses(project.name, sha):
+            # creator can be None if the user has been removed.
+            creator = status.get('creator')
+            if not creator:
+                continue
+            user = creator.get('login')
+            context = status.get('context')
+            state = status.get('state')
+            if "%s:%s" % (user, context) not in seen:
+                statuses.append("%s:%s:%s" % (user, context, state))
+                seen.append("%s:%s" % (user, context))
+
+        return statuses
 
 
 def log_rate_limit(log, github):

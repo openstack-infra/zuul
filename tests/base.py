@@ -569,13 +569,11 @@ class FakeGithubPullRequest(object):
         """Adds a commit on top of the actual PR head."""
         self._addCommitToRepo(files=files)
         self._updateTimeStamp()
-        self._clearStatuses()
 
     def forcePush(self, files=[]):
         """Clears actual commits and add a commit on top of the base."""
         self._addCommitToRepo(files=files, reset=True)
         self._updateTimeStamp()
-        self._clearStatuses()
 
     def getPullRequestOpenedEvent(self):
         return self._getPullRequestEvent('opened')
@@ -695,7 +693,10 @@ class FakeGithubPullRequest(object):
                     }
                 },
                 'head': {
-                    'sha': self.head_sha
+                    'sha': self.head_sha,
+                    'repo': {
+                        'full_name': self.project
+                    }
                 }
             },
             'label': {
@@ -742,6 +743,9 @@ class FakeGithubPullRequest(object):
         repo.index.add([fn])
 
         self.head_sha = repo.index.commit(msg).hexsha
+        # Create an empty set of statuses for the given sha,
+        # each sha on a PR may have a status set on it
+        self.statuses[self.head_sha] = []
         repo.head.reference = 'master'
         zuul.merger.merger.reset_repo_to_head(repo)
         repo.git.clean('-x', '-f', '-d')
@@ -754,15 +758,21 @@ class FakeGithubPullRequest(object):
         repo = self._getRepo()
         return repo.references[self._getPRReference()].commit.hexsha
 
-    def setStatus(self, state, url, description, context):
-        self.statuses[context] = {
+    def setStatus(self, sha, state, url, description, context):
+        # Since we're bypassing github API, which would require a user, we
+        # hard set the user as 'zuul' here.
+        user = 'zuul'
+        # insert the status at the top of the list, to simulate that it
+        # is the most recent set status
+        self.statuses[sha].insert(0, ({
             'state': state,
             'url': url,
-            'description': description
-        }
-
-    def _clearStatuses(self):
-        self.statuses = {}
+            'description': description,
+            'context': context,
+            'creator': {
+                'login': user
+            }
+        }))
 
     def _getPRReference(self):
         return '%s/head' % self.number
@@ -783,7 +793,10 @@ class FakeGithubPullRequest(object):
                     }
                 },
                 'head': {
-                    'sha': self.head_sha
+                    'sha': self.head_sha,
+                    'repo': {
+                        'full_name': self.project
+                    }
                 }
             },
             'sender': {
@@ -857,7 +870,10 @@ class FakeGithubConnection(githubconnection.GithubConnection):
             },
             'mergeable': True,
             'head': {
-                'sha': pr.head_sha
+                'sha': pr.head_sha,
+                'repo': {
+                    'full_name': pr.project
+                }
             }
         }
         return data
@@ -901,6 +917,14 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         pull_request.is_merged = True
         pull_request.merge_message = commit_message
 
+    def getCommitStatuses(self, project, sha):
+        owner, proj = project.split('/')
+        for pr in self.pull_requests:
+            pr_owner, pr_project = pr.project.split('/')
+            if (pr_owner == owner and pr_project == proj and
+                pr.head_sha == sha):
+                return pr.statuses[sha]
+
     def setCommitStatus(self, project, sha, state,
                         url='', description='', context=''):
         owner, proj = project.split('/')
@@ -908,7 +932,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
             pr_owner, pr_project = pr.project.split('/')
             if (pr_owner == owner and pr_project == proj and
                 pr.head_sha == sha):
-                pr.setStatus(state, url, description, context)
+                pr.setStatus(sha, state, url, description, context)
 
     def labelPull(self, project, pr_number, label):
         pull_request = self.pull_requests[pr_number - 1]
