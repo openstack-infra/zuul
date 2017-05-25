@@ -335,6 +335,8 @@ class TestGithubDriver(ZuulTestCase):
         self.fake_github.emitEvent(D.getCommentAddedEvent('merge me'))
         self.waitUntilSettled()
         self.assertFalse(D.is_merged)
+        self.assertEqual(len(D.comments), 1)
+        self.assertEqual(D.comments[0], 'Merge failed')
 
     @simple_layout('layouts/dependent-github.yaml', driver='github')
     def test_parallel_changes(self):
