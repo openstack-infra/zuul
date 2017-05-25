@@ -263,12 +263,13 @@ class GithubEventFilter(EventFilter, GithubCommonFilter):
 
 
 class GithubRefFilter(RefFilter, GithubCommonFilter):
-    def __init__(self, statuses=[], required_reviews=[]):
+    def __init__(self, statuses=[], required_reviews=[], open=None):
         RefFilter.__init__(self)
 
         GithubCommonFilter.__init__(self, required_reviews=required_reviews,
                                     required_statuses=statuses)
         self.statuses = statuses
+        self.open = open
 
     def __repr__(self):
         ret = '<GithubRefFilter'
@@ -278,6 +279,8 @@ class GithubRefFilter(RefFilter, GithubCommonFilter):
         if self.required_reviews:
             ret += (' required-reviews: %s' %
                     str(self.required_reviews))
+        if self.open:
+            ret += ' open: %s' % self.open
 
         ret += '>'
 
@@ -286,6 +289,10 @@ class GithubRefFilter(RefFilter, GithubCommonFilter):
     def matches(self, change):
         if not self.matchesRequiredStatuses(change):
             return False
+
+        if self.open is not None:
+            if self.open != change.open:
+                return False
 
         # required reviews are ANDed
         if not self.matchesReviews(change):

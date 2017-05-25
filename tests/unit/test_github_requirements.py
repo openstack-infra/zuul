@@ -288,3 +288,22 @@ class TestGithubRequirements(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, 'project7-olderthan')
+
+    @simple_layout('layouts/requirements-github.yaml', driver='github')
+    def test_require_open(self):
+
+        A = self.fake_github.openFakePullRequest('org/project8', 'master', 'A')
+        # A comment event that we will keep submitting to trigger
+        comment = A.getCommentAddedEvent('test me')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+
+        # PR is open, we should have enqueued
+        self.assertEqual(len(self.history), 1)
+
+        # close the PR and try again
+        A.state = 'closed'
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        # PR is closed, should not trigger
+        self.assertEqual(len(self.history), 1)
