@@ -58,7 +58,7 @@ class GithubTriggerEvent(TriggerEvent):
 class GithubEventFilter(EventFilter):
     def __init__(self, trigger, types=[], branches=[], refs=[],
                  comments=[], actions=[], labels=[], unlabels=[],
-                 states=[], ignore_deletes=True):
+                 states=[], statuses=[], ignore_deletes=True):
 
         EventFilter.__init__(self, trigger)
 
@@ -74,6 +74,7 @@ class GithubEventFilter(EventFilter):
         self.labels = labels
         self.unlabels = unlabels
         self.states = states
+        self.statuses = statuses
         self.ignore_deletes = ignore_deletes
 
     def __repr__(self):
@@ -97,6 +98,8 @@ class GithubEventFilter(EventFilter):
             ret += ' unlabels: %s' % ', '.join(self.unlabels)
         if self.states:
             ret += ' states: %s' % ', '.join(self.states)
+        if self.statuses:
+            ret += ' statuses: %s' % ', '.join(self.statuses)
         ret += '>'
 
         return ret
@@ -158,6 +161,10 @@ class GithubEventFilter(EventFilter):
 
         # states are ORed
         if self.states and event.state not in self.states:
+            return False
+
+        # statuses are ORed
+        if self.statuses and event.status not in self.statuses:
             return False
 
         return True
