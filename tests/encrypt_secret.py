@@ -30,5 +30,6 @@ def main():
     ciphertext = encryption.encrypt_pkcs1_oaep(sys.argv[1], public_key)
     print(ciphertext.encode('base64'))
 
+
 if __name__ == '__main__':
     main()

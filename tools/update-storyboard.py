@@ -96,5 +96,6 @@ def main():
         if ok_lanes and not task_found:
             add_task(sync, task, lanes[ok_lanes[0]])
 
+
 if __name__ == '__main__':
     main()
