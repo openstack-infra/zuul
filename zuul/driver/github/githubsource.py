@@ -14,6 +14,7 @@
 
 import logging
 import time
+import voluptuous as v
 
 from zuul.source import BaseSource
 from zuul.model import Project
@@ -96,6 +97,7 @@ class GithubSource(BaseSource):
     def getRequireFilters(self, config):
         f = GithubRefFilter(
             statuses=to_list(config.get('status')),
+            required_reviews=to_list(config.get('review')),
         )
         return [f]
 
@@ -103,8 +105,18 @@ class GithubSource(BaseSource):
         return []
 
 
+review = v.Schema({'username': str,
+                   'email': str,
+                   'older-than': str,
+                   'newer-than': str,
+                   'type': str,
+                   'permission': v.Any('read', 'write', 'admin'),
+                   })
+
+
 def getRequireSchema():
-    require = {'status': scalar_or_list(str)}
+    require = {'status': scalar_or_list(str),
+               'review': scalar_or_list(review)}
     return require
 
 

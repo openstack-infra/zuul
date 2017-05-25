@@ -336,6 +336,7 @@ class GithubConnection(BaseConnection):
             change.files = self.getPullFileNames(project, change.number)
             change.title = event.title
             change.status = self._get_statuses(project, event.patch_number)
+            change.reviews = self.getPullReviews(project, change.number)
             change.source_event = event
         elif event.ref:
             change = Ref(project)
@@ -428,11 +429,72 @@ class GithubConnection(BaseConnection):
         log_rate_limit(self.log, self.github)
         return filenames
 
+    def getPullReviews(self, project, number):
+        owner, proj = project.name.split('/')
+
+        revs = self._getPullReviews(owner, proj, number)
+
+        reviews = []
+        for rev in revs:
+            review = {
+                'by': {
+                    'username': rev.get('user').get('login'),
+                    'email': rev.get('user').get('email'),
+                },
+                'grantedOn': rev.get('provided'),
+            }
+
+            review['type'] = rev.get('state').lower()
+
+            # Get user's rights. A user always has read to leave a review
+            review['permission'] = 'read'
+            permission = self.getRepoPermission(
+                project.name, rev.get('user').get('login'))
+            if permission == 'write':
+                review['permission'] = 'write'
+            if permission == 'admin':
+                review['permission'] = 'admin'
+
+            reviews.append(review)
+        return reviews
+
+    def _getPullReviews(self, owner, project, number):
+        # make a list out of the reviews so that we complete our
+        # API transaction
+        reviews = [review.as_dict() for review in
+                   self.github.pull_request(owner, project, number).reviews()]
+
+        log_rate_limit(self.log, self.github)
+        return reviews
+
     def getUser(self, login):
         return GithubUser(self.github, login)
 
     def getUserUri(self, login):
         return 'https://%s/%s' % (self.git_host, login)
+
+    def getRepoPermission(self, project, login):
+        owner, proj = project.split('/')
+        # This gets around a missing API call
+        # need preview header
+        headers = {'Accept': 'application/vnd.github.korra-preview'}
+
+        # Create a repo object
+        repository = self.github.repository(owner, proj)
+        # Build up a URL
+        url = repository._build_url('collaborators', login, 'permission',
+                                    base_url=repository._api)
+        # Get the data
+        perms = repository._get(url, headers=headers)
+
+        log_rate_limit(self.log, self.github)
+
+        # no known user, maybe deleted since review?
+        if perms.status_code == 404:
+            return 'none'
+
+        # get permissions from the data
+        return perms.json()['permission']
 
     def commentPull(self, project, pr_number, message):
         owner, proj = project.split('/')
