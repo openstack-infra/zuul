@@ -40,6 +40,32 @@ def linesplit(socket):
         yield buff
 
 
+def zuul_filter_result(result):
+    """Remove keys from shell/command output.
+
+    Zuul streams stdout into the log above, so including stdout and stderr
+    in the result dict that ansible displays in the logs is duplicate
+    noise. We keep stdout in the result dict so that other callback plugins
+    like ARA could also have access to it. But drop them here.
+
+    Remove changed so that we don't show a bunch of "changed" titles
+    on successful shell tasks, since that doesn't make sense from a Zuul
+    POV. The super class treats missing "changed" key as False.
+
+    Remove cmd because most of the script content where people want to
+    see the script run is run with -x. It's possible we may want to revist
+    this to be smarter about when we remove it - like, only remove it
+    if it has an embedded newline - so that for normal 'simple' uses
+    of cmd it'll echo what the command was for folks.
+    """
+
+    for key in ('changed', 'cmd',
+                'stderr', 'stderr_lines',
+                'stdout', 'stdout_lines'):
+        result.pop(key, None)
+    return result
+
+
 class CallbackModule(default.CallbackModule):
 
     '''
@@ -103,3 +129,18 @@ class CallbackModule(default.CallbackModule):
                         target=self._read_log, args=(host, ip))
                     p.daemon = True
                     p.start()
+
+    def v2_runner_on_failed(self, result, ignore_errors=False):
+        if result._task.action in ('command', 'shell'):
+            zuul_filter_result(result._result)
+        super(CallbackModule, self).v2_runner_on_failed(
+            result, ignore_errors=ignore_errors)
+
+    def v2_runner_on_ok(self, result):
+        # TODO(mordred) Showing the result dict with start, end, rc and delta
+        #               is cool and all - but we could probably just do a more
+        #               direct banner formatted nicer and not call the super
+        #               class method at all here.
+        if result._task.action in ('command', 'shell'):
+            zuul_filter_result(result._result)
+        super(CallbackModule, self).v2_runner_on_ok(result)
