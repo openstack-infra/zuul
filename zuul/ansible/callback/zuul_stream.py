@@ -157,7 +157,7 @@ class CallbackModule(default.CallbackModule):
         if result._task.loop and 'results' in result._result:
             self._process_items(result)
         else:
-            msg += "Ran in {delta} seconds. Start: {start} end: {end}".format(
+            msg += " Runtime: {delta} Start: {start} End: {end}".format(
                 **result._result)
 
         self._handle_warnings(result._result)
