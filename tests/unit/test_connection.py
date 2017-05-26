@@ -265,3 +265,21 @@ class TestMultipleGerrits(ZuulTestCase):
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
         self.waitUntilSettled()
+
+
+class TestConnectionsMerger(ZuulTestCase):
+    config_file = 'zuul-connections-merger.conf'
+    tenant_config_file = 'config/single-tenant/main.yaml'
+
+    def configure_connections(self):
+        super(TestConnectionsMerger, self).configure_connections(True)
+
+    def test_connections_merger(self):
+        "Test merger only configures source connections"
+
+        self.assertIn("gerrit", self.connections.connections)
+        self.assertIn("github", self.connections.connections)
+        self.assertNotIn("smtp", self.connections.connections)
+        self.assertNotIn("sql", self.connections.connections)
+        self.assertNotIn("timer", self.connections.connections)
+        self.assertNotIn("zuul", self.connections.connections)
