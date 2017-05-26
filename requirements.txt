@@ -2,7 +2,7 @@ pbr>=1.1.0
 
 # pull from master until https://github.com/sigmavirus24/github3.py/pull/671
 # is in a release
--e git://github.com/sigmavirus24/github3.py.git@develop#egg=Github3.py
+-e git+https://github.com/sigmavirus24/github3.py.git@develop#egg=Github3.py
 PyYAML>=3.1.0
 Paste
 WebOb>=1.2.3
