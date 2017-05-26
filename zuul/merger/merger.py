@@ -42,9 +42,12 @@ class ZuulReference(git.Reference):
 
 
 class Repo(object):
-    log = logging.getLogger("zuul.Repo")
-
-    def __init__(self, remote, local, email, username, cache_path=None):
+    def __init__(self, remote, local, email, username,
+                 cache_path=None, logger=None):
+        if logger is None:
+            self.log = logging.getLogger("zuul.Repo")
+        else:
+            self.log = logger
         self.remote_url = remote
         self.local_path = local
         self.email = email
@@ -261,10 +264,13 @@ class Repo(object):
 
 
 class Merger(object):
-    log = logging.getLogger("zuul.Merger")
-
     def __init__(self, working_root, connections, email, username,
-                 cache_root=None):
+                 cache_root=None, logger=None):
+        self.logger = logger
+        if logger is None:
+            self.log = logging.getLogger("zuul.Merger")
+        else:
+            self.log = logger
         self.repos = {}
         self.working_root = working_root
         if not os.path.exists(working_root):
@@ -300,7 +306,8 @@ class Merger(object):
                                           project_name)
             else:
                 cache_path = None
-            repo = Repo(url, path, self.email, self.username, cache_path)
+            repo = Repo(url, path, self.email, self.username, cache_path,
+                        self.logger)
 
             self.repos[key] = repo
         except Exception:
