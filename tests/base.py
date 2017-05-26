@@ -1928,7 +1928,7 @@ class ZuulTestCase(BaseTestCase):
         self.sched.reconfigure(self.config)
         self.sched.resume()
 
-    def configure_connections(self):
+    def configure_connections(self, source_only=False):
         # Set up gerrit related fakes
         # Set a changes database so multiple FakeGerrit's can report back to
         # a virtual canonical database given by the configured hostname
@@ -1971,7 +1971,7 @@ class ZuulTestCase(BaseTestCase):
 
         # Register connections from the config using fakes
         self.connections = zuul.lib.connections.ConnectionRegistry()
-        self.connections.configure(self.config)
+        self.connections.configure(self.config, source_only=source_only)
 
     def setup_config(self):
         # This creates the per-test configuration object.  It can be

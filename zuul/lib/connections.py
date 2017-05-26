@@ -105,7 +105,7 @@ class ConnectionRegistry(object):
             # The merger and the reporter only needs source driver.
             # This makes sure Reporter like the SQLDriver are only created by
             # the scheduler process
-            if source_only and not issubclass(driver, SourceInterface):
+            if source_only and not isinstance(driver, SourceInterface):
                 continue
 
             connection = driver.getConnection(con_name, con_config)
@@ -138,10 +138,11 @@ class ConnectionRegistry(object):
 
         # Create default connections for drivers which need no
         # connection information (e.g., 'timer' or 'zuul').
-        for driver in self.drivers.values():
-            if not hasattr(driver, 'getConnection'):
-                connections[driver.name] = DefaultConnection(
-                    driver, driver.name, {})
+        if not source_only:
+            for driver in self.drivers.values():
+                if not hasattr(driver, 'getConnection'):
+                    connections[driver.name] = DefaultConnection(
+                        driver, driver.name, {})
 
         self.connections = connections
 
