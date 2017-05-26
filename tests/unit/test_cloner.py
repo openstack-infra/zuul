@@ -20,7 +20,6 @@ import os
 import shutil
 import time
 from unittest import skip
-import six
 
 import git
 
@@ -29,33 +28,40 @@ import zuul.lib.cloner
 from tests.base import ZuulTestCase, simple_layout
 
 
-def make_state(present, absent):
-    return (present, absent)
-
-
 class TestCloner(ZuulTestCase):
     tenant_config_file = 'config/single-tenant/main.yaml'
 
     log = logging.getLogger("zuul.test.cloner")
 
     def assertRepoState(self, repo, state, project, build, number):
-        if isinstance(state, six.string_types):
-            self.assertEquals(state,
+        if 'branch' in state:
+            self.assertFalse(repo.head.is_detached,
+                             'Project %s commit for build %s #%s should '
+                             'not have a detached HEAD' % (
+                                 project, build, number))
+            self.assertEquals(repo.active_branch.name,
+                              state['branch'],
+                              'Project %s commit for build %s #%s should '
+                              'be on the correct branch' % (
+                                  project, build, number))
+        if 'commit' in state:
+            self.assertEquals(state['commit'],
                               str(repo.commit('HEAD')),
                               'Project %s commit for build %s #%s should '
                               'be correct' % (
                                   project, build, number))
-        else:
-            ref = repo.commit('HEAD')
-            repo_messages = set(
-                [c.message.strip() for c in repo.iter_commits(ref)])
-            for change in state[0]:
+        ref = repo.commit('HEAD')
+        repo_messages = set(
+            [c.message.strip() for c in repo.iter_commits(ref)])
+        if 'present' in state:
+            for change in state['present']:
                 msg = '%s-1' % change.subject
                 self.assertTrue(msg in repo_messages,
                                 'Project %s for build %s #%s should '
                                 'have change %s' % (
                                     project, build, number, change.subject))
-            for change in state[1]:
+        if 'absent' in state:
+            for change in state['absent']:
                 msg = '%s-1' % change.subject
                 self.assertTrue(msg not in repo_messages,
                                 'Project %s for build %s #%s should '
@@ -166,11 +172,12 @@ class TestCloner(ZuulTestCase):
 
         upstream = self.getUpstreamRepos(projects)
         states = [
-            {p1: make_state(present=[A], absent=[B]),
-             p2: str(upstream[p2].commit('master')),
+            {p1: dict(present=[A], absent=[B], branch='master'),
+             p2: dict(commit=str(upstream[p2].commit('master')),
+                      branch='master'),
              },
-            {p1: make_state(present=[A], absent=[B]),
-             p2: make_state(present=[B], absent=[A]),
+            {p1: dict(present=[A], absent=[B], branch='master'),
+             p2: dict(present=[B], absent=[A], branch='master'),
              },
         ]
 
@@ -216,20 +223,27 @@ class TestCloner(ZuulTestCase):
 
         upstream = self.getUpstreamRepos(projects)
         states = [
-            {p1: make_state(present=[A], absent=[B, C]),
-             p2: str(upstream[p2].commit('master')),
-             p3: str(upstream[p3].commit('master')),
-             p4: str(upstream[p4].commit('master')),
+            {p1: dict(present=[A], absent=[B, C], branch='master'),
+             p2: dict(commit=str(upstream[p2].commit('master')),
+                      branch='master'),
+             p3: dict(commit=str(upstream[p3].commit('master')),
+                      branch='master'),
+             p4: dict(commit=str(upstream[p4].commit('master')),
+                      branch='master'),
              },
-            {p1: make_state(present=[A], absent=[B, C]),
-             p2: make_state(present=[B], absent=[A, C]),
-             p3: str(upstream[p3].commit('master')),
-             p4: str(upstream[p4].commit('stable/havana')),
+            {p1: dict(present=[A], absent=[B, C], branch='master'),
+             p2: dict(present=[B], absent=[A, C], branch='stable/havana'),
+             p3: dict(commit=str(upstream[p3].commit('master')),
+                      branch='master'),
+             p4: dict(commit=str(upstream[p4].commit('stable/havana')),
+                      branch='stable/havana'),
              },
-            {p1: make_state(present=[A], absent=[B, C]),
-             p2: str(upstream[p2].commit('master')),
-             p3: make_state(present=[C], absent=[A, B]),
-             p4: str(upstream[p4].commit('master')),
+            {p1: dict(present=[A], absent=[B, C], branch='master'),
+             p2: dict(commit=str(upstream[p2].commit('master')),
+                      branch='master'),
+             p3: dict(present=[C], absent=[A, B], branch='master'),
+             p4: dict(commit=str(upstream[p4].commit('master')),
+                      branch='master'),
              },
         ]
 
