@@ -263,13 +263,15 @@ class GithubEventFilter(EventFilter, GithubCommonFilter):
 
 
 class GithubRefFilter(RefFilter, GithubCommonFilter):
-    def __init__(self, statuses=[], required_reviews=[], open=None):
+    def __init__(self, statuses=[], required_reviews=[], open=None,
+                 current_patchset=None):
         RefFilter.__init__(self)
 
         GithubCommonFilter.__init__(self, required_reviews=required_reviews,
                                     required_statuses=statuses)
         self.statuses = statuses
         self.open = open
+        self.current_patchset = current_patchset
 
     def __repr__(self):
         ret = '<GithubRefFilter'
@@ -281,6 +283,8 @@ class GithubRefFilter(RefFilter, GithubCommonFilter):
                     str(self.required_reviews))
         if self.open:
             ret += ' open: %s' % self.open
+        if self.current_patchset:
+            ret += ' current-patchset: %s' % self.current_patchset
 
         ret += '>'
 
@@ -292,6 +296,10 @@ class GithubRefFilter(RefFilter, GithubCommonFilter):
 
         if self.open is not None:
             if self.open != change.open:
+                return False
+
+        if self.current_patchset is not None:
+            if self.current_patchset != change.is_current_patchset:
                 return False
 
         # required reviews are ANDed

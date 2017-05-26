@@ -996,8 +996,12 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         owner, proj = project.split('/')
         for pr in self.pull_requests:
             pr_owner, pr_project = pr.project.split('/')
+            # This is somewhat risky, if the same commit exists in multiple
+            # PRs, we might grab the wrong one that doesn't have a status
+            # that is expected to be there. Maybe re-work this so that there
+            # is a global registry of commit statuses like with github.
             if (pr_owner == owner and pr_project == proj and
-                pr.head_sha == sha):
+                sha in pr.statuses):
                 return pr.statuses[sha]
 
     def setCommitStatus(self, project, sha, state,

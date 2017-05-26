@@ -307,3 +307,22 @@ class TestGithubRequirements(ZuulTestCase):
         self.waitUntilSettled()
         # PR is closed, should not trigger
         self.assertEqual(len(self.history), 1)
+
+    @simple_layout('layouts/requirements-github.yaml', driver='github')
+    def test_require_current(self):
+
+        A = self.fake_github.openFakePullRequest('org/project9', 'master', 'A')
+        # A sync event that we will keep submitting to trigger
+        sync = A.getPullRequestSynchronizeEvent()
+        self.fake_github.emitEvent(sync)
+        self.waitUntilSettled()
+
+        # PR head is current should enqueue
+        self.assertEqual(len(self.history), 1)
+
+        # Add a commit to the PR, re-issue the original comment event
+        A.addCommit()
+        self.fake_github.emitEvent(sync)
+        self.waitUntilSettled()
+        # Event hash is not current, should not trigger
+        self.assertEqual(len(self.history), 1)
