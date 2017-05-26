@@ -2064,6 +2064,8 @@ class ZuulTestCase(BaseTestCase):
 
     def shutdown(self):
         self.log.debug("Shutting down after tests")
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.executor_client.stop()
         self.merge_client.stop()
         self.executor_server.stop()
