@@ -1,6 +1,6 @@
-pipelines:
-  - name: check
-    manager: IndependentPipelineManager
+- pipeline:
+    name: check
+    manager: independent
     trigger:
       gerrit:
         - event: patchset-created
@@ -11,15 +11,17 @@ pipelines:
       gerrit:
         verified: -1
 
-  - name: post
-    manager: IndependentPipelineManager
+- pipeline:
+    name: post
+    manager: independent
     trigger:
       gerrit:
         - event: ref-updated
           ref: ^(?!refs/).*$
 
-  - name: gate
-    manager: DependentPipelineManager
+- pipeline:
+    name: gate
+    manager: dependent
     failure-message: Build failed.  For information on how to proceed, see http://wiki.example.org/Test_Failures
     merge-failure-message: "The merge failed! For more information..."
     trigger:
@@ -44,13 +46,29 @@ pipelines:
         verified: 0
     precedence: high
 
-projects:
-  - name: org/project
+- job:
+    name: project-merge
+    hold-following-changes: true
+
+- job:
+    name: project-test1
+
+- job:
+    name: project-test2
+
+- project:
+    name: org/project
     check:
-      - project-merge:
-        - project-test1
-        - project-test2
+      jobs:
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
     gate:
-      - project-merge:
-        - project-test1
-        - project-test2
+      jobs:
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
