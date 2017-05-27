@@ -1384,9 +1384,9 @@ class FakeGearmanServer(gear.Server):
                 len(self.low_queue))
         self.log.debug("releasing queued job %s (%s)" % (regex, qlen))
         for job in self.getQueue():
-            if job.name != 'executor:execute':
+            if job.name != b'executor:execute':
                 continue
-            parameters = json.loads(job.arguments)
+            parameters = json.loads(job.arguments.decode('utf8'))
             if not regex or re.match(regex, parameters.get('job')):
                 self.log.debug("releasing queued job %s" %
                                job.unique)
