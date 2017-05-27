@@ -72,7 +72,7 @@ class GithubWebhookListener():
 
         if event:
             event.project_hostname = self.connection.canonical_hostname
-            self.log.debug('Scheduling github event: {0}'.format(event.type))
+            self.connection.logEvent(event)
             self.connection.sched.addEvent(event)
 
     def _event_push(self, request):

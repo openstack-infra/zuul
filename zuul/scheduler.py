@@ -256,11 +256,6 @@ class Scheduler(threading.Thread):
 
     def addEvent(self, event):
         self.log.debug("Adding trigger event: %s" % event)
-        try:
-            if self.statsd:
-                self.statsd.incr('gerrit.event.%s' % event.type)
-        except:
-            self.log.exception("Exception reporting event stats")
         self.trigger_event_queue.put(event)
         self.wake_event.set()
         self.log.debug("Done adding trigger event: %s" % event)

@@ -143,6 +143,7 @@ class GerritEventConnector(threading.Thread):
             self.connection._getChange(event.change_number,
                                        event.patch_number,
                                        refresh=True)
+        self.connection.logEvent(event)
         self.connection.sched.addEvent(event)
 
     def run(self):

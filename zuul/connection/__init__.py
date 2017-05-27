@@ -14,6 +14,7 @@
 
 import abc
 
+import extras
 import six
 
 
@@ -43,6 +44,26 @@ class BaseConnection(object):
         self.driver = driver
         self.connection_name = connection_name
         self.connection_config = connection_config
+        self.statsd = extras.try_import('statsd.statsd')
+
+    def logEvent(self, event):
+        self.log.debug(
+            'Scheduling {driver} event from {connection}: {event}'.format(
+                driver=self.driver.name,
+                connection=self.connection_name,
+                event=event.type))
+        try:
+            if self.statsd:
+                self.statsd.incr(
+                    'zuul.event.{driver}.{event}'.format(
+                        driver=self.driver.name, event=event.type))
+                self.statsd.incr(
+                    'zuul.event.{driver}.{connection}.{event}'.format(
+                        driver=self.driver.name,
+                        connection=self.connection_name,
+                        event=event.type))
+        except:
+            self.log.exception("Exception reporting event stats")
 
     def onLoad(self):
         pass
