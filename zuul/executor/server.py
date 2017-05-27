@@ -803,17 +803,6 @@ class AnsibleJob(object):
             'worker_name': 'My Worker',
         }
 
-        # TODOv3:
-        # 'name': self.name,
-        # 'manager': self.executor_server.hostname,
-        # 'worker_name': 'My Worker',
-        # 'worker_hostname': 'localhost',
-        # 'worker_ips': ['127.0.0.1', '192.168.1.1'],
-        # 'worker_fqdn': 'zuul.example.org',
-        # 'worker_program': 'FakeBuilder',
-        # 'worker_version': 'v1.1',
-        # 'worker_extra': {'something': 'else'}
-
         self.job.sendWorkData(json.dumps(data))
         self.job.sendWorkStatus(0, 100)
 

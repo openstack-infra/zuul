@@ -3333,7 +3333,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(queue.window_floor, 1)
         self.assertEqual(C.data['status'], 'MERGED')
 
-    @skip("Disabled for early v3 development")
     def test_worker_update_metadata(self):
         "Test if a worker can send back metadata about itself"
         self.executor_server.hold_jobs_in_build = True
@@ -3343,17 +3342,17 @@ class TestScheduler(ZuulTestCase):
         self.fake_gerrit.addEvent(A.addApproval('approved', 1))
         self.waitUntilSettled()
 
-        self.assertEqual(len(self.executor.builds), 1)
+        self.assertEqual(len(self.executor_client.builds), 1)
 
         self.log.debug('Current builds:')
-        self.log.debug(self.executor.builds)
+        self.log.debug(self.executor_client.builds)
 
         start = time.time()
         while True:
             if time.time() - start > 10:
                 raise Exception("Timeout waiting for gearman server to report "
                                 + "back to the client")
-            build = list(self.executor.builds.values())[0]
+            build = list(self.executor_client.builds.values())[0]
             if build.worker.name == "My Worker":
                 break
             else:
@@ -3361,12 +3360,6 @@ class TestScheduler(ZuulTestCase):
 
         self.log.debug(build)
         self.assertEqual("My Worker", build.worker.name)
-        self.assertEqual("localhost", build.worker.hostname)
-        self.assertEqual(['127.0.0.1', '192.168.1.1'], build.worker.ips)
-        self.assertEqual("zuul.example.org", build.worker.fqdn)
-        self.assertEqual("FakeBuilder", build.worker.program)
-        self.assertEqual("v1.1", build.worker.version)
-        self.assertEqual({'something': 'else'}, build.worker.extra)
 
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
@@ -3563,7 +3556,7 @@ For CI problems and help debugging, contact ci@example.org"""
                 self.assertEqual(False, job['retry'])
                 self.assertEqual('https://server/job/project-merge/0/',
                                  job['url'])
-                self.assertEqual(7, len(job['worker']))
+                self.assertEqual(2, len(job['worker']))
                 self.assertEqual(False, job['canceled'])
                 self.assertEqual(True, job['voting'])
                 self.assertIsNone(job['result'])
