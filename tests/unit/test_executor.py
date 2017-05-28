@@ -18,6 +18,9 @@
 import logging
 import time
 
+import zuul.executor.server
+import zuul.model
+
 from tests.base import ZuulTestCase, simple_layout
 
 
@@ -305,3 +308,27 @@ class TestExecutorRepos(ZuulTestCase):
         ]
 
         self.assertBuildStates(states, projects)
+
+
+class TestAnsibleJob(ZuulTestCase):
+    tenant_config_file = 'config/ansible/main.yaml'
+
+    def setUp(self):
+        super(TestAnsibleJob, self).setUp()
+        job = zuul.model.Job('test')
+        job.unique = 'test'
+        self.test_job = zuul.executor.server.AnsibleJob(self.executor_server,
+                                                        job)
+
+    def test_getHostList_host_keys(self):
+        # Test without ssh_port set
+        node = {'name': 'fake-host',
+                'host_keys': ['fake-host-key'],
+                'interface_ip': 'localhost'}
+        keys = self.test_job.getHostList({'nodes': [node]})[0]['host_keys']
+        self.assertEqual(keys[0], 'localhost fake-host-key')
+
+        # Test with custom ssh_port set
+        node['ssh_port'] = 22022
+        keys = self.test_job.getHostList({'nodes': [node]})[0]['host_keys']
+        self.assertEqual(keys[0], '[localhost]:22022 fake-host-key')
