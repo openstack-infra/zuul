@@ -6,17 +6,17 @@
       gerrit:
         - event: comment-added
           approval:
-            - approved: 1
+            - Approved: 1
     start:
       gerrit:
-        verified: 0
+        Verified: 0
     success:
       gerrit:
-        verified: 2
+        Verified: 2
         submit: true
     failure:
       gerrit:
-        verified: -2
+        Verified: -2
     window: 2
     window-floor: 1
     window-increase-type: linear

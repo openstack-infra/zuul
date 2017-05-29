@@ -6,12 +6,12 @@
         - event: patchset-created
     success:
       gerrit:
-        verified: 1
+        Verified: 1
       resultsdb:
         score: 1
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
       resultsdb:
         score: -1
       resultsdb_failures:

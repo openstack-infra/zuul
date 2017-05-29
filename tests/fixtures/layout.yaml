@@ -11,10 +11,10 @@ pipelines:
         - event: patchset-created
     success:
       gerrit:
-        verified: 1
+        Verified: 1
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
 
   - name: post
     manager: independent
@@ -34,17 +34,17 @@ pipelines:
       gerrit:
         - event: comment-added
           approval:
-            - approved: 1
+            - Approved: 1
     success:
       gerrit:
-        verified: 2
+        Verified: 2
         submit: true
     failure:
       gerrit:
-        verified: -2
+        Verified: -2
     start:
       gerrit:
-        verified: 0
+        Verified: 0
     precedence: high
 
   - name: unused
@@ -56,7 +56,7 @@ pipelines:
       gerrit:
         - event: comment-added
           approval:
-            - approved: 1
+            - Approved: 1
 
   - name: dup1
     manager: independent
@@ -67,10 +67,10 @@ pipelines:
         - event: change-restored
     success:
       gerrit:
-        verified: 1
+        Verified: 1
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
 
   - name: dup2
     manager: independent
@@ -81,10 +81,10 @@ pipelines:
         - event: change-restored
     success:
       gerrit:
-        verified: 1
+        Verified: 1
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
 
   - name: conflict
     manager: dependent
@@ -95,17 +95,17 @@ pipelines:
       gerrit:
         - event: comment-added
           approval:
-            - approved: 1
+            - Approved: 1
     success:
       gerrit:
-        verified: 2
+        Verified: 2
         submit: true
     failure:
       gerrit:
-        verified: -2
+        Verified: -2
     start:
       gerrit:
-        verified: 0
+        Verified: 0
 
   - name: experimental
     manager: independent

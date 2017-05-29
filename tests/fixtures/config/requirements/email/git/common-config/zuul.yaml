@@ -6,10 +6,10 @@
         - event: comment-added
     success:
       gerrit:
-        verified: 1
+        Verified: 1
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
     require:
       gerrit:
         approval:
@@ -25,10 +25,10 @@
             - email: jenkins@example.com
     success:
       gerrit:
-        verified: 1
+        Verified: 1
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
 
 - job:
     name: project1-job
