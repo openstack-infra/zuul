@@ -154,6 +154,20 @@
       github:
         comment: true
 
+- pipeline:
+    name: require_current
+    manager: independent
+    require:
+      github:
+        current-patchset: true
+    trigger:
+      github:
+        - event: pull_request
+          action: changed
+    success:
+      github:
+        comment: true
+
 - job:
     name: project1-pipeline
 - job:
@@ -170,6 +184,8 @@
     name: project7-olderthan
 - job:
     name: project8-requireopen
+- job:
+    name: project9-requirecurrent
 
 - project:
     name: org/project1
@@ -221,3 +237,9 @@
     require_open:
       jobs:
         - project8-requireopen
+
+- project:
+    name: org/project9
+    require_current:
+      jobs:
+        - project9-requirecurrent

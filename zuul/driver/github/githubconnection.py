@@ -480,6 +480,9 @@ class GithubConnection(BaseConnection):
             change.reviews = self.getPullReviews(project, change.number)
             change.source_event = event
             change.open = self.getPullOpen(project, change.number)
+            change.is_current_patchset = self.getIsCurrent(project,
+                                                           change.number,
+                                                           event.patch_number)
         elif event.ref:
             change = Ref(project)
             change.ref = event.ref
@@ -720,6 +723,10 @@ class GithubConnection(BaseConnection):
     def getPullOpen(self, project, number):
         pr = self.getPull(project, number)
         return pr.get('state') == 'open'
+
+    def getIsCurrent(self, project, number, sha):
+        pr = self.getPull(project, number)
+        return pr.get('head').get('sha') == sha
 
     def _ghTimestampToDate(self, timestamp):
         return time.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
