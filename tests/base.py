@@ -565,6 +565,7 @@ class FakeGithubPullRequest(object):
         self.head_sha = None
         self.is_merged = False
         self.merge_message = None
+        self.state = 'open'
         self._createPRRef()
         self._addCommitToRepo(files=files)
         self._updateTimeStamp()
@@ -921,6 +922,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
                 'ref': pr.branch,
             },
             'mergeable': True,
+            'state': pr.state,
             'head': {
                 'sha': pr.head_sha,
                 'repo': {

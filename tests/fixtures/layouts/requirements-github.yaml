@@ -139,6 +139,21 @@
       github:
         comment: true
 
+- pipeline:
+    name: require_open
+    manager: independent
+    require:
+      github:
+        open: true
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: 'test me'
+    success:
+      github:
+        comment: true
+
 - job:
     name: project1-pipeline
 - job:
@@ -153,6 +168,8 @@
     name: project6-newerthan
 - job:
     name: project7-olderthan
+- job:
+    name: project8-requireopen
 
 - project:
     name: org/project1
@@ -198,3 +215,9 @@
     older_than:
       jobs:
         - project7-olderthan
+
+- project:
+    name: org/project8
+    require_open:
+      jobs:
+        - project8-requireopen

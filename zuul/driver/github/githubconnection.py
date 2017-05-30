@@ -479,6 +479,7 @@ class GithubConnection(BaseConnection):
             change.status = self._get_statuses(project, event.patch_number)
             change.reviews = self.getPullReviews(project, change.number)
             change.source_event = event
+            change.open = self.getPullOpen(project, change.number)
         elif event.ref:
             change = Ref(project)
             change.ref = event.ref
@@ -715,6 +716,10 @@ class GithubConnection(BaseConnection):
         pull_request = github.issue(owner, proj, pr_number)
         pull_request.remove_label(label)
         log_rate_limit(self.log, github)
+
+    def getPullOpen(self, project, number):
+        pr = self.getPull(project, number)
+        return pr.get('state') == 'open'
 
     def _ghTimestampToDate(self, timestamp):
         return time.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
