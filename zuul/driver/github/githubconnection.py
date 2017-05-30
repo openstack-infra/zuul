@@ -18,6 +18,8 @@ import hmac
 import hashlib
 import time
 
+import cachecontrol
+from cachecontrol.cache import DictCache
 import webob
 import webob.dec
 import voluptuous as v
@@ -291,6 +293,13 @@ class GithubConnection(BaseConnection):
             'canonical_hostname', self.git_host)
         self.source = driver.getSource(self)
 
+        # NOTE(jamielennox): Better here would be to cache to memcache or file
+        # or something external - but zuul already sucks at restarting so in
+        # memory probably doesn't make this much worse.
+        self.cache_adapter = cachecontrol.CacheControlAdapter(
+            DictCache(),
+            cache_etags=True)
+
     def onLoad(self):
         webhook_listener = GithubWebhookListener(self)
         self.registerHttpHandler(self.payload_path,
@@ -309,6 +318,10 @@ class GithubConnection(BaseConnection):
             else:
                 self.github = github3.login(token=token)
             self.log.info("Github API Authentication successful.")
+
+            # anything going through requests to http/s goes through cache
+            self.github.session.mount('http://', self.cache_adapter)
+            self.github.session.mount('https://', self.cache_adapter)
         else:
             self.github = None
             self.log.info(
