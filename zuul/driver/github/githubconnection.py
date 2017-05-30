@@ -91,17 +91,24 @@ class GithubWebhookListener():
             raise webob.exc.HTTPBadRequest(message)
 
         try:
-            event = method(request)
+            json_body = request.json_body
+        except:
+            message = 'Exception deserializing JSON body'
+            self.log.exception(message)
+            raise webob.exc.HTTPBadRequest(message)
+
+        try:
+            event = method(json_body)
         except:
             self.log.exception('Exception when handling event:')
+            event = None
 
         if event:
             event.project_hostname = self.connection.canonical_hostname
             self.log.debug('Scheduling github event: {0}'.format(event.type))
             self.connection.sched.addEvent(event)
 
-    def _event_push(self, request):
-        body = request.json_body
+    def _event_push(self, body):
         base_repo = body.get('repository')
 
         event = GithubTriggerEvent()
@@ -121,8 +128,7 @@ class GithubWebhookListener():
 
         return event
 
-    def _event_pull_request(self, request):
-        body = request.json_body
+    def _event_pull_request(self, body):
         action = body.get('action')
         pr_body = body.get('pull_request')
 
@@ -149,9 +155,8 @@ class GithubWebhookListener():
 
         return event
 
-    def _event_issue_comment(self, request):
+    def _event_issue_comment(self, body):
         """Handles pull request comments"""
-        body = request.json_body
         action = body.get('action')
         if action != 'created':
             return
@@ -169,9 +174,8 @@ class GithubWebhookListener():
         event.action = 'comment'
         return event
 
-    def _event_pull_request_review(self, request):
+    def _event_pull_request_review(self, body):
         """Handles pull request reviews"""
-        body = request.json_body
         pr_body = body.get('pull_request')
         if pr_body is None:
             return
@@ -187,8 +191,7 @@ class GithubWebhookListener():
         event.action = body.get('action')
         return event
 
-    def _event_status(self, request):
-        body = request.json_body
+    def _event_status(self, body):
         action = body.get('action')
         if action == 'pending':
             return
