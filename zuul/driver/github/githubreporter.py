@@ -18,6 +18,7 @@ import time
 
 from zuul.reporter import BaseReporter
 from zuul.exceptions import MergeFailure
+from zuul.driver.util import scalar_or_list
 
 
 class GithubReporter(BaseReporter):
@@ -154,14 +155,11 @@ class GithubReporter(BaseReporter):
 
 
 def getSchema():
-    def toList(x):
-        return v.Any([x], x)
-
     github_reporter = v.Schema({
         'status': v.Any('pending', 'success', 'failure'),
         'comment': bool,
         'merge': bool,
-        'label': toList(str),
-        'unlabel': toList(str)
+        'label': scalar_or_list(str),
+        'unlabel': scalar_or_list(str)
     })
     return github_reporter
