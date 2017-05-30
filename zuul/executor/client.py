@@ -286,21 +286,28 @@ class ExecutorClient(object):
                 params['vars'][secret.name] = copy.deepcopy(secret.secret_data)
         params['vars']['zuul'] = zuul_params
         projects = set()
+
+        def make_project_dict(project):
+            project_config = item.current_build_set.layout.project_configs.get(
+                project.canonical_name, None)
+            if project_config:
+                project_default_branch = project_config.default_branch
+            else:
+                project_default_branch = 'master'
+            connection = project.source.connection
+            return dict(connection=connection.connection_name,
+                        name=project.name,
+                        default_branch=project_default_branch)
+
         if job.repos:
             for repo in job.repos:
                 (trusted, project) = tenant.getProject(repo)
-                connection = project.source.connection
-                params['projects'].append(
-                    dict(connection=connection.connection_name,
-                         name=project.name))
+                params['projects'].append(make_project_dict(project))
                 projects.add(project)
         for item in all_items:
             if item.change.project not in projects:
                 project = item.change.project
-                connection = item.change.project.source.connection
-                params['projects'].append(
-                    dict(connection=connection.connection_name,
-                         name=project.name))
+                params['projects'].append(make_project_dict(project))
                 projects.add(project)
 
         build = Build(job, uuid)

@@ -1944,6 +1944,7 @@ class ProjectConfig(object):
     def __init__(self, name):
         self.name = name
         self.merge_mode = None
+        self.default_branch = None
         self.pipelines = {}
         self.private_key_file = None
 
