@@ -97,6 +97,20 @@ class GithubWebhookListener():
             self.log.exception(message)
             raise webob.exc.HTTPBadRequest(message)
 
+        # If there's any installation mapping information in the body then
+        # update the project mapping before any requests are made.
+        installation_id = json_body.get('installation', {}).get('id')
+        project_name = json_body.get('repository', {}).get('full_name')
+
+        if installation_id and project_name:
+            old_id = self.connection.installation_map.get(project_name)
+
+            if old_id and old_id != installation_id:
+                msg = "Unexpected installation_id change for %s. %d -> %d."
+                self.log.warning(msg, project_name, old_id, installation_id)
+
+            self.connection.installation_map[project_name] = installation_id
+
         try:
             event = method(json_body)
         except:
@@ -320,9 +334,9 @@ class GithubConnection(BaseConnection):
         self._github = None
         self.app_id = None
         self.app_key = None
-        self.installation_id = None
-        self.installation_token = None
-        self.installation_expiry = None
+
+        self.installation_map = {}
+        self.installation_token_cache = {}
 
         # NOTE(jamielennox): Better here would be to cache to memcache or file
         # or something external - but zuul already sucks at restarting so in
@@ -360,9 +374,9 @@ class GithubConnection(BaseConnection):
         app_id = config.get('app_id')
         app_key = None
         app_key_file = config.get('app_key')
-        installation_id = config.get('installation_id')
 
         self._github = self._createGithubClient()
+
         if api_token:
             self._github.login(token=api_token)
 
@@ -380,20 +394,22 @@ class GithubConnection(BaseConnection):
 
         if app_id:
             self.app_id = int(app_id)
-        if installation_id:
-            self.installation_id = int(installation_id)
         if app_key:
             self.app_key = app_key
 
-    def _get_installation_key(self, user_id=None):
-        if not (self.installation_id and self.app_id):
-            return None
+    def _get_installation_key(self, project, user_id=None):
+        installation_id = self.installation_map.get(project)
+
+        if not installation_id:
+            self.log.error("No installation ID available for project %s",
+                           project)
+            return ''
 
         now = datetime.datetime.now(utc)
+        token, expiry = self.installation_token_cache.get(installation_id,
+                                                          (None, None))
 
-        if ((not self.installation_expiry) or
-                (not self.installation_token) or
-                (now < self.installation_expiry)):
+        if ((not expiry) or (not token) or (now >= expiry)):
             expiry = now + datetime.timedelta(minutes=5)
 
             data = {'iat': now, 'exp': expiry, 'iss': self.app_id}
@@ -401,7 +417,7 @@ class GithubConnection(BaseConnection):
                                    self.app_key,
                                    algorithm='RS256')
 
-            url = ACCESS_TOKEN_URL % self.installation_id
+            url = ACCESS_TOKEN_URL % installation_id
             headers = {'Accept': PREVIEW_JSON_ACCEPT,
                        'Authorization': 'Bearer %s' % app_token}
             json_data = {'user_id': user_id} if user_id else None
@@ -411,20 +427,29 @@ class GithubConnection(BaseConnection):
 
             data = response.json()
 
-            self.installation_expiry = iso8601.parse_date(data['expires_at'])
-            self.installation_expiry -= datetime.timedelta(minutes=5)
-            self.installation_token = data['token']
+            expiry = iso8601.parse_date(data['expires_at'])
+            expiry -= datetime.timedelta(minutes=2)
+            token = data['token']
 
-        return self.installation_token
+            self.installation_token_cache[installation_id] = (token, expiry)
 
-    def getGithubClient(self):
-        # if we're using api_key authentication then we don't need to fetch
-        # new installation tokens so return the existing one.
-        installation_key = self._get_installation_key()
+        return token
 
-        if installation_key:
-            self._github.login(token=installation_key)
+    def getGithubClient(self,
+                        project=None,
+                        user_id=None,
+                        use_app=True):
+        # if you're authenticating for a project and you're an integration then
+        # you need to use the installation specific token. There are some
+        # operations that are not yet supported by integrations so
+        # use_app lets you use api_key auth.
+        if use_app and project and self.app_id:
+            github = self._createGithubClient()
+            github.login(token=self._get_installation_key(project, user_id))
+            return github
 
+        # if we're using api_key authentication then this is already token
+        # authenticated, if not then anonymous is the best we have.
         return self._github
 
     def maintainCache(self, relevant):
@@ -465,8 +490,8 @@ class GithubConnection(BaseConnection):
         if self.git_ssh_key:
             return 'ssh://git@%s/%s.git' % (self.git_host, project)
 
-        installation_key = self._get_installation_key()
-        if installation_key:
+        if self.app_id:
+            installation_key = self._get_installation_key(project)
             return 'https://x-access-token:%s@%s/%s' % (installation_key,
                                                         self.git_host,
                                                         project)
@@ -497,7 +522,7 @@ class GithubConnection(BaseConnection):
         return '%s/pull/%s' % (self.getGitwebUrl(project), number)
 
     def getPull(self, project_name, number):
-        github = self.getGithubClient()
+        github = self.getGithubClient(project_name)
         owner, proj = project_name.split('/')
         pr = github.pull_request(owner, proj, number).as_dict()
         log_rate_limit(self.log, github)
@@ -521,7 +546,7 @@ class GithubConnection(BaseConnection):
         pulls = []
         github = self.getGithubClient()
         for issue in github.search_issues(query=query):
-            pr_url = issue.pull_request.get('url')
+            pr_url = issue.issue.pull_request().as_dict().get('url')
             if not pr_url:
                 continue
             # the issue provides no good description of the project :\
@@ -543,7 +568,7 @@ class GithubConnection(BaseConnection):
         return pulls.pop()
 
     def getPullFileNames(self, project, number):
-        github = self.getGithubClient()
+        github = self.getGithubClient(project)
         owner, proj = project.name.split('/')
         filenames = [f.filename for f in
                      github.pull_request(owner, proj, number).files()]
@@ -592,7 +617,10 @@ class GithubConnection(BaseConnection):
     def _getPullReviews(self, owner, project, number):
         # make a list out of the reviews so that we complete our
         # API transaction
-        github = self.getGithubClient()
+        # reviews are not yet supported by integrations, use api_key:
+        # https://platform.github.community/t/api-endpoint-for-pr-reviews/409
+        github = self.getGithubClient("%s/%s" % (owner, project),
+                                      use_app=False)
         reviews = [review.as_dict() for review in
                    github.pull_request(owner, project, number).reviews()]
 
@@ -606,7 +634,7 @@ class GithubConnection(BaseConnection):
         return 'https://%s/%s' % (self.git_host, login)
 
     def getRepoPermission(self, project, login):
-        github = self.getGithubClient()
+        github = self.getGithubClient(project)
         owner, proj = project.split('/')
         # This gets around a missing API call
         # need preview header
@@ -630,7 +658,7 @@ class GithubConnection(BaseConnection):
         return perms.json()['permission']
 
     def commentPull(self, project, pr_number, message):
-        github = self.getGithubClient()
+        github = self.getGithubClient(project)
         owner, proj = project.split('/')
         repository = github.repository(owner, proj)
         pull_request = repository.issue(pr_number)
@@ -638,7 +666,7 @@ class GithubConnection(BaseConnection):
         log_rate_limit(self.log, github)
 
     def mergePull(self, project, pr_number, commit_message='', sha=None):
-        github = self.getGithubClient()
+        github = self.getGithubClient(project)
         owner, proj = project.split('/')
         pull_request = github.pull_request(owner, proj, pr_number)
         try:
@@ -651,7 +679,7 @@ class GithubConnection(BaseConnection):
             raise Exception('Pull request was not merged')
 
     def getCommitStatuses(self, project, sha):
-        github = self.getGithubClient()
+        github = self.getGithubClient(project)
         owner, proj = project.split('/')
         repository = github.repository(owner, proj)
         commit = repository.commit(sha)
@@ -664,21 +692,21 @@ class GithubConnection(BaseConnection):
 
     def setCommitStatus(self, project, sha, state, url='', description='',
                         context=''):
-        github = self.getGithubClient()
+        github = self.getGithubClient(project)
         owner, proj = project.split('/')
         repository = github.repository(owner, proj)
         repository.create_status(sha, state, url, description, context)
         log_rate_limit(self.log, github)
 
     def labelPull(self, project, pr_number, label):
-        github = self.getGithubClient()
+        github = self.getGithubClient(project)
         owner, proj = project.split('/')
         pull_request = github.issue(owner, proj, pr_number)
         pull_request.add_labels(label)
         log_rate_limit(self.log, github)
 
     def unlabelPull(self, project, pr_number, label):
-        github = self.getGithubClient()
+        github = self.getGithubClient(project)
         owner, proj = project.split('/')
         pull_request = github.issue(owner, proj, pr_number)
         pull_request.remove_label(label)
