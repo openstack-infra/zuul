@@ -1,0 +1,5 @@
+- hosts: all
+  tasks:
+    - shell: |+
+        echo "I am broken"
+        exit 1

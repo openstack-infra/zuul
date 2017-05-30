@@ -15,3 +15,4 @@
         - check-vars
         - timeout
         - hello-world
+        - failpost

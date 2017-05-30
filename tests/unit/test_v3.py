@@ -431,38 +431,51 @@ class TestAnsible(AnsibleZuulTestCase):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
-        build = self.getJobFromHistory('timeout')
-        self.assertEqual(build.result, 'TIMED_OUT')
-        build = self.getJobFromHistory('faillocal')
-        self.assertEqual(build.result, 'FAILURE')
-        build = self.getJobFromHistory('check-vars')
-        self.assertEqual(build.result, 'SUCCESS')
-        build = self.getJobFromHistory('hello-world')
-        self.assertEqual(build.result, 'SUCCESS')
-        build = self.getJobFromHistory('python27')
-        self.assertEqual(build.result, 'SUCCESS')
-        flag_path = os.path.join(self.test_root, build.uuid + '.flag')
+        build_timeout = self.getJobFromHistory('timeout')
+        self.assertEqual(build_timeout.result, 'TIMED_OUT')
+        build_faillocal = self.getJobFromHistory('faillocal')
+        self.assertEqual(build_faillocal.result, 'FAILURE')
+        build_failpost = self.getJobFromHistory('failpost')
+        self.assertEqual(build_failpost.result, 'POST_FAILURE')
+        build_check_vars = self.getJobFromHistory('check-vars')
+        self.assertEqual(build_check_vars.result, 'SUCCESS')
+        build_hello = self.getJobFromHistory('hello-world')
+        self.assertEqual(build_hello.result, 'SUCCESS')
+        build_python27 = self.getJobFromHistory('python27')
+        self.assertEqual(build_python27.result, 'SUCCESS')
+        flag_path = os.path.join(self.test_root, build_python27.uuid + '.flag')
         self.assertTrue(os.path.exists(flag_path))
-        copied_path = os.path.join(self.test_root, build.uuid +
+        copied_path = os.path.join(self.test_root, build_python27.uuid +
                                    '.copied')
         self.assertTrue(os.path.exists(copied_path))
-        failed_path = os.path.join(self.test_root, build.uuid +
+        failed_path = os.path.join(self.test_root, build_python27.uuid +
                                    '.failed')
         self.assertFalse(os.path.exists(failed_path))
-        pre_flag_path = os.path.join(self.test_root, build.uuid +
+        pre_flag_path = os.path.join(self.test_root, build_python27.uuid +
                                      '.pre.flag')
         self.assertTrue(os.path.exists(pre_flag_path))
-        post_flag_path = os.path.join(self.test_root, build.uuid +
+        post_flag_path = os.path.join(self.test_root, build_python27.uuid +
                                       '.post.flag')
         self.assertTrue(os.path.exists(post_flag_path))
         bare_role_flag_path = os.path.join(self.test_root,
-                                           build.uuid + '.bare-role.flag')
+                                           build_python27.uuid +
+                                           '.bare-role.flag')
         self.assertTrue(os.path.exists(bare_role_flag_path))
 
         secrets_path = os.path.join(self.test_root,
-                                    build.uuid + '.secrets')
+                                    build_python27.uuid + '.secrets')
         with open(secrets_path) as f:
             self.assertEqual(f.read(), "test-username test-password")
+
+        msg = A.messages[0]
+        success = "{} https://success.example.com/zuul-logs/{}"
+        fail = "{} https://failure.example.com/zuul-logs/{}"
+        self.assertIn(success.format("python27", build_python27.uuid), msg)
+        self.assertIn(fail.format("faillocal", build_faillocal.uuid), msg)
+        self.assertIn(success.format("check-vars", build_check_vars.uuid), msg)
+        self.assertIn(success.format("hello-world", build_hello.uuid), msg)
+        self.assertIn(fail.format("timeout", build_timeout.uuid), msg)
+        self.assertIn(fail.format("failpost", build_failpost.uuid), msg)
 
 
 class TestBrokenConfig(ZuulTestCase):
