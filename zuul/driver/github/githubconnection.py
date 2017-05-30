@@ -408,8 +408,7 @@ class GithubConnection(BaseConnection):
 
         return self.installation_token
 
-    @property
-    def github(self):
+    def getGithubClient(self):
         # if we're using api_key authentication then we don't need to fetch
         # new installation tokens so return the existing one.
         installation_key = self._get_installation_key()
@@ -478,19 +477,21 @@ class GithubConnection(BaseConnection):
         self.projects[project.name] = project
 
     def getProjectBranches(self, project):
+        github = self.getGithubClient()
         owner, proj = project.name.split('/')
-        repository = self.github.repository(owner, proj)
+        repository = github.repository(owner, proj)
         branches = [branch.name for branch in repository.branches()]
-        log_rate_limit(self.log, self.github)
+        log_rate_limit(self.log, github)
         return branches
 
     def getPullUrl(self, project, number):
         return '%s/pull/%s' % (self.getGitwebUrl(project), number)
 
     def getPull(self, project_name, number):
+        github = self.getGithubClient()
         owner, proj = project_name.split('/')
-        pr = self.github.pull_request(owner, proj, number).as_dict()
-        log_rate_limit(self.log, self.github)
+        pr = github.pull_request(owner, proj, number).as_dict()
+        log_rate_limit(self.log, github)
         return pr
 
     def canMerge(self, change, allow_needs):
@@ -509,20 +510,22 @@ class GithubConnection(BaseConnection):
     def getPullBySha(self, sha):
         query = '%s type:pr is:open' % sha
         pulls = []
-        for issue in self.github.search_issues(query=query):
+        github = self.getGithubClient()
+        for issue in github.search_issues(query=query):
             pr_url = issue.pull_request.get('url')
             if not pr_url:
                 continue
             # the issue provides no good description of the project :\
             owner, project, _, number = pr_url.split('/')[4:]
-            pr = self.github.pull_request(owner, project, number)
+            github = self.getGithubClient("%s/%s" % (owner, project))
+            pr = github.pull_request(owner, project, number)
             if pr.head.sha != sha:
                 continue
             if pr.as_dict() in pulls:
                 continue
             pulls.append(pr.as_dict())
 
-        log_rate_limit(self.log, self.github)
+        log_rate_limit(self.log, github)
         if len(pulls) > 1:
             raise Exception('Multiple pulls found with head sha %s' % sha)
 
@@ -531,10 +534,11 @@ class GithubConnection(BaseConnection):
         return pulls.pop()
 
     def getPullFileNames(self, project, number):
+        github = self.getGithubClient()
         owner, proj = project.name.split('/')
         filenames = [f.filename for f in
-                     self.github.pull_request(owner, proj, number).files()]
-        log_rate_limit(self.log, self.github)
+                     github.pull_request(owner, proj, number).files()]
+        log_rate_limit(self.log, github)
         return filenames
 
     def getPullReviews(self, project, number):
@@ -579,33 +583,35 @@ class GithubConnection(BaseConnection):
     def _getPullReviews(self, owner, project, number):
         # make a list out of the reviews so that we complete our
         # API transaction
+        github = self.getGithubClient()
         reviews = [review.as_dict() for review in
-                   self.github.pull_request(owner, project, number).reviews()]
+                   github.pull_request(owner, project, number).reviews()]
 
-        log_rate_limit(self.log, self.github)
+        log_rate_limit(self.log, github)
         return reviews
 
     def getUser(self, login):
-        return GithubUser(self.github, login)
+        return GithubUser(self.getGithubClient(), login)
 
     def getUserUri(self, login):
         return 'https://%s/%s' % (self.git_host, login)
 
     def getRepoPermission(self, project, login):
+        github = self.getGithubClient()
         owner, proj = project.split('/')
         # This gets around a missing API call
         # need preview header
         headers = {'Accept': 'application/vnd.github.korra-preview'}
 
         # Create a repo object
-        repository = self.github.repository(owner, proj)
+        repository = github.repository(owner, project)
         # Build up a URL
         url = repository._build_url('collaborators', login, 'permission',
                                     base_url=repository._api)
         # Get the data
         perms = repository._get(url, headers=headers)
 
-        log_rate_limit(self.log, self.github)
+        log_rate_limit(self.log, github)
 
         # no known user, maybe deleted since review?
         if perms.status_code == 404:
@@ -615,53 +621,59 @@ class GithubConnection(BaseConnection):
         return perms.json()['permission']
 
     def commentPull(self, project, pr_number, message):
+        github = self.getGithubClient()
         owner, proj = project.split('/')
-        repository = self.github.repository(owner, proj)
+        repository = github.repository(owner, proj)
         pull_request = repository.issue(pr_number)
         pull_request.create_comment(message)
-        log_rate_limit(self.log, self.github)
+        log_rate_limit(self.log, github)
 
     def mergePull(self, project, pr_number, commit_message='', sha=None):
+        github = self.getGithubClient()
         owner, proj = project.split('/')
-        pull_request = self.github.pull_request(owner, proj, pr_number)
+        pull_request = github.pull_request(owner, proj, pr_number)
         try:
             result = pull_request.merge(commit_message=commit_message, sha=sha)
         except MethodNotAllowed as e:
             raise MergeFailure('Merge was not successful due to mergeability'
                                ' conflict, original error is %s' % e)
-        log_rate_limit(self.log, self.github)
+        log_rate_limit(self.log, github)
         if not result:
             raise Exception('Pull request was not merged')
 
     def getCommitStatuses(self, project, sha):
+        github = self.getGithubClient()
         owner, proj = project.split('/')
-        repository = self.github.repository(owner, proj)
+        repository = github.repository(owner, proj)
         commit = repository.commit(sha)
         # make a list out of the statuses so that we complete our
         # API transaction
         statuses = [status.as_dict() for status in commit.statuses()]
 
-        log_rate_limit(self.log, self.github)
+        log_rate_limit(self.log, github)
         return statuses
 
     def setCommitStatus(self, project, sha, state, url='', description='',
                         context=''):
+        github = self.getGithubClient()
         owner, proj = project.split('/')
-        repository = self.github.repository(owner, proj)
+        repository = github.repository(owner, proj)
         repository.create_status(sha, state, url, description, context)
-        log_rate_limit(self.log, self.github)
+        log_rate_limit(self.log, github)
 
     def labelPull(self, project, pr_number, label):
+        github = self.getGithubClient()
         owner, proj = project.split('/')
-        pull_request = self.github.issue(owner, proj, pr_number)
+        pull_request = github.issue(owner, proj, pr_number)
         pull_request.add_labels(label)
-        log_rate_limit(self.log, self.github)
+        log_rate_limit(self.log, github)
 
     def unlabelPull(self, project, pr_number, label):
+        github = self.getGithubClient()
         owner, proj = project.split('/')
-        pull_request = self.github.issue(owner, proj, pr_number)
+        pull_request = github.issue(owner, proj, pr_number)
         pull_request.remove_label(label)
-        log_rate_limit(self.log, self.github)
+        log_rate_limit(self.log, github)
 
     def _ghTimestampToDate(self, timestamp):
         return time.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
