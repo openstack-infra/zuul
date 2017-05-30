@@ -59,10 +59,11 @@ class GithubTriggerEvent(TriggerEvent):
         return False
 
 
-class GithubReviewFilter(object):
-    def __init__(self, required_reviews=[]):
+class GithubCommonFilter(object):
+    def __init__(self, required_reviews=[], required_statuses=[]):
         self._required_reviews = copy.deepcopy(required_reviews)
         self.required_reviews = self._tidy_reviews(required_reviews)
+        self.required_statuses = required_statuses
 
     def _tidy_reviews(self, reviews):
         for r in reviews:
@@ -126,13 +127,26 @@ class GithubReviewFilter(object):
                 return False
         return True
 
+    def matchesRequiredStatuses(self, change):
+        # statuses are ORed
+        # A PR head can have multiple statuses on it. If the change
+        # statuses and the filter statuses are a null intersection, there
+        # are no matches and we return false
+        if self.required_statuses:
+            if set(change.status).isdisjoint(set(self.required_statuses)):
+                return False
+        return True
 
-class GithubEventFilter(EventFilter):
+
+class GithubEventFilter(EventFilter, GithubCommonFilter):
     def __init__(self, trigger, types=[], branches=[], refs=[],
                  comments=[], actions=[], labels=[], unlabels=[],
-                 states=[], statuses=[], ignore_deletes=True):
+                 states=[], statuses=[], required_statuses=[],
+                 ignore_deletes=True):
 
         EventFilter.__init__(self, trigger)
+
+        GithubCommonFilter.__init__(self, required_statuses=required_statuses)
 
         self._types = types
         self._branches = branches
@@ -147,6 +161,7 @@ class GithubEventFilter(EventFilter):
         self.unlabels = unlabels
         self.states = states
         self.statuses = statuses
+        self.required_statuses = required_statuses
         self.ignore_deletes = ignore_deletes
 
     def __repr__(self):
@@ -172,6 +187,8 @@ class GithubEventFilter(EventFilter):
             ret += ' states: %s' % ', '.join(self.states)
         if self.statuses:
             ret += ' statuses: %s' % ', '.join(self.statuses)
+        if self.required_statuses:
+            ret += ' required_statuses: %s' % ', '.join(self.required_statuses)
         ret += '>'
 
         return ret
@@ -239,14 +256,18 @@ class GithubEventFilter(EventFilter):
         if self.statuses and event.status not in self.statuses:
             return False
 
+        if not self.matchesRequiredStatuses(change):
+            return False
+
         return True
 
 
-class GithubRefFilter(RefFilter, GithubReviewFilter):
+class GithubRefFilter(RefFilter, GithubCommonFilter):
     def __init__(self, statuses=[], required_reviews=[]):
         RefFilter.__init__(self)
 
-        GithubReviewFilter.__init__(self, required_reviews=required_reviews)
+        GithubCommonFilter.__init__(self, required_reviews=required_reviews,
+                                    required_statuses=statuses)
         self.statuses = statuses
 
     def __repr__(self):
@@ -263,13 +284,8 @@ class GithubRefFilter(RefFilter, GithubReviewFilter):
         return ret
 
     def matches(self, change):
-        # statuses are ORed
-        # A PR head can have multiple statuses on it. If the change
-        # statuses and the filter statuses are a null intersection, there
-        # are no matches and we return false
-        if self.statuses:
-            if set(change.status).isdisjoint(set(self.statuses)):
-                return False
+        if not self.matchesRequiredStatuses(change):
+            return False
 
         # required reviews are ANDed
         if not self.matchesReviews(change):

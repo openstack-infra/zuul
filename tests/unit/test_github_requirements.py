@@ -49,6 +49,30 @@ class TestGithubRequirements(ZuulTestCase):
     @simple_layout('layouts/requirements-github.yaml', driver='github')
     def test_trigger_require_status(self):
         "Test trigger requirement: status"
+        A = self.fake_github.openFakePullRequest('org/project1', 'master', 'A')
+        # A comment event that we will keep submitting to trigger
+        comment = A.getCommentAddedEvent('trigger me')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        # No status from zuul so should not be enqueued
+        self.assertEqual(len(self.history), 0)
+
+        # An error status should not cause it to be enqueued
+        A.setStatus(A.head_sha, 'error', 'null', 'null', 'check')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+
+        # A success status goes in
+        A.setStatus(A.head_sha, 'success', 'null', 'null', 'check')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+        self.assertEqual(self.history[0].name, 'project1-pipeline')
+
+    @simple_layout('layouts/requirements-github.yaml', driver='github')
+    def test_trigger_on_status(self):
+        "Test trigger on: status"
         A = self.fake_github.openFakePullRequest('org/project2', 'master', 'A')
 
         # An error status should not cause it to be enqueued
