@@ -484,16 +484,14 @@ class ExecutorServer(object):
 
     def merge(self, job):
         args = json.loads(job.arguments)
-        ret = self.merger.mergeChanges(args['items'], args.get('files'))
+        ret = self.merger.mergeChanges(args['items'], args.get('files'),
+                                       args.get('repo_state'))
         result = dict(merged=(ret is not None),
                       zuul_url=self.zuul_url)
-        if args.get('files'):
-            if ret:
-                result['commit'], result['files'] = ret
-            else:
-                result['commit'], result['files'] = (None, None)
+        if ret is None:
+            result['commit'] = result['files'] = result['repo_state'] = None
         else:
-            result['commit'] = ret
+            result['commit'], result['files'], result['repo_state'] = ret
         job.sendWorkComplete(json.dumps(result))
 
 
@@ -588,13 +586,10 @@ class AnsibleJob(object):
 
         merge_items = [i for i in args['items'] if i.get('refspec')]
         if merge_items:
-            commit = self.doMergeChanges(merge_items)
-            if not commit:
+            if not self.doMergeChanges(merge_items):
                 # There was a merge conflict and we have already sent
                 # a work complete result, don't run any jobs
                 return
-        else:
-            commit = args['items'][-1]['newrev']  # noqa
 
         # Delete the origin remote from each repo we set up since
         # it will not be valid within the jobs.
@@ -640,11 +635,12 @@ class AnsibleJob(object):
     def doMergeChanges(self, items):
         # Get a merger in order to update the repos involved in this job.
         merger = self.executor_server._getMerger(self.jobdir.src_root)
-        commit = merger.mergeChanges(items)  # noqa
-        if not commit:  # merge conflict
+        ret = merger.mergeChanges(items)  # noqa
+        if not ret:  # merge conflict
             result = dict(result='MERGER_FAILURE')
             self.job.sendWorkComplete(json.dumps(result))
-        return commit
+            return False
+        return True
 
     def runPlaybooks(self, args):
         result = None
