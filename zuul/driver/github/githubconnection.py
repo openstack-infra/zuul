@@ -340,9 +340,7 @@ class GithubConnection(BaseConnection):
     def onStop(self):
         self.unregisterHttpHandler(self.payload_path)
 
-    def _authenticateGithubAPI(self):
-        config = self.connection_config
-
+    def _createGithubClient(self):
         if self.git_host != 'github.com':
             url = 'https://%s/' % self.git_host
             github = github3.GitHubEnterprise(url)
@@ -352,32 +350,40 @@ class GithubConnection(BaseConnection):
         # anything going through requests to http/s goes through cache
         github.session.mount('http://', self.cache_adapter)
         github.session.mount('https://', self.cache_adapter)
+        return github
+
+    def _authenticateGithubAPI(self):
+        config = self.connection_config
 
         api_token = config.get('api_token')
 
+        app_id = config.get('app_id')
+        app_key = None
+        app_key_file = config.get('app_key')
+        installation_id = config.get('installation_id')
+
+        self._github = self._createGithubClient()
         if api_token:
-            github.login(token=api_token)
-        else:
-            app_id = config.get('app_id')
-            installation_id = config.get('installation_id')
-            app_key_file = config.get('app_key')
+            self._github.login(token=api_token)
 
-            if app_key_file:
-                with open(app_key_file, 'r') as f:
-                    app_key = f.read()
+        if app_key_file:
+            with open(app_key_file, 'r') as f:
+                app_key = f.read()
 
-            if not (app_id and app_key and installation_id):
-                self.log.warning("You must provide an app_id, "
-                                 "app_key and installation_id to use "
-                                 "installation based authentication")
+        if (app_id or app_key) and \
+                not (app_id and app_key):
+            self.log.warning("You must provide an app_id and "
+                             "app_key to use installation based "
+                             "authentication")
 
-                return
+            return
 
+        if app_id:
             self.app_id = int(app_id)
+        if installation_id:
             self.installation_id = int(installation_id)
+        if app_key:
             self.app_key = app_key
-
-        self._github = github
 
     def _get_installation_key(self, user_id=None):
         if not (self.installation_id and self.app_id):
