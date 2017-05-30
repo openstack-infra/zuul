@@ -192,17 +192,6 @@ class PipelineManager(object):
     def getFailingDependentItems(self, item):
         return None
 
-    def getDependentItems(self, item):
-        orig_item = item
-        items = []
-        while item.item_ahead:
-            items.append(item.item_ahead)
-            item = item.item_ahead
-        self.log.info("Change %s depends on changes %s" %
-                      (orig_item.change,
-                       [x.change for x in items]))
-        return items
-
     def getItemForChange(self, change):
         for item in self.pipeline.getAllItems():
             if item.change.equals(change):
@@ -364,7 +353,7 @@ class PipelineManager(object):
 
     def _executeJobs(self, item, jobs):
         self.log.debug("Executing jobs for change %s" % item.change)
-        dependent_items = self.getDependentItems(item)
+        build_set = item.current_build_set
         for job in jobs:
             self.log.debug("Found job %s for change %s" % (job, item.change))
             try:
@@ -372,7 +361,8 @@ class PipelineManager(object):
                 self.sched.nodepool.useNodeSet(nodeset)
                 build = self.sched.executor.execute(job, item,
                                                     self.pipeline,
-                                                    dependent_items)
+                                                    build_set.dependent_items,
+                                                    build_set.merger_items)
                 self.log.debug("Adding build %s of job %s to item %s" %
                                (build, job, item))
                 item.addBuild(build)
@@ -502,13 +492,9 @@ class PipelineManager(object):
 
         self.log.debug("Scheduling merge for item %s (files: %s)" %
                        (item, files))
-        dependent_items = self.getDependentItems(item)
-        dependent_items.reverse()
-        all_items = dependent_items + [item]
-        merger_items = [i.makeMergerItem() for i in all_items]
         build_set = item.current_build_set
         build_set.merge_state = build_set.PENDING
-        self.sched.merger.mergeChanges(merger_items,
+        self.sched.merger.mergeChanges(build_set.merger_items,
                                        item.current_build_set, files,
                                        precedence=self.pipeline.precedence)
         return False
@@ -683,6 +669,7 @@ class PipelineManager(object):
         if event.merged:
             build_set.commit = event.commit
             build_set.files.setFiles(event.files)
+            build_set.repo_state = event.repo_state
         elif event.updated:
             build_set.commit = item.change.newrev
         if not build_set.commit:

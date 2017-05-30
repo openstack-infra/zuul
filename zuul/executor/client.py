@@ -169,7 +169,8 @@ class ExecutorClient(object):
         self.log.debug("Function %s is not registered" % name)
         return False
 
-    def execute(self, job, item, pipeline, dependent_items=[]):
+    def execute(self, job, item, pipeline, dependent_items=[],
+                merger_items=[]):
         tenant = pipeline.layout.tenant
         uuid = str(uuid4().hex)
         self.log.info(
@@ -179,8 +180,11 @@ class ExecutorClient(object):
                 item.current_build_set.getJobNodeSet(job.name),
                 item.change,
                 [x.change for x in dependent_items]))
+
         dependent_items = dependent_items[:]
         dependent_items.reverse()
+        all_items = dependent_items + [item]
+
         # TODOv3(jeblair): This ansible vars data structure will
         # replace the environment variables below.
         project = dict(
@@ -210,7 +214,7 @@ class ExecutorClient(object):
             changes_str = '^'.join(
                 ['%s:%s:%s' % (i.change.project.name, i.change.branch,
                                i.change.refspec)
-                 for i in dependent_items + [item]])
+                 for i in all_items])
             params['ZUUL_BRANCH'] = item.change.branch
             params['ZUUL_CHANGES'] = changes_str
             params['ZUUL_REF'] = ('refs/zuul/%s/%s' %
@@ -220,7 +224,7 @@ class ExecutorClient(object):
 
             zuul_changes = ' '.join(['%s,%s' % (i.change.number,
                                                 i.change.patchset)
-                                     for i in dependent_items + [item]])
+                                     for i in all_items])
             params['ZUUL_CHANGE_IDS'] = zuul_changes
             params['ZUUL_CHANGE'] = str(item.change.number)
             params['ZUUL_PATCHSET'] = str(item.change.patchset)
@@ -253,13 +257,11 @@ class ExecutorClient(object):
         # ZUUL_OLDREV
         # ZUUL_NEWREV
 
-        all_items = dependent_items + [item]
-        merger_items = [i.makeMergerItem() for i in all_items]
-
         params['job'] = job.name
         params['timeout'] = job.timeout
         params['items'] = merger_items
         params['projects'] = []
+        params['repo_state'] = item.current_build_set.repo_state
 
         if job.name != 'noop':
             params['playbooks'] = [x.toDict() for x in job.run]

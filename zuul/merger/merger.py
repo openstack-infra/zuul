@@ -14,6 +14,7 @@
 # under the License.
 
 import git
+import gitdb
 import os
 import logging
 
@@ -127,6 +128,22 @@ class Repo(object):
     def getRefs(self):
         repo = self.createRepoObject()
         return repo.refs
+
+    def setRefs(self, refs):
+        repo = self.createRepoObject()
+        current_refs = {}
+        for ref in repo.refs:
+            current_refs[ref.path] = ref
+        unseen = set(current_refs.keys())
+        for path, hexsha in refs.items():
+            binsha = gitdb.util.to_bin_sha(hexsha)
+            obj = git.objects.Object.new_from_sha(repo, binsha)
+            self.log.debug("Create reference %s", path)
+            git.refs.Reference.create(repo, path, obj, force=True)
+            unseen.discard(path)
+        for path in unseen:
+            self.log.debug("Delete reference %s", path)
+            git.refs.SymbolicReference.delete(repo, ref.path)
 
     def checkout(self, ref):
         repo = self.createRepoObject()
@@ -299,7 +316,20 @@ class Merger(object):
         for ref in repo.getRefs():
             if ref.path.startswith('refs/zuul'):
                 continue
+            if ref.path.startswith('refs/remotes'):
+                continue
             project[ref.path] = ref.object.hexsha
+
+    def _restoreRepoState(self, connection_name, project_name, repo,
+                          repo_state):
+        projects = repo_state.get(connection_name, {})
+        project = projects.get(project_name, {})
+        if not project:
+            # We don't have a state for this project.
+            return
+        self.log.debug("Restore repo state for project %s/%s",
+                       connection_name, project_name)
+        repo.setRefs(project)
 
     def _mergeChange(self, item, ref):
         repo = self.getRepo(item['connection'], item['project'])
@@ -349,6 +379,9 @@ class Merger(object):
             except Exception:
                 self.log.exception("Unable to reset repo %s" % repo)
                 return None
+            self._restoreRepoState(item['connection'], item['project'], repo,
+                                   repo_state)
+
             base = repo.getBranchHead(item['branch'])
             # Save the repo state so that later mergers can repeat
             # this process.
@@ -368,6 +401,7 @@ class Merger(object):
             # commits of each project-branch
             for key, mrc in recent.items():
                 connection, project, branch = key
+                zuul_ref = None
                 try:
                     repo = self.getRepo(connection, project)
                     zuul_ref = branch + '/' + item['ref']

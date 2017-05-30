@@ -1131,7 +1131,6 @@ class BuildSet(object):
 
     def __init__(self, item):
         self.item = item
-        self.other_changes = []
         self.builds = {}
         self.result = None
         self.next_build_set = None
@@ -1139,6 +1138,8 @@ class BuildSet(object):
         self.ref = None
         self.commit = None
         self.zuul_url = None
+        self.dependent_items = None
+        self.merger_items = None
         self.unable_to_merge = False
         self.config_error = None  # None or an error message string.
         self.failing_reasons = []
@@ -1146,6 +1147,7 @@ class BuildSet(object):
         self.nodesets = {}  # job -> nodeset
         self.node_requests = {}  # job -> reqs
         self.files = RepoFiles()
+        self.repo_state = {}
         self.layout = None
         self.tries = {}
 
@@ -1159,13 +1161,19 @@ class BuildSet(object):
         # The change isn't enqueued until after it's created
         # so we don't know what the other changes ahead will be
         # until jobs start.
-        if not self.other_changes:
+        if self.dependent_items is None:
+            items = []
             next_item = self.item.item_ahead
             while next_item:
-                self.other_changes.append(next_item.change)
+                items.append(next_item)
                 next_item = next_item.item_ahead
+            self.dependent_items = items
         if not self.ref:
             self.ref = 'Z' + uuid4().hex
+        if self.merger_items is None:
+            items = [self.item] + self.dependent_items
+            items.reverse()
+            self.merger_items = [i.makeMergerItem() for i in items]
 
     def getStateName(self, state_num):
         return self.states_map.get(
@@ -1217,9 +1225,26 @@ class BuildSet(object):
         return self.tries.get(job_name, 0)
 
     def getMergeMode(self):
-        if self.layout:
+        # We may be called before this build set has a shadow layout
+        # (ie, we are called to perform the merge to create that
+        # layout).  It's possible that the change we are merging will
+        # update the merge-mode for the project, but there's not much
+        # we can do about that here.  Instead, do the best we can by
+        # using the nearest shadow layout to determine the merge mode,
+        # or if that fails, the current live layout, or if that fails,
+        # use the default: merge-resolve.
+        item = self.item
+        layout = None
+        while item:
+            layout = item.current_build_set.layout
+            if layout:
+                break
+            item = item.item_ahead
+        if not layout:
+            layout = self.item.pipeline.layout
+        if layout:
             project = self.item.change.project
-            project_config = self.layout.project_configs.get(
+            project_config = layout.project_configs.get(
                 project.canonical_name)
             if project_config:
                 return project_config.merge_mode

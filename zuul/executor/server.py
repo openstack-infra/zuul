@@ -586,7 +586,7 @@ class AnsibleJob(object):
 
         merge_items = [i for i in args['items'] if i.get('refspec')]
         if merge_items:
-            if not self.doMergeChanges(merge_items):
+            if not self.doMergeChanges(merge_items, args['repo_state']):
                 # There was a merge conflict and we have already sent
                 # a work complete result, don't run any jobs
                 return
@@ -632,10 +632,10 @@ class AnsibleJob(object):
         result = dict(result=result)
         self.job.sendWorkComplete(json.dumps(result))
 
-    def doMergeChanges(self, items):
+    def doMergeChanges(self, items, repo_state):
         # Get a merger in order to update the repos involved in this job.
         merger = self.executor_server._getMerger(self.jobdir.src_root)
-        ret = merger.mergeChanges(items)  # noqa
+        ret = merger.mergeChanges(items, repo_state=repo_state)
         if not ret:  # merge conflict
             result = dict(result='MERGER_FAILURE')
             self.job.sendWorkComplete(json.dumps(result))

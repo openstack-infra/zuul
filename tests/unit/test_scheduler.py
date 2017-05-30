@@ -994,8 +994,9 @@ class TestScheduler(ZuulTestCase):
         "Test that delayed check merge conflicts are handled properly"
 
         # Hold jobs in the gearman queue so that we can test whether
-        # the executor returns a merge failure after the scheduler has
-        # successfully merged.
+        # the executor sucesfully merges a change based on an old
+        # repo state (frozen by the scheduler) which would otherwise
+        # conflict.
         self.gearman_server.hold_jobs_in_queue = True
         A = self.fake_gerrit.addFakeChange('org/project',
                                            'master', 'A',
@@ -1068,9 +1069,12 @@ class TestScheduler(ZuulTestCase):
             dict(name='project-merge', result='SUCCESS', changes='1,1'),
             dict(name='project-test1', result='SUCCESS', changes='1,1'),
             dict(name='project-test2', result='SUCCESS', changes='1,1'),
-            dict(name='project-merge', result='MERGER_FAILURE', changes='2,1'),
-            dict(name='project-merge', result='MERGER_FAILURE',
-                 changes='2,1 3,1'),
+            dict(name='project-merge', result='SUCCESS', changes='2,1'),
+            dict(name='project-test1', result='SUCCESS', changes='2,1'),
+            dict(name='project-test2', result='SUCCESS', changes='2,1'),
+            dict(name='project-merge', result='SUCCESS', changes='2,1 3,1'),
+            dict(name='project-test1', result='SUCCESS', changes='2,1 3,1'),
+            dict(name='project-test2', result='SUCCESS', changes='2,1 3,1'),
         ], ordered=False)
 
     def test_post(self):
