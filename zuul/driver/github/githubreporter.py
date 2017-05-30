@@ -102,12 +102,12 @@ class GithubReporter(BaseReporter):
                 item.change.is_merged = True
                 return
             except MergeFailure:
-                self.log.debug(
+                self.log.exception(
                     'Merge attempt of change %s  %s/2 failed.' %
-                    (i, item.change))
+                    (item.change, i), exc_info=True)
                 if i == 1:
                     time.sleep(2)
-        self.log.debug(
+        self.log.warning(
             'Merge of change %s failed after 2 attempts, giving up' %
             item.change)
 
