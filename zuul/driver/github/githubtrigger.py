@@ -16,6 +16,7 @@ import logging
 import voluptuous as v
 from zuul.trigger import BaseTrigger
 from zuul.driver.github.githubmodel import GithubEventFilter
+from zuul.driver.util import scalar_or_list, to_list
 
 
 class GithubTrigger(BaseTrigger):
@@ -23,27 +24,20 @@ class GithubTrigger(BaseTrigger):
     log = logging.getLogger("zuul.trigger.GithubTrigger")
 
     def getEventFilters(self, trigger_config):
-        def toList(item):
-            if not item:
-                return []
-            if isinstance(item, list):
-                return item
-            return [item]
-
         efilters = []
-        for trigger in toList(trigger_config):
+        for trigger in to_list(trigger_config):
             f = GithubEventFilter(
                 trigger=self,
-                types=toList(trigger['event']),
-                actions=toList(trigger.get('action')),
-                branches=toList(trigger.get('branch')),
-                refs=toList(trigger.get('ref')),
-                comments=toList(trigger.get('comment')),
-                labels=toList(trigger.get('label')),
-                unlabels=toList(trigger.get('unlabel')),
-                states=toList(trigger.get('state')),
-                statuses=toList(trigger.get('status')),
-                required_statuses=toList(trigger.get('require-status'))
+                types=to_list(trigger['event']),
+                actions=to_list(trigger.get('action')),
+                branches=to_list(trigger.get('branch')),
+                refs=to_list(trigger.get('ref')),
+                comments=to_list(trigger.get('comment')),
+                labels=to_list(trigger.get('label')),
+                unlabels=to_list(trigger.get('unlabel')),
+                states=to_list(trigger.get('state')),
+                statuses=to_list(trigger.get('status')),
+                required_statuses=to_list(trigger.get('require-status'))
             )
             efilters.append(f)
 
@@ -54,23 +48,20 @@ class GithubTrigger(BaseTrigger):
 
 
 def getSchema():
-    def toList(x):
-        return v.Any([x], x)
-
     github_trigger = {
         v.Required('event'):
-            toList(v.Any('pull_request',
-                         'pull_request_review',
-                         'push')),
-        'action': toList(str),
-        'branch': toList(str),
-        'ref': toList(str),
-        'comment': toList(str),
-        'label': toList(str),
-        'unlabel': toList(str),
-        'state': toList(str),
-        'require-status': toList(str),
-        'status': toList(str)
+            scalar_or_list(v.Any('pull_request',
+                                 'pull_request_review',
+                                 'push')),
+        'action': scalar_or_list(str),
+        'branch': scalar_or_list(str),
+        'ref': scalar_or_list(str),
+        'comment': scalar_or_list(str),
+        'label': scalar_or_list(str),
+        'unlabel': scalar_or_list(str),
+        'state': scalar_or_list(str),
+        'require-status': scalar_or_list(str),
+        'status': scalar_or_list(str)
     }
 
     return github_trigger
