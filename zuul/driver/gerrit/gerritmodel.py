@@ -115,6 +115,10 @@ class GerritApprovalFilter(object):
         return True
 
     def matchesApprovals(self, change):
+        if self.required_approvals or self.reject_approvals:
+            if not hasattr(change, 'number'):
+                # Not a change, no reviews
+                return False
         if (self.required_approvals and not change.approvals
                 or self.reject_approvals and not change.approvals):
             # A change with no approvals can not match
@@ -291,10 +295,10 @@ class GerritEventFilter(EventFilter, GerritApprovalFilter):
 
 
 class GerritRefFilter(RefFilter, GerritApprovalFilter):
-    def __init__(self, open=None, current_patchset=None,
+    def __init__(self, connection_name, open=None, current_patchset=None,
                  statuses=[], required_approvals=[],
                  reject_approvals=[]):
-        RefFilter.__init__(self)
+        RefFilter.__init__(self, connection_name)
 
         GerritApprovalFilter.__init__(self,
                                       required_approvals=required_approvals,
@@ -307,6 +311,7 @@ class GerritRefFilter(RefFilter, GerritApprovalFilter):
     def __repr__(self):
         ret = '<GerritRefFilter'
 
+        ret += ' connection_name: %s' % self.connection_name
         if self.open is not None:
             ret += ' open: %s' % self.open
         if self.current_patchset is not None:
@@ -325,11 +330,21 @@ class GerritRefFilter(RefFilter, GerritApprovalFilter):
 
     def matches(self, change):
         if self.open is not None:
-            if self.open != change.open:
+            # if a "change" has no number, it's not a change, but a push
+            # and cannot possibly pass this test.
+            if hasattr(change, 'number'):
+                if self.open != change.open:
+                    return False
+            else:
                 return False
 
         if self.current_patchset is not None:
-            if self.current_patchset != change.is_current_patchset:
+            # if a "change" has no number, it's not a change, but a push
+            # and cannot possibly pass this test.
+            if hasattr(change, 'number'):
+                if self.current_patchset != change.is_current_patchset:
+                    return False
+            else:
                 return False
 
         if self.statuses:

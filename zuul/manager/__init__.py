@@ -285,6 +285,10 @@ class PipelineManager(object):
 
         if not ignore_requirements:
             for f in self.changeish_filters:
+                if f.connection_name != change.project.connection_name:
+                    self.log.debug("Filter %s skipped for change %s due "
+                                   "to mismatched connections" % (f, change))
+                    continue
                 if not f.matches(change):
                     self.log.debug("Change %s does not match pipeline "
                                    "requirement %s" % (change, f))

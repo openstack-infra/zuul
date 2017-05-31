@@ -1924,8 +1924,9 @@ class EventFilter(BaseFilter):
 
 class RefFilter(BaseFilter):
     """Allows a Manager to only enqueue Changes that meet certain criteria."""
-    def __init__(self):
+    def __init__(self, connection_name):
         super(RefFilter, self).__init__()
+        self.connection_name = connection_name
 
     def matches(self, change):
         return True
