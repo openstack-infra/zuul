@@ -350,17 +350,19 @@ class Merger(object):
         repo.checkoutLocalBranch(branch)
 
     def _saveRepoState(self, connection_name, project_name, repo,
-                       repo_state):
+                       repo_state, recent):
         projects = repo_state.setdefault(connection_name, {})
         project = projects.setdefault(project_name, {})
-        if project:
-            # We already have a state for this project.
-            return
         for ref in repo.getRefs():
-            if ref.path.startswith('refs/zuul'):
+            if ref.path.startswith('refs/zuul/'):
                 continue
-            if ref.path.startswith('refs/remotes'):
+            if ref.path.startswith('refs/remotes/'):
                 continue
+            if ref.path.startswith('refs/heads/'):
+                branch = ref.path[len('refs/heads/'):]
+                key = (connection_name, project_name, branch)
+                if key not in recent:
+                    recent[key] = ref.object
             project[ref.path] = ref.object.hexsha
 
     def _restoreRepoState(self, connection_name, project_name, repo,
@@ -429,7 +431,7 @@ class Merger(object):
             # Save the repo state so that later mergers can repeat
             # this process.
             self._saveRepoState(item['connection'], item['project'], repo,
-                                repo_state)
+                                repo_state, recent)
         else:
             self.log.debug("Found base commit %s for %s" % (base, key,))
         # Merge the change
