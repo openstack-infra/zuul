@@ -79,8 +79,14 @@ class Executor(zuul.cmd.ZuulApp):
 
         self.log = logging.getLogger("zuul.Executor")
 
+        jobroot_dir = None
+        if self.config.has_option('zuul', 'jobroot_dir'):
+            jobroot_dir = os.path.expanduser(
+                self.config.get('zuul', 'jobroot_dir'))
+
         ExecutorServer = zuul.executor.server.ExecutorServer
         self.executor = ExecutorServer(self.config, self.connections,
+                                       jobdir_root=jobroot_dir,
                                        keep_jobdir=self.args.keep_jobdir)
         self.executor.start()
 

@@ -108,6 +108,10 @@ layout.yaml to be useful.
   commands.
   ``state_dir=/var/lib/zuul``
 
+**jobroot_dir**
+  Path to directory that Zuul should store temporary job files.
+  ``jobroot_dir=/tmp``
+
 **report_times**
   Boolean value (``true`` or ``false``) that determines if Zuul should
   include elapsed times for each job in the textual report.  Used by
