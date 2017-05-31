@@ -24,14 +24,14 @@ LOG_STREAM_PORT = 19885
 
 
 def linesplit(socket):
-    buff = socket.recv(4096)
+    buff = socket.recv(4096).decode("utf-8")
     buffering = True
     while buffering:
         if "\n" in buff:
             (line, buff) = buff.split("\n", 1)
             yield line + "\n"
         else:
-            more = socket.recv(4096)
+            more = socket.recv(4096).decode("utf-8")
             if not more:
                 buffering = False
             else:
