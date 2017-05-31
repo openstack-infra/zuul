@@ -80,7 +80,15 @@ class JobDirPlaybook(object):
 
 
 class JobDir(object):
-    def __init__(self, root=None, keep=False):
+    def __init__(self, root, keep, build_uuid):
+        '''
+        :param str root: Root directory for the individual job directories.
+            Can be None to use the default system temp root directory.
+        :param bool keep: If True, do not delete the job directory.
+        :param str build_uuid: The unique build UUID. If supplied, this will
+            be used as the temp job directory name. Using this will help the
+            log streaming daemon find job logs.
+        '''
         # root
         #   ansible
         #     trusted.cfg
@@ -89,7 +97,12 @@ class JobDir(object):
         #     src
         #     logs
         self.keep = keep
-        self.root = tempfile.mkdtemp(dir=root)
+        if root:
+            tmpdir = root
+        else:
+            tmpdir = tempfile.gettempdir()
+        self.root = os.path.join(tmpdir, build_uuid)
+        os.mkdir(self.root, 0o700)
         # Work
         self.work_root = os.path.join(self.root, 'work')
         os.makedirs(self.work_root)
@@ -531,8 +544,9 @@ class AnsibleJob(object):
 
     def execute(self):
         try:
-            self.jobdir = JobDir(root=self.executor_server.jobdir_root,
-                                 keep=self.executor_server.keep_jobdir)
+            self.jobdir = JobDir(self.executor_server.jobdir_root,
+                                 self.executor_server.keep_jobdir,
+                                 str(self.job.unique))
             self._execute()
         except Exception:
             self.log.exception("Exception while executing job")
