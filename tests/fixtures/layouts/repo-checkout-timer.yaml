@@ -1,0 +1,18 @@
+- pipeline:
+    name: periodic
+    manager: independent
+    trigger:
+      timer:
+        - time: '* * * * * */1'
+
+- job:
+    name: integration
+    override-branch: stable/havana
+    required-projects:
+      - org/project1
+
+- project:
+    name: org/project1
+    periodic:
+      jobs:
+        - integration

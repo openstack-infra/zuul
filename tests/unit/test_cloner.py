@@ -537,72 +537,52 @@ class TestCloner(ZuulTestCase):
         self.executor_server.release()
         self.waitUntilSettled()
 
-    @skip("Disabled for early v3 development")
     def test_periodic(self):
-        self.worker.hold_jobs_in_build = True
-        self.create_branch('org/project', 'stable/havana')
-        self.updateConfigLayout(
-            'tests/fixtures/layout-timer.yaml')
+        # This test can not use simple_layout because it must start
+        # with a configuration which does not include a
+        # timer-triggered job so that we have an opportunity to set
+        # the hold flag before the first job.
+        self.executor_server.hold_jobs_in_build = True
+        # Start timer trigger - also org/project
+        self.commitConfigUpdate('common-config',
+                                'layouts/repo-checkout-timer.yaml')
         self.sched.reconfigure(self.config)
-        self.registerJobs()
+
+        p1 = 'review.example.com/org/project1'
+        projects = [p1]
+        self.create_branch('org/project1', 'stable/havana')
 
         # The pipeline triggers every second, so we should have seen
         # several by now.
         time.sleep(5)
         self.waitUntilSettled()
 
-        builds = self.builds[:]
-
-        self.worker.hold_jobs_in_build = False
         # Stop queuing timer triggered jobs so that the assertions
         # below don't race against more jobs being queued.
-        self.updateConfigLayout(
-            'tests/fixtures/layout-no-timer.yaml')
+        self.commitConfigUpdate('common-config',
+                                'layouts/repo-checkout-no-timer.yaml')
         self.sched.reconfigure(self.config)
-        self.registerJobs()
-        self.worker.release()
-        self.waitUntilSettled()
 
-        projects = ['org/project']
-
-        self.assertEquals(2, len(builds), "Two builds are running")
+        self.assertEquals(1, len(self.builds), "One build is running")
 
         upstream = self.getUpstreamRepos(projects)
         states = [
-            {'org/project':
-                str(upstream['org/project'].commit('stable/havana')),
-             },
-            {'org/project':
-                str(upstream['org/project'].commit('stable/havana')),
+            {p1: dict(commit=str(upstream[p1].commit('stable/havana')),
+                      branch='stable/havana'),
              },
         ]
 
-        for number, build in enumerate(builds):
+        for number, build in enumerate(self.builds):
             self.log.debug("Build parameters: %s", build.parameters)
-            cloner = zuul.lib.cloner.Cloner(
-                git_base_url=self.upstream_root,
-                projects=projects,
-                workspace=self.workspace_root,
-                zuul_project=build.parameters.get('ZUUL_PROJECT', None),
-                zuul_branch=build.parameters.get('ZUUL_BRANCH', None),
-                zuul_ref=build.parameters.get('ZUUL_REF', None),
-                zuul_url=self.src_root,
-                branch='stable/havana',
-            )
-            cloner.execute()
-            work = self.getWorkspaceRepos(projects)
+            work = build.getWorkspaceRepos(projects)
             state = states[number]
 
             for project in projects:
-                self.assertEquals(state[project],
-                                  str(work[project].commit('HEAD')),
-                                  'Project %s commit for build %s should '
-                                  'be correct' % (project, number))
+                self.assertRepoState(work[project], state[project],
+                                     project, build, number)
 
-            shutil.rmtree(self.workspace_root)
-
-        self.worker.hold_jobs_in_build = False
-        self.worker.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
     @skip("Disabled for early v3 development")
@@ -634,7 +614,6 @@ class TestCloner(ZuulTestCase):
 
         builds = self.builds[:]
 
-        self.worker.hold_jobs_in_build = False
         # Stop queuing timer triggered jobs so that the assertions
         # below don't race against more jobs being queued.
         self.config.set('zuul', 'layout_config',
