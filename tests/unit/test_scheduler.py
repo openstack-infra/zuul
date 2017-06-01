@@ -21,9 +21,8 @@ import textwrap
 import os
 import re
 import shutil
-import sys
 import time
-from unittest import (skip, skipIf)
+from unittest import skip
 
 import git
 from six.moves import urllib
@@ -510,7 +509,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
-    @skipIf(sys.version_info.major > 2, 'Fails on py3')
     def test_failed_change_at_head_with_queue(self):
         "Test that if a change at the head fails, queued jobs are canceled"
 
@@ -937,7 +935,6 @@ class TestScheduler(ZuulTestCase):
         a = source.getChange(event, refresh=True)
         self.assertTrue(source.canMerge(a, mgr.getSubmitAllowNeeds()))
 
-    @skipIf(sys.version_info.major > 2, 'Fails on py3')
     def test_project_merge_conflict(self):
         "Test that gate merge conflicts are handled properly"
 
@@ -989,7 +986,6 @@ class TestScheduler(ZuulTestCase):
             dict(name='project-test2', result='SUCCESS', changes='1,1 3,1'),
         ], ordered=False)
 
-    @skipIf(sys.version_info.major > 2, 'Fails on py3')
     def test_delayed_merge_conflict(self):
         "Test that delayed check merge conflicts are handled properly"
 
@@ -1931,7 +1927,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.reported, 2)
 
     @simple_layout('layouts/no-jobs-project.yaml')
-    @skipIf(sys.version_info.major > 2, 'Fails on py3')
     def test_no_job_project(self):
         "Test that reports with no jobs don't get sent"
         A = self.fake_gerrit.addFakeChange('org/no-jobs-project',
@@ -2063,7 +2058,6 @@ class TestScheduler(ZuulTestCase):
         self.assertReportedStat('test-timing', '3|ms')
         self.assertReportedStat('test-gauge', '12|g')
 
-    @skipIf(sys.version_info.major > 2, 'Fails on py3')
     def test_stuck_job_cleanup(self):
         "Test that pending jobs are cleaned up if removed from layout"
 
@@ -2191,7 +2185,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(q1.name, 'integrated')
         self.assertEqual(q2.name, 'integrated')
 
-    @skipIf(sys.version_info.major > 2, 'Fails on py3')
     def test_queue_precedence(self):
         "Test that queue precedence works"
 
@@ -3878,7 +3871,6 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(B.reported, 0)
 
-    @skipIf(sys.version_info.major > 2, 'Fails on py3')
     def test_crd_check(self):
         "Test cross-repo dependencies in independent pipelines"
 
@@ -4029,11 +4021,9 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(self.history[0].changes, '2,1 1,1')
         self.assertEqual(len(tenant.layout.pipelines['check'].queues), 0)
 
-    @skipIf(sys.version_info.major > 2, 'Fails on py3')
     def test_crd_check_reconfiguration(self):
         self._test_crd_check_reconfiguration('org/project1', 'org/project2')
 
-    @skipIf(sys.version_info.major > 2, 'Fails on py3')
     def test_crd_undefined_project(self):
         """Test that undefined projects in dependencies are handled for
         independent pipelines"""
@@ -4043,7 +4033,6 @@ For CI problems and help debugging, contact ci@example.org"""
         self._test_crd_check_reconfiguration('org/project1', 'org/unknown')
 
     @simple_layout('layouts/ignore-dependencies.yaml')
-    @skipIf(sys.version_info.major > 2, 'Fails on py3')
     def test_crd_check_ignore_dependencies(self):
         "Test cross-repo dependencies can be ignored"
 
