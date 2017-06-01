@@ -929,7 +929,7 @@ class JobList(object):
     def inheritFrom(self, other):
         for jobname, jobs in other.jobs.items():
             if jobname in self.jobs:
-                self.jobs[jobname].append(jobs)
+                self.jobs[jobname].extend(jobs)
             else:
                 self.jobs[jobname] = jobs
 
