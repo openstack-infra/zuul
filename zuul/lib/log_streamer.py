@@ -172,8 +172,14 @@ class CustomForkingTCPServer(ss.ForkingTCPServer):
         '''
         Overridden from base class to shutdown the socket immediately.
         '''
-        self.socket.shutdown(socket.SHUT_RD)
-        self.socket.close()
+        try:
+            self.socket.shutdown(socket.SHUT_RD)
+            self.socket.close()
+        except socket.error as e:
+            # If it's already closed, don't error.
+            if e.errno == socket.EBADF:
+                return
+            raise
 
 
 class LogStreamer(object):
