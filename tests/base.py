@@ -2182,10 +2182,17 @@ class ZuulTestCase(BaseTestCase):
         self.fake_nodepool.stop()
         self.zk.disconnect()
         self.printHistory()
-        # we whitelist watchdog threads as they have relatively long delays
+        # We whitelist watchdog threads as they have relatively long delays
         # before noticing they should exit, but they should exit on their own.
+        # Further the pydevd threads also need to be whitelisted so debugging
+        # e.g. in PyCharm is possible without breaking shutdown.
+        whitelist = ['executor-watchdog',
+                     'pydevd.CommandThread',
+                     'pydevd.Reader',
+                     'pydevd.Writer',
+                     ]
         threads = [t for t in threading.enumerate()
-                   if t.name != 'executor-watchdog']
+                   if t.name not in whitelist]
         if len(threads) > 1:
             log_str = ""
             for thread_id, stack_frame in sys._current_frames().items():
