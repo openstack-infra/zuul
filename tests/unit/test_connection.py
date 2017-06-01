@@ -266,6 +266,48 @@ class TestMultipleGerrits(ZuulTestCase):
         self.executor_server.release()
         self.waitUntilSettled()
 
+    def test_multiple_project_separate_gerrits_common_pipeline(self):
+        self.executor_server.hold_jobs_in_build = True
+
+        A = self.fake_another_gerrit.addFakeChange(
+            'org/project2', 'master', 'A')
+        self.fake_another_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+
+        self.waitUntilSettled()
+
+        self.assertBuilds([dict(name='project-test2',
+                                changes='1,1',
+                                project='org/project2',
+                                pipeline='common_check')])
+
+        # NOTE(jamielennox): the tests back the git repo for both connections
+        # onto the same git repo on the file system. If we just create another
+        # fake change the fake_review_gerrit will try to create another 1,1
+        # change and git will fail to create the ref. Arbitrarily set it to get
+        # around the problem.
+        self.fake_review_gerrit.change_number = 50
+
+        B = self.fake_review_gerrit.addFakeChange(
+            'org/project2', 'master', 'B')
+        self.fake_review_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+
+        self.waitUntilSettled()
+
+        self.assertBuilds([
+            dict(name='project-test2',
+                 changes='1,1',
+                 project='org/project2',
+                 pipeline='common_check'),
+            dict(name='project-test1',
+                 changes='51,1',
+                 project='org/project2',
+                 pipeline='common_check'),
+        ])
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
 
 class TestConnectionsMerger(ZuulTestCase):
     config_file = 'zuul-connections-merger.conf'

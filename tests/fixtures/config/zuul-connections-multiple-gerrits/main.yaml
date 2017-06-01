@@ -6,6 +6,8 @@
           - common-config
         untrusted-projects:
           - org/project1
+          - org/project2
       another_gerrit:
         untrusted-projects:
           - org/project1
+          - org/project2

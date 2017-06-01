@@ -24,6 +24,25 @@
       another_gerrit:
         verified: -1
 
+- pipeline:
+    name: common_check
+    manager: independent
+    trigger:
+      another_gerrit:
+        - event: patchset-created
+      review_gerrit:
+        - event: patchset-created
+    success:
+      review_gerrit:
+        verified: 1
+      another_gerrit:
+        verified: 1
+    failure:
+      review_gerrit:
+        verified: -1
+      another_gerrit:
+        verified: -1
+
 - job:
     name: project-test1
 
@@ -39,5 +58,18 @@
 - project:
     name: another.example.com/org/project1
     another_check:
+      jobs:
+        - project-test2
+
+
+- project:
+    name: review.example.com/org/project2
+    common_check:
+      jobs:
+        - project-test1
+
+- project:
+    name: another.example.com/org/project2
+    common_check:
       jobs:
         - project-test2
