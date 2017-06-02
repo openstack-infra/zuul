@@ -16,12 +16,9 @@
 # under the License.
 
 import logging
-import os
 import shutil
 import time
 from unittest import skip
-
-import git
 
 import zuul.lib.cloner
 
@@ -67,90 +64,6 @@ class TestCloner(ZuulTestCase):
                                 'Project %s for build %s #%s should '
                                 'not have change %s' % (
                                     project, build, number, change.subject))
-
-    @skip("Disabled for early v3 development")
-    def test_cache_dir(self):
-        projects = ['org/project1', 'org/project2']
-        cache_root = os.path.join(self.test_root, "cache")
-        for project in projects:
-            upstream_repo_path = os.path.join(self.upstream_root, project)
-            cache_repo_path = os.path.join(cache_root, project)
-            git.Repo.clone_from(upstream_repo_path, cache_repo_path)
-
-        self.worker.hold_jobs_in_build = True
-        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
-        A.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-
-        self.waitUntilSettled()
-
-        self.assertEquals(1, len(self.builds), "One build is running")
-
-        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
-        B.setMerged()
-
-        upstream = self.getUpstreamRepos(projects)
-        states = [{
-            'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
-            'org/project2': str(upstream['org/project2'].commit('master')),
-        }]
-
-        for number, build in enumerate(self.builds):
-            self.log.debug("Build parameters: %s", build.parameters)
-            cloner = zuul.lib.cloner.Cloner(
-                git_base_url=self.upstream_root,
-                projects=projects,
-                workspace=self.workspace_root,
-                zuul_project=build.parameters.get('ZUUL_PROJECT', None),
-                zuul_branch=build.parameters['ZUUL_BRANCH'],
-                zuul_ref=build.parameters['ZUUL_REF'],
-                zuul_url=self.src_root,
-                cache_dir=cache_root,
-            )
-            cloner.execute()
-            work = self.getWorkspaceRepos(projects)
-            state = states[number]
-
-            for project in projects:
-                self.assertEquals(state[project],
-                                  str(work[project].commit('HEAD')),
-                                  'Project %s commit for build %s should '
-                                  'be correct' % (project, number))
-
-        work = self.getWorkspaceRepos(projects)
-        # project1 is the zuul_project so the origin should be set to the
-        # zuul_url since that is the most up to date.
-        cache_repo_path = os.path.join(cache_root, 'org/project1')
-        self.assertNotEqual(
-            work['org/project1'].remotes.origin.url,
-            cache_repo_path,
-            'workspace repo origin should not be the cache'
-        )
-        zuul_url_repo_path = os.path.join(self.git_root, 'org/project1')
-        self.assertEqual(
-            work['org/project1'].remotes.origin.url,
-            zuul_url_repo_path,
-            'workspace repo origin should be the zuul url'
-        )
-
-        # project2 is not the zuul_project so the origin should be set
-        # to upstream since that is the best we can do
-        cache_repo_path = os.path.join(cache_root, 'org/project2')
-        self.assertNotEqual(
-            work['org/project2'].remotes.origin.url,
-            cache_repo_path,
-            'workspace repo origin should not be the cache'
-        )
-        upstream_repo_path = os.path.join(self.upstream_root, 'org/project2')
-        self.assertEqual(
-            work['org/project2'].remotes.origin.url,
-            upstream_repo_path,
-            'workspace repo origin should be the upstream url'
-        )
-
-        self.worker.hold_jobs_in_build = False
-        self.worker.release()
-        self.waitUntilSettled()
 
     @simple_layout('layouts/repo-checkout-two-project.yaml')
     def test_one_branch(self):
