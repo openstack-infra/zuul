@@ -174,6 +174,10 @@ executor
 
 The zuul-executor process configuration.
 
+**finger_port**
+  Port to use for finger log streamer.
+  ``finger_port=79``
+
 **git_dir**
   Directory that Zuul should clone local git repositories to.
   ``git_dir=/var/lib/zuul/git``
