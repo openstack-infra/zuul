@@ -58,6 +58,24 @@ class ProjectNotFoundError(Exception):
         super(ProjectNotFoundError, self).__init__(message)
 
 
+class PipelineNotPermittedError(Exception):
+    def __init__(self):
+        message = textwrap.dedent("""\
+        Pipelines may not be defined in untrusted repos,
+        they may only be defined in config repos.""")
+        message = textwrap.fill(message)
+        super(PipelineNotPermittedError, self).__init__(message)
+
+
+class ProjectNotPermittedError(Exception):
+    def __init__(self):
+        message = textwrap.dedent("""\
+        Within an untrusted project, the only project definition
+        permitted is that of the project itself.""")
+        message = textwrap.fill(message)
+        super(ProjectNotPermittedError, self).__init__(message)
+
+
 def indent(s):
     return '\n'.join(['  ' + x for x in s.split('\n')])
 
@@ -562,6 +580,11 @@ class ProjectParser(object):
 
         configs = []
         for conf in conf_list:
+            with configuration_exceptions('project', conf):
+                if not conf['_source_context'].trusted:
+                    if project != conf['_source_context'].project:
+                        raise ProjectNotPermittedError()
+
             # Make a copy since we modify this later via pop
             conf = copy.deepcopy(conf)
             conf_templates = conf.pop('templates', [])
@@ -1032,10 +1055,11 @@ class TenantParser(object):
 
     @staticmethod
     def _parseUntrustedProjectLayout(data, source_context):
-        # TODOv3(jeblair): this should implement some rules to protect
-        # aspects of the config that should not be changed in-repo
         config = model.UnparsedTenantConfig()
         config.extend(safe_load_yaml(data, source_context))
+        if config.pipelines:
+            with configuration_exceptions('pipeline', config.pipelines[0]):
+                raise PipelineNotPermittedError()
         return config
 
     @staticmethod
