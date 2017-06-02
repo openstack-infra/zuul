@@ -39,7 +39,7 @@ import zuul.executor.server
 # Similar situation with gear and statsd.
 
 
-FINGER_PORT = 79
+DEFAULT_FINGER_PORT = 79
 
 
 class Executor(zuul.cmd.ZuulApp):
@@ -86,7 +86,7 @@ class Executor(zuul.cmd.ZuulApp):
 
             self.log.info("Starting log streamer")
             streamer = zuul.lib.log_streamer.LogStreamer(
-                self.user, '0.0.0.0', FINGER_PORT, self.jobroot_dir)
+                self.user, '0.0.0.0', self.finger_port, self.jobroot_dir)
 
             # Keep running until the parent dies:
             pipe_read = os.fdopen(pipe_read)
@@ -126,6 +126,11 @@ class Executor(zuul.cmd.ZuulApp):
 
         self.setup_logging('executor', 'log_config')
         self.log = logging.getLogger("zuul.Executor")
+
+        if self.config.has_option('executor', 'finger_port'):
+            self.finger_port = int(self.config.get('executor', 'finger_port'))
+        else:
+            self.finger_port = DEFAULT_FINGER_PORT
 
         self.start_log_streamer()
         self.change_privs()
