@@ -21,10 +21,10 @@ import time
 from tests.base import ZuulTestCase, simple_layout
 
 
-class TestCloner(ZuulTestCase):
+class TestExecutorRepos(ZuulTestCase):
     tenant_config_file = 'config/single-tenant/main.yaml'
 
-    log = logging.getLogger("zuul.test.cloner")
+    log = logging.getLogger("zuul.test.executor")
 
     def assertRepoState(self, repo, state, project, build, number):
         if 'branch' in state:
