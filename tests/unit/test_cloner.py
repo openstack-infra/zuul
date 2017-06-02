@@ -16,11 +16,7 @@
 # under the License.
 
 import logging
-import shutil
 import time
-from unittest import skip
-
-import zuul.lib.cloner
 
 from tests.base import ZuulTestCase, simple_layout
 
@@ -315,87 +311,6 @@ class TestCloner(ZuulTestCase):
 
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
-        self.waitUntilSettled()
-
-    @skip("Disabled for early v3 development")
-    def test_periodic_update(self):
-        # Test that the merger correctly updates its local repository
-        # before running a periodic job.
-
-        # Prime the merger with the current state
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
-        self.waitUntilSettled()
-
-        # Merge a different change
-        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
-        B.setMerged()
-
-        # Start a periodic job
-        self.worker.hold_jobs_in_build = True
-        self.executor.negative_function_cache_ttl = 0
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-timer.yaml')
-        self.sched.reconfigure(self.config)
-        self.registerJobs()
-
-        # The pipeline triggers every second, so we should have seen
-        # several by now.
-        time.sleep(5)
-        self.waitUntilSettled()
-
-        builds = self.builds[:]
-
-        # Stop queuing timer triggered jobs so that the assertions
-        # below don't race against more jobs being queued.
-        self.config.set('zuul', 'layout_config',
-                        'tests/fixtures/layout-no-timer.yaml')
-        self.sched.reconfigure(self.config)
-        self.registerJobs()
-        self.worker.release()
-        self.waitUntilSettled()
-
-        projects = ['org/project']
-
-        self.assertEquals(2, len(builds), "Two builds are running")
-
-        upstream = self.getUpstreamRepos(projects)
-        self.assertEqual(upstream['org/project'].commit('master').hexsha,
-                         B.patchsets[0]['revision'])
-        states = [
-            {'org/project':
-                str(upstream['org/project'].commit('master')),
-             },
-            {'org/project':
-                str(upstream['org/project'].commit('master')),
-             },
-        ]
-
-        for number, build in enumerate(builds):
-            self.log.debug("Build parameters: %s", build.parameters)
-            cloner = zuul.lib.cloner.Cloner(
-                git_base_url=self.upstream_root,
-                projects=projects,
-                workspace=self.workspace_root,
-                zuul_project=build.parameters.get('ZUUL_PROJECT', None),
-                zuul_branch=build.parameters.get('ZUUL_BRANCH', None),
-                zuul_ref=build.parameters.get('ZUUL_REF', None),
-                zuul_url=self.git_root,
-            )
-            cloner.execute()
-            work = self.getWorkspaceRepos(projects)
-            state = states[number]
-
-            for project in projects:
-                self.assertEquals(state[project],
-                                  str(work[project].commit('HEAD')),
-                                  'Project %s commit for build %s should '
-                                  'be correct' % (project, number))
-
-            shutil.rmtree(self.workspace_root)
-
-        self.worker.hold_jobs_in_build = False
-        self.worker.release()
         self.waitUntilSettled()
 
     @simple_layout('layouts/repo-checkout-post.yaml')
