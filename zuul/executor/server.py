@@ -31,10 +31,7 @@ import git
 from six.moves import shlex_quote
 
 import zuul.merger.merger
-import zuul.ansible.action
-import zuul.ansible.callback
-import zuul.ansible.library
-import zuul.ansible.lookup
+import zuul.ansible
 from zuul.lib import commandsocket
 
 COMMANDS = ['stop', 'pause', 'unpause', 'graceful', 'verbose',
@@ -374,25 +371,26 @@ class ExecutorServer(object):
         self.command_socket = commandsocket.CommandSocket(path)
         ansible_dir = os.path.join(state_dir, 'ansible')
         self.ansible_dir = ansible_dir
-        self.library_dir = os.path.join(ansible_dir, 'library')
-        if not os.path.exists(self.library_dir):
-            os.makedirs(self.library_dir)
-        self.action_dir = os.path.join(ansible_dir, 'action')
-        if not os.path.exists(self.action_dir):
-            os.makedirs(self.action_dir)
 
-        self.callback_dir = os.path.join(ansible_dir, 'callback')
-        if not os.path.exists(self.callback_dir):
-            os.makedirs(self.callback_dir)
+        zuul_dir = os.path.join(ansible_dir, 'zuul')
+        plugin_dir = os.path.join(zuul_dir, 'ansible')
 
-        self.lookup_dir = os.path.join(ansible_dir, 'lookup')
-        if not os.path.exists(self.lookup_dir):
-            os.makedirs(self.lookup_dir)
+        if not os.path.exists(plugin_dir):
+            os.makedirs(plugin_dir)
 
-        _copy_ansible_files(zuul.ansible.library, self.library_dir)
-        _copy_ansible_files(zuul.ansible.action, self.action_dir)
-        _copy_ansible_files(zuul.ansible.callback, self.callback_dir)
-        _copy_ansible_files(zuul.ansible.lookup, self.lookup_dir)
+        self.library_dir = os.path.join(plugin_dir, 'library')
+        self.action_dir = os.path.join(plugin_dir, 'action')
+        self.callback_dir = os.path.join(plugin_dir, 'callback')
+        self.lookup_dir = os.path.join(plugin_dir, 'lookup')
+
+        _copy_ansible_files(zuul.ansible, plugin_dir)
+
+        # We're copying zuul.ansible.* into a directory we are going
+        # to add to pythonpath, so our plugins can "import
+        # zuul.ansible".  But we're not installing all of zuul, so
+        # create a __init__.py file for the stub "zuul" module.
+        with open(os.path.join(zuul_dir, '__init__.py'), 'w'):
+            pass
 
         self.job_workers = {}
 
@@ -1135,6 +1133,13 @@ class AnsibleJob(object):
         env_copy = os.environ.copy()
         env_copy.update(self.ssh_agent.env)
         env_copy['LOGNAME'] = 'zuul'
+        pythonpath = env_copy.get('PYTHONPATH')
+        if pythonpath:
+            pythonpath = [pythonpath]
+        else:
+            pythonpath = []
+        pythonpath = [self.executor_server.ansible_dir] + pythonpath
+        env_copy['PYTHONPATH'] = os.path.pathsep.join(pythonpath)
 
         if trusted:
             config_file = self.jobdir.trusted_config
