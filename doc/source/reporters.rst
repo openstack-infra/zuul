@@ -44,6 +44,10 @@ reporter. It has the following options:
   set as the commit status on github.
   ``status: 'success'``
 
+  **status-url**
+  String value for a link url to set in the github status. Defaults to the zuul
+  server status_url, or the empty string if that is unset.
+
   **comment**
   Boolean value (``true`` or ``false``) that determines if the reporter should
   add a comment to the pipeline status to the github pull request. Defaults
