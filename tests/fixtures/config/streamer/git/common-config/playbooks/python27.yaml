@@ -1,0 +1,11 @@
+# NOTE(Shrews): Do not run any tasks that will need zuul_console to stream
+# output because that will not work. Since we just need any output in our
+# ansible log, the test coordination tasks should be sufficient.
+- hosts: all
+  tasks:
+    - debug: var=waitpath
+
+     # Do not finish until test creates the flag file
+    - wait_for:
+        state: present
+        path: "{{waitpath}}"

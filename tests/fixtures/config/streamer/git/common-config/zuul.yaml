@@ -1,0 +1,17 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+- job:
+    name: python27
+    vars:
+      waitpath: '{{zuul._test.test_root}}/{{zuul.uuid}}/test_wait'
