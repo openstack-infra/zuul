@@ -727,7 +727,20 @@ class PipelineManager(object):
     def _reportItem(self, item):
         self.log.debug("Reporting change %s" % item.change)
         ret = True  # Means error as returned by trigger.report
-        if item.getConfigError():
+
+        # In the case of failure, we may not hove completed an initial
+        # merge which would get the layout for this item, so in order
+        # to determine whether this item's project is in this
+        # pipeline, use the dynamic layout if available, otherwise,
+        # fall back to the current static layout as a best
+        # approximation.
+        layout = item.layout or self.pipeline.layout
+
+        if not layout.hasProject(item.change.project):
+            self.log.debug("Project %s not in pipeline %s for change %s" % (
+                item.change.project, self.pipeline, item.change))
+            actions = []
+        elif item.getConfigError():
             self.log.debug("Invalid config for change %s" % item.change)
             # TODOv3(jeblair): consider a new reporter action for this
             actions = self.pipeline.merge_failure_actions
@@ -735,9 +748,12 @@ class PipelineManager(object):
         elif item.didMergerFail():
             actions = self.pipeline.merge_failure_actions
             item.setReportedResult('MERGER_FAILURE')
+        elif item.wasDequeuedNeedingChange():
+            actions = self.pipeline.failure_actions
+            item.setReportedResult('FAILURE')
         elif not item.getJobs():
             # We don't send empty reports with +1
-            self.log.debug("No jobs for change %s" % item.change)
+            self.log.debug("No jobs for change %s" % (item.change,))
             actions = []
         elif item.didAllJobsSucceed():
             self.log.debug("success %s" % (self.pipeline.success_actions))
@@ -748,7 +764,7 @@ class PipelineManager(object):
             actions = self.pipeline.failure_actions
             item.setReportedResult('FAILURE')
             self.pipeline._consecutive_failures += 1
-        if self.pipeline._disabled:
+        if layout.hasProject(item.change.project) and self.pipeline._disabled:
             actions = self.pipeline.disabled_actions
         # Check here if we should disable so that we only use the disabled
         # reporters /after/ the last disable_at failure is still reported as

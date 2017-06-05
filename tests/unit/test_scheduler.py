@@ -1181,7 +1181,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.data['status'], 'NEW')
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.data['status'], 'NEW')
-        self.assertEqual(C.reported, 2)
+        self.assertIn('This change depends on a change that failed to merge.',
+                      C.messages[-1])
         self.assertEqual(len(self.history), 1)
 
     def test_failing_dependent_changes(self):
