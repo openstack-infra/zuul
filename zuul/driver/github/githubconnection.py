@@ -479,8 +479,8 @@ class GithubConnection(BaseConnection):
             change.status = self._get_statuses(project, event.patch_number)
             change.reviews = self.getPullReviews(project, change.number)
             change.source_event = event
-            change.open = self.getPullOpen(project, change.number)
-            change.is_current_patchset = self.getIsCurrent(project,
+            change.open = self.getPullOpen(event.project_name, change.number)
+            change.is_current_patchset = self.getIsCurrent(event.project_name,
                                                            change.number,
                                                            event.patch_number)
         elif event.ref:
