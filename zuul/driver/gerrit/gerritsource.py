@@ -65,6 +65,7 @@ class GerritSource(BaseSource):
 
     def getRequireFilters(self, config):
         f = GerritRefFilter(
+            connection_name=self.connection.connection_name,
             open=config.get('open'),
             current_patchset=config.get('current-patchset'),
             statuses=to_list(config.get('status')),
@@ -74,6 +75,7 @@ class GerritSource(BaseSource):
 
     def getRejectFilters(self, config):
         f = GerritRefFilter(
+            connection_name=self.connection.connection_name,
             reject_approvals=to_list(config.get('approval')),
         )
         return [f]

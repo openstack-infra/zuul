@@ -592,6 +592,21 @@ class FakeGithubPullRequest(object):
     def getPullRequestClosedEvent(self):
         return self._getPullRequestEvent('closed')
 
+    def getPushEvent(self, old_sha, ref='refs/heads/master'):
+        name = 'push'
+        data = {
+            'ref': ref,
+            'before': old_sha,
+            'after': self.head_sha,
+            'repository': {
+                'full_name': self.project
+            },
+            'sender': {
+                'login': 'ghuser'
+            }
+        }
+        return (name, data)
+
     def addComment(self, message):
         self.comments.append(message)
         self._updateTimeStamp()

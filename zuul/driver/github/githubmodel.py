@@ -109,9 +109,13 @@ class GithubCommonFilter(object):
         return True
 
     def matchesReviews(self, change):
-        if self.required_reviews and not change.reviews:
-            # No reviews means no matching
-            return False
+        if self.required_reviews:
+            if not hasattr(change, 'number'):
+                # not a PR, no reviews
+                return False
+            if not change.reviews:
+                # No reviews means no matching
+                return False
 
         return self.matchesRequiredReviews(change)
 
@@ -133,6 +137,9 @@ class GithubCommonFilter(object):
         # statuses and the filter statuses are a null intersection, there
         # are no matches and we return false
         if self.required_statuses:
+            if not hasattr(change, 'number'):
+                # not a PR, no status
+                return False
             if set(change.status).isdisjoint(set(self.required_statuses)):
                 return False
         return True
@@ -263,9 +270,9 @@ class GithubEventFilter(EventFilter, GithubCommonFilter):
 
 
 class GithubRefFilter(RefFilter, GithubCommonFilter):
-    def __init__(self, statuses=[], required_reviews=[], open=None,
-                 current_patchset=None):
-        RefFilter.__init__(self)
+    def __init__(self, connection_name, statuses=[], required_reviews=[],
+                 open=None, current_patchset=None):
+        RefFilter.__init__(self, connection_name)
 
         GithubCommonFilter.__init__(self, required_reviews=required_reviews,
                                     required_statuses=statuses)
@@ -276,6 +283,7 @@ class GithubRefFilter(RefFilter, GithubCommonFilter):
     def __repr__(self):
         ret = '<GithubRefFilter'
 
+        ret += ' connection_name: %s' % self.connection_name
         if self.statuses:
             ret += ' statuses: %s' % ', '.join(self.statuses)
         if self.required_reviews:
@@ -295,11 +303,21 @@ class GithubRefFilter(RefFilter, GithubCommonFilter):
             return False
 
         if self.open is not None:
-            if self.open != change.open:
+            # if a "change" has no number, it's not a change, but a push
+            # and cannot possibly pass this test.
+            if hasattr(change, 'number'):
+                if self.open != change.open:
+                    return False
+            else:
                 return False
 
         if self.current_patchset is not None:
-            if self.current_patchset != change.is_current_patchset:
+            # if a "change" has no number, it's not a change, but a push
+            # and cannot possibly pass this test.
+            if hasattr(change, 'number'):
+                if self.current_patchset != change.is_current_patchset:
+                    return False
+            else:
                 return False
 
         # required reviews are ANDed
