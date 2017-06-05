@@ -26,7 +26,7 @@ class TestClonerCmdArguments(testtools.TestCase):
 
     def test_default_cache_dir_empty(self):
         self.app.parse_arguments(['base', 'repo'])
-        self.assertEqual(None, self.app.args.cache_dir)
+        self.assertIsNone(self.app.args.cache_dir)
 
     def test_default_cache_dir_environ(self):
         try:

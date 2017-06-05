@@ -3536,9 +3536,9 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual([], running_item['failing_reasons'])
         self.assertEqual([], running_item['items_behind'])
         self.assertEqual('https://hostname/1', running_item['url'])
-        self.assertEqual(None, running_item['item_ahead'])
+        self.assertIsNone(running_item['item_ahead'])
         self.assertEqual('org/project', running_item['project'])
-        self.assertEqual(None, running_item['remaining_time'])
+        self.assertIsNone(running_item['remaining_time'])
         self.assertEqual(True, running_item['active'])
         self.assertEqual('1,1', running_item['id'])
 
@@ -3553,7 +3553,7 @@ For CI problems and help debugging, contact ci@example.org"""
                 self.assertEqual(7, len(job['worker']))
                 self.assertEqual(False, job['canceled'])
                 self.assertEqual(True, job['voting'])
-                self.assertEqual(None, job['result'])
+                self.assertIsNone(job['result'])
                 self.assertEqual('gate', job['pipeline'])
                 break
 
