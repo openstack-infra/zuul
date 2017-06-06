@@ -1,0 +1,59 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+- pipeline:
+    name: gate
+    manager: dependent
+    success-message: Build succeeded (gate).
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - approved: 1
+    success:
+      gerrit:
+        verified: 2
+        submit: true
+    failure:
+      gerrit:
+        verified: -2
+    start:
+      gerrit:
+        verified: 0
+    precedence: high
+
+- job:
+    name: integration
+    required-projects:
+      - org/project1
+      - org/project2
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - integration
+    gate:
+      queue: integrated
+      jobs:
+        - integration
+
+- project:
+    name: org/project2
+    check:
+      jobs:
+        - integration
+    gate:
+      queue: integrated
+      jobs:
+        - integration
