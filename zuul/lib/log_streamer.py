@@ -47,8 +47,39 @@ class RequestHandler(ss.BaseRequestHandler):
     the (class/method/attribute) names were changed to protect the innocent.
     '''
 
+    MAX_REQUEST_LEN = 1024
+    REQUEST_TIMEOUT = 10
+
+    def get_command(self):
+        poll = select.poll()
+        bitmask = (select.POLLIN | select.POLLERR |
+                   select.POLLHUP | select.POLLNVAL)
+        poll.register(self.request, bitmask)
+        buffer = b''
+        ret = None
+        start = time.time()
+        while True:
+            elapsed = time.time() - start
+            timeout = max(self.REQUEST_TIMEOUT - elapsed, 0)
+            if not timeout:
+                raise Exception("Timeout while waiting for input")
+            for fd, event in poll.poll(timeout):
+                if event & select.POLLIN:
+                    buffer += self.request.recv(self.MAX_REQUEST_LEN)
+                else:
+                    raise Exception("Received error event")
+            if len(buffer) >= self.MAX_REQUEST_LEN:
+                raise Exception("Request too long")
+            try:
+                ret = buffer.decode('utf-8')
+                x = ret.find('\n')
+                if x > 0:
+                    return ret[:x]
+            except UnicodeDecodeError:
+                pass
+
     def handle(self):
-        build_uuid = self.request.recv(1024).decode("utf-8")
+        build_uuid = self.get_command()
         build_uuid = build_uuid.rstrip()
 
         # validate build ID
