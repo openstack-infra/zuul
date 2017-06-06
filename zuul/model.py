@@ -754,6 +754,7 @@ class Job(object):
             roles=frozenset(),
             required_projects={},
             allowed_projects=None,
+            override_branch=None,
         )
 
         # These are generally internal attributes which are not
