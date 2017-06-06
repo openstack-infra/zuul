@@ -27,7 +27,6 @@ import traceback
 from zuul.lib.yamlutil import yaml
 
 import gear
-import git
 from six.moves import shlex_quote
 
 import zuul.merger.merger
@@ -412,8 +411,13 @@ class ExecutorServer(object):
         self.job_workers = {}
 
     def _getMerger(self, root):
+        if root != self.merge_root:
+            cache_root = self.merge_root
+        else:
+            cache_root = None
         return zuul.merger.merger.Merger(root, self.connections,
-                                         self.merge_email, self.merge_name)
+                                         self.merge_email, self.merge_name,
+                                         cache_root)
 
     def start(self):
         self._running = True
@@ -716,36 +720,27 @@ class AnsibleJob(object):
             task.wait()
 
         self.log.debug("Job %s: git updates complete" % (self.job.unique,))
-        repos = []
+        merger = self.executor_server._getMerger(self.jobdir.src_root)
+        repos = {}
         for project in args['projects']:
             self.log.debug("Cloning %s/%s" % (project['connection'],
                                               project['name'],))
-            source = self.executor_server.connections.getSource(
-                project['connection'])
-            project_object = source.getProject(project['name'])
-            url = source.getGitUrl(project_object)
-            repo = git.Repo.clone_from(
-                os.path.join(self.executor_server.merge_root,
-                             source.canonical_hostname,
-                             project['name']),
-                os.path.join(self.jobdir.src_root,
-                             source.canonical_hostname,
-                             project['name']))
-
-            repo.remotes.origin.config_writer.set('url', url)
-            repos.append(repo)
+            repo = merger.getRepo(project['connection'],
+                                  project['name'])
+            repos[project['canonical_name']] = repo
 
         merge_items = [i for i in args['items'] if i.get('refspec')]
         if merge_items:
-            if not self.doMergeChanges(merge_items, args['repo_state']):
+            if not self.doMergeChanges(merger, merge_items,
+                                       args['repo_state']):
                 # There was a merge conflict and we have already sent
                 # a work complete result, don't run any jobs
                 return
 
         # Delete the origin remote from each repo we set up since
         # it will not be valid within the jobs.
-        for repo in repos:
-            repo.delete_remote(repo.remotes.origin)
+        for repo in repos.values():
+            repo.deleteRemote('origin')
 
         # is the playbook in a repo that we have already prepared?
         trusted, untrusted = self.preparePlaybookRepos(args)
@@ -783,9 +778,7 @@ class AnsibleJob(object):
         result = dict(result=result)
         self.job.sendWorkComplete(json.dumps(result))
 
-    def doMergeChanges(self, items, repo_state):
-        # Get a merger in order to update the repos involved in this job.
-        merger = self.executor_server._getMerger(self.jobdir.src_root)
+    def doMergeChanges(self, merger, items, repo_state):
         ret = merger.mergeChanges(items, repo_state=repo_state)
         if not ret:  # merge conflict
             result = dict(result='MERGER_FAILURE')

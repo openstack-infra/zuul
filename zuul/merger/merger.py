@@ -44,11 +44,12 @@ class ZuulReference(git.Reference):
 class Repo(object):
     log = logging.getLogger("zuul.Repo")
 
-    def __init__(self, remote, local, email, username):
+    def __init__(self, remote, local, email, username, cache_path=None):
         self.remote_url = remote
         self.local_path = local
         self.email = email
         self.username = username
+        self.cache_path = cache_path
         self._initialized = False
         try:
             self._ensure_cloned()
@@ -60,17 +61,32 @@ class Repo(object):
         if self._initialized and repo_is_cloned:
             return
         # If the repo does not exist, clone the repo.
+        rewrite_url = False
         if not repo_is_cloned:
             self.log.debug("Cloning from %s to %s" % (self.remote_url,
                                                       self.local_path))
-            git.Repo.clone_from(self.remote_url, self.local_path)
+            if self.cache_path:
+                git.Repo.clone_from(self.cache_path, self.local_path)
+                rewrite_url = True
+            else:
+                git.Repo.clone_from(self.remote_url, self.local_path)
         repo = git.Repo(self.local_path)
+        # Create local branches corresponding to all the remote branches
+        if not repo_is_cloned:
+            origin = repo.remotes.origin
+            for ref in origin.refs:
+                if ref.remote_head == 'HEAD':
+                    continue
+                repo.create_head(ref.remote_head, ref, force=True)
         with repo.config_writer() as config_writer:
             if self.email:
                 config_writer.set_value('user', 'email', self.email)
             if self.username:
                 config_writer.set_value('user', 'name', self.username)
             config_writer.write()
+        if rewrite_url:
+            with repo.remotes.origin.config_writer as config_writer:
+                config_writer.set('url', self.remote_url)
         self._initialized = True
 
     def isInitialized(self):
@@ -157,6 +173,11 @@ class Repo(object):
         reset_repo_to_head(repo)
         return repo.head.commit
 
+    def checkoutLocalBranch(self, branch):
+        repo = self.createRepoObject()
+        ref = repo.heads[branch].commit
+        self.checkout(ref)
+
     def cherryPick(self, ref):
         repo = self.createRepoObject()
         self.log.debug("Cherry-picking %s" % ref)
@@ -230,11 +251,16 @@ class Repo(object):
                 ret[fn] = None
         return ret
 
+    def deleteRemote(self, remote):
+        repo = self.createRepoObject()
+        repo.delete_remote(repo.remotes[remote])
+
 
 class Merger(object):
     log = logging.getLogger("zuul.Merger")
 
-    def __init__(self, working_root, connections, email, username):
+    def __init__(self, working_root, connections, email, username,
+                 cache_root=None):
         self.repos = {}
         self.working_root = working_root
         if not os.path.exists(working_root):
@@ -242,6 +268,7 @@ class Merger(object):
         self.connections = connections
         self.email = email
         self.username = username
+        self.cache_root = cache_root
 
     def _get_ssh_cmd(self, connection_name):
         sshkey = self.connections.connections.get(connection_name).\
@@ -264,7 +291,12 @@ class Merger(object):
         key = '/'.join([hostname, project_name])
         try:
             path = os.path.join(self.working_root, hostname, project_name)
-            repo = Repo(url, path, self.email, self.username)
+            if self.cache_root:
+                cache_path = os.path.join(self.cache_root, hostname,
+                                          project_name)
+            else:
+                cache_path = None
+            repo = Repo(url, path, self.email, self.username, cache_path)
 
             self.repos[key] = repo
         except Exception:
@@ -301,15 +333,10 @@ class Merger(object):
                                connection_name, project_name)
 
     def checkoutBranch(self, connection_name, project_name, branch):
+        self.log.info("Checking out %s/%s branch %s",
+                      connection_name, project_name, branch)
         repo = self.getRepo(connection_name, project_name)
-        if repo.hasBranch(branch):
-            self.log.info("Checking out branch %s of %s/%s" %
-                          (branch, connection_name, project_name))
-            head = repo.getBranchHead(branch)
-            repo.checkout(head)
-        else:
-            raise Exception("Project %s/%s does not have branch %s" %
-                            (connection_name, project_name, branch))
+        repo.checkoutLocalBranch(branch)
 
     def _saveRepoState(self, connection_name, project_name, repo,
                        repo_state):
