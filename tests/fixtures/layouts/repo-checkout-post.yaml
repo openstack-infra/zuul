@@ -8,9 +8,18 @@
 
 - job:
     name: integration
+    required-projects:
+      - org/project1
+      - org/project2
 
 - project:
     name: org/project1
+    post:
+      jobs:
+        - integration
+
+- project:
+    name: org/project2
     post:
       jobs:
         - integration
