@@ -1289,6 +1289,8 @@ class QueueItem(object):
         self.enqueue_time = None
         self.dequeue_time = None
         self.reported = False
+        self.reported_start = False
+        self.quiet = False
         self.active = False  # Whether an item is within an active window
         self.live = True  # Whether an item is intended to be processed at all
         self.layout = None  # This item's shadow layout

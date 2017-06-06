@@ -262,9 +262,9 @@ class TestInRepoConfig(ZuulTestCase):
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
-        self.assertEqual(A.reported, 2,
-                         "A should report start and failure")
-        self.assertIn('syntax error', A.messages[1],
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn('syntax error', A.messages[0],
                       "A should have a syntax error reported")
 
     def test_trusted_syntax_error(self):
@@ -283,9 +283,9 @@ class TestInRepoConfig(ZuulTestCase):
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
-        self.assertEqual(A.reported, 2,
-                         "A should report start and failure")
-        self.assertIn('syntax error', A.messages[1],
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn('syntax error', A.messages[0],
                       "A should have a syntax error reported")
 
     def test_untrusted_yaml_error(self):
@@ -303,9 +303,9 @@ class TestInRepoConfig(ZuulTestCase):
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
-        self.assertEqual(A.reported, 2,
-                         "A should report start and failure")
-        self.assertIn('syntax error', A.messages[1],
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn('syntax error', A.messages[0],
                       "A should have a syntax error reported")
 
     def test_untrusted_shadow_error(self):
@@ -323,9 +323,9 @@ class TestInRepoConfig(ZuulTestCase):
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
-        self.assertEqual(A.reported, 2,
-                         "A should report start and failure")
-        self.assertIn('not permitted to shadow', A.messages[1],
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn('not permitted to shadow', A.messages[0],
                       "A should have a syntax error reported")
 
 
