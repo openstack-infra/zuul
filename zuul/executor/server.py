@@ -387,12 +387,13 @@ class ExecutorServer(object):
         self.command_socket = commandsocket.CommandSocket(path)
         ansible_dir = os.path.join(state_dir, 'ansible')
         self.ansible_dir = ansible_dir
+        if os.path.exists(ansible_dir):
+            shutil.rmtree(ansible_dir)
 
         zuul_dir = os.path.join(ansible_dir, 'zuul')
         plugin_dir = os.path.join(zuul_dir, 'ansible')
 
-        if not os.path.exists(plugin_dir):
-            os.makedirs(plugin_dir)
+        os.makedirs(plugin_dir, mode=0o0755)
 
         self.library_dir = os.path.join(plugin_dir, 'library')
         self.action_dir = os.path.join(plugin_dir, 'action')
