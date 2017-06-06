@@ -1398,6 +1398,9 @@ class QueueItem(object):
     def getConfigError(self):
         return self.current_build_set.config_error
 
+    def wasDequeuedNeedingChange(self):
+        return self.dequeued_needing_change
+
     def isHoldingFollowingChanges(self):
         if not self.live:
             return False
@@ -2204,6 +2207,9 @@ class Layout(object):
                 project_config.pipelines[item.pipeline.name].job_list
             self._createJobGraph(item, project_job_list, ret)
         return ret
+
+    def hasProject(self, project):
+        return project.canonical_name in self.project_configs
 
 
 class Semaphore(object):
