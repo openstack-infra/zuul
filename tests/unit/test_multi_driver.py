@@ -28,10 +28,10 @@ class TestGerritAndGithub(ZuulTestCase):
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
 
         B = self.fake_github.openFakePullRequest('org/project1', 'master', 'B')
         self.fake_github.emitEvent(B.getPullRequestOpenedEvent())
-
         self.waitUntilSettled()
 
         self.assertEqual(2, len(self.builds))
