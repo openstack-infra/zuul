@@ -229,8 +229,8 @@ class JobParser(object):
 
         role = vs.Any(zuul_role, galaxy_role)
 
-        repo = {vs.Required('name'): str,
-                'override-branch': str}
+        job_project = {vs.Required('name'): str,
+                       'override-branch': str}
 
         job = {vs.Required('name'): str,
                'parent': str,
@@ -255,7 +255,7 @@ class JobParser(object):
                '_source_context': model.SourceContext,
                '_start_mark': yaml.Mark,
                'roles': to_list(role),
-               'repos': to_list(vs.Any(repo, str)),
+               'required-projects': to_list(vs.Any(job_project, str)),
                'vars': dict,
                'dependencies': to_list(str),
                'allowed-projects': to_list(str),
@@ -367,23 +367,23 @@ class JobParser(object):
                     ns.addNode(node)
             job.nodeset = ns
 
-        if 'repos' in conf:
-            new_repos = {}
-            repos = as_list(conf.get('repos', []))
-            for repo in repos:
-                if isinstance(repo, dict):
-                    repo_name = repo['name']
-                    repo_override_branch = repo.get('override-branch')
+        if 'required-projects' in conf:
+            new_projects = {}
+            projects = as_list(conf.get('required-projects', []))
+            for project in projects:
+                if isinstance(project, dict):
+                    project_name = project['name']
+                    project_override_branch = project.get('override-branch')
                 else:
-                    repo_name = repo
-                    repo_override_branch = None
-                (trusted, project) = tenant.getProject(repo_name)
+                    project_name = project
+                    project_override_branch = None
+                (trusted, project) = tenant.getProject(project_name)
                 if project is None:
-                    raise Exception("Unknown project %s" % (repo_name,))
-                job_repo = model.JobRepo(repo_name,
-                                         repo_override_branch)
-                new_repos[repo_name] = job_repo
-            job.updateRepos(new_repos)
+                    raise Exception("Unknown project %s" % (project_name,))
+                job_project = model.JobProject(project_name,
+                                               project_override_branch)
+                new_projects[project_name] = job_project
+            job.updateProjects(new_projects)
 
         tags = conf.get('tags')
         if tags:
