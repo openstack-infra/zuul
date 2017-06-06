@@ -1546,8 +1546,8 @@ class QueueItem(object):
         # secrets, etc.
         safe_change = self.change.getSafeAttributes()
         safe_pipeline = self.pipeline.getSafeAttributes()
-        safe_job = job.getSafeAttributes()
-        safe_build = build.getSafeAttributes()
+        safe_job = job.getSafeAttributes() if job else {}
+        safe_build = build.getSafeAttributes() if build else {}
         try:
             url = url_pattern.format(change=safe_change,
                                      pipeline=safe_pipeline,
