@@ -129,10 +129,12 @@ class GithubWebhookListener():
         event.trigger_name = 'github'
         event.project_name = base_repo.get('full_name')
         event.type = 'push'
+        event.branch_updated = True
 
         event.ref = body.get('ref')
         event.oldrev = body.get('before')
         event.newrev = body.get('after')
+        event.commits = body.get('commits')
 
         ref_parts = event.ref.split('/')  # ie, ['refs', 'heads', 'master']
 
@@ -490,6 +492,7 @@ class GithubConnection(BaseConnection):
             change.newrev = event.newrev
             change.url = self.getGitwebUrl(project, sha=event.newrev)
             change.source_event = event
+            change.files = self.getPushedFileNames(event)
         else:
             change = Ref(project)
         return change
@@ -727,6 +730,13 @@ class GithubConnection(BaseConnection):
     def getIsCurrent(self, project, number, sha):
         pr = self.getPull(project, number)
         return pr.get('head').get('sha') == sha
+
+    def getPushedFileNames(self, event):
+        files = set()
+        for c in event.commits:
+            for f in c.get('added') + c.get('modified') + c.get('removed'):
+                files.add(f)
+        return list(files)
 
     def _ghTimestampToDate(self, timestamp):
         return time.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')

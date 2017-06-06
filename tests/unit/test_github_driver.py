@@ -510,3 +510,18 @@ class TestGithubDriver(ZuulTestCase):
         self.assertNotIn('merge', A.labels)
         self.assertNotIn('merge', B.labels)
         self.assertNotIn('merge', C.labels)
+
+    @simple_layout('layouts/basic-github.yaml', driver='github')
+    def test_push_event_reconfigure(self):
+        pevent = self.fake_github.getPushEvent(project='common-config',
+                                               ref='refs/heads/master',
+                                               modified_files=['zuul.yaml'])
+
+        # record previous tenant reconfiguration time, which may not be set
+        old = self.sched.tenant_last_reconfigured.get('tenant-one', 0)
+        time.sleep(1)
+        self.fake_github.emitEvent(pevent)
+        self.waitUntilSettled()
+        new = self.sched.tenant_last_reconfigured.get('tenant-one', 0)
+        # New timestamp should be greater than the old timestamp
+        self.assertLess(old, new)

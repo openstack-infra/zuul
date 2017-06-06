@@ -1767,6 +1767,8 @@ class Ref(object):
         self.oldrev = None
         self.newrev = None
 
+        self.files = []
+
     def getBasePath(self):
         base_path = ''
         if hasattr(self, 'ref'):
@@ -1809,6 +1811,8 @@ class Ref(object):
         return set()
 
     def updatesConfig(self):
+        if 'zuul.yaml' in self.files or '.zuul.yaml' in self.files:
+            return True
         return False
 
     def getSafeAttributes(self):
@@ -1828,7 +1832,6 @@ class Change(Ref):
         self.patchset = None
         self.refspec = None
 
-        self.files = []
         self.needs_changes = []
         self.needed_by_changes = []
         self.is_current_patchset = True
@@ -1876,11 +1879,6 @@ class Change(Ref):
             related.update(c.getRelatedChanges())
         return related
 
-    def updatesConfig(self):
-        if 'zuul.yaml' in self.files or '.zuul.yaml' in self.files:
-            return True
-        return False
-
     def getSafeAttributes(self):
         return Attributes(project=self.project,
                           number=self.number,
@@ -1894,6 +1892,7 @@ class TriggerEvent(object):
         self.data = None
         # common
         self.type = None
+        self.branch_updated = False
         # For management events (eg: enqueue / promote)
         self.tenant_name = None
         self.project_hostname = None

@@ -592,21 +592,6 @@ class FakeGithubPullRequest(object):
     def getPullRequestClosedEvent(self):
         return self._getPullRequestEvent('closed')
 
-    def getPushEvent(self, old_sha, ref='refs/heads/master'):
-        name = 'push'
-        data = {
-            'ref': ref,
-            'before': old_sha,
-            'after': self.head_sha,
-            'repository': {
-                'full_name': self.project
-            },
-            'sender': {
-                'login': 'ghuser'
-            }
-        }
-        return (name, data)
-
     def addComment(self, message):
         self.comments.append(message)
         self._updateTimeStamp()
@@ -896,7 +881,8 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         self.pull_requests.append(pull_request)
         return pull_request
 
-    def getPushEvent(self, project, ref, old_rev=None, new_rev=None):
+    def getPushEvent(self, project, ref, old_rev=None, new_rev=None,
+                     added_files=[], removed_files=[], modified_files=[]):
         if not old_rev:
             old_rev = '00000000000000000000000000000000'
         if not new_rev:
@@ -908,7 +894,14 @@ class FakeGithubConnection(githubconnection.GithubConnection):
             'after': new_rev,
             'repository': {
                 'full_name': project
-            }
+            },
+            'commits': [
+                {
+                    'added': added_files,
+                    'removed': removed_files,
+                    'modified': modified_files
+                }
+            ]
         }
         return (name, data)
 

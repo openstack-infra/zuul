@@ -76,6 +76,14 @@ class GerritEventConnector(threading.Thread):
         time.sleep(max((ts + self.delay) - now, 0.0))
         event = GerritTriggerEvent()
         event.type = data.get('type')
+        # This catches when a change is merged, as it could potentially
+        # have merged layout info which will need to be read in.
+        # Ideally this would be done with a refupdate event so as to catch
+        # directly pushed things as well as full changes being merged.
+        # But we do not yet get files changed data for pure refupdate events.
+        # TODO(jlk): handle refupdated events instead of just changes
+        if event.type == 'change-merged':
+            event.branch_updated = True
         event.trigger_name = 'gerrit'
         change = data.get('change')
         event.project_hostname = self.connection.canonical_hostname

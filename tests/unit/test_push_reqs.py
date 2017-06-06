@@ -28,7 +28,10 @@ class TestPushRequirements(ZuulTestCase):
         # Create a github change, add a change and emit a push event
         A = self.fake_github.openFakePullRequest('org/project1', 'master', 'A')
         old_sha = A.head_sha
-        self.fake_github.emitEvent(A.getPushEvent(old_sha))
+        pevent = self.fake_github.getPushEvent(project='org/project1',
+                                               ref='refs/heads/master',
+                                               old_rev=old_sha)
+        self.fake_github.emitEvent(pevent)
 
         self.waitUntilSettled()
 
