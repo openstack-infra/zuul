@@ -314,38 +314,6 @@ class TestCloner(ZuulTestCase):
         self.waitUntilSettled()
 
     @simple_layout('layouts/repo-checkout-post.yaml')
-    def test_post_checkout(self):
-        self.executor_server.hold_jobs_in_build = True
-        p1 = "review.example.com/org/project1"
-        projects = [p1]
-
-        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
-        event = A.getRefUpdatedEvent()
-        A.setMerged()
-        self.fake_gerrit.addEvent(event)
-        self.waitUntilSettled()
-
-        upstream = self.getUpstreamRepos(projects)
-        states = [
-            {p1: dict(commit=str(upstream[p1].commit('master')),
-                      present=[A], branch='master'),
-             },
-        ]
-
-        for number, build in enumerate(self.builds):
-            self.log.debug("Build parameters: %s", build.parameters)
-            work = build.getWorkspaceRepos(projects)
-            state = states[number]
-
-            for project in projects:
-                self.assertRepoState(work[project], state[project],
-                                     project, build, number)
-
-        self.executor_server.hold_jobs_in_build = False
-        self.executor_server.release()
-        self.waitUntilSettled()
-
-    @simple_layout('layouts/repo-checkout-post.yaml')
     def test_post_and_master_checkout(self):
         self.executor_server.hold_jobs_in_build = True
         p1 = "review.example.com/org/project1"
