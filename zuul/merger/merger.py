@@ -129,6 +129,14 @@ class Repo(object):
         repo = self.createRepoObject()
         return repo.refs
 
+    def setRef(self, path, hexsha, repo=None):
+        if repo is None:
+            repo = self.createRepoObject()
+        binsha = gitdb.util.to_bin_sha(hexsha)
+        obj = git.objects.Object.new_from_sha(repo, binsha)
+        self.log.debug("Create reference %s", path)
+        git.refs.Reference.create(repo, path, obj, force=True)
+
     def setRefs(self, refs):
         repo = self.createRepoObject()
         current_refs = {}
@@ -136,10 +144,7 @@ class Repo(object):
             current_refs[ref.path] = ref
         unseen = set(current_refs.keys())
         for path, hexsha in refs.items():
-            binsha = gitdb.util.to_bin_sha(hexsha)
-            obj = git.objects.Object.new_from_sha(repo, binsha)
-            self.log.debug("Create reference %s", path)
-            git.refs.Reference.create(repo, path, obj, force=True)
+            self.setRef(path, hexsha, repo)
             unseen.discard(path)
         for path in unseen:
             self.log.debug("Delete reference %s", path)
@@ -439,7 +444,10 @@ class Merger(object):
                     project=item['project'],
                     branch=item['branch'],
                     files=repo_files))
-        return commit.hexsha, read_files, repo_state
+        ret_recent = {}
+        for k, v in recent.items():
+            ret_recent[k] = v.hexsha
+        return commit.hexsha, read_files, repo_state, ret_recent
 
     def getFiles(self, connection_name, project_name, branch, files):
         repo = self.getRepo(connection_name, project_name)

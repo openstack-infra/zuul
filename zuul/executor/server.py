@@ -629,7 +629,8 @@ class ExecutorServer(object):
         if ret is None:
             result['commit'] = result['files'] = result['repo_state'] = None
         else:
-            result['commit'], result['files'], result['repo_state'] = ret
+            (result['commit'], result['files'], result['repo_state'],
+             recent) = ret
         job.sendWorkComplete(json.dumps(result))
 
 
@@ -790,6 +791,11 @@ class AnsibleJob(object):
             result = dict(result='MERGER_FAILURE')
             self.job.sendWorkComplete(json.dumps(result))
             return False
+        recent = ret[3]
+        for key, commit in recent.items():
+            (connection, project, branch) = key
+            repo = merger.getRepo(connection, project)
+            repo.setRef('refs/heads/' + branch, commit)
         return True
 
     def runPlaybooks(self, args):
