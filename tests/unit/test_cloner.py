@@ -20,6 +20,7 @@ import os
 import shutil
 import time
 from unittest import skip
+import six
 
 import git
 
@@ -28,10 +29,38 @@ import zuul.lib.cloner
 from tests.base import ZuulTestCase, simple_layout
 
 
+def make_state(present, absent):
+    return (present, absent)
+
+
 class TestCloner(ZuulTestCase):
     tenant_config_file = 'config/single-tenant/main.yaml'
 
     log = logging.getLogger("zuul.test.cloner")
+
+    def assertRepoState(self, repo, state, project, build, number):
+        if isinstance(state, six.string_types):
+            self.assertEquals(state,
+                              str(repo.commit('HEAD')),
+                              'Project %s commit for build %s #%s should '
+                              'be correct' % (
+                                  project, build, number))
+        else:
+            ref = repo.commit('HEAD')
+            repo_messages = set(
+                [c.message.strip() for c in repo.iter_commits(ref)])
+            for change in state[0]:
+                msg = '%s-1' % change.subject
+                self.assertTrue(msg in repo_messages,
+                                'Project %s for build %s #%s should '
+                                'have change %s' % (
+                                    project, build, number, change.subject))
+            for change in state[1]:
+                msg = '%s-1' % change.subject
+                self.assertTrue(msg not in repo_messages,
+                                'Project %s for build %s #%s should '
+                                'not have change %s' % (
+                                    project, build, number, change.subject))
 
     @skip("Disabled for early v3 development")
     def test_cache_dir(self):
@@ -137,11 +166,11 @@ class TestCloner(ZuulTestCase):
 
         upstream = self.getUpstreamRepos(projects)
         states = [
-            {p1: self.builds[0].parameters['ZUUL_COMMIT'],
+            {p1: make_state(present=[A], absent=[B]),
              p2: str(upstream[p2].commit('master')),
              },
-            {p1: self.builds[0].parameters['ZUUL_COMMIT'],
-             p2: self.builds[1].parameters['ZUUL_COMMIT'],
+            {p1: make_state(present=[A], absent=[B]),
+             p2: make_state(present=[B], absent=[A]),
              },
         ]
 
@@ -151,20 +180,22 @@ class TestCloner(ZuulTestCase):
             state = states[number]
 
             for project in projects:
-                self.assertEquals(state[project],
-                                  str(work[project].commit('HEAD')),
-                                  'Project %s commit for build %s should '
-                                  'be correct' % (project, number))
+                self.assertRepoState(work[project], state[project],
+                                     project, build, number)
 
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
         self.waitUntilSettled()
 
-    @skip("Disabled for early v3 development")
+    @simple_layout('layouts/repo-checkout-four-project.yaml')
     def test_multi_branch(self):
-        self.worker.hold_jobs_in_build = True
-        projects = ['org/project1', 'org/project2',
-                    'org/project3', 'org/project4']
+        self.executor_server.hold_jobs_in_build = True
+
+        p1 = 'review.example.com/org/project1'
+        p2 = 'review.example.com/org/project2'
+        p3 = 'review.example.com/org/project3'
+        p4 = 'review.example.com/org/project4'
+        projects = [p1, p2, p3, p4]
 
         self.create_branch('org/project2', 'stable/havana')
         self.create_branch('org/project4', 'stable/havana')
@@ -172,12 +203,12 @@ class TestCloner(ZuulTestCase):
         B = self.fake_gerrit.addFakeChange('org/project2', 'stable/havana',
                                            'B')
         C = self.fake_gerrit.addFakeChange('org/project3', 'master', 'C')
-        A.addApproval('CRVW', 2)
-        B.addApproval('CRVW', 2)
-        C.addApproval('CRVW', 2)
-        self.fake_gerrit.addEvent(A.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(B.addApproval('APRV', 1))
-        self.fake_gerrit.addEvent(C.addApproval('APRV', 1))
+        A.addApproval('code-review', 2)
+        B.addApproval('code-review', 2)
+        C.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
 
         self.waitUntilSettled()
 
@@ -185,50 +216,34 @@ class TestCloner(ZuulTestCase):
 
         upstream = self.getUpstreamRepos(projects)
         states = [
-            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
-             'org/project2': str(upstream['org/project2'].commit('master')),
-             'org/project3': str(upstream['org/project3'].commit('master')),
-             'org/project4': str(upstream['org/project4'].
-                                 commit('master')),
+            {p1: make_state(present=[A], absent=[B, C]),
+             p2: str(upstream[p2].commit('master')),
+             p3: str(upstream[p3].commit('master')),
+             p4: str(upstream[p4].commit('master')),
              },
-            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
-             'org/project2': self.builds[1].parameters['ZUUL_COMMIT'],
-             'org/project3': str(upstream['org/project3'].commit('master')),
-             'org/project4': str(upstream['org/project4'].
-                                 commit('stable/havana')),
+            {p1: make_state(present=[A], absent=[B, C]),
+             p2: make_state(present=[B], absent=[A, C]),
+             p3: str(upstream[p3].commit('master')),
+             p4: str(upstream[p4].commit('stable/havana')),
              },
-            {'org/project1': self.builds[0].parameters['ZUUL_COMMIT'],
-             'org/project2': str(upstream['org/project2'].commit('master')),
-             'org/project3': self.builds[2].parameters['ZUUL_COMMIT'],
-             'org/project4': str(upstream['org/project4'].
-                                 commit('master')),
+            {p1: make_state(present=[A], absent=[B, C]),
+             p2: str(upstream[p2].commit('master')),
+             p3: make_state(present=[C], absent=[A, B]),
+             p4: str(upstream[p4].commit('master')),
              },
         ]
 
         for number, build in enumerate(self.builds):
             self.log.debug("Build parameters: %s", build.parameters)
-            cloner = zuul.lib.cloner.Cloner(
-                git_base_url=self.upstream_root,
-                projects=projects,
-                workspace=self.workspace_root,
-                zuul_project=build.parameters.get('ZUUL_PROJECT', None),
-                zuul_branch=build.parameters['ZUUL_BRANCH'],
-                zuul_ref=build.parameters['ZUUL_REF'],
-                zuul_url=self.src_root,
-            )
-            cloner.execute()
-            work = self.getWorkspaceRepos(projects)
+            work = build.getWorkspaceRepos(projects)
             state = states[number]
 
             for project in projects:
-                self.assertEquals(state[project],
-                                  str(work[project].commit('HEAD')),
-                                  'Project %s commit for build %s should '
-                                  'be correct' % (project, number))
-            shutil.rmtree(self.workspace_root)
+                self.assertRepoState(work[project], state[project],
+                                     project, build, number)
 
-        self.worker.hold_jobs_in_build = False
-        self.worker.release()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
 
     @skip("Disabled for early v3 development")
