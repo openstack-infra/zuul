@@ -666,40 +666,37 @@ class TestCloner(ZuulTestCase):
         self.worker.release()
         self.waitUntilSettled()
 
-    @skip("Disabled for early v3 development")
+    @simple_layout('layouts/repo-checkout-post.yaml')
     def test_post_checkout(self):
-        self.worker.hold_jobs_in_build = True
-        project = "org/project1"
+        self.executor_server.hold_jobs_in_build = True
+        p1 = "review.example.com/org/project1"
+        projects = [p1]
 
-        A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         event = A.getRefUpdatedEvent()
         A.setMerged()
         self.fake_gerrit.addEvent(event)
         self.waitUntilSettled()
 
-        build = self.builds[0]
-        state = {'org/project1': build.parameters['ZUUL_COMMIT']}
+        upstream = self.getUpstreamRepos(projects)
+        states = [
+            {p1: dict(commit=str(upstream[p1].commit('master')),
+                      present=[A], branch='master'),
+             },
+        ]
 
-        build.release()
+        for number, build in enumerate(self.builds):
+            self.log.debug("Build parameters: %s", build.parameters)
+            work = build.getWorkspaceRepos(projects)
+            state = states[number]
+
+            for project in projects:
+                self.assertRepoState(work[project], state[project],
+                                     project, build, number)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
         self.waitUntilSettled()
-
-        cloner = zuul.lib.cloner.Cloner(
-            git_base_url=self.upstream_root,
-            projects=[project],
-            workspace=self.workspace_root,
-            zuul_project=build.parameters.get('ZUUL_PROJECT', None),
-            zuul_branch=build.parameters.get('ZUUL_BRANCH', None),
-            zuul_ref=build.parameters.get('ZUUL_REF', None),
-            zuul_newrev=build.parameters.get('ZUUL_NEWREV', None),
-            zuul_url=self.git_root,
-        )
-        cloner.execute()
-        work = self.getWorkspaceRepos([project])
-        self.assertEquals(state[project],
-                          str(work[project].commit('HEAD')),
-                          'Project %s commit for build %s should '
-                          'be correct' % (project, 0))
-        shutil.rmtree(self.workspace_root)
 
     @skip("Disabled for early v3 development")
     def test_post_and_master_checkout(self):

@@ -1,0 +1,16 @@
+- pipeline:
+    name: post
+    manager: independent
+    trigger:
+      gerrit:
+        - event: ref-updated
+          ref: ^(?!refs/).*$
+
+- job:
+    name: integration
+
+- project:
+    name: org/project1
+    post:
+      jobs:
+        - integration
