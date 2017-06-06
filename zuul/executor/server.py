@@ -410,14 +410,14 @@ class ExecutorServer(object):
 
         self.job_workers = {}
 
-    def _getMerger(self, root):
+    def _getMerger(self, root, logger=None):
         if root != self.merge_root:
             cache_root = self.merge_root
         else:
             cache_root = None
         return zuul.merger.merger.Merger(root, self.connections,
                                          self.merge_email, self.merge_name,
-                                         cache_root)
+                                         cache_root, logger)
 
     def start(self):
         self._running = True
@@ -638,15 +638,22 @@ class ExecutorServer(object):
         job.sendWorkComplete(json.dumps(result))
 
 
-class AnsibleJob(object):
-    log = logging.getLogger("zuul.AnsibleJob")
+class AnsibleJobLogAdapter(logging.LoggerAdapter):
+    def process(self, msg, kwargs):
+        msg, kwargs = super(AnsibleJobLogAdapter, self).process(msg, kwargs)
+        msg = '[build: %s] %s' % (kwargs['extra']['job'], msg)
+        return msg, kwargs
 
+
+class AnsibleJob(object):
     RESULT_NORMAL = 1
     RESULT_TIMED_OUT = 2
     RESULT_UNREACHABLE = 3
     RESULT_ABORTED = 4
 
     def __init__(self, executor_server, job):
+        logger = logging.getLogger("zuul.AnsibleJob")
+        self.log = AnsibleJobLogAdapter(logger, {'job': job.unique})
         self.executor_server = executor_server
         self.job = job
         self.jobdir = None
@@ -720,7 +727,8 @@ class AnsibleJob(object):
             task.wait()
 
         self.log.debug("Job %s: git updates complete" % (self.job.unique,))
-        merger = self.executor_server._getMerger(self.jobdir.src_root)
+        merger = self.executor_server._getMerger(self.jobdir.src_root,
+                                                 self.log)
         repos = {}
         for project in args['projects']:
             self.log.debug("Cloning %s/%s" % (project['connection'],
@@ -979,7 +987,8 @@ class AnsibleJob(object):
         # the stack of changes we are testing, so check out the branch
         # tip into a dedicated space.
 
-        merger = self.executor_server._getMerger(jobdir_playbook.root)
+        merger = self.executor_server._getMerger(jobdir_playbook.root,
+                                                 self.log)
         merger.checkoutBranch(playbook['connection'], project.name,
                               playbook['branch'])
 
@@ -1063,7 +1072,8 @@ class AnsibleJob(object):
             # in the dependency chain for the change (in which case,
             # there is no existing untrusted checkout of it).  Check
             # out the branch tip into a dedicated space.
-            merger = self.executor_server._getMerger(trusted_root)
+            merger = self.executor_server._getMerger(trusted_root,
+                                                     self.log)
             merger.checkoutBranch(role['connection'], project.name,
                                   'master')
             orig_repo_path = os.path.join(trusted_root,
