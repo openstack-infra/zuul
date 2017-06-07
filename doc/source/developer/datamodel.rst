@@ -8,7 +8,7 @@ basic organizational structure that everything else hangs off.
 
 Pipelines have a configured
 :py:class:`~zuul.manager.PipelineManager` which controlls how
-the :py:class:`Change <zuul.model.Changeish>` objects are enqueued and
+the :py:class:`Ref <zuul.model.Ref>` objects are enqueued and
 processed.
 
 There are currently two,
@@ -35,7 +35,7 @@ objects.
 .. autoclass:: zuul.model.Build
 
 The :py:class:`~zuul.manager.base.PipelineManager` enqueues each
-:py:class:`Change <zuul.model.Changeish>` into the
+:py:class:`Ref <zuul.model.Ref>` into the
 :py:class:`~zuul.model.ChangeQueue` in a :py:class:`~zuul.model.QueueItem`.
 
 .. autoclass:: zuul.model.QueueItem

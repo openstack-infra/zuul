@@ -1322,7 +1322,7 @@ class QueueItem(object):
     def __init__(self, queue, change):
         self.pipeline = queue.pipeline
         self.queue = queue
-        self.change = change  # a changeish
+        self.change = change  # a ref
         self.build_sets = []
         self.dequeued_needing_change = False
         self.current_build_set = BuildSet(self)
@@ -1631,15 +1631,14 @@ class QueueItem(object):
         return (result, url)
 
     def formatJSON(self):
-        changeish = self.change
         ret = {}
         ret['active'] = self.active
         ret['live'] = self.live
-        if hasattr(changeish, 'url') and changeish.url is not None:
-            ret['url'] = changeish.url
+        if hasattr(self.change, 'url') and self.change.url is not None:
+            ret['url'] = self.change.url
         else:
             ret['url'] = None
-        ret['id'] = changeish._id()
+        ret['id'] = self.change._id()
         if self.item_ahead:
             ret['item_ahead'] = self.item_ahead.change._id()
         else:
@@ -1647,8 +1646,8 @@ class QueueItem(object):
         ret['items_behind'] = [i.change._id() for i in self.items_behind]
         ret['failing_reasons'] = self.current_build_set.failing_reasons
         ret['zuul_ref'] = self.current_build_set.ref
-        if changeish.project:
-            ret['project'] = changeish.project.name
+        if self.change.project:
+            ret['project'] = self.change.project.name
         else:
             # For cross-project dependencies with the depends-on
             # project not known to zuul, the project is None
@@ -1656,8 +1655,8 @@ class QueueItem(object):
             ret['project'] = "Unknown Project"
         ret['enqueue_time'] = int(self.enqueue_time * 1000)
         ret['jobs'] = []
-        if hasattr(changeish, 'owner'):
-            ret['owner'] = changeish.owner
+        if hasattr(self.change, 'owner'):
+            ret['owner'] = self.change.owner
         else:
             ret['owner'] = None
         max_remaining = 0
@@ -1725,20 +1724,19 @@ class QueueItem(object):
         return ret
 
     def formatStatus(self, indent=0, html=False):
-        changeish = self.change
         indent_str = ' ' * indent
         ret = ''
-        if html and hasattr(changeish, 'url') and changeish.url is not None:
+        if html and getattr(self.change, 'url', None) is not None:
             ret += '%sProject %s change <a href="%s">%s</a>\n' % (
                 indent_str,
-                changeish.project.name,
-                changeish.url,
-                changeish._id())
+                self.change.project.name,
+                self.change.url,
+                self.change._id())
         else:
             ret += '%sProject %s change %s based on %s\n' % (
                 indent_str,
-                changeish.project.name,
-                changeish._id(),
+                self.change.project.name,
+                self.change._id(),
                 self.item_ahead)
         for job in self.getJobs():
             build = self.current_build_set.getBuild(job.name)
