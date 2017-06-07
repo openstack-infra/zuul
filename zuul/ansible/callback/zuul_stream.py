@@ -15,7 +15,10 @@
 
 from __future__ import absolute_import
 
+import datetime
 import multiprocessing
+import logging
+import os
 import socket
 import time
 import uuid
@@ -87,15 +90,28 @@ class CallbackModule(default.CallbackModule):
         self._host_dict = {}
         self._play = None
         self._streamer = None
+        self.configure_logger()
+
+    def configure_logger(self):
+        # ansible appends timestamp, user and pid to the log lines emitted
+        # to the log file. We're doing other things though, so we don't want
+        # this.
+        path = os.environ['ZUUL_JOB_OUTPUT_FILE']
+        if self._display.verbosity > 2:
+            level = logging.DEBUG
+        else:
+            level = logging.INFO
+        logging.basicConfig(filename=path, level=level, format='%(message)s')
+        self._log = logging.getLogger('zuul.executor.ansible')
 
     def _read_log(self, host, ip, log_id):
-        self._display.vvv("[%s] Starting to log" % host)
+        self._log.debug("[%s] Starting to log" % host)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         while True:
             try:
                 s.connect((ip, LOG_STREAM_PORT))
             except Exception:
-                self._display.vvv("[%s] Waiting on logger" % host)
+                self._log.debug("[%s] Waiting on logger" % host)
                 time.sleep(0.1)
                 continue
             s.send(log_id + '\n')
@@ -103,7 +119,7 @@ class CallbackModule(default.CallbackModule):
                 if "[Zuul] Task exit code" in line:
                     return
                 else:
-                    self._display.display("[%s] %s " % (host, line.strip()))
+                    self._log.info("[%s] %s " % (host, line.strip()))
 
     def v2_playbook_on_play_start(self, play):
         self._play = play
@@ -156,21 +172,48 @@ class CallbackModule(default.CallbackModule):
         if self._play.strategy == 'free':
             return super(CallbackModule, self).v2_runner_on_ok(result)
 
-        delegated_vars = result._result.get('_ansible_delegated_vars', None)
-
-        if delegated_vars:
-            msg = "ok: [{host} -> {delegated_host} %s]".format(
-                host=result._host.get_name(),
-                delegated_host=delegated_vars['ansible_host'])
-        else:
-            msg = "ok: [{host}]".format(host=result._host.get_name())
-
         if result._task.loop and 'results' in result._result:
             self._process_items(result)
-        else:
-            msg += " Runtime: {delta} Start: {start} End: {end}".format(
-                **result._result)
 
         self._handle_warnings(result._result)
 
-        self._display.display(msg)
+        self._log_message(
+            result,
+            " Runtime: {delta} Start: {start} End: {end}".format(
+                **result._result))
+
+    def _print_task_banner(self, task):
+
+        task_name = task.get_name().strip()
+
+        args = ''
+        task_args = task.args.copy()
+        task_args.pop('_raw_params', None)
+        is_shell = task_args.pop('_uses_shell', False)
+        if is_shell and task_name == 'command':
+            task_name = 'shell'
+
+        if not task.no_log and task_args:
+            args = u', '.join(u'%s=%s' % a for a in task_args.items())
+            args = u' %s' % args
+
+        msg = "TASK [{task}{args}]".format(
+            task=task_name,
+            args=args)
+        self._log.info(msg)
+
+    def _log_message(self, result, msg, status="OK"):
+        now = datetime.datetime.now()
+        if not result:
+            hostname = self._get_hostname(result)
+            self._log.info("[{host}] {now} | {status}: {msg}".format(
+                host=hostname, now=now, status=status, msg=msg))
+
+    def _get_hostname(self, result):
+        delegated_vars = result._result.get('_ansible_delegated_vars', None)
+        if delegated_vars:
+            return "{host} -> {delegated_host}".format(
+                host=result._host.get_name(),
+                delegated_host=delegated_vars['ansible_host'])
+        else:
+            return result._host.get_name()

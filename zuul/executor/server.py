@@ -193,7 +193,7 @@ class JobDir(object):
         self.untrusted_config = os.path.join(
             self.ansible_root, 'untrusted.cfg')
         self.trusted_config = os.path.join(self.ansible_root, 'trusted.cfg')
-        self.ansible_log = os.path.join(self.log_root, 'ansible_log.txt')
+        self.job_output_file = os.path.join(self.log_root, 'job-output.txt')
 
     def addPrePlaybook(self):
         count = len(self.pre_playbooks)
@@ -1183,7 +1183,6 @@ class AnsibleJob(object):
                          self.jobdir.root)
             config.write('private_key_file = %s\n' % self.private_key_file)
             config.write('retry_files_enabled = False\n')
-            config.write('log_path = %s\n' % self.jobdir.ansible_log)
             config.write('gathering = explicit\n')
             config.write('library = %s\n'
                          % self.executor_server.library_dir)
@@ -1249,6 +1248,7 @@ class AnsibleJob(object):
         env_copy = os.environ.copy()
         env_copy.update(self.ssh_agent.env)
         env_copy['LOGNAME'] = 'zuul'
+        env_copy['ZUUL_JOB_OUTPUT_FILE'] = self.jobdir.job_output_file
         pythonpath = env_copy.get('PYTHONPATH')
         if pythonpath:
             pythonpath = [pythonpath]
