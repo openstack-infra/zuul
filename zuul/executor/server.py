@@ -1130,6 +1130,11 @@ class AnsibleJob(object):
                 inventory.write('\n')
                 for key in item['host_keys']:
                     keys.append(key)
+            for group in args['groups']:
+                inventory.write('[{name}]\n'.format(name=group['name']))
+                for node_name in group['nodes']:
+                    inventory.write(node_name)
+                    inventory.write('\n')
 
         with open(self.jobdir.known_hosts, 'w') as known_hosts:
             for key in keys:
