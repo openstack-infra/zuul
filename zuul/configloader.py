@@ -903,7 +903,7 @@ class TenantParser(object):
 
         key_dir = os.path.dirname(project.private_key_file)
         if not os.path.isdir(key_dir):
-            os.makedirs(key_dir)
+            os.makedirs(key_dir, 0o700)
 
         TenantParser.log.info(
             "Generating RSA keypair for project %s" % (project.name,)
@@ -919,6 +919,9 @@ class TenantParser(object):
         )
         with open(project.private_key_file, 'wb') as f:
             f.write(pem_private_key)
+
+        # Ensure private key is read/write for zuul user only.
+        os.chmod(project.private_key_file, 0o600)
 
     @staticmethod
     def _loadKeys(project):
