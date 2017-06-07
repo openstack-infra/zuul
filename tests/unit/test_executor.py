@@ -61,6 +61,19 @@ class TestExecutorRepos(ZuulTestCase):
                                 'not have change %s' % (
                                     project, build, number, change.subject))
 
+    def assertBuildStates(self, states, projects):
+        for number, build in enumerate(self.builds):
+            work = build.getWorkspaceRepos(projects)
+            state = states[number]
+
+            for project in projects:
+                self.assertRepoState(work[project], state[project],
+                                     project, build, number)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
     @simple_layout('layouts/repo-checkout-two-project.yaml')
     def test_one_branch(self):
         self.executor_server.hold_jobs_in_build = True
@@ -90,18 +103,7 @@ class TestExecutorRepos(ZuulTestCase):
              },
         ]
 
-        for number, build in enumerate(self.builds):
-            self.log.debug("Build parameters: %s", build.parameters)
-            work = build.getWorkspaceRepos(projects)
-            state = states[number]
-
-            for project in projects:
-                self.assertRepoState(work[project], state[project],
-                                     project, build, number)
-
-        self.executor_server.hold_jobs_in_build = False
-        self.executor_server.release()
-        self.waitUntilSettled()
+        self.assertBuildStates(states, projects)
 
     @simple_layout('layouts/repo-checkout-four-project.yaml')
     def test_multi_branch(self):
@@ -156,18 +158,7 @@ class TestExecutorRepos(ZuulTestCase):
              },
         ]
 
-        for number, build in enumerate(self.builds):
-            self.log.debug("Build parameters: %s", build.parameters)
-            work = build.getWorkspaceRepos(projects)
-            state = states[number]
-
-            for project in projects:
-                self.assertRepoState(work[project], state[project],
-                                     project, build, number)
-
-        self.executor_server.hold_jobs_in_build = False
-        self.executor_server.release()
-        self.waitUntilSettled()
+        self.assertBuildStates(states, projects)
 
     @simple_layout('layouts/repo-checkout-six-project.yaml')
     def test_project_override(self):
@@ -252,18 +243,7 @@ class TestExecutorRepos(ZuulTestCase):
              },
         ]
 
-        for number, build in enumerate(self.builds):
-            self.log.debug("Build parameters: %s", build.parameters)
-            work = build.getWorkspaceRepos(projects)
-            state = states[number]
-
-            for project in projects:
-                self.assertRepoState(work[project], state[project],
-                                     project, build, number)
-
-        self.executor_server.hold_jobs_in_build = False
-        self.executor_server.release()
-        self.waitUntilSettled()
+        self.assertBuildStates(states, projects)
 
     def test_periodic(self):
         # This test can not use simple_layout because it must start
@@ -300,18 +280,7 @@ class TestExecutorRepos(ZuulTestCase):
              },
         ]
 
-        for number, build in enumerate(self.builds):
-            self.log.debug("Build parameters: %s", build.parameters)
-            work = build.getWorkspaceRepos(projects)
-            state = states[number]
-
-            for project in projects:
-                self.assertRepoState(work[project], state[project],
-                                     project, build, number)
-
-        self.executor_server.hold_jobs_in_build = False
-        self.executor_server.release()
-        self.waitUntilSettled()
+        self.assertBuildStates(states, projects)
 
     @simple_layout('layouts/repo-checkout-post.yaml')
     def test_post_and_master_checkout(self):
@@ -335,15 +304,4 @@ class TestExecutorRepos(ZuulTestCase):
              },
         ]
 
-        for number, build in enumerate(self.builds):
-            self.log.debug("Build parameters: %s", build.parameters)
-            work = build.getWorkspaceRepos(projects)
-            state = states[number]
-
-            for project in projects:
-                self.assertRepoState(work[project], state[project],
-                                     project, build, number)
-
-        self.executor_server.hold_jobs_in_build = False
-        self.executor_server.release()
-        self.waitUntilSettled()
+        self.assertBuildStates(states, projects)
