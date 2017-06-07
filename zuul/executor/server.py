@@ -182,7 +182,7 @@ class JobDir(object):
         self.ansible_root = os.path.join(self.root, 'ansible')
         os.makedirs(self.ansible_root)
         self.known_hosts = os.path.join(self.ansible_root, 'known_hosts')
-        self.inventory = os.path.join(self.ansible_root, 'inventory')
+        self.inventory = os.path.join(self.ansible_root, 'inventory.yaml')
         self.vars = os.path.join(self.ansible_root, 'vars.yaml')
         self.playbooks = []  # The list of candidate playbooks
         self.playbook = None  # A pointer to the candidate we have chosen
@@ -310,6 +310,30 @@ def _copy_ansible_files(python_module, target_dir):
                 shutil.copytree(full_path, os.path.join(target_dir, fn))
             else:
                 shutil.copy(os.path.join(library_path, fn), target_dir)
+
+
+def make_inventory_dict(nodes, groups):
+
+    hosts = {}
+    for node in nodes:
+        hosts[node['name']] = node['host_vars']
+
+    inventory = {
+        'all': {
+            'hosts': hosts,
+        }
+    }
+
+    for group in groups:
+        group_hosts = {}
+        for node_name in group['nodes']:
+            # children is a dict with None as values because we don't have
+            # and per-group variables. If we did, None would be a dict
+            # with the per-group variables
+            group_hosts[node_name] = None
+        inventory[group['name']] = {'hosts': group_hosts}
+
+    return inventory
 
 
 class ExecutorMergeWorker(gear.TextWorker):
@@ -1121,24 +1145,17 @@ class AnsibleJob(object):
             self.jobdir.trusted_roles_path.append(trusted_role_path)
 
     def prepareAnsibleFiles(self, args):
-        keys = []
-        with open(self.jobdir.inventory, 'w') as inventory:
-            for item in self.getHostList(args):
-                inventory.write(item['name'])
-                for k, v in item['host_vars'].items():
-                    inventory.write(' %s="%s"' % (k, v))
-                inventory.write('\n')
-                for key in item['host_keys']:
-                    keys.append(key)
-            for group in args['groups']:
-                inventory.write('[{name}]\n'.format(name=group['name']))
-                for node_name in group['nodes']:
-                    inventory.write(node_name)
-                    inventory.write('\n')
+        nodes = self.getHostList(args)
+        inventory = make_inventory_dict(nodes, args['groups'])
+
+        with open(self.jobdir.inventory, 'w') as inventory_yaml:
+            inventory_yaml.write(
+                yaml.safe_dump(inventory, default_flow_style=False))
 
         with open(self.jobdir.known_hosts, 'w') as known_hosts:
-            for key in keys:
-                known_hosts.write('%s\n' % key)
+            for node in nodes:
+                for key in node['host_keys']:
+                    known_hosts.write('%s\n' % key)
 
         with open(self.jobdir.vars, 'w') as vars_yaml:
             zuul_vars = dict(args['vars'])

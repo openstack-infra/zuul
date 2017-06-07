@@ -1,0 +1,6 @@
+- project:
+    name: org/project
+    check:
+      jobs:
+        - single-inventory
+        - group-inventory
