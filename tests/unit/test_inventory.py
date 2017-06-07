@@ -44,8 +44,15 @@ class TestInventory(ZuulTestCase):
         all_nodes = ('ubuntu-xenial',)
         self.assertIn('all', inventory)
         self.assertIn('hosts', inventory['all'])
+        self.assertIn('vars', inventory['all'])
         for node_name in all_nodes:
             self.assertIn(node_name, inventory['all']['hosts'])
+        self.assertIn('zuul', inventory['all']['vars'])
+        z_vars = inventory['all']['vars']['zuul']
+        self.assertIn('executor', z_vars)
+        self.assertIn('src_root', z_vars['executor'])
+        self.assertIn('job', z_vars)
+        self.assertEqual(z_vars['job'], 'single-inventory')
 
         self.executor_server.release()
         self.waitUntilSettled()
@@ -57,11 +64,19 @@ class TestInventory(ZuulTestCase):
         all_nodes = ('controller', 'compute1', 'compute2')
         self.assertIn('all', inventory)
         self.assertIn('hosts', inventory['all'])
+        self.assertIn('vars', inventory['all'])
         for group_name in ('ceph-osd', 'ceph-monitor'):
             self.assertIn(group_name, inventory)
         for node_name in all_nodes:
             self.assertIn(node_name, inventory['all']['hosts'])
             self.assertIn(node_name,
                           inventory['ceph-monitor']['hosts'])
+        self.assertIn('zuul', inventory['all']['vars'])
+        z_vars = inventory['all']['vars']['zuul']
+        self.assertIn('executor', z_vars)
+        self.assertIn('src_root', z_vars['executor'])
+        self.assertIn('job', z_vars)
+        self.assertEqual(z_vars['job'], 'group-inventory')
+
         self.executor_server.release()
         self.waitUntilSettled()
