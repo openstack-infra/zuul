@@ -3868,9 +3868,12 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(B.reported, 0)
         self.assertEqual(len(self.history), 0)
 
-        # Simulate change B being gated outside this layout
-        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        # Simulate change B being gated outside this layout Set the
+        # change merged before submitting the event so that when the
+        # event triggers a gerrit query to update the change, we get
+        # the information that it was merged.
         B.setMerged()
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
