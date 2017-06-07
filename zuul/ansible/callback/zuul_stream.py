@@ -64,7 +64,7 @@ def zuul_filter_result(result):
     of cmd it'll echo what the command was for folks.
     """
 
-    for key in ('changed', 'cmd',
+    for key in ('changed', 'cmd', 'zuul_log_id',
                 'stderr', 'stderr_lines',
                 'stdout', 'stdout_lines'):
         result.pop(key, None)
@@ -119,11 +119,24 @@ class CallbackModule(default.CallbackModule):
                 if "[Zuul] Task exit code" in line:
                     return
                 else:
-                    self._log.info("[%s] %s " % (host, line.strip()))
+                    ts, ln = line.strip().split(' | ', 1)
+
+                    self._log.info("%s | %s | %s " % (ts, host, ln))
+
+    def v2_playbook_on_start(self, playbook):
+        self._playbook_name = os.path.splitext(playbook._file_name)[0]
 
     def v2_playbook_on_play_start(self, play):
         self._play = play
-        super(CallbackModule, self).v2_playbook_on_play_start(play)
+        name = play.get_name().strip()
+        now = datetime.datetime.now()
+        if not name:
+            msg = u"{now} | PLAY".format(now=now)
+        else:
+            msg = u"{now} | PLAY [{playbook} : {name}]".format(
+                playbook=self._playbook_name, now=now, name=name)
+
+        self._log.info(msg)
 
     def v2_playbook_on_task_start(self, task, is_conditional):
         self._task = task
@@ -158,29 +171,58 @@ class CallbackModule(default.CallbackModule):
             self._streamer.join()
         if result._task.action in ('command', 'shell'):
             zuul_filter_result(result._result)
-        super(CallbackModule, self).v2_runner_on_failed(
-            result, ignore_errors=ignore_errors)
+        self._handle_exception(result._result)
+
+        if result._task.loop and 'results' in result._result:
+            self._process_items(result)
+        else:
+            self._log_message(
+                result=result,
+                msg="Results: => {results}".format(
+                    results=self._dump_results(result._result)),
+                status='ERROR')
+        if ignore_errors:
+            self._log_message(result, "Ignoring Errors", status="ERROR")
 
     def v2_runner_on_ok(self, result):
+        if (self._play.strategy == 'free'
+                and self._last_task_banner != result._task._uuid):
+            self._print_task_banner(result._task)
+
+        self._clean_results(result._result, result._task.action)
+
+        if result._task.action in ('include', 'include_role'):
+            return
+
         if self._streamer:
             self._streamer.join()
+
+        if result._result.get('changed', False):
+            status = 'changed'
+        else:
+            status = 'ok'
+
         if result._task.action in ('command', 'shell'):
             zuul_filter_result(result._result)
-        else:
-            return super(CallbackModule, self).v2_runner_on_ok(result)
-
-        if self._play.strategy == 'free':
-            return super(CallbackModule, self).v2_runner_on_ok(result)
 
         if result._task.loop and 'results' in result._result:
             self._process_items(result)
 
         self._handle_warnings(result._result)
 
-        self._log_message(
-            result,
-            " Runtime: {delta} Start: {start} End: {end}".format(
-                **result._result))
+        if result._task.loop and 'results' in result._result:
+            self._process_items(result)
+        elif result._task.action not in ('command', 'shell'):
+            self._log_message(
+                result=result,
+                msg="Results: => {results}".format(
+                    results=self._dump_results(result._result)),
+                status=status)
+        else:
+            self._log_message(
+                result,
+                "Runtime: {delta} Start: {start} End: {end}".format(
+                    **result._result))
 
     def _print_task_banner(self, task):
 
@@ -188,26 +230,30 @@ class CallbackModule(default.CallbackModule):
 
         args = ''
         task_args = task.args.copy()
-        task_args.pop('_raw_params', None)
         is_shell = task_args.pop('_uses_shell', False)
         if is_shell and task_name == 'command':
             task_name = 'shell'
+        raw_params = task_args.pop('_raw_params', '').split('\n')
+        # If there's just a single line, go ahead and print it
+        if len(raw_params) == 1 and task_name in ('shell', 'command'):
+            task_name = '{name}: {command}'.format(
+                name=task_name, command=raw_params[0])
 
         if not task.no_log and task_args:
             args = u', '.join(u'%s=%s' % a for a in task_args.items())
             args = u' %s' % args
 
-        msg = "TASK [{task}{args}]".format(
+        msg = "{now} | TASK [{task}{args}]".format(
+            now=datetime.datetime.now(),
             task=task_name,
             args=args)
         self._log.info(msg)
 
-    def _log_message(self, result, msg, status="OK"):
+    def _log_message(self, result, msg, status="ok"):
         now = datetime.datetime.now()
-        if not result:
-            hostname = self._get_hostname(result)
-            self._log.info("[{host}] {now} | {status}: {msg}".format(
-                host=hostname, now=now, status=status, msg=msg))
+        hostname = self._get_hostname(result)
+        self._log.info("{now} | {host} | {status}: {msg}".format(
+            host=hostname, now=now, status=status, msg=msg))
 
     def _get_hostname(self, result):
         delegated_vars = result._result.get('_ansible_delegated_vars', None)
