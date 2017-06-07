@@ -25,7 +25,7 @@ class GerritReporter(BaseReporter):
     name = 'gerrit'
     log = logging.getLogger("zuul.GerritReporter")
 
-    def report(self, pipeline, item):
+    def report(self, item):
         """Send a message to gerrit."""
 
         # If the source is no GerritSource we cannot report anything here.
@@ -38,7 +38,7 @@ class GerritReporter(BaseReporter):
                 self.connection.canonical_hostname:
             return
 
-        message = self._formatItemReport(pipeline, item)
+        message = self._formatItemReport(item)
 
         self.log.debug("Report change %s, params %s, message: %s" %
                        (item.change, self.config, message))
