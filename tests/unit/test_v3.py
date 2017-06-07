@@ -328,6 +328,46 @@ class TestInRepoConfig(ZuulTestCase):
         self.assertIn('not permitted to shadow', A.messages[0],
                       "A should have a syntax error reported")
 
+    def test_untrusted_pipeline_error(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - pipeline:
+                name: test
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn('Pipelines may not be defined', A.messages[0],
+                      "A should have a syntax error reported")
+
+    def test_untrusted_project_error(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - project:
+                name: org/project1
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn('the only project definition permitted', A.messages[0],
+                      "A should have a syntax error reported")
+
 
 class TestAnsible(AnsibleZuulTestCase):
     # A temporary class to hold new tests while others are disabled
