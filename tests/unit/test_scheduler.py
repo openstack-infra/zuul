@@ -63,7 +63,11 @@ class TestScheduler(ZuulTestCase):
         self.assertIsNone(self.getJobFromHistory('project-test2').node)
 
         # TODOv3(jeblair): we may want to report stats by tenant (also?).
-        self.assertReportedStat('gerrit.event.comment-added', value='1|c')
+        # Per-driver
+        self.assertReportedStat('zuul.event.gerrit.comment-added', value='1|c')
+        # Per-driver per-connection
+        self.assertReportedStat('zuul.event.gerrit.gerrit.comment-added',
+                                value='1|c')
         self.assertReportedStat('zuul.pipeline.gate.current_changes',
                                 value='1|g')
         self.assertReportedStat('zuul.pipeline.gate.job.project-merge.SUCCESS',
