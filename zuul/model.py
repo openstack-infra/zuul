@@ -336,6 +336,9 @@ class Project(object):
         self.foreign = foreign
         self.unparsed_config = None
         self.unparsed_branch_config = {}  # branch -> UnparsedTenantConfig
+        # Configuration object classes to include or exclude when
+        # loading zuul config files.
+        self.load_classes = frozenset()
 
     def __str__(self):
         return self.name
