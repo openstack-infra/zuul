@@ -949,7 +949,8 @@ class FakeGithubConnection(githubconnection.GithubConnection):
                 'repo': {
                     'full_name': pr.project
                 }
-            }
+            },
+            'files': pr.files
         }
         return data
 
@@ -959,10 +960,6 @@ class FakeGithubConnection(githubconnection.GithubConnection):
             raise Exception('Multiple pulls found with head sha: %s' % sha)
         pr = prs[0]
         return self.getPull(pr.project, pr.number)
-
-    def getPullFileNames(self, project, number):
-        pr = self.pull_requests[number - 1]
-        return pr.files
 
     def _getPullReviews(self, owner, project, number):
         pr = self.pull_requests[number - 1]
