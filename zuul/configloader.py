@@ -327,6 +327,7 @@ class JobParser(object):
                'dependencies': to_list(str),
                'allowed-projects': to_list(str),
                'override-branch': str,
+               'description': str,
                }
 
         return vs.Schema(job)
