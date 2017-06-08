@@ -1,0 +1,10 @@
+- job:
+    name: project-test
+    roles:
+      - zuul: bare-role
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-test
