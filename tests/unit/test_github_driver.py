@@ -13,7 +13,7 @@
 # under the License.
 
 import re
-from testtools.matchers import MatchesRegex
+from testtools.matchers import MatchesRegex, StartsWith
 import time
 
 from tests.base import ZuulTestCase, simple_layout, random_sha1
@@ -300,9 +300,20 @@ class TestGithubDriver(ZuulTestCase):
         self.assertEqual('tenant-one/reporting', report_status['context'])
         self.assertEqual('success', report_status['state'])
         self.assertEqual(2, len(A.comments))
-        report_url = ('http://logs.example.com/tenant-one/reporting/'
-                      '%s/%s/%s/' % (A.project, A.number, A.head_sha))
-        self.assertEqual(report_url, report_status['url'])
+
+        base = 'http://logs.example.com/tenant-one/reporting/%s/%s/' % (
+            A.project, A.number)
+
+        # Deconstructing the URL because we don't save the BuildSet UUID
+        # anywhere to do a direct comparison and doing regexp matches on a full
+        # URL is painful.
+
+        # The first part of the URL matches the easy base string
+        self.assertThat(report_status['url'], StartsWith(base))
+
+        # The rest of the URL is a UUID and a trailing slash.
+        self.assertThat(report_status['url'][len(base):],
+                        MatchesRegex('^[a-fA-F0-9]{32}\/$'))
 
     @simple_layout('layouts/merging-github.yaml', driver='github')
     def test_report_pull_merge(self):
