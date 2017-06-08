@@ -121,6 +121,10 @@ class Executor(zuul.cmd.ZuulApp):
         if self.config.has_option('zuul', 'jobroot_dir'):
             self.jobroot_dir = os.path.expanduser(
                 self.config.get('zuul', 'jobroot_dir'))
+            if not os.path.isdir(self.jobroot_dir):
+                print("Invalid jobroot_dir: {jobroot_dir}".format(
+                    jobroot_dir=self.jobroot_dir))
+                sys.exit(1)
         else:
             self.jobroot_dir = tempfile.gettempdir()
 
