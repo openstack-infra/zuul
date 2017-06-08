@@ -228,6 +228,7 @@ class Scheduler(threading.Thread):
 
         self.zuul_version = zuul_version.version_info.release_string()
         self.last_reconfigured = None
+        self.tenant_last_reconfigured = {}
 
     def stop(self):
         self._stopped = True
@@ -590,6 +591,7 @@ class Scheduler(threading.Thread):
                 trigger.postConfig(pipeline)
             for reporter in pipeline.actions:
                 reporter.postConfig()
+        self.tenant_last_reconfigured[tenant.name] = int(time.time())
         if self.statsd:
             try:
                 for pipeline in tenant.layout.pipelines.values():
@@ -747,7 +749,7 @@ class Scheduler(threading.Thread):
                                    "source %s",
                                    e.change, project.source)
                     continue
-                if (event.type == 'change-merged' and
+                if (event.branch_updated and
                     hasattr(change, 'files') and
                     change.updatesConfig()):
                     # The change that just landed updates the config.
