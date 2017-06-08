@@ -395,7 +395,7 @@ class ExecutorServer(object):
 
         if self.config.has_option('executor', 'untrusted_wrapper'):
             untrusted_wrapper_name = self.config.get(
-                'executor', 'untrusted_wrapper').split()
+                'executor', 'untrusted_wrapper').strip()
         else:
             untrusted_wrapper_name = 'bubblewrap'
         self.untrusted_wrapper = connections.drivers[untrusted_wrapper_name]
