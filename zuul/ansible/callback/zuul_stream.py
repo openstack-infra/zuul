@@ -13,8 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-
 import datetime
 import multiprocessing
 import logging
@@ -104,8 +102,9 @@ class CallbackModule(default.CallbackModule):
         logging.basicConfig(filename=path, level=level, format='%(message)s')
         self._log = logging.getLogger('zuul.executor.ansible')
 
-    def _read_log(self, host, ip, log_id):
-        self._log.debug("[%s] Starting to log" % host)
+    def _read_log(self, host, ip, log_id, task_name):
+        self._log.debug("[%s] Starting to log %s for task %s"
+                        % (host, log_id, task_name))
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         while True:
             try:
@@ -142,7 +141,7 @@ class CallbackModule(default.CallbackModule):
         self._task = task
 
         if self._play.strategy != 'free':
-            self._print_task_banner(task)
+            task_name = self._print_task_banner(task)
         if task.action == 'command':
             log_id = uuid.uuid4().hex
             task.args['zuul_log_id'] = log_id
@@ -162,7 +161,7 @@ class CallbackModule(default.CallbackModule):
                         'ansible_inventory_host'))
                 self._host_dict[host] = ip
                 self._streamer = multiprocessing.Process(
-                    target=self._read_log, args=(host, ip, log_id))
+                    target=self._read_log, args=(host, ip, log_id, task_name))
                 self._streamer.daemon = True
                 self._streamer.start()
 
@@ -248,6 +247,7 @@ class CallbackModule(default.CallbackModule):
             task=task_name,
             args=args)
         self._log.info(msg)
+        return task
 
     def _log_message(self, result, msg, status="ok"):
         now = datetime.datetime.now()
