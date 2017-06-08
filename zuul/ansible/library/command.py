@@ -121,15 +121,18 @@ from ansible.module_utils.basic import get_exception
 from ast import literal_eval
 
 
-LOG_STREAM_FILE = '/tmp/console.log'
+LOG_STREAM_FILE = '/tmp/console-{log_uuid}.log'
 PASSWD_ARG_RE = re.compile(r'^[-]{0,2}pass[-]?(word|wd)?')
 # List to save stdout log lines in as we collect them
 _log_lines = []
 
 
 class Console(object):
+    def __init__(self, log_uuid):
+        self.logfile_name = LOG_STREAM_FILE.format(log_uuid=log_uuid)
+
     def __enter__(self):
-        self.logfile = open(LOG_STREAM_FILE, 'a', 0)
+        self.logfile = open(self.logfile_name, 'a', 0)
         return self
 
     def __exit__(self, etype, value, tb):
@@ -145,9 +148,9 @@ class Console(object):
         self.logfile.write(outln)
 
 
-def follow(fd):
+def follow(fd, log_uuid):
     newline_warning = False
-    with Console() as console:
+    with Console(log_uuid) as console:
         while True:
             line = fd.readline()
             if not line:
@@ -163,7 +166,7 @@ def follow(fd):
 
 # Taken from ansible/module_utils/basic.py ... forking the method for now
 # so that we can dive in and figure out how to make appropriate hook points
-def zuul_run_command(self, args, check_rc=False, close_fds=True, executable=None, data=None, binary_data=False, path_prefix=None, cwd=None, use_unsafe_shell=False, prompt_regex=None, environ_update=None):
+def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, executable=None, data=None, binary_data=False, path_prefix=None, cwd=None, use_unsafe_shell=False, prompt_regex=None, environ_update=None):
     '''
     Execute a command, returns rc, stdout, and stderr.
 
@@ -312,7 +315,7 @@ def zuul_run_command(self, args, check_rc=False, close_fds=True, executable=None
             self.log('Executing: ' + running)
         # ZUUL: Replaced the excution loop with the zuul_runner run function
         cmd = subprocess.Popen(args, **kwargs)
-        t = threading.Thread(target=follow, args=(cmd.stdout,))
+        t = threading.Thread(target=follow, args=(cmd.stdout, zuul_log_id))
         t.daemon = True
         t.start()
         ret = cmd.wait()
@@ -321,7 +324,7 @@ def zuul_run_command(self, args, check_rc=False, close_fds=True, executable=None
         # likely stuck in readline() because it spawed a child that is
         # holding stdout or stderr open.
         t.join(10)
-        with Console() as console:
+        with Console(zuul_log_id) as console:
             if t.isAlive():
                 console.addLine("[Zuul] standard output/error still open "
                                 "after child exited")
@@ -397,6 +400,7 @@ def main():
           removes = dict(type='path'),
           warn = dict(type='bool', default=True),
           environ = dict(type='dict', default=None),
+          zuul_log_id = dict(type='str'),
         )
     )
 
@@ -408,6 +412,7 @@ def main():
     removes  = module.params['removes']
     warn = module.params['warn']
     environ = module.params['environ']
+    zuul_log_id = module.params['zuul_log_id']
 
     if args.strip() == '':
         module.fail_json(rc=256, msg="no command given")
@@ -448,7 +453,7 @@ def main():
         args = shlex.split(args)
     startd = datetime.datetime.now()
 
-    rc, out, err = zuul_run_command(module, args, executable=executable, use_unsafe_shell=shell, environ_update=environ)
+    rc, out, err = zuul_run_command(module, args, zuul_log_id, executable=executable, use_unsafe_shell=shell, environ_update=environ)
 
     endd = datetime.datetime.now()
     delta = endd - startd
@@ -467,7 +472,8 @@ def main():
         end      = str(endd),
         delta    = str(delta),
         changed  = True,
-        warnings = warnings
+        warnings = warnings,
+        zuul_log_id = zuul_log_id
     )
 
 if __name__ == '__main__':

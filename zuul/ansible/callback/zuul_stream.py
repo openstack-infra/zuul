@@ -13,10 +13,12 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
+from __future__ import absolute_import
+
 import multiprocessing
 import socket
 import time
+import uuid
 
 from ansible.plugins.callback import default
 
@@ -82,21 +84,26 @@ class CallbackModule(default.CallbackModule):
         super(CallbackModule, self).__init__()
         self._task = None
         self._daemon_running = False
-        self._daemon_stamp = 'daemon-stamp-%s'
         self._host_dict = {}
+        self._play = None
+        self._streamer = None
 
-    def _read_log(self, host, ip):
-        self._display.display("[%s] starting to log" % host)
+    def _read_log(self, host, ip, log_id):
+        self._display.vvv("[%s] Starting to log" % host)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         while True:
             try:
                 s.connect((ip, LOG_STREAM_PORT))
             except Exception:
-                self._display.display("[%s] Waiting on logger" % host)
+                self._display.vvv("[%s] Waiting on logger" % host)
                 time.sleep(0.1)
                 continue
+            s.send(log_id + '\n')
             for line in linesplit(s):
-                self._display.display("[%s] %s " % (host, line.strip()))
+                if "[Zuul] Task exit code" in line:
+                    return
+                else:
+                    self._display.display("[%s] %s " % (host, line.strip()))
 
     def v2_playbook_on_play_start(self, play):
         self._play = play
@@ -108,6 +115,8 @@ class CallbackModule(default.CallbackModule):
         if self._play.strategy != 'free':
             self._print_task_banner(task)
         if task.action == 'command':
+            log_id = uuid.uuid4().hex
+            task.args['zuul_log_id'] = log_id
             play_vars = self._play._variable_manager._hostvars
 
             hosts = self._play.hosts
@@ -119,24 +128,26 @@ class CallbackModule(default.CallbackModule):
                 hosts = play_vars.keys()
 
             for host in hosts:
-                ip = play_vars[host]['ansible_host']
-                daemon_stamp = self._daemon_stamp % host
-                if not os.path.exists(daemon_stamp):
-                    self._host_dict[host] = ip
-                    # Touch stamp file
-                    open(daemon_stamp, 'w').close()
-                    p = multiprocessing.Process(
-                        target=self._read_log, args=(host, ip))
-                    p.daemon = True
-                    p.start()
+                ip = play_vars[host].get(
+                    'ansible_host', play_vars[host].get(
+                        'ansible_inventory_host'))
+                self._host_dict[host] = ip
+                self._streamer = multiprocessing.Process(
+                    target=self._read_log, args=(host, ip, log_id))
+                self._streamer.daemon = True
+                self._streamer.start()
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
+        if self._streamer:
+            self._streamer.join()
         if result._task.action in ('command', 'shell'):
             zuul_filter_result(result._result)
         super(CallbackModule, self).v2_runner_on_failed(
             result, ignore_errors=ignore_errors)
 
     def v2_runner_on_ok(self, result):
+        if self._streamer:
+            self._streamer.join()
         if result._task.action in ('command', 'shell'):
             zuul_filter_result(result._result)
         else:
