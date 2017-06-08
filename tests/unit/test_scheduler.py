@@ -29,6 +29,7 @@ from six.moves import urllib
 import testtools
 
 import zuul.change_matcher
+from zuul.driver.gerrit import gerritreporter
 import zuul.scheduler
 import zuul.rpcclient
 import zuul.model
@@ -3403,49 +3404,45 @@ For CI problems and help debugging, contact ci@example.org"""
 
         self.assertEqual(0, len(A.messages))
 
-    @skip("Disabled for early v3 development")
+    @simple_layout('layouts/merge-failure.yaml')
     def test_merge_failure_reporters(self):
         """Check that the config is set up correctly"""
 
-        self.updateConfigLayout(
-            'tests/fixtures/layout-merge-failure.yaml')
-        self.sched.reconfigure(self.config)
-        self.registerJobs()
-
+        tenant = self.sched.abide.tenants.get('tenant-one')
         self.assertEqual(
             "Merge Failed.\n\nThis change or one of its cross-repo "
             "dependencies was unable to be automatically merged with the "
             "current state of its repository. Please rebase the change and "
             "upload a new patchset.",
-            self.sched.layout.pipelines['check'].merge_failure_message)
+            tenant.layout.pipelines['check'].merge_failure_message)
         self.assertEqual(
             "The merge failed! For more information...",
-            self.sched.layout.pipelines['gate'].merge_failure_message)
+            tenant.layout.pipelines['gate'].merge_failure_message)
 
         self.assertEqual(
-            len(self.sched.layout.pipelines['check'].merge_failure_actions), 1)
+            len(tenant.layout.pipelines['check'].merge_failure_actions), 1)
         self.assertEqual(
-            len(self.sched.layout.pipelines['gate'].merge_failure_actions), 2)
+            len(tenant.layout.pipelines['gate'].merge_failure_actions), 2)
 
         self.assertTrue(isinstance(
-            self.sched.layout.pipelines['check'].merge_failure_actions[0],
-            zuul.reporter.gerrit.GerritReporter))
+            tenant.layout.pipelines['check'].merge_failure_actions[0],
+            gerritreporter.GerritReporter))
 
         self.assertTrue(
             (
-                isinstance(self.sched.layout.pipelines['gate'].
+                isinstance(tenant.layout.pipelines['gate'].
                            merge_failure_actions[0],
-                           zuul.reporter.smtp.SMTPReporter) and
-                isinstance(self.sched.layout.pipelines['gate'].
+                           zuul.driver.smtp.smtpreporter.SMTPReporter) and
+                isinstance(tenant.layout.pipelines['gate'].
                            merge_failure_actions[1],
-                           zuul.reporter.gerrit.GerritReporter)
+                           gerritreporter.GerritReporter)
             ) or (
-                isinstance(self.sched.layout.pipelines['gate'].
+                isinstance(tenant.layout.pipelines['gate'].
                            merge_failure_actions[0],
-                           zuul.reporter.gerrit.GerritReporter) and
-                isinstance(self.sched.layout.pipelines['gate'].
+                           gerritreporter.GerritReporter) and
+                isinstance(tenant.layout.pipelines['gate'].
                            merge_failure_actions[1],
-                           zuul.reporter.smtp.SMTPReporter)
+                           zuul.driver.smtp.smtpreporter.SMTPReporter)
             )
         )
 
