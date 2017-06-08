@@ -196,6 +196,7 @@ class ExecutorClient(object):
                            pipeline=pipeline.name,
                            job=job.name,
                            project=project,
+                           tenant=tenant.name,
                            tags=' '.join(sorted(job.tags)))
 
         if hasattr(item.change, 'branch'):

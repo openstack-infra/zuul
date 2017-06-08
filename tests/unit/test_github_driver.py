@@ -300,8 +300,8 @@ class TestGithubDriver(ZuulTestCase):
         self.assertEqual('tenant-one/reporting', report_status['context'])
         self.assertEqual('success', report_status['state'])
         self.assertEqual(2, len(A.comments))
-        report_url = ('http://logs.example.com/reporting/%s/%s/%s/' %
-                      (A.project, A.number, A.head_sha))
+        report_url = ('http://logs.example.com/tenant-one/reporting/'
+                      '%s/%s/%s/' % (A.project, A.number, A.head_sha))
         self.assertEqual(report_url, report_status['url'])
 
     @simple_layout('layouts/merging-github.yaml', driver='github')
