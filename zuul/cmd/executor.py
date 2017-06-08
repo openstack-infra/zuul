@@ -71,7 +71,8 @@ class Executor(zuul.cmd.ZuulApp):
         path = os.path.join(state_dir, 'executor.socket')
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         s.connect(path)
-        s.sendall('%s\n' % cmd)
+        cmd = '%s\n' % cmd
+        s.sendall(cmd.encode('utf8'))
 
     def exit_handler(self):
         self.executor.stop()
