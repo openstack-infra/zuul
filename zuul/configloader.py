@@ -859,8 +859,28 @@ class SemaphoreParser(object):
 class TenantParser(object):
     log = logging.getLogger("zuul.TenantParser")
 
-    tenant_source = vs.Schema({'config-projects': [str],
-                               'untrusted-projects': [str]})
+    classes = vs.Any('pipeline', 'job', 'semaphore', 'project',
+                     'project-template', 'nodeset', 'secret')
+
+    project_dict = {str: {
+        'include': to_list(classes),
+        'exclude': to_list(classes),
+    }}
+
+    project = vs.Any(str, project_dict)
+
+    group = {
+        'include': to_list(classes),
+        'exclude': to_list(classes),
+        vs.Required('projects'): to_list(project),
+    }
+
+    project_or_group = vs.Any(project, group)
+
+    tenant_source = vs.Schema({
+        'config-projects': to_list(project_or_group),
+        'untrusted-projects': to_list(project_or_group),
+    })
 
     @staticmethod
     def validateTenantSources(connections):
@@ -960,24 +980,84 @@ class TenantParser(object):
                 encryption.deserialize_rsa_keypair(f.read())
 
     @staticmethod
+    def _getProject(source, conf, current_include):
+        if isinstance(conf, six.string_types):
+            # Return a project object whether conf is a dict or a str
+            project = source.getProject(conf)
+            project_include = current_include
+        else:
+            project_name = list(conf.keys())[0]
+            project = source.getProject(project_name)
+
+            project_include = frozenset(
+                as_list(conf[project_name].get('include', [])))
+            if not project_include:
+                project_include = current_include
+            project_exclude = frozenset(
+                as_list(conf[project_name].get('exclude', [])))
+            if project_exclude:
+                project_include = frozenset(project_include - project_exclude)
+
+        project.load_classes = frozenset(project_include)
+        return project
+
+    @staticmethod
+    def _getProjects(source, conf, current_include):
+        # Return a project object whether conf is a dict or a str
+        projects = []
+        if isinstance(conf, six.string_types):
+            # A simple project name string
+            projects.append(TenantParser._getProject(
+                source, conf, current_include))
+        elif len(conf.keys()) > 1 and 'projects' in conf:
+            # This is a project group
+            if 'include' in conf:
+                current_include = set(as_list(conf['include']))
+            else:
+                current_include = current_include.copy()
+            if 'exclude' in conf:
+                exclude = set(as_list(conf['exclude']))
+                current_include = current_include - exclude
+            for project in conf['projects']:
+                sub_projects = TenantParser._getProjects(source, project,
+                                                         current_include)
+                projects.extend(sub_projects)
+        elif len(conf.keys()) == 1:
+            # A project with overrides
+            projects.append(TenantParser._getProject(
+                source, conf, current_include))
+        else:
+            raise Exception("Unable to parse project %s", conf)
+        return projects
+
+    @staticmethod
     def _loadTenantProjects(project_key_dir, connections, conf_tenant):
         config_projects = []
         untrusted_projects = []
 
+        default_include = frozenset(['pipeline', 'job', 'semaphore', 'project',
+                                     'secret', 'project-template', 'nodeset'])
+
         for source_name, conf_source in conf_tenant.get('source', {}).items():
             source = connections.getSource(source_name)
 
+            current_include = default_include
             for conf_repo in conf_source.get('config-projects', []):
-                project = source.getProject(conf_repo)
-                TenantParser._loadProjectKeys(
-                    project_key_dir, source_name, project)
-                config_projects.append(project)
+                projects = TenantParser._getProjects(source, conf_repo,
+                                                     current_include)
+                for project in projects:
+                    TenantParser._loadProjectKeys(
+                        project_key_dir, source_name, project)
+                    config_projects.append(project)
 
+            current_include = frozenset(default_include - set(['pipeline']))
             for conf_repo in conf_source.get('untrusted-projects', []):
-                project = source.getProject(conf_repo)
-                TenantParser._loadProjectKeys(
-                    project_key_dir, source_name, project)
-                untrusted_projects.append(project)
+                projects = TenantParser._getProjects(source, conf_repo,
+                                                     current_include)
+                for project in projects:
+                    TenantParser._loadProjectKeys(
+                        project_key_dir, source_name, project)
+                    untrusted_projects.append(project)
 
         return config_projects, untrusted_projects
 
@@ -1090,34 +1170,78 @@ class TenantParser(object):
         return config
 
     @staticmethod
-    def _parseLayout(base, tenant, data, scheduler, connections):
-        layout = model.Layout()
-
-        for config_pipeline in data.pipelines:
-            layout.addPipeline(PipelineParser.fromYaml(layout, connections,
-                                                       scheduler,
-                                                       config_pipeline))
+    def _parseLayoutItems(layout, tenant, data, scheduler, connections,
+                          skip_pipelines=False, skip_semaphores=False):
+        if not skip_pipelines:
+            for config_pipeline in data.pipelines:
+                classes = config_pipeline['_source_context'].\
+                    project.load_classes
+                if 'pipeline' not in classes:
+                    continue
+                layout.addPipeline(PipelineParser.fromYaml(
+                    layout, connections,
+                    scheduler, config_pipeline))
 
         for config_nodeset in data.nodesets:
+            classes = config_nodeset['_source_context'].project.load_classes
+            if 'nodeset' not in classes:
+                continue
             layout.addNodeSet(NodeSetParser.fromYaml(layout, config_nodeset))
 
         for config_secret in data.secrets:
+            classes = config_secret['_source_context'].project.load_classes
+            if 'secret' not in classes:
+                continue
             layout.addSecret(SecretParser.fromYaml(layout, config_secret))
 
         for config_job in data.jobs:
+            classes = config_job['_source_context'].project.load_classes
+            if 'job' not in classes:
+                continue
             with configuration_exceptions('job', config_job):
-                layout.addJob(JobParser.fromYaml(tenant, layout, config_job))
+                job = JobParser.fromYaml(tenant, layout, config_job)
+                layout.addJob(job)
 
-        for config_semaphore in data.semaphores:
-            layout.addSemaphore(SemaphoreParser.fromYaml(config_semaphore))
+        if not skip_semaphores:
+            for config_semaphore in data.semaphores:
+                classes = config_semaphore['_source_context'].\
+                    project.load_classes
+                if 'semaphore' not in classes:
+                    continue
+                layout.addSemaphore(SemaphoreParser.fromYaml(config_semaphore))
 
         for config_template in data.project_templates:
+            classes = config_template['_source_context'].project.load_classes
+            if 'project-template' not in classes:
+                continue
             layout.addProjectTemplate(ProjectTemplateParser.fromYaml(
                 tenant, layout, config_template))
 
-        for config_project in data.projects.values():
+        for config_projects in data.projects.values():
+            # Unlike other config classes, we expect multiple project
+            # stanzas with the same name, so that a config repo can
+            # define a project-pipeline and the project itself can
+            # augment it.  To that end, config_project is a list of
+            # each of the project stanzas.  Each one may be (should
+            # be!) from a different repo, so filter them according to
+            # the include/exclude rules before parsing them.
+            filtered_projects = [
+                p for p in config_projects if
+                'project' in p['_source_context'].project.load_classes
+            ]
+
+            if not filtered_projects:
+                continue
+
             layout.addProjectConfig(ProjectParser.fromYaml(
-                tenant, layout, config_project))
+                tenant, layout, filtered_projects))
+
+    @staticmethod
+    def _parseLayout(base, tenant, data, scheduler, connections):
+        layout = model.Layout()
+
+        TenantParser._parseLayoutItems(layout, tenant, data,
+                                       scheduler, connections)
 
         layout.tenant = tenant
 
@@ -1228,21 +1352,8 @@ class ConfigLoader(object):
         # configuration changes.
         layout.semaphores = tenant.layout.semaphores
 
-        for config_nodeset in config.nodesets:
-            layout.addNodeSet(NodeSetParser.fromYaml(layout, config_nodeset))
+        TenantParser._parseLayoutItems(layout, tenant, config, None, None,
+                                       skip_pipelines=True,
+                                       skip_semaphores=True)
 
-        for config_secret in config.secrets:
-            layout.addSecret(SecretParser.fromYaml(layout, config_secret))
-
-        for config_job in config.jobs:
-            with configuration_exceptions('job', config_job):
-                layout.addJob(JobParser.fromYaml(tenant, layout, config_job))
-
-        for config_template in config.project_templates:
-            layout.addProjectTemplate(ProjectTemplateParser.fromYaml(
-                tenant, layout, config_template))
-
-        for config_project in config.projects.values():
-            layout.addProjectConfig(ProjectParser.fromYaml(
-                tenant, layout, config_project))
         return layout
