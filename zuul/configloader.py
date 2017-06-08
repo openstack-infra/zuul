@@ -50,17 +50,37 @@ class ConfigurationSyntaxError(Exception):
 class NodeFromGroupNotFoundError(Exception):
     def __init__(self, nodeset, node, group):
         message = textwrap.dedent("""\
-        In nodeset {nodeset} the group {group} contains a
-        node named {node} which is not defined in the nodeset.""")
+        In nodeset "{nodeset}" the group "{group}" contains a
+        node named "{node}" which is not defined in the nodeset.""")
         message = textwrap.fill(message.format(nodeset=nodeset,
                                                node=node, group=group))
         super(NodeFromGroupNotFoundError, self).__init__(message)
 
 
+class DuplicateNodeError(Exception):
+    def __init__(self, nodeset, node):
+        message = textwrap.dedent("""\
+        In nodeset "{nodeset}" the node "{node}" appears multiple times.
+        Node names must be unique within a nodeset.""")
+        message = textwrap.fill(message.format(nodeset=nodeset,
+                                               node=node))
+        super(DuplicateNodeError, self).__init__(message)
+
+
+class DuplicateGroupError(Exception):
+    def __init__(self, nodeset, group):
+        message = textwrap.dedent("""\
+        In nodeset "{nodeset}" the group "{group}" appears multiple times.
+        Group names must be unique within a nodeset.""")
+        message = textwrap.fill(message.format(nodeset=nodeset,
+                                               group=group))
+        super(DuplicateGroupError, self).__init__(message)
+
+
 class ProjectNotFoundError(Exception):
     def __init__(self, project):
         message = textwrap.dedent("""\
-        The project {project} was not found.  All projects
+        The project "{project}" was not found.  All projects
         referenced within a Zuul configuration must first be
         added to the main configuration file by the Zuul
         administrator.""")
@@ -198,12 +218,12 @@ class NodeSetParser(object):
                 }
 
         group = {vs.Required('name'): str,
-                 vs.Required('nodes'): [str]
+                 vs.Required('nodes'): to_list(str),
                  }
 
         nodeset = {vs.Required('name'): str,
-                   vs.Required('nodes'): [node],
-                   'groups': [group],
+                   vs.Required('nodes'): to_list(node),
+                   'groups': to_list(group),
                    '_source_context': model.SourceContext,
                    '_start_mark': yaml.Mark,
                    }
@@ -212,21 +232,26 @@ class NodeSetParser(object):
 
     @staticmethod
     def fromYaml(layout, conf):
-        with configuration_exceptions('nodeset', conf):
-            NodeSetParser.getSchema()(conf)
+        NodeSetParser.getSchema()(conf)
         ns = model.NodeSet(conf['name'])
-        node_names = []
+        node_names = set()
+        group_names = set()
         for conf_node in as_list(conf['nodes']):
+            if conf_node['name'] in node_names:
+                raise DuplicateNodeError(conf['name'], conf_node['name'])
             node = model.Node(conf_node['name'], conf_node['image'])
             ns.addNode(node)
-            node_names.append(conf_node['name'])
+            node_names.add(conf_node['name'])
         for conf_group in as_list(conf.get('groups', [])):
-            for node_name in conf_group['nodes']:
+            for node_name in as_list(conf_group['nodes']):
                 if node_name not in node_names:
                     raise NodeFromGroupNotFoundError(conf['name'], node_name,
                                                      conf_group['name'])
+            if conf_group['name'] in group_names:
+                raise DuplicateGroupError(conf['name'], conf_group['name'])
             group = model.Group(conf_group['name'], conf_group['nodes'])
             ns.addGroup(group)
+            group_names.add(conf_group['name'])
         return ns
 
 
@@ -1186,7 +1211,9 @@ class TenantParser(object):
             classes = config_nodeset['_source_context'].project.load_classes
             if 'nodeset' not in classes:
                 continue
-            layout.addNodeSet(NodeSetParser.fromYaml(layout, config_nodeset))
+            with configuration_exceptions('nodeset', config_nodeset):
+                layout.addNodeSet(NodeSetParser.fromYaml(
+                    layout, config_nodeset))
 
         for config_secret in data.secrets:
             classes = config_secret['_source_context'].project.load_classes

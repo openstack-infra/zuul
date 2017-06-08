@@ -368,6 +368,59 @@ class TestInRepoConfig(ZuulTestCase):
         self.assertIn('the only project definition permitted', A.messages[0],
                       "A should have a syntax error reported")
 
+    def test_duplicate_node_error(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - nodeset:
+                name: duplicate
+                nodes:
+                  - name: compute
+                    image: foo
+                  - name: compute
+                    image: foo
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn('appears multiple times', A.messages[0],
+                      "A should have a syntax error reported")
+
+    def test_duplicate_group_error(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - nodeset:
+                name: duplicate
+                nodes:
+                  - name: compute
+                    image: foo
+                groups:
+                  - name: group
+                    nodes: compute
+                  - name: group
+                    nodes: compute
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn('appears multiple times', A.messages[0],
+                      "A should have a syntax error reported")
+
 
 class TestAnsible(AnsibleZuulTestCase):
     # A temporary class to hold new tests while others are disabled
