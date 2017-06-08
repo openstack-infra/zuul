@@ -214,7 +214,7 @@ class NodeSetParser(object):
     @staticmethod
     def getSchema():
         node = {vs.Required('name'): str,
-                vs.Required('image'): str,
+                vs.Required('label'): str,
                 }
 
         group = {vs.Required('name'): str,
@@ -239,7 +239,7 @@ class NodeSetParser(object):
         for conf_node in as_list(conf['nodes']):
             if conf_node['name'] in node_names:
                 raise DuplicateNodeError(conf['name'], conf_node['name'])
-            node = model.Node(conf_node['name'], conf_node['image'])
+            node = model.Node(conf_node['name'], conf_node['label'])
             ns.addNode(node)
             node_names.add(conf_node['name'])
         for conf_group in as_list(conf.get('groups', [])):
@@ -285,7 +285,7 @@ class JobParser(object):
                 }
 
         node = {vs.Required('name'): str,
-                vs.Required('image'): str,
+                vs.Required('label'): str,
                 }
 
         zuul_role = {vs.Required('zuul'): str,
@@ -432,7 +432,7 @@ class JobParser(object):
             else:
                 ns = model.NodeSet()
                 for conf_node in conf_nodes:
-                    node = model.Node(conf_node['name'], conf_node['image'])
+                    node = model.Node(conf_node['name'], conf_node['label'])
                     ns.addNode(node)
             job.nodeset = ns
 

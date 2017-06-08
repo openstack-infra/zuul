@@ -49,20 +49,20 @@
     attempts: 4
     nodes:
       - name: controller
-        image: image1
+        label: label1
 
 - job:
     name: project-test1
     branches: stable
     nodes:
       - name: controller
-        image: image2
+        label: label2
 
 - job:
     name: project-post
     nodes:
       - name: static
-        image: ubuntu-xenial
+        label: ubuntu-xenial
 
 - job:
     name: project-test2

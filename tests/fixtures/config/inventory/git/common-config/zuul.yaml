@@ -16,11 +16,11 @@
     name: nodeset1
     nodes:
       - name: controller
-        image: controller-image
+        label: controller-label
       - name: compute1
-        image: compute-image
+        label: compute-label
       - name: compute2
-        image: compute-image
+        label: compute-label
     groups:
       - name: ceph-osd
         nodes:
@@ -35,7 +35,7 @@
     name: single-inventory
     nodes:
       - name: ubuntu-xenial
-        image: ubuntu-xenial
+        label: ubuntu-xenial
 
 - job:
     name: group-inventory

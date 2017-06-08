@@ -186,7 +186,7 @@ class TestJob(BaseTestCase):
             'post-run': 'base-post',
             'nodes': [{
                 'name': 'controller',
-                'image': 'base',
+                'label': 'base',
             }],
         })
         layout.addJob(base)
@@ -199,7 +199,7 @@ class TestJob(BaseTestCase):
             'post-run': 'py27-post',
             'nodes': [{
                 'name': 'controller',
-                'image': 'new',
+                'label': 'new',
             }],
             'timeout': 40,
         })
@@ -216,7 +216,7 @@ class TestJob(BaseTestCase):
             'post-run': 'py27-diablo-post',
             'nodes': [{
                 'name': 'controller',
-                'image': 'old',
+                'label': 'old',
             }],
             'timeout': 50,
         })
@@ -264,7 +264,7 @@ class TestJob(BaseTestCase):
         self.assertEqual(job.timeout, 40)
         nodes = job.nodeset.getNodes()
         self.assertEqual(len(nodes), 1)
-        self.assertEqual(nodes[0].image, 'new')
+        self.assertEqual(nodes[0].label, 'new')
         self.assertEqual([x.path for x in job.pre_run],
                          ['playbooks/base-pre',
                           'playbooks/py27-pre'])
@@ -292,7 +292,7 @@ class TestJob(BaseTestCase):
         self.assertEqual(job.timeout, 50)
         nodes = job.nodeset.getNodes()
         self.assertEqual(len(nodes), 1)
-        self.assertEqual(nodes[0].image, 'old')
+        self.assertEqual(nodes[0].label, 'old')
         self.assertEqual([x.path for x in job.pre_run],
                          ['playbooks/base-pre',
                           'playbooks/py27-pre',

@@ -38,7 +38,7 @@
     timeout: 30
     nodes:
       - name: controller
-        image: ubuntu-xenial
+        label: ubuntu-xenial
 
 - job:
     name: python27
@@ -50,7 +50,7 @@
     branches: stable/mitaka
     nodes:
       - name: controller
-        image: ubuntu-trusty
+        label: ubuntu-trusty
 
 - job:
     name: python35
