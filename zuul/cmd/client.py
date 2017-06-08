@@ -284,22 +284,6 @@ class Client(zuul.cmd.ZuulApp):
             'worker.hostname': {
                 'title': 'Worker Hostname'
             },
-            'worker.ips': {
-                'title': 'Worker IPs',
-                'transform': self._format_list
-            },
-            'worker.fqdn': {
-                'title': 'Worker Domain'
-            },
-            'worker.program': {
-                'title': 'Worker Program'
-            },
-            'worker.version': {
-                'title': 'Worker Version'
-            },
-            'worker.extra': {
-                'title': 'Worker Extra'
-            },
         }
 
 

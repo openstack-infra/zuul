@@ -1108,21 +1108,11 @@ class Worker(object):
     def __init__(self):
         self.name = "Unknown"
         self.hostname = None
-        self.ips = []
-        self.fqdn = None
-        self.program = None
-        self.version = None
-        self.extra = {}
 
     def updateFromData(self, data):
         """Update worker information if contained in the WORK_DATA response."""
         self.name = data.get('worker_name', self.name)
         self.hostname = data.get('worker_hostname', self.hostname)
-        self.ips = data.get('worker_ips', self.ips)
-        self.fqdn = data.get('worker_fqdn', self.fqdn)
-        self.program = data.get('worker_program', self.program)
-        self.version = data.get('worker_version', self.version)
-        self.extra = data.get('worker_extra', self.extra)
 
     def __repr__(self):
         return '<Worker %s>' % self.name
@@ -1687,11 +1677,6 @@ class QueueItem(object):
                 worker = {
                     'name': build.worker.name,
                     'hostname': build.worker.hostname,
-                    'ips': build.worker.ips,
-                    'fqdn': build.worker.fqdn,
-                    'program': build.worker.program,
-                    'version': build.worker.version,
-                    'extra': build.worker.extra
                 }
             if remaining and remaining > max_remaining:
                 max_remaining = remaining
