@@ -95,7 +95,7 @@ class RequestHandler(ss.BaseRequestHandler):
             return
 
         # check if log file exists
-        log_file = os.path.join(job_dir, 'ansible', 'ansible_log.txt')
+        log_file = os.path.join(job_dir, 'ansible', 'job-output.txt')
         if not os.path.exists(log_file):
             msg = 'Log not found for build ID %s' % build_uuid
             self.request.sendall(msg.encode("utf-8"))
