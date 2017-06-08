@@ -7,9 +7,12 @@
 .testrepository
 .tox
 .venv
+.coverage
 AUTHORS
 build/*
 ChangeLog
 doc/build/*
 zuul/versioninfo
 dist/
+cover/
+htmlcov/
