@@ -11,7 +11,7 @@
     name: project-post
     nodes:
       - name: static
-        image: ubuntu-xenial
+        label: ubuntu-xenial
 
 - project:
     name: org/project

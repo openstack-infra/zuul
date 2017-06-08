@@ -59,7 +59,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
         self.assertEqual(self.getJobFromHistory('project-test1').node,
-                         'image1')
+                         'label1')
         self.assertIsNone(self.getJobFromHistory('project-test2').node)
 
         # TODOv3(jeblair): we may want to report stats by tenant (also?).
@@ -109,7 +109,7 @@ class TestScheduler(ZuulTestCase):
         self.assertIn('gate', A.messages[1],
                       "A should transit gate")
         self.assertEqual(self.getJobFromHistory('project-test1').node,
-                         'image2')
+                         'label2')
 
     def test_parallel_changes(self):
         "Test that changes are tested in parallel and merged in series"

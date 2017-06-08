@@ -23,7 +23,7 @@
     name: nodeset1
     nodes:
       - name: controller
-        image: controller-image
+        label: controller-label
 
 - job:
     name: project1-test1

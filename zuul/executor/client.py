@@ -277,7 +277,7 @@ class ExecutorClient(object):
         nodeset = item.current_build_set.getJobNodeSet(job.name)
         nodes = []
         for node in nodeset.getNodes():
-            nodes.append(dict(name=node.name, image=node.image,
+            nodes.append(dict(name=node.name, label=node.label,
                               az=node.az,
                               host_keys=node.host_keys,
                               provider=node.provider,

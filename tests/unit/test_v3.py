@@ -375,9 +375,9 @@ class TestInRepoConfig(ZuulTestCase):
                 name: duplicate
                 nodes:
                   - name: compute
-                    image: foo
+                    label: foo
                   - name: compute
-                    image: foo
+                    label: foo
             """)
 
         file_dict = {'.zuul.yaml': in_repo_conf}
@@ -400,7 +400,7 @@ class TestInRepoConfig(ZuulTestCase):
                 name: duplicate
                 nodes:
                   - name: compute
-                    image: foo
+                    label: foo
                 groups:
                   - name: group
                     nodes: compute

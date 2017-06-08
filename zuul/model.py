@@ -354,9 +354,9 @@ class Node(object):
     provided by Nodepool.
     """
 
-    def __init__(self, name, image):
+    def __init__(self, name, label):
         self.name = name
-        self.image = image
+        self.label = label
         self.id = None
         self.lock = None
         # Attributes from Nodepool
@@ -383,7 +383,7 @@ class Node(object):
         self.state_time = time.time()
 
     def __repr__(self):
-        return '<Node %s %s:%s>' % (self.id, self.name, self.image)
+        return '<Node %s %s:%s>' % (self.id, self.name, self.label)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -392,7 +392,7 @@ class Node(object):
         if not isinstance(other, Node):
             return False
         return (self.name == other.name and
-                self.image == other.image and
+                self.label == other.label and
                 self.id == other.id)
 
     def toDict(self):
@@ -471,7 +471,7 @@ class NodeSet(object):
     def copy(self):
         n = NodeSet(self.name)
         for name, node in self.nodes.items():
-            n.addNode(Node(node.name, node.image))
+            n.addNode(Node(node.name, node.label))
         for name, group in self.groups.items():
             n.addGroup(Group(group.name, group.nodes[:]))
         return n
@@ -538,7 +538,7 @@ class NodeRequest(object):
 
     def toDict(self):
         d = {}
-        nodes = [n.image for n in self.nodeset.getNodes()]
+        nodes = [n.label for n in self.nodeset.getNodes()]
         d['node_types'] = nodes
         d['requestor'] = self.requestor
         d['state'] = self.state

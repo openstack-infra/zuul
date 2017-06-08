@@ -19,7 +19,7 @@
     name: project-test1
     nodes:
       - name: controller
-        image: image1
+        label: label1
 
 - project:
     name: org/project

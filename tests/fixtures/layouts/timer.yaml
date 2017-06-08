@@ -28,13 +28,13 @@
     name: project-bitrot-stable-old
     nodes:
       - name: static
-        image: ubuntu-xenial
+        label: ubuntu-xenial
 
 - job:
     name: project-bitrot-stable-older
     nodes:
       - name: static
-        image: ubuntu-trusty
+        label: ubuntu-trusty
 
 - project:
     name: org/project

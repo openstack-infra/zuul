@@ -71,7 +71,7 @@
     name: check-vars
     nodes:
       - name: ubuntu-xenial
-        image: ubuntu-xenial
+        label: ubuntu-xenial
 
 - job:
     name: hello

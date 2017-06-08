@@ -1098,14 +1098,14 @@ class FakeBuild(object):
         self.jobdir = None
         self.uuid = job.unique
         self.parameters = json.loads(job.arguments)
-        # TODOv3(jeblair): self.node is really "the image of the node
-        # assigned".  We should rename it (self.node_image?) if we
+        # TODOv3(jeblair): self.node is really "the label of the node
+        # assigned".  We should rename it (self.node_label?) if we
         # keep using it like this, or we may end up exposing more of
         # the complexity around multi-node jobs here
-        # (self.nodes[0].image?)
+        # (self.nodes[0].label?)
         self.node = None
         if len(self.parameters.get('nodes')) == 1:
-            self.node = self.parameters['nodes'][0]['image']
+            self.node = self.parameters['nodes'][0]['label']
         self.unique = self.parameters['ZUUL_UUID']
         self.pipeline = self.parameters['ZUUL_PIPELINE']
         self.project = self.parameters['ZUUL_PROJECT']
