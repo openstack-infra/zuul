@@ -113,7 +113,8 @@ class CallbackModule(default.CallbackModule):
                 self._log.debug("[%s] Waiting on logger" % host)
                 time.sleep(0.1)
                 continue
-            s.send(log_id + '\n')
+            msg = "%s\n" % log_id
+            s.send(msg.encode("utf-8"))
             for line in linesplit(s):
                 if "[Zuul] Task exit code" in line:
                     return
