@@ -42,12 +42,16 @@ class ZuulReference(git.Reference):
 
 
 class Repo(object):
-    def __init__(self, remote, local, email, username,
+    def __init__(self, remote, local, email, username, sshkey=None,
                  cache_path=None, logger=None):
         if logger is None:
             self.log = logging.getLogger("zuul.Repo")
         else:
             self.log = logger
+        if sshkey:
+            self.env = {'GIT_SSH_COMMAND': 'ssh -i %s' % (sshkey,)}
+        else:
+            self.env = {}
         self.remote_url = remote
         self.local_path = local
         self.email = email
@@ -69,11 +73,14 @@ class Repo(object):
             self.log.debug("Cloning from %s to %s" % (self.remote_url,
                                                       self.local_path))
             if self.cache_path:
-                git.Repo.clone_from(self.cache_path, self.local_path)
+                git.Repo.clone_from(self.cache_path, self.local_path,
+                                    env=self.env)
                 rewrite_url = True
             else:
-                git.Repo.clone_from(self.remote_url, self.local_path)
+                git.Repo.clone_from(self.remote_url, self.local_path,
+                                    env=self.env)
         repo = git.Repo(self.local_path)
+        repo.git.update_environment(**self.env)
         # Create local branches corresponding to all the remote branches
         if not repo_is_cloned:
             origin = repo.remotes.origin
@@ -98,6 +105,7 @@ class Repo(object):
     def createRepoObject(self):
         self._ensure_cloned()
         repo = git.Repo(self.local_path)
+        repo.git.update_environment(**self.env)
         return repo
 
     def reset(self):
@@ -282,23 +290,7 @@ class Merger(object):
         self.username = username
         self.cache_root = cache_root
 
-    def _get_ssh_cmd(self, connection_name):
-        sshkey = self.connections.connections.get(connection_name).\
-            connection_config.get('sshkey')
-        if sshkey:
-            return 'ssh -i %s' % sshkey
-        else:
-            return None
-
-    def _setGitSsh(self, connection_name):
-        wrapper_name = '.ssh_wrapper_%s' % connection_name
-        name = os.path.join(self.working_root, wrapper_name)
-        if os.path.isfile(name):
-            os.environ['GIT_SSH'] = name
-        elif 'GIT_SSH' in os.environ:
-            del os.environ['GIT_SSH']
-
-    def _addProject(self, hostname, project_name, url):
+    def _addProject(self, hostname, project_name, url, sshkey):
         repo = None
         key = '/'.join([hostname, project_name])
         try:
@@ -308,8 +300,8 @@ class Merger(object):
                                           project_name)
             else:
                 cache_path = None
-            repo = Repo(url, path, self.email, self.username, cache_path,
-                        self.logger)
+            repo = Repo(url, path, self.email, self.username,
+                        sshkey, cache_path, self.logger)
 
             self.repos[key] = repo
         except Exception:
@@ -325,11 +317,13 @@ class Merger(object):
         key = '/'.join([hostname, project_name])
         if key in self.repos:
             return self.repos[key]
+        sshkey = self.connections.connections.get(connection_name).\
+            connection_config.get('sshkey')
         if not url:
             raise Exception("Unable to set up repo for project %s/%s"
                             " without a url" %
                             (connection_name, project_name,))
-        return self._addProject(hostname, project_name, url)
+        return self._addProject(hostname, project_name, url, sshkey)
 
     def updateRepo(self, connection_name, project_name):
         # TODOv3(jhesketh): Reimplement
@@ -437,28 +431,26 @@ class Merger(object):
         else:
             self.log.debug("Found base commit %s for %s" % (base, key,))
         # Merge the change
-        with repo.createRepoObject().git.custom_environment(
-            GIT_SSH_COMMAND=self._get_ssh_cmd(item['connection'])):
-            commit = self._mergeChange(item, base)
-            if not commit:
+        commit = self._mergeChange(item, base)
+        if not commit:
+            return None
+        # Store this commit as the most recent for this project-branch
+        recent[key] = commit
+        # Set the Zuul ref for this item to point to the most recent
+        # commits of each project-branch
+        for key, mrc in recent.items():
+            connection, project, branch = key
+            zuul_ref = None
+            try:
+                repo = self.getRepo(connection, project)
+                zuul_ref = branch + '/' + item['ref']
+                if not repo.getCommitFromRef(zuul_ref):
+                    repo.createZuulRef(zuul_ref, mrc)
+            except Exception:
+                self.log.exception("Unable to set zuul ref %s for "
+                                   "item %s" % (zuul_ref, item))
                 return None
-            # Store this commit as the most recent for this project-branch
-            recent[key] = commit
-            # Set the Zuul ref for this item to point to the most recent
-            # commits of each project-branch
-            for key, mrc in recent.items():
-                connection, project, branch = key
-                zuul_ref = None
-                try:
-                    repo = self.getRepo(connection, project)
-                    zuul_ref = branch + '/' + item['ref']
-                    if not repo.getCommitFromRef(zuul_ref):
-                        repo.createZuulRef(zuul_ref, mrc)
-                except Exception:
-                    self.log.exception("Unable to set zuul ref %s for "
-                                       "item %s" % (zuul_ref, item))
-                    return None
-            return commit
+        return commit
 
     def mergeChanges(self, items, files=None, repo_state=None):
         # connection+project+branch -> commit
