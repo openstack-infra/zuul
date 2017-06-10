@@ -158,14 +158,7 @@ class CallbackModule(default.CallbackModule):
             task.args['zuul_log_id'] = log_id
             play_vars = self._play._variable_manager._hostvars
 
-            hosts = self._play.hosts
-            if 'all' in hosts:
-                # NOTE(jamielennox): play.hosts is purely the list of hosts
-                # that was provided not interpretted by inventory. We don't
-                # have inventory access here but we can assume that 'all' is
-                # everything in hostvars.
-                hosts = play_vars.keys()
-
+            hosts = self._get_play_hosts()
             for host in hosts:
                 ip = play_vars[host].get(
                     'ansible_host', play_vars[host].get(
@@ -263,6 +256,17 @@ class CallbackModule(default.CallbackModule):
             args=args)
         self._log(msg)
         return task
+
+    def _get_play_hosts(self):
+        hosts = self._play.hosts
+        if 'all' in hosts:
+            # NOTE(jamielennox): play.hosts is purely the list of hosts
+            # that was provided not interpretted by inventory. We don't
+            # have inventory access here but we can assume that 'all' is
+            # everything in hostvars.
+            play_vars = self._play._variable_manager._hostvars
+            hosts = play_vars.keys()
+        return hosts
 
     def _log_message(self, result, msg, status="ok"):
         hostname = self._get_hostname(result)
