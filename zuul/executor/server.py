@@ -363,6 +363,7 @@ class ExecutorServer(object):
         self.hostname = socket.gethostname()
         self.zuul_url = config.get('merger', 'zuul_url')
         self.merger_lock = threading.Lock()
+        self.verbose = False
         self.command_map = dict(
             stop=self.stop,
             pause=self.pause,
@@ -522,12 +523,10 @@ class ExecutorServer(object):
         pass
 
     def verboseOn(self):
-        # TODOv3: implement
-        pass
+        self.verbose = True
 
     def verboseOff(self):
-        # TODOv3: implement
-        pass
+        self.verbose = False
 
     def join(self):
         self.update_thread.join()
@@ -1308,7 +1307,7 @@ class AnsibleJob(object):
         env_copy = os.environ.copy()
         env_copy['LOGNAME'] = 'zuul'
 
-        if False:  # TODOv3: self.options['verbose']:
+        if self.executor_server.verbose:
             verbose = '-vvv'
         else:
             verbose = '-v'
