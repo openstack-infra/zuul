@@ -100,17 +100,28 @@ class CallbackModule(default.CallbackModule):
         else:
             level = logging.INFO
         logging.basicConfig(filename=path, level=level, format='%(message)s')
-        self._log = logging.getLogger('zuul.executor.ansible')
+        self._logger = logging.getLogger('zuul.executor.ansible')
+
+    def _log(self, msg, ts=None, job=True, executor=False, debug=False):
+        if job:
+            now = ts or datetime.datetime.now()
+            self._logger.info("{now} | {msg}".format(now=now, msg=msg))
+        if executor:
+            if debug:
+                self._display.vvv(msg)
+            else:
+                self._display.display(msg)
 
     def _read_log(self, host, ip, log_id, task_name):
-        self._display.display("[%s] Starting to log %s for task %s"
-                              % (host, log_id, task_name))
+        self._log("[%s] Starting to log %s for task %s"
+                  % (host, log_id, task_name), executor=True)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         while True:
             try:
                 s.connect((ip, LOG_STREAM_PORT))
             except Exception:
-                self._display.vvv("[%s] Waiting on logger" % host)
+                self._log("[%s] Waiting on logger" % host,
+                          executor=True, debug=True)
                 time.sleep(0.1)
                 continue
             msg = "%s\n" % log_id
@@ -121,7 +132,7 @@ class CallbackModule(default.CallbackModule):
                 else:
                     ts, ln = line.strip().split(' | ', 1)
 
-                    self._log.info("%s | %s | %s " % (ts, host, ln))
+                    self._log("%s | %s " % (host, ln), ts=ts)
 
     def v2_playbook_on_start(self, playbook):
         self._playbook_name = os.path.splitext(playbook._file_name)[0]
@@ -129,14 +140,13 @@ class CallbackModule(default.CallbackModule):
     def v2_playbook_on_play_start(self, play):
         self._play = play
         name = play.get_name().strip()
-        now = datetime.datetime.now()
         if not name:
-            msg = u"{now} | PLAY".format(now=now)
+            msg = u"PLAY"
         else:
-            msg = u"{now} | PLAY [{playbook} : {name}]".format(
-                playbook=self._playbook_name, now=now, name=name)
+            msg = u"PLAY [{playbook} : {name}]".format(
+                playbook=self._playbook_name, name=name)
 
-        self._log.info(msg)
+        self._log(msg)
 
     def v2_playbook_on_task_start(self, task, is_conditional):
         self._task = task
@@ -170,10 +180,8 @@ class CallbackModule(default.CallbackModule):
         if self._streamer:
             self._streamer.join(30)
             if self._streamer.is_alive():
-                msg = "{now} | [Zuul] Log Stream did not terminate".format(
-                    now=datetime.datetime.now())
-                self._log.info(msg)
-                self._display.display("WARNING: Streamer could not join")
+                msg = "[Zuul] Log Stream did not terminate"
+                self._log(msg, job=True, executor=True)
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
         self._stop_streamer()
@@ -250,18 +258,16 @@ class CallbackModule(default.CallbackModule):
             args = u', '.join(u'%s=%s' % a for a in task_args.items())
             args = u' %s' % args
 
-        msg = "{now} | TASK [{task}{args}]".format(
-            now=datetime.datetime.now(),
+        msg = "TASK [{task}{args}]".format(
             task=task_name,
             args=args)
-        self._log.info(msg)
+        self._log(msg)
         return task
 
     def _log_message(self, result, msg, status="ok"):
-        now = datetime.datetime.now()
         hostname = self._get_hostname(result)
-        self._log.info("{now} | {host} | {status}: {msg}".format(
-            host=hostname, now=now, status=status, msg=msg))
+        self._log("{host} | {status}: {msg}".format(
+            host=hostname, status=status, msg=msg))
 
     def _get_hostname(self, result):
         delegated_vars = result._result.get('_ansible_delegated_vars', None)
