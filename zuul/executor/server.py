@@ -36,6 +36,7 @@ from zuul.lib import commandsocket
 
 COMMANDS = ['stop', 'pause', 'unpause', 'graceful', 'verbose',
             'unverbose', 'keep', 'nokeep']
+DEFAULT_FINGER_PORT = 79
 
 
 class Watchdog(object):
@@ -357,13 +358,14 @@ class ExecutorServer(object):
     log = logging.getLogger("zuul.ExecutorServer")
 
     def __init__(self, config, connections={}, jobdir_root=None,
-                 keep_jobdir=False):
+                 keep_jobdir=False, log_streaming_port=DEFAULT_FINGER_PORT):
         self.config = config
         self.keep_jobdir = keep_jobdir
         self.jobdir_root = jobdir_root
         # TODOv3(mordred): make the executor name more unique --
         # perhaps hostname+pid.
         self.hostname = socket.gethostname()
+        self.log_streaming_port = log_streaming_port
         self.zuul_url = config.get('merger', 'zuul_url')
         self.merger_lock = threading.Lock()
         self.verbose = False
@@ -808,9 +810,6 @@ class AnsibleJob(object):
         self.prepareAnsibleFiles(args)
 
         data = {
-            'url': 'finger://{server}/{unique}'.format(
-                unique=self.job.unique,
-                server=self.executor_server.hostname),
             # TODO(mordred) worker_name is needed as a unique name for the
             # client to use for cancelling jobs on an executor. It's defaulting
             # to the hostname for now, but in the future we should allow
@@ -818,7 +817,17 @@ class AnsibleJob(object):
             # one executor on a host.
             'worker_name': self.executor_server.hostname,
             'worker_hostname': self.executor_server.hostname,
+            'worker_log_port': self.executor_server.log_streaming_port
         }
+        if self.executor_server.log_streaming_port != DEFAULT_FINGER_PORT:
+            data['url'] = "finger://{hostname}:{port}/{uuid}".format(
+                hostname=data['worker_hostname'],
+                port=data['worker_log_port'],
+                uuid=self.job.unique)
+        else:
+            data['url'] = 'finger://{hostname}/{uuid}'.format(
+                hostname=data['worker_hostname'],
+                uuid=self.job.unique)
 
         self.job.sendWorkData(json.dumps(data))
         self.job.sendWorkStatus(0, 100)

@@ -1105,11 +1105,13 @@ class Worker(object):
     def __init__(self):
         self.name = "Unknown"
         self.hostname = None
+        self.log_port = None
 
     def updateFromData(self, data):
         """Update worker information if contained in the WORK_DATA response."""
         self.name = data.get('worker_name', self.name)
         self.hostname = data.get('worker_hostname', self.hostname)
+        self.log_port = data.get('worker_log_port', self.log_port)
 
     def __repr__(self):
         return '<Worker %s>' % self.name

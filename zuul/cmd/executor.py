@@ -40,9 +40,6 @@ from zuul.lib.config import get_default
 # Similar situation with gear and statsd.
 
 
-DEFAULT_FINGER_PORT = 79
-
-
 class Executor(zuul.cmd.ZuulApp):
 
     def parse_arguments(self):
@@ -127,8 +124,10 @@ class Executor(zuul.cmd.ZuulApp):
         self.setup_logging('executor', 'log_config')
         self.log = logging.getLogger("zuul.Executor")
 
-        self.finger_port = int(get_default(self.config, 'executor',
-                                           'finger_port', DEFAULT_FINGER_PORT))
+        self.finger_port = int(
+            get_default(self.config, 'executor', 'finger_port',
+                        zuul.executor.server.DEFAULT_FINGER_PORT)
+        )
 
         self.start_log_streamer()
         self.change_privs()
@@ -136,7 +135,8 @@ class Executor(zuul.cmd.ZuulApp):
         ExecutorServer = zuul.executor.server.ExecutorServer
         self.executor = ExecutorServer(self.config, self.connections,
                                        jobdir_root=self.jobroot_dir,
-                                       keep_jobdir=self.args.keep_jobdir)
+                                       keep_jobdir=self.args.keep_jobdir,
+                                       log_streaming_port=self.finger_port)
         self.executor.start()
 
         signal.signal(signal.SIGUSR2, zuul.cmd.stack_dump_handler)
