@@ -93,6 +93,7 @@ class BubblewrapDriver(Driver, WrapperInterface):
         '--chdir', '{work_dir}',
         '--unshare-all',
         '--share-net',
+        '--die-with-parent',
         '--uid', '{uid}',
         '--gid', '{gid}',
         '--file', '{uid_fd}', '/etc/passwd',
