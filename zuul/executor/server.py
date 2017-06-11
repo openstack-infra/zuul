@@ -181,7 +181,9 @@ class JobDir(object):
         # Ansible
         self.ansible_root = os.path.join(self.root, 'ansible')
         os.makedirs(self.ansible_root)
-        self.known_hosts = os.path.join(self.ansible_root, 'known_hosts')
+        ssh_dir = os.path.join(self.work_root, '.ssh')
+        os.mkdir(ssh_dir, 0o700)
+        self.known_hosts = os.path.join(ssh_dir, 'known_hosts')
         self.inventory = os.path.join(self.ansible_root, 'inventory.yaml')
         self.playbooks = []  # The list of candidate playbooks
         self.playbook = None  # A pointer to the candidate we have chosen
