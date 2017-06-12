@@ -14,6 +14,7 @@
 
 import re
 from testtools.matchers import MatchesRegex, StartsWith
+import urllib
 import time
 
 from tests.base import ZuulTestCase, simple_layout, random_sha1
@@ -584,3 +585,18 @@ class TestGithubDriver(ZuulTestCase):
         new = self.sched.tenant_last_reconfigured.get('tenant-one', 0)
         # New timestamp should be greater than the old timestamp
         self.assertLess(old, new)
+
+    @simple_layout('layouts/basic-github.yaml', driver='github')
+    def test_ping_event(self):
+        # Test valid ping
+        pevent = {'repository': {'full_name': 'org/project'}}
+        req = self.fake_github.emitEvent(('ping', pevent))
+        self.assertEqual(req.status, 200, "Ping event didn't succeed")
+
+        # Test invalid ping
+        pevent = {'repository': {'full_name': 'unknown-project'}}
+        self.assertRaises(
+            urllib.error.HTTPError,
+            self.fake_github.emitEvent,
+            ('ping', pevent),
+        )

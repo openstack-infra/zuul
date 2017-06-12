@@ -75,6 +75,8 @@ class GithubWebhookListener():
 
         try:
             self.__dispatch_event(request)
+        except webob.exc.HTTPNotFound:
+            raise
         except:
             self.log.exception("Exception handling Github event:")
 
@@ -92,7 +94,8 @@ class GithubWebhookListener():
         except AttributeError:
             message = "Unhandled X-Github-Event: {0}".format(event)
             self.log.debug(message)
-            raise webob.exc.HTTPBadRequest(message)
+            # Returns empty 200 on unhandled events
+            raise webob.exc.HTTPOk()
 
         try:
             json_body = request.json_body
@@ -117,6 +120,8 @@ class GithubWebhookListener():
 
         try:
             event = method(json_body)
+        except webob.exc.HTTPNotFound:
+            raise
         except:
             self.log.exception('Exception when handling event:')
             event = None
@@ -218,6 +223,14 @@ class GithubWebhookListener():
         event.type = 'pull_request_review'
         event.action = body.get('action')
         return event
+
+    def _event_ping(self, body):
+        project_name = body['repository']['full_name']
+        if not self.connection.getProject(project_name):
+            self.log.warning("Ping received for unknown project %s" %
+                             project_name)
+            raise webob.exc.HTTPNotFound("Sorry, this project is not "
+                                         "registered")
 
     def _event_status(self, body):
         action = body.get('action')
