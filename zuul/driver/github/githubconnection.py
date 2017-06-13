@@ -247,7 +247,7 @@ class GithubWebhookListener():
             raise webob.exc.HTTPUnauthorized(
                 'Please specify a X-Hub-Signature header with secret.')
 
-        payload_signature = 'sha1=' + hmac.new(secret,
+        payload_signature = 'sha1=' + hmac.new(secret.encode('utf-8'),
                                                body,
                                                hashlib.sha1).hexdigest()
 
