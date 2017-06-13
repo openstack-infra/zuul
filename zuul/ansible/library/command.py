@@ -356,6 +356,10 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
     if umask:
         old_umask = os.umask(umask)
 
+    t = None
+    fail_json_kwargs = None
+    ret = None
+
     try:
         if self._debug:
             self.log('Executing: ' + clean_args)
@@ -394,11 +398,27 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
     except (OSError, IOError):
         e = get_exception()
         self.log("Error Executing CMD:%s Exception:%s" % (clean_args, to_native(e)))
-        self.fail_json(rc=e.errno, msg=to_native(e), cmd=clean_args)
+        fail_json_kwargs=dict(rc=e.errno, msg=str(e), cmd=clean_args)
     except Exception:
         e = get_exception()
         self.log("Error Executing CMD:%s Exception:%s" % (clean_args, to_native(traceback.format_exc())))
-        self.fail_json(rc=257, msg=to_native(e), exception=traceback.format_exc(), cmd=clean_args)
+        fail_json_kwargs = dict(rc=257, msg=str(e), exception=traceback.format_exc(), cmd=clean_args)
+    finally:
+        if t:
+            with Console(zuul_log_id) as console:
+                if t.isAlive():
+                    console.addLine("[Zuul] standard output/error still open "
+                                    "after child exited")
+                if not ret and fail_json_kwargs:
+                    ret = fail_json_kwargs['rc']
+                elif not ret and not fail_json_kwargs:
+                    ret = -1
+                console.addLine("[Zuul] Task exit code: %s\n" % ret)
+                if ret == -1 and not fail_json_kwargs:
+                    self.fail_json(rc=ret, msg="Something went horribly wrong during task execution")
+
+        if fail_json_kwargs:
+            self.fail_json(**fail_json_kwargs)
 
     # Restore env settings
     for key, val in old_env_vals.items():
