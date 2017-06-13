@@ -52,6 +52,16 @@ server just set **server** to 127.0.0.1.
   Port on which the Gearman server is listening.
   ``port=4730`` (optional)
 
+**ssl_ca**
+  Optional: An openssl file containing a set of concatenated “certification authority” certificates
+  in PEM formet.
+
+**ssl_cert**
+  Optional: An openssl file containing the client public certificate in PEM format.
+
+**ssl_key**
+  Optional: An openssl file containing the client private key in PEM format.
+
 gearman_server
 """"""""""""""
 
@@ -69,6 +79,16 @@ than connecting to an external one.
 **log_config**
   Path to log config file for internal Gearman server.
   ``log_config=/etc/zuul/gearman-logging.yaml``
+
+**ssl_ca**
+  Optional: An openssl file containing a set of concatenated “certification authority” certificates
+  in PEM formet.
+
+**ssl_cert**
+  Optional: An openssl file containing the server public certificate in PEM format.
+
+**ssl_key**
+  Optional: An openssl file containing the server private key in PEM format.
 
 webapp
 """"""

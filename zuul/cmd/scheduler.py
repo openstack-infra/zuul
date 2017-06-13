@@ -102,7 +102,22 @@ class Scheduler(zuul.cmd.ZuulApp):
                 host = self.config.get('gearman_server', 'listen_address')
             else:
                 host = None
+            if self.config.has_option('gearman_server', 'ssl_key'):
+                ssl_key = self.config.get('gearman_server', 'ssl_key')
+            else:
+                ssl_key = None
+            if self.config.has_option('gearman_server', 'ssl_cert'):
+                ssl_cert = self.config.get('gearman_server', 'ssl_cert')
+            else:
+                ssl_cert = None
+            if self.config.has_option('gearman_server', 'ssl_ca'):
+                ssl_ca = self.config.get('gearman_server', 'ssl_ca')
+            else:
+                ssl_ca = None
             zuul.lib.gearserver.GearServer(4730,
+                                           ssl_key=ssl_key,
+                                           ssl_cert=ssl_cert,
+                                           ssl_ca=ssl_ca,
                                            host=host,
                                            statsd_host=statsd_host,
                                            statsd_port=statsd_port,

@@ -54,8 +54,20 @@ class MergeServer(object):
             port = self.config.get('gearman', 'port')
         else:
             port = 4730
+        if self.config.has_option('gearman', 'ssl_key'):
+            ssl_key = self.config.get('gearman', 'ssl_key')
+        else:
+            ssl_key = None
+        if self.config.has_option('gearman', 'ssl_cert'):
+            ssl_cert = self.config.get('gearman', 'ssl_cert')
+        else:
+            ssl_cert = None
+        if self.config.has_option('gearman', 'ssl_ca'):
+            ssl_ca = self.config.get('gearman', 'ssl_ca')
+        else:
+            ssl_ca = None
         self.worker = gear.TextWorker('Zuul Merger')
-        self.worker.addServer(server, port)
+        self.worker.addServer(server, port, ssl_key, ssl_cert, ssl_ca)
         self.log.debug("Waiting for server")
         self.worker.waitForServer()
         self.log.debug("Registering")

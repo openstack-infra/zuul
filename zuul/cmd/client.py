@@ -125,6 +125,18 @@ class Client(zuul.cmd.ZuulApp):
             self.port = self.config.get('gearman', 'port')
         else:
             self.port = 4730
+        if self.config.has_option('gearman', 'ssl_key'):
+            self.ssl_key = self.config.get('gearman', 'ssl_key')
+        else:
+            self.ssl_key = None
+        if self.config.has_option('gearman', 'ssl_cert'):
+            self.ssl_cert = self.config.get('gearman', 'ssl_cert')
+        else:
+            self.ssl_cert = None
+        if self.config.has_option('gearman', 'ssl_ca'):
+            self.ssl_ca = self.config.get('gearman', 'ssl_ca')
+        else:
+            self.ssl_ca = None
 
         if self.args.func():
             sys.exit(0)
@@ -132,7 +144,8 @@ class Client(zuul.cmd.ZuulApp):
             sys.exit(1)
 
     def enqueue(self):
-        client = zuul.rpcclient.RPCClient(self.server, self.port)
+        client = zuul.rpcclient.RPCClient(
+            self.server, self.port, self.ssl_key, self.ssl_cert, self.ssl_ca)
         r = client.enqueue(tenant=self.args.tenant,
                            pipeline=self.args.pipeline,
                            project=self.args.project,
@@ -141,7 +154,8 @@ class Client(zuul.cmd.ZuulApp):
         return r
 
     def enqueue_ref(self):
-        client = zuul.rpcclient.RPCClient(self.server, self.port)
+        client = zuul.rpcclient.RPCClient(
+            self.server, self.port, self.ssl_key, self.ssl_cert, self.ssl_ca)
         r = client.enqueue_ref(tenant=self.args.tenant,
                                pipeline=self.args.pipeline,
                                project=self.args.project,
@@ -152,14 +166,16 @@ class Client(zuul.cmd.ZuulApp):
         return r
 
     def promote(self):
-        client = zuul.rpcclient.RPCClient(self.server, self.port)
+        client = zuul.rpcclient.RPCClient(
+            self.server, self.port, self.ssl_key, self.ssl_cert, self.ssl_ca)
         r = client.promote(tenant=self.args.tenant,
                            pipeline=self.args.pipeline,
                            change_ids=self.args.changes)
         return r
 
     def show_running_jobs(self):
-        client = zuul.rpcclient.RPCClient(self.server, self.port)
+        client = zuul.rpcclient.RPCClient(
+            self.server, self.port, self.ssl_key, self.ssl_cert, self.ssl_ca)
         running_items = client.get_running_jobs()
 
         if len(running_items) == 0:
