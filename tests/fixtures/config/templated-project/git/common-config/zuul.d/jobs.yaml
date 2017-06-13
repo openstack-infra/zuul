@@ -1,0 +1,17 @@
+- job:
+    name: project-test1
+
+- job:
+    name: project-test2
+
+- job:
+    name: layered-project-test3
+
+- job:
+    name: layered-project-test4
+
+- job:
+    name: layered-project-foo-test5
+
+- job:
+    name: project-test6

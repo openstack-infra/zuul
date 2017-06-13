@@ -254,7 +254,7 @@ class Repo(object):
             origin.fetch()
         origin.fetch(tags=True)
 
-    def getFiles(self, files, branch=None, commit=None):
+    def getFiles(self, files, dirs=[], branch=None, commit=None):
         ret = {}
         repo = self.createRepoObject()
         if branch:
@@ -266,6 +266,14 @@ class Repo(object):
                 ret[fn] = tree[fn].data_stream.read().decode('utf8')
             else:
                 ret[fn] = None
+        if dirs:
+            for dn in dirs:
+                if dn not in tree:
+                    continue
+                for blob in tree[dn].traverse():
+                    if blob.path.endswith(".yaml"):
+                        ret[blob.path] = blob.data_stream.read().decode(
+                            'utf-8')
         return ret
 
     def deleteRemote(self, remote):
@@ -452,7 +460,7 @@ class Merger(object):
                 return None
         return commit
 
-    def mergeChanges(self, items, files=None, repo_state=None):
+    def mergeChanges(self, items, files=None, dirs=None, repo_state=None):
         # connection+project+branch -> commit
         recent = {}
         commit = None
@@ -470,9 +478,9 @@ class Merger(object):
             commit = self._mergeItem(item, recent, repo_state)
             if not commit:
                 return None
-            if files:
+            if files or dirs:
                 repo = self.getRepo(item['connection'], item['project'])
-                repo_files = repo.getFiles(files, commit=commit)
+                repo_files = repo.getFiles(files, dirs, commit=commit)
                 read_files.append(dict(
                     connection=item['connection'],
                     project=item['project'],
@@ -483,6 +491,6 @@ class Merger(object):
             ret_recent[k] = v.hexsha
         return commit.hexsha, read_files, repo_state, ret_recent
 
-    def getFiles(self, connection_name, project_name, branch, files):
+    def getFiles(self, connection_name, project_name, branch, files, dirs=[]):
         repo = self.getRepo(connection_name, project_name)
-        return repo.getFiles(files, branch=branch)
+        return repo.getFiles(files, dirs, branch=branch)

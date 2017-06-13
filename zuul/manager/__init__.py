@@ -480,7 +480,7 @@ class PipelineManager(object):
             self.log.debug("Preparing dynamic layout for: %s" % item.change)
             return self._loadDynamicLayout(item)
 
-    def scheduleMerge(self, item, files=None):
+    def scheduleMerge(self, item, files=None, dirs=None):
         build_set = item.current_build_set
 
         if not hasattr(item.change, 'branch'):
@@ -490,12 +490,12 @@ class PipelineManager(object):
             build_set.merge_state = build_set.COMPLETE
             return True
 
-        self.log.debug("Scheduling merge for item %s (files: %s)" %
-                       (item, files))
+        self.log.debug("Scheduling merge for item %s (files: %s, dirs: %s)" %
+                       (item, files, dirs))
         build_set = item.current_build_set
         build_set.merge_state = build_set.PENDING
         self.sched.merger.mergeChanges(build_set.merger_items,
-                                       item.current_build_set, files,
+                                       item.current_build_set, files, dirs,
                                        precedence=self.pipeline.precedence)
         return False
 
@@ -506,7 +506,9 @@ class PipelineManager(object):
         if not build_set.ref:
             build_set.setConfiguration()
         if build_set.merge_state == build_set.NEW:
-            return self.scheduleMerge(item, ['zuul.yaml', '.zuul.yaml'])
+            return self.scheduleMerge(item,
+                                      files=['zuul.yaml', '.zuul.yaml'],
+                                      dirs=['zuul.d', '.zuul.d'])
         if build_set.merge_state == build_set.PENDING:
             return False
         if build_set.unable_to_merge:

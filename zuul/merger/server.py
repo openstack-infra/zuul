@@ -94,8 +94,9 @@ class MergeServer(object):
 
     def merge(self, job):
         args = json.loads(job.arguments)
-        ret = self.merger.mergeChanges(args['items'], args.get('files'),
-                                       args.get('repo_state'))
+        ret = self.merger.mergeChanges(
+            args['items'], args.get('files'),
+            args.get('dirs'), args.get('repo_state'))
         result = dict(merged=(ret is not None),
                       zuul_url=self.zuul_url)
         if ret is None:
@@ -109,7 +110,8 @@ class MergeServer(object):
         args = json.loads(job.arguments)
         self.merger.updateRepo(args['connection'], args['project'])
         files = self.merger.getFiles(args['connection'], args['project'],
-                                     args['branch'], args['files'])
+                                     args['branch'], args['files'],
+                                     args.get('dirs'))
         result = dict(updated=True,
                       files=files,
                       zuul_url=self.zuul_url)
