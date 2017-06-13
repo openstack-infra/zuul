@@ -168,6 +168,21 @@
       github:
         comment: true
 
+- pipeline:
+    name: require_label
+    manager: independent
+    require:
+      github:
+        label: approved
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: 'test me'
+    success:
+      github:
+        comment: true
+
 - job:
     name: project1-pipeline
 - job:
@@ -186,6 +201,8 @@
     name: project8-requireopen
 - job:
     name: project9-requirecurrent
+- job:
+    name: project10-label
 
 - project:
     name: org/project1
@@ -243,3 +260,9 @@
     require_current:
       jobs:
         - project9-requirecurrent
+
+- project:
+    name: org/project10
+    require_label:
+      jobs:
+        - project10-label

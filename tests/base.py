@@ -936,7 +936,8 @@ class FakeGithubConnection(githubconnection.GithubConnection):
                     'full_name': pr.project
                 }
             },
-            'files': pr.files
+            'files': pr.files,
+            'labels': pr.labels
         }
         return data
 
