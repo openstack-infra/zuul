@@ -60,9 +60,12 @@ class GithubTriggerEvent(TriggerEvent):
 
 
 class GithubCommonFilter(object):
-    def __init__(self, required_reviews=[], required_statuses=[]):
+    def __init__(self, required_reviews=[], required_statuses=[],
+                 reject_reviews=[]):
         self._required_reviews = copy.deepcopy(required_reviews)
+        self._reject_reviews = copy.deepcopy(reject_reviews)
         self.required_reviews = self._tidy_reviews(required_reviews)
+        self.reject_reviews = self._tidy_reviews(reject_reviews)
         self.required_statuses = required_statuses
 
     def _tidy_reviews(self, reviews):
@@ -109,15 +112,17 @@ class GithubCommonFilter(object):
         return True
 
     def matchesReviews(self, change):
-        if self.required_reviews:
+        if self.required_reviews or self.reject_reviews:
             if not hasattr(change, 'number'):
                 # not a PR, no reviews
                 return False
-            if not change.reviews:
-                # No reviews means no matching
+            if self.required_reviews and not change.reviews:
+                # No reviews means no matching of required bits
+                # having reject reviews but no reviews on the change is okay
                 return False
 
-        return self.matchesRequiredReviews(change)
+        return (self.matchesRequiredReviews(change) and
+                self.matchesNoRejectReviews(change))
 
     def matchesRequiredReviews(self, change):
         for rreview in self.required_reviews:
@@ -129,6 +134,14 @@ class GithubCommonFilter(object):
                     break
             if not matches_review:
                 return False
+        return True
+
+    def matchesNoRejectReviews(self, change):
+        for rreview in self.reject_reviews:
+            for review in change.reviews:
+                if self._match_review_required_review(rreview, review):
+                    # A review matched, we can reject right away
+                    return False
         return True
 
     def matchesRequiredStatuses(self, change):
@@ -271,10 +284,11 @@ class GithubEventFilter(EventFilter, GithubCommonFilter):
 
 class GithubRefFilter(RefFilter, GithubCommonFilter):
     def __init__(self, connection_name, statuses=[], required_reviews=[],
-                 open=None, current_patchset=None):
+                 reject_reviews=[], open=None, current_patchset=None):
         RefFilter.__init__(self, connection_name)
 
         GithubCommonFilter.__init__(self, required_reviews=required_reviews,
+                                    reject_reviews=reject_reviews,
                                     required_statuses=statuses)
         self.statuses = statuses
         self.open = open
@@ -289,6 +303,9 @@ class GithubRefFilter(RefFilter, GithubCommonFilter):
         if self.required_reviews:
             ret += (' required-reviews: %s' %
                     str(self.required_reviews))
+        if self.reject_reviews:
+            ret += (' reject-reviews: %s' %
+                    str(self.reject_reviews))
         if self.open:
             ret += ' open: %s' % self.open
         if self.current_patchset:
@@ -320,7 +337,7 @@ class GithubRefFilter(RefFilter, GithubCommonFilter):
             else:
                 return False
 
-        # required reviews are ANDed
+        # required reviews are ANDed (reject reviews are ORed)
         if not self.matchesReviews(change):
             return False
 
