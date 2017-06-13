@@ -3,9 +3,9 @@
     - name: Assert nodepool variables are valid.
       assert:
         that:
-          - nodepool_az == 'test-az'
-          - nodepool_region == 'test-region'
-          - nodepool_provider == 'test-provider'
+          - nodepool.az == 'test-az'
+          - nodepool.region == 'test-region'
+          - nodepool.provider == 'test-provider'
 
     - name: Assert zuul-executor variables are valid.
       assert:
