@@ -144,6 +144,11 @@ class RequestHandler(ss.BaseRequestHandler):
                 else:
                     break
 
+            # See if the file has been removed, meaning we should stop
+            # streaming it.
+            if not os.path.exists(log.path):
+                return False
+
             # At this point, we are waiting for more data to be written
             time.sleep(0.5)
 
@@ -158,16 +163,6 @@ class RequestHandler(ss.BaseRequestHandler):
                 # disconnected.
                 if not ret:
                     return False
-
-            # See if the file has been truncated
-            try:
-                st = os.stat(log.path)
-                if (st.st_ino != log.stat.st_ino or
-                    st.st_size < log.size):
-                    return True
-            except Exception:
-                return True
-            log.size = st.st_size
 
 
 class CustomForkingTCPServer(ss.ForkingTCPServer):
