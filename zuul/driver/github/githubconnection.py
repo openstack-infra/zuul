@@ -118,6 +118,12 @@ class GithubWebhookListener():
             event = None
 
         if event:
+            if event.change_number:
+                project = self.connection.source.getProject(event.project_name)
+                self.connection._getChange(project,
+                                           event.change_number,
+                                           event.patch_number,
+                                           refresh=True)
             event.project_hostname = self.connection.canonical_hostname
             self.connection.logEvent(event)
             self.connection.sched.addEvent(event)
@@ -463,28 +469,20 @@ class GithubConnection(BaseConnection):
             if change not in relevant:
                 del self._change_cache[key]
 
-    def getChange(self, event):
+    def getChange(self, event, refresh=False):
         """Get the change representing an event."""
 
         project = self.source.getProject(event.project_name)
         if event.change_number:
-            change = PullRequest(event.project_name)
-            change.project = project
-            change.number = event.change_number
+            change = self._getChange(project, event.change_number,
+                                     event.patch_number, refresh=refresh)
             change.refspec = event.refspec
             change.branch = event.branch
             change.url = event.change_url
             change.updated_at = self._ghTimestampToDate(event.updated_at)
-            change.patchset = event.patch_number
-            change.files = self.getPullFileNames(project, change.number)
-            change.title = event.title
-            change.status = self._get_statuses(project, event.patch_number)
-            change.reviews = self.getPullReviews(project, change.number)
             change.source_event = event
-            change.open = self.getPullOpen(event.project_name, change.number)
-            change.is_current_patchset = self.getIsCurrent(event.project_name,
-                                                           change.number,
-                                                           event.patch_number)
+            change.is_current_patchset = (change.pr.get('head').get('sha') ==
+                                          event.patch_number)
         elif event.ref:
             change = Ref(project)
             change.ref = event.ref
@@ -495,6 +493,38 @@ class GithubConnection(BaseConnection):
             change.files = self.getPushedFileNames(event)
         else:
             change = Ref(project)
+        return change
+
+    def _getChange(self, project, number, patchset, refresh=False):
+        key = '%s/%s/%s' % (project.name, number, patchset)
+        change = self._change_cache.get(key)
+        if change and not refresh:
+            return change
+        if not change:
+            change = PullRequest(project.name)
+            change.project = project
+            change.number = number
+            change.patchset = patchset
+        self._change_cache[key] = change
+        try:
+            self._updateChange(change)
+        except Exception:
+            if key in self._change_cache:
+                del self._change_cache[key]
+            raise
+        return change
+
+    def _updateChange(self, change):
+        self.log.info("Updating %s" % (change,))
+        change.pr = self.getPull(change.project.name, change.number)
+        change.files = change.pr.get('files')
+        change.title = change.pr.get('title')
+        change.open = change.pr.get('state') == 'open'
+        change.status = self._get_statuses(change.project,
+                                           change.patchset)
+        change.reviews = self.getPullReviews(change.project,
+                                             change.number)
+
         return change
 
     def getGitUrl(self, project):
@@ -535,7 +565,9 @@ class GithubConnection(BaseConnection):
     def getPull(self, project_name, number):
         github = self.getGithubClient(project_name)
         owner, proj = project_name.split('/')
-        pr = github.pull_request(owner, proj, number).as_dict()
+        probj = github.pull_request(owner, proj, number)
+        pr = probj.as_dict()
+        pr['files'] = [f.filename for f in probj.files()]
         log_rate_limit(self.log, github)
         return pr
 
@@ -577,14 +609,6 @@ class GithubConnection(BaseConnection):
         if len(pulls) == 0:
             return None
         return pulls.pop()
-
-    def getPullFileNames(self, project, number):
-        github = self.getGithubClient(project)
-        owner, proj = project.name.split('/')
-        filenames = [f.filename for f in
-                     github.pull_request(owner, proj, number).files()]
-        log_rate_limit(self.log, github)
-        return filenames
 
     def getPullReviews(self, project, number):
         owner, proj = project.name.split('/')
@@ -722,14 +746,6 @@ class GithubConnection(BaseConnection):
         pull_request = github.issue(owner, proj, pr_number)
         pull_request.remove_label(label)
         log_rate_limit(self.log, github)
-
-    def getPullOpen(self, project, number):
-        pr = self.getPull(project, number)
-        return pr.get('state') == 'open'
-
-    def getIsCurrent(self, project, number, sha):
-        pr = self.getPull(project, number)
-        return pr.get('head').get('sha') == sha
 
     def getPushedFileNames(self, event):
         files = set()
