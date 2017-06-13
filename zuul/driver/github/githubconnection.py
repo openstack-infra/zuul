@@ -565,7 +565,13 @@ class GithubConnection(BaseConnection):
     def getPull(self, project_name, number):
         github = self.getGithubClient(project_name)
         owner, proj = project_name.split('/')
-        probj = github.pull_request(owner, proj, number)
+        for retry in range(5):
+            probj = github.pull_request(owner, proj, number)
+            if probj is not None:
+                break
+            self.log.warning("Pull request #%s of %s/%s returned None!" % (
+                             number, owner, proj))
+            time.sleep(1)
         pr = probj.as_dict()
         pr['files'] = [f.filename for f in probj.files()]
         log_rate_limit(self.log, github)
