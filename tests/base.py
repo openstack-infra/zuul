@@ -776,21 +776,6 @@ class FakeGithubPullRequest(object):
         repo = self._getRepo()
         return repo.references[self._getPRReference()].commit.hexsha
 
-    def setStatus(self, sha, state, url, description, context, user='zuul'):
-        # Since we're bypassing github API, which would require a user, we
-        # hard set the user as 'zuul' here.
-        # insert the status at the top of the list, to simulate that it
-        # is the most recent set status
-        self.statuses[sha].insert(0, ({
-            'state': state,
-            'url': url,
-            'description': description,
-            'context': context,
-            'creator': {
-                'login': user
-            }
-        }))
-
     def addReview(self, user, state, granted_on=None):
         gh_time_format = '%Y-%m-%dT%H:%M:%SZ'
         # convert the timestamp to a str format that would be returned
@@ -882,6 +867,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         self.connection_name = connection_name
         self.pr_number = 0
         self.pull_requests = []
+        self.statuses = {}
         self.upstream_root = upstream_root
         self.merge_failure = False
         self.merge_not_allowed_count = 0
@@ -1014,25 +1000,24 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         pull_request.merge_message = commit_message
 
     def getCommitStatuses(self, project, sha):
-        owner, proj = project.split('/')
-        for pr in self.pull_requests:
-            pr_owner, pr_project = pr.project.split('/')
-            # This is somewhat risky, if the same commit exists in multiple
-            # PRs, we might grab the wrong one that doesn't have a status
-            # that is expected to be there. Maybe re-work this so that there
-            # is a global registry of commit statuses like with github.
-            if (pr_owner == owner and pr_project == proj and
-                sha in pr.statuses):
-                return pr.statuses[sha]
+        return self.statuses.get(project, {}).get(sha, [])
 
-    def setCommitStatus(self, project, sha, state,
-                        url='', description='', context=''):
-        owner, proj = project.split('/')
-        for pr in self.pull_requests:
-            pr_owner, pr_project = pr.project.split('/')
-            if (pr_owner == owner and pr_project == proj and
-                pr.head_sha == sha):
-                pr.setStatus(sha, state, url, description, context)
+    def setCommitStatus(self, project, sha, state, url='', description='',
+                        context='default', user='zuul'):
+        # always insert a status to the front of the list, to represent
+        # the last status provided for a commit.
+        # Since we're bypassing github API, which would require a user, we
+        # default the user as 'zuul' here.
+        self.statuses.setdefault(project, {}).setdefault(sha, [])
+        self.statuses[project][sha].insert(0, {
+            'state': state,
+            'url': url,
+            'description': description,
+            'context': context,
+            'creator': {
+                'login': user
+            }
+        })
 
     def labelPull(self, project, pr_number, label):
         pull_request = self.pull_requests[pr_number - 1]
