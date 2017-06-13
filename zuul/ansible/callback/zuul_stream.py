@@ -103,14 +103,14 @@ class CallbackModule(default.CallbackModule):
         self._log = logging.getLogger('zuul.executor.ansible')
 
     def _read_log(self, host, ip, log_id, task_name):
-        self._log.debug("[%s] Starting to log %s for task %s"
-                        % (host, log_id, task_name))
+        self._display.display("[%s] Starting to log %s for task %s"
+                              % (host, log_id, task_name))
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         while True:
             try:
                 s.connect((ip, LOG_STREAM_PORT))
             except Exception:
-                self._log.debug("[%s] Waiting on logger" % host)
+                self._display.vvv("[%s] Waiting on logger" % host)
                 time.sleep(0.1)
                 continue
             msg = "%s\n" % log_id
@@ -173,6 +173,7 @@ class CallbackModule(default.CallbackModule):
                 msg = "{now} | [Zuul] Log Stream did not terminate".format(
                     now=datetime.datetime.now())
                 self._log.info(msg)
+                self._display.display("WARNING: Streamer could not join")
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
         self._stop_streamer()
