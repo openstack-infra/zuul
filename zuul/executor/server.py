@@ -693,6 +693,13 @@ class AnsibleJob(object):
     RESULT_UNREACHABLE = 3
     RESULT_ABORTED = 4
 
+    RESULT_MAP = {
+        RESULT_NORMAL: 'RESULT_NORMAL',
+        RESULT_TIMED_OUT: 'RESULT_TIMED_OUT',
+        RESULT_UNREACHABLE: 'RESULT_UNREACHABLE',
+        RESULT_ABORTED: 'RESULT_ABORTED',
+    }
+
     def __init__(self, executor_server, job):
         logger = logging.getLogger("zuul.AnsibleJob")
         self.log = AnsibleJobLogAdapter(logger, {'job': job.unique})
@@ -1294,11 +1301,13 @@ class AnsibleJob(object):
             for line in iter(self.proc.stdout.readline, b''):
                 line = line[:1024].rstrip()
                 self.log.debug("Ansible output: %s" % (line,))
+            self.log.debug("Ansible output terminated")
             ret = self.proc.wait()
+            self.log.debug("Ansible exit code: %s" % (ret,))
         finally:
             if timeout:
                 watchdog.stop()
-        self.log.debug("Ansible exit code: %s" % (ret,))
+                self.log.debug("Stopped watchdog")
 
         with self.proc_lock:
             self.proc = None
@@ -1329,5 +1338,8 @@ class AnsibleJob(object):
         if success is not None:
             cmd.extend(['-e', 'success=%s' % str(bool(success))])
 
-        return self.runAnsible(
+        result, code = self.runAnsible(
             cmd=cmd, timeout=timeout, trusted=playbook.trusted)
+        self.log.debug("Ansible complete, result %s code %s" % (
+            self.RESULT_MAP[result], code))
+        return result, code
