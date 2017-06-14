@@ -903,9 +903,10 @@ class AnsibleJob(object):
             host_vars = dict(
                 ansible_host=ip,
                 ansible_user=self.executor_server.default_username,
-                nodepool_az=node.get('az'),
-                nodepool_provider=node.get('provider'),
-                nodepool_region=node.get('region'))
+                nodepool=dict(
+                    az=node.get('az'),
+                    provider=node.get('provider'),
+                    region=node.get('region')))
 
             host_keys = []
             for key in node.get('host_keys'):
