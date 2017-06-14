@@ -62,11 +62,15 @@ def zuul_filter_result(result):
     of cmd it'll echo what the command was for folks.
     """
 
+    stdout = result.pop('stdout', '')
+    stdout_lines = result.pop('stdout_lines', [])
+    if not stdout_lines and stdout:
+        stdout_lines = stdout.split('\n')
+
     for key in ('changed', 'cmd', 'zuul_log_id',
-                'stderr', 'stderr_lines',
-                'stdout', 'stdout_lines'):
+                'stderr', 'stderr_lines'):
         result.pop(key, None)
-    return result
+    return stdout_lines
 
 
 class CallbackModule(default.CallbackModule):
@@ -159,9 +163,15 @@ class CallbackModule(default.CallbackModule):
 
             hosts = self._get_task_hosts(task)
             for host in hosts:
+                if host in ('locahost', '127.0.0.1'):
+                    # Don't try to stream from localhost
+                    continue
                 ip = play_vars[host].get(
                     'ansible_host', play_vars[host].get(
                         'ansible_inventory_host'))
+                # TODO(mordred) this is clearly stupid and won't work for
+                # multi-node (we're a for loop, but we're setting a single
+                # value.
                 self._streamer = threading.Thread(
                     target=self._read_log, args=(
                         host, ip, log_id, task_name, hosts))
@@ -176,9 +186,21 @@ class CallbackModule(default.CallbackModule):
                 self._log(msg, job=True, executor=True)
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
-        self._stop_streamer()
+        is_localhost = False
+        delegated_vars = result._result.get('_ansible_delegated_vars', None)
+        if delegated_vars:
+            delegated_host = delegated_vars['ansible_host']
+            if delegated_host in ('localhost', '127.0.0.1'):
+                is_localhost = True
+
+        if not is_localhost:
+            self._stop_streamer()
         if result._task.action in ('command', 'shell'):
-            zuul_filter_result(result._result)
+            stdout_lines = zuul_filter_result(result._result)
+        if is_localhost:
+            for line in stdout_lines:
+                ts, ln = (x.strip() for x in line.split(' | ', 1))
+                self._log("localhost | %s " % ln, ts=ts)
         self._handle_exception(result._result)
 
         if result._task.loop and 'results' in result._result:
