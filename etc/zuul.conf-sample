@@ -1,8 +1,14 @@
 [gearman]
 server=127.0.0.1
+;ssl_ca=/path/to/ca.pem
+;ssl_cert=/path/to/client.pem
+;ssl_key=/path/to/client.key
 
 [gearman_server]
 start=true
+;ssl_ca=/path/to/ca.pem
+;ssl_cert=/path/to/server.pem
+;ssl_key=/path/to/server.key
 
 [zuul]
 layout_config=/etc/zuul/layout.yaml

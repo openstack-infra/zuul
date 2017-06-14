@@ -35,10 +35,34 @@ import zuul.rpcclient
 import zuul.model
 
 from tests.base import (
+    SSLZuulTestCase,
     ZuulTestCase,
     repack_repo,
     simple_layout,
 )
+
+
+class TestSchedulerSSL(SSLZuulTestCase):
+    tenant_config_file = 'config/single-tenant/main.yaml'
+
+    def test_jobs_executed(self):
+        "Test that jobs are executed and a change is merged"
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(self.getJobFromHistory('project-test1').node,
+                         'label1')
+        self.assertIsNone(self.getJobFromHistory('project-test2').node)
 
 
 class TestScheduler(ZuulTestCase):

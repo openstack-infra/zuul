@@ -1356,9 +1356,20 @@ class FakeGearmanServer(gear.Server):
 
     """
 
-    def __init__(self):
+    def __init__(self, use_ssl=False):
         self.hold_jobs_in_queue = False
-        super(FakeGearmanServer, self).__init__(0)
+        if use_ssl:
+            ssl_ca = os.path.join(FIXTURE_DIR, 'gearman/root-ca.pem')
+            ssl_cert = os.path.join(FIXTURE_DIR, 'gearman/server.pem')
+            ssl_key = os.path.join(FIXTURE_DIR, 'gearman/server.key')
+        else:
+            ssl_ca = None
+            ssl_cert = None
+            ssl_key = None
+
+        super(FakeGearmanServer, self).__init__(0, ssl_key=ssl_key,
+                                                ssl_cert=ssl_cert,
+                                                ssl_ca=ssl_ca)
 
     def getJobForConnection(self, connection, peek=False):
         for queue in [self.high_queue, self.normal_queue, self.low_queue]:
@@ -1812,6 +1823,7 @@ class ZuulTestCase(BaseTestCase):
     config_file = 'zuul.conf'
     run_ansible = False
     create_project_keys = False
+    use_ssl = False
 
     def _startMerger(self):
         self.merge_server = zuul.merger.server.MergeServer(self.config,
@@ -1869,11 +1881,22 @@ class ZuulTestCase(BaseTestCase):
         reload_module(statsd)
         reload_module(zuul.scheduler)
 
-        self.gearman_server = FakeGearmanServer()
+        self.gearman_server = FakeGearmanServer(self.use_ssl)
 
         self.config.set('gearman', 'port', str(self.gearman_server.port))
         self.log.info("Gearman server on port %s" %
                       (self.gearman_server.port,))
+        if self.use_ssl:
+            self.log.info('SSL enabled for gearman')
+            self.config.set(
+                'gearman', 'ssl_ca',
+                os.path.join(FIXTURE_DIR, 'gearman/root-ca.pem'))
+            self.config.set(
+                'gearman', 'ssl_cert',
+                os.path.join(FIXTURE_DIR, 'gearman/client.pem'))
+            self.config.set(
+                'gearman', 'ssl_key',
+                os.path.join(FIXTURE_DIR, 'gearman/client.key'))
 
         gerritsource.GerritSource.replication_timeout = 1.5
         gerritsource.GerritSource.replication_retry_interval = 0.5
@@ -2681,6 +2704,11 @@ class ZuulTestCase(BaseTestCase):
 class AnsibleZuulTestCase(ZuulTestCase):
     """ZuulTestCase but with an actual ansible executor running"""
     run_ansible = True
+
+
+class SSLZuulTestCase(ZuulTestCase):
+    """ZuulTestCase but with an but using SSL when possible"""
+    use_ssl = True
 
 
 class ZuulDBTestCase(ZuulTestCase):
