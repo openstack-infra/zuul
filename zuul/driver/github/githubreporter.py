@@ -40,21 +40,25 @@ class GithubReporter(BaseReporter):
             self._unlabels = [self._unlabels]
 
     def report(self, item):
-        """Comment on PR and set commit status."""
-        if self._create_comment:
-            self.addPullComment(item)
+        """Report on an event."""
+        # order is important for github branch protection.
+        # A status should be set before a merge attempt
         if (self._commit_status is not None and
             hasattr(item.change, 'patchset') and
             item.change.patchset is not None):
-            self.setPullStatus(item)
-        if (self._merge and
-            hasattr(item.change, 'number')):
-            self.mergePull(item)
-            if not item.change.is_merged:
-                msg = self._formatItemReportMergeFailure(item)
-                self.addPullComment(item, msg)
-        if self._labels or self._unlabels:
-            self.setLabels(item)
+            self.setCommitStatus(item)
+        # Comments, labels, and merges can only be performed on pull requests.
+        # If the change is not a pull request (e.g. a push) skip them.
+        if hasattr(item.change, 'number'):
+            if self._create_comment:
+                self.addPullComment(item)
+            if self._labels or self._unlabels:
+                self.setLabels(item)
+            if (self._merge):
+                self.mergePull(item)
+                if not item.change.is_merged:
+                    msg = self._formatItemReportMergeFailure(item)
+                    self.addPullComment(item, msg)
 
     def addPullComment(self, item, comment=None):
         message = comment or self._formatItemReport(item)
@@ -65,7 +69,7 @@ class GithubReporter(BaseReporter):
             (item.change, self.config, message))
         self.connection.commentPull(project, pr_number, message)
 
-    def setPullStatus(self, item):
+    def setCommitStatus(self, item):
         project = item.change.project.name
         sha = item.change.patchset
         context = '%s/%s' % (item.pipeline.layout.tenant.name,

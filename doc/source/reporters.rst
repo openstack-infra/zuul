@@ -31,10 +31,10 @@ trigger.
 GitHub
 ------
 
-Zuul reports back to GitHub pull requests via GitHub API.
-On success and failure, it creates a comment containing the build results.
-It also sets the status on start, success and failure. Status name and
-description is taken from the pipeline.
+Zuul reports back to GitHub via GitHub API. Available reports include a PR
+comment containing the build results, a commit status on start, success and
+failure, an issue label addition/removal on the PR, and a merge of the PR
+itself. Status name, description, and context is taken from the pipeline.
 
 A :ref:`connection` that uses the github driver must be supplied to the
 reporter. It has the following options:
@@ -51,22 +51,23 @@ reporter. It has the following options:
   **comment**
   Boolean value (``true`` or ``false``) that determines if the reporter should
   add a comment to the pipeline status to the github pull request. Defaults
-  to ``true``.
+  to ``true``. Only used for Pull Request based events.
   ``comment: false``
 
   **merge**
   Boolean value (``true`` or ``false``) that determines if the reporter should
-  merge the pull reqeust. Defaults to ``false``.
+  merge the pull reqeust. Defaults to ``false``. Only used for Pull Request based
+  events.
   ``merge=true``
 
   **label**
   List of strings each representing an exact label name which should be added
-  to the pull request by reporter.
+  to the pull request by reporter. Only used for Pull Request based events.
   ``label: 'test successful'``
 
   **unlabel**
   List of strings each representing an exact label name which should be removed
-  from the pull request by reporter.
+  from the pull request by reporter. Only used for Pull Request based events.
   ``unlabel: 'test failed'``
 
 SMTP
