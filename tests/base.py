@@ -2707,7 +2707,7 @@ class AnsibleZuulTestCase(ZuulTestCase):
 
 
 class SSLZuulTestCase(ZuulTestCase):
-    """ZuulTestCase but with an but using SSL when possible"""
+    """ZuulTestCase but using SSL when possible"""
     use_ssl = True
 
 
