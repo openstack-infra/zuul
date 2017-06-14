@@ -123,12 +123,19 @@ import traceback
 import threading
 
 from ansible.module_utils.basic import AnsibleModule, heuristic_log_sanitize
-from ansible.module_utils.basic import get_exception
-from ansible.module_utils.six import b
-
-# ZUUL: Hardcode python2 until we're on ansible 2.2
-from ast import literal_eval
-
+from ansible.module_utils.pycompat24 import get_exception, literal_eval
+from ansible.module_utils.six import (
+    PY2,
+    PY3,
+    b,
+    binary_type,
+    integer_types,
+    iteritems,
+    string_types,
+    text_type,
+)
+from ansible.module_utils.six.moves import map, reduce
+from ansible.module_utils._text import to_native, to_bytes, to_text
 
 LOG_STREAM_FILE = '/tmp/console-{log_uuid}.log'
 PASSWD_ARG_RE = re.compile(r'^[-]{0,2}pass[-]?(word|wd)?')
@@ -175,7 +182,7 @@ def follow(fd, log_uuid):
 
 # Taken from ansible/module_utils/basic.py ... forking the method for now
 # so that we can dive in and figure out how to make appropriate hook points
-def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, executable=None, data=None, binary_data=False, path_prefix=None, cwd=None, use_unsafe_shell=False, prompt_regex=None, environ_update=None):
+def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, executable=None, data=None, binary_data=False, path_prefix=None, cwd=None, use_unsafe_shell=False, prompt_regex=None, environ_update=None, umask=None, encoding='utf-8', errors='surrogate_or_strict'):
     '''
     Execute a command, returns rc, stdout, and stderr.
 
@@ -197,7 +204,27 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
     :kw prompt_regex: Regex string (not a compiled regex) which can be
         used to detect prompts in the stdout which would otherwise cause
         the execution to hang (especially if no input data is specified)
-    :kwarg environ_update: dictionary to *update* os.environ with
+    :kw environ_update: dictionary to *update* os.environ with
+    :kw umask: Umask to be used when running the command. Default None
+    :kw encoding: Since we return native strings, on python3 we need to
+        know the encoding to use to transform from bytes to text.  If you
+        want to always get bytes back, use encoding=None.  The default is
+        "utf-8".  This does not affect transformation of strings given as
+        args.
+    :kw errors: Since we return native strings, on python3 we need to
+        transform stdout and stderr from bytes to text.  If the bytes are
+        undecodable in the ``encoding`` specified, then use this error
+        handler to deal with them.  The default is ``surrogate_or_strict``
+        which means that the bytes will be decoded using the
+        surrogateescape error handler if available (available on all
+        python3 versions we support) otherwise a UnicodeError traceback
+        will be raised.  This does not affect transformations of strings
+        given as args.
+    :returns: A 3-tuple of return code (integer), stdout (native string),
+        and stderr (native string).  On python2, stdout and stderr are both
+        byte strings.  On python3, stdout and stderr are text strings converted
+        according to the encoding and errors parameters.  If you want byte
+        strings on python3, use encoding=None to turn decoding to text off.
     '''
 
     shell = False
@@ -205,13 +232,15 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
         if use_unsafe_shell:
             args = " ".join([pipes.quote(x) for x in args])
             shell = True
-    elif isinstance(args, (str, unicode)) and use_unsafe_shell:
+    elif isinstance(args, (binary_type, text_type)) and use_unsafe_shell:
         shell = True
-    elif isinstance(args, (str, unicode)):
+    elif isinstance(args, (binary_type, text_type)):
         # On python2.6 and below, shlex has problems with text type
-        # ZUUL: Hardcode python2 until we're on ansible 2.2
-        if isinstance(args, unicode):
-            args = args.encode('utf-8')
+        # On python3, shlex needs a text type.
+        if PY2:
+            args = to_bytes(args, errors='surrogate_or_strict')
+        elif PY3:
+            args = to_text(args, errors='surrogateescape')
         args = shlex.split(args)
     else:
         msg = "Argument 'args' to run_command must be list or string"
@@ -219,6 +248,11 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
 
     prompt_re = None
     if prompt_regex:
+        if isinstance(prompt_regex, text_type):
+            if PY3:
+                prompt_regex = to_bytes(prompt_regex, errors='surrogateescape')
+            elif PY2:
+                prompt_regex = to_bytes(prompt_regex, errors='surrogate_or_strict')
         try:
             prompt_re = re.compile(prompt_regex, re.MULTILINE)
         except re.error:
@@ -226,7 +260,7 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
 
     # expand things like $HOME and ~
     if not shell:
-        args = [ os.path.expanduser(os.path.expandvars(x)) for x in args if x is not None ]
+        args = [os.path.expanduser(os.path.expandvars(x)) for x in args if x is not None]
 
     rc = 0
     msg = None
@@ -254,9 +288,9 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
     # Clean out python paths set by ansiballz
     if 'PYTHONPATH' in os.environ:
         pypaths = os.environ['PYTHONPATH'].split(':')
-        pypaths = [x for x in pypaths \
-                    if not x.endswith('/ansible_modlib.zip') \
-                    and not x.endswith('/debug_dir')]
+        pypaths = [x for x in pypaths
+                   if not x.endswith('/ansible_modlib.zip') and
+                   not x.endswith('/debug_dir')]
         os.environ['PYTHONPATH'] = ':'.join(pypaths)
         if not os.environ['PYTHONPATH']:
             del os.environ['PYTHONPATH']
@@ -265,8 +299,13 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
     # in reporting later, which strips out things like
     # passwords from the args list
     to_clean_args = args
-    # ZUUL: Hardcode python2 until we're on ansible 2.2
-    if isinstance(args, (unicode, str)):
+    if PY2:
+        if isinstance(args, text_type):
+            to_clean_args = to_bytes(args)
+    else:
+        if isinstance(args, binary_type):
+            to_clean_args = to_text(args)
+    if isinstance(args, (text_type, binary_type)):
         to_clean_args = shlex.split(to_clean_args)
 
     clean_args = []
@@ -300,34 +339,36 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
         stderr=subprocess.STDOUT,
     )
 
-    if cwd and os.path.isdir(cwd):
-        kwargs['cwd'] = cwd
-
     # store the pwd
     prev_dir = os.getcwd()
 
     # make sure we're in the right working directory
     if cwd and os.path.isdir(cwd):
+        cwd = os.path.abspath(os.path.expanduser(cwd))
+        kwargs['cwd'] = cwd
         try:
             os.chdir(cwd)
         except (OSError, IOError):
             e = get_exception()
             self.fail_json(rc=e.errno, msg="Could not open %s, %s" % (cwd, str(e)))
 
-    try:
+    old_umask = None
+    if umask:
+        old_umask = os.umask(umask)
 
+    try:
         if self._debug:
-            if isinstance(args, list):
-                running = ' '.join(args)
-            else:
-                running = args
-            self.log('Executing: ' + running)
+            self.log('Executing: ' + clean_args)
+        cmd = subprocess.Popen(args, **kwargs)
+
         # ZUUL: Replaced the excution loop with the zuul_runner run function
         cmd = subprocess.Popen(args, **kwargs)
         t = threading.Thread(target=follow, args=(cmd.stdout, zuul_log_id))
         t.daemon = True
         t.start()
+
         ret = cmd.wait()
+
         # Give the thread that is writing the console log up to 10 seconds
         # to catch up and exit.  If it hasn't done so by then, it is very
         # likely stuck in readline() because it spawed a child that is
@@ -343,19 +384,21 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
         # we can't close stdout (attempting to do so raises an
         # exception) , so this is disabled.
         # cmd.stdout.close()
+        # cmd.stderr.close()
 
         # ZUUL: stdout and stderr are in the console log file
         # ZUUL: return the saved log lines so we can ship them back
-        stdout = ''.join(_log_lines)
-        stderr = ''
+        stdout = b('').join(_log_lines)
+        stderr = b('')
 
         rc = cmd.returncode
     except (OSError, IOError):
         e = get_exception()
-        self.fail_json(rc=e.errno, msg=str(e), cmd=clean_args)
+        self.log("Error Executing CMD:%s Exception:%s" % (clean_args, to_native(e)))
+        self.fail_json(rc=e.errno, msg=to_native(e), cmd=clean_args)
     except Exception:
-        e = get_exception()
-        self.fail_json(rc=257, msg=str(e), exception=traceback.format_exc(), cmd=clean_args)
+        self.log("Error Executing CMD:%s Exception:%s" % (clean_args, to_native(traceback.format_exc())))
+        self.fail_json(rc=257, msg=to_native(e), exception=traceback.format_exc(), cmd=clean_args)
 
     # Restore env settings
     for key, val in old_env_vals.items():
@@ -364,6 +407,9 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
         else:
             os.environ[key] = val
 
+    if old_umask:
+        os.umask(old_umask)
+
     if rc != 0 and check_rc:
         msg = heuristic_log_sanitize(stderr.rstrip(), self.no_log_values)
         self.fail_json(cmd=clean_args, rc=rc, stdout=stdout, stderr=stderr, msg=msg)
@@ -371,6 +417,9 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
     # reset the pwd
     os.chdir(prev_dir)
 
+    if encoding is not None:
+        return (rc, to_native(stdout, encoding=encoding, errors=errors),
+                to_native(stderr, encoding=encoding, errors=errors))
     return (rc, stdout, stderr)
 
 
@@ -462,7 +511,7 @@ def main():
         args = shlex.split(args)
     startd = datetime.datetime.now()
 
-    rc, out, err = zuul_run_command(module, args, zuul_log_id, executable=executable, use_unsafe_shell=shell, environ_update=environ)
+    rc, out, err = zuul_run_command(module, args, zuul_log_id, executable=executable, use_unsafe_shell=shell, encoding=None, environ_update=environ)
 
     endd = datetime.datetime.now()
     delta = endd - startd
