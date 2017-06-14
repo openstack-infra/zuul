@@ -142,11 +142,7 @@ class BaseReporter(object):
                     elapsed = ' in %ds' % (s)
             else:
                 elapsed = ''
-            name = ''
-            if config.has_option('zuul', 'job_name_in_report'):
-                if config.getboolean('zuul',
-                                     'job_name_in_report'):
-                    name = job.name + ' '
+            name = job.name + ' '
             ret += '- %s%s : %s%s%s\n' % (name, url, result, elapsed,
                                           voting)
         return ret
