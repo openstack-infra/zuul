@@ -19,6 +19,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this software.  If not, see <http://www.gnu.org/licenses/>.
 
+ANSIBLE_METADATA = {'metadata_version': '1.0',
+                    'status': ['stableinterface'],
+                    'supported_by': 'core'}
+
 # flake8: noqa
 # This file shares a significant chunk of code with an upstream ansible
 # function, run_command. The goal is to not have to fork quite so much
@@ -34,7 +38,7 @@ module: command
 short_description: Executes a command on a remote node
 version_added: historical
 description:
-     - The M(command) module takes the command name followed by a list of space-delimited arguments.
+     - The C(command) module takes the command name followed by a list of space-delimited arguments.
      - The given command will be executed on all selected nodes. It will not be
        processed through the shell, so variables like C($HOME) and operations
        like C("<"), C(">"), C("|"), C(";") and C("&") will not work (use the M(shell)
@@ -76,30 +80,33 @@ options:
       - if command warnings are on in ansible.cfg, do not warn about this particular line if set to no/false.
     required: false
 notes:
-    -  If you want to run a command through the shell (say you are using C(<),
-       C(>), C(|), etc), you actually want the M(shell) module instead. The
-       M(command) module is much more secure as it's not affected by the user's
-       environment.
-    -  " C(creates), C(removes), and C(chdir) can be specified after the command. For instance, if you only want to run a command if a certain file does not exist, use this."
+    -  If you want to run a command through the shell (say you are using C(<), C(>), C(|), etc), you actually want the M(shell) module instead.
+       The C(command) module is much more secure as it's not affected by the user's environment.
+    -  " C(creates), C(removes), and C(chdir) can be specified after the command.
+       For instance, if you only want to run a command if a certain file does not exist, use this."
 author:
     - Ansible Core Team
     - Michael DeHaan
 '''
 
 EXAMPLES = '''
-# Example from Ansible Playbooks.
-- command: /sbin/shutdown -t now
+- name: return motd to registered var
+  command: cat /etc/motd
+  register: mymotd
 
-# Run the command if the specified file does not exist.
-- command: /usr/bin/make_database.sh arg1 arg2 creates=/path/to/database
+- name: Run the command if the specified file does not exist.
+  command: /usr/bin/make_database.sh arg1 arg2 creates=/path/to/database
 
-# You can also use the 'args' form to provide the options. This command
-# will change the working directory to somedir/ and will only run when
-# /path/to/database doesn't exist.
-- command: /usr/bin/make_database.sh arg1 arg2
+# You can also use the 'args' form to provide the options.
+- name: This command will change the working directory to somedir/ and will only run when /path/to/database doesn't exist.
+  command: /usr/bin/make_database.sh arg1 arg2
   args:
     chdir: somedir/
     creates: /path/to/database
+
+- name: safely use templated variable to run command. Always use the quote filter to avoid injection issues.
+  command: cat {{ myfile|quote }}
+  register: myoutput
 '''
 
 import datetime
@@ -117,6 +124,8 @@ import threading
 
 from ansible.module_utils.basic import AnsibleModule, heuristic_log_sanitize
 from ansible.module_utils.basic import get_exception
+from ansible.module_utils.six import b
+
 # ZUUL: Hardcode python2 until we're on ansible 2.2
 from ast import literal_eval
 
@@ -392,24 +401,24 @@ def main():
     # hence don't copy this one if you are looking to build others!
     module = AnsibleModule(
         argument_spec=dict(
-          _raw_params = dict(),
-          _uses_shell = dict(type='bool', default=False),
-          chdir = dict(type='path'),
-          executable = dict(),
-          creates = dict(type='path'),
-          removes = dict(type='path'),
-          warn = dict(type='bool', default=True),
-          environ = dict(type='dict', default=None),
-          zuul_log_id = dict(type='str'),
+            _raw_params = dict(),
+            _uses_shell = dict(type='bool', default=False),
+            chdir = dict(type='path'),
+            executable = dict(),
+            creates = dict(type='path'),
+            removes = dict(type='path'),
+            warn = dict(type='bool', default=True),
+            environ = dict(type='dict', default=None),
+            zuul_log_id = dict(type='str'),
         )
     )
 
     shell = module.params['_uses_shell']
     chdir = module.params['chdir']
     executable = module.params['executable']
-    args  = module.params['_raw_params']
-    creates  = module.params['creates']
-    removes  = module.params['removes']
+    args = module.params['_raw_params']
+    creates = module.params['creates']
+    removes = module.params['removes']
     warn = module.params['warn']
     environ = module.params['environ']
     zuul_log_id = module.params['zuul_log_id']
@@ -434,9 +443,9 @@ def main():
             )
 
     if removes:
-    # do not run the command if the line contains removes=filename
-    # and the filename does not exist.  This allows idempotence
-    # of command executions.
+        # do not run the command if the line contains removes=filename
+        # and the filename does not exist.  This allows idempotence
+        # of command executions.
         if not glob.glob(removes):
             module.exit_json(
                 cmd=args,
@@ -459,14 +468,14 @@ def main():
     delta = endd - startd
 
     if out is None:
-        out = ''
+        out = b('')
     if err is None:
-        err = ''
+        err = b('')
 
     module.exit_json(
         cmd      = args,
-        stdout   = out.rstrip("\r\n"),
-        stderr   = err.rstrip("\r\n"),
+        stdout   = out.rstrip(b("\r\n")),
+        stderr   = err.rstrip(b("\r\n")),
         rc       = rc,
         start    = str(startd),
         end      = str(endd),
