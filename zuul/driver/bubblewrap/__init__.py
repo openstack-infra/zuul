@@ -152,6 +152,8 @@ class BubblewrapDriver(Driver, WrapperInterface):
 
 
 def main(args=None):
+    logging.basicConfig(level=logging.DEBUG)
+
     driver = BubblewrapDriver()
 
     parser = argparse.ArgumentParser()
