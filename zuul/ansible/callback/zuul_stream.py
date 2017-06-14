@@ -119,7 +119,8 @@ class CallbackModule(default.CallbackModule):
                 if "[Zuul] Task exit code" in line:
                     return
                 else:
-                    ts, ln = line.strip().split(' | ', 1)
+                    ts, ln = line.split(' | ', 1)
+                    ln = ln.strip()
 
                     self._log.info("%s | %s | %s " % (ts, host, ln))
 
