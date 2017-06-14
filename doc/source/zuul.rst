@@ -128,11 +128,6 @@ layout.yaml to be useful.
   optional value and ``1`` is used by default.
   ``status_expiry=1``
 
-**job_name_in_report**
-  Boolean value (``true`` or ``false``) that indicates whether the
-  job name should be included in the report (normally only the URL
-  is included).  Defaults to ``false``.  Used by zuul-server only.
-  ``job_name_in_report=true``
 
 merger
 """"""
