@@ -1183,7 +1183,6 @@ class AnsibleJob(object):
                          self.jobdir.root)
             config.write('remote_tmp = %s/.ansible/remote_tmp\n' %
                          self.jobdir.root)
-            config.write('private_key_file = %s\n' % self.private_key_file)
             config.write('retry_files_enabled = False\n')
             config.write('gathering = explicit\n')
             config.write('library = %s\n'
