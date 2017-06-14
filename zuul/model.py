@@ -1339,7 +1339,6 @@ class QueueItem(object):
         self.quiet = False
         self.active = False  # Whether an item is within an active window
         self.live = True  # Whether an item is intended to be processed at all
-        self.layout = None  # This item's shadow layout
         self.job_graph = None
 
     def __repr__(self):
