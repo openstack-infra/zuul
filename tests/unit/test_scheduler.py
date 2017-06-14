@@ -3380,13 +3380,13 @@ class TestScheduler(ZuulTestCase):
                 raise Exception("Timeout waiting for gearman server to report "
                                 + "back to the client")
             build = list(self.executor_client.builds.values())[0]
-            if build.worker.name == "My Worker":
+            if build.worker.name == self.executor_server.hostname:
                 break
             else:
                 time.sleep(0)
 
         self.log.debug(build)
-        self.assertEqual("My Worker", build.worker.name)
+        self.assertEqual(self.executor_server.hostname, build.worker.name)
 
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
@@ -3553,7 +3553,7 @@ For CI problems and help debugging, contact ci@example.org"""
                 raise Exception("Timeout waiting for gearman server to report "
                                 + "back to the client")
             build = list(self.executor_client.builds.values())[0]
-            if build.worker.name == "My Worker":
+            if build.worker.name == self.executor_server.hostname:
                 break
             else:
                 time.sleep(0)

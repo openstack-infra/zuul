@@ -337,7 +337,7 @@ class ExecutorClient(object):
         gearman_job = gear.TextJob('executor:execute', json.dumps(params),
                                    unique=uuid)
         build.__gearman_job = gearman_job
-        build.__gearman_manager = None
+        build.__gearman_worker = None
         self.builds[uuid] = build
 
         # NOTE(pabelanger): Rather then looping forever, check to see if job
@@ -444,7 +444,7 @@ class ExecutorClient(object):
 
             if not started:
                 self.log.info("Build %s started" % job)
-                build.__gearman_manager = data.get('manager')
+                build.__gearman_worker = data.get('worker_name')
                 self.sched.onBuildStarted(build)
         else:
             self.log.error("Unable to find build %s" % job.unique)
@@ -473,12 +473,12 @@ class ExecutorClient(object):
         return False
 
     def cancelRunningBuild(self, build):
-        if not build.__gearman_manager:
+        if not build.__gearman_worker:
             self.log.error("Build %s has no manager while canceling" %
                            (build,))
         stop_uuid = str(uuid4().hex)
         data = dict(uuid=build.__gearman_job.unique)
-        stop_job = gear.TextJob("executor:stop:%s" % build.__gearman_manager,
+        stop_job = gear.TextJob("executor:stop:%s" % build.__gearman_worker,
                                 json.dumps(data), unique=stop_uuid)
         self.meta_jobs[stop_uuid] = stop_job
         self.log.debug("Submitting stop job: %s", stop_job)

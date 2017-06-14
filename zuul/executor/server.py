@@ -808,11 +808,16 @@ class AnsibleJob(object):
         self.prepareAnsibleFiles(args)
 
         data = {
-            'manager': self.executor_server.hostname,
             'url': 'finger://{server}/{unique}'.format(
                 unique=self.job.unique,
                 server=self.executor_server.hostname),
-            'worker_name': 'My Worker',
+            # TODO(mordred) worker_name is needed as a unique name for the
+            # client to use for cancelling jobs on an executor. It's defaulting
+            # to the hostname for now, but in the future we should allow
+            # setting a per-executor override so that one can run more than
+            # one executor on a host.
+            'worker_name': self.executor_server.hostname,
+            'worker_hostname': self.executor_server.hostname,
         }
 
         self.job.sendWorkData(json.dumps(data))
