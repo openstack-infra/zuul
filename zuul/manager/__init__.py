@@ -738,7 +738,9 @@ class PipelineManager(object):
         # pipeline, use the dynamic layout if available, otherwise,
         # fall back to the current static layout as a best
         # approximation.
-        layout = item.layout or self.pipeline.layout
+        layout = (item.layout or
+                  item.current_build_set.layout or
+                  self.pipeline.layout)
 
         if not layout.hasProject(item.change.project):
             self.log.debug("Project %s not in pipeline %s for change %s" % (
