@@ -85,7 +85,6 @@ class CallbackModule(default.CallbackModule):
         super(CallbackModule, self).__init__()
         self._task = None
         self._daemon_running = False
-        self._host_dict = {}
         self._play = None
         self._streamer = None
         self.configure_logger()
@@ -112,7 +111,7 @@ class CallbackModule(default.CallbackModule):
             else:
                 self._display.display(msg)
 
-    def _read_log(self, host, ip, log_id, task_name):
+    def _read_log(self, host, ip, log_id, task_name, hosts):
         self._log("[%s] Starting to log %s for task %s"
                   % (host, log_id, task_name), executor=True)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -159,14 +158,14 @@ class CallbackModule(default.CallbackModule):
             task.args['zuul_log_id'] = log_id
             play_vars = self._play._variable_manager._hostvars
 
-            hosts = self._get_play_hosts()
+            hosts = self._get_task_hosts(task)
             for host in hosts:
                 ip = play_vars[host].get(
                     'ansible_host', play_vars[host].get(
                         'ansible_inventory_host'))
-                self._host_dict[host] = ip
                 self._streamer = threading.Thread(
-                    target=self._read_log, args=(host, ip, log_id, task_name))
+                    target=self._read_log, args=(
+                        host, ip, log_id, task_name, hosts))
                 self._streamer.daemon = True
                 self._streamer.start()
 
@@ -258,7 +257,12 @@ class CallbackModule(default.CallbackModule):
         self._log(msg)
         return task
 
-    def _get_play_hosts(self):
+    def _get_task_hosts(self, task):
+        # If this task has as delegate to, we don't care about the play hosts,
+        # we care about the task's delegate target.
+        delegate_to = task.delegate_to
+        if delegate_to:
+            return [delegate_to]
         hosts = self._play.hosts
         if 'all' in hosts:
             # NOTE(jamielennox): play.hosts is purely the list of hosts
