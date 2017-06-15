@@ -120,9 +120,10 @@ class TestSQLConnection(ZuulDBTestCase):
         # Check the first result, which should be the project-merge job
         self.assertEqual('project-merge', buildset0_builds[0]['job_name'])
         self.assertEqual("SUCCESS", buildset0_builds[0]['result'])
-        self.assertEqual('https://server/job/project-merge/0/',
-                         buildset0_builds[0]['log_url'])
-
+        self.assertEqual(
+            'finger://zl.example.com/{uuid}'.format(
+                uuid=buildset0_builds[0]['uuid']),
+            buildset0_builds[0]['log_url'])
         self.assertEqual('check', buildset1['pipeline'])
         self.assertEqual('org/project', buildset1['project'])
         self.assertEqual(2, buildset1['change'])
@@ -142,8 +143,10 @@ class TestSQLConnection(ZuulDBTestCase):
         # which failed
         self.assertEqual('project-test1', buildset1_builds[-2]['job_name'])
         self.assertEqual("FAILURE", buildset1_builds[-2]['result'])
-        self.assertEqual('https://server/job/project-test1/0/',
-                         buildset1_builds[-2]['log_url'])
+        self.assertEqual(
+            'finger://zl.example.com/{uuid}'.format(
+                uuid=buildset1_builds[-2]['uuid']),
+            buildset1_builds[-2]['log_url'])
 
     def test_multiple_sql_connections(self):
         "Test putting results in different databases"
