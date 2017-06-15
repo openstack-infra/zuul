@@ -27,6 +27,7 @@ import sys
 import signal
 
 import zuul.cmd
+from zuul.lib.config import get_default
 
 # No zuul imports here because they pull in paramiko which must not be
 # imported until after the daemonization.
@@ -79,10 +80,8 @@ def main():
     server.read_config()
     server.configure_connections(source_only=True)
 
-    if server.config.has_option('zuul', 'state_dir'):
-        state_dir = os.path.expanduser(server.config.get('zuul', 'state_dir'))
-    else:
-        state_dir = '/var/lib/zuul'
+    state_dir = get_default(server.config, 'zuul', 'state_dir',
+                            '/var/lib/zuul', expand_user=True)
     test_fn = os.path.join(state_dir, 'test')
     try:
         f = open(test_fn, 'w')
@@ -92,10 +91,9 @@ def main():
         print("\nUnable to write to state directory: %s\n" % state_dir)
         raise
 
-    if server.config.has_option('merger', 'pidfile'):
-        pid_fn = os.path.expanduser(server.config.get('merger', 'pidfile'))
-    else:
-        pid_fn = '/var/run/zuul-merger/zuul-merger.pid'
+    pid_fn = get_default(server.config, 'merger', 'pidfile',
+                         '/var/run/zuul-merger/zuul-merger.pid',
+                         expand_user=True)
     pid = pid_file_module.TimeoutPIDLockFile(pid_fn, 10)
 
     if server.args.nodaemon:

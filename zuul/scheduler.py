@@ -31,6 +31,7 @@ from zuul import configloader
 from zuul import model
 from zuul import exceptions
 from zuul import version as zuul_version
+from zuul.lib.config import get_default
 
 
 class ManagementEvent(object):
@@ -370,30 +371,21 @@ class Scheduler(threading.Thread):
         self.log.debug("Waiting for exit")
 
     def _get_queue_pickle_file(self):
-        if self.config.has_option('zuul', 'state_dir'):
-            state_dir = os.path.expanduser(self.config.get('zuul',
-                                                           'state_dir'))
-        else:
-            state_dir = '/var/lib/zuul'
+        state_dir = get_default(self.config, 'zuul', 'state_dir',
+                                '/var/lib/zuul', expand_user=True)
         return os.path.join(state_dir, 'queue.pickle')
 
     def _get_time_database_dir(self):
-        if self.config.has_option('zuul', 'state_dir'):
-            state_dir = os.path.expanduser(self.config.get('zuul',
-                                                           'state_dir'))
-        else:
-            state_dir = '/var/lib/zuul'
+        state_dir = get_default(self.config, 'zuul', 'state_dir',
+                                '/var/lib/zuul', expand_user=True)
         d = os.path.join(state_dir, 'times')
         if not os.path.exists(d):
             os.mkdir(d)
         return d
 
     def _get_project_key_dir(self):
-        if self.config.has_option('zuul', 'state_dir'):
-            state_dir = os.path.expanduser(self.config.get('zuul',
-                                                           'state_dir'))
-        else:
-            state_dir = '/var/lib/zuul'
+        state_dir = get_default(self.config, 'zuul', 'state_dir',
+                                '/var/lib/zuul', expand_user=True)
         key_dir = os.path.join(state_dir, 'keys')
         if not os.path.exists(key_dir):
             os.mkdir(key_dir, 0o700)

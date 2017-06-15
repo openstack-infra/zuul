@@ -32,6 +32,7 @@ import tempfile
 
 import zuul.cmd
 import zuul.executor.server
+from zuul.lib.config import get_default
 
 # No zuul imports that pull in paramiko here; it must not be
 # imported until after the daemonization.
@@ -63,11 +64,8 @@ class Executor(zuul.cmd.ZuulApp):
         self.args = parser.parse_args()
 
     def send_command(self, cmd):
-        if self.config.has_option('zuul', 'state_dir'):
-            state_dir = os.path.expanduser(
-                self.config.get('zuul', 'state_dir'))
-        else:
-            state_dir = '/var/lib/zuul'
+        state_dir = get_default(self.config, 'zuul', 'state_dir',
+                                '/var/lib/zuul', expand_user=True)
         path = os.path.join(state_dir, 'executor.socket')
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         s.connect(path)
@@ -114,10 +112,7 @@ class Executor(zuul.cmd.ZuulApp):
     def main(self, daemon=True):
         # See comment at top of file about zuul imports
 
-        if self.config.has_option('executor', 'user'):
-            self.user = self.config.get('executor', 'user')
-        else:
-            self.user = 'zuul'
+        self.user = get_default(self.config, 'executor', 'user', 'zuul')
 
         if self.config.has_option('zuul', 'jobroot_dir'):
             self.jobroot_dir = os.path.expanduser(
@@ -132,10 +127,8 @@ class Executor(zuul.cmd.ZuulApp):
         self.setup_logging('executor', 'log_config')
         self.log = logging.getLogger("zuul.Executor")
 
-        if self.config.has_option('executor', 'finger_port'):
-            self.finger_port = int(self.config.get('executor', 'finger_port'))
-        else:
-            self.finger_port = DEFAULT_FINGER_PORT
+        self.finger_port = int(get_default(self.config, 'executor',
+                                           'finger_port', DEFAULT_FINGER_PORT))
 
         self.start_log_streamer()
         self.change_privs()
@@ -170,10 +163,9 @@ def main():
 
     server.configure_connections(source_only=True)
 
-    if server.config.has_option('executor', 'pidfile'):
-        pid_fn = os.path.expanduser(server.config.get('executor', 'pidfile'))
-    else:
-        pid_fn = '/var/run/zuul-executor/zuul-executor.pid'
+    pid_fn = get_default(server.config, 'executor', 'pidfile',
+                         '/var/run/zuul-executor/zuul-executor.pid',
+                         expand_user=True)
     pid = pid_file_module.TimeoutPIDLockFile(pid_fn, 10)
 
     if server.args.nodaemon:
