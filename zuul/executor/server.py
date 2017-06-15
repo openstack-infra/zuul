@@ -1164,6 +1164,8 @@ class AnsibleJob(object):
 
     def prepareAnsibleFiles(self, args):
         all_vars = dict(args['vars'])
+        # TODO(mordred) Hack to work around running things with python3
+        all_vars['ansible_python_interpreter'] = '/usr/bin/python2'
         all_vars['zuul']['executor'] = dict(
             hostname=self.executor_server.hostname,
             src_root=self.jobdir.src_root,
