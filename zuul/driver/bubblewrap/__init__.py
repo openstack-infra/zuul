@@ -90,7 +90,7 @@ class BubblewrapDriver(Driver, WrapperInterface):
         '--bind', '{work_dir}', '{work_dir}',
         '--dev', '/dev',
         '--dir', '{user_home}',
-        '--chdir', '/',
+        '--chdir', '{work_dir}',
         '--unshare-all',
         '--share-net',
         '--uid', '{uid}',
