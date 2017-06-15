@@ -142,7 +142,7 @@ class TestGithubRequirements(ZuulTestCase):
 
         A = self.fake_github.openFakePullRequest('org/project4', 'master', 'A')
         # Add derp to writers
-        A.writers.append('derp')
+        A.writers.extend(('derp', 'werp'))
         # A comment event that we will keep submitting to trigger
         comment = A.getCommentAddedEvent('test me')
         self.fake_github.emitEvent(comment)
@@ -156,14 +156,27 @@ class TestGithubRequirements(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
+        # A negative review from werp should not cause it to be enqueued
+        A.addReview('werp', 'CHANGES_REQUESTED')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+
         # A positive from nobody should not cause it to be enqueued
         A.addReview('nobody', 'APPROVED')
         self.fake_github.emitEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
-        # A positive review from derp should cause it to be enqueued
+        # A positive review from derp should still be blocked by the
+        # negative review from werp
         A.addReview('derp', 'APPROVED')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+
+        # A positive review from werp should cause it to be enqueued
+        A.addReview('werp', 'APPROVED')
         self.fake_github.emitEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)

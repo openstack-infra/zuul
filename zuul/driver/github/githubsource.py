@@ -101,7 +101,11 @@ class GithubSource(BaseSource):
         return [f]
 
     def getRejectFilters(self, config):
-        return []
+        f = GithubRefFilter(
+            connection_name=self.connection.connection_name,
+            reject_reviews=to_list(config.get('review'))
+        )
+        return [f]
 
 
 review = v.Schema({'username': str,
