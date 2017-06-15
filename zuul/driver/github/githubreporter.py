@@ -139,7 +139,7 @@ class GithubReporter(BaseReporter):
         if change.title:
             message += change.title
 
-        account = change.source_event.account
+        account = getattr(change.source_event, 'account', None)
         if not account:
             return message
 

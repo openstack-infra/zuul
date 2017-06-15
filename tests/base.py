@@ -554,7 +554,7 @@ class FakeGithubPullRequest(object):
 
     def __init__(self, github, number, project, branch,
                  subject, upstream_root, files=[], number_of_commits=1,
-                 writers=[]):
+                 writers=[], body=''):
         """Creates a new PR with several commits.
         Sends an event about opened PR."""
         self.github = github
@@ -563,6 +563,7 @@ class FakeGithubPullRequest(object):
         self.project = project
         self.branch = branch
         self.subject = subject
+        self.body = body
         self.number_of_commits = 0
         self.upstream_root = upstream_root
         self.files = []
@@ -601,6 +602,9 @@ class FakeGithubPullRequest(object):
 
     def getPullRequestClosedEvent(self):
         return self._getPullRequestEvent('closed')
+
+    def getPullRequestEditedEvent(self):
+        return self._getPullRequestEvent('edited')
 
     def addComment(self, message):
         self.comments.append(message)
@@ -723,6 +727,10 @@ class FakeGithubPullRequest(object):
         }
         return (name, data)
 
+    def editBody(self, body):
+        self.body = body
+        self._updateTimeStamp()
+
     def _getRepo(self):
         repo_path = os.path.join(self.upstream_root, self.project)
         return git.Repo(repo_path)
@@ -830,7 +838,8 @@ class FakeGithubPullRequest(object):
                     'repo': {
                         'full_name': self.project
                     }
-                }
+                },
+                'body': self.body
             },
             'sender': {
                 'login': 'ghuser'
@@ -869,11 +878,12 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         self.merge_failure = False
         self.merge_not_allowed_count = 0
 
-    def openFakePullRequest(self, project, branch, subject, files=[]):
+    def openFakePullRequest(self, project, branch, subject, files=[],
+                            body=''):
         self.pr_number += 1
         pull_request = FakeGithubPullRequest(
             self, self.pr_number, project, branch, subject, self.upstream_root,
-            files=files)
+            files=files, body=body)
         self.pull_requests.append(pull_request)
         return pull_request
 
@@ -934,7 +944,9 @@ class FakeGithubConnection(githubconnection.GithubConnection):
                 }
             },
             'files': pr.files,
-            'labels': pr.labels
+            'labels': pr.labels,
+            'merged': pr.is_merged,
+            'body': pr.body
         }
         return data
 
@@ -1021,6 +1033,19 @@ class FakeGithubConnection(githubconnection.GithubConnection):
     def unlabelPull(self, project, pr_number, label):
         pull_request = self.pull_requests[pr_number - 1]
         pull_request.removeLabel(label)
+
+    def _getNeededByFromPR(self, change):
+        prs = []
+        pattern = re.compile(r"Depends-On.*https://%s/%s/pull/%s" %
+                             (self.git_host, change.project.name,
+                              change.number))
+        for pr in self.pull_requests:
+            if pattern.search(pr.body):
+                # Get our version of a pull so that it's a dict
+                pull = self.getPull(pr.project, pr.number)
+                prs.append(pull)
+
+        return prs
 
 
 class BuildHistory(object):

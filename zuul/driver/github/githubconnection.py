@@ -18,6 +18,7 @@ import logging
 import hmac
 import hashlib
 import time
+import re
 
 import cachecontrol
 from cachecontrol.cache import DictCache
@@ -72,7 +73,10 @@ class GithubWebhookListener():
 
         self._validate_signature(request)
 
-        self.__dispatch_event(request)
+        try:
+            self.__dispatch_event(request)
+        except:
+            self.log.exception("Exception handling Github event:")
 
     def __dispatch_event(self, request):
         try:
@@ -172,6 +176,8 @@ class GithubWebhookListener():
         elif action == 'unlabeled':
             event.action = 'unlabeled'
             event.label = body['label']['name']
+        elif action == 'edited':
+            event.action = 'edited'
         else:
             return None
 
@@ -353,6 +359,12 @@ class GithubConnection(BaseConnection):
             DictCache(),
             cache_etags=True)
 
+        # The regex is based on the connection host. We do not yet support
+        # cross-connection dependency gathering
+        self.depends_on_re = re.compile(
+            r"^Depends-On: https://%s/.+/.+/pull/[0-9]+$" % self.git_host,
+            re.MULTILINE | re.IGNORECASE)
+
     def onLoad(self):
         webhook_listener = GithubWebhookListener(self)
         self.registerHttpHandler(self.payload_path,
@@ -476,8 +488,6 @@ class GithubConnection(BaseConnection):
         if event.change_number:
             change = self._getChange(project, event.change_number,
                                      event.patch_number, refresh=refresh)
-            change.refspec = event.refspec
-            change.branch = event.branch
             change.url = event.change_url
             change.updated_at = self._ghTimestampToDate(event.updated_at)
             change.source_event = event
@@ -495,8 +505,9 @@ class GithubConnection(BaseConnection):
             change = Ref(project)
         return change
 
-    def _getChange(self, project, number, patchset, refresh=False):
-        key = '%s/%s/%s' % (project.name, number, patchset)
+    def _getChange(self, project, number, patchset=None, refresh=False,
+                   history=None):
+        key = (project.name, number, patchset)
         change = self._change_cache.get(key)
         if change and not refresh:
             return change
@@ -507,24 +518,122 @@ class GithubConnection(BaseConnection):
             change.patchset = patchset
         self._change_cache[key] = change
         try:
-            self._updateChange(change)
+            self._updateChange(change, history)
         except Exception:
             if key in self._change_cache:
                 del self._change_cache[key]
             raise
         return change
 
-    def _updateChange(self, change):
+    def _getDependsOnFromPR(self, body):
+        prs = []
+        seen = set()
+
+        for match in self.depends_on_re.findall(body):
+            if match in seen:
+                self.log.debug("Ignoring duplicate Depends-On: %s" % (match,))
+                continue
+            seen.add(match)
+            # Get the github url
+            url = match.rsplit()[-1]
+            # break it into the parts we need
+            _, org, proj, _, num = url.rsplit('/', 4)
+            # Get a pull object so we can get the head sha
+            pull = self.getPull('%s/%s' % (org, proj), int(num))
+            prs.append(pull)
+
+        return prs
+
+    def _getNeededByFromPR(self, change):
+        prs = []
+        seen = set()
+        # This shouldn't return duplicate issues, but code as if it could
+
+        # This leaves off the protocol, but looks for the specific GitHub
+        # hostname, the org/project, and the pull request number.
+        pattern = 'Depends-On %s/%s/pull/%s' % (self.git_host,
+                                                change.project.name,
+                                                change.number)
+        query = '%s type:pr is:open in:body' % pattern
+        github = self.getGithubClient()
+        for issue in github.search_issues(query=query):
+            pr = issue.issue.pull_request().as_dict()
+            if not pr.get('url'):
+                continue
+            if issue in seen:
+                continue
+            # the issue provides no good description of the project :\
+            org, proj, _, num = pr.get('url').split('/')[-4:]
+            self.log.debug("Found PR %s/%s/%s needs %s/%s" %
+                           (org, proj, num, change.project.name,
+                            change.number))
+            prs.append(pr)
+            seen.add(issue)
+
+        log_rate_limit(self.log, github)
+        return prs
+
+    def _updateChange(self, change, history=None):
+
+        # If this change is already in the history, we have a cyclic
+        # dependency loop and we do not need to update again, since it
+        # was done in a previous frame.
+        if history and (change.project.name, change.number) in history:
+            return change
+
         self.log.info("Updating %s" % (change,))
         change.pr = self.getPull(change.project.name, change.number)
+        change.refspec = "refs/pull/%s/head" % change.number
+        change.branch = change.pr.get('base').get('ref')
         change.files = change.pr.get('files')
         change.title = change.pr.get('title')
         change.open = change.pr.get('state') == 'open'
+        change.is_merged = change.pr.get('merged')
         change.status = self._get_statuses(change.project,
                                            change.patchset)
         change.reviews = self.getPullReviews(change.project,
                                              change.number)
         change.labels = change.pr.get('labels')
+        change.body = change.pr.get('body')
+
+        if history is None:
+            history = []
+        else:
+            history = history[:]
+        history.append((change.project.name, change.number))
+
+        needs_changes = []
+
+        # Get all the PRs this may depend on
+        for pr in self._getDependsOnFromPR(change.body):
+            proj = pr.get('base').get('repo').get('full_name')
+            pull = pr.get('number')
+            self.log.debug("Updating %s: Getting dependent "
+                           "pull request %s/%s" %
+                           (change, proj, pull))
+            project = self.source.getProject(proj)
+            dep = self._getChange(project, pull,
+                                  patchset=pr.get('head').get('sha'),
+                                  history=history)
+            if (not dep.is_merged) and dep not in needs_changes:
+                needs_changes.append(dep)
+
+        change.needs_changes = needs_changes
+
+        needed_by_changes = []
+        for pr in self._getNeededByFromPR(change):
+            proj = pr.get('base').get('repo').get('full_name')
+            pull = pr.get('number')
+            self.log.debug("Updating %s: Getting needed "
+                           "pull request %s/%s" %
+                           (change, proj, pull))
+            project = self.source.getProject(proj)
+            dep = self._getChange(project, pull,
+                                  patchset=pr.get('head').get('sha'),
+                                  history=history)
+            if not dep.is_merged:
+                needed_by_changes.append(dep)
+        change.needed_by_changes = needed_by_changes
 
         return change
 
