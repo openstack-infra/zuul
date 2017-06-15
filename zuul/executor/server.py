@@ -382,9 +382,9 @@ class ExecutorServer(object):
                                             'default_username', 'zuul')
         self.merge_email = get_default(self.config, 'merger', 'git_user_email')
         self.merge_name = get_default(self.config, 'merger', 'git_user_name')
-        untrusted_wrapper_name = get_default(self.config, 'executor',
-                                             'untrusted_wrapper', 'bubblewrap')
-        self.untrusted_wrapper = connections.drivers[untrusted_wrapper_name]
+        execution_wrapper_name = get_default(self.config, 'executor',
+                                             'execution_wrapper', 'bubblewrap')
+        self.execution_wrapper = connections.drivers[execution_wrapper_name]
 
         self.connections = connections
         # This merger and its git repos are used to maintain
@@ -1238,14 +1238,24 @@ class AnsibleJob(object):
 
         if trusted:
             config_file = self.jobdir.trusted_config
-            popen = subprocess.Popen
+            opt_prefix = 'trusted'
         else:
             config_file = self.jobdir.untrusted_config
-            driver = self.executor_server.untrusted_wrapper
-            popen = driver.getPopen(
-                work_dir=self.jobdir.root,
-                ansible_dir=self.executor_server.ansible_dir,
-                ssh_auth_sock=env_copy.get('SSH_AUTH_SOCK'))
+            opt_prefix = 'untrusted'
+        ro_dirs = get_default(self.executor_server.config, 'executor',
+                              '%s_ro_dirs' % opt_prefix)
+        rw_dirs = get_default(self.executor_server.config, 'executor',
+                              '%s_rw_dirs' % opt_prefix)
+        state_dir = get_default(self.executor_server.config, 'zuul',
+                                'state_dir', '/var/lib/zuul', expand_user=True)
+        ro_dirs = ro_dirs.split(":") if ro_dirs else []
+        rw_dirs = rw_dirs.split(":") if rw_dirs else []
+        self.executor_server.execution_wrapper.setMountsMap(state_dir, ro_dirs,
+                                                            rw_dirs)
+
+        popen = self.executor_server.execution_wrapper.getPopen(
+            work_dir=self.jobdir.root,
+            ssh_auth_sock=env_copy.get('SSH_AUTH_SOCK'))
 
         env_copy['ANSIBLE_CONFIG'] = config_file
 

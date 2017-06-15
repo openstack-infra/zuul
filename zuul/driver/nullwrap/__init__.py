@@ -26,3 +26,6 @@ class NullwrapDriver(Driver, WrapperInterface):
 
     def getPopen(self, **kwargs):
         return subprocess.Popen
+
+    def setMountsMap(self, **kwargs):
+        pass

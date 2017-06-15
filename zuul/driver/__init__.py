@@ -278,3 +278,13 @@ class WrapperInterface(object):
         :rtype: Callable
         """
         pass
+
+    @abc.abstractmethod
+    def setMountsMap(self, state_dir, ro_dirs=[], rw_dirs=[]):
+        """Add additional mount point to the execution environment.
+
+        :arg str state_dir: the state directory to be read write
+        :arg list ro_dirs: read only directories paths
+        :arg list rw_dirs: read write directories paths
+        """
+        pass

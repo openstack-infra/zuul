@@ -31,17 +31,14 @@ class TestBubblewrap(testtools.TestCase):
     def test_bubblewrap_wraps(self):
         bwrap = bubblewrap.BubblewrapDriver()
         work_dir = tempfile.mkdtemp()
-        ansible_dir = tempfile.mkdtemp()
         ssh_agent = SshAgent()
         self.addCleanup(ssh_agent.stop)
         ssh_agent.start()
         po = bwrap.getPopen(work_dir=work_dir,
-                            ansible_dir=ansible_dir,
                             ssh_auth_sock=ssh_agent.env['SSH_AUTH_SOCK'])
         self.assertTrue(po.passwd_r > 2)
         self.assertTrue(po.group_r > 2)
         self.assertTrue(work_dir in po.command)
-        self.assertTrue(ansible_dir in po.command)
         # Now run /usr/bin/id to verify passwd/group entries made it in
         true_proc = po(['/usr/bin/id'], stdout=subprocess.PIPE,
                        stderr=subprocess.PIPE)
