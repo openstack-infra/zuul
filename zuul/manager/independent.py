@@ -36,7 +36,15 @@ class IndependentPipelineManager(PipelineManager):
         return DynamicChangeQueueContextManager(change_queue)
 
     def enqueueChangesAhead(self, change, quiet, ignore_requirements,
-                            change_queue):
+                            change_queue, history=None):
+        if history and change.number in history:
+            # detected dependency cycle
+            self.log.warn("Dependency cycle detected")
+            return False
+        if hasattr(change, 'number'):
+            history = history or []
+            history.append(change.number)
+
         ret = self.checkForChangesNeededBy(change, change_queue)
         if ret in [True, False]:
             return ret
@@ -50,7 +58,8 @@ class IndependentPipelineManager(PipelineManager):
             # live).
             r = self.addChange(needed_change, quiet=True,
                                ignore_requirements=True,
-                               live=False, change_queue=change_queue)
+                               live=False, change_queue=change_queue,
+                               history=history)
             if not r:
                 return False
         return True

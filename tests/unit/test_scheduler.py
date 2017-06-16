@@ -4173,6 +4173,7 @@ For CI problems and help debugging, contact ci@example.org"""
 
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
+        self.assertEqual(A.reported, 1)
 
         # Create B->A
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
@@ -4181,41 +4182,33 @@ For CI problems and help debugging, contact ci@example.org"""
         self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
 
+        # Dep is there so zuul should have reported on B
+        self.assertEqual(B.reported, 1)
+
         # Update A to add A->B (a cycle).
         A.addPatchset()
         A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
             A.subject, B.data['id'])
-        # Normally we would submit the patchset-created event for
-        # processing here, however, we have no way of noting whether
-        # the dependency cycle detection correctly raised an
-        # exception, so instead, we reach into the source driver and
-        # call the method that would ultimately be called by the event
-        # processing.
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(2))
+        self.waitUntilSettled()
 
-        tenant = self.sched.abide.tenants.get('tenant-one')
-        (trusted, project) = tenant.getProject('org/project')
-        source = project.source
-
-        # TODO(pabelanger): As we add more source / trigger APIs we should make
-        # it easier for users to create events for testing.
-        event = zuul.model.TriggerEvent()
-        event.trigger_name = 'gerrit'
-        event.change_number = '1'
-        event.patch_number = '2'
-        with testtools.ExpectedException(
-            Exception, "Dependency cycle detected"):
-            source.getChange(event, True)
-        self.log.debug("Got expected dependency cycle exception")
+        # Dependency cycle injected so zuul should not have reported again on A
+        self.assertEqual(A.reported, 1)
 
         # Now if we update B to remove the depends-on, everything
         # should be okay.  B; A->B
 
         B.addPatchset()
         B.data['commitMessage'] = '%s\n' % (B.subject,)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(2))
+        self.waitUntilSettled()
 
-        source.getChange(event, True)
-        event.change_number = '2'
-        source.getChange(event, True)
+        # Cycle was removed so now zuul should have reported again on A
+        self.assertEqual(A.reported, 2)
+
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(2))
+        self.waitUntilSettled()
+        self.assertEqual(B.reported, 2)
 
     @simple_layout('layouts/disable_at.yaml')
     def test_disable_at(self):

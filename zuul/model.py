@@ -154,7 +154,8 @@ class Pipeline(object):
         return None
 
     def removeQueue(self, queue):
-        self.queues.remove(queue)
+        if queue in self.queues:
+            self.queues.remove(queue)
 
     def getChangesInQueue(self):
         changes = []
