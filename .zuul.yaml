@@ -5,6 +5,5 @@
         - tox-docs
         - tox-cover
         - tox-linters
-        - tox-py27
         - tox-py35
         - tox-tarball
