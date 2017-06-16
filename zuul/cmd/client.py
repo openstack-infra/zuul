@@ -95,10 +95,11 @@ class Client(zuul.cmd.ZuulApp):
             'running-jobs',
             help='show the running jobs'
         )
+        running_jobs_columns = list(self._show_running_jobs_columns().keys())
         show_running_jobs.add_argument(
             '--columns',
             help="comma separated list of columns to display (or 'ALL')",
-            choices=self._show_running_jobs_columns().keys().append('ALL'),
+            choices=running_jobs_columns.append('ALL'),
             default='name, worker.name, start_time, result'
         )
 
