@@ -14,11 +14,8 @@
 
 import abc
 
-import six
 
-
-@six.add_metaclass(abc.ABCMeta)
-class BaseSource(object):
+class BaseSource(object, metaclass=abc.ABCMeta):
     """Base class for sources.
 
     A source class gives methods for fetching and updating changes. Each

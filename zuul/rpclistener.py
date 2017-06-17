@@ -19,7 +19,6 @@ import threading
 import traceback
 
 import gear
-import six
 
 from zuul import model
 
@@ -179,8 +178,7 @@ class RPCListener(object):
         # TODO: use args to filter by pipeline etc
         running_items = []
         for tenant in self.sched.abide.tenants.values():
-            for pipeline_name, pipeline in six.iteritems(
-                    tenant.layout.pipelines):
+            for pipeline_name, pipeline in tenant.layout.pipelines.items():
                 for queue in pipeline.queues:
                     for item in queue.queue:
                         running_items.append(item.formatJSON())

@@ -15,7 +15,6 @@ from contextlib import contextmanager
 import copy
 import os
 import logging
-import six
 import pprint
 import textwrap
 
@@ -427,7 +426,7 @@ class JobParser(object):
                 setattr(job, a, conf[k])
         if 'nodes' in conf:
             conf_nodes = conf['nodes']
-            if isinstance(conf_nodes, six.string_types):
+            if isinstance(conf_nodes, str):
                 # This references an existing named nodeset in the layout.
                 ns = layout.nodesets[conf_nodes]
             else:
@@ -576,7 +575,7 @@ class ProjectTemplateParser(object):
     def _parseJobList(tenant, layout, conf, source_context,
                       start_mark, job_list):
         for conf_job in conf:
-            if isinstance(conf_job, six.string_types):
+            if isinstance(conf_job, str):
                 attrs = dict(name=conf_job)
             elif isinstance(conf_job, dict):
                 # A dictionary in a job tree may override params
@@ -1007,7 +1006,7 @@ class TenantParser(object):
 
     @staticmethod
     def _getProject(source, conf, current_include):
-        if isinstance(conf, six.string_types):
+        if isinstance(conf, str):
             # Return a project object whether conf is a dict or a str
             project = source.getProject(conf)
             project_include = current_include
@@ -1031,7 +1030,7 @@ class TenantParser(object):
     def _getProjects(source, conf, current_include):
         # Return a project object whether conf is a dict or a str
         projects = []
-        if isinstance(conf, six.string_types):
+        if isinstance(conf, str):
             # A simple project name string
             projects.append(TenantParser._getProject(
                 source, conf, current_include))

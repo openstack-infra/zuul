@@ -17,8 +17,8 @@
 
 import os
 import json
+import urllib
 
-from six.moves import urllib
 import webob
 
 from tests.base import ZuulTestCase, FIXTURE_DIR

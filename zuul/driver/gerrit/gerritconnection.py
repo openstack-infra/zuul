@@ -18,11 +18,11 @@ import re
 import select
 import threading
 import time
-from six.moves import queue as Queue
-from six.moves import shlex_quote
 import paramiko
 import logging
 import pprint
+import shlex
+import queue
 import voluptuous as v
 
 from zuul.connection import BaseConnection
@@ -260,7 +260,7 @@ class GerritConnection(BaseConnection):
         self.keyfile = self.connection_config.get('sshkey', None)
         self.keepalive = int(self.connection_config.get('keepalive', 60))
         self.watcher_thread = None
-        self.event_queue = Queue.Queue()
+        self.event_queue = queue.Queue()
         self.client = None
 
         self.baseurl = self.connection_config.get('baseurl',
@@ -606,7 +606,7 @@ class GerritConnection(BaseConnection):
     def review(self, project, change, message, action={}):
         cmd = 'gerrit review --project %s' % project
         if message:
-            cmd += ' --message %s' % shlex_quote(message)
+            cmd += ' --message %s' % shlex.quote(message)
         for key, val in action.items():
             if val is True:
                 cmd += ' --%s' % key

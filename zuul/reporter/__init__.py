@@ -15,11 +15,8 @@
 import abc
 import logging
 
-import six
 
-
-@six.add_metaclass(abc.ABCMeta)
-class BaseReporter(object):
+class BaseReporter(object, metaclass=abc.ABCMeta):
     """Base class for reporters.
 
     Defines the exact public methods that must be supplied.

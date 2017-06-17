@@ -14,11 +14,8 @@
 
 import abc
 
-import six
 
-
-@six.add_metaclass(abc.ABCMeta)
-class Driver(object):
+class Driver(object, metaclass=abc.ABCMeta):
     """A Driver is an extension component of Zuul that supports
     interfacing with a remote system.  It can support any of the following
     interfaces (but must support at least one to be useful):
@@ -80,8 +77,7 @@ class Driver(object):
         pass
 
 
-@six.add_metaclass(abc.ABCMeta)
-class ConnectionInterface(object):
+class ConnectionInterface(object, metaclass=abc.ABCMeta):
     """The Connection interface.
 
     A driver which is able to supply a Connection should implement
@@ -124,8 +120,7 @@ class ConnectionInterface(object):
         pass
 
 
-@six.add_metaclass(abc.ABCMeta)
-class TriggerInterface(object):
+class TriggerInterface(object, metaclass=abc.ABCMeta):
     """The trigger interface.
 
     A driver which is able to supply a trigger should implement this
@@ -167,8 +162,7 @@ class TriggerInterface(object):
         pass
 
 
-@six.add_metaclass(abc.ABCMeta)
-class SourceInterface(object):
+class SourceInterface(object, metaclass=abc.ABCMeta):
     """The source interface to be implemented by a driver.
 
     A driver which is able to supply a Source should implement this
@@ -216,8 +210,7 @@ class SourceInterface(object):
         pass
 
 
-@six.add_metaclass(abc.ABCMeta)
-class ReporterInterface(object):
+class ReporterInterface(object, metaclass=abc.ABCMeta):
     """The reporter interface to be implemented by a driver.
 
     A driver which is able to supply a Reporter should implement this
@@ -256,8 +249,7 @@ class ReporterInterface(object):
         pass
 
 
-@six.add_metaclass(abc.ABCMeta)
-class WrapperInterface(object):
+class WrapperInterface(object, metaclass=abc.ABCMeta):
     """The wrapper interface to be implmeneted by a driver.
 
     A driver which wraps execution of commands executed by Zuul should
