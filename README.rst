@@ -134,6 +134,16 @@ the following:
   is too cryptic.  In your own work, feel free to leave TODOv3 notes
   if a change would otherwise become too large or unweildy.
 
+Python Version Support
+----------------------
+
+Zuul v3 requires Python 3. It does not support Python 2.
+
+As Ansible is used for the execution of jobs, it's important to note that
+while Ansible does support Python 3, not all of Ansible's modules do. Zuul
+currently sets ``ansible_python_interpreter`` to python2 so that remote
+content will be executed with Python2.
+
 Roadmap
 -------
 
