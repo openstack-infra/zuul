@@ -13,18 +13,15 @@
 # under the License.
 
 import abc
+from collections import OrderedDict
 import copy
 import logging
 import os
 import struct
 import time
 from uuid import uuid4
-import extras
 
 import six
-
-OrderedDict = extras.try_imports(['collections.OrderedDict',
-                                  'ordereddict.OrderedDict'])
 
 
 MERGER_MERGE = 1          # "git merge"
