@@ -33,7 +33,7 @@ Configuration Loading
 ---------------------
 
 When Zuul starts, it examines all of the git repositories which are
-specified by the system administrator in :ref:`admin-config` and searches
+specified by the system administrator in :ref:`tenant-config` and searches
 for files in the root of each repository.  In the case of a
 *config-project*, Zuul looks for a file named `zuul.yaml`.  In the
 case of an *untrusted-project*, Zuul looks first for `zuul.yaml` and
@@ -111,7 +111,7 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
         my_gerrit
           verified: -1
 
-See TODO for more annotated examples of common pipeline configurations.
+.. TODO: See TODO for more annotated examples of common pipeline configurations.
 
 The attributes available on a pipeline are as follows (all are
 optional unless otherwise specified):
@@ -122,6 +122,8 @@ optional unless otherwise specified):
 
 **manager** (required)
   There are currently two schemes for managing pipelines:
+
+  .. _independent_pipeline_manager:
 
   *independent*
     Every event in this pipeline should be treated as independent of
@@ -137,6 +139,8 @@ optional unless otherwise specified):
     Another type of pipeline that is independent is a post-merge
     pipeline. In that case, the changes have already merged, so the
     results can not affect any other events in the pipeline.
+
+  .. _dependent_pipeline_manager:
 
   *dependent*
     The dependent pipeline manager is designed for gating.  It ensures
@@ -190,7 +194,7 @@ optional unless otherwise specified):
 
   Triggers are loaded from their connection name. The driver type of
   the connection will dictate which options are available.
-  See :doc:`triggers`.
+  See :ref:`drivers`.
 
 **require**
   If this section is present, it established pre-requisites for any
@@ -199,7 +203,7 @@ optional unless otherwise specified):
   the conditions specified here must be met or the item will not be
   enqueued.
 
-.. TODO this section is in flux in v3 _pipeline-require-approval:
+.. _pipeline-require-approval:
 
   **approval**
   This requires that a certain kind of approval be present for the
@@ -281,6 +285,13 @@ optional unless otherwise specified):
   this to ``true``.  This option is ignored by dependent pipelines.
   The default is: ``false``.
 
+**precedence**
+  Indicates how the build scheduler should prioritize jobs for
+  different pipelines.  Each pipeline may have one precedence, jobs
+  for pipelines with a higher precedence will be run before ones with
+  lower.  The value should be one of ``high``, ``normal``, or ``low``.
+  Default: ``normal``.
+
 The following options configure *reporters*.  Reporters are
 complementary to triggers; where a trigger is an event on a connection
 which causes Zuul to enqueue an item, a reporter is the action
@@ -315,19 +326,17 @@ which implements it.  See :ref:`drivers` for more information.
   These reporters describe what Zuul should do when a pipeline is
   disabled.  See ``disable-after-consecutive-failures``.
 
+The following options can be used to alter Zuul's behavior to mitigate
+situations in which jobs are failing frequently (perhaps due to a
+problem with an external dependency, or unusually high
+non-deterministic test failures).
+
 **disable-after-consecutive-failures**
   If set, a pipeline can enter a ''disabled'' state if too many changes
   in a row fail. When this value is exceeded the pipeline will stop
   reporting to any of the ``success``, ``failure`` or ``merge-failure``
   reporters and instead only report to the ``disabled`` reporters.
   (No ``start`` reports are made when a pipeline is disabled).
-
-**precedence**
-  Indicates how the build scheduler should prioritize jobs for
-  different pipelines.  Each pipeline may have one precedence, jobs
-  for pipelines with a higher precedence will be run before ones with
-  lower.  The value should be one of ``high``, ``normal``, or ``low``.
-  Default: ``normal``.
 
 **window**
   Dependent pipeline managers only. Zuul can rate limit dependent
@@ -515,7 +524,7 @@ unless otherwise specified:
   variants used in constructing the frozen job, with no duplication.
   Default: none.
 
-** branches **
+**branches**
   A regular expression (or list of regular expressions) which describe
   on what branches a job should run (or in the case of variants: to
   alter the behavior of a job for a certain branch).
@@ -690,6 +699,8 @@ unless otherwise specified:
   the name of the project is not the name under which the role should
   be installed (and therefore referenced from Ansible), the `name`
   attribute may be used to specify an alternate.
+
+  .. note:: galaxy roles are not yet implemented
 
   **galaxy**
     The name of the role in Ansible Galaxy.  If this attribute is

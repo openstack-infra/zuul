@@ -1,15 +1,17 @@
-:title: Statsd reporting
+:title: Monitoring
+
+Monitoring
+==========
 
 Statsd reporting
-================
+----------------
 
 Zuul comes with support for the statsd protocol, when enabled and configured
 (see below), the Zuul scheduler will emit raw metrics to a statsd receiver
-which let you in turn generate nice graphics. An example is OpenStack Zuul
-status page: http://status.openstack.org/zuul/
+which let you in turn generate nice graphics.
 
 Configuration
--------------
+~~~~~~~~~~~~~
 
 Statsd support uses the statsd python module. Note that Zuul will start without
 the statsd python module, so an existing Zuul installation may be missing it.
@@ -27,17 +29,16 @@ Your init script most probably loads a configuration file named
   STATSD_PORT=8125
 
 Metrics
--------
+~~~~~~~
 
 The metrics are emitted by the Zuul scheduler (`zuul/scheduler.py`):
 
 **gerrit.event.<type> (counters)**
-  Gerrit emits different kind of message over its `stream-events` interface. As
-  a convenience, Zuul emits metrics to statsd which save you from having to use
-  a different daemon to measure Gerrit events.
-  The Gerrit events have different types defined by Gerrit itself, Zuul will
-  relay any type of event reusing the name defined by Gerrit. Some of the
-  events emitted are:
+  Gerrit emits different kind of message over its `stream-events`
+  interface.  Zuul will report counters for each type of event it
+  receives from Gerrit.
+
+  Some of the events emitted are:
 
     * patchset-created
     * draft-published
@@ -51,18 +52,6 @@ The metrics are emitted by the Zuul scheduler (`zuul/scheduler.py`):
 
   Refer to your Gerrit installation documentation for an exhaustive list of
   Gerrit event types.
-
-**zuul.node_type.**
-  Holds metrics specifc to build nodes per label. The hierarchy is:
-
-    #. **<build node label>** each of the labels associated to a build in
-           Jenkins. It contains:
-
-      #. **job.<jobname>** subtree detailing per job statistics:
-
-        #. **wait_time** counter and timer of the wait time, with the
-                   difference of the job start time and the execute time, in
-                   milliseconds.
 
 **zuul.pipeline.**
   Holds metrics specific to jobs. The hierarchy is:
