@@ -25,8 +25,8 @@ import time
 from unittest import skip
 
 import git
-from six.moves import urllib
 import testtools
+import urllib
 
 import zuul.change_matcher
 from zuul.driver.gerrit import gerritreporter

@@ -18,8 +18,6 @@ import logging
 import os
 import re
 
-import six
-
 from git import GitCommandError
 from zuul import exceptions
 from zuul.lib.clonemapper import CloneMapper
@@ -72,7 +70,7 @@ class Cloner(object):
         dests = mapper.expand(workspace=self.workspace)
 
         self.log.info("Preparing %s repositories", len(dests))
-        for project, dest in six.iteritems(dests):
+        for project, dest in dests.items():
             self.prepareRepo(project, dest)
         self.log.info("Prepared all repositories")
 

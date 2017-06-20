@@ -14,7 +14,7 @@
 # under the License.
 
 import logging
-from six.moves import urllib
+import urllib
 
 import voluptuous as v
 

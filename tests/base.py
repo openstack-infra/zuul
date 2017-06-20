@@ -15,24 +15,20 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from six.moves import configparser as ConfigParser
+import configparser
 import datetime
 import gc
 import hashlib
+import importlib
+from io import StringIO
 import json
 import logging
 import os
-from six.moves import queue as Queue
-from six.moves import urllib
+import queue
 import random
 import re
 import select
 import shutil
-from six.moves import reload_module
-try:
-    from cStringIO import StringIO
-except Exception:
-    from six import StringIO
 import socket
 import string
 import subprocess
@@ -42,6 +38,7 @@ import threading
 import traceback
 import time
 import uuid
+import urllib
 
 
 import git
@@ -463,7 +460,7 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
         super(FakeGerritConnection, self).__init__(driver, connection_name,
                                                    connection_config)
 
-        self.event_queue = Queue.Queue()
+        self.event_queue = queue.Queue()
         self.fixture_dir = os.path.join(FIXTURE_DIR, 'gerrit')
         self.change_number = 0
         self.changes = changes_db
@@ -1373,8 +1370,8 @@ class FakeGearmanServer(gear.Server):
                                                 ssl_ca=ssl_ca)
 
     def getJobForConnection(self, connection, peek=False):
-        for queue in [self.high_queue, self.normal_queue, self.low_queue]:
-            for job in queue:
+        for job_queue in [self.high_queue, self.normal_queue, self.low_queue]:
+            for job in job_queue:
                 if not hasattr(job, 'waiting'):
                     if job.name.startswith(b'executor:execute'):
                         job.waiting = self.hold_jobs_in_queue
@@ -1384,7 +1381,7 @@ class FakeGearmanServer(gear.Server):
                     continue
                 if job.name in connection.functions:
                     if not peek:
-                        queue.remove(job)
+                        job_queue.remove(job)
                         connection.related_jobs[job.handle] = job
                         job.worker_connection = connection
                     job.running = True
@@ -1879,8 +1876,8 @@ class ZuulTestCase(BaseTestCase):
         os.environ['STATSD_PORT'] = str(self.statsd.port)
         self.statsd.start()
         # the statsd client object is configured in the statsd module import
-        reload_module(statsd)
-        reload_module(zuul.scheduler)
+        importlib.reload(statsd)
+        importlib.reload(zuul.scheduler)
 
         self.gearman_server = FakeGearmanServer(self.use_ssl)
 
@@ -2008,7 +2005,7 @@ class ZuulTestCase(BaseTestCase):
         # This creates the per-test configuration object.  It can be
         # overriden by subclasses, but should not need to be since it
         # obeys the config_file and tenant_config_file attributes.
-        self.config = ConfigParser.ConfigParser()
+        self.config = configparser.ConfigParser()
         self.config.read(os.path.join(FIXTURE_DIR, self.config_file))
 
         if not self.setupSimpleLayout():
@@ -2383,12 +2380,12 @@ class ZuulTestCase(BaseTestCase):
         return True
 
     def eventQueuesEmpty(self):
-        for queue in self.event_queues:
-            yield queue.empty()
+        for event_queue in self.event_queues:
+            yield event_queue.empty()
 
     def eventQueuesJoin(self):
-        for queue in self.event_queues:
-            queue.join()
+        for event_queue in self.event_queues:
+            event_queue.join()
 
     def waitUntilSettled(self):
         self.log.debug("Waiting until settled...")
@@ -2397,8 +2394,9 @@ class ZuulTestCase(BaseTestCase):
             if time.time() - start > self.wait_timeout:
                 self.log.error("Timeout waiting for Zuul to settle")
                 self.log.error("Queue status:")
-                for queue in self.event_queues:
-                    self.log.error("  %s: %s" % (queue, queue.empty()))
+                for event_queue in self.event_queues:
+                    self.log.error("  %s: %s" %
+                                   (event_queue, event_queue.empty()))
                 self.log.error("All builds waiting: %s" %
                                (self.areAllBuildsWaiting(),))
                 self.log.error("All builds reported: %s" %
@@ -2457,11 +2455,12 @@ class ZuulTestCase(BaseTestCase):
         # Make sure there are no orphaned jobs
         for tenant in self.sched.abide.tenants.values():
             for pipeline in tenant.layout.pipelines.values():
-                for queue in pipeline.queues:
-                    if len(queue.queue) != 0:
+                for pipeline_queue in pipeline.queues:
+                    if len(pipeline_queue.queue) != 0:
                         print('pipeline %s queue %s contents %s' % (
-                            pipeline.name, queue.name, queue.queue))
-                    self.assertEqual(len(queue.queue), 0,
+                            pipeline.name, pipeline_queue.name,
+                            pipeline_queue.queue))
+                    self.assertEqual(len(pipeline_queue.queue), 0,
                                      "Pipelines queues should be empty")
 
     def assertReportedStat(self, key, value=None, kind=None):

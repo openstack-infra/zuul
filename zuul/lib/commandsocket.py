@@ -18,7 +18,7 @@ import logging
 import os
 import socket
 import threading
-from six.moves import queue
+import queue
 
 
 class CommandSocket(object):

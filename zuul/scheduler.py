@@ -20,8 +20,7 @@ import json
 import logging
 import os
 import pickle
-import six
-from six.moves import queue as Queue
+import queue
 import socket
 import sys
 import threading
@@ -49,7 +48,9 @@ class ManagementEvent(object):
     def wait(self, timeout=None):
         self._wait_event.wait(timeout)
         if self._exc_info:
-            six.reraise(*self._exc_info)
+            # http://python3porting.com/differences.html#raise
+            e, v, t = self._exc_info
+            raise e(v).with_traceback(t)
         return self._wait_event.is_set()
 
 
@@ -217,9 +218,9 @@ class Scheduler(threading.Thread):
         self.triggers = dict()
         self.config = config
 
-        self.trigger_event_queue = Queue.Queue()
-        self.result_event_queue = Queue.Queue()
-        self.management_event_queue = Queue.Queue()
+        self.trigger_event_queue = queue.Queue()
+        self.result_event_queue = queue.Queue()
+        self.management_event_queue = queue.Queue()
         self.abide = model.Abide()
 
         if not testonly:

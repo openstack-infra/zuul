@@ -17,7 +17,7 @@ import os
 import subprocess
 import sys
 import tempfile
-from six.moves import urllib
+import urllib
 
 DESCRIPTION = """Encrypt a secret for Zuul.
 

@@ -21,9 +21,6 @@ import struct
 import time
 from uuid import uuid4
 
-import six
-
-
 MERGER_MERGE = 1          # "git merge"
 MERGER_MERGE_RESOLVE = 2  # "git merge -s resolve"
 MERGER_CHERRY_PICK = 3    # "git cherry-pick"
@@ -666,8 +663,7 @@ class PlaybookContext(object):
             path=self.path)
 
 
-@six.add_metaclass(abc.ABCMeta)
-class Role(object):
+class Role(object, metaclass=abc.ABCMeta):
     """A reference to an ansible role."""
 
     def __init__(self, target_name):

@@ -18,6 +18,7 @@ import logging
 import os
 import shutil
 import signal
+import shlex
 import socket
 import subprocess
 import tempfile
@@ -27,7 +28,6 @@ import traceback
 from zuul.lib.yamlutil import yaml
 
 import gear
-from six.moves import shlex_quote
 
 import zuul.merger.merger
 import zuul.ansible
@@ -1288,7 +1288,7 @@ class AnsibleJob(object):
             if self.aborted:
                 return (self.RESULT_ABORTED, None)
             self.log.debug("Ansible command: ANSIBLE_CONFIG=%s %s",
-                           config_file, " ".join(shlex_quote(c) for c in cmd))
+                           config_file, " ".join(shlex.quote(c) for c in cmd))
             self.proc = popen(
                 cmd,
                 cwd=self.jobdir.work_root,

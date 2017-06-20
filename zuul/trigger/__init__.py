@@ -14,11 +14,8 @@
 
 import abc
 
-import six
 
-
-@six.add_metaclass(abc.ABCMeta)
-class BaseTrigger(object):
+class BaseTrigger(object, metaclass=abc.ABCMeta):
     """Base class for triggers.
 
     Defines the exact public methods that must be supplied."""

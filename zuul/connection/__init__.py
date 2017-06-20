@@ -15,11 +15,9 @@
 import abc
 
 import extras
-import six
 
 
-@six.add_metaclass(abc.ABCMeta)
-class BaseConnection(object):
+class BaseConnection(object, metaclass=abc.ABCMeta):
     """Base class for connections.
 
     A connection is a shared object that sources, triggers and reporters can

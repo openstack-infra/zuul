@@ -14,9 +14,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import six
-from six.moves import configparser as ConfigParser
+import configparser
 import extras
+import io
 import logging
 import logging.config
 import os
@@ -48,7 +48,7 @@ def stack_dump_handler(signum, frame):
             yappi.start()
         else:
             yappi.stop()
-            yappi_out = six.BytesIO()
+            yappi_out = io.BytesIO()
             yappi.get_func_stats().print_all(out=yappi_out)
             yappi.get_thread_stats().print_all(out=yappi_out)
             log.debug(yappi_out.getvalue())
@@ -69,7 +69,7 @@ class ZuulApp(object):
         return "Zuul version: %s" % zuul_version_info.release_string()
 
     def read_config(self):
-        self.config = ConfigParser.ConfigParser()
+        self.config = configparser.ConfigParser()
         if self.args.config:
             locations = [self.args.config]
         else:
