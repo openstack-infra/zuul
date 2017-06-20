@@ -70,33 +70,10 @@ class BubblewrapDriver(Driver, WrapperInterface):
     name = 'bubblewrap'
     log = logging.getLogger("zuul.BubblewrapDriver")
 
-    bwrap_command = [
-        'bwrap',
-        '--dir', '/tmp',
-        '--tmpfs', '/tmp',
-        '--dir', '/var',
-        '--dir', '/var/tmp',
-        '--dir', '/run/user/{uid}',
-        '--ro-bind', '/usr', '/usr',
-        '--ro-bind', '/lib', '/lib',
-        '--ro-bind', '/lib64', '/lib64',
-        '--ro-bind', '/bin', '/bin',
-        '--ro-bind', '/sbin', '/sbin',
-        '--ro-bind', '/etc/resolv.conf', '/etc/resolv.conf',
-        '--ro-bind', '{ssh_auth_sock}', '{ssh_auth_sock}',
-        '--dir', '{work_dir}',
-        '--bind', '{work_dir}', '{work_dir}',
-        '--dev', '/dev',
-        '--chdir', '{work_dir}',
-        '--unshare-all',
-        '--share-net',
-        '--die-with-parent',
-        '--uid', '{uid}',
-        '--gid', '{gid}',
-        '--file', '{uid_fd}', '/etc/passwd',
-        '--file', '{gid_fd}', '/etc/group',
-    ]
     mounts_map = {'rw': [], 'ro': []}
+
+    def __init__(self):
+        self.bwrap_command = self._bwrap_command()
 
     def reconfigure(self, tenant):
         pass
@@ -159,6 +136,38 @@ class BubblewrapDriver(Driver, WrapperInterface):
         wrapped_popen = WrappedPopen(command, passwd_r, group_r)
 
         return wrapped_popen
+
+    def _bwrap_command(self):
+        bwrap_command = [
+            'bwrap',
+            '--dir', '/tmp',
+            '--tmpfs', '/tmp',
+            '--dir', '/var',
+            '--dir', '/var/tmp',
+            '--dir', '/run/user/{uid}',
+            '--ro-bind', '/usr', '/usr',
+            '--ro-bind', '/lib', '/lib',
+            '--ro-bind', '/bin', '/bin',
+            '--ro-bind', '/sbin', '/sbin',
+            '--ro-bind', '/etc/resolv.conf', '/etc/resolv.conf',
+            '--ro-bind', '{ssh_auth_sock}', '{ssh_auth_sock}',
+            '--dir', '{work_dir}',
+            '--bind', '{work_dir}', '{work_dir}',
+            '--dev', '/dev',
+            '--chdir', '{work_dir}',
+            '--unshare-all',
+            '--share-net',
+            '--die-with-parent',
+            '--uid', '{uid}',
+            '--gid', '{gid}',
+            '--file', '{uid_fd}', '/etc/passwd',
+            '--file', '{gid_fd}', '/etc/group',
+        ]
+
+        if os.path.isdir('/lib64'):
+            bwrap_command.extend(['--ro-bind', '/lib64', '/lib64'])
+
+        return bwrap_command
 
 
 def main(args=None):
