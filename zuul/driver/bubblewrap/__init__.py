@@ -125,6 +125,7 @@ class BubblewrapDriver(Driver, WrapperInterface):
             ['{}'.format(x).encode('utf8') for x in passwd])
         (passwd_r, passwd_w) = os.pipe()
         os.write(passwd_w, passwd_bytes)
+        os.write(passwd_w, b'\n')
         os.close(passwd_w)
 
         gid = os.getgid()
@@ -133,6 +134,7 @@ class BubblewrapDriver(Driver, WrapperInterface):
             ['{}'.format(x).encode('utf8') for x in group])
         group_r, group_w = os.pipe()
         os.write(group_w, group_bytes)
+        os.write(group_w, b'\n')
         os.close(group_w)
 
         kwargs = dict(kwargs)  # Don't update passed in dict
