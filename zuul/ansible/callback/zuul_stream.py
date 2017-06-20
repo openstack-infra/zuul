@@ -164,7 +164,7 @@ class CallbackModule(default.CallbackModule):
 
             hosts = self._get_task_hosts(task)
             for host in hosts:
-                if host in ('locahost', '127.0.0.1'):
+                if host in ('localhost', '127.0.0.1'):
                     # Don't try to stream from localhost
                     continue
                 ip = play_vars[host].get(
