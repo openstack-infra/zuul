@@ -199,10 +199,10 @@ class CallbackModule(default.CallbackModule):
             self._stop_streamers()
         if result._task.action in ('command', 'shell'):
             stdout_lines = zuul_filter_result(result._result)
-        if is_localhost:
-            for line in stdout_lines:
-                ts, ln = (x.strip() for x in line.split(' | ', 1))
-                self._log("localhost | %s " % ln, ts=ts)
+            if is_localhost:
+                for line in stdout_lines:
+                    ts, ln = (x.strip() for x in line.split(' | ', 1))
+                    self._log("localhost | %s " % ln, ts=ts)
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
         self._process_result_for_localhost(result)
