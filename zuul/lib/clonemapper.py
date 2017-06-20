@@ -14,16 +14,12 @@
 # under the License.
 
 from collections import defaultdict
-import extras
+from collections import OrderedDict
 import logging
 import os
 import re
 
 import six
-
-
-OrderedDict = extras.try_imports(['collections.OrderedDict',
-                                  'ordereddict.OrderedDict'])
 
 
 class CloneMapper(object):
