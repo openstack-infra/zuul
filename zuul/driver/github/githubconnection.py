@@ -599,7 +599,7 @@ class GithubConnection(BaseConnection):
             if not pr_url:
                 continue
             # the issue provides no good description of the project :\
-            owner, project, _, number = pr_url.split('/')[4:]
+            owner, project, _, number = pr_url.split('/')[-4:]
             github = self.getGithubClient("%s/%s" % (owner, project))
             pr = github.pull_request(owner, project, number)
             if pr.head.sha != sha:
