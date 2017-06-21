@@ -320,6 +320,46 @@ class TestGithubDriver(ZuulTestCase):
         self.assertThat(report_status['url'][len(base):],
                         MatchesRegex('^[a-fA-F0-9]{32}\/$'))
 
+    @simple_layout('layouts/reporting-github.yaml', driver='github')
+    def test_push_reporting(self):
+        project = 'org/project2'
+        # pipeline reports pull status both on start and success
+        self.executor_server.hold_jobs_in_build = True
+        pevent = self.fake_github.getPushEvent(project=project,
+                                               ref='refs/heads/master')
+
+        self.fake_github.emitEvent(pevent)
+        self.waitUntilSettled()
+
+        # there should only be one report, a status
+        self.assertEqual(1, len(self.fake_github.reports))
+        # Verify the user/context/state of the status
+        status = ('zuul', 'tenant-one/push-reporting', 'pending')
+        self.assertEqual(status, self.fake_github.reports[0][-1])
+
+        # free the executor, allow the build to finish
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        # Now there should be a second report, the success of the build
+        self.assertEqual(2, len(self.fake_github.reports))
+        # Verify the user/context/state of the status
+        status = ('zuul', 'tenant-one/push-reporting', 'success')
+        self.assertEqual(status, self.fake_github.reports[-1][-1])
+
+        # now make a PR which should also comment
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_github.openFakePullRequest(project, 'master', 'A')
+        self.fake_github.emitEvent(A.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+
+        # Now there should be a four reports, a new comment
+        # and status
+        self.assertEqual(4, len(self.fake_github.reports))
+        self.executor_server.release()
+        self.waitUntilSettled()
+
     @simple_layout('layouts/merging-github.yaml', driver='github')
     def test_report_pull_merge(self):
         # pipeline merges the pull request on success

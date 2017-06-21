@@ -34,6 +34,29 @@
       github:
         comment: false
 
+- pipeline:
+    name: push-reporting
+    description: Uncommon reporting
+    manager: independent
+    trigger:
+      github:
+        - event: push
+        - event: pull_request
+          action: opened
+    start:
+      github:
+        comment: true
+        status: 'pending'
+    success:
+      github:
+        comment: true
+        status: 'success'
+        merge: true
+    failure:
+      github:
+        comment: true
+        status: 'failure'
+
 - job:
     name: project-test1
 
@@ -43,5 +66,11 @@
       jobs:
         - project-test1
     reporting:
+      jobs:
+        - project-test1
+
+- project:
+    name: org/project2
+    push-reporting:
       jobs:
         - project-test1
