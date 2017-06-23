@@ -155,8 +155,7 @@ class Scheduler(zuul.cmd.ZuulApp):
 
         zookeeper.connect(zookeeper_hosts)
 
-        cache_expiry = get_default(self.config, 'zuul', 'status_expiry', 1)
-
+        cache_expiry = get_default(self.config, 'webapp', 'status_expiry', 1)
         listen_address = get_default(self.config, 'webapp', 'listen_address',
                                      '0.0.0.0')
         port = get_default(self.config, 'webapp', 'port', 8001)
