@@ -28,7 +28,8 @@ sys.path.insert(0, os.path.abspath('../..'))
 extensions = [
     'sphinx.ext.autodoc',
     'sphinxcontrib.blockdiag',
-    'sphinxcontrib.programoutput'
+    'sphinxcontrib.programoutput',
+    'oslosphinx'
 ]
 #extensions = ['sphinx.ext.intersphinx']
 #intersphinx_mapping = {'python': ('http://docs.python.org/2.7', None)}
