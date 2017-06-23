@@ -1048,7 +1048,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
     def _getNeededByFromPR(self, change):
         prs = []
         pattern = re.compile(r"Depends-On.*https://%s/%s/pull/%s" %
-                             (self.git_host, change.project.name,
+                             (self.server, change.project.name,
                               change.number))
         for pr in self.pull_requests:
             if pattern.search(pr.body):

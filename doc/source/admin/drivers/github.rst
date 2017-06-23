@@ -41,14 +41,14 @@ The supported options in zuul.conf connections are:
   Path to SSH key to use when cloning github repositories.
   ``sshkey=/home/zuul/.ssh/id_rsa``
 
-**git_host**
+**server**
   Optional: Hostname of the github install (such as a GitHub Enterprise)
   If not specified, defaults to ``github.com``
-  ``git_host=github.myenterprise.com``
+  ``server=github.myenterprise.com``
 
 **canonical_hostname**
   The canonical hostname associated with the git repos on the GitHub
-  server.  Defaults to the value of **git_host**.  This is used to
+  server.  Defaults to the value of **server**.  This is used to
   identify repos from this connection by name and in preparing repos
   on the filesystem for use by jobs.  This only needs to be set in the
   case where the canonical public location of the git repos is not the
