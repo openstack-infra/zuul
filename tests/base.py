@@ -1846,12 +1846,16 @@ class ZuulTestCase(BaseTestCase):
         self.merger_src_root = os.path.join(self.test_root, "merger-git")
         self.executor_src_root = os.path.join(self.test_root, "executor-git")
         self.state_root = os.path.join(self.test_root, "lib")
+        self.merger_state_root = os.path.join(self.test_root, "merger-lib")
+        self.executor_state_root = os.path.join(self.test_root, "executor-lib")
 
         if os.path.exists(self.test_root):
             shutil.rmtree(self.test_root)
         os.makedirs(self.test_root)
         os.makedirs(self.upstream_root)
         os.makedirs(self.state_root)
+        os.makedirs(self.merger_state_root)
+        os.makedirs(self.executor_state_root)
 
         # Make per test copy of Configuration.
         self.setup_config()
@@ -1868,8 +1872,10 @@ class ZuulTestCase(BaseTestCase):
                             self.config.get('scheduler', 'tenant_config')))
         self.config.set('zuul', 'state_dir', self.state_root)
         self.config.set('merger', 'git_dir', self.merger_src_root)
+        self.config.set('merger', 'state_dir', self.merger_state_root)
         self.config.set('executor', 'git_dir', self.executor_src_root)
         self.config.set('executor', 'private_key_file', self.private_key_file)
+        self.config.set('executor', 'state_dir', self.executor_state_root)
 
         self.statsd = FakeStatsd()
         # note, use 127.0.0.1 rather than localhost to avoid getting ipv6

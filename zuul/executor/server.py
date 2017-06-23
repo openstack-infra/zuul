@@ -400,7 +400,7 @@ class ExecutorServer(object):
         self.merger = self._getMerger(self.merge_root)
         self.update_queue = DeduplicateQueue()
 
-        state_dir = get_default(self.config, 'zuul', 'state_dir',
+        state_dir = get_default(self.config, 'executor', 'state_dir',
                                 '/var/lib/zuul', expand_user=True)
         path = os.path.join(state_dir, 'executor.socket')
         self.command_socket = commandsocket.CommandSocket(path)
@@ -1293,7 +1293,7 @@ class AnsibleJob(object):
                               '%s_ro_dirs' % opt_prefix)
         rw_dirs = get_default(self.executor_server.config, 'executor',
                               '%s_rw_dirs' % opt_prefix)
-        state_dir = get_default(self.executor_server.config, 'zuul',
+        state_dir = get_default(self.executor_server.config, 'executor',
                                 'state_dir', '/var/lib/zuul', expand_user=True)
         ro_dirs = ro_dirs.split(":") if ro_dirs else []
         rw_dirs = rw_dirs.split(":") if rw_dirs else []
