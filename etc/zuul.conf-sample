@@ -4,6 +4,9 @@ server=127.0.0.1
 ;ssl_cert=/path/to/client.pem
 ;ssl_key=/path/to/client.key
 
+[zookeeper]
+hosts=127.0.0.1:2181
+
 [gearman_server]
 start=true
 ;ssl_ca=/path/to/ca.pem
@@ -12,7 +15,6 @@ start=true
 
 [zuul]
 status_url=https://zuul.example.com/status
-zookeeper_hosts=127.0.0.1:2181
 
 [scheduler]
 tenant_config=/etc/zuul/main.yaml
