@@ -54,7 +54,7 @@ service in Zuul, and a connection to Gerrit.
 
 **zuul.conf**::
 
-    [zuul]
+    [scheduler]
     tenant_config=/etc/zuul/main.yaml
 
     [gearman_server]

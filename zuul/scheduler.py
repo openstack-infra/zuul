@@ -451,7 +451,7 @@ class Scheduler(threading.Thread):
             self.log.debug("Performing reconfiguration")
             loader = configloader.ConfigLoader()
             abide = loader.loadConfig(
-                self.config.get('zuul', 'tenant_config'),
+                self.config.get('scheduler', 'tenant_config'),
                 self._get_project_key_dir(),
                 self, self.merger, self.connections)
             for tenant in abide.tenants.values():
@@ -468,7 +468,7 @@ class Scheduler(threading.Thread):
             self.log.debug("Performing tenant reconfiguration")
             loader = configloader.ConfigLoader()
             abide = loader.reloadTenant(
-                self.config.get('zuul', 'tenant_config'),
+                self.config.get('scheduler', 'tenant_config'),
                 self._get_project_key_dir(),
                 self, self.merger, self.connections,
                 self.abide, event.tenant)
