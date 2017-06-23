@@ -48,6 +48,19 @@ future state that Zuul is testing, and all dependencies are present.
 Do not use any git remotes; the local repositories are guaranteed to
 be up to date.
 
+The repositories will be placed on the filesystem in directories
+corresponding with the canonical hostname of their source connection.
+For example::
+
+  work/src/git.example.com/project1
+  work/src/github.com/project2
+
+Is the layout that would be present for a job which included project1
+from the connection associated to git.example.com and project2 from
+GitHub.  This helps avoid collisions between projects with the same
+name, and some language environments, such as Go, expect repositories
+in this format.
+
 Note that these git repositories are located on the executor; in order
 to be useful to most kinds of jobs, they will need to be present on
 the test nodes.  The ``base`` job in the standard library contains a

@@ -46,6 +46,17 @@ The supported options in zuul.conf connections are:
   If not specified, defaults to ``github.com``
   ``git_host=github.myenterprise.com``
 
+**canonical_hostname**
+  The canonical hostname associated with the git repos on the GitHub
+  server.  Defaults to the value of **git_host**.  This is used to
+  identify repos from this connection by name and in preparing repos
+  on the filesystem for use by jobs.  This only needs to be set in the
+  case where the canonical public location of the git repos is not the
+  same as the GitHub server and it would be incorrect to refer to
+  those repos in configuration and build scripts using the GitHub
+  server hostname.
+  ``canonical_hostname=git.example.com``
+
 Trigger Configuration
 ---------------------
 GitHub webhook events can be configured as triggers.
