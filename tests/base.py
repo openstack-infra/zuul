@@ -1870,7 +1870,7 @@ class ZuulTestCase(BaseTestCase):
                         os.path.join(
                             FIXTURE_DIR,
                             self.config.get('scheduler', 'tenant_config')))
-        self.config.set('zuul', 'state_dir', self.state_root)
+        self.config.set('scheduler', 'state_dir', self.state_root)
         self.config.set('merger', 'git_dir', self.merger_src_root)
         self.config.set('merger', 'state_dir', self.merger_state_root)
         self.config.set('executor', 'git_dir', self.executor_src_root)
