@@ -350,3 +350,28 @@ class TestGithubRequirements(ZuulTestCase):
         self.waitUntilSettled()
         # Event hash is not current, should not trigger
         self.assertEqual(len(self.history), 1)
+
+    @simple_layout('layouts/requirements-github.yaml', driver='github')
+    def test_pipeline_require_label(self):
+        "Test pipeline requirement: label"
+        A = self.fake_github.openFakePullRequest('org/project10', 'master',
+                                                 'A')
+        # A comment event that we will keep submitting to trigger
+        comment = A.getCommentAddedEvent('test me')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        # No label so should not be enqueued
+        self.assertEqual(len(self.history), 0)
+
+        # A derp label should not cause it to be enqueued
+        A.addLabel('derp')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+
+        # An approved label goes in
+        A.addLabel('approved')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+        self.assertEqual(self.history[0].name, 'project10-label')

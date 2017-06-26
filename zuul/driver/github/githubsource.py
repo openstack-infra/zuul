@@ -97,6 +97,7 @@ class GithubSource(BaseSource):
             required_reviews=to_list(config.get('review')),
             open=config.get('open'),
             current_patchset=config.get('current-patchset'),
+            labels=to_list(config.get('label')),
         )
         return [f]
 
@@ -121,7 +122,8 @@ def getRequireSchema():
     require = {'status': scalar_or_list(str),
                'review': scalar_or_list(review),
                'open': bool,
-               'current-patchset': bool}
+               'current-patchset': bool,
+               'label': scalar_or_list(str)}
     return require
 
 
