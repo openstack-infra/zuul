@@ -734,11 +734,27 @@ class AnsibleJob(object):
                        (self.job.unique, self.jobdir.root))
         args = json.loads(self.job.arguments)
         tasks = []
+        projects = set()
+
+        # Make sure all projects used by the job are updated...
         for project in args['projects']:
             self.log.debug("Job %s: updating project %s" %
                            (self.job.unique, project))
             tasks.append(self.executor_server.update(
                 project['connection'], project['name']))
+            projects.add((project['connection'], project['name']))
+
+        # ...as well as all playbook and role projects.
+        repos = (args['pre_playbooks'] + args['playbooks'] +
+                 args['post_playbooks'] + args['roles'])
+        for repo in repos:
+            self.log.debug("Job %s: updating playbook or role %s" %
+                           (self.job.unique, repo))
+            key = (repo['connection'], repo['project'])
+            if key not in projects:
+                tasks.append(self.executor_server.update(*key))
+                projects.add(key)
+
         for task in tasks:
             task.wait()
 
