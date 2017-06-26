@@ -25,6 +25,7 @@ import time
 
 import zuul.rpcclient
 import zuul.cmd
+from zuul.lib.config import get_default
 
 
 class Client(zuul.cmd.ZuulApp):
@@ -122,22 +123,10 @@ class Client(zuul.cmd.ZuulApp):
         self.setup_logging()
 
         self.server = self.config.get('gearman', 'server')
-        if self.config.has_option('gearman', 'port'):
-            self.port = self.config.get('gearman', 'port')
-        else:
-            self.port = 4730
-        if self.config.has_option('gearman', 'ssl_key'):
-            self.ssl_key = self.config.get('gearman', 'ssl_key')
-        else:
-            self.ssl_key = None
-        if self.config.has_option('gearman', 'ssl_cert'):
-            self.ssl_cert = self.config.get('gearman', 'ssl_cert')
-        else:
-            self.ssl_cert = None
-        if self.config.has_option('gearman', 'ssl_ca'):
-            self.ssl_ca = self.config.get('gearman', 'ssl_ca')
-        else:
-            self.ssl_ca = None
+        self.port = get_default(self.config, 'gearman', 'port', 4730)
+        self.ssl_key = get_default(self.config, 'gearman', 'ssl_key')
+        self.ssl_cert = get_default(self.config, 'gearman', 'ssl_cert')
+        self.ssl_ca = get_default(self.config, 'gearman', 'ssl_ca')
 
         if self.args.func():
             sys.exit(0)

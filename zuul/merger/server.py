@@ -19,6 +19,7 @@ import traceback
 
 import gear
 
+from zuul.lib.config import get_default
 from zuul.merger import merger
 
 
@@ -29,20 +30,10 @@ class MergeServer(object):
         self.config = config
         self.zuul_url = config.get('merger', 'zuul_url')
 
-        if self.config.has_option('merger', 'git_dir'):
-            merge_root = self.config.get('merger', 'git_dir')
-        else:
-            merge_root = '/var/lib/zuul/merger-git'
-
-        if self.config.has_option('merger', 'git_user_email'):
-            merge_email = self.config.get('merger', 'git_user_email')
-        else:
-            merge_email = None
-
-        if self.config.has_option('merger', 'git_user_name'):
-            merge_name = self.config.get('merger', 'git_user_name')
-        else:
-            merge_name = None
+        merge_root = get_default(self.config, 'merger', 'git_dir',
+                                 '/var/lib/zuul/merger-git')
+        merge_email = get_default(self.config, 'merger', 'git_user_email')
+        merge_name = get_default(self.config, 'merger', 'git_user_name')
 
         self.merger = merger.Merger(merge_root, connections, merge_email,
                                     merge_name)
@@ -50,22 +41,10 @@ class MergeServer(object):
     def start(self):
         self._running = True
         server = self.config.get('gearman', 'server')
-        if self.config.has_option('gearman', 'port'):
-            port = self.config.get('gearman', 'port')
-        else:
-            port = 4730
-        if self.config.has_option('gearman', 'ssl_key'):
-            ssl_key = self.config.get('gearman', 'ssl_key')
-        else:
-            ssl_key = None
-        if self.config.has_option('gearman', 'ssl_cert'):
-            ssl_cert = self.config.get('gearman', 'ssl_cert')
-        else:
-            ssl_cert = None
-        if self.config.has_option('gearman', 'ssl_ca'):
-            ssl_ca = self.config.get('gearman', 'ssl_ca')
-        else:
-            ssl_ca = None
+        port = get_default(self.config, 'gearman', 'port', 4730)
+        ssl_key = get_default(self.config, 'gearman', 'ssl_key')
+        ssl_cert = get_default(self.config, 'gearman', 'ssl_cert')
+        ssl_ca = get_default(self.config, 'gearman', 'ssl_ca')
         self.worker = gear.TextWorker('Zuul Merger')
         self.worker.addServer(server, port, ssl_key, ssl_cert, ssl_ca)
         self.log.debug("Waiting for server")

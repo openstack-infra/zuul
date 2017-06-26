@@ -20,6 +20,7 @@ from uuid import uuid4
 import gear
 
 import zuul.model
+from zuul.lib.config import get_default
 
 
 def getJobData(job):
@@ -75,22 +76,10 @@ class MergeClient(object):
         self.config = config
         self.sched = sched
         server = self.config.get('gearman', 'server')
-        if self.config.has_option('gearman', 'port'):
-            port = self.config.get('gearman', 'port')
-        else:
-            port = 4730
-        if self.config.has_option('gearman', 'ssl_key'):
-            ssl_key = self.config.get('gearman', 'ssl_key')
-        else:
-            ssl_key = None
-        if self.config.has_option('gearman', 'ssl_cert'):
-            ssl_cert = self.config.get('gearman', 'ssl_cert')
-        else:
-            ssl_cert = None
-        if self.config.has_option('gearman', 'ssl_ca'):
-            ssl_ca = self.config.get('gearman', 'ssl_ca')
-        else:
-            ssl_ca = None
+        port = get_default(self.config, 'gearman', 'port', 4730)
+        ssl_key = get_default(self.config, 'gearman', 'ssl_key')
+        ssl_cert = get_default(self.config, 'gearman', 'ssl_cert')
+        ssl_ca = get_default(self.config, 'gearman', 'ssl_ca')
         self.log.debug("Connecting to gearman at %s:%s" % (server, port))
         self.gearman = MergeGearmanClient(self)
         self.gearman.addServer(server, port, ssl_key, ssl_cert, ssl_ca)

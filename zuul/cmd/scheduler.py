@@ -28,6 +28,7 @@ import sys
 import signal
 
 import zuul.cmd
+from zuul.lib.config import get_default
 
 # No zuul imports here because they pull in paramiko which must not be
 # imported until after the daemonization.
@@ -98,22 +99,10 @@ class Scheduler(zuul.cmd.ZuulApp):
             import zuul.lib.gearserver
             statsd_host = os.environ.get('STATSD_HOST')
             statsd_port = int(os.environ.get('STATSD_PORT', 8125))
-            if self.config.has_option('gearman_server', 'listen_address'):
-                host = self.config.get('gearman_server', 'listen_address')
-            else:
-                host = None
-            if self.config.has_option('gearman_server', 'ssl_key'):
-                ssl_key = self.config.get('gearman_server', 'ssl_key')
-            else:
-                ssl_key = None
-            if self.config.has_option('gearman_server', 'ssl_cert'):
-                ssl_cert = self.config.get('gearman_server', 'ssl_cert')
-            else:
-                ssl_cert = None
-            if self.config.has_option('gearman_server', 'ssl_ca'):
-                ssl_ca = self.config.get('gearman_server', 'ssl_ca')
-            else:
-                ssl_ca = None
+            host = get_default(self.config, 'gearman_server', 'listen_address')
+            ssl_key = get_default(self.config, 'gearman_server', 'ssl_key')
+            ssl_cert = get_default(self.config, 'gearman_server', 'ssl_cert')
+            ssl_ca = get_default(self.config, 'gearman_server', 'ssl_ca')
             zuul.lib.gearserver.GearServer(4730,
                                            ssl_key=ssl_key,
                                            ssl_cert=ssl_cert,
@@ -161,27 +150,16 @@ class Scheduler(zuul.cmd.ZuulApp):
         nodepool = zuul.nodepool.Nodepool(self.sched)
 
         zookeeper = zuul.zk.ZooKeeper()
-        if self.config.has_option('zuul', 'zookeeper_hosts'):
-            zookeeper_hosts = self.config.get('zuul', 'zookeeper_hosts')
-        else:
-            zookeeper_hosts = '127.0.0.1:2181'
+        zookeeper_hosts = get_default(self.config, 'zuul', 'zookeeper_hosts',
+                                      '127.0.0.1:2181')
 
         zookeeper.connect(zookeeper_hosts)
 
-        if self.config.has_option('zuul', 'status_expiry'):
-            cache_expiry = self.config.getint('zuul', 'status_expiry')
-        else:
-            cache_expiry = 1
+        cache_expiry = get_default(self.config, 'zuul', 'status_expiry', 1)
 
-        if self.config.has_option('webapp', 'listen_address'):
-            listen_address = self.config.get('webapp', 'listen_address')
-        else:
-            listen_address = '0.0.0.0'
-
-        if self.config.has_option('webapp', 'port'):
-            port = self.config.getint('webapp', 'port')
-        else:
-            port = 8001
+        listen_address = get_default(self.config, 'webapp', 'listen_address',
+                                     '0.0.0.0')
+        port = get_default(self.config, 'webapp', 'port', 8001)
 
         webapp = zuul.webapp.WebApp(
             self.sched, port=port, cache_expiry=cache_expiry,
@@ -230,10 +208,9 @@ def main():
     if scheduler.args.validate:
         sys.exit(scheduler.test_config())
 
-    if scheduler.config.has_option('zuul', 'pidfile'):
-        pid_fn = os.path.expanduser(scheduler.config.get('zuul', 'pidfile'))
-    else:
-        pid_fn = '/var/run/zuul-scheduler/zuul-scheduler.pid'
+    pid_fn = get_default(scheduler.config, 'zuul', 'pidfile',
+                         '/var/run/zuul-scheduler/zuul-scheduler.pid',
+                         expand_user=True)
     pid = pid_file_module.TimeoutPIDLockFile(pid_fn, 10)
 
     if scheduler.args.nodaemon:
