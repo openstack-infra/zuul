@@ -83,7 +83,6 @@ class BubblewrapDriver(Driver, WrapperInterface):
         '--ro-bind', '/bin', '/bin',
         '--ro-bind', '/sbin', '/sbin',
         '--ro-bind', '/etc/resolv.conf', '/etc/resolv.conf',
-        '--ro-bind', '{ansible_dir}', '{ansible_dir}',
         '--ro-bind', '{ssh_auth_sock}', '{ssh_auth_sock}',
         '--dir', '{work_dir}',
         '--bind', '{work_dir}', '{work_dir}',
@@ -98,12 +97,16 @@ class BubblewrapDriver(Driver, WrapperInterface):
         '--file', '{uid_fd}', '/etc/passwd',
         '--file', '{gid_fd}', '/etc/group',
     ]
+    mounts_map = {'rw': [], 'ro': []}
 
     def reconfigure(self, tenant):
         pass
 
     def stop(self):
         pass
+
+    def setMountsMap(self, state_dir, ro_dirs=[], rw_dirs=[]):
+        self.mounts_map = {'ro': ro_dirs, 'rw': [state_dir] + rw_dirs}
 
     def getPopen(self, **kwargs):
         # Set zuul_dir if it was not passed in
@@ -117,6 +120,11 @@ class BubblewrapDriver(Driver, WrapperInterface):
         bwrap_command = list(self.bwrap_command)
         if not zuul_dir.startswith('/usr'):
             bwrap_command.extend(['--ro-bind', zuul_dir, zuul_dir])
+
+        for mount_type in ('ro', 'rw'):
+            bind_arg = '--ro-bind' if mount_type == 'ro' else '--bind'
+            for bind in self.mounts_map[mount_type]:
+                bwrap_command.extend([bind_arg, bind, bind])
 
         # Need users and groups
         uid = os.getuid()
@@ -160,14 +168,12 @@ def main(args=None):
 
     parser = argparse.ArgumentParser()
     parser.add_argument('work_dir')
-    parser.add_argument('ansible_dir')
     parser.add_argument('run_args', nargs='+')
     cli_args = parser.parse_args()
 
     ssh_auth_sock = os.environ.get('SSH_AUTH_SOCK')
 
     popen = driver.getPopen(work_dir=cli_args.work_dir,
-                            ansible_dir=cli_args.ansible_dir,
                             ssh_auth_sock=ssh_auth_sock)
     x = popen(cli_args.run_args)
     x.wait()
