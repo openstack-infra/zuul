@@ -266,11 +266,11 @@ class TestJob(BaseTestCase):
         self.assertEqual(len(nodes), 1)
         self.assertEqual(nodes[0].label, 'new')
         self.assertEqual([x.path for x in job.pre_run],
-                         ['playbooks/base-pre',
-                          'playbooks/py27-pre'])
+                         ['base-pre',
+                          'py27-pre'])
         self.assertEqual([x.path for x in job.post_run],
-                         ['playbooks/py27-post',
-                          'playbooks/base-post'])
+                         ['py27-post',
+                          'base-post'])
         self.assertEqual([x.path for x in job.run],
                          ['playbooks/python27',
                           'playbooks/base'])
@@ -294,15 +294,15 @@ class TestJob(BaseTestCase):
         self.assertEqual(len(nodes), 1)
         self.assertEqual(nodes[0].label, 'old')
         self.assertEqual([x.path for x in job.pre_run],
-                         ['playbooks/base-pre',
-                          'playbooks/py27-pre',
-                          'playbooks/py27-diablo-pre'])
+                         ['base-pre',
+                          'py27-pre',
+                          'py27-diablo-pre'])
         self.assertEqual([x.path for x in job.post_run],
-                         ['playbooks/py27-diablo-post',
-                          'playbooks/py27-post',
-                          'playbooks/base-post'])
+                         ['py27-diablo-post',
+                          'py27-post',
+                          'base-post'])
         self.assertEqual([x.path for x in job.run],
-                         ['playbooks/py27-diablo']),
+                         ['py27-diablo']),
 
         # Test essex
         change.branch = 'stable/essex'
@@ -319,13 +319,13 @@ class TestJob(BaseTestCase):
         job = item.getJobs()[0]
         self.assertEqual(job.name, 'python27')
         self.assertEqual([x.path for x in job.pre_run],
-                         ['playbooks/base-pre',
-                          'playbooks/py27-pre',
-                          'playbooks/py27-essex-pre'])
+                         ['base-pre',
+                          'py27-pre',
+                          'py27-essex-pre'])
         self.assertEqual([x.path for x in job.post_run],
-                         ['playbooks/py27-essex-post',
-                          'playbooks/py27-post',
-                          'playbooks/base-post'])
+                         ['py27-essex-post',
+                          'py27-post',
+                          'base-post'])
         self.assertEqual([x.path for x in job.run],
                          ['playbooks/python27',
                           'playbooks/base'])

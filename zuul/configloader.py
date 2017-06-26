@@ -401,18 +401,15 @@ class JobParser(object):
             job.inheritFrom(parent)
 
         for pre_run_name in as_list(conf.get('pre-run')):
-            full_pre_run_name = os.path.join('playbooks', pre_run_name)
             pre_run = model.PlaybookContext(job.source_context,
-                                            full_pre_run_name)
+                                            pre_run_name)
             job.pre_run = job.pre_run + (pre_run,)
         for post_run_name in as_list(conf.get('post-run')):
-            full_post_run_name = os.path.join('playbooks', post_run_name)
             post_run = model.PlaybookContext(job.source_context,
-                                             full_post_run_name)
+                                             post_run_name)
             job.post_run = (post_run,) + job.post_run
         if 'run' in conf:
-            run_name = os.path.join('playbooks', conf['run'])
-            run = model.PlaybookContext(job.source_context, run_name)
+            run = model.PlaybookContext(job.source_context, conf['run'])
             job.run = (run,)
         else:
             if not project_pipeline:
