@@ -64,6 +64,7 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         self.streamer = None
         self.stop_streamer = False
         self.streaming_data = ''
+        self.test_streaming_event = threading.Event()
 
     def stopStreamer(self):
         self.stop_streamer = True
@@ -79,6 +80,7 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
 
         req = '%s\n' % build_uuid
         s.sendall(req.encode('utf-8'))
+        self.test_streaming_event.set()
 
         while not self.stop_streamer:
             data = s.recv(2048)
@@ -130,6 +132,7 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         )
         streamer_thread.start()
         self.addCleanup(self.stopStreamer)
+        self.test_streaming_event.wait()
 
         # Allow the job to complete, which should close the streaming
         # connection (and terminate the thread) as well since the log file
@@ -142,11 +145,10 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         # Now that the job is finished, the log file has been closed by the
         # job and deleted. However, we still have a file handle to it, so we
         # can make sure that we read the entire contents at this point.
-        file_contents = logfile.readlines()
+        # Compact the returned lines into a single string for easy comparison.
+        file_contents = ''.join(logfile.readlines())
         logfile.close()
 
-        # Compact the returned lines into a single string for easy comparison.
-        orig = ''.join(file_contents)
-        self.log.debug("\n\nFile contents: %s\n\n", orig)
+        self.log.debug("\n\nFile contents: %s\n\n", file_contents)
         self.log.debug("\n\nStreamed: %s\n\n", self.streaming_data)
-        self.assertEqual(orig, self.streaming_data)
+        self.assertEqual(file_contents, self.streaming_data)
