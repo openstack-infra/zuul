@@ -21,13 +21,9 @@ import pwd
 import re
 import select
 import socket
+import socketserver
 import threading
 import time
-
-try:
-    import SocketServer as ss  # python 2.x
-except ImportError:
-    import socketserver as ss  # python 3
 
 
 class Log(object):
@@ -39,7 +35,7 @@ class Log(object):
         self.size = self.stat.st_size
 
 
-class RequestHandler(ss.BaseRequestHandler):
+class RequestHandler(socketserver.BaseRequestHandler):
     '''
     Class to handle a single log streaming request.
 
@@ -165,7 +161,7 @@ class RequestHandler(ss.BaseRequestHandler):
                     return False
 
 
-class CustomForkingTCPServer(ss.ForkingTCPServer):
+class CustomForkingTCPServer(socketserver.ForkingTCPServer):
     '''
     Custom version that allows us to drop privileges after port binding.
     '''
@@ -174,7 +170,7 @@ class CustomForkingTCPServer(ss.ForkingTCPServer):
         self.jobdir_root = kwargs.pop('jobdir_root')
         # For some reason, setting custom attributes does not work if we
         # call the base class __init__ first. Wha??
-        ss.ForkingTCPServer.__init__(self, *args, **kwargs)
+        socketserver.ForkingTCPServer.__init__(self, *args, **kwargs)
 
     def change_privs(self):
         '''
@@ -190,7 +186,7 @@ class CustomForkingTCPServer(ss.ForkingTCPServer):
 
     def server_bind(self):
         self.allow_reuse_address = True
-        ss.ForkingTCPServer.server_bind(self)
+        socketserver.ForkingTCPServer.server_bind(self)
         if self.user:
             self.change_privs()
 
