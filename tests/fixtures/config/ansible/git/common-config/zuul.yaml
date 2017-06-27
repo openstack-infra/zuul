@@ -51,8 +51,8 @@
 
 - job:
     name: python27
-    pre-run: pre
-    post-run: post
+    pre-run: playbooks/pre
+    post-run: playbooks/post
     vars:
       flagpath: '{{zuul._test.test_root}}/{{zuul.uuid}}.flag'
     roles:
@@ -75,4 +75,4 @@
 
 - job:
     name: hello
-    post-run: hello-post
+    post-run: playbooks/hello-post
