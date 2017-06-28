@@ -237,6 +237,7 @@ class GerritWatcher(threading.Thread):
 class GerritConnection(BaseConnection):
     driver_name = 'gerrit'
     log = logging.getLogger("zuul.GerritConnection")
+    iolog = logging.getLogger("zuul.GerritConnection.io")
     depends_on_re = re.compile(r"^Depends-On: (I[0-9a-f]{40})\s*$",
                                re.MULTILINE | re.IGNORECASE)
     replication_timeout = 300
@@ -631,8 +632,8 @@ class GerritConnection(BaseConnection):
         data = json.loads(lines[0])
         if not data:
             return False
-        self.log.debug("Received data from Gerrit query: \n%s" %
-                       (pprint.pformat(data)))
+        self.iolog.debug("Received data from Gerrit query: \n%s" %
+                         (pprint.pformat(data)))
         return data
 
     def simpleQuery(self, query):
@@ -662,8 +663,8 @@ class GerritConnection(BaseConnection):
 
             if not data:
                 return False, more_changes
-            self.log.debug("Received data from Gerrit query: \n%s" %
-                           (pprint.pformat(data)))
+            self.iolog.debug("Received data from Gerrit query: \n%s" %
+                             (pprint.pformat(data)))
             return data, more_changes
 
         # gerrit returns 500 results by default, so implement paging
@@ -717,14 +718,17 @@ class GerritConnection(BaseConnection):
             stdin.write(stdin_data)
 
         out = stdout.read().decode('utf-8')
-        self.log.debug("SSH received stdout:\n%s" % out)
+        self.iolog.debug("SSH received stdout:\n%s" % out)
 
         ret = stdout.channel.recv_exit_status()
         self.log.debug("SSH exit status: %s" % ret)
 
         err = stderr.read().decode('utf-8')
-        self.log.debug("SSH received stderr:\n%s" % err)
+        if err.strip():
+            self.log.debug("SSH received stderr:\n%s" % err)
+
         if ret:
+            self.log.debug("SSH received stdout:\n%s" % out)
             raise Exception("Gerrit error executing %s" % command)
         return (out, err)
 
