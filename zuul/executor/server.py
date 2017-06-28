@@ -35,7 +35,7 @@ import zuul.ansible
 from zuul.lib import commandsocket
 
 COMMANDS = ['stop', 'pause', 'unpause', 'graceful', 'verbose',
-            'unverbose']
+            'unverbose', 'keep', 'nokeep']
 
 
 class Watchdog(object):
@@ -374,6 +374,8 @@ class ExecutorServer(object):
             graceful=self.graceful,
             verbose=self.verboseOn,
             unverbose=self.verboseOff,
+            keep=self.keep,
+            nokeep=self.nokeep,
         )
 
         self.merge_root = get_default(self.config, 'executor', 'git_dir',
@@ -509,6 +511,12 @@ class ExecutorServer(object):
 
     def verboseOff(self):
         self.verbose = False
+
+    def keep(self):
+        self.keep_jobdirs = True
+
+    def nokeep(self):
+        self.keep_jobdirs = False
 
     def join(self):
         self.update_thread.join()
