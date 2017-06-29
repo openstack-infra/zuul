@@ -87,7 +87,6 @@ class BubblewrapDriver(Driver, WrapperInterface):
         '--dir', '{work_dir}',
         '--bind', '{work_dir}', '{work_dir}',
         '--dev', '/dev',
-        '--dir', '{user_home}',
         '--chdir', '{work_dir}',
         '--unshare-all',
         '--share-net',
@@ -128,7 +127,9 @@ class BubblewrapDriver(Driver, WrapperInterface):
 
         # Need users and groups
         uid = os.getuid()
-        passwd = pwd.getpwuid(uid)
+        passwd = list(pwd.getpwuid(uid))
+        # Replace our user's actual home directory with the work dir.
+        passwd = passwd[:5] + [kwargs['work_dir']] + passwd[6:]
         passwd_bytes = b':'.join(
             ['{}'.format(x).encode('utf8') for x in passwd])
         (passwd_r, passwd_w) = os.pipe()
@@ -150,7 +151,6 @@ class BubblewrapDriver(Driver, WrapperInterface):
         kwargs['gid'] = gid
         kwargs['uid_fd'] = passwd_r
         kwargs['gid_fd'] = group_r
-        kwargs['user_home'] = passwd.pw_dir
         command = [x.format(**kwargs) for x in bwrap_command]
 
         self.log.debug("Bubblewrap command: %s",
