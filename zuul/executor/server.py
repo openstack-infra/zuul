@@ -1282,6 +1282,9 @@ class AnsibleJob(object):
             ssh_auth_sock=env_copy.get('SSH_AUTH_SOCK'))
 
         env_copy['ANSIBLE_CONFIG'] = config_file
+        # NOTE(pabelanger): Default HOME variable to jobdir.work_root, as it is
+        # possible we don't bind mount current zuul user home directory.
+        env_copy['HOME'] = self.jobdir.work_root
 
         with self.proc_lock:
             if self.aborted:
