@@ -932,13 +932,14 @@ class TenantParser(object):
         tenant = model.Tenant(conf['name'])
         tenant.unparsed_config = conf
         unparsed_config = model.UnparsedTenantConfig()
-        config_projects, untrusted_projects = \
+        # tpcs is TenantProjectConfigs
+        config_tpcs, untrusted_tpcs = \
             TenantParser._loadTenantProjects(
                 project_key_dir, connections, conf)
-        for project in config_projects:
-            tenant.addConfigProject(project)
-        for project in untrusted_projects:
-            tenant.addUntrustedProject(project)
+        for tpc in config_tpcs:
+            tenant.addConfigProject(tpc)
+        for tpc in untrusted_tpcs:
+            tenant.addUntrustedProject(tpc)
         tenant.config_projects_config, tenant.untrusted_projects_config = \
             TenantParser._loadTenantInRepoLayouts(merger, connections,
                                                   tenant.config_projects,
@@ -1020,8 +1021,10 @@ class TenantParser(object):
             if project_exclude:
                 project_include = frozenset(project_include - project_exclude)
 
-        project.load_classes = frozenset(project_include)
-        return project
+        tenant_project_config = model.TenantProjectConfig(project)
+        tenant_project_config.load_classes = frozenset(project_include)
+
+        return tenant_project_config
 
     @staticmethod
     def _getProjects(source, conf, current_include):
@@ -1065,21 +1068,22 @@ class TenantParser(object):
 
             current_include = default_include
             for conf_repo in conf_source.get('config-projects', []):
-                projects = TenantParser._getProjects(source, conf_repo,
-                                                     current_include)
-                for project in projects:
+                # tpcs = TenantProjectConfigs
+                tpcs = TenantParser._getProjects(source, conf_repo,
+                                                 current_include)
+                for tpc in tpcs:
                     TenantParser._loadProjectKeys(
-                        project_key_dir, source_name, project)
-                    config_projects.append(project)
+                        project_key_dir, source_name, tpc.project)
+                    config_projects.append(tpc)
 
             current_include = frozenset(default_include - set(['pipeline']))
             for conf_repo in conf_source.get('untrusted-projects', []):
-                projects = TenantParser._getProjects(source, conf_repo,
-                                                     current_include)
-                for project in projects:
+                tpcs = TenantParser._getProjects(source, conf_repo,
+                                                 current_include)
+                for tpc in tpcs:
                     TenantParser._loadProjectKeys(
-                        project_key_dir, source_name, project)
-                    untrusted_projects.append(project)
+                        project_key_dir, source_name, tpc.project)
+                    untrusted_projects.append(tpc)
 
         return config_projects, untrusted_projects
 
@@ -1192,12 +1196,18 @@ class TenantParser(object):
         return config
 
     @staticmethod
+    def _getLoadClasses(tenant, conf_object):
+        project = conf_object['_source_context'].project
+        tpc = tenant.project_configs[project.canonical_name]
+        return tpc.load_classes
+
+    @staticmethod
     def _parseLayoutItems(layout, tenant, data, scheduler, connections,
                           skip_pipelines=False, skip_semaphores=False):
         if not skip_pipelines:
             for config_pipeline in data.pipelines:
-                classes = config_pipeline['_source_context'].\
-                    project.load_classes
+                classes = TenantParser._getLoadClasses(
+                    tenant, config_pipeline)
                 if 'pipeline' not in classes:
                     continue
                 layout.addPipeline(PipelineParser.fromYaml(
@@ -1205,7 +1215,7 @@ class TenantParser(object):
                     scheduler, config_pipeline))
 
         for config_nodeset in data.nodesets:
-            classes = config_nodeset['_source_context'].project.load_classes
+            classes = TenantParser._getLoadClasses(tenant, config_nodeset)
             if 'nodeset' not in classes:
                 continue
             with configuration_exceptions('nodeset', config_nodeset):
@@ -1213,13 +1223,13 @@ class TenantParser(object):
                     layout, config_nodeset))
 
         for config_secret in data.secrets:
-            classes = config_secret['_source_context'].project.load_classes
+            classes = TenantParser._getLoadClasses(tenant, config_secret)
             if 'secret' not in classes:
                 continue
             layout.addSecret(SecretParser.fromYaml(layout, config_secret))
 
         for config_job in data.jobs:
-            classes = config_job['_source_context'].project.load_classes
+            classes = TenantParser._getLoadClasses(tenant, config_job)
             if 'job' not in classes:
                 continue
             with configuration_exceptions('job', config_job):
@@ -1228,14 +1238,14 @@ class TenantParser(object):
 
         if not skip_semaphores:
             for config_semaphore in data.semaphores:
-                classes = config_semaphore['_source_context'].\
-                    project.load_classes
+                classes = TenantParser._getLoadClasses(
+                    tenant, config_semaphore)
                 if 'semaphore' not in classes:
                     continue
                 layout.addSemaphore(SemaphoreParser.fromYaml(config_semaphore))
 
         for config_template in data.project_templates:
-            classes = config_template['_source_context'].project.load_classes
+            classes = TenantParser._getLoadClasses(tenant, config_template)
             if 'project-template' not in classes:
                 continue
             layout.addProjectTemplate(ProjectTemplateParser.fromYaml(
@@ -1249,10 +1259,11 @@ class TenantParser(object):
             # each of the project stanzas.  Each one may be (should
             # be!) from a different repo, so filter them according to
             # the include/exclude rules before parsing them.
-            filtered_projects = [
-                p for p in config_projects if
-                'project' in p['_source_context'].project.load_classes
-            ]
+            filtered_projects = []
+            for config_project in config_projects:
+                classes = TenantParser._getLoadClasses(tenant, config_project)
+                if 'project' in classes:
+                    filtered_projects.append(config_project)
 
             if not filtered_projects:
                 continue

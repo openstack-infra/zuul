@@ -331,9 +331,6 @@ class Project(object):
         self.foreign = foreign
         self.unparsed_config = None
         self.unparsed_branch_config = {}  # branch -> UnparsedTenantConfig
-        # Configuration object classes to include or exclude when
-        # loading zuul config files.
-        self.load_classes = frozenset()
 
     def __str__(self):
         return self.name
@@ -1998,6 +1995,19 @@ class ProjectPipelineConfig(object):
         self.merge_mode = None
 
 
+class TenantProjectConfig(object):
+    """A project in the context of a tenant.
+
+    A Project is globally unique in the system, however, when used in
+    a tenant, some metadata about the project local to the tenant is
+    stored in a TenantProjectConfig.
+    """
+
+    def __init__(self, project):
+        self.project = project
+        self.load_classes = set()
+
+
 class ProjectConfig(object):
     # Represents a project cofiguration
     def __init__(self, name):
@@ -2009,6 +2019,7 @@ class ProjectConfig(object):
 
 
 class UnparsedAbideConfig(object):
+
     """A collection of yaml lists that has not yet been parsed into objects.
 
     An Abide is a collection of tenants.
@@ -2356,6 +2367,9 @@ class Tenant(object):
         # The unparsed config from those projects.
         self.untrusted_projects_config = None
         self.semaphore_handler = SemaphoreHandler()
+        # Metadata about projects for this tenant
+        # canonical project name -> TenantProjectConfig
+        self.project_configs = {}
 
         # A mapping of project names to projects.  project_name ->
         # VALUE where VALUE is a further dictionary of
@@ -2363,17 +2377,21 @@ class Tenant(object):
         self.projects = {}
         self.canonical_hostnames = set()
 
-    def _addProject(self, project):
+    def _addProject(self, tpc):
         """Add a project to the project index
 
-        :arg Project project: The project to add.
+        :arg TenantProjectConfig tpc: The TenantProjectConfig (with
+        associated project) to add.
+
         """
+        project = tpc.project
         self.canonical_hostnames.add(project.canonical_hostname)
         hostname_dict = self.projects.setdefault(project.name, {})
         if project.canonical_hostname in hostname_dict:
             raise Exception("Project %s is already in project index" %
                             (project,))
         hostname_dict[project.canonical_hostname] = project
+        self.project_configs[project.canonical_name] = tpc
 
     def getProject(self, name):
         """Return a project given its name.
@@ -2420,13 +2438,13 @@ class Tenant(object):
         raise Exception("Project %s is neither trusted nor untrusted" %
                         (project,))
 
-    def addConfigProject(self, project):
-        self.config_projects.append(project)
-        self._addProject(project)
+    def addConfigProject(self, tpc):
+        self.config_projects.append(tpc.project)
+        self._addProject(tpc)
 
-    def addUntrustedProject(self, project):
-        self.untrusted_projects.append(project)
-        self._addProject(project)
+    def addUntrustedProject(self, tpc):
+        self.untrusted_projects.append(tpc.project)
+        self._addProject(tpc)
 
     def getSafeAttributes(self):
         return Attributes(name=self.name)
