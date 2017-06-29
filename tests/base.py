@@ -2139,6 +2139,8 @@ class ZuulTestCase(BaseTestCase):
         # Make sure we set up an RSA key for the project so that we
         # don't spend time generating one:
 
+        if isinstance(project, dict):
+            project = list(project.keys())[0]
         key_root = os.path.join(self.state_root, 'keys')
         if not os.path.isdir(key_root):
             os.mkdir(key_root, 0o700)

@@ -617,3 +617,17 @@ class TestRoles(ZuulTestCase):
         self.assertHistory([
             dict(name='project-test', result='SUCCESS', changes='1,1 2,1'),
         ])
+
+
+class TestShadow(ZuulTestCase):
+    tenant_config_file = 'config/shadow/main.yaml'
+
+    def test_shadow(self):
+        # Test that a repo is allowed to shadow another's job definitions.
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='test1', result='SUCCESS', changes='1,1'),
+            dict(name='test2', result='SUCCESS', changes='1,1'),
+        ])

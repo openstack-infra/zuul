@@ -1,0 +1,10 @@
+- job:
+    name: base
+
+- job:
+    name: test1
+    parent: base
+
+- job:
+    name: test2
+    parent: base

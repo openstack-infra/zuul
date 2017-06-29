@@ -2006,6 +2006,7 @@ class TenantProjectConfig(object):
     def __init__(self, project):
         self.project = project
         self.load_classes = set()
+        self.shadow_projects = set()
 
 
 class ProjectConfig(object):
@@ -2129,8 +2130,8 @@ class UnparsedTenantConfig(object):
 class Layout(object):
     """Holds all of the Pipelines."""
 
-    def __init__(self):
-        self.tenant = None
+    def __init__(self, tenant):
+        self.tenant = tenant
         self.project_configs = {}
         self.project_templates = {}
         self.pipelines = OrderedDict()
@@ -2159,6 +2160,18 @@ class Layout(object):
         prior_jobs = [j for j in self.getJobs(job.name) if
                       j.source_context.project !=
                       job.source_context.project]
+        # Unless the repo is permitted to shadow another.  If so, and
+        # the job we are adding is from a repo that is permitted to
+        # shadow the one with the older jobs, skip adding this job.
+        job_project = job.source_context.project
+        job_tpc = self.tenant.project_configs[job_project.canonical_name]
+        skip_add = False
+        for prior_job in prior_jobs[:]:
+            prior_project = prior_job.source_context.project
+            if prior_project in job_tpc.shadow_projects:
+                prior_jobs.remove(prior_job)
+                skip_add = True
+
         if prior_jobs:
             raise Exception("Job %s in %s is not permitted to shadow "
                             "job %s in %s" % (
@@ -2166,11 +2179,13 @@ class Layout(object):
                                 job.source_context.project,
                                 prior_jobs[0],
                                 prior_jobs[0].source_context.project))
-
+        if skip_add:
+            return False
         if job.name in self.jobs:
             self.jobs[job.name].append(job)
         else:
             self.jobs[job.name] = [job]
+        return True
 
     def addNodeSet(self, nodeset):
         if nodeset.name in self.nodesets:
