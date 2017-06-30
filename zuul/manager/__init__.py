@@ -401,7 +401,8 @@ class PipelineManager(object):
                 self.log.exception("Exception while canceling build %s "
                                    "for change %s" % (build, item.change))
             finally:
-                old_build_set.layout.tenant.semaphore_handler.release(
+                tenant = old_build_set.item.pipeline.layout.tenant
+                tenant.semaphore_handler.release(
                     old_build_set.item, build.job)
 
             if not was_running:
