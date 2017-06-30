@@ -201,8 +201,7 @@ class CallbackModule(default.CallbackModule):
             stdout_lines = zuul_filter_result(result._result)
             if is_localhost:
                 for line in stdout_lines:
-                    ts, ln = (x.strip() for x in line.split(' | ', 1))
-                    self._log("localhost | %s " % ln, ts=ts)
+                    self._log("localhost | %s " % line.strip())
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
         self._process_result_for_localhost(result)
