@@ -686,7 +686,8 @@ class GithubConnection(BaseConnection):
         headers = {'Accept': 'application/vnd.github.korra-preview'}
 
         # Create a repo object
-        repository = github.repository(owner, project)
+        repository = github.repository(owner, proj)
+
         # Build up a URL
         url = repository._build_url('collaborators', login, 'permission',
                                     base_url=repository._api)
