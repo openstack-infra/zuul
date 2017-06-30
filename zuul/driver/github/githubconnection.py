@@ -427,7 +427,7 @@ class GithubConnection(BaseConnection):
             data = {'iat': now, 'exp': expiry, 'iss': self.app_id}
             app_token = jwt.encode(data,
                                    self.app_key,
-                                   algorithm='RS256')
+                                   algorithm='RS256').decode('utf-8')
 
             url = ACCESS_TOKEN_URL % installation_id
             headers = {'Accept': PREVIEW_JSON_ACCEPT,
