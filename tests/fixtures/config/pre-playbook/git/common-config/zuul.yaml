@@ -1,0 +1,18 @@
+- pipeline:
+    name: check
+    manager: independent
+    allow-secrets: true
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+- job:
+    name: python27
+    pre-run: playbooks/pre
+    post-run: playbooks/post

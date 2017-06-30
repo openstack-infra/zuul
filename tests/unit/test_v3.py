@@ -465,6 +465,31 @@ class TestAnsible(AnsibleZuulTestCase):
             self.assertEqual(f.read(), "test-username test-password")
 
 
+class TestPrePlaybooks(AnsibleZuulTestCase):
+    # A temporary class to hold new tests while others are disabled
+
+    tenant_config_file = 'config/pre-playbook/main.yaml'
+
+    def test_pre_playbook_fail(self):
+        # Test that we run the post playbooks (but not the actual
+        # playbook) when a pre-playbook fails.
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        build = self.getJobFromHistory('python27')
+        self.assertIsNone(build.result)
+        self.assertIn('RETRY_LIMIT', A.messages[0])
+        flag_path = os.path.join(self.test_root, build.uuid +
+                                 '.main.flag')
+        self.assertFalse(os.path.exists(flag_path))
+        pre_flag_path = os.path.join(self.test_root, build.uuid +
+                                     '.pre.flag')
+        self.assertFalse(os.path.exists(pre_flag_path))
+        post_flag_path = os.path.join(self.test_root, build.uuid +
+                                      '.post.flag')
+        self.assertTrue(os.path.exists(post_flag_path))
+
+
 class TestBrokenConfig(ZuulTestCase):
     # Test that we get an appropriate syntax error if we start with a
     # broken config.

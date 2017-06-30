@@ -891,6 +891,7 @@ class AnsibleJob(object):
                 # These should really never fail, so return None and have
                 # zuul try again
                 pre_failed = True
+                success = False
                 break
 
         if not pre_failed:
