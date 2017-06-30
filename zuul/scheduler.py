@@ -49,9 +49,9 @@ class ManagementEvent(object):
     def wait(self, timeout=None):
         self._wait_event.wait(timeout)
         if self._exc_info:
-            # http://python3porting.com/differences.html#raise
-            e, v, t = self._exc_info
-            raise e(v).with_traceback(t)
+            # sys.exc_info returns (type, value, traceback)
+            type_, exception_instance, traceback = self._exc_info
+            raise exception_instance.with_traceback(traceback)
         return self._wait_event.is_set()
 
 
