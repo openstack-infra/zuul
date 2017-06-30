@@ -27,7 +27,10 @@ class ActionModule(normal.ActionModule):
                 or self._task.delegate_to == 'localhost'
                 or (self._task.delegate_to
                     and self._task.delegate_to.startswtih('127.'))):
-            return dict(
-                failed=True,
-                msg="Executing local code is prohibited")
+            if self._task.action == 'stat':
+                paths._fail_if_unsafe(self._task.args['path'])
+            else:
+                return dict(
+                    failed=True,
+                    msg="Executing local code is prohibited")
         return super(ActionModule, self).run(tmp, task_vars)
