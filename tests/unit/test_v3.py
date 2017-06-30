@@ -67,6 +67,89 @@ class TestMultipleTenants(AnsibleZuulTestCase):
                          "not affect tenant one")
 
 
+class TestFinal(ZuulTestCase):
+
+    tenant_config_file = 'config/final/main.yaml'
+
+    def test_final_variant_ok(self):
+        # test clean usage of final parent job
+        in_repo_conf = textwrap.dedent(
+            """
+            - project:
+                name: org/project
+                check:
+                  jobs:
+                    - job-final
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(A.patchsets[-1]['approvals'][0]['value'], '1')
+
+    def test_final_variant_error(self):
+        # test misuse of final parent job
+        in_repo_conf = textwrap.dedent(
+            """
+            - project:
+                name: org/project
+                check:
+                  jobs:
+                    - job-final:
+                        vars:
+                          dont_override_this: bar
+            """)
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        # The second patch tried to override some variables.
+        # Thus it should fail.
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(A.patchsets[-1]['approvals'][0]['value'], '-1')
+        self.assertIn('Unable to modify final job', A.messages[0])
+
+    def test_final_inheritance(self):
+        # test misuse of final parent job
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test
+                parent: job-final
+
+            - project:
+                name: org/project
+                check:
+                  jobs:
+                    - project-test
+            """)
+
+        in_repo_playbook = textwrap.dedent(
+            """
+            - hosts: all
+              tasks: []
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf,
+                     'playbooks/project-test.yaml': in_repo_playbook}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        # The second patch tried to override some variables.
+        # Thus it should fail.
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(A.patchsets[-1]['approvals'][0]['value'], '-1')
+        self.assertIn('Unable to inherit from final job', A.messages[0])
+
+
 class TestInRepoConfig(ZuulTestCase):
     # A temporary class to hold new tests while others are disabled
 

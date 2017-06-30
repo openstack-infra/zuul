@@ -438,7 +438,7 @@ starting with very basic jobs which describe characteristics that all
 jobs on the system should have, progressing through stages of
 specialization before arriving at a particular job.  A job may inherit
 from any other job in any project (however, if the other job is marked
-as ``final``, some attributes may not be overidden).
+as :attr:`job.final`, jobs may not inherit from it).
 
 A job with no parent is called a *base job* and may only be defined in
 a :term:`config-project`.  Every other job must have a parent, and so
@@ -452,7 +452,8 @@ Subsequent job definitions with the same name are called variants.
 These may have different selection criteria which indicate to Zuul
 that, for instance, the job should behave differently on a different
 git branch.  Unlike inheritance, all job variants must be defined in
-the same project.
+the same project.  Some attributes of jobs marked :attr:`job.final`
+may not be overidden
 
 When Zuul decides to run a job, it performs a process known as
 freezing the job.  Because any number of job variants may be
@@ -528,6 +529,14 @@ Here is an example of two job definitions:
       by Zuul, but it is used by the zuul-sphinx extension to Sphinx
       to auto-document Zuul jobs (in which case it is interpreted as
       ReStructuredText.
+
+   .. attr:: final
+      :default: false
+
+      To prevent other jobs from inheriting from this job, and also to
+      prevent changing execution-related attributes when this job is
+      specified in a project's pipeline, set this attribute to
+      ``true``.
 
    .. attr:: success-message
       :default: SUCCESS

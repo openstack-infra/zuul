@@ -917,6 +917,10 @@ class Job(object):
         if not isinstance(other, Job):
             raise Exception("Job unable to inherit from %s" % (other,))
 
+        if other.final:
+            raise Exception("Unable to inherit from final job %s" %
+                            (repr(other),))
+
         # copy all attributes
         for k in self.inheritable_attributes:
             if (other._get(k) is not None):
