@@ -13,6 +13,7 @@
 # under the License.
 
 import collections
+import datetime
 import json
 import logging
 import os
@@ -34,6 +35,7 @@ import zuul.merger.merger
 import zuul.ansible
 from zuul.lib import commandsocket
 
+BUFFER_LINES_FOR_SYNTAX = 200
 COMMANDS = ['stop', 'pause', 'unpause', 'graceful', 'verbose',
             'unverbose', 'keep', 'nokeep']
 DEFAULT_FINGER_PORT = 79
@@ -1314,13 +1316,16 @@ class AnsibleJob(object):
                 env=env_copy,
             )
 
+        syntax_buffer = []
         ret = None
         if timeout:
             watchdog = Watchdog(timeout, self._ansibleTimeout,
                                 ("Ansible timeout exceeded",))
             watchdog.start()
         try:
-            for line in iter(self.proc.stdout.readline, b''):
+            for idx, line in enumerate(iter(self.proc.stdout.readline, b'')):
+                if idx < BUFFER_LINES_FOR_SYNTAX:
+                    syntax_buffer.append(line)
                 line = line[:1024].rstrip()
                 self.log.debug("Ansible output: %s" % (line,))
             self.log.debug("Ansible output terminated")
@@ -1343,6 +1348,18 @@ class AnsibleJob(object):
         elif ret == -9:
             # Received abort request.
             return (self.RESULT_ABORTED, None)
+        elif ret == 4:
+            # Ansible could not parse the yaml.
+            self.log.debug("Ansible parse error")
+            # TODO(mordred) If/when we rework use of logger in ansible-playbook
+            # we'll want to change how this works to use that as well. For now,
+            # this is what we need to do.
+            with open(self.jobdir.job_output_file, 'a') as job_output:
+                job_output.write("{now} | ANSIBLE PARSE ERROR\n".format(
+                    now=datetime.datetime.now()))
+                for line in syntax_buffer:
+                    job_output.write("{now} | {line}".format(
+                        now=datetime.datetime.now(), line=line))
 
         return (self.RESULT_NORMAL, ret)
 
