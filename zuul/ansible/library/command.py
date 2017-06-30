@@ -396,6 +396,7 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
         self.log("Error Executing CMD:%s Exception:%s" % (clean_args, to_native(e)))
         self.fail_json(rc=e.errno, msg=to_native(e), cmd=clean_args)
     except Exception:
+        e = get_exception()
         self.log("Error Executing CMD:%s Exception:%s" % (clean_args, to_native(traceback.format_exc())))
         self.fail_json(rc=257, msg=to_native(e), exception=traceback.format_exc(), cmd=clean_args)
 
