@@ -187,6 +187,9 @@ class JobDir(object):
         os.makedirs(self.ansible_root)
         ssh_dir = os.path.join(self.work_root, '.ssh')
         os.mkdir(ssh_dir, 0o700)
+        self.result_data_file = os.path.join(self.work_root, 'results.json')
+        with open(self.result_data_file, 'w'):
+            pass
         self.known_hosts = os.path.join(ssh_dir, 'known_hosts')
         self.inventory = os.path.join(self.ansible_root, 'inventory.yaml')
         self.playbooks = []  # The list of candidate playbooks
@@ -835,12 +838,22 @@ class AnsibleJob(object):
         self.job.sendWorkStatus(0, 100)
 
         result = self.runPlaybooks(args)
+        data = self.getResultData()
+        result_data = json.dumps(dict(result=result,
+                                      data=data))
+        self.log.debug("Sending result: %s" % (result_data,))
+        self.job.sendWorkComplete(result_data)
 
-        if result is None:
-            self.job.sendWorkFail()
-            return
-        result = dict(result=result)
-        self.job.sendWorkComplete(json.dumps(result))
+    def getResultData(self):
+        data = {}
+        try:
+            with open(self.jobdir.result_data_file) as f:
+                file_data = f.read()
+                if file_data:
+                    data = json.loads(file_data)
+        except Exception:
+            self.log.exception("Unable to load result data:")
+        return data
 
     def doMergeChanges(self, merger, items, repo_state):
         ret = merger.mergeChanges(items, repo_state=repo_state)
@@ -1185,7 +1198,8 @@ class AnsibleJob(object):
         all_vars['zuul']['executor'] = dict(
             hostname=self.executor_server.hostname,
             src_root=self.jobdir.src_root,
-            log_root=self.jobdir.log_root)
+            log_root=self.jobdir.log_root,
+            result_data_file=self.jobdir.result_data_file)
 
         nodes = self.getHostList(args)
         inventory = make_inventory_dict(nodes, args['groups'], all_vars)
@@ -1277,6 +1291,7 @@ class AnsibleJob(object):
         env_copy.update(self.ssh_agent.env)
         env_copy['LOGNAME'] = 'zuul'
         env_copy['ZUUL_JOB_OUTPUT_FILE'] = self.jobdir.job_output_file
+        env_copy['ZUUL_JOBDIR'] = self.jobdir.root
         pythonpath = env_copy.get('PYTHONPATH')
         if pythonpath:
             pythonpath = [pythonpath]

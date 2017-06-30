@@ -1077,6 +1077,7 @@ class Build(object):
         self.uuid = uuid
         self.url = None
         self.result = None
+        self.result_data = {}
         self.build_set = None
         self.execute_time = time.time()
         self.start_time = None
@@ -1095,7 +1096,9 @@ class Build(object):
                 (self.uuid, self.job.name, self.worker))
 
     def getSafeAttributes(self):
-        return Attributes(uuid=self.uuid)
+        return Attributes(uuid=self.uuid,
+                          result=self.result,
+                          result_data=self.result_data)
 
 
 class Worker(object):
@@ -1626,6 +1629,8 @@ class QueueItem(object):
         url = None
         if pattern:
             url = self.formatUrlPattern(pattern, job, build)
+        if not url:
+            url = build.result_data.get('zuul', {}).get('log_url')
         if not url:
             url = build.url or job.name
         return (result, url)

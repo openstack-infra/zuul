@@ -298,7 +298,7 @@ class ExecutorClient(object):
         build.parameters = params
 
         if job.name == 'noop':
-            self.sched.onBuildCompleted(build, 'SUCCESS')
+            self.sched.onBuildCompleted(build, 'SUCCESS', {})
             return build
 
         gearman_job = gear.TextJob('executor:execute', json.dumps(params),
@@ -386,9 +386,10 @@ class ExecutorClient(object):
                     result = 'RETRY_LIMIT'
                 else:
                     build.retry = True
+            result_data = data.get('data', {})
             self.log.info("Build %s complete, result %s" %
                           (job, result))
-            self.sched.onBuildCompleted(build, result)
+            self.sched.onBuildCompleted(build, result, result_data)
             # The test suite expects the build to be removed from the
             # internal dict after it's added to the report queue.
             del self.builds[job.unique]

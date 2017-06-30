@@ -1,0 +1,22 @@
+- pipeline:
+    name: check
+    manager: independent
+    allow-secrets: true
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+- job:
+    name: data-return
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - data-return

@@ -273,10 +273,11 @@ class Scheduler(threading.Thread):
         self.wake_event.set()
         self.log.debug("Done adding start event for build: %s" % build)
 
-    def onBuildCompleted(self, build, result):
+    def onBuildCompleted(self, build, result, result_data):
         self.log.debug("Adding complete event for build: %s result: %s" % (
             build, result))
         build.end_time = time.time()
+        build.result_data = result_data
         # Note, as soon as the result is set, other threads may act
         # upon this, even though the event hasn't been fully
         # processed.  Ensure that any other data from the event (eg,
