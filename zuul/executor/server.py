@@ -215,6 +215,8 @@ class JobDir(object):
             pass
         self.known_hosts = os.path.join(ssh_dir, 'known_hosts')
         self.inventory = os.path.join(self.ansible_root, 'inventory.yaml')
+        self.secrets = os.path.join(self.ansible_root, 'secrets.yaml')
+        self.has_secrets = False
         self.playbooks = []  # The list of candidate playbooks
         self.playbook = None  # A pointer to the candidate we have chosen
         self.pre_playbooks = []
@@ -767,7 +769,7 @@ class AnsibleJob(object):
     def _execute(self):
         args = json.loads(self.job.arguments)
         self.log.debug("Beginning job %s for ref %s" %
-                       (self.job.name, args['vars']['zuul']['ref']))
+                       (self.job.name, args['zuul']['ref']))
         self.log.debug("Args: %s" % (self.job.arguments,))
         self.log.debug("Job root: %s" % (self.jobdir.root,))
         tasks = []
@@ -1171,9 +1173,12 @@ class AnsibleJob(object):
         jobdir_playbook.roles_path.append(role_path)
 
     def prepareAnsibleFiles(self, args):
-        all_vars = dict(args['vars'])
+        all_vars = args['vars'].copy()
         # TODO(mordred) Hack to work around running things with python3
         all_vars['ansible_python_interpreter'] = '/usr/bin/python2'
+        if 'zuul' in all_vars:
+            raise Exception("Defining vars named 'zuul' is not allowed")
+        all_vars['zuul'] = args['zuul'].copy()
         all_vars['zuul']['executor'] = dict(
             hostname=self.executor_server.hostname,
             src_root=self.jobdir.src_root,
@@ -1191,6 +1196,15 @@ class AnsibleJob(object):
             for node in nodes:
                 for key in node['host_keys']:
                     known_hosts.write('%s\n' % key)
+
+        secrets = args['secrets'].copy()
+        if secrets:
+            if 'zuul' in secrets:
+                raise Exception("Defining secrets named 'zuul' is not allowed")
+            with open(self.jobdir.secrets, 'w') as secrets_yaml:
+                secrets_yaml.write(
+                    yaml.safe_dump(secrets, default_flow_style=False))
+            self.jobdir.has_secrets = True
 
     def writeAnsibleConfig(self, jobdir_playbook):
         trusted = jobdir_playbook.trusted
@@ -1372,6 +1386,8 @@ class AnsibleJob(object):
             verbose = '-v'
 
         cmd = ['ansible-playbook', verbose, playbook.path]
+        if self.jobdir.has_secrets:
+            cmd.extend(['-e', '@' + self.jobdir.secrets])
 
         if success is not None:
             cmd.extend(['-e', 'success=%s' % str(bool(success))])
