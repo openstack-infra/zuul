@@ -5061,6 +5061,46 @@ class TestSemaphore(ZuulTestCase):
         self.executor_server.release()
         self.waitUntilSettled()
 
+    def test_semaphore_new_patchset(self):
+        "Test new patchset with job semaphores"
+        self.executor_server.hold_jobs_in_build = True
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        check_pipeline = tenant.layout.pipelines['check']
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.assertFalse('test-semaphore' in
+                         tenant.semaphore_handler.semaphores)
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertTrue('test-semaphore' in
+                        tenant.semaphore_handler.semaphores)
+        semaphore = tenant.semaphore_handler.semaphores['test-semaphore']
+        self.assertEqual(len(semaphore), 1)
+
+        A.addPatchset()
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(2))
+        self.waitUntilSettled()
+
+        self.assertTrue('test-semaphore' in
+                        tenant.semaphore_handler.semaphores)
+        semaphore = tenant.semaphore_handler.semaphores['test-semaphore']
+        self.assertEqual(len(semaphore), 1)
+
+        items = check_pipeline.getAllItems()
+        self.assertEqual(items[0].change.number, '1')
+        self.assertEqual(items[0].change.patchset, '2')
+        self.assertTrue(items[0].live)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        # The semaphore should be released
+        self.assertFalse('test-semaphore' in
+                         tenant.semaphore_handler.semaphores)
+
     def test_semaphore_reconfigure(self):
         "Test reconfigure with job semaphores"
         self.executor_server.hold_jobs_in_build = True
