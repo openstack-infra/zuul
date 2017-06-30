@@ -30,7 +30,9 @@ class Log(object):
 
     def __init__(self, path):
         self.path = path
-        self.file = open(path)
+        # The logs are written as binary encoded utf-8, which is what we
+        # send over the wire.
+        self.file = open(path, 'rb')
         self.stat = os.stat(path)
         self.size = self.stat.st_size
 
@@ -127,7 +129,7 @@ class RequestHandler(socketserver.BaseRequestHandler):
             chunk = log.file.read(4096)
             if not chunk:
                 break
-            self.request.send(chunk.encode('utf-8'))
+            self.request.send(chunk)
         return log
 
     def follow_log(self, log):
@@ -136,7 +138,7 @@ class RequestHandler(socketserver.BaseRequestHandler):
             while True:
                 chunk = log.file.read(4096)
                 if chunk:
-                    self.request.send(chunk.encode('utf-8'))
+                    self.request.send(chunk)
                 else:
                     break
 
