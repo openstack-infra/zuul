@@ -148,7 +148,7 @@ class Console(object):
         self.logfile_name = LOG_STREAM_FILE.format(log_uuid=log_uuid)
 
     def __enter__(self):
-        self.logfile = open(self.logfile_name, 'a', 0)
+        self.logfile = open(self.logfile_name, 'ab', buffering=0)
         return self
 
     def __exit__(self, etype, value, tb):
@@ -161,7 +161,7 @@ class Console(object):
         # consistent.
         ts = datetime.datetime.now()
         outln = '%s | %s' % (ts, ln)
-        self.logfile.write(outln)
+        self.logfile.write(outln.encode('utf-8'))
 
 
 def follow(fd, log_uuid):
