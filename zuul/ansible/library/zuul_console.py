@@ -59,7 +59,7 @@ def daemonize():
 class Console(object):
     def __init__(self, path):
         self.path = path
-        self.file = open(path)
+        self.file = open(path, 'rb')
         self.stat = os.stat(path)
         self.size = self.stat.st_size
 
