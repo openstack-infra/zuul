@@ -517,10 +517,10 @@ class ExecutorServer(object):
         self.verbose = False
 
     def keep(self):
-        self.keep_jobdirs = True
+        self.keep_jobdir = True
 
     def nokeep(self):
-        self.keep_jobdirs = False
+        self.keep_jobdir = False
 
     def join(self):
         self.update_thread.join()
