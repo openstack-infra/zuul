@@ -1365,7 +1365,7 @@ class AnsibleJob(object):
                 job_output.write("{now} | ANSIBLE PARSE ERROR\n".format(
                     now=datetime.datetime.now()))
                 for line in syntax_buffer:
-                    job_output.write("{now} | {line}".format(
+                    job_output.write("{now} | {line}\n".format(
                         now=datetime.datetime.now(), line=line))
 
         return (self.RESULT_NORMAL, ret)
