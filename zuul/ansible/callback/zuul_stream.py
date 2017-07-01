@@ -226,7 +226,7 @@ class CallbackModule(default.CallbackModule):
         self._clean_results(result._result, result._task.action)
         self._process_result_for_localhost(result)
 
-        if result._task.action in ('include', 'include_role'):
+        if result._task.action in ('include', 'include_role', 'setup'):
             return
 
         if result._result.get('changed', False):
