@@ -172,6 +172,9 @@ class CallbackModule(default.CallbackModule):
                 ip = play_vars[host].get(
                     'ansible_host', play_vars[host].get(
                         'ansible_inventory_host'))
+                if ip in ('localhost', '127.0.0.1'):
+                    # Don't try to stream from localhost
+                    continue
                 streamer = threading.Thread(
                     target=self._read_log, args=(
                         host, ip, log_id, task_name, hosts))
