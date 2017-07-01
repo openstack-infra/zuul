@@ -172,8 +172,8 @@ def follow(fd, log_uuid):
             if not line:
                 break
             _log_lines.append(line)
-            if not line.endswith('\n'):
-                line += '\n'
+            if not line.endswith(b'\n'):
+                line += b'\n'
                 newline_warning = True
             console.addLine(line)
         if newline_warning:
