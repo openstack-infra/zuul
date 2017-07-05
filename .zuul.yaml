@@ -7,3 +7,8 @@
         - tox-linters
         - tox-py35
         - tox-tarball
+        - zuul-tox-docs
+        - zuul-tox-cover
+        - zuul-tox-linters
+        - zuul-tox-py35
+        - zuul-tox-tarball
