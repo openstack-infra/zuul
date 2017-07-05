@@ -54,17 +54,13 @@ Client connection information for gearman.
 zookeeper
 """""""""
 
+.. NOTE: this is a white lie at this point, since only the scheduler
+   uses this, however, we expect other components to use it later, so
+   it's reasonable for admins to plan for this now.
+
 **hosts**
   A list of zookeeper hosts for Zuul to use when communicating with
   Nodepool.  ``hosts=zk1.example.com,zk2.example.com,zk3.example.com``
-
-zuul
-""""
-
-**status_url**
-  URL that will be posted in Zuul comments made to changes when
-  starting jobs for a change.  Used by zuul-scheduler only.
-  ``status_url=https://zuul.example.com/status``
 
 
 Scheduler
@@ -125,6 +121,11 @@ webapp
   Zuul will cache the status.json file for this many seconds. This is an
   optional value and ``1`` is used by default.
   ``status_expiry=1``
+
+**status_url**
+  URL that will be posted in Zuul comments made to changes when
+  starting jobs for a change.  Used by zuul-scheduler only.
+  ``status_url=https://zuul.example.com/status``
 
 scheduler
 """""""""
