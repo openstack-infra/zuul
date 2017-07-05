@@ -43,10 +43,13 @@ class GithubReporter(BaseReporter):
         """Report on an event."""
         # order is important for github branch protection.
         # A status should be set before a merge attempt
-        if (self._commit_status is not None and
-            hasattr(item.change, 'patchset') and
-            item.change.patchset is not None):
-            self.setCommitStatus(item)
+        if self._commit_status is not None:
+            if (hasattr(item.change, 'patchset') and
+                    item.change.patchset is not None):
+                self.setCommitStatus(item)
+            elif (hasattr(item.change, 'newrev') and
+                    item.change.newrev is not None):
+                self.setCommitStatus(item)
         # Comments, labels, and merges can only be performed on pull requests.
         # If the change is not a pull request (e.g. a push) skip them.
         if hasattr(item.change, 'number'):
@@ -71,7 +74,10 @@ class GithubReporter(BaseReporter):
 
     def setCommitStatus(self, item):
         project = item.change.project.name
-        sha = item.change.patchset
+        if hasattr(item.change, 'patchset'):
+            sha = item.change.patchset
+        elif hasattr(item.change, 'newrev'):
+            sha = item.change.newrev
         context = '%s/%s' % (item.pipeline.layout.tenant.name,
                              item.pipeline.name)
         state = self._commit_status

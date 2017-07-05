@@ -868,6 +868,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         self.upstream_root = upstream_root
         self.merge_failure = False
         self.merge_not_allowed_count = 0
+        self.reports = []
 
     def openFakePullRequest(self, project, branch, subject, files=[]):
         self.pr_number += 1
@@ -980,10 +981,14 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         return ['master']
 
     def commentPull(self, project, pr_number, message):
+        # record that this got reported
+        self.reports.append((project, pr_number, 'comment'))
         pull_request = self.pull_requests[pr_number - 1]
         pull_request.addComment(message)
 
     def mergePull(self, project, pr_number, commit_message='', sha=None):
+        # record that this got reported
+        self.reports.append((project, pr_number, 'merge'))
         pull_request = self.pull_requests[pr_number - 1]
         if self.merge_failure:
             raise Exception('Pull request was not merged')
@@ -999,6 +1004,8 @@ class FakeGithubConnection(githubconnection.GithubConnection):
 
     def setCommitStatus(self, project, sha, state, url='', description='',
                         context='default', user='zuul'):
+        # record that this got reported
+        self.reports.append((project, sha, 'status', (user, context, state)))
         # always insert a status to the front of the list, to represent
         # the last status provided for a commit.
         # Since we're bypassing github API, which would require a user, we
@@ -1015,10 +1022,14 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         })
 
     def labelPull(self, project, pr_number, label):
+        # record that this got reported
+        self.reports.append((project, pr_number, 'label', label))
         pull_request = self.pull_requests[pr_number - 1]
         pull_request.addLabel(label)
 
     def unlabelPull(self, project, pr_number, label):
+        # record that this got reported
+        self.reports.append((project, pr_number, 'unlabel', label))
         pull_request = self.pull_requests[pr_number - 1]
         pull_request.removeLabel(label)
 
