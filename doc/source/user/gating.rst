@@ -1,16 +1,18 @@
 :title: Project Gating
 
+.. _project_gating:
+
 Project Gating
 ==============
 
 Traditionally, many software development projects merge changes from
 developers into the repository, and then identify regressions
 resulting from those changes (perhaps by running a test suite with a
-continuous integration system such as Jenkins), followed by more
-patches to fix those bugs.  When the mainline of development is
-broken, it can be very frustrating for developers and can cause lost
-productivity, particularly so when the number of contributors or
-contributions is large.
+continuous integration system), followed by more patches to fix those
+bugs.  When the mainline of development is broken, it can be very
+frustrating for developers and can cause lost productivity,
+particularly so when the number of contributors or contributions is
+large.
 
 The process of gating attempts to prevent changes that introduce
 regressions from being merged.  This keeps the mainline of development
@@ -24,9 +26,6 @@ comprehensive test suites, that process does not scale very well, and
 is not the best use of a developer's time.  Zuul can help automate
 this process, with a particular emphasis on ensuring large numbers of
 changes are tested correctly.
-
-Zuul was designed to handle the workflow of the OpenStack project, but
-can be used with any project.
 
 Testing in parallel
 -------------------
@@ -42,18 +41,17 @@ projects, it may take hours to test changes, and it is easy for
 developers to create changes at a rate faster than they can be tested
 and merged.
 
-Zuul's DependentPipelineManager allows for parallel execution of test
-jobs for gating while ensuring changes are tested correctly, exactly
-as if they had been tested one at a time.  It does this by performing
-speculative execution of test jobs; it assumes that all jobs will
-succeed and tests them in parallel accordingly.  If they do succeed,
-they can all be merged.  However, if one fails, then changes that were
-expecting it to succeed are re-tested without the failed change.  In
-the best case, as many changes as execution contexts are available may
-be tested in parallel and merged at once.  In the worst case, changes
-are tested one at a time (as each subsequent change fails, changes
-behind it start again).  In practice, the OpenStack project observes
-something closer to the best case.
+Zuul's :ref:`dependent pipeline manager<dependent_pipeline_manager>`
+allows for parallel execution of test jobs for gating while ensuring
+changes are tested correctly, exactly as if they had been tested one
+at a time.  It does this by performing speculative execution of test
+jobs; it assumes that all jobs will succeed and tests them in parallel
+accordingly.  If they do succeed, they can all be merged.  However, if
+one fails, then changes that were expecting it to succeed are
+re-tested without the failed change.  In the best case, as many
+changes as execution contexts are available may be tested in parallel
+and merged at once.  In the worst case, changes are tested one at a
+time (as each subsequent change fails, changes behind it start again).
 
 For example, if a core developer approves five changes in rapid
 succession::
@@ -220,80 +218,34 @@ changes entering the gate are going to be tested with the version of
 other projects currently enqueued in the gate (since they will
 eventually be merged and might introduce breaking features).
 
-Such relationships can be defined in Zuul configuration by registering
-a job in a DependentPipeline of several projects. Whenever a change
-enters such a pipeline, it will create references for the other
-projects as well.  As an example, given a main project ``acme`` and a
-plugin ``plugin`` you can define a job ``acme-tests`` which should be
-run for both projects:
+Such relationships can be defined in Zuul configuration by placing
+projects in a shared queue within a dependent pipeline.  Whenever
+changes for any project enter a pipeline with such a shared queue,
+they are tested together, such that the commits for the changes ahead
+in the queue are automatically present in the jobs for the changes
+behind them.  See :ref:`project` for more details.
 
-.. code-block:: yaml
+A given dependent pipeline may have as many shared change queues as
+necessary, so groups of related projects may share a change queue
+without interfering with unrelated projects.  Independent pipelines do
+not use shared change queues, however, they may still be used to test
+changes across projects using cross-project dependencies.
 
-  pipelines:
-    - name: gate
-      manager: DependentPipelineManager
+.. _dependencies:
 
-  projects::
-    - name: acme
-      gate:
-       - acme-tests
-    - name: plugin
-      gate:
-       - acme-tests  # Register job again
+Cross-Project Dependencies
+--------------------------
 
-Whenever a change enters the ``gate`` pipeline queue, Zuul creates a reference
-for it.  For each subsequent change, an additional reference is created for the
-changes ahead in the queue.  As a result, you will always be able to fetch the
-future state of your project dependencies for each change in the queue.
+Zuul permits users to specify dependencies across projects.  Using a
+special footer in Git commit messages, users may specify that a change
+depends on another change in any repository known to Zuul.
 
-Based on the pipeline and project definitions above, three changes are
-inserted in the ``gate`` pipeline with the associated references:
+Zuul's cross-project dependencies behave like a directed acyclic graph
+(DAG), like git itself, to indicate a one-way dependency relationship
+between changes in different git repositories.  Change A may depend on
+B, but B may not depend on A.
 
-  ========  ======= ====== =========
-  Change    Project Branch Zuul Ref.
-  ========  ======= ====== =========
-  Change 1  acme    master master/Z1
-  Change 2  plugin  stable stable/Z2
-  Change 3  plugin  master master/Z3
-  ========  ======= ====== =========
-
-Since the changes enter a DependentPipelineManager pipeline, Zuul creates
-additional references:
-
-  ====== ======= ========= =============================
-  Change Project Zuul Ref. Description
-  ====== ======= ========= =============================
-  1      acme    master/Z1 acme master + change 1
-  ------ ------- --------- -----------------------------
-  2      acme    master/Z2 acme master + change 1
-  2      plugin  stable/Z2 plugin stable + change 2
-  ------ ------- --------- -----------------------------
-  3      acme    master/Z3 acme master + change 1
-  3      plugin  stable/Z3 plugin stable + change 2
-  3      plugin  master/Z3 plugin master + change 3
-  ====== ======= ========= =============================
-
-In order to test change 3, you would clone both repositories and simply
-fetch the Z3 reference for each combination of project/branch you are
-interested in testing. For example, you could fetch ``acme`` with
-master/Z3 and ``plugin`` with master/Z3 and thus have ``acme`` with
-change 1 applied as the expected state for when Change 3 would merge.
-When your job fetches several repositories without changes ahead in the
-queue, they may not have a Z reference in which case you can just check
-out the branch.
-
-
-Cross Repository Dependencies
------------------------------
-
-Zuul permits users to specify dependencies across repositories.  Using
-a special header in Git commit messages, Users may specify that a
-change depends on another change in any repository known to Zuul.
-
-Zuul's cross-repository dependencies (CRD) behave like a directed
-acyclic graph (DAG), like git itself, to indicate a one-way dependency
-relationship between changes in different git repositories.  Change A
-may depend on B, but B may not depend on A.
+.. TODO: update for v3 crd syntax
 
 To use them, include ``Depends-On: <gerrit-change-id>`` in the footer of
 a commit message.  Use the full Change-ID ('I' + 40 characters).
@@ -302,10 +254,10 @@ a commit message.  Use the full Change-ID ('I' + 40 characters).
 Dependent Pipeline
 ~~~~~~~~~~~~~~~~~~
 
-When Zuul sees CRD changes, it serializes them in the usual manner when
-enqueuing them into a pipeline.  This means that if change A depends on
-B, then when they are added to a dependent pipeline, B will appear first
-and A will follow:
+When Zuul sees changes with cross-project dependencies, it serializes
+them in the usual manner when enqueuing them into a pipeline.  This
+means that if change A depends on B, then when they are added to a
+dependent pipeline, B will appear first and A will follow:
 
 .. blockdiag::
   :align: center
@@ -333,25 +285,26 @@ it will not be possible for A to merge until B does.
 
 .. note::
 
-   If changes with CRD do not share a change queue then Zuul is unable
-   to enqueue them together, and the first will be required to merge
-   before the second is enqueued.
+   If changes with cross-project dependencies do not share a change
+   queue then Zuul is unable to enqueue them together, and the first
+   will be required to merge before the second is enqueued.
 
 Independent Pipeline
 ~~~~~~~~~~~~~~~~~~~~
 
 When changes are enqueued into an independent pipeline, all of the
-related dependencies (both normal git-dependencies that come from parent
-commits as well as CRD changes) appear in a dependency graph, as in a
-dependent pipeline. This means that even in an independent pipeline,
-your change will be tested with its dependencies.  So changes that were
-previously unable to be fully tested until a related change landed in a
-different repository may now be tested together from the start.
+related dependencies (both normal git-dependencies that come from
+parent commits as well as cross-project dependencies) appear in a
+dependency graph, as in a dependent pipeline. This means that even in
+an independent pipeline, your change will be tested with its
+dependencies.  Changes that were previously unable to be fully tested
+until a related change landed in a different repository may now be
+tested together from the start.
 
-All of the changes are still independent (so you will note that the
-whole pipeline does not share a graph as in a dependent pipeline), but
-for each change tested, all of its dependencies are visually connected
-to it, and they are used to construct the git references that Zuul uses
+All of the changes are still independent (you will note that the whole
+pipeline does not share a graph as in a dependent pipeline), but for
+each change tested, all of its dependencies are visually connected to
+it, and they are used to construct the git repositories that Zuul uses
 when testing.
 
 When looking at this graph on the status page, you will note that the
@@ -382,6 +335,8 @@ dependencies.  Even if one of the dependencies is also being tested, it
 will show up as a grey dot when used as a dependency, but separately and
 additionally will appear as its own red or green dot for its test.
 
+
+.. TODO: relevant for v3?
 
 Multiple Changes
 ~~~~~~~~~~~~~~~~
@@ -462,10 +417,12 @@ the commit message footer.
     B, C <- A
   }
 
+.. TODO: update for v3
+
 Cycles
 ~~~~~~
 
-If a cycle is created by use of CRD, Zuul will abort its work very
-early.  There will be no message in Gerrit and no changes that are part
-of the cycle will be enqueued into any pipeline.  This is to protect
-Zuul from infinite loops.
+If a cycle is created by use of cross-project dependencies, Zuul will
+abort its work very early.  There will be no message in Gerrit and no
+changes that are part of the cycle will be enqueued into any pipeline.
+This is to protect Zuul from infinite loops.
