@@ -36,7 +36,11 @@ The supported options in zuul.conf connections are:
   The canonical hostname associated with the git repos on the Gerrit
   server.  Defaults to the value of **server**.  This is used to
   identify repos from this connection by name and in preparing repos
-  on the filesystem for use by jobs.
+  on the filesystem for use by jobs.  This only needs to be set in the
+  case where the canonical public location of the git repos is not the
+  same as the Gerrit server and it would be incorrect to refer to
+  those repos in configuration and build scripts using the Gerrit
+  server hostname.
   ``canonical_hostname=git.example.com``
 
 **port**
