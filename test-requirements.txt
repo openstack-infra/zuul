@@ -11,5 +11,6 @@ python-subunit
 testrepository>=0.0.17
 testtools>=0.9.32
 sphinxcontrib-programoutput
+oslosphinx
 mock
 PyMySQL
