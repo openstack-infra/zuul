@@ -106,8 +106,6 @@ webapp
   Port on which the webapp is listening (default: 8001).
   ``port=8008``
 
-.. TODO: move this to webapp (currently in 'zuul')
-
 **status_expiry**
   Zuul will cache the status.json file for this many seconds. This is an
   optional value and ``1`` is used by default.
