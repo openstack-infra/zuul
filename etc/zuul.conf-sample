@@ -11,12 +11,14 @@ start=true
 ;ssl_key=/path/to/server.key
 
 [zuul]
-layout_config=/etc/zuul/layout.yaml
+status_url=https://zuul.example.com/status
+zookeeper_hosts=127.0.0.1:2181
+
+[scheduler]
+tenant_config=/etc/zuul/main.yaml
 log_config=/etc/zuul/logging.conf
 pidfile=/var/run/zuul/zuul.pid
 state_dir=/var/lib/zuul
-status_url=https://jenkins.example.com/zuul/status
-zookeeper_hosts=127.0.0.1:2181
 
 [merger]
 git_dir=/var/lib/zuul/git
