@@ -61,7 +61,7 @@ class Executor(zuul.cmd.ZuulApp):
         self.args = parser.parse_args()
 
     def send_command(self, cmd):
-        state_dir = get_default(self.config, 'zuul', 'state_dir',
+        state_dir = get_default(self.config, 'executor', 'state_dir',
                                 '/var/lib/zuul', expand_user=True)
         path = os.path.join(state_dir, 'executor.socket')
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -111,9 +111,9 @@ class Executor(zuul.cmd.ZuulApp):
 
         self.user = get_default(self.config, 'executor', 'user', 'zuul')
 
-        if self.config.has_option('zuul', 'jobroot_dir'):
+        if self.config.has_option('executor', 'jobroot_dir'):
             self.jobroot_dir = os.path.expanduser(
-                self.config.get('zuul', 'jobroot_dir'))
+                self.config.get('executor', 'jobroot_dir'))
             if not os.path.isdir(self.jobroot_dir):
                 print("Invalid jobroot_dir: {jobroot_dir}".format(
                     jobroot_dir=self.jobroot_dir))

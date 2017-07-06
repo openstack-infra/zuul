@@ -80,7 +80,7 @@ def main():
     server.read_config()
     server.configure_connections(source_only=True)
 
-    state_dir = get_default(server.config, 'zuul', 'state_dir',
+    state_dir = get_default(server.config, 'merger', 'state_dir',
                             '/var/lib/zuul', expand_user=True)
     test_fn = os.path.join(state_dir, 'test')
     try:
