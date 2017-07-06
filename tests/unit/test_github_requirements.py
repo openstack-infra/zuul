@@ -240,13 +240,10 @@ class TestGithubRequirements(ZuulTestCase):
 
         # The first negative review from derp should not cause it to be
         # enqueued
-        for i in range(1, 4):
-            submitted_at = time.time() - 72 * 60 * 60
-            A.addReview('derp', 'CHANGES_REQUESTED',
-                        submitted_at)
-            self.fake_github.emitEvent(comment)
-            self.waitUntilSettled()
-            self.assertEqual(len(self.history), 0)
+        A.addReview('derp', 'CHANGES_REQUESTED')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
 
         # A positive review from derp should cause it to be enqueued
         A.addReview('derp', 'APPROVED')
