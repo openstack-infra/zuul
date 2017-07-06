@@ -15,10 +15,12 @@ import logging
 import subprocess
 import tempfile
 import testtools
+import time
 import os
 
 from zuul.driver import bubblewrap
 from zuul.executor.server import SshAgent
+from tests.base import iterate_timeout
 
 
 class TestBubblewrap(testtools.TestCase):
@@ -61,12 +63,15 @@ class TestBubblewrap(testtools.TestCase):
         po = bwrap.getPopen(work_dir=work_dir,
                             ansible_dir=ansible_dir,
                             ssh_auth_sock=ssh_agent.env['SSH_AUTH_SOCK'])
-        leak_time = 7
+        leak_time = 60
         # Use hexadecimal notation to avoid false-positive
         true_proc = po(['bash', '-c', 'sleep 0x%X & disown' % leak_time])
         self.assertEqual(0, true_proc.wait())
         cmdline = "sleep\x000x%X\x00" % leak_time
-        sleep_proc = [pid for pid in os.listdir("/proc") if
-                      os.path.isfile("/proc/%s/cmdline" % pid) and
-                      open("/proc/%s/cmdline" % pid).read() == cmdline]
-        self.assertEqual(len(sleep_proc), 0, "Processes leaked")
+        for x in iterate_timeout(30, "process to exit"):
+            sleep_proc = [pid for pid in os.listdir("/proc") if
+                          os.path.isfile("/proc/%s/cmdline" % pid) and
+                          open("/proc/%s/cmdline" % pid).read() == cmdline]
+            if not sleep_proc:
+                break
+            time.sleep(1)
