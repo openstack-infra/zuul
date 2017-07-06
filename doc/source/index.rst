@@ -15,6 +15,8 @@ Contents:
 
    quick-start
    gating
+   configuration
+   encryption
    connections
    triggers
    reporters
