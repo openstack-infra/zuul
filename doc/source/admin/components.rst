@@ -125,7 +125,6 @@ webapp
 
 scheduler
 """""""""
-.. TODO: rename this to 'scheduler' (currently 'zuul') and update to match these docs
 
 **tenant_config**
   Path to tenant config file.

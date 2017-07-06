@@ -59,7 +59,7 @@ class Scheduler(zuul.cmd.ZuulApp):
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
         self.log.debug("Reconfiguration triggered")
         self.read_config()
-        self.setup_logging('zuul', 'log_config')
+        self.setup_logging('scheduler', 'log_config')
         try:
             self.sched.reconfigure(self.config)
         except Exception:
@@ -140,7 +140,7 @@ class Scheduler(zuul.cmd.ZuulApp):
             self.config.getboolean('gearman_server', 'start')):
             self.start_gear_server()
 
-        self.setup_logging('zuul', 'log_config')
+        self.setup_logging('scheduler', 'log_config')
         self.log = logging.getLogger("zuul.Scheduler")
 
         self.sched = zuul.scheduler.Scheduler(self.config)
@@ -207,7 +207,7 @@ def main():
     if scheduler.args.validate:
         sys.exit(scheduler.test_config())
 
-    pid_fn = get_default(scheduler.config, 'zuul', 'pidfile',
+    pid_fn = get_default(scheduler.config, 'scheduler', 'pidfile',
                          '/var/run/zuul-scheduler/zuul-scheduler.pid',
                          expand_user=True)
     pid = pid_file_module.TimeoutPIDLockFile(pid_fn, 10)
