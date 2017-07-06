@@ -150,8 +150,8 @@ class Scheduler(zuul.cmd.ZuulApp):
         nodepool = zuul.nodepool.Nodepool(self.sched)
 
         zookeeper = zuul.zk.ZooKeeper()
-        zookeeper_hosts = get_default(self.config, 'zuul', 'zookeeper_hosts',
-                                      '127.0.0.1:2181')
+        zookeeper_hosts = get_default(self.config, 'zookeeper',
+                                      'hosts', '127.0.0.1:2181')
 
         zookeeper.connect(zookeeper_hosts)
 

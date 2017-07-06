@@ -51,6 +51,13 @@ Client connection information for gearman.
 **ssl_key**
   Optional: An openssl file containing the client private key in PEM format.
 
+zookeeper
+"""""""""
+
+**hosts**
+  A list of zookeeper hosts for Zuul to use when communicating with
+  Nodepool.  ``hosts=zk1.example.com,zk2.example.com,zk3.example.com``
+
 zuul
 """"
 
@@ -58,10 +65,6 @@ zuul
   URL that will be posted in Zuul comments made to changes when
   starting jobs for a change.  Used by zuul-scheduler only.
   ``status_url=https://zuul.example.com/status``
-
-**zookeeper_hosts**
-  A list of zookeeper hosts for Zuul to use when communicating with
-  Nodepool.  ``zookeeper_hosts=zk1.example.com,zk2.example.com,zk3.example.com``
 
 
 Scheduler
