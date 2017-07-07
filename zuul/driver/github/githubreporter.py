@@ -85,8 +85,8 @@ class GithubReporter(BaseReporter):
         url_pattern = self.config.get('status-url')
         if not url_pattern:
             sched_config = self.connection.sched.config
-            if sched_config.has_option('zuul', 'status_url'):
-                url_pattern = sched_config.get('zuul', 'status_url')
+            if sched_config.has_option('webapp', 'status_url'):
+                url_pattern = sched_config.get('webapp', 'status_url')
         url = item.formatUrlPattern(url_pattern) if url_pattern else ''
 
         description = ''

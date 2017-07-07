@@ -14,6 +14,7 @@
 
 import abc
 import logging
+from zuul.lib.config import get_default
 
 
 class BaseReporter(object, metaclass=abc.ABCMeta):
@@ -69,10 +70,8 @@ class BaseReporter(object, metaclass=abc.ABCMeta):
         return ret
 
     def _formatItemReportStart(self, item, with_jobs=True):
-        status_url = ''
-        if self.connection.sched.config.has_option('zuul', 'status_url'):
-            status_url = self.connection.sched.config.get('zuul',
-                                                          'status_url')
+        status_url = get_default(self.connection.sched.config,
+                                 'webapp', 'status_url', '')
         return item.pipeline.start_message.format(pipeline=item.pipeline,
                                                   status_url=status_url)
 
