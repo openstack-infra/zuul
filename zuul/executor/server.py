@@ -739,12 +739,11 @@ class AnsibleJob(object):
                     self.log.exception("Error stopping SSH agent:")
 
     def _execute(self):
-        self.log.debug("Job %s: beginning" % (self.job.unique,))
-        self.log.debug("Job %s: args: %s" % (self.job.unique,
-                                             self.job.arguments,))
-        self.log.debug("Job %s: job root at %s" %
-                       (self.job.unique, self.jobdir.root))
         args = json.loads(self.job.arguments)
+        self.log.debug("Beginning job %s for ref %s" %
+                       (self.job.name, args['vars']['zuul']['ref']))
+        self.log.debug("Args: %s" % (self.job.arguments,))
+        self.log.debug("Job root: %s" % (self.jobdir.root,))
         tasks = []
         projects = set()
 
