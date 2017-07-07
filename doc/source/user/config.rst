@@ -99,7 +99,7 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
 +1, or if at least one of them fails, a -1::
 
   - pipeline:
-    name: check
+      name: check
       manager: independent
       trigger:
         my_gerrit:
