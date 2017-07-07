@@ -164,7 +164,7 @@ class Pipeline(object):
             items.extend(shared_queue.queue)
         return items
 
-    def formatStatusJSON(self):
+    def formatStatusJSON(self, websocket_url=None):
         j_pipeline = dict(name=self.name,
                           description=self.description)
         j_queues = []
@@ -181,7 +181,7 @@ class Pipeline(object):
                     if j_changes:
                         j_queue['heads'].append(j_changes)
                     j_changes = []
-                j_changes.append(e.formatJSON())
+                j_changes.append(e.formatJSON(websocket_url))
                 if (len(j_changes) > 1 and
                         (j_changes[-2]['remaining_time'] is not None) and
                         (j_changes[-1]['remaining_time'] is not None)):
@@ -1673,7 +1673,7 @@ class QueueItem(object):
             url = default_url or build.url or job.name
         return (result, url)
 
-    def formatJSON(self):
+    def formatJSON(self, websocket_url=None):
         ret = {}
         ret['active'] = self.active
         ret['live'] = self.live
@@ -1710,11 +1710,20 @@ class QueueItem(object):
             remaining = None
             result = None
             build_url = None
+            finger_url = None
             report_url = None
             worker = None
             if build:
                 result = build.result
-                build_url = build.url
+                finger_url = build.url
+                # TODO(tobiash): add support for custom web root
+                urlformat = 'static/stream.html?' \
+                            'uuid={build.uuid}&' \
+                            'logfile=console.log'
+                if websocket_url:
+                    urlformat += '&websocket_url={websocket_url}'
+                build_url = urlformat.format(
+                    build=build, websocket_url=websocket_url)
                 (unused, report_url) = self.formatJobResult(job)
                 if build.start_time:
                     if build.end_time:
@@ -1740,6 +1749,7 @@ class QueueItem(object):
                 'elapsed_time': elapsed,
                 'remaining_time': remaining,
                 'url': build_url,
+                'finger_url': finger_url,
                 'report_url': report_url,
                 'result': result,
                 'voting': job.voting,

@@ -385,6 +385,10 @@ web
 
      port=9000
 
+**websocket_url**
+  Base URL on which the websocket service is exposed, if different than the
+  base URL of the web app.
+
 Operation
 ~~~~~~~~~
 

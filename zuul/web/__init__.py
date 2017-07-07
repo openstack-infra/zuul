@@ -18,12 +18,15 @@
 import asyncio
 import json
 import logging
+import os
 import uvloop
 
 import aiohttp
 from aiohttp import web
 
 import zuul.rpcclient
+
+STATIC_DIR = os.path.join(os.path.dirname(__file__), 'static')
 
 
 class LogStreamingHandler(object):
@@ -39,11 +42,11 @@ class LogStreamingHandler(object):
         self.ssl_ca = ssl_ca
 
     def _getPortLocation(self, job_uuid):
-        '''
+        """
         Query Gearman for the executor running the given job.
 
         :param str job_uuid: The job UUID we want to stream.
-        '''
+        """
         # TODO: Fetch the entire list of uuid/file/server/ports once and
         #       share that, and fetch a new list on cache misses perhaps?
         # TODO: Avoid recreating a client for each request.
@@ -55,14 +58,14 @@ class LogStreamingHandler(object):
         return ret
 
     async def _fingerClient(self, ws, server, port, job_uuid):
-        '''
+        """
         Create a client to connect to the finger streamer and pull results.
 
         :param aiohttp.web.WebSocketResponse ws: The websocket response object.
         :param str server: The executor server running the job.
         :param str port: The executor server port.
         :param str job_uuid: The job UUID to stream.
-        '''
+        """
         self.log.debug("Connecting to finger server %s:%s", server, port)
         reader, writer = await asyncio.open_connection(host=server, port=port,
                                                        loop=self.event_loop)
@@ -82,12 +85,12 @@ class LogStreamingHandler(object):
                 return
 
     async def _streamLog(self, ws, request):
-        '''
+        """
         Stream the log for the requested job back to the client.
 
         :param aiohttp.web.WebSocketResponse ws: The websocket response object.
         :param dict request: The client request parameters.
-        '''
+        """
         for key in ('uuid', 'logfile'):
             if key not in request:
                 return (4000, "'{key}' missing from request payload".format(
@@ -112,11 +115,11 @@ class LogStreamingHandler(object):
         return (1000, "No more data")
 
     async def processRequest(self, request):
-        '''
+        """
         Handle a client websocket request for log streaming.
 
         :param aiohttp.web.Request request: The client request.
-        '''
+        """
         try:
             ws = web.WebSocketResponse()
             await ws.prepare(request)
@@ -161,6 +164,8 @@ class ZuulWeb(object):
         self.ssl_key = ssl_key
         self.ssl_cert = ssl_cert
         self.ssl_ca = ssl_ca
+        self.event_loop = None
+        self.term = None
 
     async def _handleWebsocket(self, request):
         handler = LogStreamingHandler(self.event_loop,
@@ -169,7 +174,7 @@ class ZuulWeb(object):
         return await handler.processRequest(request)
 
     def run(self, loop=None):
-        '''
+        """
         Run the websocket daemon.
 
         Because this method can be the target of a new thread, we need to
@@ -178,9 +183,9 @@ class ZuulWeb(object):
         :param loop: The event loop to use. If not supplied, the default main
             thread event loop is used. This should be supplied if ZuulWeb
             is run within a separate (non-main) thread.
-        '''
+        """
         routes = [
-            ('GET', '/console-stream', self._handleWebsocket)
+            ('GET', '/console-stream', self._handleWebsocket),
         ]
 
         self.log.debug("ZuulWeb starting")
@@ -195,6 +200,7 @@ class ZuulWeb(object):
         app = web.Application()
         for method, path, handler in routes:
             app.router.add_route(method, path, handler)
+        app.router.add_static('/static', STATIC_DIR)
         handler = app.make_handler(loop=self.event_loop)
 
         # create the server
@@ -224,7 +230,8 @@ class ZuulWeb(object):
             loop.close()
 
     def stop(self):
-        self.event_loop.call_soon_threadsafe(self.term.set_result, True)
+        if self.event_loop and self.term:
+            self.event_loop.call_soon_threadsafe(self.term.set_result, True)
 
 
 if __name__ == "__main__":
