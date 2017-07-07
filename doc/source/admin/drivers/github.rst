@@ -49,12 +49,12 @@ The supported options in zuul.conf connections are:
 **canonical_hostname**
   The canonical hostname associated with the git repos on the GitHub
   server.  Defaults to the value of **server**.  This is used to
-  identify repos from this connection by name and in preparing repos
-  on the filesystem for use by jobs.  This only needs to be set in the
-  case where the canonical public location of the git repos is not the
-  same as the GitHub server and it would be incorrect to refer to
-  those repos in configuration and build scripts using the GitHub
-  server hostname.
+  identify projects from this connection by name and in preparing
+  repos on the filesystem for use by jobs.  Note that Zuul will still
+  only communicate with the GitHub server identified by **server**;
+  this option is useful if users customarily use a different hostname
+  to clone or pull git repos so that when Zuul places them in the
+  job's working directory, they appear under this directory name.
   ``canonical_hostname=git.example.com``
 
 Trigger Configuration
