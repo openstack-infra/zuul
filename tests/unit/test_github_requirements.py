@@ -256,6 +256,37 @@ class TestGithubRequirements(ZuulTestCase):
         self.assertEqual(self.history[0].name, 'project5-reviewuserstate')
 
     @simple_layout('layouts/requirements-github.yaml', driver='github')
+    def test_pipeline_require_review_comment_masked(self):
+        "Test pipeline requirement: review comments on top of votes"
+
+        A = self.fake_github.openFakePullRequest('org/project5', 'master', 'A')
+        # Add derp to writers
+        A.writers.append('derp')
+        # A comment event that we will keep submitting to trigger
+        comment = A.getCommentAddedEvent('test me')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        # No positive review from derp so should not be enqueued
+        self.assertEqual(len(self.history), 0)
+
+        # The first negative review from derp should not cause it to be
+        # enqueued
+        A.addReview('derp', 'CHANGES_REQUESTED')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+
+        # A positive review is required, so provide it
+        A.addReview('derp', 'APPROVED')
+
+        # Add a comment review on top to make sure we can still enqueue
+        A.addReview('derp', 'COMMENTED')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+        self.assertEqual(self.history[0].name, 'project5-reviewuserstate')
+
+    @simple_layout('layouts/requirements-github.yaml', driver='github')
     def test_require_review_newer_than(self):
 
         A = self.fake_github.openFakePullRequest('org/project6', 'master', 'A')

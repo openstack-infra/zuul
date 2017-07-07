@@ -776,8 +776,19 @@ class GithubConnection(BaseConnection):
                 # if there are multiple reviews per user, keep the newest
                 # note that this breaks the ability to set the 'older-than'
                 # option on a review requirement.
+                # BUT do not keep the latest if it's a 'commented' type and the
+                # previous review was 'approved' or 'changes_requested', as
+                # the GitHub model does not change the vote if a comment is
+                # added after the fact. THANKS GITHUB!
                 if review['grantedOn'] > reviews[user]['grantedOn']:
-                    reviews[user] = review
+                    if (review['type'] == 'commented' and reviews[user]['type']
+                            in ('approved', 'changes_requested')):
+                        self.log.debug("Discarding comment review %s due to "
+                                       "an existing vote %s" % (review,
+                                                                reviews[user]))
+                        pass
+                    else:
+                        reviews[user] = review
 
         return reviews.values()
 
