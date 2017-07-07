@@ -321,9 +321,9 @@ class ExecutorClient(object):
                     make_project_dict(project,
                                       job_project.override_branch))
                 projects.add(project)
-        for item in all_items:
-            if item.change.project not in projects:
-                project = item.change.project
+        for i in all_items:
+            if i.change.project not in projects:
+                project = i.change.project
                 params['projects'].append(make_project_dict(project))
                 projects.add(project)
 
