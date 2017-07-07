@@ -101,6 +101,8 @@ untrusted job content.
 
 .. TODO: describe standard lib and link to published docs for it.
 
+.. _return_values:
+
 Return Values
 -------------
 

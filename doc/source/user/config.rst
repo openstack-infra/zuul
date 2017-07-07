@@ -496,12 +496,21 @@ unless otherwise specified:
   different string.  Default: "FAILURE".
 
 **success-url**
-  When a job succeeds, this URL is reported along with the result.
+  When a job succeeds, this URL is reported along with the result.  If
+  this value is not supplied, Zuul uses the content of the job
+  :ref:`return value <return_values>` **zuul.log_url**.  This is
+  recommended as it allows the code which stores the URL to the job
+  artifacts to report exactly where they were stored.  To override
+  this value, or if it is not set, supply an absolute URL in this
+  field.  If a relative URL is supplied in this field, and
+  **zuul.log_url** is set, then the two will be combined to produce
+  the URL used for the report.  This can be used to specify that
+  certain jobs should "deep link" into the stored job artifacts.
   Default: none.
 
 **failure-url**
   When a job fails, this URL is reported along with the result.
-  Default: none.
+  Otherwise behaves the same as **success-url**.
 
 **hold-following-changes**
   In a dependent pipeline, this option may be used to indicate that no
