@@ -1134,7 +1134,7 @@ class TenantParser(object):
                 job = merger.getFiles(
                     project.source.connection.connection_name,
                     project.name, branch,
-                    files=['.zuul.yaml'])
+                    files=['zuul.yaml', '.zuul.yaml'])
                 job.source_context = model.SourceContext(
                     project, branch, '', False)
                 jobs.append(job)
@@ -1324,15 +1324,16 @@ class ConfigLoader(object):
     def _loadDynamicProjectData(self, config, project, files, trusted):
         if trusted:
             branches = ['master']
-            fn = 'zuul.yaml'
         else:
             branches = project.source.getProjectBranches(project)
-            fn = '.zuul.yaml'
 
         for branch in branches:
             incdata = None
-            data = files.getFile(project.source.connection.connection_name,
-                                 project.name, branch, fn)
+            for fn in ['zuul.yaml', '.zuul.yaml']:
+                data = files.getFile(project.source.connection.connection_name,
+                                     project.name, branch, fn)
+                if data:
+                    break
             if data:
                 source_context = model.SourceContext(project, branch,
                                                      fn, trusted)
