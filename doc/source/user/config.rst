@@ -164,6 +164,17 @@ optional unless otherwise specified):
     For more detail on the theory and operation of Zuul's dependent
     pipeline manager, see: :doc:`gating`.
 
+**allow-secrets**
+  This is a boolean which can be used to prevent jobs which require
+  secrets from running in this pipeline.  Some pipelines run on
+  proposed changes and therefore execute code which has not yet been
+  reviewed.  In such a case, allowing a job to use a secret could
+  result in that secret being exposed.  The default is False, meaning
+  that in order to run jobs with secrets, this must be explicitly
+  enabled on each Pipeline where that is safe.
+
+  For more information, see :ref:`secret`.
+
 **description**
   This field may be used to provide a textual description of the
   pipeline.  It may appear in the status page or in documentation.
