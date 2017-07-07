@@ -922,7 +922,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
             'http://localhost:%s/connection/%s/payload'
             % (port, self.connection_name),
             data=payload, headers=headers)
-        urllib.request.urlopen(req)
+        return urllib.request.urlopen(req)
 
     def getPull(self, project, number):
         pr = self.pull_requests[number - 1]
