@@ -554,7 +554,7 @@ class FakeGithubPullRequest(object):
 
     def __init__(self, github, number, project, branch,
                  subject, upstream_root, files=[], number_of_commits=1,
-                 writers=[], body=''):
+                 writers=[], body=None):
         """Creates a new PR with several commits.
         Sends an event about opened PR."""
         self.github = github
@@ -880,7 +880,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         self.reports = []
 
     def openFakePullRequest(self, project, branch, subject, files=[],
-                            body=''):
+                            body=None):
         self.pr_number += 1
         pull_request = FakeGithubPullRequest(
             self, self.pr_number, project, branch, subject, self.upstream_root,
@@ -1051,7 +1051,11 @@ class FakeGithubConnection(githubconnection.GithubConnection):
                              (self.server, change.project.name,
                               change.number))
         for pr in self.pull_requests:
-            if pattern.search(pr.body):
+            if not pr.body:
+                body = ''
+            else:
+                body = pr.body
+            if pattern.search(body):
                 # Get our version of a pull so that it's a dict
                 pull = self.getPull(pr.project, pr.number)
                 prs.append(pull)

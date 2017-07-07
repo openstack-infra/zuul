@@ -608,6 +608,9 @@ class GithubConnection(BaseConnection):
                                              change.number)
         change.labels = change.pr.get('labels')
         change.body = change.pr.get('body')
+        # ensure body is at least an empty string
+        if not change.body:
+            change.body = ''
 
         if history is None:
             history = []
