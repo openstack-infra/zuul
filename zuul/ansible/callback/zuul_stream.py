@@ -252,6 +252,13 @@ class CallbackModule(default.CallbackModule):
         result_dict = dict(result._result)
 
         self._clean_results(result_dict, result._task.action)
+        if '_zuul_nolog_return' in result_dict:
+            # We have a custom zuul module that doesn't want the parameters
+            # from its returned splatted to stdout. This is typically for
+            # modules that are collecting data to be displayed some other way.
+            for key in result_dict.keys():
+                if key != 'changed':
+                    result_dict.pop(key)
 
         if result_dict.get('changed', False):
             status = 'changed'
