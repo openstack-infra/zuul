@@ -547,6 +547,8 @@ class Scheduler(threading.Thread):
                     else:
                         items_to_remove.append(item)
             for item in items_to_remove:
+                self.log.warning(
+                    "Removing item %s during reconfiguration" % (item,))
                 for build in item.current_build_set.getBuilds():
                     builds_to_cancel.append(build)
             for build in builds_to_cancel:
