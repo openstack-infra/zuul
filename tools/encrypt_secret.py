@@ -13,11 +13,19 @@
 # under the License.
 
 import argparse
+import base64
 import os
 import subprocess
 import sys
 import tempfile
-import urllib
+
+# we to import Request and urlopen differently for python 2 and 3
+try:
+    from urllib.request import Request
+    from urllib.request import urlopen
+except ImportError:
+    from urllib2 import Request
+    from urllib2 import urlopen
 
 DESCRIPTION = """Encrypt a secret for Zuul.
 
@@ -50,9 +58,9 @@ def main():
                         "to standard output.")
     args = parser.parse_args()
 
-    req = urllib.request.Request("%s/keys/%s/%s.pub" % (
+    req = Request("%s/keys/%s/%s.pub" % (
         args.url, args.source, args.project))
-    pubkey = urllib.request.urlopen(req)
+    pubkey = urlopen(req)
 
     if args.infile:
         with open(args.infile) as f:
@@ -70,18 +78,18 @@ def main():
                               pubkey_file.name],
                              stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE)
-        (stdout, stderr) = p.communicate(plaintext)
+        (stdout, stderr) = p.communicate(plaintext.encode("utf-8"))
         if p.returncode != 0:
             raise Exception("Return code %s from openssl" % p.returncode)
-        ciphertext = stdout.encode('base64')
+        ciphertext = base64.b64encode(stdout)
     finally:
         os.unlink(pubkey_file.name)
 
     if args.outfile:
-        with open(args.outfile, "w") as f:
+        with open(args.outfile, "wb") as f:
             f.write(ciphertext)
     else:
-        print(ciphertext)
+        print(ciphertext.decode("utf-8"))
 
 
 if __name__ == '__main__':
