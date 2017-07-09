@@ -1620,7 +1620,7 @@ class QueueItem(object):
                 result = job.success_message
             if job.success_url:
                 pattern = job.success_url
-        elif result == 'FAILURE':
+        else:
             if job.failure_message:
                 result = job.failure_message
             if job.failure_url:

@@ -48,8 +48,13 @@
         Z3QSO1NjbBxWnaHKZYT7nkrJm8AMCgZU0ZArFLpaufKCeiK5ECSsDxic4FIsY1OkWT42qEUfL0Wd
         +150AKGNZpPJnnP3QYY4W/MWcKH/zdO400+zWN52WevbSqZy90tqKDJrBkMl1ydqbuw1E4ZHvIs=
 
+- job:
+    name: base-urls
+    success-url: https://success.example.com/zuul-logs/{build.uuid}/
+    failure-url: https://failure.example.com/zuul-logs/{build.uuid}/
 
 - job:
+    parent: base-urls
     name: python27
     pre-run: playbooks/pre
     post-run: playbooks/post
@@ -74,5 +79,11 @@
         label: ubuntu-xenial
 
 - job:
+    parent: base-urls
     name: hello
     post-run: playbooks/hello-post
+
+- job:
+    parent: python27
+    name: failpost
+    post-run: playbooks/post-broken
