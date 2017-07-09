@@ -204,7 +204,8 @@ class CallbackModule(default.CallbackModule):
         else:
             task_host = result._host.get_name()
             task_hostvars = result._task._variable_manager._hostvars[task_host]
-            if task_hostvars['ansible_host'] in localhost_names:
+            if task_hostvars.get('ansible_host', task_hostvars.get(
+                    'ansible_inventory_host')) in localhost_names:
                 is_localhost = True
 
         if not is_localhost and is_task:
