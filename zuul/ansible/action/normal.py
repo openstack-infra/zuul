@@ -29,6 +29,12 @@ class ActionModule(normal.ActionModule):
                     and self._task.delegate_to.startswtih('127.'))):
             if self._task.action == 'stat':
                 paths._fail_if_unsafe(self._task.args['path'])
+            elif self._task.action == 'file':
+                dest = self._task.args.get(
+                    'path', self._task.args.get(
+                        'dest', self._task.args.get(
+                            'name')))
+                paths._fail_if_unsafe(dest)
             else:
                 return dict(
                     failed=True,
