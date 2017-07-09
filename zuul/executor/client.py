@@ -340,12 +340,6 @@ class ExecutorClient(object):
         build.__gearman_worker = None
         self.builds[uuid] = build
 
-        # NOTE(pabelanger): Rather then looping forever, check to see if job
-        # has passed attempts limit.
-        if item.current_build_set.getTries(job.name) > job.attempts:
-            self.onBuildCompleted(gearman_job, 'RETRY_LIMIT')
-            return build
-
         if pipeline.precedence == zuul.model.PRECEDENCE_NORMAL:
             precedence = gear.PRECEDENCE_NORMAL
         elif pipeline.precedence == zuul.model.PRECEDENCE_HIGH:
@@ -420,7 +414,11 @@ class ExecutorClient(object):
             if result is None:
                 result = data.get('result')
             if result is None:
-                build.retry = True
+                if (build.build_set.getTries(build.job.name) >=
+                    build.job.attempts):
+                    result = 'RETRY_LIMIT'
+                else:
+                    build.retry = True
             self.log.info("Build %s complete, result %s" %
                           (job, result))
             self.sched.onBuildCompleted(build, result)
