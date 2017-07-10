@@ -2306,6 +2306,16 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual('finger://zl.example.com/%s' % status_jobs[2]['uuid'],
                          status_jobs[2]['report_url'])
 
+        # check job dependencies
+        self.assertIsNotNone(status_jobs[0]['dependencies'])
+        self.assertIsNotNone(status_jobs[1]['dependencies'])
+        self.assertIsNotNone(status_jobs[2]['dependencies'])
+        self.assertEqual(len(status_jobs[0]['dependencies']), 0)
+        self.assertEqual(len(status_jobs[1]['dependencies']), 1)
+        self.assertEqual(len(status_jobs[2]['dependencies']), 1)
+        self.assertIn('project-merge', status_jobs[1]['dependencies'])
+        self.assertIn('project-merge', status_jobs[2]['dependencies'])
+
     def test_live_reconfiguration(self):
         "Test that live reconfiguration works"
         self.executor_server.hold_jobs_in_build = True

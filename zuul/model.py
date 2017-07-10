@@ -1695,6 +1695,7 @@ class QueueItem(object):
 
             ret['jobs'].append({
                 'name': job.name,
+                'dependencies': list(job.dependencies),
                 'elapsed_time': elapsed,
                 'remaining_time': remaining,
                 'url': build_url,
