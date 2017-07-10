@@ -108,19 +108,21 @@ class MergeClient(object):
                                timeout=300)
         return job
 
-    def mergeChanges(self, items, build_set, files=None, repo_state=None,
-                     precedence=zuul.model.PRECEDENCE_NORMAL):
+    def mergeChanges(self, items, build_set, files=None, dirs=None,
+                     repo_state=None, precedence=zuul.model.PRECEDENCE_NORMAL):
         data = dict(items=items,
                     files=files,
+                    dirs=dirs,
                     repo_state=repo_state)
         self.submitJob('merger:merge', data, build_set, precedence)
 
-    def getFiles(self, connection_name, project_name, branch, files,
+    def getFiles(self, connection_name, project_name, branch, files, dirs=[],
                  precedence=zuul.model.PRECEDENCE_HIGH):
         data = dict(connection=connection_name,
                     project=project_name,
                     branch=branch,
-                    files=files)
+                    files=files,
+                    dirs=dirs)
         job = self.submitJob('merger:cat', data, None, precedence)
         return job
 

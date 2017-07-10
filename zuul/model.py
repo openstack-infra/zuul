@@ -1848,7 +1848,9 @@ class Ref(object):
         return set()
 
     def updatesConfig(self):
-        if 'zuul.yaml' in self.files or '.zuul.yaml' in self.files:
+        if 'zuul.yaml' in self.files or '.zuul.yaml' in self.files or \
+           [True for fn in self.files if fn.startswith("zuul.d/") or
+            fn.startswith(".zuul.d/")]:
             return True
         return False
 

@@ -1,0 +1,7 @@
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - project-test1
+        - project1-project2-integration:
+            dependencies: project-test1

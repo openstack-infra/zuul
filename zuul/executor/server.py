@@ -641,7 +641,8 @@ class ExecutorServer(object):
         task.wait()
         with self.merger_lock:
             files = self.merger.getFiles(args['connection'], args['project'],
-                                         args['branch'], args['files'])
+                                         args['branch'], args['files'],
+                                         args.get('dirs', []))
         result = dict(updated=True,
                       files=files,
                       zuul_url=self.zuul_url)
@@ -651,6 +652,7 @@ class ExecutorServer(object):
         args = json.loads(job.arguments)
         with self.merger_lock:
             ret = self.merger.mergeChanges(args['items'], args.get('files'),
+                                           args.get('dirs', []),
                                            args.get('repo_state'))
         result = dict(merged=(ret is not None),
                       zuul_url=self.zuul_url)
