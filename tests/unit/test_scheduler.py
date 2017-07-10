@@ -2289,22 +2289,40 @@ class TestScheduler(ZuulTestCase):
                             status_jobs.append(job)
         self.assertEqual('project-merge', status_jobs[0]['name'])
         # TODO(mordred) pull uuids from self.builds
-        self.assertEqual('finger://zl.example.com/%s' % status_jobs[0]['uuid'],
-                         status_jobs[0]['url'])
+        self.assertEqual(
+            'finger://{hostname}/{uuid}'.format(
+                hostname=self.executor_server.hostname,
+                uuid=status_jobs[0]['uuid']),
+            status_jobs[0]['url'])
         # TOOD(mordred) configure a success-url on the base job
-        self.assertEqual('finger://zl.example.com/%s' % status_jobs[0]['uuid'],
-                         status_jobs[0]['report_url'])
+        self.assertEqual(
+            'finger://{hostname}/{uuid}'.format(
+                hostname=self.executor_server.hostname,
+                uuid=status_jobs[0]['uuid']),
+            status_jobs[0]['report_url'])
         self.assertEqual('project-test1', status_jobs[1]['name'])
-        self.assertEqual('finger://zl.example.com/%s' % status_jobs[1]['uuid'],
-                         status_jobs[1]['url'])
-        self.assertEqual('finger://zl.example.com/%s' % status_jobs[1]['uuid'],
-                         status_jobs[1]['report_url'])
+        self.assertEqual(
+            'finger://{hostname}/{uuid}'.format(
+                hostname=self.executor_server.hostname,
+                uuid=status_jobs[1]['uuid']),
+            status_jobs[1]['url'])
+        self.assertEqual(
+            'finger://{hostname}/{uuid}'.format(
+                hostname=self.executor_server.hostname,
+                uuid=status_jobs[1]['uuid']),
+            status_jobs[1]['report_url'])
 
         self.assertEqual('project-test2', status_jobs[2]['name'])
-        self.assertEqual('finger://zl.example.com/%s' % status_jobs[2]['uuid'],
-                         status_jobs[2]['url'])
-        self.assertEqual('finger://zl.example.com/%s' % status_jobs[2]['uuid'],
-                         status_jobs[2]['report_url'])
+        self.assertEqual(
+            'finger://{hostname}/{uuid}'.format(
+                hostname=self.executor_server.hostname,
+                uuid=status_jobs[2]['uuid']),
+            status_jobs[2]['url'])
+        self.assertEqual(
+            'finger://{hostname}/{uuid}'.format(
+                hostname=self.executor_server.hostname,
+                uuid=status_jobs[2]['uuid']),
+            status_jobs[2]['report_url'])
 
     def test_live_reconfiguration(self):
         "Test that live reconfiguration works"
@@ -3577,8 +3595,11 @@ For CI problems and help debugging, contact ci@example.org"""
                 self.assertEqual('project-merge', job['name'])
                 self.assertEqual('gate', job['pipeline'])
                 self.assertEqual(False, job['retry'])
-                self.assertEqual('finger://zl.example.com/%s' % job['uuid'],
-                                 job['url'])
+                self.assertEqual(
+                    'finger://{hostname}/{uuid}'.format(
+                        hostname=self.executor_server.hostname,
+                        uuid=job['uuid']),
+                    job['url'])
                 self.assertEqual(2, len(job['worker']))
                 self.assertEqual(False, job['canceled'])
                 self.assertEqual(True, job['voting'])
@@ -4674,7 +4695,8 @@ class TestSchedulerSuccessURL(ZuulTestCase):
 
         # NOTE: This default URL is currently hard-coded in executor/server.py
         self.assertIn(
-            '- docs-draft-test2 finger://zl.example.com/{uuid}'.format(
+            '- docs-draft-test2 finger://{hostname}/{uuid}'.format(
+                hostname=self.executor_server.hostname,
                 uuid=uuid_test2),
             body[3])
 
