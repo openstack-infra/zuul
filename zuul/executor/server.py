@@ -1079,11 +1079,8 @@ class AnsibleJob(object):
                 for entry in os.listdir(d):
                     self._blockPluginDirs(os.path.join(d, entry))
             return d
-        # We assume the repository itself is a collection of roles
-        if not trusted:
-            for entry in os.listdir(path):
-                self._blockPluginDirs(os.path.join(path, entry))
-        return path
+        # It is neither a bare role, nor a collection of roles
+        raise Exception("Unable to find role in %s" % (path,))
 
     def prepareZuulRole(self, args, role, root, trusted, untrusted):
         self.log.debug("Prepare zuul role for %s" % (role,))
