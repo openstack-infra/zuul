@@ -779,6 +779,7 @@ class Scheduler(threading.Thread):
                 self.log.error("Unable to handle event %s" % event)
             event.done()
         except Exception:
+            self.log.exception("Exception in management event:")
             event.exception(sys.exc_info())
         self.management_event_queue.task_done()
 

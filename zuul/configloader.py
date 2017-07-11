@@ -1167,6 +1167,8 @@ class TenantParser(object):
             # This is important for correct inheritance.
             TenantParser.log.debug("Waiting for cat job %s" % (job,))
             job.wait()
+            TenantParser.log.debug("Cat job %s got files %s" %
+                                   (job, job.files))
             loaded = False
             files = sorted(job.files.keys())
             for conf_root in ['zuul.yaml', '.zuul.yaml', 'zuul.d', '.zuul.d']:
