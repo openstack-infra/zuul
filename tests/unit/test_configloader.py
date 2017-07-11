@@ -38,12 +38,16 @@ class TestTenantSimple(TenantParserTestCase):
                          [x.name for x in tenant.config_projects])
         self.assertEqual(['org/project1', 'org/project2'],
                          [x.name for x in tenant.untrusted_projects])
-        self.assertEqual(self.CONFIG_SET,
-                         tenant.config_projects[0].load_classes)
-        self.assertEqual(self.UNTRUSTED_SET,
-                         tenant.untrusted_projects[0].load_classes)
-        self.assertEqual(self.UNTRUSTED_SET,
-                         tenant.untrusted_projects[1].load_classes)
+
+        project = tenant.config_projects[0]
+        tpc = tenant.project_configs[project.canonical_name]
+        self.assertEqual(self.CONFIG_SET, tpc.load_classes)
+        project = tenant.untrusted_projects[0]
+        tpc = tenant.project_configs[project.canonical_name]
+        self.assertEqual(self.UNTRUSTED_SET, tpc.load_classes)
+        project = tenant.untrusted_projects[1]
+        tpc = tenant.project_configs[project.canonical_name]
+        self.assertEqual(self.UNTRUSTED_SET, tpc.load_classes)
         self.assertTrue('common-config-job' in tenant.layout.jobs)
         self.assertTrue('project1-job' in tenant.layout.jobs)
         self.assertTrue('project2-job' in tenant.layout.jobs)
@@ -70,12 +74,16 @@ class TestTenantOverride(TenantParserTestCase):
                          [x.name for x in tenant.config_projects])
         self.assertEqual(['org/project1', 'org/project2'],
                          [x.name for x in tenant.untrusted_projects])
-        self.assertEqual(self.CONFIG_SET,
-                         tenant.config_projects[0].load_classes)
+        project = tenant.config_projects[0]
+        tpc = tenant.project_configs[project.canonical_name]
+        self.assertEqual(self.CONFIG_SET, tpc.load_classes)
+        project = tenant.untrusted_projects[0]
+        tpc = tenant.project_configs[project.canonical_name]
         self.assertEqual(self.UNTRUSTED_SET - set(['project']),
-                         tenant.untrusted_projects[0].load_classes)
-        self.assertEqual(set(['job']),
-                         tenant.untrusted_projects[1].load_classes)
+                         tpc.load_classes)
+        project = tenant.untrusted_projects[1]
+        tpc = tenant.project_configs[project.canonical_name]
+        self.assertEqual(set(['job']), tpc.load_classes)
         self.assertTrue('common-config-job' in tenant.layout.jobs)
         self.assertTrue('project1-job' in tenant.layout.jobs)
         self.assertTrue('project2-job' in tenant.layout.jobs)
@@ -102,12 +110,17 @@ class TestTenantGroups(TenantParserTestCase):
                          [x.name for x in tenant.config_projects])
         self.assertEqual(['org/project1', 'org/project2'],
                          [x.name for x in tenant.untrusted_projects])
-        self.assertEqual(self.CONFIG_SET,
-                         tenant.config_projects[0].load_classes)
+        project = tenant.config_projects[0]
+        tpc = tenant.project_configs[project.canonical_name]
+        self.assertEqual(self.CONFIG_SET, tpc.load_classes)
+        project = tenant.untrusted_projects[0]
+        tpc = tenant.project_configs[project.canonical_name]
         self.assertEqual(self.UNTRUSTED_SET - set(['project']),
-                         tenant.untrusted_projects[0].load_classes)
+                         tpc.load_classes)
+        project = tenant.untrusted_projects[1]
+        tpc = tenant.project_configs[project.canonical_name]
         self.assertEqual(self.UNTRUSTED_SET - set(['project']),
-                         tenant.untrusted_projects[1].load_classes)
+                         tpc.load_classes)
         self.assertTrue('common-config-job' in tenant.layout.jobs)
         self.assertTrue('project1-job' in tenant.layout.jobs)
         self.assertTrue('project2-job' in tenant.layout.jobs)
@@ -134,12 +147,17 @@ class TestTenantGroups2(TenantParserTestCase):
                          [x.name for x in tenant.config_projects])
         self.assertEqual(['org/project1', 'org/project2'],
                          [x.name for x in tenant.untrusted_projects])
-        self.assertEqual(self.CONFIG_SET,
-                         tenant.config_projects[0].load_classes)
+        project = tenant.config_projects[0]
+        tpc = tenant.project_configs[project.canonical_name]
+        self.assertEqual(self.CONFIG_SET, tpc.load_classes)
+        project = tenant.untrusted_projects[0]
+        tpc = tenant.project_configs[project.canonical_name]
         self.assertEqual(self.UNTRUSTED_SET - set(['project']),
-                         tenant.untrusted_projects[0].load_classes)
+                         tpc.load_classes)
+        project = tenant.untrusted_projects[1]
+        tpc = tenant.project_configs[project.canonical_name]
         self.assertEqual(self.UNTRUSTED_SET - set(['project', 'job']),
-                         tenant.untrusted_projects[1].load_classes)
+                         tpc.load_classes)
         self.assertTrue('common-config-job' in tenant.layout.jobs)
         self.assertTrue('project1-job' in tenant.layout.jobs)
         self.assertFalse('project2-job' in tenant.layout.jobs)
@@ -166,12 +184,15 @@ class TestTenantGroups3(TenantParserTestCase):
                          [x.name for x in tenant.config_projects])
         self.assertEqual(['org/project1', 'org/project2'],
                          [x.name for x in tenant.untrusted_projects])
-        self.assertEqual(self.CONFIG_SET,
-                         tenant.config_projects[0].load_classes)
-        self.assertEqual(set(['job']),
-                         tenant.untrusted_projects[0].load_classes)
-        self.assertEqual(set(['project', 'job']),
-                         tenant.untrusted_projects[1].load_classes)
+        project = tenant.config_projects[0]
+        tpc = tenant.project_configs[project.canonical_name]
+        self.assertEqual(self.CONFIG_SET, tpc.load_classes)
+        project = tenant.untrusted_projects[0]
+        tpc = tenant.project_configs[project.canonical_name]
+        self.assertEqual(set(['job']), tpc.load_classes)
+        project = tenant.untrusted_projects[1]
+        tpc = tenant.project_configs[project.canonical_name]
+        self.assertEqual(set(['project', 'job']), tpc.load_classes)
         self.assertTrue('common-config-job' in tenant.layout.jobs)
         self.assertTrue('project1-job' in tenant.layout.jobs)
         self.assertTrue('project2-job' in tenant.layout.jobs)
