@@ -10,3 +10,7 @@
         that:
           - st.stat.exists
           - st.stat.isreg
+
+    - name: Simple shell task.
+      shell: |+
+        echo "Hello world"
