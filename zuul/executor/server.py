@@ -884,10 +884,10 @@ class AnsibleJob(object):
         result = None
 
         pre_failed = False
-        for playbook in self.jobdir.pre_playbooks:
+        for count, playbook in enumerate(self.jobdir.pre_playbooks):
             # TODOv3(pabelanger): Implement pre-run timeout setting.
             pre_status, pre_code = self.runAnsiblePlaybook(
-                playbook, args['timeout'])
+                playbook, args['timeout'], phase='pre', count=count)
             if pre_status != self.RESULT_NORMAL or pre_code != 0:
                 # These should really never fail, so return None and have
                 # zuul try again
@@ -897,7 +897,7 @@ class AnsibleJob(object):
 
         if not pre_failed:
             job_status, job_code = self.runAnsiblePlaybook(
-                self.jobdir.playbook, args['timeout'])
+                self.jobdir.playbook, args['timeout'], phase='run')
             if job_status == self.RESULT_TIMED_OUT:
                 return 'TIMED_OUT'
             if job_status == self.RESULT_ABORTED:
@@ -913,10 +913,10 @@ class AnsibleJob(object):
             else:
                 result = 'FAILURE'
 
-        for playbook in self.jobdir.post_playbooks:
+        for count, playbook in enumerate(self.jobdir.post_playbooks):
             # TODOv3(pabelanger): Implement post-run timeout setting.
             post_status, post_code = self.runAnsiblePlaybook(
-                playbook, args['timeout'], success)
+                playbook, args['timeout'], success, phase='post', count=count)
             if post_status != self.RESULT_NORMAL or post_code != 0:
                 # If we encountered a pre-failure, that takes
                 # precedence over the post result.
@@ -1376,7 +1376,8 @@ class AnsibleJob(object):
 
         return (self.RESULT_NORMAL, ret)
 
-    def runAnsiblePlaybook(self, playbook, timeout, success=None):
+    def runAnsiblePlaybook(self, playbook, timeout, success=None,
+                           phase=None, count=None):
         env_copy = os.environ.copy()
         env_copy['LOGNAME'] = 'zuul'
 
@@ -1389,6 +1390,12 @@ class AnsibleJob(object):
 
         if success is not None:
             cmd.extend(['-e', 'success=%s' % str(bool(success))])
+
+        if phase:
+            cmd.extend(['-e', 'zuul_execution_phase=%s' % phase])
+
+        if count is not None:
+            cmd.extend(['-e', 'zuul_execution_phase_count=%s' % count])
 
         result, code = self.runAnsible(
             cmd=cmd, timeout=timeout, trusted=playbook.trusted)
