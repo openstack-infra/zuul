@@ -2342,6 +2342,11 @@ class ZuulTestCase(BaseTestCase):
             if count is not None and i >= count:
                 break
 
+    def getSortedBuilds(self):
+        "Return the list of currently running builds sorted by name"
+
+        return sorted(self.builds, key=lambda x: x.name)
+
     def release(self, job):
         if isinstance(job, FakeBuild):
             job.release()

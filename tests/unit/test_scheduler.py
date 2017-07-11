@@ -3367,8 +3367,9 @@ class TestScheduler(ZuulTestCase):
 
         # Only C's test jobs are queued because window is still 1.
         self.assertEqual(len(self.builds), 2)
-        self.assertEqual(self.builds[0].name, 'project-test1')
-        self.assertEqual(self.builds[1].name, 'project-test2')
+        builds = self.getSortedBuilds()
+        self.assertEqual(builds[0].name, 'project-test1')
+        self.assertEqual(builds[1].name, 'project-test2')
 
         self.executor_server.release('project-.*')
         self.waitUntilSettled()
