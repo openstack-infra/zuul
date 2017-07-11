@@ -323,3 +323,41 @@ currently running jobs have completed, run ``zuul-executor graceful``.
 To enable or disable running Ansible in verbose mode (with the '-vvv'
 argument to ansible-playbook) run ``zuul-executor verbose`` and
 ``zuul-executor unverbose``.
+
+Web Server
+----------
+
+The Zuul web server currently acts as a websocket interface to live log
+streaming. Eventually, it will serve as the single process handling all
+HTTP interactions with Zuul.
+
+Configuration
+~~~~~~~~~~~~~
+
+In addition to the ``gearman`` common configuration section, the following
+sections of **zuul.conf** are used by the web server:
+
+web
+"""
+
+**listen_address**
+  IP address or domain name on which to listen (default: 127.0.0.1).
+  ``listen_address=127.0.0.1``
+
+**log_config**
+  Path to log config file for the web server process.
+  ``log_config=/etc/zuul/logging.yaml``
+
+**pidfile**
+  Path to PID lock file for the web server process.
+  ``pidfile=/var/run/zuul-web/zuul-web.pid``
+
+**port**
+  Port to use for web server process.
+  ``port=9000``
+
+Operation
+~~~~~~~~~
+
+To start the web server, run ``zuul-web``.  To stop it, kill the
+PID which was saved in the pidfile specified in the configuration.
