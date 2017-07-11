@@ -5,6 +5,7 @@
 # Developers should setup their test systems in a similar way.
 
 # This setup needs to be run as a user that can run sudo.
+TOOLSDIR=$(dirname $0)
 
 # Be sure mysql and zookeeper are started.
 sudo service mysql start
@@ -38,6 +39,10 @@ mysql -u $DB_USER -p$DB_PW -h 127.0.0.1 -e "
 
 # TODO(pabelanger): Move this into bindep after we figure out how to enable our
 # PPA.
-sudo add-apt-repository ppa:openstack-ci-core/bubblewrap
+# NOTE(pabelanger): Avoid hitting http://keyserver.ubuntu.com
+sudo apt-key add $TOOLSDIR/018D05F5.gpg
+LSBDISTCODENAME=$(lsb_release -cs)
+echo "deb http://ppa.launchpad.net/openstack-ci-core/bubblewrap/ubuntu $LSBDISTCODENAME main" | \
+    sudo tee /etc/apt/sources.list.d/openstack-ci-core-ubuntu-bubblewrap-xenial.list
 sudo apt-get update
 sudo apt-get --assume-yes install bubblewrap
