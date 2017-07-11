@@ -138,6 +138,9 @@ class LogStreamingHandler(object):
                     break
                 elif msg.type == aiohttp.WSMsgType.CLOSED:
                     break
+        except asyncio.CancelledError:
+            self.log.debug("Websocket request handling cancelled")
+            pass
         except Exception as e:
             self.log.exception("Websocket exception:")
             await ws.close(code=4009, message=str(e).encode('utf-8'))
