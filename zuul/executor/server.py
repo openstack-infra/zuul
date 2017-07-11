@@ -118,12 +118,12 @@ class SshAgent(object):
         env.update(self.env)
         key_path = os.path.expanduser(key_path)
         self.log.debug('Adding SSH Key {}'.format(key_path))
-        output = ''
         try:
-            output = subprocess.check_output(['ssh-add', key_path], env=env,
-                                             stderr=subprocess.PIPE)
-        except subprocess.CalledProcessError:
-            self.log.error('ssh-add failed: {}'.format(output))
+            subprocess.check_output(['ssh-add', key_path], env=env,
+                                    stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            self.log.error('ssh-add failed. stdout: %s, stderr: %s',
+                           e.output, e.stderr)
             raise
         self.log.info('Added SSH Key {}'.format(key_path))
 
@@ -613,7 +613,12 @@ class ExecutorServer(object):
 
     def executeJob(self, job):
         self.job_workers[job.unique] = AnsibleJob(self, job)
-        self.job_workers[job.unique].run()
+
+        try:
+            self.job_workers[job.unique].run()
+        except Exception:
+            del self.job_workers[job.unique]
+            raise
 
     def finishJob(self, unique):
         del(self.job_workers[unique])
@@ -704,7 +709,13 @@ class AnsibleJob(object):
 
     def run(self):
         self.ssh_agent.start()
-        self.ssh_agent.add(self.private_key_file)
+
+        try:
+            self.ssh_agent.add(self.private_key_file)
+        except Exception:
+            self.ssh_agent.stop()
+            raise
+
         self.running = True
         self.thread = threading.Thread(target=self.execute)
         self.thread.start()
