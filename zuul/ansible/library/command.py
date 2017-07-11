@@ -409,9 +409,9 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
                 if t.isAlive():
                     console.addLine("[Zuul] standard output/error still open "
                                     "after child exited")
-                if not ret and fail_json_kwargs:
+                if ret is None and fail_json_kwargs:
                     ret = fail_json_kwargs['rc']
-                elif not ret and not fail_json_kwargs:
+                elif ret is None and not fail_json_kwargs:
                     ret = -1
                 console.addLine("[Zuul] Task exit code: %s\n" % ret)
                 if ret == -1 and not fail_json_kwargs:
