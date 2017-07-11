@@ -486,6 +486,62 @@ class TestInRepoConfig(ZuulTestCase):
         self.assertIn('appears multiple times', A.messages[0],
                       "A should have a syntax error reported")
 
+    def test_multi_repo(self):
+        downstream_repo_conf = textwrap.dedent(
+            """
+            - project:
+                name: org/project1
+                tenant-one-gate:
+                  jobs:
+                    - project-test1
+
+            - job:
+                name: project1-test1
+                parent: project-test1
+            """)
+
+        file_dict = {'.zuul.yaml': downstream_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+        self.waitUntilSettled()
+
+        upstream_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test1
+
+            - job:
+                name: project-test2
+
+            - project:
+                name: org/project
+                tenant-one-gate:
+                  jobs:
+                    - project-test1
+            """)
+
+        file_dict = {'.zuul.yaml': upstream_repo_conf}
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B',
+                                           files=file_dict)
+        B.addApproval('code-review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.fake_gerrit.addEvent(B.getChangeMergedEvent())
+        self.waitUntilSettled()
+
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        # Ensure the latest change is reflected in the config; if it
+        # isn't this will raise an exception.
+        tenant.layout.getJob('project-test2')
+
 
 class TestAnsible(AnsibleZuulTestCase):
     # A temporary class to hold new tests while others are disabled

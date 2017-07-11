@@ -1090,13 +1090,20 @@ class TenantParser(object):
         untrusted_projects_config = model.UnparsedTenantConfig()
         jobs = []
 
+        # In some cases, we can use cached data, but it's still
+        # important that we process that in the same order along with
+        # any jobs that we run.  This class is used to hold the cached
+        # data and is inserted in the ordered jobs list for later
+        # processing.
+        class CachedDataJob(object):
+            def __init__(self, config_project, project):
+                self.config_project = config_project
+                self.project = project
+
         for project in config_projects:
             # If we have cached data (this is a reconfiguration) use it.
             if cached and project.unparsed_config:
-                TenantParser.log.info(
-                    "Loading previously parsed configuration from %s" %
-                    (project,))
-                config_projects_config.extend(project.unparsed_config)
+                jobs.append(CachedDataJob(True, project))
                 continue
             # Otherwise, prepare an empty unparsed config object to
             # hold cached data later.
@@ -1115,10 +1122,7 @@ class TenantParser(object):
         for project in untrusted_projects:
             # If we have cached data (this is a reconfiguration) use it.
             if cached and project.unparsed_config:
-                TenantParser.log.info(
-                    "Loading previously parsed configuration from %s" %
-                    (project,))
-                untrusted_projects_config.extend(project.unparsed_config)
+                jobs.append(CachedDataJob(False, project))
                 continue
             # Otherwise, prepare an empty unparsed config object to
             # hold cached data later.
@@ -1146,6 +1150,17 @@ class TenantParser(object):
             # complete in the order they were executed which is the
             # same order they were defined in the main config file.
             # This is important for correct inheritance.
+            if isinstance(job, CachedDataJob):
+                TenantParser.log.info(
+                    "Loading previously parsed configuration from %s" %
+                    (job.project,))
+                if job.config_project:
+                    config_projects_config.extend(
+                        job.project.unparsed_config)
+                else:
+                    untrusted_projects_config.extend(
+                        job.project.unparsed_config)
+                continue
             TenantParser.log.debug("Waiting for cat job %s" % (job,))
             job.wait()
             TenantParser.log.debug("Cat job %s got files %s" %
