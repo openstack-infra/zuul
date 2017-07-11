@@ -1,0 +1,2 @@
+- job:
+    name: trusted-.zuul.d-jobs
