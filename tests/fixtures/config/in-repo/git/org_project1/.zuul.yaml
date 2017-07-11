@@ -1,0 +1,5 @@
+- project:
+    name: org/project1
+    tenant-one-gate:
+      jobs:
+        - project-test1
