@@ -284,6 +284,7 @@ class ExecutorClient(object):
                               host_keys=node.host_keys,
                               provider=node.provider,
                               region=node.region,
+                              ssh_port=node.ssh_port,
                               interface_ip=node.interface_ip,
                               public_ipv6=node.public_ipv6,
                               public_ipv4=node.public_ipv4))
