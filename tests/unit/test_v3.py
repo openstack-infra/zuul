@@ -716,9 +716,7 @@ class TestProjectKeys(ZuulTestCase):
         self.assertEqual(4096, private_key.key_size)
 
 
-class TestRoles(ZuulTestCase):
-    tenant_config_file = 'config/roles/main.yaml'
-
+class RoleTestCase(ZuulTestCase):
     def _assertRolePath(self, build, playbook, content):
         path = os.path.join(self.test_root, build.uuid,
                             'ansible', playbook, 'ansible.cfg')
@@ -737,6 +735,10 @@ class TestRoles(ZuulTestCase):
             self.assertEqual(len(roles_paths), 0,
                              "Should have no roles_path line in %s" %
                              (playbook,))
+
+
+class TestRoles(RoleTestCase):
+    tenant_config_file = 'config/roles/main.yaml'
 
     def test_role(self):
         # This exercises a proposed change to a role being checked out
@@ -820,6 +822,57 @@ class TestRoles(ZuulTestCase):
         self.assertIn(
             '- project-test project-test : ERROR Unable to find role',
             A.messages[-1])
+
+
+class TestImplicitRoles(RoleTestCase):
+    tenant_config_file = 'config/implicit-roles/main.yaml'
+
+    def test_missing_roles(self):
+        # Test implicit and explicit roles for a project which does
+        # not have roles.  The implicit role should be silently
+        # ignored since the project doesn't supply roles, but if a
+        # user declares an explicit role, it should error.
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/norole-project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 2)
+        build = self.getBuildByName('implicit-role-fail')
+        self._assertRolePath(build, 'playbook_0', None)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+        # The retry_limit doesn't get recorded
+        self.assertHistory([
+            dict(name='implicit-role-fail', result='SUCCESS', changes='1,1'),
+        ])
+
+    def test_roles(self):
+        # Test implicit and explicit roles for a project which does
+        # have roles.  In both cases, we should end up with the role
+        # in the path.  In the explicit case, ensure we end up with
+        # the name we specified.
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/role-project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 2)
+        build = self.getBuildByName('implicit-role-ok')
+        self._assertRolePath(build, 'playbook_0', 'role_0')
+
+        build = self.getBuildByName('explicit-role-ok')
+        self._assertRolePath(build, 'playbook_0', 'role_0')
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='implicit-role-ok', result='SUCCESS', changes='1,1'),
+            dict(name='explicit-role-ok', result='SUCCESS', changes='1,1'),
+        ], ordered=False)
 
 
 class TestShadow(ZuulTestCase):

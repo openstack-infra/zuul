@@ -425,14 +425,19 @@ class JobParser(object):
 
         # Roles are part of the playbook context so we must establish
         # them earlier than playbooks.
+        roles = []
         if 'roles' in conf:
-            roles = []
             for role in conf.get('roles', []):
                 if 'zuul' in role:
                     r = JobParser._makeZuulRole(tenant, job, role)
                     if r:
                         roles.append(r)
-            job.addRoles(roles)
+        # A job's repo should be an implicit role source for that job,
+        # but not in a project-pipeline variant.
+        if not project_pipeline:
+            r = JobParser._makeImplicitRole(job)
+            roles.insert(0, r)
+        job.addRoles(roles)
 
         for pre_run_name in as_list(conf.get('pre-run')):
             pre_run = model.PlaybookContext(job.source_context,
@@ -553,6 +558,15 @@ class JobParser(object):
         return model.ZuulRole(role.get('name', name),
                               project.connection_name,
                               project.name)
+
+    @staticmethod
+    def _makeImplicitRole(job):
+        project = job.source_context.project
+        name = project.name.split('/')[-1]
+        return model.ZuulRole(name,
+                              project.connection_name,
+                              project.name,
+                              implicit=True)
 
 
 class ProjectTemplateParser(object):

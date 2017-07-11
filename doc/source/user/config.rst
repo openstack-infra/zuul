@@ -738,6 +738,12 @@ unless otherwise specified:
   be installed (and therefore referenced from Ansible), the `name`
   attribute may be used to specify an alternate.
 
+  A job automatically has the project in which it is defined added to
+  the roles path if that project appears to contain a role or `roles/`
+  directory.  By default, the project is added to the path under its
+  own name, however, that may be changed by explicitly listing the
+  project in the roles list in the usual way.
+
   .. note:: galaxy roles are not yet implemented
 
   **galaxy**
