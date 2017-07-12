@@ -7,6 +7,9 @@ We are currently engaged in a significant development effort in
 preparation for the third major version of Zuul.  We call this effort
 `Zuul v3`_ and it is described in more detail below.
 
+The latest documentation for Zuul v3 is published at:
+https://docs.openstack.org/infra/zuul/feature/zuulv3/
+
 Contributing
 ------------
 
