@@ -467,7 +467,7 @@ class JobParser(object):
                     r = JobParser._makeZuulRole(tenant, job, role)
                     if r:
                         roles.append(r)
-            job.roles = job.roles.union(set(roles))
+            job.addRoles(roles)
 
         variables = conf.get('vars', None)
         if variables:
