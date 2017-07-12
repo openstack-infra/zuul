@@ -699,4 +699,4 @@ class TestShadow(ZuulTestCase):
         self.assertHistory([
             dict(name='test1', result='SUCCESS', changes='1,1'),
             dict(name='test2', result='SUCCESS', changes='1,1'),
-        ])
+        ], ordered=False)
