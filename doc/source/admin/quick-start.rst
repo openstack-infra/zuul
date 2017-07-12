@@ -33,6 +33,9 @@ Zuul provides the following components:
       merger if dedicated mergers are not provided.  One or more of
       these must be run.
 
+    - **zuul-web**: A web server that currently provides websocket access to
+      live-streaming of logs.
+
     - **gearman**: optional builtin gearman daemon provided by zuul-scheduler
 
 External components:
