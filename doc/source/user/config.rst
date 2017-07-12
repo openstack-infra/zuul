@@ -662,32 +662,35 @@ unless otherwise specified:
   of attempts to make before an error is reported.  Default: 3.
 
 **pre-run**
-  The name of a playbook or list of playbooks to run before the main
-  body of a job.  The playbook is expected to reside in the
-  `playbooks/` directory of the project where the job is defined.
+  The name of a playbook or list of playbooks without file extension
+  to run before the main body of a job.  The full path to the playbook
+  in the repo where the job is defined is expected.
 
   When a job inherits from a parent, the child's pre-run playbooks are
   run after the parent's.  See :ref:`job` for more information.
 
 **post-run**
-  The name of a playbook or list of playbooks to run after the main
-  body of a job.  The playbook is expected to reside in the
-  `playbooks/` directory of the project where the job is defined.
+  The name of a playbook or list of playbooks without file extension
+  to run after the main body of a job.  The full path to the playbook
+  in the repo where the job is defined is expected.
 
   When a job inherits from a parent, the child's post-run playbooks
   are run before the parent's.  See :ref:`job` for more information.
 
 **run**
-  The name of the main playbook for this job.  This parameter is not
-  normally necessary, as it defaults to the name of the job.  However,
-  if a playbook with a different name is needed, it can be specified
-  here.  The playbook is expected to reside in the `playbooks/`
-  directory of the project where the job is defined.  When a child
-  inherits from a parent, a playbook with the name of the child job is
-  implicitly searched first, before falling back on the playbook used
-  by the parent job (unless the child job specifies a ``run``
-  attribute, in which case that value is used).  Default: the name of
-  the job.
+  The name of the main playbook for this job.  This parameter is
+  not normally necessary, as it defaults to a playbook with the
+  same name as the job inside of the `playbooks/` directory (e.g.,
+  the `foo` job would default to `playbooks/foo`.  However, if a
+  playbook with a different name is needed, it can be specified
+  here.  The file extension is not required, but the full path
+  within the repo is.  When a child inherits from a parent, a
+  playbook with the name of the child job is implicitly searched
+  first, before falling back on the playbook used by the parent
+  job (unless the child job specifies a ``run`` attribute, in which
+  case that value is used).  Example::
+
+     run: playbooks/<name of the job>
 
 **roles**
   A list of Ansible roles to prepare for the job.  Because a job runs
