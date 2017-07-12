@@ -135,40 +135,6 @@ class ExecutorClient(object):
         self.gearman.shutdown()
         self.log.debug("Stopped")
 
-    def isJobRegistered(self, name):
-        if self.function_cache_time:
-            for connection in self.gearman.active_connections:
-                if connection.connect_time > self.function_cache_time:
-                    self.function_cache = set()
-                    self.function_cache_time = 0
-                    break
-        if name in self.function_cache:
-            self.log.debug("Function %s is registered" % name)
-            return True
-        if ((time.time() - self.function_cache_time) <
-            self.negative_function_cache_ttl):
-            self.log.debug("Function %s is not registered "
-                           "(negative ttl in effect)" % name)
-            return False
-        self.function_cache_time = time.time()
-        for connection in self.gearman.active_connections:
-            try:
-                req = gear.StatusAdminRequest()
-                connection.sendAdminRequest(req, timeout=300)
-            except Exception:
-                self.log.exception("Exception while checking functions")
-                continue
-            for line in req.response.split('\n'):
-                parts = [x.strip() for x in line.split()]
-                if not parts or parts[0] == '.':
-                    continue
-                self.function_cache.add(parts[0])
-        if name in self.function_cache:
-            self.log.debug("Function %s is registered" % name)
-            return True
-        self.log.debug("Function %s is not registered" % name)
-        return False
-
     def execute(self, job, item, pipeline, dependent_items=[],
                 merger_items=[]):
         tenant = pipeline.layout.tenant
