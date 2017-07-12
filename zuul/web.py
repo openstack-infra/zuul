@@ -231,5 +231,6 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
-    z = ZuulWeb()
+    z = ZuulWeb(listen_address="127.0.0.1", listen_port=9000,
+                gear_server="127.0.0.1", gear_port=4730)
     z.run(loop)
