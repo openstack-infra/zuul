@@ -32,24 +32,25 @@ gearman
 
 Client connection information for gearman.
 
-**server**
-  Hostname or IP address of the Gearman server.
-  ``server=gearman.example.com`` (required)
+**server** (required)
+  Hostname or IP address of the Gearman server::
+
+     server=gearman.example.com
 
 **port**
-  Port on which the Gearman server is listening.
-  ``port=4730`` (optional)
+  Port on which the Gearman server is listening::
+
+     port=4730
 
 **ssl_ca**
-  Optional: An openssl file containing a set of concatenated
-  “certification authority” certificates in PEM formet.
+  An openssl file containing a set of concatenated “certification
+  authority” certificates in PEM formet.
 
 **ssl_cert**
-  Optional: An openssl file containing the client public certificate in
-  PEM format.
+  An openssl file containing the client public certificate in PEM format.
 
 **ssl_key**
-  Optional: An openssl file containing the client private key in PEM format.
+  An openssl file containing the client private key in PEM format.
 
 zookeeper
 """""""""
@@ -60,7 +61,9 @@ zookeeper
 
 **hosts**
   A list of zookeeper hosts for Zuul to use when communicating with
-  Nodepool.  ``hosts=zk1.example.com,zk2.example.com,zk3.example.com``
+  Nodepool::
+
+     hosts=zk1.example.com,zk2.example.com,zk3.example.com
 
 
 Scheduler
@@ -85,66 +88,76 @@ The builtin gearman server. Zuul can fork a gearman process from itself rather
 than connecting to an external one.
 
 **start**
-  Whether to start the internal Gearman server (default: False).
-  ``start=true``
+  Whether to start the internal Gearman server (default: False)::
+
+     start=true
 
 **listen_address**
-  IP address or domain name on which to listen (default: all addresses).
-  ``listen_address=127.0.0.1``
+  IP address or domain name on which to listen (default: all addresses)::
+
+     listen_address=127.0.0.1
 
 **log_config**
-  Path to log config file for internal Gearman server.
-  ``log_config=/etc/zuul/gearman-logging.yaml``
+  Path to log config file for internal Gearman server::
+
+     log_config=/etc/zuul/gearman-logging.yaml
 
 **ssl_ca**
-  Optional: An openssl file containing a set of concatenated “certification authority” certificates
-  in PEM formet.
+  An openssl file containing a set of concatenated “certification authority”
+  certificates in PEM formet.
 
 **ssl_cert**
-  Optional: An openssl file containing the server public certificate in PEM format.
+  An openssl file containing the server public certificate in PEM format.
 
 **ssl_key**
-  Optional: An openssl file containing the server private key in PEM format.
+  An openssl file containing the server private key in PEM format.
 
 webapp
 """"""
 
 **listen_address**
-  IP address or domain name on which to listen (default: 0.0.0.0).
-  ``listen_address=127.0.0.1``
+  IP address or domain name on which to listen (default: 0.0.0.0)::
+
+     listen_address=127.0.0.1
 
 **port**
-  Port on which the webapp is listening (default: 8001).
-  ``port=8008``
+  Port on which the webapp is listening (default: 8001)::
+
+     port=8008
 
 **status_expiry**
-  Zuul will cache the status.json file for this many seconds. This is an
-  optional value and ``1`` is used by default.
-  ``status_expiry=1``
+  Zuul will cache the status.json file for this many seconds (default: 1)::
+
+     status_expiry=1
 
 **status_url**
   URL that will be posted in Zuul comments made to changes when
-  starting jobs for a change.  Used by zuul-scheduler only.
-  ``status_url=https://zuul.example.com/status``
+  starting jobs for a change.  Used by zuul-scheduler only::
+
+     status_url=https://zuul.example.com/status
 
 scheduler
 """""""""
 
 **tenant_config**
-  Path to tenant config file.
-  ``layout_config=/etc/zuul/tenant.yaml``
+  Path to tenant config file::
+
+     layout_config=/etc/zuul/tenant.yaml
 
 **log_config**
-  Path to log config file.
-  ``log_config=/etc/zuul/scheduler-logging.yaml``
+  Path to log config file::
+
+     log_config=/etc/zuul/scheduler-logging.yaml
 
 **pidfile**
-  Path to PID lock file.
-  ``pidfile=/var/run/zuul/scheduler.pid``
+  Path to PID lock file::
+
+     pidfile=/var/run/zuul/scheduler.pid
 
 **state_dir**
-  Path to directory that Zuul should save state to.
-  ``state_dir=/var/lib/zuul``
+  Path to directory that Zuul should save state to::
+
+     state_dir=/var/lib/zuul
 
 Operation
 ~~~~~~~~~
@@ -186,24 +199,29 @@ merger
 """"""
 
 **git_dir**
-  Directory that Zuul should clone local git repositories to.
-  ``git_dir=/var/lib/zuul/git``
+  Directory that Zuul should clone local git repositories to::
+
+     git_dir=/var/lib/zuul/git
 
 **git_user_email**
-  Optional: Value to pass to `git config user.email`.
-  ``git_user_email=zuul@example.com``
+  Value to pass to `git config user.email`::
+
+     git_user_email=zuul@example.com
 
 **git_user_name**
-  Optional: Value to pass to `git config user.name`.
-  ``git_user_name=zuul``
+  Value to pass to `git config user.name`::
+
+     git_user_name=zuul
 
 **log_config**
-  Path to log config file for the merger process.
-  ``log_config=/etc/zuul/logging.yaml``
+  Path to log config file for the merger process::
+
+     log_config=/etc/zuul/logging.yaml
 
 **pidfile**
-  Path to PID lock file for the merger process.
-  ``pidfile=/var/run/zuul-merger/merger.pid``
+  Path to PID lock file for the merger process::
+
+     pidfile=/var/run/zuul-merger/merger.pid
 
 Operation
 ~~~~~~~~~
@@ -273,37 +291,44 @@ executor
 """"""""
 
 **finger_port**
-  Port to use for finger log streamer.
-  ``finger_port=79``
+  Port to use for finger log streamer::
+
+     finger_port=79
 
 **git_dir**
-  Directory that Zuul should clone local git repositories to.
-  ``git_dir=/var/lib/zuul/git``
+  Directory that Zuul should clone local git repositories to::
+
+     git_dir=/var/lib/zuul/git
 
 **log_config**
-  Path to log config file for the executor process.
-  ``log_config=/etc/zuul/logging.yaml``
+  Path to log config file for the executor process::
+
+     log_config=/etc/zuul/logging.yaml
 
 **private_key_file**
-  SSH private key file to be used when logging into worker nodes.
-  ``private_key_file=~/.ssh/id_rsa``
+  SSH private key file to be used when logging into worker nodes::
+
+     private_key_file=~/.ssh/id_rsa
 
 **user**
   User ID for the zuul-executor process. In normal operation as a daemon,
   the executor should be started as the ``root`` user, but it will drop
-  privileges to this user during startup.
-  ``user=zuul``
+  privileges to this user during startup::
+
+     user=zuul
 
 merger
 """"""
 
 **git_user_email**
-  Optional: Value to pass to `git config user.email`.
-  ``git_user_email=zuul@example.com``
+  Value to pass to `git config user.email`::
+
+     git_user_email=zuul@example.com
 
 **git_user_name**
-  Optional: Value to pass to `git config user.name`.
-  ``git_user_name=zuul``
+  Value to pass to `git config user.name`::
+
+     git_user_name=zuul
 
 Operation
 ~~~~~~~~~
@@ -341,20 +366,24 @@ web
 """
 
 **listen_address**
-  IP address or domain name on which to listen (default: 127.0.0.1).
-  ``listen_address=127.0.0.1``
+  IP address or domain name on which to listen (default: 127.0.0.1)::
+
+     listen_address=127.0.0.1
 
 **log_config**
-  Path to log config file for the web server process.
-  ``log_config=/etc/zuul/logging.yaml``
+  Path to log config file for the web server process::
+
+     log_config=/etc/zuul/logging.yaml
 
 **pidfile**
-  Path to PID lock file for the web server process.
-  ``pidfile=/var/run/zuul-web/zuul-web.pid``
+  Path to PID lock file for the web server process::
+
+     pidfile=/var/run/zuul-web/zuul-web.pid
 
 **port**
-  Port to use for web server process.
-  ``port=9000``
+  Port to use for web server process::
+
+     port=9000
 
 Operation
 ~~~~~~~~~
