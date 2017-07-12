@@ -883,10 +883,10 @@ class AnsibleJob(object):
         result = None
 
         pre_failed = False
-        for count, playbook in enumerate(self.jobdir.pre_playbooks):
+        for index, playbook in enumerate(self.jobdir.pre_playbooks):
             # TODOv3(pabelanger): Implement pre-run timeout setting.
             pre_status, pre_code = self.runAnsiblePlaybook(
-                playbook, args['timeout'], phase='pre', count=count)
+                playbook, args['timeout'], phase='pre', index=index)
             if pre_status != self.RESULT_NORMAL or pre_code != 0:
                 # These should really never fail, so return None and have
                 # zuul try again
@@ -912,10 +912,10 @@ class AnsibleJob(object):
             else:
                 result = 'FAILURE'
 
-        for count, playbook in enumerate(self.jobdir.post_playbooks):
+        for index, playbook in enumerate(self.jobdir.post_playbooks):
             # TODOv3(pabelanger): Implement post-run timeout setting.
             post_status, post_code = self.runAnsiblePlaybook(
-                playbook, args['timeout'], success, phase='post', count=count)
+                playbook, args['timeout'], success, phase='post', index=index)
             if post_status != self.RESULT_NORMAL or post_code != 0:
                 # If we encountered a pre-failure, that takes
                 # precedence over the post result.
@@ -1373,7 +1373,7 @@ class AnsibleJob(object):
         return (self.RESULT_NORMAL, ret)
 
     def runAnsiblePlaybook(self, playbook, timeout, success=None,
-                           phase=None, count=None):
+                           phase=None, index=None):
         env_copy = os.environ.copy()
         env_copy['LOGNAME'] = 'zuul'
 
@@ -1390,8 +1390,8 @@ class AnsibleJob(object):
         if phase:
             cmd.extend(['-e', 'zuul_execution_phase=%s' % phase])
 
-        if count is not None:
-            cmd.extend(['-e', 'zuul_execution_phase_count=%s' % count])
+        if index is not None:
+            cmd.extend(['-e', 'zuul_execution_phase_index=%s' % index])
 
         result, code = self.runAnsible(
             cmd=cmd, timeout=timeout, trusted=playbook.trusted)
