@@ -613,12 +613,7 @@ class ExecutorServer(object):
 
     def executeJob(self, job):
         self.job_workers[job.unique] = AnsibleJob(self, job)
-
-        try:
-            self.job_workers[job.unique].run()
-        except Exception:
-            del self.job_workers[job.unique]
-            raise
+        self.job_workers[job.unique].run()
 
     def finishJob(self, unique):
         del(self.job_workers[unique])
@@ -700,22 +695,12 @@ class AnsibleJob(object):
         self.running = False
         self.aborted = False
         self.thread = None
-        self.ssh_agent = None
-
         self.private_key_file = get_default(self.executor_server.config,
                                             'executor', 'private_key_file',
                                             '~/.ssh/id_rsa')
         self.ssh_agent = SshAgent()
 
     def run(self):
-        self.ssh_agent.start()
-
-        try:
-            self.ssh_agent.add(self.private_key_file)
-        except Exception:
-            self.ssh_agent.stop()
-            raise
-
         self.running = True
         self.thread = threading.Thread(target=self.execute)
         self.thread.start()
@@ -728,6 +713,8 @@ class AnsibleJob(object):
 
     def execute(self):
         try:
+            self.ssh_agent.start()
+            self.ssh_agent.add(self.private_key_file)
             self.jobdir = JobDir(self.executor_server.jobdir_root,
                                  self.executor_server.keep_jobdir,
                                  str(self.job.unique))
@@ -737,19 +724,20 @@ class AnsibleJob(object):
             self.job.sendWorkException(traceback.format_exc())
         finally:
             self.running = False
-            try:
-                self.jobdir.cleanup()
-            except Exception:
-                self.log.exception("Error cleaning up jobdir:")
-            try:
-                self.executor_server.finishJob(self.job.unique)
-            except Exception:
-                self.log.exception("Error finalizing job thread:")
+            if self.jobdir:
+                try:
+                    self.jobdir.cleanup()
+                except Exception:
+                    self.log.exception("Error cleaning up jobdir:")
             if self.ssh_agent:
                 try:
                     self.ssh_agent.stop()
                 except Exception:
                     self.log.exception("Error stopping SSH agent:")
+            try:
+                self.executor_server.finishJob(self.job.unique)
+            except Exception:
+                self.log.exception("Error finalizing job thread:")
 
     def _execute(self):
         args = json.loads(self.job.arguments)
