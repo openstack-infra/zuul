@@ -107,7 +107,6 @@ class ZuulGearmanClient(gear.Client):
 
 class ExecutorClient(object):
     log = logging.getLogger("zuul.ExecutorClient")
-    negative_function_cache_ttl = 5
 
     def __init__(self, config, sched):
         self.config = config
@@ -125,8 +124,6 @@ class ExecutorClient(object):
 
         self.cleanup_thread = GearmanCleanup(self)
         self.cleanup_thread.start()
-        self.function_cache = set()
-        self.function_cache_time = 0
 
     def stop(self):
         self.log.debug("Stopping")
