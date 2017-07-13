@@ -150,14 +150,29 @@ class CallbackModule(default.CallbackModule):
     def v2_playbook_on_start(self, playbook):
         self._playbook_name = os.path.splitext(playbook._file_name)[0]
 
+    def v2_playbook_on_include(self, included_file):
+        for host in included_file._hosts:
+            self._log("{host} | included: {filename}".format(
+                host=host.name,
+                filename=included_file._filename))
+
     def v2_playbook_on_play_start(self, play):
         self._play = play
+        # Get the hostvars from just one host - the vars we're looking for will
+        # be identical on all of them
+        hostvars = self._play._variable_manager._hostvars
+        a_host = hostvars.keys()[0]
+        self.phase = hostvars[a_host]['zuul_execution_phase']
+        if self.phase != 'run':
+            self.phase = '{phase}-{index}'.format(
+                phase=self.phase,
+                index=hostvars[a_host]['zuul_execution_phase_index'])
+
+        # the name of a play defaults to the hosts string
         name = play.get_name().strip()
-        if not name:
-            msg = u"PLAY"
-        else:
-            msg = u"PLAY [{playbook} : {name}]".format(
-                playbook=self._playbook_name, name=name)
+        msg = u"PLAY [{phase} : {playbook} : {name}]".format(
+            phase=self.phase,
+            playbook=self._playbook_name, name=name)
 
         self._log(msg)
         # Log an extra blank line to get space after each play
