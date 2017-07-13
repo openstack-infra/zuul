@@ -74,7 +74,7 @@ def zuul_filter_result(result):
     if not stdout_lines and stdout:
         stdout_lines = stdout.split('\n')
 
-    for key in ('changed', 'cmd', 'zuul_log_id',
+    for key in ('changed', 'cmd', 'zuul_log_id', 'invocation',
                 'stderr', 'stderr_lines'):
         result.pop(key, None)
     return stdout_lines
@@ -306,10 +306,14 @@ class CallbackModule(default.CallbackModule):
             pass
 
         elif result._task.action not in ('command', 'shell'):
-            self._log_message(
-                result=result,
-                status=status,
-                result_dict=result_dict)
+            if 'msg' in result_dict:
+                self._log_message(msg=result_dict['msg'],
+                                  result=result, status=status)
+            else:
+                self._log_message(
+                    result=result,
+                    status=status,
+                    result_dict=result_dict)
         elif 'results' in result_dict:
             for res in result_dict['results']:
                 self._log_message(
@@ -448,15 +452,29 @@ class CallbackModule(default.CallbackModule):
     def _dump_result_dict(self, result_dict):
         result_dict = result_dict.copy()
         for key in list(result_dict.keys()):
-            if key.startswith('_ansible') or key == 'zuul_log_id':
+            if key.startswith('_ansible'):
                 del result_dict[key]
+        zuul_filter_result(result_dict)
         return result_dict
 
     def _log_message(self, result, msg=None, status="ok", result_dict=None):
         hostname = self._get_hostname(result)
+        if result._task.no_log:
+            self._log("{host} | {msg}".format(
+                host=hostname,
+                msg="Output suppressed because no_log was given"))
+            return
         if msg:
-            self._log("{host} | {status}: {msg}".format(
-                host=hostname, status=status, msg=msg))
+            msg_lines = msg.strip().split('\n')
+            if len(msg_lines) > 1:
+                self._log("{host} | {status}:".format(
+                    host=hostname, status=status))
+                for msg_line in msg_lines:
+                    self._log("{host} | {msg_line}".format(
+                        host=hostname, msg_line=msg_line))
+            else:
+                self._log("{host} | {status}: {msg}".format(
+                    host=hostname, status=status, msg=msg))
         else:
             self._log("{host} | {status}".format(
                 host=hostname, status=status, msg=msg))
