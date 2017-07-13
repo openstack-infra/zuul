@@ -15,8 +15,14 @@
 - job:
     name: data-return
 
+- job:
+    name: data-return-relative
+    run: playbooks/data-return
+    success-url: docs/index.html
+
 - project:
     name: org/project
     check:
       jobs:
         - data-return
+        - data-return-relative

@@ -20,6 +20,7 @@ import os
 import struct
 import time
 from uuid import uuid4
+import urllib.parse
 
 MERGER_MERGE = 1          # "git merge"
 MERGER_MERGE_RESOLVE = 2  # "git merge -s resolve"
@@ -1626,13 +1627,29 @@ class QueueItem(object):
                 result = job.failure_message
             if job.failure_url:
                 pattern = job.failure_url
-        url = None
+        url = None  # The final URL
+        default_url = build.result_data.get('zuul', {}).get('log_url')
         if pattern:
-            url = self.formatUrlPattern(pattern, job, build)
+            job_url = self.formatUrlPattern(pattern, job, build)
+        else:
+            job_url = None
+        try:
+            if job_url:
+                u = urllib.parse.urlparse(job_url)
+                if u.scheme:
+                    # The job success or failure url is absolute, so it's
+                    # our final url.
+                    url = job_url
+                else:
+                    # We have a relative job url.  Combine it with our
+                    # default url.
+                    if default_url:
+                        url = urllib.parse.urljoin(default_url, job_url)
+        except Exception:
+            self.log.exception("Error while parsing url for job %s:"
+                               % (job,))
         if not url:
-            url = build.result_data.get('zuul', {}).get('log_url')
-        if not url:
-            url = build.url or job.name
+            url = default_url or build.url or job.name
         return (result, url)
 
     def formatJSON(self):

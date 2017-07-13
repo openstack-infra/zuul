@@ -713,6 +713,10 @@ class TestDataReturn(AnsibleZuulTestCase):
         self.waitUntilSettled()
         self.assertHistory([
             dict(name='data-return', result='SUCCESS', changes='1,1'),
-        ])
-        self.assertIn('- data-return test/log/url',
+            dict(name='data-return-relative', result='SUCCESS', changes='1,1'),
+        ], ordered=False)
+        self.assertIn('- data-return http://example.com/test/log/url/',
+                      A.messages[-1])
+        self.assertIn('- data-return-relative '
+                      'http://example.com/test/log/url/docs/index.html',
                       A.messages[-1])
