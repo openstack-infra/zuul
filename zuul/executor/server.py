@@ -1211,6 +1211,7 @@ class AnsibleJob(object):
             config.write('callback_plugins = %s\n'
                          % self.executor_server.callback_dir)
             config.write('stdout_callback = zuul_stream\n')
+            config.write('callback_whitelist = zuul_json\n')
             # bump the timeout because busy nodes may take more than
             # 10s to respond
             config.write('timeout = 30\n')
@@ -1353,6 +1354,8 @@ class AnsibleJob(object):
             # TODO(mordred) If/when we rework use of logger in ansible-playbook
             # we'll want to change how this works to use that as well. For now,
             # this is what we need to do.
+            # TODO(mordred) We probably want to put this into the json output
+            # as well.
             with open(self.jobdir.job_output_file, 'a') as job_output:
                 job_output.write("{now} | ANSIBLE PARSE ERROR\n".format(
                     now=datetime.datetime.now()))
