@@ -447,7 +447,7 @@ class CallbackModule(default.CallbackModule):
 
     def _dump_result_dict(self, result_dict):
         result_dict = result_dict.copy()
-        for key in result_dict.keys():
+        for key in list(result_dict.keys()):
             if key.startswith('_ansible') or key == 'zuul_log_id':
                 del result_dict[key]
         return result_dict
