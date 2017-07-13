@@ -357,6 +357,22 @@ class CallbackModule(default.CallbackModule):
         # Log an extra blank line to get space after each task
         self._log("")
 
+    def v2_playbook_on_stats(self, stats):
+
+        # Log an extra blank line to get space before the stats
+        self._log("")
+        self._log("PLAY RECAP")
+
+        hosts = sorted(stats.processed.keys())
+        for host in hosts:
+            t = stats.summarize(host)
+            self._log(
+                "{host} |"
+                " ok: {ok}"
+                " changed: {changed}"
+                " unreachable: {unreachable}"
+                " failed: {failures}".format(host=host, **t))
+
     def _process_deferred(self, result):
         self._items_done = True
         result_dict = self._deferred_result
