@@ -400,21 +400,34 @@ class JobParser(object):
             parent = layout.getJob(conf['parent'])
             job.inheritFrom(parent)
 
+        # Roles are part of the playbook context so we must establish
+        # them earlier than playbooks.
+        if 'roles' in conf:
+            roles = []
+            for role in conf.get('roles', []):
+                if 'zuul' in role:
+                    r = JobParser._makeZuulRole(tenant, job, role)
+                    if r:
+                        roles.append(r)
+            job.addRoles(roles)
+
         for pre_run_name in as_list(conf.get('pre-run')):
             pre_run = model.PlaybookContext(job.source_context,
-                                            pre_run_name)
+                                            pre_run_name, job.roles)
             job.pre_run = job.pre_run + (pre_run,)
         for post_run_name in as_list(conf.get('post-run')):
             post_run = model.PlaybookContext(job.source_context,
-                                             post_run_name)
+                                             post_run_name, job.roles)
             job.post_run = (post_run,) + job.post_run
         if 'run' in conf:
-            run = model.PlaybookContext(job.source_context, conf['run'])
+            run = model.PlaybookContext(job.source_context, conf['run'],
+                                        job.roles)
             job.run = (run,)
         else:
             if not project_pipeline:
                 run_name = os.path.join('playbooks', job.name)
-                run = model.PlaybookContext(job.source_context, run_name)
+                run = model.PlaybookContext(job.source_context, run_name,
+                                            job.roles)
                 job.implied_run = (run,) + job.implied_run
 
         for k in JobParser.simple_attributes:
@@ -459,15 +472,6 @@ class JobParser(object):
             job.tags = job.tags.union(set(tags))
 
         job.dependencies = frozenset(as_list(conf.get('dependencies')))
-
-        if 'roles' in conf:
-            roles = []
-            for role in conf.get('roles', []):
-                if 'zuul' in role:
-                    r = JobParser._makeZuulRole(tenant, job, role)
-                    if r:
-                        roles.append(r)
-            job.addRoles(roles)
 
         variables = conf.get('vars', None)
         if variables:
