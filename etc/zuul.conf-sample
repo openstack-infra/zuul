@@ -13,9 +13,6 @@ start=true
 ;ssl_cert=/path/to/server.pem
 ;ssl_key=/path/to/server.key
 
-[zuul]
-status_url=https://zuul.example.com/status
-
 [scheduler]
 tenant_config=/etc/zuul/main.yaml
 log_config=/etc/zuul/logging.conf
@@ -40,6 +37,7 @@ port=9000
 [webapp]
 listen_address=0.0.0.0
 port=8001
+status_url=https://zuul.example.com/status
 
 [connection gerrit]
 driver=gerrit
