@@ -161,7 +161,7 @@ class CallbackModule(default.CallbackModule):
         # Get the hostvars from just one host - the vars we're looking for will
         # be identical on all of them
         hostvars = self._play._variable_manager._hostvars
-        a_host = hostvars.keys()[0]
+        a_host = next(iter(hostvars.keys()))
         self.phase = hostvars[a_host]['zuul_execution_phase']
         if self.phase != 'run':
             self.phase = '{phase}-{index}'.format(
