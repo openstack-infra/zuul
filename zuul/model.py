@@ -863,9 +863,9 @@ class Job(object):
 
     def addRoles(self, roles):
         newroles = list(self.roles)
-        for role in roles:
+        for role in reversed(roles):
             if role not in newroles:
-                newroles.append(role)
+                newroles.insert(0, role)
         self.roles = tuple(newroles)
 
     def updateVariables(self, other_vars):

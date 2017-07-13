@@ -698,7 +698,9 @@ unless otherwise specified:
   Ansible Galaxy, or a Zuul role, which is a role provided by a
   project managed by Zuul.  Zuul roles are able to benefit from
   speculative merging and cross-project dependencies when used by
-  playbooks in untrusted projects.
+  playbooks in untrusted projects.  Roles are added to the Ansible
+  role path in the order they appear on the job -- roles earlier in
+  the list will take precedence over those which follow.
 
   In the case of job inheritance or variance, the roles used for each
   of the playbooks run by the job will be only those which were
@@ -709,7 +711,9 @@ unless otherwise specified:
   pre and post playbooks, then any roles added by the child will be
   available to the child's playbooks.  This is so that a job which
   inherits from a parent does not inadvertantly alter the behavior of
-  the parent's playbooks by the addition of conflicting roles.
+  the parent's playbooks by the addition of conflicting roles.  Roles
+  added by a child will appear before those it inherits from its
+  parent.
 
   A project which supplies a role may be structured in one of two
   configurations: a bare role (in which the role exists at the root of
