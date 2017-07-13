@@ -21,4 +21,4 @@ pipeline will run in response to that event.
 **time**
   The time specification in cron syntax.  Only the 5 part syntax is
   supported, not the symbolic names.  Example: ``0 0 * * *`` runs at
-  midnight.
+  midnight. The first weekday is Monday.
