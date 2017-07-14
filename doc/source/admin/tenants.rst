@@ -35,6 +35,8 @@ configuration.  An example tenant definition is::
             - shared-jobs:
                 include: jobs
           untrusted-projects:
+            - zuul-jobs:
+                shadow: common-config
             - project1
             - project2
 
@@ -82,6 +84,20 @@ The following attributes are supported:
 
     **exclude**
     A list of configuration classes that should not be loaded.
+
+    **shadow**
+    A list of projects which this project is permitted to shadow.
+    Normally, only one project in Zuul may contain definitions for a
+    given job.  If a project earlier in the configuration defines a
+    job which a later project redefines, the later definition is
+    considered an error and is not permitted.  The "shadow" attribute
+    of a project indicates that job definitions in this project which
+    conflict with the named projects should be ignored, and those in
+    the named project should be used instead.  The named projects must
+    still appear earlier in the configuration.  In the example above,
+    if a job definition appears in both the "common-config" and
+    "zuul-jobs" projects, the definition in "common-config" will be
+    used.
 
   The order of the projects listed in a tenant is important.  A job
   which is defined in one project may not be redefined in another
