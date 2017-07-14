@@ -54,7 +54,8 @@ class TestJob(BaseTestCase):
                 encryption.deserialize_rsa_keypair(f.read())
         self.context = model.SourceContext(self.project, 'master',
                                            'test', True)
-        self.start_mark = yaml.Mark('name', 0, 0, 0, '', 0)
+        m = yaml.Mark('name', 0, 0, 0, '', 0)
+        self.start_mark = configloader.ZuulMark(m, m, '')
 
     @property
     def job(self):
