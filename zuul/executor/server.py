@@ -1120,7 +1120,8 @@ class AnsibleJob(object):
             # This repo has a collection of roles
             if not trusted:
                 for entry in os.listdir(d):
-                    self._blockPluginDirs(os.path.join(d, entry))
+                    if os.path.isdir(os.path.join(d, entry)):
+                        self._blockPluginDirs(os.path.join(d, entry))
             return d
         # It is neither a bare role, nor a collection of roles
         raise Exception("Unable to find role in %s" % (path,))
