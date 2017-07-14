@@ -789,7 +789,7 @@ class Job(object):
             semaphore=None,
             attempts=3,
             final=False,
-            roles=frozenset(),
+            roles=(),
             required_projects={},
             allowed_projects=None,
             override_branch=None,
@@ -853,6 +853,13 @@ class Job(object):
     def setRun(self):
         if not self.run:
             self.run = self.implied_run
+
+    def addRoles(self, roles):
+        newroles = list(self.roles)
+        for role in roles:
+            if role not in newroles:
+                newroles.append(role)
+        self.roles = tuple(newroles)
 
     def updateVariables(self, other_vars):
         v = self.variables
@@ -929,7 +936,7 @@ class Job(object):
         if other._get('post_run') is not None:
             self.post_run = other.post_run + self.post_run
         if other._get('roles') is not None:
-            self.roles = self.roles.union(other.roles)
+            self.addRoles(other.roles)
         if other._get('variables') is not None:
             self.updateVariables(other.variables)
         if other._get('required_projects') is not None:
