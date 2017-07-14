@@ -150,6 +150,7 @@ class BubblewrapDriver(Driver, WrapperInterface):
             '--ro-bind', '/bin', '/bin',
             '--ro-bind', '/sbin', '/sbin',
             '--ro-bind', '/etc/resolv.conf', '/etc/resolv.conf',
+            '--ro-bind', '/etc/hosts', '/etc/hosts',
             '--ro-bind', '{ssh_auth_sock}', '{ssh_auth_sock}',
             '--dir', '{work_dir}',
             '--bind', '{work_dir}', '{work_dir}',
@@ -166,6 +167,9 @@ class BubblewrapDriver(Driver, WrapperInterface):
 
         if os.path.isdir('/lib64'):
             bwrap_command.extend(['--ro-bind', '/lib64', '/lib64'])
+        if os.path.isfile('/etc/nsswitch.conf'):
+            bwrap_command.extend(['--ro-bind', '/etc/nsswitch.conf',
+                                  '/etc/nsswitch.conf'])
 
         return bwrap_command
 
