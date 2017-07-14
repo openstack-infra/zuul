@@ -95,9 +95,9 @@ class TestJob(BaseTestCase):
     def test_job_inheritance(self):
         # This is standard job inheritance.
 
-        base_pre = model.PlaybookContext(self.context, 'base-pre')
-        base_run = model.PlaybookContext(self.context, 'base-run')
-        base_post = model.PlaybookContext(self.context, 'base-post')
+        base_pre = model.PlaybookContext(self.context, 'base-pre', [])
+        base_run = model.PlaybookContext(self.context, 'base-run', [])
+        base_post = model.PlaybookContext(self.context, 'base-post', [])
 
         base = model.Job('base')
         base.timeout = 30
@@ -121,9 +121,9 @@ class TestJob(BaseTestCase):
     def test_job_variants(self):
         # This simulates freezing a job.
 
-        py27_pre = model.PlaybookContext(self.context, 'py27-pre')
-        py27_run = model.PlaybookContext(self.context, 'py27-run')
-        py27_post = model.PlaybookContext(self.context, 'py27-post')
+        py27_pre = model.PlaybookContext(self.context, 'py27-pre', [])
+        py27_run = model.PlaybookContext(self.context, 'py27-run', [])
+        py27_post = model.PlaybookContext(self.context, 'py27-post', [])
 
         py27 = model.Job('py27')
         py27.timeout = 30

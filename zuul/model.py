@@ -633,11 +633,17 @@ class PlaybookContext(object):
 
     Jobs refer to objects of this class for their main, pre, and post
     playbooks so that we can keep track of which repos and security
-    contexts are needed in order to run them."""
+    contexts are needed in order to run them.
 
-    def __init__(self, source_context, path):
+    We also keep a list of roles so that playbooks only run with the
+    roles which were defined at the point the playbook was defined.
+
+    """
+
+    def __init__(self, source_context, path, roles):
         self.source_context = source_context
         self.path = path
+        self.roles = roles
 
     def __repr__(self):
         return '<PlaybookContext %s %s>' % (self.source_context,
@@ -650,7 +656,8 @@ class PlaybookContext(object):
         if not isinstance(other, PlaybookContext):
             return False
         return (self.source_context == other.source_context and
-                self.path == other.path)
+                self.path == other.path and
+                self.roles == other.roles)
 
     def toDict(self):
         # Render to a dict to use in passing json to the executor
@@ -659,6 +666,7 @@ class PlaybookContext(object):
             project=self.source_context.project.name,
             branch=self.source_context.branch,
             trusted=self.source_context.trusted,
+            roles=[r.toDict() for r in self.roles],
             path=self.path)
 
 
