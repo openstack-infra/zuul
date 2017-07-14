@@ -673,6 +673,25 @@ class TestProjectKeys(ZuulTestCase):
 class TestRoles(ZuulTestCase):
     tenant_config_file = 'config/roles/main.yaml'
 
+    def _assertRolePath(self, build, playbook, content):
+        path = os.path.join(self.test_root, build.uuid,
+                            'ansible', playbook, 'ansible.cfg')
+        roles_paths = []
+        with open(path) as f:
+            for line in f:
+                if line.startswith('roles_path'):
+                    roles_paths.append(line)
+        print(roles_paths)
+        if content:
+            self.assertEqual(len(roles_paths), 1,
+                             "Should have one roles_path line in %s" %
+                             (playbook,))
+            self.assertIn(content, roles_paths[0])
+        else:
+            self.assertEqual(len(roles_paths), 0,
+                             "Should have no roles_path line in %s" %
+                             (playbook,))
+
     def test_role(self):
         # This exercises a proposed change to a role being checked out
         # and used.
@@ -685,6 +704,51 @@ class TestRoles(ZuulTestCase):
         self.waitUntilSettled()
         self.assertHistory([
             dict(name='project-test', result='SUCCESS', changes='1,1 2,1'),
+        ])
+
+    def test_role_inheritance(self):
+        self.executor_server.hold_jobs_in_build = True
+        conf = textwrap.dedent(
+            """
+            - job:
+                name: parent
+                roles:
+                  - zuul: bare-role
+                pre-run: playbooks/parent-pre
+                post-run: playbooks/parent-post
+
+            - job:
+                name: project-test
+                parent: parent
+                roles:
+                  - zuul: org/project
+
+            - project:
+                name: org/project
+                check:
+                  jobs:
+                    - project-test
+            """)
+
+        file_dict = {'.zuul.yaml': conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 1)
+        build = self.getBuildByName('project-test')
+        self._assertRolePath(build, 'pre_playbook_0', 'role_0')
+        self._assertRolePath(build, 'playbook_0', 'role_0')
+        self._assertRolePath(build, 'playbook_0', 'role_1')
+        self._assertRolePath(build, 'post_playbook_0', 'role_0')
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='project-test', result='SUCCESS', changes='1,1'),
         ])
 
 

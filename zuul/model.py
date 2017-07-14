@@ -712,7 +712,7 @@ class ZuulRole(Role):
         if not isinstance(other, ZuulRole):
             return False
         return (super(ZuulRole, self).__eq__(other) and
-                self.connection_name == other.connection_name,
+                self.connection_name == other.connection_name and
                 self.project_name == other.project_name)
 
     def toDict(self):
