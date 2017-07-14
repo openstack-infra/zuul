@@ -460,6 +460,8 @@ class JobParser(object):
             else:
                 secret_name = secret_config['name']
                 secret = layout.secrets[secret_config['secret']]
+            if secret_name == 'zuul':
+                raise Exception("Secrets named 'zuul' are not allowed.")
             if secret.source_context != job.source_context:
                 raise Exception(
                     "Unable to use secret %s.  Secrets must be "
@@ -574,6 +576,8 @@ class JobParser(object):
 
         variables = conf.get('vars', None)
         if variables:
+            if 'zuul' in variables:
+                raise Exception("Variables named 'zuul' are not allowed.")
             job.updateVariables(variables)
 
         allowed_projects = conf.get('allowed-projects', None)
