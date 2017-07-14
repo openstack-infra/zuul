@@ -15,8 +15,8 @@ from contextlib import contextmanager
 import copy
 import os
 import logging
-import pprint
 import textwrap
+import io
 
 import voluptuous as vs
 
@@ -131,7 +131,7 @@ def configuration_exceptions(stanza, conf):
 
         {error}
 
-        The error appears in a {stanza} stanza with the content:
+        The error appears in the following {stanza} stanza:
 
         {content}
 
@@ -140,9 +140,28 @@ def configuration_exceptions(stanza, conf):
         m = m.format(intro=intro,
                      error=indent(str(e)),
                      stanza=stanza,
-                     content=indent(pprint.pformat(conf)),
+                     content=indent(start_mark.snippet.rstrip()),
                      start_mark=str(start_mark))
         raise ConfigurationSyntaxError(m)
+
+
+class ZuulMark(object):
+    # The yaml mark class differs between the C and python versions.
+    # The C version does not provide a snippet, and also appears to
+    # lose data under some circumstances.
+    def __init__(self, start_mark, end_mark, stream):
+        self.name = start_mark.name
+        self.index = start_mark.index
+        self.line = start_mark.line
+        self.column = start_mark.column
+        self.snippet = stream[start_mark.index:end_mark.index]
+
+    def __str__(self):
+        return '  in "{name}", line {line}, column {column}'.format(
+            name=self.name,
+            line=self.line + 1,
+            column=self.column + 1,
+        )
 
 
 class ZuulSafeLoader(yaml.SafeLoader):
@@ -151,9 +170,12 @@ class ZuulSafeLoader(yaml.SafeLoader):
                                  'semaphore'))
 
     def __init__(self, stream, context):
-        super(ZuulSafeLoader, self).__init__(stream)
+        wrapped_stream = io.StringIO(stream)
+        wrapped_stream.name = str(context)
+        super(ZuulSafeLoader, self).__init__(wrapped_stream)
         self.name = str(context)
         self.zuul_context = context
+        self.zuul_stream = stream
 
     def construct_mapping(self, node, deep=False):
         r = super(ZuulSafeLoader, self).construct_mapping(node, deep)
@@ -161,7 +183,8 @@ class ZuulSafeLoader(yaml.SafeLoader):
         if len(keys) == 1 and keys.intersection(self.zuul_node_types):
             d = list(r.values())[0]
             if isinstance(d, dict):
-                d['_start_mark'] = node.start_mark
+                d['_start_mark'] = ZuulMark(node.start_mark, node.end_mark,
+                                            self.zuul_stream)
                 d['_source_context'] = self.zuul_context
         return r
 
@@ -224,7 +247,7 @@ class NodeSetParser(object):
                    vs.Required('nodes'): to_list(node),
                    'groups': to_list(group),
                    '_source_context': model.SourceContext,
-                   '_start_mark': yaml.Mark,
+                   '_start_mark': ZuulMark,
                    }
 
         return vs.Schema(nodeset)
@@ -262,7 +285,7 @@ class SecretParser(object):
         secret = {vs.Required('name'): str,
                   vs.Required('data'): data,
                   '_source_context': model.SourceContext,
-                  '_start_mark': yaml.Mark,
+                  '_start_mark': ZuulMark,
                   }
 
         return vs.Schema(secret)
@@ -319,7 +342,7 @@ class JobParser(object):
                'post-run': to_list(str),
                'run': str,
                '_source_context': model.SourceContext,
-               '_start_mark': yaml.Mark,
+               '_start_mark': ZuulMark,
                'roles': to_list(role),
                'required-projects': to_list(vs.Any(job_project, str)),
                'vars': dict,
@@ -543,7 +566,7 @@ class ProjectTemplateParser(object):
                 'merge', 'merge-resolve',
                 'cherry-pick'),
             '_source_context': model.SourceContext,
-            '_start_mark': yaml.Mark,
+            '_start_mark': ZuulMark,
         }
 
         for p in layout.pipelines.values():
@@ -607,7 +630,7 @@ class ProjectParser(object):
                                  'cherry-pick'),
             'default-branch': str,
             '_source_context': model.SourceContext,
-            '_start_mark': yaml.Mark,
+            '_start_mark': ZuulMark,
         }
 
         for p in layout.pipelines.values():
@@ -762,7 +785,7 @@ class PipelineParser(object):
                     'window-decrease-type': window_type,
                     'window-decrease-factor': window_factor,
                     '_source_context': model.SourceContext,
-                    '_start_mark': yaml.Mark,
+                    '_start_mark': ZuulMark,
                     }
         pipeline['require'] = PipelineParser.getDriverSchema('require',
                                                              connections)
@@ -869,7 +892,7 @@ class SemaphoreParser(object):
         semaphore = {vs.Required('name'): str,
                      'max': int,
                      '_source_context': model.SourceContext,
-                     '_start_mark': yaml.Mark,
+                     '_start_mark': ZuulMark,
                      }
 
         return vs.Schema(semaphore)
