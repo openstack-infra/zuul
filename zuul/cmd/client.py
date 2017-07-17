@@ -91,6 +91,7 @@ class Client(zuul.cmd.ZuulApp):
 
         cmd_show = subparsers.add_parser('show',
                                          help='valid show subcommands')
+        cmd_show.set_defaults(func=self.show_running_jobs)
         show_subparsers = cmd_show.add_subparsers(title='show')
         show_running_jobs = show_subparsers.add_parser(
             'running-jobs',
@@ -108,6 +109,9 @@ class Client(zuul.cmd.ZuulApp):
         show_running_jobs.set_defaults(func=self.show_running_jobs)
 
         self.args = parser.parse_args()
+        if not getattr(self.args, 'func', None):
+            parser.print_help()
+            sys.exit(1)
         if self.args.func == self.enqueue_ref:
             if self.args.oldrev == self.args.newrev:
                 parser.error("The old and new revisions must not be the same.")
