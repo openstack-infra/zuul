@@ -14,6 +14,7 @@ import logging
 
 from zuul import model
 from zuul.manager import PipelineManager, StaticChangeQueueContextManager
+from zuul.manager import DynamicChangeQueueContextManager
 
 
 class DependentPipelineManager(PipelineManager):
@@ -75,8 +76,17 @@ class DependentPipelineManager(PipelineManager):
     def getChangeQueue(self, change, existing=None):
         if existing:
             return StaticChangeQueueContextManager(existing)
-        return StaticChangeQueueContextManager(
-            self.pipeline.getQueue(change.project))
+        queue = self.pipeline.getQueue(change.project)
+        if queue:
+            return StaticChangeQueueContextManager(queue)
+        else:
+            # There is no existing queue for this change. Create a
+            # dynamic one for this one change's use
+            change_queue = model.ChangeQueue(self.pipeline, dynamic=True)
+            change_queue.addProject(change.project)
+            self.pipeline.addQueue(change_queue)
+            self.log.debug("Dynamically created queue %s", change_queue)
+            return DynamicChangeQueueContextManager(change_queue)
 
     def isChangeReadyToBeEnqueued(self, change):
         source = change.project.source
@@ -201,3 +211,11 @@ class DependentPipelineManager(PipelineManager):
         if failing_items:
             return failing_items
         return None
+
+    def dequeueItem(self, item):
+        super(DependentPipelineManager, self).dequeueItem(item)
+        # If this was a dynamic queue from a speculative change,
+        # remove the queue (if empty)
+        if item.queue.dynamic:
+            if not item.queue.queue:
+                self.pipeline.removeQueue(item.queue)

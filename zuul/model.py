@@ -209,11 +209,14 @@ class ChangeQueue(object):
     be processed. If a Change succeeds, the Window is increased by
     `window_increase_factor`. If a Change fails, the Window is decreased by
     `window_decrease_factor`.
+
+    A ChangeQueue may be a dynamically created queue, which may be removed
+    from a DependentPipelineManager once empty.
     """
     def __init__(self, pipeline, window=0, window_floor=1,
                  window_increase_type='linear', window_increase_factor=1,
                  window_decrease_type='exponential', window_decrease_factor=2,
-                 name=None):
+                 name=None, dynamic=False):
         self.pipeline = pipeline
         if name:
             self.name = name
@@ -228,6 +231,7 @@ class ChangeQueue(object):
         self.window_increase_factor = window_increase_factor
         self.window_decrease_type = window_decrease_type
         self.window_decrease_factor = window_decrease_factor
+        self.dynamic = dynamic
 
     def __repr__(self):
         return '<ChangeQueue %s: %s>' % (self.pipeline.name, self.name)

@@ -199,6 +199,52 @@ class TestInRepoConfig(ZuulTestCase):
         self.executor_server.release()
         self.waitUntilSettled()
 
+    def test_dynamic_dependent_pipeline(self):
+        # Test dynamically adding a project to a
+        # dependent pipeline for the first time
+        self.executor_server.hold_jobs_in_build = True
+
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        gate_pipeline = tenant.layout.pipelines['gate']
+
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test2
+
+            - project:
+                name: org/project
+                gate:
+                  jobs:
+                    - project-test2
+            """)
+
+        in_repo_playbook = textwrap.dedent(
+            """
+            - hosts: all
+              tasks: []
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf,
+                     'playbooks/project-test2.yaml': in_repo_playbook}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('approved', 1)
+        self.fake_gerrit.addEvent(A.addApproval('code-review', 2))
+        self.waitUntilSettled()
+
+        items = gate_pipeline.getAllItems()
+        self.assertEqual(items[0].change.number, '1')
+        self.assertEqual(items[0].change.patchset, '1')
+        self.assertTrue(items[0].live)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        # Make sure the dynamic queue got cleaned up
+        self.assertEqual(gate_pipeline.queues, [])
+
     def test_in_repo_branch(self):
         in_repo_conf = textwrap.dedent(
             """
