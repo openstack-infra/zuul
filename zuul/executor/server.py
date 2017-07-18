@@ -41,6 +41,16 @@ COMMANDS = ['stop', 'pause', 'unpause', 'graceful', 'verbose',
 DEFAULT_FINGER_PORT = 79
 
 
+class ExecutorError(Exception):
+    """A non-transient run-time executor error
+
+    This class represents error conditions detected by the executor
+    when preparing to run a job which we know are consistently fatal.
+    Zuul should not reschedule the build in these cases.
+    """
+    pass
+
+
 class Watchdog(object):
     def __init__(self, timeout, function, args):
         self.timeout = timeout
@@ -115,8 +125,8 @@ class SshAgent(object):
             subprocess.check_output(['ssh-add', key_path], env=env,
                                     stderr=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
-            self.log.error('ssh-add failed. stdout: %s, stderr: %s',
-                           e.output, e.stderr)
+            self.log.exception('ssh-add failed. stdout: %s, stderr: %s',
+                               e.output, e.stderr)
             raise
         self.log.info('Added SSH Key {}'.format(key_path))
 
@@ -744,6 +754,11 @@ class AnsibleJob(object):
                                  self.executor_server.keep_jobdir,
                                  str(self.job.unique))
             self._execute()
+        except ExecutorError as e:
+            result_data = json.dumps(dict(result='ERROR',
+                                          error_detail=e.args[0]))
+            self.log.debug("Sending result: %s" % (result_data,))
+            self.job.sendWorkComplete(result_data)
         except Exception:
             self.log.exception("Exception while executing job")
             self.job.sendWorkException(traceback.format_exc())
@@ -913,8 +928,9 @@ class AnsibleJob(object):
                           project_name, project_default_branch)
             repo.checkoutLocalBranch(project_default_branch)
         else:
-            raise Exception("Project %s does not have the default branch %s" %
-                            (project_name, project_default_branch))
+            raise ExecutorError("Project %s does not have the "
+                                "default branch %s" %
+                                (project_name, project_default_branch))
 
     def runPlaybooks(self, args):
         result = None
@@ -1005,9 +1021,9 @@ class AnsibleJob(object):
         '''
         for entry in os.listdir(path):
             if os.path.isdir(entry) and entry.endswith('_plugins'):
-                raise Exception(
-                    "Ansible plugin dir %s found adjacent to playbook %s in"
-                    " non-trusted repo." % (entry, path))
+                raise ExecutorError(
+                    "Ansible plugin dir %s found adjacent to playbook %s in "
+                    "non-trusted repo." % (entry, path))
 
     def findPlaybook(self, path, required=False, trusted=False):
         for ext in ['.yaml', '.yml']:
@@ -1018,7 +1034,7 @@ class AnsibleJob(object):
                     self._blockPluginDirs(playbook_dir)
                 return fn
         if required:
-            raise Exception("Unable to find playbook %s" % path)
+            raise ExecutorError("Unable to find playbook %s" % path)
         return None
 
     def preparePlaybooks(self, args):
@@ -1036,7 +1052,7 @@ class AnsibleJob(object):
                 break
 
         if self.jobdir.playbook is None:
-            raise Exception("No valid playbook found")
+            raise ExecutorError("No valid playbook found")
 
         for playbook in args['post_playbooks']:
             jobdir_playbook = self.jobdir.addPostPlaybook()
@@ -1124,7 +1140,7 @@ class AnsibleJob(object):
                         self._blockPluginDirs(os.path.join(d, entry))
             return d
         # It is neither a bare role, nor a collection of roles
-        raise Exception("Unable to find role in %s" % (path,))
+        raise ExecutorError("Unable to find role in %s" % (path,))
 
     def prepareZuulRole(self, jobdir_playbook, role, args, root):
         self.log.debug("Prepare zuul role for %s" % (role,))
@@ -1162,7 +1178,7 @@ class AnsibleJob(object):
         link = os.path.join(root, name)
         link = os.path.realpath(link)
         if not link.startswith(os.path.realpath(root)):
-            raise Exception("Invalid role name %s", name)
+            raise ExecutorError("Invalid role name %s", name)
         os.symlink(path, link)
 
         role_path = self.findRole(link, trusted=jobdir_playbook.trusted)

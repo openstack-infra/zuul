@@ -1098,6 +1098,7 @@ class Build(object):
         self.url = None
         self.result = None
         self.result_data = {}
+        self.error_detail = None
         self.build_set = None
         self.execute_time = time.time()
         self.start_time = None
@@ -1118,6 +1119,7 @@ class Build(object):
     def getSafeAttributes(self):
         return Attributes(uuid=self.uuid,
                           result=self.result,
+                          error_detail=self.error_detail,
                           result_data=self.result_data)
 
 

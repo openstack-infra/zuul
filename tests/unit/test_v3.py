@@ -797,6 +797,30 @@ class TestRoles(ZuulTestCase):
             dict(name='project-test', result='SUCCESS', changes='1,1'),
         ])
 
+    def test_role_error(self):
+        conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test
+                roles:
+                  - zuul: common-config
+
+            - project:
+                name: org/project
+                check:
+                  jobs:
+                    - project-test
+            """)
+
+        file_dict = {'.zuul.yaml': conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertIn(
+            '- project-test project-test : ERROR Unable to find role',
+            A.messages[-1])
+
 
 class TestShadow(ZuulTestCase):
     tenant_config_file = 'config/shadow/main.yaml'

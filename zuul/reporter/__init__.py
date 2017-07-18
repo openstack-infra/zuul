@@ -138,7 +138,11 @@ class BaseReporter(object, metaclass=abc.ABCMeta):
                     elapsed = ' in %ds' % (s)
             else:
                 elapsed = ''
+            if build.error_detail:
+                error = ' ' + build.error_detail
+            else:
+                error = ''
             name = job.name + ' '
-            ret += '- %s%s : %s%s%s\n' % (name, url, result, elapsed,
-                                          voting)
+            ret += '- %s%s : %s%s%s%s\n' % (name, url, result, error,
+                                            elapsed, voting)
         return ret
