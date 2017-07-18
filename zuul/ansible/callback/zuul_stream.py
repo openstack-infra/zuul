@@ -312,8 +312,7 @@ class CallbackModule(default.CallbackModule):
             else:
                 self._log_message(
                     result=result,
-                    status=status,
-                    result_dict=result_dict)
+                    status=status)
         elif 'results' in result_dict:
             for res in result_dict['results']:
                 self._log_message(
@@ -342,7 +341,6 @@ class CallbackModule(default.CallbackModule):
             self._log_message(
                 result=result,
                 msg="Item: {item}".format(item=result_dict['item']),
-                result_dict=result_dict,
                 status=status)
         else:
             self._log_message(
