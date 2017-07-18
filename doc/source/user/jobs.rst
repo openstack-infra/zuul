@@ -70,8 +70,41 @@ behavior.
 
 .. TODO: link to base job documentation and/or document src (and logs?) directory
 
+Variables
+---------
+
+Any variables specified in the job definition are available as Ansible
+host variables.  They are added to the `vars` section of the inventory
+file under the `all` hosts group, so they are available to all hosts.
+Simply refer to them by the name specified in the job's `vars`
+section.
+
+Secrets
+~~~~~~~
+
+Secrets also appear as variables available to Ansible.  Unlike job
+variables, these are not added to the inventory file (so that the
+inventory file may be kept for debugging purposes without revealing
+secrets).  But they are still available to Ansible as normal
+variables.  Because secrets are groups of variables, they will appear
+as a dictionary structure in templates, with the dictionary itself
+being the name of the secret, and its members the individual items in
+the secret.  For example, a secret defined as::
+
+  - secret:
+      name: credentials
+      data:
+        username: foo
+        password: bar
+
+Might be used in a template as::
+
+ {{ credentials.username }} {{ credentials.password }}
+
+.. TODO: xref job vars
+
 Zuul Variables
---------------
+~~~~~~~~~~~~~~
 
 Zuul supplies not only the variables specified by the job definition
 to Ansible, but also some variables from the executor itself.  They
