@@ -69,7 +69,7 @@ class TestSQLConnection(ZuulDBTestCase):
         insp = sa.engine.reflection.Inspector(
             self.connections.connections['resultsdb'].engine)
 
-        self.assertEqual(9, len(insp.get_columns(buildset_table)))
+        self.assertEqual(10, len(insp.get_columns(buildset_table)))
         self.assertEqual(10, len(insp.get_columns(build_table)))
 
     def test_sql_results(self):
@@ -108,6 +108,7 @@ class TestSQLConnection(ZuulDBTestCase):
         self.assertEqual(1, buildset0['patchset'])
         self.assertEqual(1, buildset0['score'])
         self.assertEqual('Build succeeded.', buildset0['message'])
+        self.assertEqual('tenant-one', buildset0['tenant'])
 
         buildset0_builds = conn.execute(
             sa.sql.select([reporter.connection.zuul_build_table]).

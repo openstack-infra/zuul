@@ -85,6 +85,7 @@ class SQLConnection(BaseConnection):
             sa.Column('ref', sa.String(255)),
             sa.Column('score', sa.Integer, nullable=True),
             sa.Column('message', sa.TEXT()),
+            sa.Column('tenant', sa.String(255)),
         )
 
         zuul_build_table = sa.Table(
