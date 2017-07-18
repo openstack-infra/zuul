@@ -17,6 +17,7 @@ import os
 import logging
 import textwrap
 import io
+import re
 
 import voluptuous as vs
 
@@ -300,6 +301,8 @@ class SecretParser(object):
 
 
 class JobParser(object):
+    ANSIBLE_ROLE_RE = re.compile(r'^(ansible[-_.+]*)*(role[-_.+]*)*')
+
     @staticmethod
     def getSchema():
         auth = {'secrets': to_list(str),
@@ -563,6 +566,7 @@ class JobParser(object):
     def _makeImplicitRole(job):
         project = job.source_context.project
         name = project.name.split('/')[-1]
+        name = JobParser.ANSIBLE_ROLE_RE.sub('', name)
         return model.ZuulRole(name,
                               project.connection_name,
                               project.name,
