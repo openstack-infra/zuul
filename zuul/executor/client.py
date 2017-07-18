@@ -253,10 +253,12 @@ class ExecutorClient(object):
         params['nodes'] = nodes
         params['groups'] = [group.toDict() for group in nodeset.getGroups()]
         params['vars'] = copy.deepcopy(job.variables)
+        params['secrets'] = {}
         if job.auth:
             for secret in job.auth.secrets:
-                params['vars'][secret.name] = copy.deepcopy(secret.secret_data)
-        params['vars']['zuul'] = zuul_params
+                secret_data = copy.deepcopy(secret.secret_data)
+                params['secrets'][secret.name] = secret_data
+        params['zuul'] = zuul_params
         projects = set()
 
         def make_project_dict(project, override_branch=None):

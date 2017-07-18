@@ -2757,7 +2757,7 @@ class TestScheduler(ZuulTestCase):
 
         for build in self.history:
             self.assertEqual(results.get(build.uuid, ''),
-                             build.parameters['vars']['zuul'].get('tags'))
+                             build.parameters['zuul'].get('tags'))
 
     def test_timer(self):
         "Test that a periodic job is triggered"

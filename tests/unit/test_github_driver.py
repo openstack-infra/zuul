@@ -46,7 +46,7 @@ class TestGithubDriver(ZuulTestCase):
                          self.getJobFromHistory('project-test2').result)
 
         job = self.getJobFromHistory('project-test2')
-        zuulvars = job.parameters['vars']['zuul']
+        zuulvars = job.parameters['zuul']
         self.assertEqual(A.number, zuulvars['change'])
         self.assertEqual(A.head_sha, zuulvars['patchset'])
         self.assertEqual(1, len(A.comments))
