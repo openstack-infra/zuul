@@ -1806,17 +1806,17 @@ class TestScheduler(ZuulTestCase):
         self.commitConfigUpdate('common-config', 'layouts/no-timer.yaml')
         self.sched.reconfigure(self.config)
 
-        self.assertEqual(len(self.builds), 2, "Two timer jobs")
+        self.assertEqual(len(self.builds), 1, "One timer job")
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
-        self.assertEqual(len(self.builds), 3, "One change plus two timer jobs")
+        self.assertEqual(len(self.builds), 2, "One change plus one timer job")
 
         self.fake_gerrit.addEvent(A.getChangeAbandonedEvent())
         self.waitUntilSettled()
 
-        self.assertEqual(len(self.builds), 2, "Two timer jobs remain")
+        self.assertEqual(len(self.builds), 1, "One timer job remains")
 
         self.executor_server.release()
         self.waitUntilSettled()
@@ -2777,6 +2777,7 @@ class TestScheduler(ZuulTestCase):
         # with a configuration which does not include a
         # timer-triggered job so that we have an opportunity to set
         # the hold flag before the first job.
+        self.create_branch('org/project', 'stable')
         self.executor_server.hold_jobs_in_build = True
         self.commitConfigUpdate('common-config', 'layouts/timer.yaml')
         self.sched.reconfigure(self.config)
@@ -2803,10 +2804,12 @@ class TestScheduler(ZuulTestCase):
         self.executor_server.release()
         self.waitUntilSettled()
 
-        self.assertEqual(self.getJobFromHistory(
-            'project-bitrot-stable-old').result, 'SUCCESS')
-        self.assertEqual(self.getJobFromHistory(
-            'project-bitrot-stable-older').result, 'SUCCESS')
+        self.assertHistory([
+            dict(name='project-bitrot', result='SUCCESS',
+                 ref='refs/heads/master'),
+            dict(name='project-bitrot', result='SUCCESS',
+                 ref='refs/heads/stable'),
+        ], ordered=False)
 
         data = json.loads(data)
         status_jobs = set()
@@ -2816,8 +2819,7 @@ class TestScheduler(ZuulTestCase):
                     for change in head:
                         for job in change['jobs']:
                             status_jobs.add(job['name'])
-        self.assertIn('project-bitrot-stable-old', status_jobs)
-        self.assertIn('project-bitrot-stable-older', status_jobs)
+        self.assertIn('project-bitrot', status_jobs)
 
     def test_idle(self):
         "Test that frequent periodic jobs work"
@@ -2846,12 +2848,12 @@ class TestScheduler(ZuulTestCase):
                                     'layouts/no-timer.yaml')
             self.sched.reconfigure(self.config)
             self.waitUntilSettled()
-            self.assertEqual(len(self.builds), 2,
+            self.assertEqual(len(self.builds), 1,
                              'Timer builds iteration #%d' % x)
             self.executor_server.release('.*')
             self.waitUntilSettled()
             self.assertEqual(len(self.builds), 0)
-            self.assertEqual(len(self.history), x * 2)
+            self.assertEqual(len(self.history), x)
 
     @simple_layout('layouts/smtp.yaml')
     def test_check_smtp_pool(self):

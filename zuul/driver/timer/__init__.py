@@ -80,15 +80,18 @@ class TimerDriver(Driver, TriggerInterface):
 
     def _onTrigger(self, tenant, pipeline_name, timespec):
         for project_name in tenant.layout.project_configs.keys():
-            project_hostname, project_name = project_name.split('/', 1)
-            event = TimerTriggerEvent()
-            event.type = 'timer'
-            event.timespec = timespec
-            event.forced_pipeline = pipeline_name
-            event.project_hostname = project_hostname
-            event.project_name = project_name
-            self.log.debug("Adding event %s" % event)
-            self.sched.addEvent(event)
+            (trusted, project) = tenant.getProject(project_name)
+            for branch in project.source.getProjectBranches(project):
+                event = TimerTriggerEvent()
+                event.type = 'timer'
+                event.timespec = timespec
+                event.forced_pipeline = pipeline_name
+                event.project_hostname = project.canonical_hostname
+                event.project_name = project.name
+                event.ref = 'refs/heads/%s' % branch
+                event.branch = branch
+                self.log.debug("Adding event %s" % event)
+                self.sched.addEvent(event)
 
     def stop(self):
         if self.apsched:

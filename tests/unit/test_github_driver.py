@@ -12,10 +12,13 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import os
 import re
 from testtools.matchers import MatchesRegex, StartsWith
 import urllib
 import time
+
+import git
 
 from tests.base import ZuulTestCase, simple_layout, random_sha1
 
@@ -94,7 +97,16 @@ class TestGithubDriver(ZuulTestCase):
     def test_tag_event(self):
         self.executor_server.hold_jobs_in_build = True
 
-        sha = random_sha1()
+        self.create_branch('org/project', 'tagbranch')
+        files = {'README.txt': 'test'}
+        self.addCommitToRepo('org/project', 'test tag',
+                             files, branch='tagbranch', tag='newtag')
+        path = os.path.join(self.upstream_root, 'org/project')
+        repo = git.Repo(path)
+        tag = repo.tags['newtag']
+        sha = tag.commit.hexsha
+        del repo
+
         self.fake_github.emitEvent(
             self.fake_github.getPushEvent('org/project', 'refs/tags/newtag',
                                           new_rev=sha))

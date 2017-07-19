@@ -156,19 +156,26 @@ class ExecutorClient(object):
             canonical_name=item.change.project.canonical_name)
 
         zuul_params = dict(uuid=uuid,
-                           ref=item.current_build_set.ref,
+                           buildset=item.current_build_set.uuid,
+                           ref=item.change.ref,
                            pipeline=pipeline.name,
                            job=job.name,
                            project=project,
                            tenant=tenant.name,
                            tags=' '.join(sorted(job.tags)))
-
         if hasattr(item.change, 'branch'):
             zuul_params['branch'] = item.change.branch
+        if hasattr(item.change, 'tag'):
+            zuul_params['tag'] = item.change.tag
         if hasattr(item.change, 'number'):
             zuul_params['change'] = item.change.number
         if hasattr(item.change, 'patchset'):
             zuul_params['patchset'] = item.change.patchset
+        if hasattr(item.change, 'oldrev'):
+            zuul_params['oldrev'] = item.change.oldrev
+        if hasattr(item.change, 'newrev'):
+            zuul_params['newrev'] = item.change.newrev
+
         # Legacy environment variables
         params = dict(ZUUL_UUID=uuid,
                       ZUUL_PROJECT=item.change.project.name)

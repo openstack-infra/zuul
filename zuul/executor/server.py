@@ -838,8 +838,18 @@ class AnsibleJob(object):
 
         for project in args['projects']:
             repo = repos[project['canonical_name']]
+            # If this project is the Zuul project and this is a ref
+            # rather than a change, checkout the ref.
+            if (project['canonical_name'] ==
+                args['zuul']['project']['canonical_name'] and
+                (not args['zuul'].get('branch')) and
+                args['zuul'].get('ref')):
+                ref = args['zuul']['ref']
+            else:
+                ref = None
             self.checkoutBranch(repo,
                                 project['name'],
+                                ref,
                                 args['branch'],
                                 args['override_branch'],
                                 project['override_branch'],
@@ -909,7 +919,7 @@ class AnsibleJob(object):
             repo.setRef('refs/heads/' + branch, commit)
         return True
 
-    def checkoutBranch(self, repo, project_name, zuul_branch,
+    def checkoutBranch(self, repo, project_name, ref, zuul_branch,
                        job_branch, project_override_branch,
                        project_default_branch):
         branches = repo.getBranches()
@@ -921,6 +931,16 @@ class AnsibleJob(object):
             self.log.info("Checking out %s job branch %s",
                           project_name, job_branch)
             repo.checkoutLocalBranch(job_branch)
+        elif ref and ref.startswith('refs/heads/'):
+            b = ref[len('refs/heads/'):]
+            self.log.info("Checking out %s branch ref %s",
+                          project_name, b)
+            repo.checkoutLocalBranch(b)
+        elif ref and ref.startswith('refs/tags/'):
+            t = ref[len('refs/tags/'):]
+            self.log.info("Checking out %s tag ref %s",
+                          project_name, t)
+            repo.checkout(t)
         elif zuul_branch and zuul_branch in branches:
             self.log.info("Checking out %s zuul branch %s",
                           project_name, zuul_branch)
