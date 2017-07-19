@@ -24,6 +24,7 @@ __metaclass__ = type
 
 import json
 import os
+import re
 
 from ansible.plugins.callback import CallbackBase
 try:
@@ -43,34 +44,54 @@ class CallbackModule(CallbackBase):
     def __init__(self, display=None):
         super(CallbackModule, self).__init__(display)
         self.results = []
+        self.output = []
+        self.playbook = {}
         self.output_path = os.path.splitext(
             os.environ['ZUUL_JOB_OUTPUT_FILE'])[0] + '.json'
         # For now, just read in the old file and write it all out again
         # This may well not scale from a memory perspective- but let's see how
         # it goes.
         if os.path.exists(self.output_path):
-            self.results = json.load(open(self.output_path, 'r'))
+            self.output = json.load(open(self.output_path, 'r'))
+        self._playbook_name = None
 
-    def _get_playbook_name(self, work_dir):
-
+    def _new_playbook(self, play):
+        # Get the hostvars from just one host - the vars we're looking for will
+        # be identical on all of them
+        hostvars = next(iter(play._variable_manager._hostvars.values()))
         playbook = self._playbook_name
-        if work_dir and playbook.startswith(work_dir):
-            playbook = playbook.replace(work_dir.rstrip('/') + '/', '')
-            # Lop off the first two path elements - ansible/pre_playbook_0
-            for prefix in ('pre', 'playbook', 'post'):
-                full_prefix = 'ansible/{prefix}_'.format(prefix=prefix)
-                if playbook.startswith(full_prefix):
-                    playbook = playbook.split(os.path.sep, 2)[2]
-        return playbook
+        self._playbook_name = None
 
-    def _new_play(self, play, phase, index, work_dir):
+        # TODO(mordred) For now, protect specific variable lookups to make it
+        # not absurdly strange to run local tests with the callback plugin
+        # enabled. Remove once we have a "run playbook like zuul runs playbook"
+        # tool.
+        phase = hostvars.get('zuul_execution_phase')
+        index = hostvars.get('zuul_execution_phase_index')
+
+        # imply work_dir from src_root
+        src_root = hostvars.get('zuul', {}).get('executor', {}).get('src_root')
+        if src_root:
+            # Ensure work_dir has a trailing / for ease of stripping
+            work_dir = os.path.dirname(
+                os.path.dirname(src_root)).rstrip('/') + '/'
+            # Strip work_dir from the beginning of the playbook name.
+            playbook = playbook.replace(work_dir, '')
+
+        # Lop off the first two path elements - ansible/pre_playbook_0
+        playbook = re.sub('(un)?trusted/project_[^/]+/', '', playbook)
+        # Remove yaml suffix
+        playbook = os.path.splitext(playbook)[0]
+
+        self.playbook['playbook'] = playbook
+        self.playbook['phase'] = phase
+        self.playbook['index'] = index
+
+    def _new_play(self, play):
         return {
             'play': {
                 'name': play.name,
                 'id': str(play._uuid),
-                'phase': phase,
-                'index': index,
-                'playbook': self._get_playbook_name(work_dir),
             },
             'tasks': []
         }
@@ -88,20 +109,10 @@ class CallbackModule(CallbackBase):
         self._playbook_name = os.path.splitext(playbook._file_name)[0]
 
     def v2_playbook_on_play_start(self, play):
-        # Get the hostvars from just one host - the vars we're looking for will
-        # be identical on all of them
-        hostvars = next(iter(play._variable_manager._hostvars.values()))
-        phase = hostvars.get('zuul_execution_phase')
-        index = hostvars.get('zuul_execution_phase_index')
-        # TODO(mordred) For now, protect this to make it not absurdly strange
-        # to run local tests with the callback plugin enabled. Remove once we
-        # have a "run playbook like zuul runs playbook" tool.
-        work_dir = None
-        if 'zuul' in hostvars and 'executor' in hostvars['zuul']:
-            # imply work_dir from src_root
-            work_dir = os.path.dirname(
-                hostvars['zuul']['executor']['src_root'])
-        self.results.append(self._new_play(play, phase, index, work_dir))
+        if self._playbook_name:
+            self._new_playbook(play)
+
+        self.results.append(self._new_play(play))
 
     def v2_playbook_on_task_start(self, task, is_conditional):
         self.results[-1]['tasks'].append(self._new_task(task))
@@ -125,12 +136,11 @@ class CallbackModule(CallbackBase):
             s = stats.summarize(h)
             summary[h] = s
 
-        output = {
-            'plays': self.results,
-            'stats': summary
-        }
+        self.playbook['plays'] = self.results
+        self.playbook['stats'] = summary
+        self.output.append(self.playbook)
 
-        json.dump(output, open(self.output_path, 'w'),
+        json.dump(self.output, open(self.output_path, 'w'),
                   indent=4, sort_keys=True, separators=(',', ': '))
 
     v2_runner_on_failed = v2_runner_on_ok
