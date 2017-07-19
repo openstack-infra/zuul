@@ -889,6 +889,7 @@ class Scheduler(threading.Thread):
         data = {}
 
         data['zuul_version'] = self.zuul_version
+        websocket_url = get_default(self.config, 'web', 'websocket_url', None)
 
         if self._pause:
             ret = '<p><b>Queue only mode:</b> preparing to '
@@ -912,5 +913,5 @@ class Scheduler(threading.Thread):
         data['pipelines'] = pipelines
         tenant = self.abide.tenants.get(tenant_name)
         for pipeline in tenant.layout.pipelines.values():
-            pipelines.append(pipeline.formatStatusJSON())
+            pipelines.append(pipeline.formatStatusJSON(websocket_url))
         return json.dumps(data)
