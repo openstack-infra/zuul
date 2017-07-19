@@ -23,6 +23,7 @@ import datetime
 import logging
 import json
 import os
+import re
 import socket
 import threading
 import time
@@ -101,6 +102,7 @@ class CallbackModule(default.CallbackModule):
         self.configure_logger()
         self._items_done = False
         self._deferred_result = None
+        self._playbook_name = None
 
     def configure_logger(self):
         # ansible appends timestamp, user and pid to the log lines emitted
@@ -148,6 +150,9 @@ class CallbackModule(default.CallbackModule):
                     self._log("%s | %s " % (host, ln), ts=ts)
 
     def v2_playbook_on_start(self, playbook):
+        if self._playbook_name:
+            # We had a previous playbook, emit a spacer.
+            self._log("")
         self._playbook_name = os.path.splitext(playbook._file_name)[0]
 
     def v2_playbook_on_include(self, included_file):
@@ -156,23 +161,49 @@ class CallbackModule(default.CallbackModule):
                 host=host.name,
                 filename=included_file._filename))
 
-    def v2_playbook_on_play_start(self, play):
-        self._play = play
+    def _emit_playbook_banner(self):
         # Get the hostvars from just one host - the vars we're looking for will
         # be identical on all of them
-        hostvars = self._play._variable_manager._hostvars
-        a_host = next(iter(hostvars.keys()))
-        self.phase = hostvars[a_host]['zuul_execution_phase']
-        if self.phase != 'run':
-            self.phase = '{phase}-{index}'.format(
-                phase=self.phase,
-                index=hostvars[a_host]['zuul_execution_phase_index'])
+        hostvars = next(iter(self._play._variable_manager._hostvars.values()))
+        playbook = self._playbook_name
+        self._playbook_name = None
+
+        # TODO(mordred) For now, protect specific variable lookups to make it
+        # not absurdly strange to run local tests with the callback plugin
+        # enabled. Remove once we have a "run playbook like zuul runs playbook"
+        # tool.
+        phase = hostvars.get('zuul_execution_phase')
+        if phase and phase != 'run':
+            phase = '{phase}-run'.format(phase=phase)
+        phase = phase.upper()
+
+        # imply work_dir from src_root
+        src_root = hostvars.get('zuul', {}).get('executor', {}).get('src_root')
+        if src_root:
+            # Ensure work_dir has a trailing / for ease of stripping
+            work_dir = os.path.dirname(
+                os.path.dirname(src_root)).rstrip('/') + '/'
+            # Strip work_dir from the beginning of the playbook name.
+            playbook = playbook.replace(work_dir, '')
+
+        # Lop off the first two path elements - ansible/pre_playbook_0
+        playbook = re.sub('(un)?trusted/project_[^/]+/', '', playbook)
+        # Remove yaml suffix
+        playbook = os.path.splitext(playbook)[0]
+
+        self._log("{phase} [{playbook}]".format(
+            phase=phase, playbook=playbook))
+
+    def v2_playbook_on_play_start(self, play):
+        self._play = play
+
+        # We can't fill in this information until the first play
+        if self._playbook_name:
+            self._emit_playbook_banner()
 
         # the name of a play defaults to the hosts string
         name = play.get_name().strip()
-        msg = u"PLAY [{phase} : {playbook} : {name}]".format(
-            phase=self.phase,
-            playbook=self._playbook_name, name=name)
+        msg = u"PLAY [{name}]".format(name=name)
 
         self._log(msg)
         # Log an extra blank line to get space after each play
@@ -389,6 +420,9 @@ class CallbackModule(default.CallbackModule):
                 " changed: {changed}"
                 " unreachable: {unreachable}"
                 " failed: {failures}".format(host=host, **t))
+        # Set this so that the next playbook start, if there is on, can emit
+        # a spacer line.
+        self._playbook_name = True
 
     def _process_deferred(self, result):
         self._items_done = True
