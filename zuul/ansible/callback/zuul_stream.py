@@ -149,9 +149,6 @@ class CallbackModule(default.CallbackModule):
                     self._log("%s | %s " % (host, ln), ts=ts)
 
     def v2_playbook_on_start(self, playbook):
-        if self._playbook_name:
-            # We had a previous playbook, emit a spacer.
-            self._log("")
         self._playbook_name = os.path.splitext(playbook._file_name)[0]
 
     def v2_playbook_on_include(self, included_file):
@@ -406,9 +403,10 @@ class CallbackModule(default.CallbackModule):
                 " changed: {changed}"
                 " unreachable: {unreachable}"
                 " failed: {failures}".format(host=host, **t))
-        # Set this so that the next playbook start, if there is on, can emit
-        # a spacer line.
-        self._playbook_name = True
+
+        # Add a spacer line after the stats so that there will be a line
+        # between each playbook
+        self._log("")
 
     def _process_deferred(self, result):
         self._items_done = True
