@@ -34,13 +34,12 @@ Configuration Loading
 
 When Zuul starts, it examines all of the git repositories which are
 specified by the system administrator in :ref:`tenant-config` and searches
-for files in the root of each repository.  In the case of a
-*config-project*, Zuul looks for a file named `zuul.yaml`.  In the
-case of an *untrusted-project*, Zuul looks first for `zuul.yaml` and
-if that is not found, `.zuul.yaml` (with a leading dot).  In the case
-of an *untrusted-project*, the configuration from every branch is
-included, however, in the case of a *config-project*, only the
-`master` branch is examined.
+for files in the root of each repository. Zuul looks first for a file named
+`zuul.yaml` or a directory named `zuul.d`, and if they are not found,
+`.zuul.yaml` or `.zuul.d` (with a leading dot). In the case of an
+*untrusted-project*, the configuration from every branch is included,
+however, in the case of a *config-project*, only the `master` branch is
+examined.
 
 When a change is proposed to one of these files in an
 *untrusted-project*, the configuration proposed in the change is
@@ -63,6 +62,16 @@ Configuration Items
 The `zuul.yaml` and `.zuul.yaml` configuration files are
 YAML-formatted and are structured as a series of items, each of which
 is described below.
+
+In the case of a `zuul.d` directory, Zuul recurses the directory and extends
+the configuration using all the .yaml files in the sorted path order.
+For example, to keep job's variants in a separate file, it needs to be loaded
+after the main entries, for example using number prefixes in file's names::
+
+* zuul.d/pipelines.yaml
+* zuul.d/projects.yaml
+* zuul.d/01_jobs.yaml
+* zuul.d/02_jobs-variants.yaml
 
 .. _pipeline:
 
