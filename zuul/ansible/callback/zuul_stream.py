@@ -23,7 +23,6 @@ import datetime
 import logging
 import json
 import os
-import re
 import socket
 import threading
 import time
@@ -165,34 +164,20 @@ class CallbackModule(default.CallbackModule):
         # Get the hostvars from just one host - the vars we're looking for will
         # be identical on all of them
         hostvars = next(iter(self._play._variable_manager._hostvars.values()))
-        playbook = self._playbook_name
         self._playbook_name = None
 
-        # TODO(mordred) For now, protect specific variable lookups to make it
-        # not absurdly strange to run local tests with the callback plugin
-        # enabled. Remove once we have a "run playbook like zuul runs playbook"
-        # tool.
-        phase = hostvars.get('zuul_execution_phase')
+        phase = hostvars.get('zuul_execution_phase', '')
+        playbook = hostvars.get('zuul_execution_canonical_name_and_path')
+        trusted = hostvars.get('zuul_execution_trusted')
+        trusted = 'trusted' if trusted == "True" else 'untrusted'
+        branch = hostvars.get('zuul_execution_branch')
+
         if phase and phase != 'run':
             phase = '{phase}-run'.format(phase=phase)
         phase = phase.upper()
 
-        # imply work_dir from src_root
-        src_root = hostvars.get('zuul', {}).get('executor', {}).get('src_root')
-        if src_root:
-            # Ensure work_dir has a trailing / for ease of stripping
-            work_dir = os.path.dirname(
-                os.path.dirname(src_root)).rstrip('/') + '/'
-            # Strip work_dir from the beginning of the playbook name.
-            playbook = playbook.replace(work_dir, '')
-
-        # Lop off the first two path elements - ansible/pre_playbook_0
-        playbook = re.sub('(un)?trusted/project_[^/]+/', '', playbook)
-        # Remove yaml suffix
-        playbook = os.path.splitext(playbook)[0]
-
-        self._log("{phase} [{playbook}]".format(
-            phase=phase, playbook=playbook))
+        self._log("{phase} [{trusted} : {playbook}@{branch}]".format(
+            trusted=trusted, phase=phase, playbook=playbook, branch=branch))
 
     def v2_playbook_on_play_start(self, play):
         self._play = play
