@@ -201,6 +201,9 @@ class CallbackModule(default.CallbackModule):
         if self._playbook_name:
             self._emit_playbook_banner()
 
+        # Log an extra blank line to get space before each play
+        self._log("")
+
         # the name of a play defaults to the hosts string
         name = play.get_name().strip()
         msg = u"PLAY [{name}]".format(name=name)
@@ -407,8 +410,6 @@ class CallbackModule(default.CallbackModule):
 
     def v2_playbook_on_stats(self, stats):
 
-        # Log an extra blank line to get space before the stats
-        self._log("")
         self._log("PLAY RECAP")
 
         hosts = sorted(stats.processed.keys())
@@ -437,12 +438,14 @@ class CallbackModule(default.CallbackModule):
 
         task_name = task.get_name().strip()
 
-        args = ''
-        task_args = task.args.copy()
         if task.loop:
             task_type = 'LOOP'
         else:
             task_type = 'TASK'
+
+        # TODO(mordred) With the removal of printing task args, do we really
+        # want to keep doing this section?
+        task_args = task.args.copy()
         is_shell = task_args.pop('_uses_shell', False)
         if is_shell and task_name == 'command':
             task_name = 'shell'
@@ -452,17 +455,10 @@ class CallbackModule(default.CallbackModule):
             task_name = '{name}: {command}'.format(
                 name=task_name, command=raw_params[0])
 
-        if not task.no_log and task_args:
-            args = u', '.join(u'%s=%s' % a for a in task_args.items())
-            args = u' %s' % args
-
-        msg = "{task_type} [{task}{args}]".format(
+        msg = "{task_type} [{task}]".format(
             task_type=task_type,
-            task=task_name,
-            args=args)
+            task=task_name)
         self._log(msg)
-        # Log an extra blank line to get space after each task
-        self._log("")
         return task
 
     def _get_task_hosts(self, task):
