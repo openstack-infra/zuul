@@ -1,0 +1,15 @@
+- job:
+    name: implicit-role-ok
+
+- job:
+    name: explicit-role-ok
+    roles:
+      - zuul: org/role-project
+        name: role-name
+
+- project:
+    name: org/role-project
+    check:
+      jobs:
+        - implicit-role-ok
+        - explicit-role-ok

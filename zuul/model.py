@@ -702,10 +702,12 @@ class Role(object, metaclass=abc.ABCMeta):
 class ZuulRole(Role):
     """A reference to an ansible role in a Zuul project."""
 
-    def __init__(self, target_name, connection_name, project_name):
+    def __init__(self, target_name, connection_name, project_name,
+                 implicit=False):
         super(ZuulRole, self).__init__(target_name)
         self.connection_name = connection_name
         self.project_name = project_name
+        self.implicit = implicit
 
     def __repr__(self):
         return '<ZuulRole %s %s>' % (self.project_name, self.target_name)
@@ -715,6 +717,8 @@ class ZuulRole(Role):
     def __eq__(self, other):
         if not isinstance(other, ZuulRole):
             return False
+        # Implicit is not consulted for equality so that we can handle
+        # implicit to explicit conversions.
         return (super(ZuulRole, self).__eq__(other) and
                 self.connection_name == other.connection_name and
                 self.project_name == other.project_name)
@@ -725,6 +729,7 @@ class ZuulRole(Role):
         d['type'] = 'zuul'
         d['connection'] = self.connection_name
         d['project'] = self.project_name
+        d['implicit'] = self.implicit
         return d
 
 
@@ -867,11 +872,31 @@ class Job(object):
             self.run = self.implied_run
 
     def addRoles(self, roles):
-        newroles = list(self.roles)
+        newroles = []
+        # Start with a copy of the existing roles, but if any of them
+        # are implicit roles which are identified as explicit in the
+        # new roles list, replace them with the explicit version.
+        changed = False
+        for existing_role in self.roles:
+            if existing_role in roles:
+                new_role = roles[roles.index(existing_role)]
+            else:
+                new_role = None
+            if (new_role and
+                isinstance(new_role, ZuulRole) and
+                isinstance(existing_role, ZuulRole) and
+                existing_role.implicit and not new_role.implicit):
+                newroles.append(new_role)
+                changed = True
+            else:
+                newroles.append(existing_role)
+        # Now add the new roles.
         for role in reversed(roles):
             if role not in newroles:
                 newroles.insert(0, role)
-        self.roles = tuple(newroles)
+                changed = True
+        if changed:
+            self.roles = tuple(newroles)
 
     def updateVariables(self, other_vars):
         v = self.variables
