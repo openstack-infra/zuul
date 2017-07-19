@@ -12,6 +12,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import fixtures
+import logging
 import textwrap
 
 from tests.base import ZuulTestCase
@@ -245,3 +247,39 @@ class TestSplitConfig(ZuulTestCase):
         # project1-project2-integration test removed, only want project-test1
         self.assertHistory([
             dict(name='project-test1', result='SUCCESS', changes='1,1')])
+
+    def test_config_path_conflict(self):
+        def add_file(project, path):
+            new_file = textwrap.dedent(
+                """
+                - job:
+                    name: test-job
+                """
+            )
+            file_dict = {path: new_file}
+            A = self.fake_gerrit.addFakeChange(project, 'master', 'A',
+                                               files=file_dict)
+            self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+            self.waitUntilSettled()
+
+        log_fixture = self.useFixture(
+            fixtures.FakeLogger(level=logging.WARNING))
+
+        log_fixture._output.truncate(0)
+        add_file("common-config", "zuul.yaml")
+        self.assertIn("Multiple configuration", log_fixture.output)
+
+        log_fixture._output.truncate(0)
+        add_file("org/project1", ".zuul.yaml")
+        self.assertIn("Multiple configuration", log_fixture.output)
+
+
+class TestConfigConflict(ZuulTestCase):
+    tenant_config_file = 'config/conflict-config/main.yaml'
+
+    def test_conflict_config(self):
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        jobs = sorted(tenant.layout.jobs.keys())
+        self.assertEquals(
+            ['noop', 'trusted-zuul.yaml-job', 'untrusted-zuul.yaml-job'],
+            jobs)

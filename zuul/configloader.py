@@ -1213,7 +1213,7 @@ class TenantParser(object):
                                    (job, job.files))
             loaded = False
             files = sorted(job.files.keys())
-            for conf_root in ['zuul.yaml', '.zuul.yaml', 'zuul.d', '.zuul.d']:
+            for conf_root in ['zuul.yaml', 'zuul.d', '.zuul.yaml', '.zuul.d']:
                 for fn in files:
                     fn_root = fn.split('/')[0]
                     if fn_root != conf_root or not job.files.get(fn):
@@ -1416,8 +1416,7 @@ class ConfigLoader(object):
                     fns1.append(fn)
                 if fn.startswith(".zuul.d/"):
                     fns2.append(fn)
-
-            fns = ['zuul.yaml', '.zuul.yaml'] + sorted(fns1) + sorted(fns2)
+            fns = ["zuul.yaml"] + sorted(fns1) + [".zuul.yaml"] + sorted(fns2)
             incdata = None
             loaded = None
             for fn in fns:
