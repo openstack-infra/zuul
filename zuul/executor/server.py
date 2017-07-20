@@ -189,6 +189,8 @@ class JobDir(object):
             log streaming daemon find job logs.
         '''
         # root
+        #   .ansible
+        #     fact-cache/localhost
         #   ansible
         #     inventory.yaml
         #   playbook_0
@@ -226,6 +228,18 @@ class JobDir(object):
         os.makedirs(self.trusted_root)
         ssh_dir = os.path.join(self.work_root, '.ssh')
         os.mkdir(ssh_dir, 0o700)
+        # Create ansible cache directory
+        ansible_cache = os.path.join(self.root, '.ansible')
+        self.fact_cache = os.path.join(ansible_cache, 'fact-cache')
+        os.makedirs(self.fact_cache)
+        localhost_facts = os.path.join(self.fact_cache, 'localhost')
+        # NOTE(pabelanger): We do not want to leak zuul-executor facts to other
+        # playbooks now that smart fact gathering is enabled by default.  We
+        # can have ansible skip populating the cache with information by the
+        # doing the following.
+        with open(localhost_facts, 'w') as f:
+            f.write('{"module_setup": true}')
+
         self.result_data_file = os.path.join(self.work_root, 'results.json')
         with open(self.result_data_file, 'w'):
             pass
@@ -1252,7 +1266,10 @@ class AnsibleJob(object):
             config.write('remote_tmp = %s/.ansible/remote_tmp\n' %
                          self.jobdir.root)
             config.write('retry_files_enabled = False\n')
-            config.write('gathering = explicit\n')
+            config.write('gathering = smart\n')
+            config.write('fact_caching = jsonfile\n')
+            config.write('fact_caching_connection = %s\n' %
+                         self.jobdir.fact_cache)
             config.write('library = %s\n'
                          % self.executor_server.library_dir)
             config.write('command_warnings = False\n')
