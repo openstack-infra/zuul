@@ -162,6 +162,8 @@ class JobDirPlaybook(object):
     def __init__(self, root):
         self.root = root
         self.trusted = None
+        self.branch = None
+        self.canonical_name_and_path = None
         self.path = None
         self.roles = []
         self.roles_path = []
@@ -1069,10 +1071,13 @@ class AnsibleJob(object):
         self.log.debug("Prepare playbook repo for %s" % (playbook,))
         # Check out the playbook repo if needed and set the path to
         # the playbook that should be run.
-        jobdir_playbook.trusted = playbook['trusted']
         source = self.executor_server.connections.getSource(
             playbook['connection'])
         project = source.getProject(playbook['project'])
+        jobdir_playbook.trusted = playbook['trusted']
+        jobdir_playbook.branch = playbook['branch']
+        jobdir_playbook.canonical_name_and_path = os.path.join(
+            project.canonical_name, playbook['path'])
         path = None
         if not playbook['trusted']:
             # This is a project repo, so it is safe to use the already
