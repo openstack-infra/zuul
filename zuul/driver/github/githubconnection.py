@@ -299,7 +299,7 @@ class GithubWebhookListener():
                                                       event.change_number)
         event.updated_at = pr_body.get('updated_at')
         event.branch = base.get('ref')
-        event.refspec = "refs/pull/" + str(pr_body.get('number')) + "/head"
+        event.ref = "refs/pull/" + str(pr_body.get('number')) + "/head"
         event.patch_number = head.get('sha')
 
         event.title = pr_body.get('title')
@@ -601,7 +601,7 @@ class GithubConnection(BaseConnection):
 
         self.log.info("Updating %s" % (change,))
         change.pr = self.getPull(change.project.name, change.number)
-        change.refspec = "refs/pull/%s/head" % change.number
+        change.ref = "refs/pull/%s/head" % change.number
         change.branch = change.pr.get('base').get('ref')
         change.files = change.pr.get('files')
         change.title = change.pr.get('title')

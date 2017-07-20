@@ -80,7 +80,7 @@ class GerritEventConnector(threading.Thread):
             patchset = data.get('patchSet')
             if patchset:
                 event.patch_number = patchset.get('number')
-                event.refspec = patchset.get('ref')
+                event.ref = patchset.get('ref')
             event.approvals = data.get('approvals', [])
             event.comment = data.get('comment')
         refupdate = data.get('refUpdate')
@@ -418,7 +418,7 @@ class GerritConnection(BaseConnection):
         files = []
         for ps in data['patchSets']:
             if ps['number'] == change.patchset:
-                change.refspec = ps['ref']
+                change.ref = ps['ref']
                 for f in ps.get('files', []):
                     files.append(f['file'])
             if int(ps['number']) > int(max_ps):

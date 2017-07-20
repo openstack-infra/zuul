@@ -82,7 +82,7 @@ class ZuulDriver(Driver, TriggerInterface):
         event.branch = change.branch
         event.change_url = change.url
         event.patch_number = change.patchset
-        event.refspec = change.refspec
+        event.ref = change.ref
         self.sched.addEvent(event)
 
     def _createParentChangeEnqueuedEvents(self, change, pipeline):
@@ -104,7 +104,7 @@ class ZuulDriver(Driver, TriggerInterface):
         event.branch = change.branch
         event.change_url = change.url
         event.patch_number = change.patchset
-        event.refspec = change.refspec
+        event.ref = change.ref
         self.sched.addEvent(event)
 
     def getTrigger(self, connection_name, config=None):

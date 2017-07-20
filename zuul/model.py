@@ -1841,12 +1841,10 @@ class QueueItem(object):
         patchset = None
         oldrev = None
         newrev = None
-        refspec = None
         branch = None
         if hasattr(self.change, 'number'):
             number = self.change.number
             patchset = self.change.patchset
-            refspec = self.change.refspec
         if hasattr(self.change, 'newrev'):
             oldrev = self.change.oldrev
             newrev = self.change.newrev
@@ -1860,9 +1858,9 @@ class QueueItem(object):
         return dict(project=project.name,
                     connection=connection_name,
                     merge_mode=self.current_build_set.getMergeMode(),
-                    refspec=refspec,
+                    ref=self.change.ref,
                     branch=branch,
-                    ref=self.current_build_set.ref,
+                    buildset_uuid=self.current_build_set.uuid,
                     number=number,
                     patchset=patchset,
                     oldrev=oldrev,
@@ -1951,7 +1949,6 @@ class Change(Branch):
         self.number = None
         self.url = None
         self.patchset = None
-        self.refspec = None
 
         self.needs_changes = []
         self.needed_by_changes = []
@@ -2008,6 +2005,7 @@ class TriggerEvent(object):
         # common
         self.type = None
         self.branch_updated = False
+        self.ref = None
         # For management events (eg: enqueue / promote)
         self.tenant_name = None
         self.project_hostname = None
@@ -2019,12 +2017,10 @@ class TriggerEvent(object):
         self.change_number = None
         self.change_url = None
         self.patch_number = None
-        self.refspec = None
         self.branch = None
         self.comment = None
         self.state = None
         # ref-updated
-        self.ref = None
         self.oldrev = None
         self.newrev = None
         # For events that arrive with a destination pipeline (eg, from

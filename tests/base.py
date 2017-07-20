@@ -1180,7 +1180,7 @@ class FakeBuild(object):
         self.log.debug("Build %s continuing" % self.unique)
 
         result = (RecordingAnsibleJob.RESULT_NORMAL, 0)  # Success
-        if (('ZUUL_REF' in self.parameters) and self.shouldFail()):
+        if self.shouldFail():
             result = (RecordingAnsibleJob.RESULT_NORMAL, 1)  # Failure
         if self.aborted:
             result = (RecordingAnsibleJob.RESULT_ABORTED, None)
@@ -1215,8 +1215,7 @@ class FakeBuild(object):
             except NoSuchPathError as e:
                 self.log.debug('%s' % e)
                 return False
-            ref = self.parameters['ZUUL_REF']
-            repo_messages = [c.message.strip() for c in repo.iter_commits(ref)]
+            repo_messages = [c.message.strip() for c in repo.iter_commits()]
             commit_message = '%s-1' % change.subject
             self.log.debug("Checking if build %s has changes; commit_message "
                            "%s; repo_messages %s" % (self, commit_message,

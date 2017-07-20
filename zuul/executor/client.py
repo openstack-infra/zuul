@@ -196,10 +196,10 @@ class ExecutorClient(object):
         params['ZUUL_PIPELINE'] = pipeline.name
         params['ZUUL_URL'] = item.current_build_set.zuul_url
         params['ZUUL_VOTING'] = job.voting and '1' or '0'
-        if hasattr(item.change, 'refspec'):
+        if hasattr(item.change, 'number'):
             changes_str = '^'.join(
                 ['%s:%s:%s' % (i.change.project.name, i.change.branch,
-                               i.change.refspec)
+                               i.change.ref)
                  for i in all_items])
             params['ZUUL_BRANCH'] = item.change.branch
             params['ZUUL_CHANGES'] = changes_str
