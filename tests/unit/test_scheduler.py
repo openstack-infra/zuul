@@ -2763,13 +2763,13 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.history), 2)
 
         results = {self.getJobFromHistory('merge',
-                   project='org/project1').uuid: 'extratag merge',
+                   project='org/project1').uuid: ['extratag', 'merge'],
                    self.getJobFromHistory('merge',
-                   project='org/project2').uuid: 'merge'}
+                   project='org/project2').uuid: ['merge']}
 
         for build in self.history:
             self.assertEqual(results.get(build.uuid, ''),
-                             build.parameters['zuul'].get('tags'))
+                             build.parameters['zuul'].get('jobtags'))
 
     def test_timer(self):
         "Test that a periodic job is triggered"
