@@ -4,6 +4,6 @@
       jobs:
         - tox-docs
         - tox-cover
-        - tox-linters
+        - tox-pep8
         - tox-py35
         - tox-tarball
