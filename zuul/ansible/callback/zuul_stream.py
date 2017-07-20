@@ -358,10 +358,15 @@ class CallbackModule(default.CallbackModule):
             status = 'ok'
 
         if result._task.action not in ('command', 'shell'):
-            self._log_message(
-                result=result,
-                msg="Item: {item}".format(item=result_dict['item']),
-                status=status)
+            if 'msg' in result_dict:
+                self._log_message(
+                    result=result, msg=result_dict['msg'], status=status)
+            else:
+                self._log_message(
+                    result=result,
+                    msg=json.dumps(result_dict['item'],
+                                   indent=2, sort_keys=True),
+                    status=status)
         else:
             self._log_message(
                 result,
@@ -481,7 +486,8 @@ class CallbackModule(default.CallbackModule):
                 host=hostname,
                 msg="Output suppressed because no_log was given"))
             return
-        if not msg and set(result_dict.keys()) == set(['msg', 'failed']):
+        if (not msg and result_dict
+                and set(result_dict.keys()) == set(['msg', 'failed'])):
             msg = result_dict['msg']
             result_dict = None
         if msg:
