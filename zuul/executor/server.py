@@ -55,6 +55,88 @@ class RoleNotFoundError(ExecutorError):
     pass
 
 
+class DiskAccountant(object):
+    ''' A single thread to periodically run du and monitor a base directory
+
+    Whenever the accountant notices a dir over limit, it will call the
+    given func with an argument of the job directory. That function
+    should be used to remediate the problem, generally by killing the
+    job producing the disk bloat). The function will be called every
+    time the problem is noticed, so it should be handled synchronously
+    to avoid stacking up calls.
+    '''
+    log = logging.getLogger("zuul.ExecutorDiskAccountant")
+
+    def __init__(self, jobs_base, limit, func, cache_dir, usage_func=None):
+        '''
+        :param str jobs_base: absolute path name of dir to be monitored
+        :param int limit: maximum number of MB allowed to be in use in any one
+                          subdir
+        :param callable func: Function to call with overlimit dirs
+        :param str cache_dir: absolute path name of dir to be passed as the
+                              first argument to du. This will ensure du does
+                              not count any hardlinks to files in this
+                              directory against a single job.
+        :param callable usage_func: Optional function to call with usage
+                                    for every dir _NOT_ over limit
+        '''
+        # Don't cross the streams
+        if cache_dir == jobs_base:
+            raise Exception("Cache dir and jobs dir cannot be the same")
+        self.thread = threading.Thread(target=self._run,
+                                       name='executor-diskaccountant')
+        self.thread.daemon = True
+        self._running = False
+        self.jobs_base = jobs_base
+        self.limit = limit
+        self.func = func
+        self.cache_dir = cache_dir
+        self.usage_func = usage_func
+        self.stop_event = threading.Event()
+
+    def _run(self):
+        while self._running:
+            # Walk job base
+            before = time.time()
+            du = subprocess.Popen(
+                ['du', '-m', '--max-depth=1', self.cache_dir, self.jobs_base],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            for line in du.stdout:
+                (size, dirname) = line.rstrip().split()
+                dirname = dirname.decode('utf8')
+                if dirname == self.jobs_base or dirname == self.cache_dir:
+                    continue
+                if os.path.dirname(dirname) == self.cache_dir:
+                    continue
+                size = int(size)
+                if size > self.limit:
+                    self.log.info(
+                        "{job} is using {size}MB (limit={limit})"
+                        .format(size=size, job=dirname, limit=self.limit))
+                    self.func(dirname)
+                elif self.usage_func:
+                    self.log.debug(
+                        "{job} is using {size}MB (limit={limit})"
+                        .format(size=size, job=dirname, limit=self.limit))
+                    self.usage_func(dirname, size)
+            du.wait()
+            after = time.time()
+            # Sleep half as long as that took, or 1s, whichever is longer
+            delay_time = max((after - before) / 2, 1.0)
+            self.stop_event.wait(delay_time)
+
+    def start(self):
+        self._running = True
+        self.thread.start()
+
+    def stop(self):
+        self._running = False
+        self.stop_event.set()
+        # We join here to avoid whitelisting the thread -- if it takes more
+        # than 5s to stop in tests, there's a problem.
+        self.thread.join(timeout=5)
+
+
 class Watchdog(object):
     def __init__(self, timeout, function, args):
         self.timeout = timeout
@@ -443,6 +525,8 @@ class ExecutorServer(object):
                                       '/var/lib/zuul/executor-git')
         self.default_username = get_default(self.config, 'executor',
                                             'default_username', 'zuul')
+        self.disk_limit_per_job = int(get_default(self.config, 'executor',
+                                                  'disk_limit_per_job', 250))
         self.merge_email = get_default(self.config, 'merger', 'git_user_email')
         self.merge_name = get_default(self.config, 'merger', 'git_user_name')
         execution_wrapper_name = get_default(self.config, 'executor',
@@ -486,6 +570,10 @@ class ExecutorServer(object):
             pass
 
         self.job_workers = {}
+        self.disk_accountant = DiskAccountant(self.jobdir_root,
+                                              self.disk_limit_per_job,
+                                              self.stopJobByJobdir,
+                                              self.merge_root)
 
     def _getMerger(self, root, logger=None):
         if root != self.merge_root:
@@ -530,6 +618,7 @@ class ExecutorServer(object):
         self.executor_thread = threading.Thread(target=self.run_executor)
         self.executor_thread.daemon = True
         self.executor_thread.start()
+        self.disk_accountant.start()
 
     def register(self):
         self.executor_worker.registerFunction("executor:execute")
@@ -540,6 +629,7 @@ class ExecutorServer(object):
 
     def stop(self):
         self.log.debug("Stopping")
+        self.disk_accountant.stop()
         self._running = False
         self._command_running = False
         self.command_socket.stop()
@@ -675,22 +765,29 @@ class ExecutorServer(object):
     def finishJob(self, unique):
         del(self.job_workers[unique])
 
+    def stopJobByJobdir(self, jobdir):
+        unique = os.path.basename(jobdir)
+        self.stopJobByUnique(unique)
+
     def stopJob(self, job):
         try:
             args = json.loads(job.arguments)
             self.log.debug("Stop job with arguments: %s" % (args,))
             unique = args['uuid']
-            job_worker = self.job_workers.get(unique)
-            if not job_worker:
-                self.log.debug("Unable to find worker for job %s" % (unique,))
-                return
-            try:
-                job_worker.stop()
-            except Exception:
-                self.log.exception("Exception sending stop command "
-                                   "to worker:")
+            self.stopJobByUnique(unique)
         finally:
             job.sendWorkComplete()
+
+    def stopJobByUnique(self, unique):
+        job_worker = self.job_workers.get(unique)
+        if not job_worker:
+            self.log.debug("Unable to find worker for job %s" % (unique,))
+            return
+        try:
+            job_worker.stop()
+        except Exception:
+            self.log.exception("Exception sending stop command "
+                               "to worker:")
 
     def cat(self, job):
         args = json.loads(job.arguments)
@@ -1429,6 +1526,7 @@ class AnsibleJob(object):
             if timeout:
                 watchdog.stop()
                 self.log.debug("Stopped watchdog")
+            self.log.debug("Stopped disk job killer")
 
         with self.proc_lock:
             self.proc = None
