@@ -175,6 +175,20 @@ class ExecutorClient(object):
             zuul_params['oldrev'] = item.change.oldrev
         if hasattr(item.change, 'newrev'):
             zuul_params['newrev'] = item.change.newrev
+        zuul_params['items'] = []
+        for i in all_items:
+            d = dict()
+            d['project'] = dict(
+                name=i.change.project.name,
+                canonical_hostname=i.change.project.canonical_hostname,
+                canonical_name=i.change.project.canonical_name)
+            if hasattr(i.change, 'number'):
+                d['change'] = i.change.number
+            if hasattr(i.change, 'patchset'):
+                d['patchset'] = i.change.number
+            if hasattr(i.change, 'branch'):
+                d['branch'] = i.change.branch
+            zuul_params['items'].append(d)
 
         # Legacy environment variables
         params = dict(ZUUL_UUID=uuid,
