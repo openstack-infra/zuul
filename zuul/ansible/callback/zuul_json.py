@@ -24,7 +24,6 @@ __metaclass__ = type
 
 import json
 import os
-import re
 
 from ansible.plugins.callback import CallbackBase
 try:
@@ -59,7 +58,6 @@ class CallbackModule(CallbackBase):
         # Get the hostvars from just one host - the vars we're looking for will
         # be identical on all of them
         hostvars = next(iter(play._variable_manager._hostvars.values()))
-        playbook = self._playbook_name
         self._playbook_name = None
 
         # TODO(mordred) For now, protect specific variable lookups to make it
@@ -68,24 +66,16 @@ class CallbackModule(CallbackBase):
         # tool.
         phase = hostvars.get('zuul_execution_phase')
         index = hostvars.get('zuul_execution_phase_index')
-
-        # imply work_dir from src_root
-        src_root = hostvars.get('zuul', {}).get('executor', {}).get('src_root')
-        if src_root:
-            # Ensure work_dir has a trailing / for ease of stripping
-            work_dir = os.path.dirname(
-                os.path.dirname(src_root)).rstrip('/') + '/'
-            # Strip work_dir from the beginning of the playbook name.
-            playbook = playbook.replace(work_dir, '')
-
-        # Lop off the first two path elements - ansible/pre_playbook_0
-        playbook = re.sub('(un)?trusted/project_[^/]+/', '', playbook)
-        # Remove yaml suffix
-        playbook = os.path.splitext(playbook)[0]
+        playbook = hostvars.get('zuul_execution_canonical_name_and_path')
+        trusted = hostvars.get('zuul_execution_trusted')
+        trusted = True if trusted == "True" else False
+        branch = hostvars.get('zuul_execution_branch')
 
         self.playbook['playbook'] = playbook
         self.playbook['phase'] = phase
         self.playbook['index'] = index
+        self.playbook['trusted'] = trusted
+        self.playbook['branch'] = branch
 
     def _new_play(self, play):
         return {
