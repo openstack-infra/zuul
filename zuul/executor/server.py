@@ -1315,7 +1315,6 @@ class AnsibleJob(object):
     def runAnsible(self, cmd, timeout, config_file, trusted):
         env_copy = os.environ.copy()
         env_copy.update(self.ssh_agent.env)
-        env_copy['LOGNAME'] = 'zuul'
         env_copy['ZUUL_JOB_OUTPUT_FILE'] = self.jobdir.job_output_file
         env_copy['ZUUL_JOBDIR'] = self.jobdir.root
         pythonpath = env_copy.get('PYTHONPATH')
@@ -1415,9 +1414,6 @@ class AnsibleJob(object):
 
     def runAnsiblePlaybook(self, playbook, timeout, success=None,
                            phase=None, index=None):
-        env_copy = os.environ.copy()
-        env_copy['LOGNAME'] = 'zuul'
-
         if self.executor_server.verbose:
             verbose = '-vvv'
         else:
