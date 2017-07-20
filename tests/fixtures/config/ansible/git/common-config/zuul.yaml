@@ -59,7 +59,7 @@
     pre-run: playbooks/pre
     post-run: playbooks/post
     vars:
-      flagpath: '{{zuul._test.test_root}}/{{zuul.uuid}}.flag'
+      flagpath: '{{zuul._test.test_root}}/{{zuul.build}}.flag'
     roles:
       - zuul: bare-role
     auth:
