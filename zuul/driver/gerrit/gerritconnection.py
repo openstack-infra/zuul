@@ -371,10 +371,14 @@ class GerritConnection(BaseConnection):
 
     def _updateChange(self, change, history=None):
 
-        # In case this change is already in the history we have a cyclic
-        # dependency and don't need to update ourselves again as this gets
-        # done in a previous frame of the call stack.
-        if history and change.number in history:
+        # In case this change is already in the history we have a
+        # cyclic dependency and don't need to update ourselves again
+        # as this gets done in a previous frame of the call stack.
+        # NOTE(jeblair): I don't think it's possible to hit this case
+        # anymore as all paths hit the change cache first.
+        if (history and change.number and change.patchset and
+            (change.number, change.patchset) in history):
+            self.log.debug("Change %s is in history" % (change,))
             return change
 
         self.log.info("Updating %s" % (change,))
@@ -420,7 +424,7 @@ class GerritConnection(BaseConnection):
             history = []
         else:
             history = history[:]
-        history.append(change.number)
+        history.append((change.number, change.patchset))
 
         needs_changes = []
         if 'dependsOn' in data:
@@ -465,7 +469,7 @@ class GerritConnection(BaseConnection):
             # reference the latest patchset of its Depends-On (this
             # change). In case the dep is already in history we already
             # refreshed this change so refresh is not needed in this case.
-            refresh = dep_num not in history
+            refresh = (dep_num, dep_ps) not in history
             dep = self._getChange(
                 dep_num, dep_ps, refresh=refresh, history=history)
             if (not dep.is_merged) and dep.is_current_patchset:

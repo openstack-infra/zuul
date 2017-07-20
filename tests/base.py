@@ -410,8 +410,8 @@ class FakeGerritChange(object):
         needed = other.data.get('neededBy', [])
         d = {'id': self.data['id'],
              'number': self.data['number'],
-             'ref': self.patchsets[patchset - 1]['ref'],
-             'revision': self.patchsets[patchset - 1]['revision']
+             'ref': self.patchsets[-1]['ref'],
+             'revision': self.patchsets[-1]['revision']
              }
         needed.append(d)
         other.data['neededBy'] = needed

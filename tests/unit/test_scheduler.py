@@ -1178,6 +1178,34 @@ class TestScheduler(ZuulTestCase):
         repo.heads.master.commit = repo.commit('init')
         self.test_build_configuration()
 
+    def test_dependent_changes_rebase(self):
+        # Test that no errors occur when we walk a dependency tree
+        # with an unused leaf node due to a rebase.
+        # Start by constructing: C -> B -> A
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        B.setDependsOn(A, 1)
+
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        C.setDependsOn(B, 1)
+
+        # Then rebase to form: D -> C -> A
+        C.addPatchset()  # C,2
+        C.setDependsOn(A, 1)
+
+        D = self.fake_gerrit.addFakeChange('org/project', 'master', 'D')
+        D.setDependsOn(C, 2)
+
+        # Walk the entire tree
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 3)
+
+        # Verify that walking just part of the tree still works
+        self.fake_gerrit.addEvent(D.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 6)
+
     def test_dependent_changes_dequeue(self):
         "Test that dependent patches are not needlessly tested"
 
