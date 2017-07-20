@@ -236,13 +236,17 @@ class CallbackModule(default.CallbackModule):
         result_dict = dict(result._result)
         localhost_names = ('localhost', '127.0.0.1')
         is_localhost = False
+        task_host = result._host.get_name()
         delegated_vars = result_dict.get('_ansible_delegated_vars', None)
         if delegated_vars:
             delegated_host = delegated_vars['ansible_host']
             if delegated_host in localhost_names:
                 is_localhost = True
+        elif result._task._variable_manager is None:
+            # Handle fact gathering which doens't have a variable manager
+            if task_host == 'localhost':
+                is_localhost = True
         else:
-            task_host = result._host.get_name()
             task_hostvars = result._task._variable_manager._hostvars[task_host]
             if task_hostvars.get('ansible_host', task_hostvars.get(
                     'ansible_inventory_host')) in localhost_names:
@@ -470,11 +474,16 @@ class CallbackModule(default.CallbackModule):
 
     def _log_message(self, result, msg=None, status="ok", result_dict=None):
         hostname = self._get_hostname(result)
+        if result_dict:
+            result_dict = self._dump_result_dict(result_dict)
         if result._task.no_log:
             self._log("{host} | {msg}".format(
                 host=hostname,
                 msg="Output suppressed because no_log was given"))
             return
+        if not msg and set(result_dict.keys()) == set(['msg', 'failed']):
+            msg = result_dict['msg']
+            result_dict = None
         if msg:
             msg_lines = msg.strip().split('\n')
             if len(msg_lines) > 1:
@@ -490,8 +499,7 @@ class CallbackModule(default.CallbackModule):
             self._log("{host} | {status}".format(
                 host=hostname, status=status, msg=msg))
         if result_dict:
-            result_string = json.dumps(self._dump_result_dict(result_dict),
-                                       indent=2, sort_keys=True)
+            result_string = json.dumps(result_dict, indent=2, sort_keys=True)
             for line in result_string.split('\n'):
                 self._log("{host} | {line}".format(host=hostname, line=line))
 
