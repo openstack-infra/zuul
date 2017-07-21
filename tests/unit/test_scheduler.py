@@ -107,8 +107,8 @@ class TestScheduler(ZuulTestCase):
         self.assertReportedStat(
             'zuul.pipeline.gate.org.project.total_changes', value='1|c')
 
-        for build in self.builds:
-            self.assertEqual(build.parameters['ZUUL_VOTING'], '1')
+        for build in self.history:
+            self.assertTrue(build.parameters['zuul']['voting'])
 
     def test_initial_pipeline_gauges(self):
         "Test that each pipeline reported its length on start"
@@ -1392,8 +1392,12 @@ class TestScheduler(ZuulTestCase):
             self.getJobFromHistory('nonvoting-project-test2').result,
             'FAILURE')
 
-        for build in self.builds:
-            self.assertEqual(build.parameters['ZUUL_VOTING'], '0')
+        self.assertTrue(self.getJobFromHistory('nonvoting-project-merge').
+                        parameters['zuul']['voting'])
+        self.assertTrue(self.getJobFromHistory('nonvoting-project-test1').
+                        parameters['zuul']['voting'])
+        self.assertFalse(self.getJobFromHistory('nonvoting-project-test2').
+                         parameters['zuul']['voting'])
 
     def test_check_queue_success(self):
         "Test successful check queue jobs."

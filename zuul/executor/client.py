@@ -160,6 +160,7 @@ class ExecutorClient(object):
                            ref=item.change.ref,
                            pipeline=pipeline.name,
                            job=job.name,
+                           voting=job.voting,
                            project=project,
                            tenant=tenant.name,
                            jobtags=sorted(job.tags))
@@ -195,7 +196,6 @@ class ExecutorClient(object):
                       ZUUL_PROJECT=item.change.project.name)
         params['ZUUL_PIPELINE'] = pipeline.name
         params['ZUUL_URL'] = item.current_build_set.zuul_url
-        params['ZUUL_VOTING'] = job.voting and '1' or '0'
 
         params['job'] = job.name
         params['timeout'] = job.timeout
