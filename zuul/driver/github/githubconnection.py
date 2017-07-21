@@ -32,7 +32,7 @@ import github3
 from github3.exceptions import MethodNotAllowed
 
 from zuul.connection import BaseConnection
-from zuul.model import Ref
+from zuul.model import Ref, Branch, Tag
 from zuul.exceptions import MergeFailure
 from zuul.driver.github.githubmodel import PullRequest, GithubTriggerEvent
 
@@ -506,16 +506,21 @@ class GithubConnection(BaseConnection):
             change.source_event = event
             change.is_current_patchset = (change.pr.get('head').get('sha') ==
                                           event.patch_number)
-        elif event.ref:
-            change = Ref(project)
+        else:
+            if event.ref and event.ref.startswith('refs/tags/'):
+                change = Tag(project)
+                change.tag = event.ref[len('refs/tags/'):]
+            elif event.ref and event.ref.startswith('refs/heads/'):
+                change = Branch(project)
+                change.branch = event.ref[len('refs/heads/'):]
+            else:
+                change = Ref(project)
             change.ref = event.ref
             change.oldrev = event.oldrev
             change.newrev = event.newrev
             change.url = self.getGitwebUrl(project, sha=event.newrev)
             change.source_event = event
             change.files = self.getPushedFileNames(event)
-        else:
-            change = Ref(project)
         return change
 
     def _getChange(self, project, number, patchset=None, refresh=False,

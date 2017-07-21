@@ -248,6 +248,46 @@ class TestExecutorRepos(ZuulTestCase):
 
         self.assertBuildStates(states, projects)
 
+    def test_periodic_override(self):
+        # This test can not use simple_layout because it must start
+        # with a configuration which does not include a
+        # timer-triggered job so that we have an opportunity to set
+        # the hold flag before the first job.
+
+        # This tests that we can override the branch in a timer
+        # trigger (mostly to ensure backwards compatability for jobs).
+        self.executor_server.hold_jobs_in_build = True
+        # Start timer trigger - also org/project
+        self.commitConfigUpdate('common-config',
+                                'layouts/repo-checkout-timer-override.yaml')
+        self.sched.reconfigure(self.config)
+
+        p1 = 'review.example.com/org/project1'
+        projects = [p1]
+        self.create_branch('org/project1', 'stable/havana')
+
+        # The pipeline triggers every second, so we should have seen
+        # several by now.
+        time.sleep(5)
+        self.waitUntilSettled()
+
+        # Stop queuing timer triggered jobs so that the assertions
+        # below don't race against more jobs being queued.
+        self.commitConfigUpdate('common-config',
+                                'layouts/repo-checkout-no-timer.yaml')
+        self.sched.reconfigure(self.config)
+
+        self.assertEquals(1, len(self.builds), "One build is running")
+
+        upstream = self.getUpstreamRepos(projects)
+        states = [
+            {p1: dict(commit=str(upstream[p1].commit('stable/havana')),
+                      branch='stable/havana'),
+             },
+        ]
+
+        self.assertBuildStates(states, projects)
+
     def test_periodic(self):
         # This test can not use simple_layout because it must start
         # with a configuration which does not include a
@@ -274,14 +314,19 @@ class TestExecutorRepos(ZuulTestCase):
                                 'layouts/repo-checkout-no-timer.yaml')
         self.sched.reconfigure(self.config)
 
-        self.assertEquals(1, len(self.builds), "One build is running")
+        self.assertEquals(2, len(self.builds), "Two builds are running")
 
         upstream = self.getUpstreamRepos(projects)
         states = [
             {p1: dict(commit=str(upstream[p1].commit('stable/havana')),
                       branch='stable/havana'),
              },
+            {p1: dict(commit=str(upstream[p1].commit('master')),
+                      branch='master'),
+             },
         ]
+        if self.builds[0].parameters['zuul']['ref'] == 'refs/heads/master':
+            states = list(reversed(states))
 
         self.assertBuildStates(states, projects)
 

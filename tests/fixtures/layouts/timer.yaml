@@ -25,16 +25,10 @@
     name: project-test2
 
 - job:
-    name: project-bitrot-stable-old
+    name: project-bitrot
     nodes:
       - name: static
         label: ubuntu-xenial
-
-- job:
-    name: project-bitrot-stable-older
-    nodes:
-      - name: static
-        label: ubuntu-trusty
 
 - project:
     name: org/project
@@ -44,5 +38,4 @@
         - project-test2
     periodic:
       jobs:
-        - project-bitrot-stable-old
-        - project-bitrot-stable-older
+        - project-bitrot

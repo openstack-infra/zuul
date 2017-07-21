@@ -667,7 +667,8 @@ class TestPrePlaybooks(AnsibleZuulTestCase):
         self.assertFalse(os.path.exists(pre_flag_path))
         post_flag_path = os.path.join(self.test_root, build.uuid +
                                       '.post.flag')
-        self.assertTrue(os.path.exists(post_flag_path))
+        self.assertTrue(os.path.exists(post_flag_path),
+                        "The file %s should exist" % post_flag_path)
 
 
 class TestBrokenConfig(ZuulTestCase):

@@ -1068,8 +1068,10 @@ class BuildHistory(object):
         self.__dict__.update(kw)
 
     def __repr__(self):
-        return ("<Completed build, result: %s name: %s uuid: %s changes: %s>" %
-                (self.result, self.name, self.uuid, self.changes))
+        return ("<Completed build, result: %s name: %s uuid: %s "
+                "changes: %s ref: %s>" %
+                (self.result, self.name, self.uuid,
+                 self.changes, self.ref))
 
 
 class FakeStatsd(threading.Thread):
@@ -1344,6 +1346,7 @@ class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
         self.executor_server.build_history.append(
             BuildHistory(name=build.name, result=result, changes=build.changes,
                          node=build.node, uuid=build.unique,
+                         ref=build.parameters['zuul']['ref'],
                          parameters=build.parameters, jobdir=build.jobdir,
                          pipeline=build.parameters['ZUUL_PIPELINE'])
         )
