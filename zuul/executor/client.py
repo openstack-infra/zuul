@@ -215,33 +215,11 @@ class ExecutorClient(object):
             params['ZUUL_CHANGE'] = str(item.change.number)
             params['ZUUL_PATCHSET'] = str(item.change.patchset)
         if hasattr(item.change, 'ref') and item.change.ref is not None:
-            params['ZUUL_REFNAME'] = item.change.ref
             params['ZUUL_OLDREV'] = item.change.oldrev
             params['ZUUL_NEWREV'] = item.change.newrev
 
             params['ZUUL_REF'] = item.change.ref
             params['ZUUL_COMMIT'] = item.change.newrev
-
-        # This is what we should be heading toward for parameters:
-
-        # required:
-        # ZUUL_UUID
-        # ZUUL_REF (/refs/zuul/..., /refs/tags/foo, master)
-        # ZUUL_COMMIT
-
-        # optional:
-        # ZUUL_PROJECT
-        # ZUUL_PIPELINE
-
-        # optional (changes only):
-        # ZUUL_BRANCH
-        # ZUUL_CHANGE
-        # ZUUL_CHANGE_IDS
-        # ZUUL_PATCHSET
-
-        # optional (ref updated only):
-        # ZUUL_OLDREV
-        # ZUUL_NEWREV
 
         params['job'] = job.name
         params['timeout'] = job.timeout
