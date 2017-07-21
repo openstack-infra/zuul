@@ -36,8 +36,6 @@ class TestGithubDriver(ZuulTestCase):
 
         build_params = self.builds[0].parameters
         self.assertEqual('master', build_params['ZUUL_BRANCH'])
-        self.assertEqual(str(A.number), build_params['ZUUL_CHANGE'])
-        self.assertEqual(A.head_sha, build_params['zuul']['patchset'])
 
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
@@ -50,8 +48,8 @@ class TestGithubDriver(ZuulTestCase):
 
         job = self.getJobFromHistory('project-test2')
         zuulvars = job.parameters['zuul']
-        self.assertEqual(A.number, zuulvars['change'])
-        self.assertEqual(A.head_sha, zuulvars['patchset'])
+        self.assertEqual(str(A.number), zuulvars['change'])
+        self.assertEqual(str(A.head_sha), zuulvars['patchset'])
         self.assertEqual(1, len(A.comments))
         self.assertEqual(2, len(self.history))
 

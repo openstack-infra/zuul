@@ -1283,7 +1283,7 @@ class TestScheduler(ZuulTestCase):
 
         self.executor_server.hold_jobs_in_build = False
         for build in self.builds:
-            if build.parameters['ZUUL_CHANGE'] != '1':
+            if build.parameters['zuul']['change'] != '1':
                 build.release()
                 self.waitUntilSettled()
 
@@ -2035,13 +2035,13 @@ class TestScheduler(ZuulTestCase):
 
         a_build = b_build = c_build = d_build = None
         for x in self.builds:
-            if x.parameters['ZUUL_CHANGE'] == '3':
+            if x.parameters['zuul']['change'] == '3':
                 a_build = x
-            elif x.parameters['ZUUL_CHANGE'] == '4':
+            elif x.parameters['zuul']['change'] == '4':
                 b_build = x
-            elif x.parameters['ZUUL_CHANGE'] == '5':
+            elif x.parameters['zuul']['change'] == '5':
                 c_build = x
-            elif x.parameters['ZUUL_CHANGE'] == '6':
+            elif x.parameters['zuul']['change'] == '6':
                 d_build = x
             if a_build and b_build and c_build and d_build:
                 break
