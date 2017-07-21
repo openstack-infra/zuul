@@ -1122,7 +1122,7 @@ class FakeBuild(object):
         if len(self.parameters.get('nodes')) == 1:
             self.node = self.parameters['nodes'][0]['label']
         self.unique = self.parameters['ZUUL_UUID']
-        self.pipeline = self.parameters['ZUUL_PIPELINE']
+        self.pipeline = self.parameters['zuul']['pipeline']
         self.project = self.parameters['ZUUL_PROJECT']
         self.name = self.parameters['job']
         self.wait_condition = threading.Condition()
@@ -1348,7 +1348,7 @@ class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
                          node=build.node, uuid=build.unique,
                          ref=build.parameters['zuul']['ref'],
                          parameters=build.parameters, jobdir=build.jobdir,
-                         pipeline=build.parameters['ZUUL_PIPELINE'])
+                         pipeline=build.parameters['zuul']['pipeline'])
         )
         self.executor_server.running_builds.remove(build)
         del self.executor_server.job_builds[self.job.unique]
