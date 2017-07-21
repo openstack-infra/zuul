@@ -4886,8 +4886,6 @@ class TestSchedulerMerges(ZuulTestCase):
         for job in self.builds:
             if 'project-merge' in job.name:
                 job_A = job
-        commit_A = self.getParameter(job_A, 'ZUUL_COMMIT')
-        self.log.debug("Got Zuul commit for change A: %s" % commit_A)
 
         path = os.path.join(job_A.jobdir.src_root, 'review.example.com',
                             'org/project-merge-branches')
@@ -4906,8 +4904,6 @@ class TestSchedulerMerges(ZuulTestCase):
         for job in self.builds:
             if 'project-merge' in job.name:
                 job_B = job
-        commit_B = self.getParameter(job_B, 'ZUUL_COMMIT')
-        self.log.debug("Got Zuul commit for change B: %s" % commit_B)
 
         path = os.path.join(job_B.jobdir.src_root, 'review.example.com',
                             'org/project-merge-branches')
@@ -4925,8 +4921,7 @@ class TestSchedulerMerges(ZuulTestCase):
         for job in self.builds:
             if 'project-merge' in job.name:
                 job_C = job
-        commit_C = self.getParameter(job_C, 'ZUUL_COMMIT')
-        self.log.debug("Got Zuul commit for change C: %s" % commit_C)
+
         path = os.path.join(job_C.jobdir.src_root, 'review.example.com',
                             'org/project-merge-branches')
         repo = git.Repo(path)
