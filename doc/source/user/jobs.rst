@@ -278,14 +278,12 @@ available:
 **zuul.oldrev**
   If the item was enqueued as the result of a tag being deleted, the
   previous git sha of the tag will be included here.  If the tag was
-  created, this will be set to the value
-  0000000000000000000000000000000000000000.
+  created, this variable will be undefined.
 
 **zuul.newrev**
   If the item was enqueued as the result of a tag being created, the
   new git sha of the tag will be included here.  If the tag was
-  deleted, this will be set to the value
-  0000000000000000000000000000000000000000.
+  deleted, this variable will be undefined.
 
 Ref Items
 +++++++++
@@ -298,14 +296,12 @@ available:
 **zuul.oldrev**
   If the item was enqueued as the result of a ref being deleted, the
   previous git sha of the ref will be included here.  If the ref was
-  created, this will be set to the value
-  0000000000000000000000000000000000000000.
+  created, this variable will be undefined.
 
 **zuul.newrev**
   If the item was enqueued as the result of a ref being created, the
   new git sha of the ref will be included here.  If the ref was
-  deleted, this will be set to the value
-  0000000000000000000000000000000000000000.
+  deleted, this variable will be undefined.
 
 Working Directory
 +++++++++++++++++
