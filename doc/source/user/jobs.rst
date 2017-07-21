@@ -109,7 +109,7 @@ Zuul Variables
 Zuul supplies not only the variables specified by the job definition
 to Ansible, but also some variables from the Zuul itself.
 
-When a pipeline is triggered an action, it enqueues items which may
+When a pipeline is triggered by an action, it enqueues items which may
 vary based on the pipeline's configuration.  For example, when a new
 change is created, that change may be enqueued into the pipeline,
 while a tag may be enqueued into the pipeline when it is pushed.
