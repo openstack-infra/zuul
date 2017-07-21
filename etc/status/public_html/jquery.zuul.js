@@ -96,7 +96,15 @@
             job: function(job) {
                 var $job_line = $('<span />');
 
-                if (job.url !== null) {
+                if (job.result !== null) {
+                    $job_line.append(
+                        $('<a />')
+                            .addClass('zuul-job-name')
+                            .attr('href', job.report_url)
+                            .text(job.name)
+                    );
+                }
+                else if (job.url !== null) {
                     $job_line.append(
                         $('<a />')
                             .addClass('zuul-job-name')
