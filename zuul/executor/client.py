@@ -162,7 +162,7 @@ class ExecutorClient(object):
                            job=job.name,
                            project=project,
                            tenant=tenant.name,
-                           tags=' '.join(sorted(job.tags)))
+                           jobtags=sorted(job.tags))
         if hasattr(item.change, 'branch'):
             zuul_params['branch'] = item.change.branch
         if hasattr(item.change, 'tag'):

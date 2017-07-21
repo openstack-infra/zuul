@@ -167,12 +167,10 @@ All items provide the following information as Ansible variables:
 **zuul.tenant**
   The name of the current Zuul tenant.
 
-**zuul.tags**
+**zuul.jobtags**
   A list of tags associated with the job.  Not to be confused with git
   tags, these are simply free-form text fields that can be used by the
   job for reporting or classification purposes.
-
-.. TODO: rename jobtags
 
 **zuul.items**
   A data structure representing the items being tested with this
