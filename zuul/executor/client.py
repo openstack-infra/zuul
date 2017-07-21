@@ -203,9 +203,6 @@ class ExecutorClient(object):
                  for i in all_items])
             params['ZUUL_BRANCH'] = item.change.branch
             params['ZUUL_CHANGES'] = changes_str
-            params['ZUUL_REF'] = ('refs/zuul/%s/%s' %
-                                  (item.change.branch,
-                                   item.current_build_set.ref))
 
             zuul_changes = ' '.join(['%s,%s' % (i.change.number,
                                                 i.change.patchset)
@@ -213,8 +210,6 @@ class ExecutorClient(object):
             params['ZUUL_CHANGE_IDS'] = zuul_changes
             params['ZUUL_CHANGE'] = str(item.change.number)
             params['ZUUL_PATCHSET'] = str(item.change.patchset)
-        if hasattr(item.change, 'ref') and item.change.ref is not None:
-            params['ZUUL_REF'] = item.change.ref
 
         params['job'] = job.name
         params['timeout'] = job.timeout

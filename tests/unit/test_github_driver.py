@@ -113,7 +113,7 @@ class TestGithubDriver(ZuulTestCase):
         self.waitUntilSettled()
 
         build_params = self.builds[0].parameters
-        self.assertEqual('refs/tags/newtag', build_params['ZUUL_REF'])
+        self.assertEqual('refs/tags/newtag', build_params['zuul']['ref'])
         self.assertEqual('00000000000000000000000000000000',
                          build_params['zuul']['oldrev'])
         self.assertEqual(sha, build_params['zuul']['newrev'])
@@ -137,7 +137,7 @@ class TestGithubDriver(ZuulTestCase):
         self.waitUntilSettled()
 
         build_params = self.builds[0].parameters
-        self.assertEqual('refs/heads/master', build_params['ZUUL_REF'])
+        self.assertEqual('refs/heads/master', build_params['zuul']['ref'])
         self.assertEqual(old_sha, build_params['zuul']['oldrev'])
         self.assertEqual(new_sha, build_params['zuul']['newrev'])
 
