@@ -284,6 +284,19 @@ class CallbackModule(default.CallbackModule):
         # Log an extra blank line to get space after each task
         self._log("")
 
+    def v2_runner_on_skipped(self, result):
+        reason = result._result.get('skip_reason')
+        if reason:
+            # No reason means it's an item, which we'll log differently
+            self._log_message(result, status='skipping', msg=reason)
+
+    def v2_runner_item_on_skipped(self, result):
+        reason = result._result.get('skip_reason')
+        if reason:
+            self._log_message(result, status='skipping', msg=reason)
+        else:
+            self._log_message(result, status='skipping')
+
     def v2_runner_on_ok(self, result):
         if (self._play.strategy == 'free'
                 and self._last_task_banner != result._task._uuid):
