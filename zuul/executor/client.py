@@ -215,9 +215,6 @@ class ExecutorClient(object):
             params['ZUUL_CHANGE'] = str(item.change.number)
             params['ZUUL_PATCHSET'] = str(item.change.patchset)
         if hasattr(item.change, 'ref') and item.change.ref is not None:
-            params['ZUUL_OLDREV'] = item.change.oldrev
-            params['ZUUL_NEWREV'] = item.change.newrev
-
             params['ZUUL_REF'] = item.change.ref
             params['ZUUL_COMMIT'] = item.change.newrev
 

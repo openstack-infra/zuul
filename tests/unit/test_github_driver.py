@@ -115,8 +115,8 @@ class TestGithubDriver(ZuulTestCase):
         build_params = self.builds[0].parameters
         self.assertEqual('refs/tags/newtag', build_params['ZUUL_REF'])
         self.assertEqual('00000000000000000000000000000000',
-                         build_params['ZUUL_OLDREV'])
-        self.assertEqual(sha, build_params['ZUUL_NEWREV'])
+                         build_params['zuul']['oldrev'])
+        self.assertEqual(sha, build_params['zuul']['newrev'])
 
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
@@ -138,8 +138,8 @@ class TestGithubDriver(ZuulTestCase):
 
         build_params = self.builds[0].parameters
         self.assertEqual('refs/heads/master', build_params['ZUUL_REF'])
-        self.assertEqual(old_sha, build_params['ZUUL_OLDREV'])
-        self.assertEqual(new_sha, build_params['ZUUL_NEWREV'])
+        self.assertEqual(old_sha, build_params['zuul']['oldrev'])
+        self.assertEqual(new_sha, build_params['zuul']['newrev'])
 
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
