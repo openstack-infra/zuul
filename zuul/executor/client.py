@@ -209,7 +209,6 @@ class ExecutorClient(object):
                                      for i in all_items])
             params['ZUUL_CHANGE_IDS'] = zuul_changes
             params['ZUUL_CHANGE'] = str(item.change.number)
-            params['ZUUL_PATCHSET'] = str(item.change.patchset)
 
         params['job'] = job.name
         params['timeout'] = job.timeout
