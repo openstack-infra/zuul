@@ -229,12 +229,12 @@ additional variables are available:
 **zuul.oldrev**
   If the item was enqueued as the result of a change merging or being
   pushed to the branch, the git sha of the old revision will be
-  included here.  Otherwise, this value will not be present.
+  included here.  Otherwise, this variable will be undefined.
 
 **zuul.newrev**
   If the item was enqueued as the result of a change merging or being
   pushed to the branch, the git sha of the new revision will be
-  included here.  Otherwise, this value will not be present.
+  included here.  Otherwise, this variable will be undefined.
 
 Tag Items
 +++++++++
@@ -247,14 +247,16 @@ available:
   The name of the item's tag (without the `refs/tags/` prefix).
 
 **zuul.oldrev**
-  If the item was enqueued as the result of a tag being created or
-  deleted the git sha of the old revision will be included here.
-  Otherwise, this value will not be present.
+  If the item was enqueued as the result of a tag being deleted, the
+  previous git sha of the tag will be included here.  If the tag was
+  created, this will be set to the value
+  0000000000000000000000000000000000000000.
 
 **zuul.newrev**
-  If the item was enqueued as the result of a tag being created or
-  deleted the git sha of the new revision will be included here.
-  Otherwise, this value will not be present.
+  If the item was enqueued as the result of a tag being created, the
+  new git sha of the tag will be included here.  If the tag was
+  deleted, this will be set to the value
+  0000000000000000000000000000000000000000.
 
 Ref Items
 +++++++++
@@ -265,14 +267,16 @@ to identify the ref.  The following additional variables are
 available:
 
 **zuul.oldrev**
-  If the item was enqueued as the result of a ref being created,
-  deleted, or changed the git sha of the old revision will be included
-  here.  Otherwise, this value will not be present.
+  If the item was enqueued as the result of a ref being deleted, the
+  previous git sha of the ref will be included here.  If the ref was
+  created, this will be set to the value
+  0000000000000000000000000000000000000000.
 
 **zuul.newrev**
-  If the item was enqueued as the result of a ref being created,
-  deleted, or changed the git sha of the new revision will be included
-  here.  Otherwise, this value will not be present.
+  If the item was enqueued as the result of a ref being created, the
+  new git sha of the ref will be included here.  If the ref was
+  deleted, this will be set to the value
+  0000000000000000000000000000000000000000.
 
 Working Directory
 +++++++++++++++++

@@ -171,9 +171,9 @@ class ExecutorClient(object):
             zuul_params['change'] = item.change.number
         if hasattr(item.change, 'patchset'):
             zuul_params['patchset'] = item.change.patchset
-        if hasattr(item.change, 'oldrev'):
+        if hasattr(item.change, 'oldrev') and item.change.oldrev:
             zuul_params['oldrev'] = item.change.oldrev
-        if hasattr(item.change, 'newrev'):
+        if hasattr(item.change, 'newrev') and item.change.newrev:
             zuul_params['newrev'] = item.change.newrev
         zuul_params['items'] = []
         for i in all_items:
