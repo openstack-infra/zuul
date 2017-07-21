@@ -1131,8 +1131,9 @@ class FakeBuild(object):
         self.requeue = False
         self.created = time.time()
         self.changes = None
-        if 'ZUUL_CHANGE_IDS' in self.parameters:
-            self.changes = self.parameters['ZUUL_CHANGE_IDS']
+        items = self.parameters['zuul']['items']
+        self.changes = ' '.join(['%s,%s' % (x['change'], x['patchset'])
+                                for x in items if 'change' in x])
 
     def __repr__(self):
         waiting = ''
