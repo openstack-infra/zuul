@@ -34,9 +34,6 @@ class TestGithubDriver(ZuulTestCase):
         self.fake_github.emitEvent(A.getPullRequestOpenedEvent())
         self.waitUntilSettled()
 
-        build_params = self.builds[0].parameters
-        self.assertEqual('master', build_params['ZUUL_BRANCH'])
-
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
         self.waitUntilSettled()
@@ -50,6 +47,7 @@ class TestGithubDriver(ZuulTestCase):
         zuulvars = job.parameters['zuul']
         self.assertEqual(str(A.number), zuulvars['change'])
         self.assertEqual(str(A.head_sha), zuulvars['patchset'])
+        self.assertEqual('master', zuulvars['branch'])
         self.assertEqual(1, len(A.comments))
         self.assertEqual(2, len(self.history))
 

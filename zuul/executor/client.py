@@ -196,8 +196,6 @@ class ExecutorClient(object):
         params['ZUUL_PIPELINE'] = pipeline.name
         params['ZUUL_URL'] = item.current_build_set.zuul_url
         params['ZUUL_VOTING'] = job.voting and '1' or '0'
-        if hasattr(item.change, 'number'):
-            params['ZUUL_BRANCH'] = item.change.branch
 
         params['job'] = job.name
         params['timeout'] = job.timeout
