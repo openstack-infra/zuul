@@ -155,7 +155,7 @@ class ExecutorClient(object):
             canonical_hostname=item.change.project.canonical_hostname,
             canonical_name=item.change.project.canonical_name)
 
-        zuul_params = dict(uuid=uuid,
+        zuul_params = dict(build=uuid,
                            buildset=item.current_build_set.uuid,
                            ref=item.change.ref,
                            pipeline=pipeline.name,

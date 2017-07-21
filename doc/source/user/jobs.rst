@@ -121,7 +121,7 @@ of item.
 
 All items provide the following information as Ansible variables:
 
-**zuul.uuid**
+**zuul.build**
   The UUID of the build.  A build is a single execution of a job.
   When an item is enqueued into a pipeline, this usually results in
   one build of each job configured for that item's project.  However,
@@ -130,8 +130,6 @@ All items provide the following information as Ansible variables:
   same item as circumstances change ahead in the queue.  Each time a
   job is run, for whatever reason, it is acompanied with a new
   unique id.
-
-.. TODO: rename build
 
 **zuul.buildset**
   The build set UUID.  When Zuul runs jobs for an item, the collection

@@ -14,4 +14,4 @@
 - job:
     name: python27
     vars:
-      waitpath: '{{zuul._test.test_root}}/{{zuul.uuid}}/test_wait'
+      waitpath: '{{zuul._test.test_root}}/{{zuul.build}}/test_wait'
