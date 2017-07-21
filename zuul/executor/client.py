@@ -183,9 +183,9 @@ class ExecutorClient(object):
                 canonical_hostname=i.change.project.canonical_hostname,
                 canonical_name=i.change.project.canonical_name)
             if hasattr(i.change, 'number'):
-                d['change'] = i.change.number
+                d['change'] = str(i.change.number)
             if hasattr(i.change, 'patchset'):
-                d['patchset'] = i.change.number
+                d['patchset'] = str(i.change.patchset)
             if hasattr(i.change, 'branch'):
                 d['branch'] = i.change.branch
             zuul_params['items'].append(d)
