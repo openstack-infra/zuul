@@ -25,7 +25,7 @@
 - job:
     name: project1-test1
 - job:
-    name: project2-test1
+    name: project2-test2
 
 - project:
     name: org/project1
