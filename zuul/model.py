@@ -356,6 +356,7 @@ class Node(object):
         self.label = label
         self.id = None
         self.lock = None
+        self.hold_job = None
         # Attributes from Nodepool
         self._state = 'unknown'
         self.state_time = time.time()
@@ -396,6 +397,7 @@ class Node(object):
     def toDict(self):
         d = {}
         d['state'] = self.state
+        d['hold_job'] = self.hold_job
         for k in self._keys:
             d[k] = getattr(self, k)
         return d

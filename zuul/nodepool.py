@@ -44,6 +44,34 @@ class Nodepool(object):
             except Exception:
                 self.log.exception("Error deleting node request:")
 
+    def holdNodeSet(self, nodeset, autohold_key):
+        '''
+        If requested, perform a hold on the given set of nodes.
+
+        :param NodeSet nodeset: The object containing the set of nodes to hold.
+        :param set autohold_key: A set with the tenant/project/job names
+            associated with the given NodeSet.
+        '''
+        if autohold_key not in self.sched.autohold_requests:
+            return
+
+        hold_iterations = self.sched.autohold_requests[autohold_key]
+        nodes = nodeset.getNodes()
+
+        for node in nodes:
+            node.state = model.STATE_HOLD
+            node.hold_job = " ".join(autohold_key)
+            self.sched.zk.storeNode(node)
+
+        # We remove the autohold when the number of nodes in hold
+        # is equal to or greater than (run iteration count can be
+        # altered) the number of nodes used in a single job run
+        # times the number of run iterations requested.
+        nodes_in_hold = self.sched.zk.heldNodeCount(autohold_key)
+        if nodes_in_hold >= len(nodes) * hold_iterations:
+            self.log.debug("Removing autohold for %s", autohold_key)
+            del self.sched.autohold_requests[autohold_key]
+
     def useNodeSet(self, nodeset):
         self.log.info("Setting nodeset %s in use" % (nodeset,))
         for node in nodeset.getNodes():

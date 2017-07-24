@@ -15,9 +15,13 @@
 import json
 import logging
 import time
+
 from kazoo.client import KazooClient, KazooState
 from kazoo import exceptions as kze
 from kazoo.recipe.lock import Lock
+
+import zuul.model
+
 
 # States:
 # We are building this node but it is not ready for use.
@@ -246,3 +250,25 @@ class ZooKeeper(object):
             raise LockException("Node %s does not hold a lock" % (node,))
         node.lock.release()
         node.lock = None
+
+    def heldNodeCount(self, autohold_key):
+        '''
+        Count the number of nodes being held for the given tenant/project/job.
+
+        :param set autohold_key: A set with the tenant/project/job names.
+        '''
+        identifier = " ".join(autohold_key)
+        try:
+            nodes = self.client.get_children(self.NODE_ROOT)
+        except kze.NoNodeError:
+            return 0
+
+        count = 0
+        for nodeid in nodes:
+            node_path = '%s/%s' % (self.NODE_ROOT, nodeid)
+            node_data, node_stat = self.client.get(node_path)
+            node_data = self._strToDict(node_data)
+            if (node_data['state'] == zuul.model.STATE_HOLD and
+                    node_data.get('hold_job') == identifier):
+                count += 1
+        return count

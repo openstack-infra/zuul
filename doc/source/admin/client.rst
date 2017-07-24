@@ -22,6 +22,14 @@ The general options that apply to all subcommands are:
 
 The following subcommands are supported:
 
+Autohold
+^^^^^^^^
+.. program-output:: zuul autohold --help
+
+Example::
+
+  zuul autohold --tenant openstack --project example_project --job example_job ---count 1
+
 Enqueue
 ^^^^^^^
 .. program-output:: zuul enqueue --help
