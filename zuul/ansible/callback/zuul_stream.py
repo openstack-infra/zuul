@@ -293,6 +293,8 @@ class CallbackModule(default.CallbackModule):
             if reason:
                 # No reason means it's an item, which we'll log differently
                 self._log_message(result, status='skipping', msg=reason)
+                # Log an extra blank line to get space after each skip
+                self._log("")
 
     def v2_runner_item_on_skipped(self, result):
         reason = result._result.get('skip_reason')
