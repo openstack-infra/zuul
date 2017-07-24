@@ -81,8 +81,8 @@ class BubblewrapDriver(Driver, WrapperInterface):
     def stop(self):
         pass
 
-    def setMountsMap(self, state_dir, ro_dirs=[], rw_dirs=[]):
-        self.mounts_map = {'ro': ro_dirs, 'rw': [state_dir] + rw_dirs}
+    def setMountsMap(self, ro_dirs=[], rw_dirs=[]):
+        self.mounts_map = {'ro': ro_dirs, 'rw': [] + rw_dirs}
 
     def getPopen(self, **kwargs):
         # Set zuul_dir if it was not passed in
@@ -180,11 +180,15 @@ def main(args=None):
     driver = BubblewrapDriver()
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('--ro-bind', nargs='+')
+    parser.add_argument('--rw-bind', nargs='+')
     parser.add_argument('work_dir')
     parser.add_argument('run_args', nargs='+')
     cli_args = parser.parse_args()
 
     ssh_auth_sock = os.environ.get('SSH_AUTH_SOCK')
+
+    driver.setMountsMap(cli_args.ro_bind, cli_args.rw_bind)
 
     popen = driver.getPopen(work_dir=cli_args.work_dir,
                             ssh_auth_sock=ssh_auth_sock)
