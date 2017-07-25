@@ -3,7 +3,8 @@
     check:
       jobs:
         - tox-docs
-        - tox-cover
+        - tox-cover:
+            voting: false
         - tox-pep8
         - tox-py35
         - tox-tarball
