@@ -33,7 +33,7 @@ configuration.  An example tenant definition is::
           config-projects:
             - common-config
             - shared-jobs:
-                include: jobs
+                include: job
           untrusted-projects:
             - zuul-jobs:
                 shadow: common-config
