@@ -75,6 +75,8 @@ after the main entries, for example using number prefixes in file's names::
 
 .. _pipeline:
 
+.. zuul:configobject:: Pipeline
+
 Pipeline
 ~~~~~~~~
 
@@ -125,53 +127,60 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
 The attributes available on a pipeline are as follows (all are
 optional unless otherwise specified):
 
-**name** (required)
-  This is used later in the project definition to indicate what jobs
-  should be run for events in the pipeline.
+.. zuul:attr:: name
+   :required:
 
-**manager** (required)
-  There are currently two schemes for managing pipelines:
+   This is used later in the project definition to indicate what jobs
+   should be run for events in the pipeline.
 
-  .. _independent_pipeline_manager:
+.. zuul:attr:: manager
+   :required:
 
-  *independent*
-    Every event in this pipeline should be treated as independent of
-    other events in the pipeline.  This is appropriate when the order of
-    events in the pipeline doesn't matter because the results of the
-    actions this pipeline performs can not affect other events in the
-    pipeline.  For example, when a change is first uploaded for review,
-    you may want to run tests on that change to provide early feedback
-    to reviewers.  At the end of the tests, the change is not going to
-    be merged, so it is safe to run these tests in parallel without
-    regard to any other changes in the pipeline.  They are independent.
+   There are currently two schemes for managing pipelines:
 
-    Another type of pipeline that is independent is a post-merge
-    pipeline. In that case, the changes have already merged, so the
-    results can not affect any other events in the pipeline.
+   .. _independent_pipeline_manager:
 
-  .. _dependent_pipeline_manager:
+   .. zuul:attr:: independent
 
-  *dependent*
-    The dependent pipeline manager is designed for gating.  It ensures
-    that every change is tested exactly as it is going to be merged
-    into the repository.  An ideal gating system would test one change
-    at a time, applied to the tip of the repository, and only if that
-    change passed tests would it be merged.  Then the next change in
-    line would be tested the same way.  In order to achieve parallel
-    testing of changes, the dependent pipeline manager performs
-    speculative execution on changes.  It orders changes based on
-    their entry into the pipeline.  It begins testing all changes in
-    parallel, assuming that each change ahead in the pipeline will pass
-    its tests.  If they all succeed, all the changes can be tested and
-    merged in parallel.  If a change near the front of the pipeline
-    fails its tests, each change behind it ignores whatever tests have
-    been completed and are tested again without the change in front.
-    This way gate tests may run in parallel but still be tested
-    correctly, exactly as they will appear in the repository when
-    merged.
+     Every event in this pipeline should be treated as independent of
+     other events in the pipeline.  This is appropriate when the order
+     of events in the pipeline doesn't matter because the results of
+     the actions this pipeline performs can not affect other events in
+     the pipeline.  For example, when a change is first uploaded for
+     review, you may want to run tests on that change to provide early
+     feedback to reviewers.  At the end of the tests, the change is
+     not going to be merged, so it is safe to run these tests in
+     parallel without regard to any other changes in the pipeline.
+     They are independent.
 
-    For more detail on the theory and operation of Zuul's dependent
-    pipeline manager, see: :doc:`gating`.
+     Another type of pipeline that is independent is a post-merge
+     pipeline. In that case, the changes have already merged, so the
+     results can not affect any other events in the pipeline.
+
+   .. _dependent_pipeline_manager:
+
+   .. zuul:attr:: dependent
+
+     The dependent pipeline manager is designed for gating.  It
+     ensures that every change is tested exactly as it is going to be
+     merged into the repository.  An ideal gating system would test
+     one change at a time, applied to the tip of the repository, and
+     only if that change passed tests would it be merged.  Then the
+     next change in line would be tested the same way.  In order to
+     achieve parallel testing of changes, the dependent pipeline
+     manager performs speculative execution on changes.  It orders
+     changes based on their entry into the pipeline.  It begins
+     testing all changes in parallel, assuming that each change ahead
+     in the pipeline will pass its tests.  If they all succeed, all
+     the changes can be tested and merged in parallel.  If a change
+     near the front of the pipeline fails its tests, each change
+     behind it ignores whatever tests have been completed and are
+     tested again without the change in front.  This way gate tests
+     may run in parallel but still be tested correctly, exactly as
+     they will appear in the repository when merged.
+
+     For more detail on the theory and operation of Zuul's dependent
+     pipeline manager, see: :doc:`gating`.
 
 **allow-secrets**
   This is a boolean which can be used to prevent jobs which require
