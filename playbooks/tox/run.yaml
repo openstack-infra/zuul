@@ -1,0 +1,5 @@
+- hosts: all
+  roles:
+    - revoke-sudo
+    - npm
+    - tox

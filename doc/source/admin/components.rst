@@ -679,6 +679,11 @@ sections of ``zuul.conf`` are used by the web server:
       Type of server hosting the statistics information. Currently only
       'graphite' is supported by the dashboard.
 
+   .. attr:: static_path
+      :default: zuul/web/static
+
+      Path containing the static web assets.
+
    .. attr:: static_cache_expiry
       :default: 3600
 

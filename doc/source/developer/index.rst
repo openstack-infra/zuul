@@ -16,3 +16,4 @@ Zuul, though advanced users may find it interesting.
    testing
    docs
    ansible
+   javascript

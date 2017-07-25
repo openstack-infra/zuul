@@ -29,6 +29,18 @@
       - playbooks/zuul-stream/.*
       - requirements.txt
 
+- job:
+    name: zuul-tox-py35
+    parent: tox-py35
+    description: |
+      Runs javascript build before running python 35 unit tests.
+    pre-run: playbooks/tox/pre.yaml
+    run: playbooks/tox/run.yaml
+    post-run: playbooks/tox/post.yaml
+    vars:
+      node_version: 8
+      npm_command: build
+
 - project:
     check:
       jobs:
@@ -39,10 +51,29 @@
             vars:
               sphinx_python: python3
         - tox-pep8
-        - tox-py35:
+        - zuul-tox-py35:
             irrelevant-files:
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
+        - build-javascript-content:
+            success-url: 'npm/html/status.html'
+            files:
+              - package.json
+              - webpack.config.js
+              - yarn.lock
+              - web/.*
+            vars:
+              javascript_content_dir: zuul/web/static
+              npm_command: build:dist -- --define ZUUL_API_URL="'https://zuul.openstack.org'"
+        - nodejs-npm-run-lint:
+            vars:
+                node_version: 8
+            success-url: 'npm/reports/bundle.html'
+            files:
+              - package.json
+              - webpack.config.js
+              - yarn.lock
+              - web/.*
         - zuul-stream-functional
         - nodepool-zuul-functional:
             voting: false
@@ -55,12 +86,32 @@
             vars:
               sphinx_python: python3
         - tox-pep8
-        - tox-py35:
+        - zuul-tox-py35:
             irrelevant-files:
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
+        - build-javascript-content:
+            success-url: 'npm/html/status.html'
+            files:
+              - package.json
+              - webpack.config.js
+              - yarn.lock
+              - web/.*
+            vars:
+              javascript_content_dir: zuul/web/static
+              npm_command: build:dist -- --define ZUUL_API_URL="'https://zuul.openstack.org'"
+        - nodejs-npm-run-lint:
+            vars:
+                node_version: 8
+            success-url: 'npm/reports/bundle.html'
+            files:
+              - package.json
+              - webpack.config.js
+              - yarn.lock
+              - web/.*
         - zuul-stream-functional
     post:
       jobs:
         - publish-openstack-sphinx-docs-infra-python3
         - publish-openstack-python-branch-tarball
+        - publish-openstack-javascript-content
