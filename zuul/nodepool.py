@@ -29,10 +29,15 @@ class Nodepool(object):
         req = model.NodeRequest(self.sched.hostname, build_set, job, nodeset)
         self.requests[req.uid] = req
 
-        self.sched.zk.submitNodeRequest(req, self._updateNodeRequest)
-        # Logged after submission so that we have the request id
-        self.log.info("Submited node request %s" % (req,))
-
+        if nodeset.nodes:
+            self.sched.zk.submitNodeRequest(req, self._updateNodeRequest)
+            # Logged after submission so that we have the request id
+            self.log.info("Submited node request %s" % (req,))
+        else:
+            self.log.info("Fulfilling empty node request %s" % (req,))
+            req.state = model.STATE_FULFILLED
+            self.sched.onNodesProvisioned(req)
+            del self.requests[req.uid]
         return req
 
     def cancelRequest(self, request):

@@ -62,7 +62,8 @@ class TestSchedulerSSL(SSLZuulTestCase):
         self.assertEqual(A.reported, 2)
         self.assertEqual(self.getJobFromHistory('project-test1').node,
                          'label1')
-        self.assertIsNone(self.getJobFromHistory('project-test2').node)
+        self.assertEqual(self.getJobFromHistory('project-test2').node,
+                         'label1')
 
 
 class TestScheduler(ZuulTestCase):
@@ -85,7 +86,8 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.reported, 2)
         self.assertEqual(self.getJobFromHistory('project-test1').node,
                          'label1')
-        self.assertIsNone(self.getJobFromHistory('project-test2').node)
+        self.assertEqual(self.getJobFromHistory('project-test2').node,
+                         'label1')
 
         # TODOv3(jeblair): we may want to report stats by tenant (also?).
         # Per-driver
