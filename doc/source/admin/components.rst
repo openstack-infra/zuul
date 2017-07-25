@@ -296,9 +296,28 @@ executor
      finger_port=79
 
 **git_dir**
-  Directory that Zuul should clone local git repositories to::
+  Directory that Zuul should clone local git repositories to.  The
+  executor keeps a local copy of every git repository it works with to
+  speed operations and perform speculative merging.
+
+  This should be on the same filesystem as **job_dir** so that when
+  git repos are cloned into the job workspaces, they can be
+  hard-linked to the local git cache.  Example::
 
      git_dir=/var/lib/zuul/git
+
+**job_dir**
+  Directory that Zuul should use to hold temporary job directories.
+  When each job is run, a new entry will be created under this
+  directory to hold the configuration and scratch workspace for that
+  job.  It will be deleted at the end of the job (unless the
+  `--keep-jobdir` command line option is specified).
+
+  This should be on the same filesystem as **git_dir** so that when
+  git repos are cloned into the job workspaces, they can be
+  hard-linked to the local git cache.  Example::
+
+     job_dir=/var/lib/zuul/jobs
 
 **log_config**
   Path to log config file for the executor process::
