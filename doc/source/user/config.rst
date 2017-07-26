@@ -234,68 +234,22 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
       of the connection will dictate which options are available.  See
       :ref:`drivers`.
 
+   .. _pipeline-require:
+
    .. zuul:attr:: require
 
-      If this section is present, it established pre-requisites for
+      If this section is present, it establishes pre-requisites for
       any kind of item entering the Pipeline.  Regardless of how the
       item is to be enqueued (via any trigger or automatic dependency
       resolution), the conditions specified here must be met or the
-      item will not be enqueued.
+      item will not be enqueued.  These requirements may vary
+      depending on the source of the item being enqueued.
 
-      .. _pipeline-require-approval:
+      Requirements are loaded from their connection name. The driver
+      type of the connection will dictate which options are available.
+      See :ref:`drivers`.
 
-      .. zuul:attr:: approval
-
-         This requires that a certain kind of approval be present for
-         the current patchset of the change (the approval could be
-         added by the event in question).  It takes several
-         sub-parameters, all of which are optional and are combined
-         together so that there must be an approval matching all
-         specified requirements.
-
-          .. zuul:attr:: username
-
-             If present, an approval from this username is required.  It is
-             treated as a regular expression.
-
-          .. zuul:attr:: email
-
-             If present, an approval with this email address is required.  It
-             is treated as a regular expression.
-
-          .. zuul:attr:: older-than
-
-             If present, the approval must be older than this amount
-             of time to match.  Provide a time interval as a number
-             with a suffix of "w" (weeks), "d" (days), "h" (hours),
-             "m" (minutes), "s" (seconds).  Example ``48h`` or ``2d``.
-
-          .. zuul:attr:: newer-than
-
-             If present, the approval must be newer than this amount
-             of time to match.  Same format as "older-than".
-
-          Any other field is interpreted as a review category and
-          value pair.  For example ``Verified: 1`` would require that
-          the approval be for a +1 vote in the "Verified" column.  The
-          value may either be a single value or a list: ``Verified:
-          [1, 2]`` would match either a +1 or +2 vote.
-
-      .. zuul:attr:: open
-
-         A boolean value (``true`` or ``false``) that indicates whether
-         the change must be open or closed in order to be enqueued.
-
-      .. zuul:attr:: current-patchset
-
-         A boolean value (``true`` or ``false``) that indicates whether
-         the change must be the current patchset in order to be
-         enqueued.
-
-      .. zuul:attr:: status
-
-         A string value that corresponds with the status of the change
-         reported by the trigger.
+   .. _pipeline-reject:
 
    .. zuul:attr:: reject
 
@@ -303,18 +257,9 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
       can block an item from being enqueued. It can be considered a
       negative version of **require**.
 
-      .. zuul:attr:: approval
-
-         This takes a list of approvals. If an approval matches the
-         provided criteria the change can not be entered into the
-         pipeline. It follows the same syntax as the :ref:`"require
-         approval" pipeline above <pipeline-require-approval>`.
-
-         Example to reject a change with any negative vote::
-
-           reject:
-             approval:
-               - code-review: [-1, -2]
+      Requirements are loaded from their connection name. The driver
+      type of the connection will dictate which options are available.
+      See :ref:`drivers`.
 
    .. zuul:attr:: dequeue-on-new-patchset
 

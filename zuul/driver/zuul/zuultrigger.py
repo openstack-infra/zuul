@@ -43,19 +43,11 @@ class ZuulTrigger(BaseTrigger):
 
 
 def getSchema():
-    approval = v.Schema({'username': str,
-                         'email': str,
-                         'older-than': str,
-                         'newer-than': str,
-                         }, extra=v.ALLOW_EXTRA)
-
     zuul_trigger = {
         v.Required('event'):
         scalar_or_list(v.Any('parent-change-enqueued',
                              'project-change-merged')),
         'pipeline': scalar_or_list(str),
-        'require-approval': scalar_or_list(approval),
-        'reject-approval': scalar_or_list(approval),
     }
 
     return zuul_trigger

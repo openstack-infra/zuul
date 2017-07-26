@@ -25,16 +25,3 @@ can simply be used by listing **zuul** as the trigger.
 **pipeline**
   Only available for ``parent-change-enqueued`` events.  This is the
   name of the pipeline in which the parent change was enqueued.
-
-**require-approval**
-  This may be used for any event.  It requires that a certain kind of
-  approval be present for the current patchset of the change (the
-  approval could be added by the event in question).  It follows the
-  same syntax as the :ref:`"approval" pipeline requirement
-  <pipeline-require-approval>`. For each specified criteria there must
-  exist a matching approval.
-
-**reject-approval**
-  This takes a list of approvals in the same format as
-  *require-approval* but will fail to enter the pipeline if there is a
-  matching approval.

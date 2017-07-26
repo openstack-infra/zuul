@@ -194,3 +194,111 @@ supplied to the reporter. It has the following options:
   Request based events.  ``unlabel: 'test failed'``
 
 .. _Github App: https://developer.github.com/apps/
+
+Requirements Configuration
+--------------------------
+
+As described in :ref:`pipeline.require <pipeline-require>` and
+:ref:`pipeline.reject <pipeline-reject>`, pipelines may specify that
+items meet certain conditions in order to be enqueued into the
+pipeline.  These conditions vary according to the source of the
+project in question.  To supply requirements for changes from a GitHub
+source named *my-github*, create a congfiguration such as the
+following::
+
+  pipeline:
+    require:
+      my-github:
+        review:
+          - type: approval
+
+This indicates that changes originating from the GitHub connection
+named *my-github* must have an approved code review in order to be
+enqueued into the pipeline.
+
+.. zuul:configobject:: pipeline.require.<source>
+
+   The dictionary passed to the GitHub pipeline `require` attribute
+   supports the following attributes:
+
+   .. _github-pipeline-require-review:
+
+   .. zuul:attr:: review
+
+      This requires that a certain kind of code review be present for
+      the pull request (it could be added by the event in question).
+      It takes several sub-parameters, all of which are optional and
+      are combined together so that there must be a code review
+      matching all specified requirements.
+
+      .. zuul:attr:: username
+
+         If present, a code review from this username is required.  It
+         is treated as a regular expression.
+
+      .. zuul:attr:: email
+
+         If present, a code review with this email address is
+         required.  It is treated as a regular expression.
+
+      .. zuul:attr:: older-than
+
+         If present, the code review must be older than this amount of
+         time to match.  Provide a time interval as a number with a
+         suffix of "w" (weeks), "d" (days), "h" (hours), "m"
+         (minutes), "s" (seconds).  Example ``48h`` or ``2d``.
+
+      .. zuul:attr:: newer-than
+
+         If present, the code review must be newer than this amount of
+         time to match.  Same format as "older-than".
+
+      .. zuul:attr:: type
+
+         If present, the code review must match this type (or types).
+
+         .. TODO: what types are valid?
+
+      .. zuul:attr:: permission
+
+         If present, the author of the code review must have this
+         permission (or permissions).  The available values are
+         ``read``, ``write``, and ``admin``.
+
+   .. zuul:attr:: open
+
+      A boolean value (``true`` or ``false``) that indicates whether
+      the change must be open or closed in order to be enqueued.
+
+   .. zuul:attr:: current-patchset
+
+      A boolean value (``true`` or ``false``) that indicates whether
+      the item must be associated with the latest commit in the pull
+      request in order to be enqueued.
+
+      .. TODO: this could probably be expanded upon -- under what
+         circumstances might this happen with github
+
+   .. zuul:attr:: status
+
+      A string value that corresponds with the status of the pull
+      request.  The syntax is ``user:status:value``.
+
+   .. zuul:attr:: label
+
+      A string value indicating that the pull request must have the
+      indicated label (or labels).
+
+
+.. zuul:configobject:: pipeline.reject.<source>
+
+   The `reject` attribute is the mirror of the `require` attribute.  It
+   also accepts a dictionary under the connection name.  This
+   dictionary supports the following attributes:
+
+   .. zuul:attr:: review
+
+      This takes a list of code reviews.  If a code review matches the
+      provided criteria the pull request can not be entered into the
+      pipeline.  It follows the same syntax as the :ref:`review
+      pipeline requirement above <github-pipeline-require-review>`.

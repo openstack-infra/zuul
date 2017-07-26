@@ -762,19 +762,6 @@ class PipelineParser(object):
 
         precedence = vs.Any('normal', 'low', 'high')
 
-        approval = vs.Schema({'username': str,
-                              'email': str,
-                              'older-than': str,
-                              'newer-than': str,
-                              }, extra=vs.ALLOW_EXTRA)
-
-        require = {'approval': to_list(approval),
-                   'open': bool,
-                   'current-patchset': bool,
-                   'status': to_list(str)}
-
-        reject = {'approval': to_list(approval)}
-
         window = vs.All(int, vs.Range(min=0))
         window_floor = vs.All(int, vs.Range(min=1))
         window_type = vs.Any('linear', 'exponential')
@@ -784,8 +771,6 @@ class PipelineParser(object):
                     vs.Required('manager'): manager,
                     'precedence': precedence,
                     'description': str,
-                    'require': require,
-                    'reject': reject,
                     'success-message': str,
                     'failure-message': str,
                     'merge-failure-message': str,
