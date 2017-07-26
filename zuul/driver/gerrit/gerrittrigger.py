@@ -77,7 +77,6 @@ def getSchema():
     variable_dict = v.Schema(dict)
 
     approval = v.Schema({'username': str,
-                         'email-filter': str,
                          'email': str,
                          'older-than': str,
                          'newer-than': str,

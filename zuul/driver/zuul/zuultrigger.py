@@ -44,7 +44,6 @@ class ZuulTrigger(BaseTrigger):
 
 def getSchema():
     approval = v.Schema({'username': str,
-                         'email-filter': str,
                          'email': str,
                          'older-than': str,
                          'newer-than': str,

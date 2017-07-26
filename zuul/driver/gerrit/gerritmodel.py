@@ -71,14 +71,12 @@ class GerritApprovalFilter(object):
             for k, v in a.items():
                 if k == 'username':
                     a['username'] = re.compile(v)
-                elif k in ['email', 'email-filter']:
+                elif k == 'email':
                     a['email'] = re.compile(v)
                 elif k == 'newer-than':
                     a[k] = time_to_seconds(v)
                 elif k == 'older-than':
                     a[k] = time_to_seconds(v)
-            if 'email-filter' in a:
-                del a['email-filter']
         return approvals
 
     def _match_approval_required_approval(self, rapproval, approval):

@@ -763,7 +763,6 @@ class PipelineParser(object):
         precedence = vs.Any('normal', 'low', 'high')
 
         approval = vs.Schema({'username': str,
-                              'email-filter': str,
                               'email': str,
                               'older-than': str,
                               'newer-than': str,

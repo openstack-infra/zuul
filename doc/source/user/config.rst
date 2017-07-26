@@ -263,11 +263,6 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
              If present, an approval with this email address is required.  It
              is treated as a regular expression.
 
-          .. zuul:attr:: email-filter (deprecated)
-
-             A deprecated alternate spelling of *email*.  Only one of
-             *email* or *email_filter* should be used.
-
           .. zuul:attr:: older-than
 
              If present, the approval must be older than this amount

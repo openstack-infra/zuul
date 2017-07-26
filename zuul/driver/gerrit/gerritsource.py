@@ -82,7 +82,6 @@ class GerritSource(BaseSource):
 
 
 approval = vs.Schema({'username': str,
-                      'email-filter': str,
                       'email': str,
                       'older-than': str,
                       'newer-than': str,
