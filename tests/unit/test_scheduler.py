@@ -2033,33 +2033,18 @@ class TestScheduler(ZuulTestCase):
         self.executor_server.release('.*-merge')
         self.waitUntilSettled()
 
-        a_zref = b_zref = c_zref = d_zref = None
         a_build = b_build = c_build = d_build = None
         for x in self.builds:
             if x.parameters['ZUUL_CHANGE'] == '3':
-                a_zref = x.parameters['ZUUL_REF']
                 a_build = x
             elif x.parameters['ZUUL_CHANGE'] == '4':
-                b_zref = x.parameters['ZUUL_REF']
                 b_build = x
             elif x.parameters['ZUUL_CHANGE'] == '5':
-                c_zref = x.parameters['ZUUL_REF']
                 c_build = x
             elif x.parameters['ZUUL_CHANGE'] == '6':
-                d_zref = x.parameters['ZUUL_REF']
                 d_build = x
             if a_build and b_build and c_build and d_build:
                 break
-
-        # There are... four... refs.
-        self.assertIsNotNone(a_zref)
-        self.assertIsNotNone(b_zref)
-        self.assertIsNotNone(c_zref)
-        self.assertIsNotNone(d_zref)
-
-        # And they should all be different
-        refs = set([a_zref, b_zref, c_zref, d_zref])
-        self.assertEqual(len(refs), 4)
 
         # should have a, not b, and should not be in project2
         self.assertTrue(a_build.hasChanges(A))
