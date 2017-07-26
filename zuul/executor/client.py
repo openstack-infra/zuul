@@ -204,11 +204,6 @@ class ExecutorClient(object):
             params['ZUUL_BRANCH'] = item.change.branch
             params['ZUUL_CHANGES'] = changes_str
 
-            zuul_changes = ' '.join(['%s,%s' % (i.change.number,
-                                                i.change.patchset)
-                                     for i in all_items])
-            params['ZUUL_CHANGE_IDS'] = zuul_changes
-
         params['job'] = job.name
         params['timeout'] = job.timeout
         params['items'] = merger_items
