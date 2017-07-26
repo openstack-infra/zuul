@@ -168,9 +168,9 @@ class ExecutorClient(object):
         if hasattr(item.change, 'tag'):
             zuul_params['tag'] = item.change.tag
         if hasattr(item.change, 'number'):
-            zuul_params['change'] = item.change.number
+            zuul_params['change'] = str(item.change.number)
         if hasattr(item.change, 'patchset'):
-            zuul_params['patchset'] = item.change.patchset
+            zuul_params['patchset'] = str(item.change.patchset)
         if hasattr(item.change, 'oldrev') and item.change.oldrev:
             zuul_params['oldrev'] = item.change.oldrev
         if hasattr(item.change, 'newrev') and item.change.newrev:
@@ -208,7 +208,6 @@ class ExecutorClient(object):
                                                 i.change.patchset)
                                      for i in all_items])
             params['ZUUL_CHANGE_IDS'] = zuul_changes
-            params['ZUUL_CHANGE'] = str(item.change.number)
 
         params['job'] = job.name
         params['timeout'] = job.timeout
