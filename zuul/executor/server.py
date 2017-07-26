@@ -1370,11 +1370,12 @@ class AnsibleJob(object):
                               '%s_ro_dirs' % opt_prefix)
         rw_dirs = get_default(self.executor_server.config, 'executor',
                               '%s_rw_dirs' % opt_prefix)
-        state_dir = get_default(self.executor_server.config, 'executor',
-                                'state_dir', '/var/lib/zuul', expand_user=True)
         ro_dirs = ro_dirs.split(":") if ro_dirs else []
         rw_dirs = rw_dirs.split(":") if rw_dirs else []
-        self.executor_server.execution_wrapper.setMountsMap(state_dir, ro_dirs,
+
+        ro_dirs.append(self.executor_server.ansible_dir)
+
+        self.executor_server.execution_wrapper.setMountsMap(ro_dirs,
                                                             rw_dirs)
 
         popen = self.executor_server.execution_wrapper.getPopen(
