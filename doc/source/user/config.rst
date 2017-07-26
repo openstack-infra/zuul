@@ -140,7 +140,7 @@ optional unless otherwise specified):
 
    .. _independent_pipeline_manager:
 
-   .. zuul:attr:: independent
+   .. zuul:value:: independent
 
      Every event in this pipeline should be treated as independent of
      other events in the pipeline.  This is appropriate when the order
@@ -159,7 +159,7 @@ optional unless otherwise specified):
 
    .. _dependent_pipeline_manager:
 
-   .. zuul:attr:: dependent
+   .. zuul:value:: dependent
 
      The dependent pipeline manager is designed for gating.  It
      ensures that every change is tested exactly as it is going to be

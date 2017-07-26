@@ -75,6 +75,26 @@ class ZuulAttrDirective(ZuulConfigObject):
                                           targetname, '', None))
 
 
+class ZuulValueDirective(ZuulConfigObject):
+    has_content = True
+
+    def handle_signature(self, sig, signode):
+        signode += addnodes.desc_name(sig, sig)
+        return sig
+
+    def add_target_and_index(self, name, sig, signode):
+        targetname = self.objtype + '-' + name
+        if targetname not in self.state.document.ids:
+            signode['names'].append(targetname)
+            signode['ids'].append(targetname)
+            signode['first'] = (not self.names)
+            self.state.document.note_explicit_target(signode)
+
+        indextext = '%s (%s)' % (name, self.objtype)
+        self.indexnode['entries'].append(('single', indextext,
+                                          targetname, '', None))
+
+
 class ZuulDomain(Domain):
     name = 'zuul'
     label = 'Zuul'
@@ -82,11 +102,13 @@ class ZuulDomain(Domain):
     object_types = {
         'configobject': ObjType('configobject'),
         'attr': ObjType('attr'),
+        'value': ObjType('value'),
     }
 
     directives = {
         'configobject': ZuulConfigobjectDirective,
         'attr': ZuulAttrDirective,
+        'value': ZuulValueDirective,
     }
 
 
