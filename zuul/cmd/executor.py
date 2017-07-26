@@ -82,7 +82,7 @@ class Executor(zuul.cmd.ZuulApp):
 
             self.log.info("Starting log streamer")
             streamer = zuul.lib.log_streamer.LogStreamer(
-                self.user, '0.0.0.0', self.finger_port, self.jobroot_dir)
+                self.user, '0.0.0.0', self.finger_port, self.job_dir)
 
             # Keep running until the parent dies:
             pipe_read = os.fdopen(pipe_read)
@@ -111,15 +111,15 @@ class Executor(zuul.cmd.ZuulApp):
 
         self.user = get_default(self.config, 'executor', 'user', 'zuul')
 
-        if self.config.has_option('executor', 'jobroot_dir'):
-            self.jobroot_dir = os.path.expanduser(
-                self.config.get('executor', 'jobroot_dir'))
-            if not os.path.isdir(self.jobroot_dir):
-                print("Invalid jobroot_dir: {jobroot_dir}".format(
-                    jobroot_dir=self.jobroot_dir))
+        if self.config.has_option('executor', 'job_dir'):
+            self.job_dir = os.path.expanduser(
+                self.config.get('executor', 'job_dir'))
+            if not os.path.isdir(self.job_dir):
+                print("Invalid job_dir: {job_dir}".format(
+                    job_dir=self.job_dir))
                 sys.exit(1)
         else:
-            self.jobroot_dir = tempfile.gettempdir()
+            self.job_dir = tempfile.gettempdir()
 
         self.setup_logging('executor', 'log_config')
         self.log = logging.getLogger("zuul.Executor")
@@ -134,7 +134,7 @@ class Executor(zuul.cmd.ZuulApp):
 
         ExecutorServer = zuul.executor.server.ExecutorServer
         self.executor = ExecutorServer(self.config, self.connections,
-                                       jobdir_root=self.jobroot_dir,
+                                       jobdir_root=self.job_dir,
                                        keep_jobdir=self.args.keep_jobdir,
                                        log_streaming_port=self.finger_port)
         self.executor.start()
