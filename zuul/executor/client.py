@@ -206,7 +206,6 @@ class ExecutorClient(object):
             params['ZUUL_REF'] = ('refs/zuul/%s/%s' %
                                   (item.change.branch,
                                    item.current_build_set.ref))
-            params['ZUUL_COMMIT'] = item.current_build_set.commit
 
             zuul_changes = ' '.join(['%s,%s' % (i.change.number,
                                                 i.change.patchset)
@@ -216,7 +215,6 @@ class ExecutorClient(object):
             params['ZUUL_PATCHSET'] = str(item.change.patchset)
         if hasattr(item.change, 'ref') and item.change.ref is not None:
             params['ZUUL_REF'] = item.change.ref
-            params['ZUUL_COMMIT'] = item.change.newrev
 
         params['job'] = job.name
         params['timeout'] = job.timeout
