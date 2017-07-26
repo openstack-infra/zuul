@@ -41,14 +41,14 @@ class SQLReporter(BaseReporter):
         with self.connection.engine.begin() as conn:
             change = getattr(item.change, 'number', '')
             patchset = getattr(item.change, 'patchset', '')
-            refspec = getattr(item.change, 'refspec', item.change.newrev)
+            ref = getattr(item.change, 'ref', '')
             buildset_ins = self.connection.zuul_buildset_table.insert().values(
                 zuul_ref=item.current_build_set.ref,
                 pipeline=item.pipeline.name,
                 project=item.change.project.name,
                 change=change,
                 patchset=patchset,
-                ref=refspec,
+                ref=ref,
                 score=self.result_score,
                 message=self._formatItemReport(
                     item, with_jobs=False),

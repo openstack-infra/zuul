@@ -225,9 +225,9 @@ class Repo(object):
         except AssertionError:
             origin.fetch(ref)
 
-    def fetchFrom(self, repository, refspec):
+    def fetchFrom(self, repository, ref):
         repo = self.createRepoObject()
-        repo.git.fetch(repository, refspec)
+        repo.git.fetch(repository, ref)
 
     def createZuulRef(self, ref, commit='HEAD'):
         repo = self.createRepoObject()
@@ -391,11 +391,11 @@ class Merger(object):
         try:
             mode = item['merge_mode']
             if mode == zuul.model.MERGER_MERGE:
-                commit = repo.merge(item['refspec'])
+                commit = repo.merge(item['ref'])
             elif mode == zuul.model.MERGER_MERGE_RESOLVE:
-                commit = repo.merge(item['refspec'], 'resolve')
+                commit = repo.merge(item['ref'], 'resolve')
             elif mode == zuul.model.MERGER_CHERRY_PICK:
-                commit = repo.cherryPick(item['refspec'])
+                commit = repo.cherryPick(item['ref'])
             else:
                 raise Exception("Unsupported merge mode: %s" % mode)
         except git.GitCommandError:
@@ -410,9 +410,10 @@ class Merger(object):
         return commit
 
     def _mergeItem(self, item, recent, repo_state):
-        self.log.debug("Processing refspec %s for project %s/%s / %s ref %s" %
-                       (item['refspec'], item['connection'],
-                        item['project'], item['branch'], item['ref']))
+        self.log.debug("Processing ref %s for project %s/%s / %s uuid %s" %
+                       (item['ref'], item['connection'],
+                        item['project'], item['branch'],
+                        item['buildset_uuid']))
         repo = self.getRepo(item['connection'], item['project'])
         key = (item['connection'], item['project'], item['branch'])
 
@@ -451,7 +452,7 @@ class Merger(object):
             zuul_ref = None
             try:
                 repo = self.getRepo(connection, project)
-                zuul_ref = branch + '/' + item['ref']
+                zuul_ref = branch + '/' + item['buildset_uuid']
                 if not repo.getCommitFromRef(zuul_ref):
                     repo.createZuulRef(zuul_ref, mrc)
             except Exception:
