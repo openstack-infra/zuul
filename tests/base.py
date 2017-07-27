@@ -134,9 +134,19 @@ class GerritChangeReference(git.Reference):
 
 
 class FakeGerritChange(object):
-    categories = {'approved': ('Approved', -1, 1),
-                  'code-review': ('Code-Review', -2, 2),
-                  'verified': ('Verified', -2, 2)}
+    categories = {'Approved': ('Approved', -1, 1),
+                  'Code-Review': ('Code-Review', -2, 2),
+                  'Verified': ('Verified', -2, 2)}
+
+    # TODO(tobiash): This is used as a translation layer between the tests
+    #                which use lower case labels. This can be removed if all
+    #                tests are converted to use the correct casing.
+    categories_translation = {'approved': 'Approved',
+                              'code-review': 'Code-Review',
+                              'verified': 'Verified',
+                              'Approved': 'Approved',
+                              'Code-Review': 'Code-Review',
+                              'Verified': 'Verified'}
 
     def __init__(self, gerrit, number, project, branch, subject,
                  status='NEW', upstream_root=None, files={}):
@@ -332,8 +342,8 @@ class FakeGerritChange(object):
         if not granted_on:
             granted_on = time.time()
         approval = {
-            'description': self.categories[category][0],
-            'type': category,
+            'description': self.categories_translation[category],
+            'type': self.categories_translation[category],
             'value': str(value),
             'by': {
                 'username': username,
@@ -342,7 +352,8 @@ class FakeGerritChange(object):
             'grantedOn': int(granted_on)
         }
         for i, x in enumerate(self.patchsets[-1]['approvals'][:]):
-            if x['by']['username'] == username and x['type'] == category:
+            if x['by']['username'] == username and \
+                    x['type'] == self.categories_translation[category]:
                 del self.patchsets[-1]['approvals'][i]
         self.patchsets[-1]['approvals'].append(approval)
         event = {'approvals': [approval],

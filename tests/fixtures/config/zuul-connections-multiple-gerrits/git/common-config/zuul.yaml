@@ -6,10 +6,10 @@
         - event: patchset-created
     success:
       review_gerrit:
-        verified: 1
+        Verified: 1
     failure:
       review_gerrit:
-        verified: -1
+        Verified: -1
 
 - pipeline:
     name: another_check
@@ -19,10 +19,10 @@
         - event: patchset-created
     success:
       another_gerrit:
-        verified: 1
+        Verified: 1
     failure:
       another_gerrit:
-        verified: -1
+        Verified: -1
 
 - pipeline:
     name: common_check
@@ -34,14 +34,14 @@
         - event: patchset-created
     success:
       review_gerrit:
-        verified: 1
+        Verified: 1
       another_gerrit:
-        verified: 1
+        Verified: 1
     failure:
       review_gerrit:
-        verified: -1
+        Verified: -1
       another_gerrit:
-        verified: -1
+        Verified: -1
 
 - job:
     name: project-test1

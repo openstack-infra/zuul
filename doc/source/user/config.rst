@@ -115,10 +115,10 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
           - event: patchset-created
       success:
         my_gerrit:
-          verified: 1
+          Verified: 1
       failure:
         my_gerrit
-          verified: -1
+          Verified: -1
 
 .. TODO: See TODO for more annotated examples of common pipeline configurations.
 
@@ -255,9 +255,9 @@ optional unless otherwise specified):
     to match.  Same format as "older-than".
 
     Any other field is interpreted as a review category and value
-    pair.  For example ``verified: 1`` would require that the approval
+    pair.  For example ``Verified: 1`` would require that the approval
     be for a +1 vote in the "Verified" column.  The value may either
-    be a single value or a list: ``verified: [1, 2]`` would match
+    be a single value or a list: ``Verified: [1, 2]`` would match
     either a +1 or +2 vote.
 
   **open**
@@ -287,7 +287,7 @@ optional unless otherwise specified):
 
     reject:
       approval:
-        - code-review: [-1, -2]
+        - Code-Review: [-1, -2]
 
 **dequeue-on-new-patchset**
   Normally, if a new patchset is uploaded to a change that is in a

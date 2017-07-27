@@ -7,10 +7,10 @@
         - event: change-restored
     success:
       gerrit:
-        verified: 1
+        Verified: 1
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
 
 - pipeline:
     name: dup2
@@ -21,10 +21,10 @@
         - event: change-restored
     success:
       gerrit:
-        verified: 1
+        Verified: 1
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
 
 - job:
     name: project-test1

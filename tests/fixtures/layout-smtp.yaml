@@ -9,13 +9,13 @@ pipelines:
         to: you@example.com
     success:
       gerrit:
-        verified: 1
+        Verified: 1
       smtp:
         to: alternative_me@example.com
         from: zuul_from@example.com
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
 
 projects:
   - name: org/project

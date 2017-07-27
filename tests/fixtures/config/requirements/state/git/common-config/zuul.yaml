@@ -10,10 +10,10 @@
         - event: comment-added
     success:
       gerrit:
-        verified: 1
+        Verified: 1
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
 
 - pipeline:
     name: open-check
@@ -27,10 +27,10 @@
         - event: comment-added
     success:
       gerrit:
-        verified: 1
+        Verified: 1
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
 
 - pipeline:
     name: status-check
@@ -44,10 +44,10 @@
         - event: comment-added
     success:
       gerrit:
-        verified: 1
+        Verified: 1
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
 
 - job:
     name: project-job

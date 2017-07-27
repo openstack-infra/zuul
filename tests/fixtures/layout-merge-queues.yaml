@@ -6,7 +6,7 @@ pipelines:
       gerrit:
         - event: comment-added
           approval:
-            - approved: 1
+            - Approved: 1
 
 projects:
   - name: projectA

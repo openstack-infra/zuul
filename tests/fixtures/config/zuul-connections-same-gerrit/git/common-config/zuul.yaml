@@ -6,10 +6,10 @@
         - event: patchset-created
     success:
       review_gerrit:
-        verified: 1
+        Verified: 1
     failure:
       alt_voting_gerrit:
-        verified: -1
+        Verified: -1
 
 - job:
     name: project-test1

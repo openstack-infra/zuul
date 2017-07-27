@@ -24,11 +24,6 @@ from zuul.driver.util import time_to_seconds
 EMPTY_GIT_REF = '0' * 40  # git sha of all zeros, used during creates/deletes
 
 
-def normalize_category(name):
-    name = name.lower()
-    return re.sub(' ', '-', name)
-
-
 class GerritChange(Change):
     def __init__(self, project):
         super(GerritChange, self).__init__(project)
@@ -109,7 +104,7 @@ class GerritApprovalFilter(object):
             else:
                 if not isinstance(v, list):
                     v = [v]
-                if (normalize_category(approval['description']) != k or
+                if (approval['description'] != k or
                         int(approval['value']) not in v):
                     return False
         return True
@@ -281,8 +276,8 @@ class GerritEventFilter(EventFilter, GerritApprovalFilter):
         for category, value in self.event_approvals.items():
             matches_approval = False
             for eapp in event.approvals:
-                if (normalize_category(eapp['description']) == category and
-                    int(eapp['value']) == int(value)):
+                if (eapp['description'] == category and
+                        int(eapp['value']) == int(value)):
                     matches_approval = True
             if not matches_approval:
                 return False

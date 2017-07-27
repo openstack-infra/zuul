@@ -4,7 +4,7 @@
     require:
       gerrit:
         approval:
-          - verified: -1
+          - Verified: -1
     trigger:
       gerrit:
         - event: patchset-created
@@ -13,10 +13,10 @@
           pipeline: gate
     success:
       gerrit:
-        verified: 1
+        Verified: 1
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
 
 - pipeline:
     name: gate
@@ -24,25 +24,25 @@
     require:
       gerrit:
         approval:
-          - verified: 1
+          - Verified: 1
     trigger:
       gerrit:
         - event: comment-added
           approval:
-            - approved: 1
+            - Approved: 1
       zuul:
         - event: parent-change-enqueued
           pipeline: gate
     success:
       gerrit:
-        verified: 2
+        Verified: 2
         submit: true
     failure:
       gerrit:
-        verified: -2
+        Verified: -2
     start:
       gerrit:
-        verified: 0
+        Verified: 0
     precedence: high
 
 - job:

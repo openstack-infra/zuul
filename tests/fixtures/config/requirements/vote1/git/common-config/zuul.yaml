@@ -5,16 +5,16 @@
       gerrit:
         approval:
           - username: jenkins
-            verified: 1
+            Verified: 1
     trigger:
       gerrit:
         - event: comment-added
     success:
       gerrit:
-        verified: 1
+        Verified: 1
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
 
 - pipeline:
     name: trigger
@@ -24,13 +24,13 @@
         - event: comment-added
           require-approval:
             - username: jenkins
-              verified: 1
+              Verified: 1
     success:
       gerrit:
-        verified: 1
+        Verified: 1
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
 
 - job:
     name: project1-job

@@ -581,7 +581,7 @@ class GerritConnection(BaseConnection):
                             continue
                         elif label['status'] in ['NEED', 'REJECT']:
                             # It may be our own rejection, so we ignore
-                            if label['label'].lower() not in allow_needs:
+                            if label['label'] not in allow_needs:
                                 return False
                             continue
                         else:

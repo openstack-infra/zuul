@@ -9,12 +9,12 @@
         to: alternative_me@example.com
     success:
       gerrit:
-        verified: 1
+        Verified: 1
       smtp:
         to: alternative_me@example.com
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
 
 - job:
     name: docs-draft-test
