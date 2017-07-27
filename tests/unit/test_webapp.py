@@ -31,11 +31,11 @@ class TestWebapp(ZuulTestCase):
         super(TestWebapp, self).setUp()
         self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
-        B.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        B.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
         self.waitUntilSettled()
         self.port = self.webapp.server.socket.getsockname()[1]
 

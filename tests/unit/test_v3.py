@@ -31,8 +31,8 @@ class TestMultipleTenants(AnsibleZuulTestCase):
 
     def test_multiple_tenants(self):
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project1-test1').result,
                          'SUCCESS')
@@ -47,8 +47,8 @@ class TestMultipleTenants(AnsibleZuulTestCase):
                          "A should *not* transit tenant-two gate")
 
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
-        B.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        B.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('python27',
                                                 'org/project2').result,
@@ -74,8 +74,8 @@ class TestInRepoConfig(ZuulTestCase):
 
     def test_in_repo_config(self):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project-test1').result,
                          'SUCCESS')
@@ -108,8 +108,8 @@ class TestInRepoConfig(ZuulTestCase):
                      'playbooks/project-test2.yaml': in_repo_playbook}
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
                                            files=file_dict)
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2,
@@ -125,8 +125,8 @@ class TestInRepoConfig(ZuulTestCase):
         # Now that the config change is landed, it should be live for
         # subsequent changes.
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
-        B.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        B.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('project-test2').result,
                          'SUCCESS')
@@ -229,8 +229,8 @@ class TestInRepoConfig(ZuulTestCase):
                      'playbooks/project-test2.yaml': in_repo_playbook}
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
                                            files=file_dict)
-        A.addApproval('approved', 1)
-        self.fake_gerrit.addEvent(A.addApproval('code-review', 2))
+        A.addApproval('Approved', 1)
+        self.fake_gerrit.addEvent(A.addApproval('Code-Review', 2))
         self.waitUntilSettled()
 
         items = gate_pipeline.getAllItems()
@@ -269,8 +269,8 @@ class TestInRepoConfig(ZuulTestCase):
         self.create_branch('org/project', 'stable')
         A = self.fake_gerrit.addFakeChange('org/project', 'stable', 'A',
                                            files=file_dict)
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2,
@@ -284,8 +284,8 @@ class TestInRepoConfig(ZuulTestCase):
 
         # The config change should not affect master.
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
-        B.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        B.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
         self.waitUntilSettled()
         self.assertHistory([
             dict(name='project-test2', result='SUCCESS', changes='1,1'),
@@ -294,8 +294,8 @@ class TestInRepoConfig(ZuulTestCase):
         # The config change should be live for further changes on
         # stable.
         C = self.fake_gerrit.addFakeChange('org/project', 'stable', 'C')
-        C.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
+        C.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(C.addApproval('Approved', 1))
         self.waitUntilSettled()
         self.assertHistory([
             dict(name='project-test2', result='SUCCESS', changes='1,1'),
@@ -368,8 +368,8 @@ class TestInRepoConfig(ZuulTestCase):
         file_dict = {'.zuul.yaml': in_repo_conf}
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
                                            files=file_dict)
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -389,8 +389,8 @@ class TestInRepoConfig(ZuulTestCase):
         file_dict = {'zuul.yaml': in_repo_conf}
         A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A',
                                            files=file_dict)
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -409,8 +409,8 @@ class TestInRepoConfig(ZuulTestCase):
         file_dict = {'.zuul.yaml': in_repo_conf}
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
                                            files=file_dict)
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -429,8 +429,8 @@ class TestInRepoConfig(ZuulTestCase):
         file_dict = {'.zuul.yaml': in_repo_conf}
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
                                            files=file_dict)
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -449,8 +449,8 @@ class TestInRepoConfig(ZuulTestCase):
         file_dict = {'.zuul.yaml': in_repo_conf}
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
                                            files=file_dict)
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -469,8 +469,8 @@ class TestInRepoConfig(ZuulTestCase):
         file_dict = {'.zuul.yaml': in_repo_conf}
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
                                            files=file_dict)
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -494,8 +494,8 @@ class TestInRepoConfig(ZuulTestCase):
         file_dict = {'.zuul.yaml': in_repo_conf}
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
                                            files=file_dict)
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -522,8 +522,8 @@ class TestInRepoConfig(ZuulTestCase):
         file_dict = {'.zuul.yaml': in_repo_conf}
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
                                            files=file_dict)
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -549,8 +549,8 @@ class TestInRepoConfig(ZuulTestCase):
         file_dict = {'.zuul.yaml': downstream_repo_conf}
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A',
                                            files=file_dict)
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')
@@ -575,8 +575,8 @@ class TestInRepoConfig(ZuulTestCase):
         file_dict = {'.zuul.yaml': upstream_repo_conf}
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B',
                                            files=file_dict)
-        B.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        B.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
         self.waitUntilSettled()
 
         self.assertEqual(B.data['status'], 'MERGED')

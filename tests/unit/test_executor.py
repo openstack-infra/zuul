@@ -86,10 +86,10 @@ class TestExecutorRepos(ZuulTestCase):
         projects = [p1, p2]
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
-        A.addApproval('code-review', 2)
-        B.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
-        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        B.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
 
         self.waitUntilSettled()
 
@@ -124,12 +124,12 @@ class TestExecutorRepos(ZuulTestCase):
         B = self.fake_gerrit.addFakeChange('org/project2', 'stable/havana',
                                            'B')
         C = self.fake_gerrit.addFakeChange('org/project3', 'master', 'C')
-        A.addApproval('code-review', 2)
-        B.addApproval('code-review', 2)
-        C.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
-        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
-        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        B.addApproval('Code-Review', 2)
+        C.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('Approved', 1))
 
         self.waitUntilSettled()
 
@@ -183,14 +183,14 @@ class TestExecutorRepos(ZuulTestCase):
         C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
         D = self.fake_gerrit.addFakeChange('org/project3', 'stable/havana',
                                            'D')
-        A.addApproval('code-review', 2)
-        B.addApproval('code-review', 2)
-        C.addApproval('code-review', 2)
-        D.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
-        self.fake_gerrit.addEvent(B.addApproval('approved', 1))
-        self.fake_gerrit.addEvent(C.addApproval('approved', 1))
-        self.fake_gerrit.addEvent(D.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        B.addApproval('Code-Review', 2)
+        C.addApproval('Code-Review', 2)
+        D.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
+        self.fake_gerrit.addEvent(C.addApproval('Approved', 1))
+        self.fake_gerrit.addEvent(D.addApproval('Approved', 1))
 
         self.waitUntilSettled()
 
