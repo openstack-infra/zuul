@@ -27,18 +27,3 @@ database.
 
 The SQL reporter does nothing on "start" or "merge-failure"; it only
 acts on "success" or "failure" reporting stages.
-
-**score**
-  A score to store for the result of the build. eg: -1 might indicate a failed
-  build.
-
-For example ::
-
-  - pipeline:
-      name: post-merge
-      success:
-        mydb_conn:
-            score: 1
-      failure:
-        mydb_conn:
-            score: -1

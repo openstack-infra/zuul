@@ -86,7 +86,7 @@ class TestSQLConnection(ZuulDBTestCase):
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
 
-        # Add a failed result for a negative score
+        # Add a failed result
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
 
         self.executor_server.failJob('project-test1', B)
@@ -106,7 +106,7 @@ class TestSQLConnection(ZuulDBTestCase):
         self.assertEqual('org/project', buildset0['project'])
         self.assertEqual(1, buildset0['change'])
         self.assertEqual(1, buildset0['patchset'])
-        self.assertEqual(1, buildset0['score'])
+        self.assertEqual('SUCCESS', buildset0['result'])
         self.assertEqual('Build succeeded.', buildset0['message'])
         self.assertEqual('tenant-one', buildset0['tenant'])
 
@@ -130,7 +130,7 @@ class TestSQLConnection(ZuulDBTestCase):
         self.assertEqual('org/project', buildset1['project'])
         self.assertEqual(2, buildset1['change'])
         self.assertEqual(1, buildset1['patchset'])
-        self.assertEqual(-1, buildset1['score'])
+        self.assertEqual('FAILURE', buildset1['result'])
         self.assertEqual('Build failed.', buildset1['message'])
 
         buildset1_builds = conn.execute(
@@ -183,7 +183,7 @@ class TestSQLConnection(ZuulDBTestCase):
         self.assertEqual('org/project', buildsets_resultsdb[0]['project'])
         self.assertEqual(1, buildsets_resultsdb[0]['change'])
         self.assertEqual(1, buildsets_resultsdb[0]['patchset'])
-        self.assertEqual(1, buildsets_resultsdb[0]['score'])
+        self.assertEqual('SUCCESS', buildsets_resultsdb[0]['result'])
         self.assertEqual('Build succeeded.', buildsets_resultsdb[0]['message'])
 
         # Grab the sa tables for resultsdb_failures
@@ -204,7 +204,7 @@ class TestSQLConnection(ZuulDBTestCase):
             'org/project', buildsets_resultsdb_failures[0]['project'])
         self.assertEqual(2, buildsets_resultsdb_failures[0]['change'])
         self.assertEqual(1, buildsets_resultsdb_failures[0]['patchset'])
-        self.assertEqual(-1, buildsets_resultsdb_failures[0]['score'])
+        self.assertEqual('FAILURE', buildsets_resultsdb_failures[0]['result'])
         self.assertEqual(
             'Build failed.', buildsets_resultsdb_failures[0]['message'])
 
