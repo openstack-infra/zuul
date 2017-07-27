@@ -1833,6 +1833,7 @@ class TestScheduler(ZuulTestCase):
         # Must be in same repo, so overwrite config with another one
         self.commitConfigUpdate('common-config', 'layouts/no-timer.yaml')
         self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 1, "One timer job")
 
