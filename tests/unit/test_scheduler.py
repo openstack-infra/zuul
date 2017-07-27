@@ -4830,7 +4830,7 @@ class TestSchedulerMerges(ZuulTestCase):
         self.waitUntilSettled()
 
         build = self.builds[-1]
-        self.assertEqual(self.getParameter(build, 'ZUUL_BRANCH'), 'mp')
+        self.assertEqual(build.parameters['zuul']['branch'], 'mp')
         path = os.path.join(build.jobdir.src_root, 'review.example.com',
                             'org/project-merge-branches')
         repo = git.Repo(path)
