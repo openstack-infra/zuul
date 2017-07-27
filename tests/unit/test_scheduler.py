@@ -913,11 +913,11 @@ class TestScheduler(ZuulTestCase):
         self.waitUntilSettled()
 
         for build in self.builds:
-            if build.parameters['ZUUL_PIPELINE'] == 'check':
+            if build.pipeline == 'check':
                 build.release()
         self.waitUntilSettled()
         for build in self.builds:
-            if build.parameters['ZUUL_PIPELINE'] == 'check':
+            if build.pipeline == 'check':
                 build.release()
         self.waitUntilSettled()
 

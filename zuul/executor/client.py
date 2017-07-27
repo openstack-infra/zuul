@@ -194,7 +194,6 @@ class ExecutorClient(object):
         # Legacy environment variables
         params = dict(ZUUL_UUID=uuid,
                       ZUUL_PROJECT=item.change.project.name)
-        params['ZUUL_PIPELINE'] = pipeline.name
 
         params['job'] = job.name
         params['timeout'] = job.timeout
