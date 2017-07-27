@@ -1123,7 +1123,7 @@ class FakeBuild(object):
             self.node = self.parameters['nodes'][0]['label']
         self.unique = self.parameters['ZUUL_UUID']
         self.pipeline = self.parameters['zuul']['pipeline']
-        self.project = self.parameters['ZUUL_PROJECT']
+        self.project = self.parameters['zuul']['project']['name']
         self.name = self.parameters['job']
         self.wait_condition = threading.Condition()
         self.waiting = False
@@ -2504,7 +2504,7 @@ class ZuulTestCase(BaseTestCase):
         for job in self.history:
             if (job.name == name and
                 (project is None or
-                 job.parameters['ZUUL_PROJECT'] == project)):
+                 job.parameters['zuul']['project']['name'] == project)):
                 return job
         raise Exception("Unable to find job %s in history" % name)
 
