@@ -274,8 +274,9 @@ class TestExecutorRepos(ZuulTestCase):
         # Stop queuing timer triggered jobs so that the assertions
         # below don't race against more jobs being queued.
         self.commitConfigUpdate('common-config',
-                                'layouts/repo-checkout-no-timer.yaml')
+                                'layouts/repo-checkout-no-timer-override.yaml')
         self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
 
         self.assertEquals(1, len(self.builds), "One build is running")
 
@@ -313,6 +314,7 @@ class TestExecutorRepos(ZuulTestCase):
         self.commitConfigUpdate('common-config',
                                 'layouts/repo-checkout-no-timer.yaml')
         self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
 
         self.assertEquals(2, len(self.builds), "Two builds are running")
 
