@@ -195,7 +195,6 @@ class ExecutorClient(object):
         params = dict(ZUUL_UUID=uuid,
                       ZUUL_PROJECT=item.change.project.name)
         params['ZUUL_PIPELINE'] = pipeline.name
-        params['ZUUL_URL'] = item.current_build_set.zuul_url
 
         params['job'] = job.name
         params['timeout'] = job.timeout

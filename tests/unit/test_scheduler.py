@@ -1853,24 +1853,6 @@ class TestScheduler(ZuulTestCase):
         self.executor_server.release()
         self.waitUntilSettled()
 
-    def test_zuul_url_return(self):
-        "Test if ZUUL_URL is returning when zuul_url is set in zuul.conf"
-        self.assertTrue(self.sched.config.has_option('merger', 'zuul_url'))
-        self.executor_server.hold_jobs_in_build = True
-
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
-        self.waitUntilSettled()
-
-        self.assertEqual(len(self.builds), 1)
-        for build in self.builds:
-            self.assertTrue('ZUUL_URL' in build.parameters)
-
-        self.executor_server.hold_jobs_in_build = False
-        self.executor_server.release()
-        self.waitUntilSettled()
-
     def test_new_patchset_dequeues_old_on_head(self):
         "Test that a new patchset causes the old to be dequeued (at head)"
         # D -> C (depends on B) -> B (depends on A) -> A -> M
