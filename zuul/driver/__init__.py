@@ -33,7 +33,7 @@ class Driver(object, metaclass=abc.ABCMeta):
     The class or instance attribute **name** must be provided as a string.
 
     """
-    name = None
+    name = None  # type: str
 
     def reconfigure(self, tenant):
         """Called when a tenant is reconfigured.
