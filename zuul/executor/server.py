@@ -818,8 +818,7 @@ class AnsibleJob(object):
 
         # Make sure all projects used by the job are updated...
         for project in args['projects']:
-            self.log.debug("Job %s: updating project %s" %
-                           (self.job.unique, project))
+            self.log.debug("Updating project %s" % (project,))
             tasks.append(self.executor_server.update(
                 project['connection'], project['name']))
             projects.add((project['connection'], project['name']))
@@ -833,8 +832,7 @@ class AnsibleJob(object):
             repos += playbook['roles']
 
         for repo in repos:
-            self.log.debug("Job %s: updating playbook or role %s" %
-                           (self.job.unique, repo))
+            self.log.debug("Updating playbook or role %s" % (repo,))
             key = (repo['connection'], repo['project'])
             if key not in projects:
                 tasks.append(self.executor_server.update(*key))
@@ -843,7 +841,7 @@ class AnsibleJob(object):
         for task in tasks:
             task.wait()
 
-        self.log.debug("Job %s: git updates complete" % (self.job.unique,))
+        self.log.debug("Git updates complete")
         merger = self.executor_server._getMerger(self.jobdir.src_root,
                                                  self.log)
         repos = {}
