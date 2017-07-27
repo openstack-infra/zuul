@@ -27,8 +27,8 @@ class TestOpenStack(AnsibleZuulTestCase):
 
     def test_nova_master(self):
         A = self.fake_gerrit.addFakeChange('openstack/nova', 'master', 'A')
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('python27').result,
                          'SUCCESS')
@@ -44,8 +44,8 @@ class TestOpenStack(AnsibleZuulTestCase):
         self.create_branch('openstack/nova', 'stable/mitaka')
         A = self.fake_gerrit.addFakeChange('openstack/nova',
                                            'stable/mitaka', 'A')
-        A.addApproval('code-review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('approved', 1))
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('python27').result,
                          'SUCCESS')

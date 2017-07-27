@@ -37,21 +37,21 @@ class TestRequirementsApprovalNewerThan(ZuulTestCase):
     def _test_require_approval_newer_than(self, project, job):
         A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
         # A comment event that we will keep submitting to trigger
-        comment = A.addApproval('code-review', 2, username='nobody')
+        comment = A.addApproval('Code-Review', 2, username='nobody')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         # No +1 from Jenkins so should not be enqueued
         self.assertEqual(len(self.history), 0)
 
         # Add a too-old +1, should not be enqueued
-        A.addApproval('verified', 1, username='jenkins',
+        A.addApproval('Verified', 1, username='jenkins',
                       granted_on=time.time() - 72 * 60 * 60)
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # Add a recent +1
-        self.fake_gerrit.addEvent(A.addApproval('verified', 1,
+        self.fake_gerrit.addEvent(A.addApproval('Verified', 1,
                                                 username='jenkins'))
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
@@ -77,20 +77,20 @@ class TestRequirementsApprovalOlderThan(ZuulTestCase):
     def _test_require_approval_older_than(self, project, job):
         A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
         # A comment event that we will keep submitting to trigger
-        comment = A.addApproval('code-review', 2, username='nobody')
+        comment = A.addApproval('Code-Review', 2, username='nobody')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         # No +1 from Jenkins so should not be enqueued
         self.assertEqual(len(self.history), 0)
 
         # Add a recent +1 which should not be enqueued
-        A.addApproval('verified', 1)
+        A.addApproval('Verified', 1)
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # Add an old +1 which should be enqueued
-        A.addApproval('verified', 1, username='jenkins',
+        A.addApproval('Verified', 1, username='jenkins',
                       granted_on=time.time() - 72 * 60 * 60)
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
@@ -116,14 +116,14 @@ class TestRequirementsUserName(ZuulTestCase):
     def _test_require_approval_username(self, project, job):
         A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
         # A comment event that we will keep submitting to trigger
-        comment = A.addApproval('code-review', 2, username='nobody')
+        comment = A.addApproval('Code-Review', 2, username='nobody')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         # No approval from Jenkins so should not be enqueued
         self.assertEqual(len(self.history), 0)
 
         # Add an approval from Jenkins
-        A.addApproval('verified', 1, username='jenkins')
+        A.addApproval('Verified', 1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
@@ -148,14 +148,14 @@ class TestRequirementsEmail(ZuulTestCase):
     def _test_require_approval_email(self, project, job):
         A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
         # A comment event that we will keep submitting to trigger
-        comment = A.addApproval('code-review', 2, username='nobody')
+        comment = A.addApproval('Code-Review', 2, username='nobody')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         # No approval from Jenkins so should not be enqueued
         self.assertEqual(len(self.history), 0)
 
         # Add an approval from Jenkins
-        A.addApproval('verified', 1, username='jenkins')
+        A.addApproval('Verified', 1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
@@ -180,20 +180,20 @@ class TestRequirementsVote1(ZuulTestCase):
     def _test_require_approval_vote1(self, project, job):
         A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
         # A comment event that we will keep submitting to trigger
-        comment = A.addApproval('code-review', 2, username='nobody')
+        comment = A.addApproval('Code-Review', 2, username='nobody')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         # No approval from Jenkins so should not be enqueued
         self.assertEqual(len(self.history), 0)
 
         # A -1 from jenkins should not cause it to be enqueued
-        A.addApproval('verified', -1, username='jenkins')
+        A.addApproval('Verified', -1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # A +1 should allow it to be enqueued
-        A.addApproval('verified', 1, username='jenkins')
+        A.addApproval('Verified', 1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
@@ -218,26 +218,26 @@ class TestRequirementsVote2(ZuulTestCase):
     def _test_require_approval_vote2(self, project, job):
         A = self.fake_gerrit.addFakeChange(project, 'master', 'A')
         # A comment event that we will keep submitting to trigger
-        comment = A.addApproval('code-review', 2, username='nobody')
+        comment = A.addApproval('Code-Review', 2, username='nobody')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         # No approval from Jenkins so should not be enqueued
         self.assertEqual(len(self.history), 0)
 
         # A -1 from jenkins should not cause it to be enqueued
-        A.addApproval('verified', -1, username='jenkins')
+        A.addApproval('Verified', -1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # A -2 from jenkins should not cause it to be enqueued
-        A.addApproval('verified', -2, username='jenkins')
+        A.addApproval('Verified', -2, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # A +1 from jenkins should allow it to be enqueued
-        A.addApproval('verified', 1, username='jenkins')
+        A.addApproval('Verified', 1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
@@ -246,13 +246,13 @@ class TestRequirementsVote2(ZuulTestCase):
         # A +2 from nobody should not cause it to be enqueued
         B = self.fake_gerrit.addFakeChange(project, 'master', 'B')
         # A comment event that we will keep submitting to trigger
-        comment = B.addApproval('code-review', 2, username='nobody')
+        comment = B.addApproval('Code-Review', 2, username='nobody')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
 
         # A +2 from jenkins should allow it to be enqueued
-        B.addApproval('verified', 2, username='jenkins')
+        B.addApproval('Verified', 2, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 2)
@@ -269,10 +269,10 @@ class TestRequirementsState(ZuulTestCase):
         # comment on first patchset and check that no additional
         # jobs are run.
         A = self.fake_gerrit.addFakeChange('current-project', 'master', 'A')
-        self.fake_gerrit.addEvent(A.addApproval('code-review', 1))
+        self.fake_gerrit.addEvent(A.addApproval('Code-Review', 1))
         self.waitUntilSettled()
         A.addPatchset()
-        self.fake_gerrit.addEvent(A.addApproval('code-review', 1))
+        self.fake_gerrit.addEvent(A.addApproval('Code-Review', 1))
         self.waitUntilSettled()
 
         self.assertEqual(len(self.history), 2)  # one job for each ps
@@ -290,24 +290,24 @@ class TestRequirementsState(ZuulTestCase):
     def test_pipeline_require_open(self):
         A = self.fake_gerrit.addFakeChange('open-project', 'master', 'A',
                                            status='MERGED')
-        self.fake_gerrit.addEvent(A.addApproval('code-review', 2))
+        self.fake_gerrit.addEvent(A.addApproval('Code-Review', 2))
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         B = self.fake_gerrit.addFakeChange('open-project', 'master', 'B')
-        self.fake_gerrit.addEvent(B.addApproval('code-review', 2))
+        self.fake_gerrit.addEvent(B.addApproval('Code-Review', 2))
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
 
     def test_pipeline_require_status(self):
         A = self.fake_gerrit.addFakeChange('status-project', 'master', 'A',
                                            status='MERGED')
-        self.fake_gerrit.addEvent(A.addApproval('code-review', 2))
+        self.fake_gerrit.addEvent(A.addApproval('Code-Review', 2))
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         B = self.fake_gerrit.addFakeChange('status-project', 'master', 'B')
-        self.fake_gerrit.addEvent(B.addApproval('code-review', 2))
+        self.fake_gerrit.addEvent(B.addApproval('Code-Review', 2))
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
 
@@ -326,21 +326,21 @@ class TestRequirementsRejectUsername(ZuulTestCase):
         self.assertEqual(len(self.history), 0)
 
         # add in a comment that will trigger
-        self.fake_gerrit.addEvent(A.addApproval('code-review', 1,
+        self.fake_gerrit.addEvent(A.addApproval('Code-Review', 1,
                                                 username='reviewer'))
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, job)
 
         # add in a comment from jenkins user which shouldn't trigger
-        self.fake_gerrit.addEvent(A.addApproval('verified', 1,
+        self.fake_gerrit.addEvent(A.addApproval('Verified', 1,
                                                 username='jenkins'))
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
 
         # Check future reviews also won't trigger as a 'jenkins' user has
         # commented previously
-        self.fake_gerrit.addEvent(A.addApproval('code-review', 1,
+        self.fake_gerrit.addEvent(A.addApproval('Code-Review', 1,
                                                 username='reviewer'))
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
@@ -368,39 +368,39 @@ class TestRequirementsReject(ZuulTestCase):
         self.assertEqual(len(self.history), 0)
 
         # First positive vote should not queue until jenkins has +1'd
-        comment = A.addApproval('verified', 1, username='reviewer_a')
+        comment = A.addApproval('Verified', 1, username='reviewer_a')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # Jenkins should put in a +1 which will also queue
-        comment = A.addApproval('verified', 1, username='jenkins')
+        comment = A.addApproval('Verified', 1, username='jenkins')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, job)
 
         # Negative vote should not queue
-        comment = A.addApproval('verified', -1, username='reviewer_b')
+        comment = A.addApproval('Verified', -1, username='reviewer_b')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
 
         # Future approvals should do nothing
-        comment = A.addApproval('verified', 1, username='reviewer_c')
+        comment = A.addApproval('Verified', 1, username='reviewer_c')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
 
         # Change/update negative vote should queue
-        comment = A.addApproval('verified', 1, username='reviewer_b')
+        comment = A.addApproval('Verified', 1, username='reviewer_b')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 2)
         self.assertEqual(self.history[1].name, job)
 
         # Future approvals should also queue
-        comment = A.addApproval('verified', 1, username='reviewer_d')
+        comment = A.addApproval('Verified', 1, username='reviewer_d')
         self.fake_gerrit.addEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 3)

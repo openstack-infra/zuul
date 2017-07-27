@@ -137,16 +137,6 @@ class FakeGerritChange(object):
                   'Code-Review': ('Code-Review', -2, 2),
                   'Verified': ('Verified', -2, 2)}
 
-    # TODO(tobiash): This is used as a translation layer between the tests
-    #                which use lower case labels. This can be removed if all
-    #                tests are converted to use the correct casing.
-    categories_translation = {'approved': 'Approved',
-                              'code-review': 'Code-Review',
-                              'verified': 'Verified',
-                              'Approved': 'Approved',
-                              'Code-Review': 'Code-Review',
-                              'Verified': 'Verified'}
-
     def __init__(self, gerrit, number, project, branch, subject,
                  status='NEW', upstream_root=None, files={}):
         self.gerrit = gerrit
@@ -301,7 +291,7 @@ class FakeGerritChange(object):
                             "url": "https://hostname/3"},
                  "patchSet": self.patchsets[patchset - 1],
                  "author": {"name": "User Name"},
-                 "approvals": [{"type": "code-review",
+                 "approvals": [{"type": "Code-Review",
                                 "description": "Code-Review",
                                 "value": "0"}],
                  "comment": "This is a comment"}
@@ -341,8 +331,8 @@ class FakeGerritChange(object):
         if not granted_on:
             granted_on = time.time()
         approval = {
-            'description': self.categories_translation[category],
-            'type': self.categories_translation[category],
+            'description': self.categories[category][0],
+            'type': category,
             'value': str(value),
             'by': {
                 'username': username,
@@ -351,8 +341,7 @@ class FakeGerritChange(object):
             'grantedOn': int(granted_on)
         }
         for i, x in enumerate(self.patchsets[-1]['approvals'][:]):
-            if x['by']['username'] == username and \
-                    x['type'] == self.categories_translation[category]:
+            if x['by']['username'] == username and x['type'] == category:
                 del self.patchsets[-1]['approvals'][i]
         self.patchsets[-1]['approvals'].append(approval)
         event = {'approvals': [approval],
