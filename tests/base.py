@@ -16,6 +16,7 @@
 # under the License.
 
 import configparser
+from contextlib import contextmanager
 import datetime
 import gc
 import hashlib
@@ -2761,6 +2762,24 @@ class ZuulTestCase(BaseTestCase):
 class AnsibleZuulTestCase(ZuulTestCase):
     """ZuulTestCase but with an actual ansible executor running"""
     run_ansible = True
+
+    @contextmanager
+    def jobLog(self, build):
+        """Print job logs on assertion errors
+
+        This method is a context manager which, if it encounters an
+        ecxeption, adds the build log to the debug output.
+
+        :arg Build build: The build that's being asserted.
+        """
+        try:
+            yield
+        except Exception:
+            path = os.path.join(self.test_root, build.uuid,
+                                'work', 'logs', 'job-output.txt')
+            with open(path) as f:
+                self.log.debug(f.read())
+            raise
 
 
 class SSLZuulTestCase(ZuulTestCase):

@@ -757,6 +757,12 @@ class AnsibleJob(object):
                                             '~/.ssh/id_rsa')
         self.ssh_agent = SshAgent()
 
+        self.executor_variables_file = None
+
+        if self.executor_server.config.has_option('executor', 'variables'):
+            self.executor_variables_file = self.executor_server.config.get(
+                'executor', 'variables')
+
     def run(self):
         self.running = True
         self.thread = threading.Thread(target=self.execute)
@@ -1375,6 +1381,9 @@ class AnsibleJob(object):
 
         ro_dirs.append(self.executor_server.ansible_dir)
 
+        if self.executor_variables_file:
+            ro_dirs.append(self.executor_variables_file)
+
         self.executor_server.execution_wrapper.setMountsMap(ro_dirs,
                                                             rw_dirs)
 
@@ -1476,6 +1485,9 @@ class AnsibleJob(object):
             'zuul_execution_canonical_name_and_path=%s'
             % playbook.canonical_name_and_path])
         cmd.extend(['-e', 'zuul_execution_branch=%s' % str(playbook.branch)])
+
+        if self.executor_variables_file is not None:
+            cmd.extend(['-e@%s' % self.executor_variables_file])
 
         result, code = self.runAnsible(
             cmd=cmd, timeout=timeout,
