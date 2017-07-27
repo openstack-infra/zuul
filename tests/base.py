@@ -1121,7 +1121,7 @@ class FakeBuild(object):
         self.node = None
         if len(self.parameters.get('nodes')) == 1:
             self.node = self.parameters['nodes'][0]['label']
-        self.unique = self.parameters['ZUUL_UUID']
+        self.unique = self.parameters['zuul']['build']
         self.pipeline = self.parameters['zuul']['pipeline']
         self.project = self.parameters['zuul']['project']['name']
         self.name = self.parameters['job']
@@ -1296,11 +1296,11 @@ class RecordingExecutorServer(zuul.executor.server.ExecutorServer):
         for build in builds:
             if not regex or re.match(regex, build.name):
                 self.log.debug("Releasing build %s" %
-                               (build.parameters['ZUUL_UUID']))
+                               (build.parameters['zuul']['build']))
                 build.release()
             else:
                 self.log.debug("Not releasing build %s" %
-                               (build.parameters['ZUUL_UUID']))
+                               (build.parameters['zuul']['build']))
         self.log.debug("Done releasing builds %s (%s)" %
                        (regex, len(self.running_builds)))
 

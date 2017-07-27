@@ -192,8 +192,7 @@ class ExecutorClient(object):
             zuul_params['items'].append(d)
 
         # Legacy environment variables
-        params = dict(ZUUL_UUID=uuid)
-
+        params = dict()
         params['job'] = job.name
         params['timeout'] = job.timeout
         params['items'] = merger_items
