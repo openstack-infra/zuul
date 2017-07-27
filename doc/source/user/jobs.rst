@@ -147,6 +147,9 @@ All items provide the following information as Ansible variables:
 **zuul.job**
   The name of the job being run.
 
+**zuul.voting**
+  A boolean indicating whether the job is voting.
+
 **zuul.project**
   The item's project.  This is a data structure with the following
   fields:
