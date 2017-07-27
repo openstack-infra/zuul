@@ -22,18 +22,35 @@ Select *Events* you are interested in. See below for the supported events.
 Connection Configuration
 ------------------------
 
+There are two forms of operation. Either the Zuul installation can be
+configured as a `Github App`_ or it can be configured as a Webhook.
+
+If the `Github App`_ approach is taken, the config settings ``app_id`` and
+``app_key`` are required. If the Webhook approach is taken, the ``api_token``
+setting is required.
+
 The supported options in zuul.conf connections are:
 
 **driver=github**
 
+**app_id**
+  App ID if you are using a GitHub App. Can be found under the "Public Link"
+  on the right hand side labeled "ID".
+
+**app_key**
+  The Secret Key Zuul will use to create tokens for the API interactions.
+  In Github this is known as "Private key" and must be collected when
+  generated.
+
 **api_token**
-  API token for accessing GitHub.
+  API token for accessing GitHub if Zuul is configured with Webhooks.
   See `Creating an access token for command-line use
   <https://help.github.com/articles/creating-an-access-token-for-command-line-use/>`_.
 
 **webhook_token**
   Optional: Token for validating the webhook event payloads.
-  If not specified, payloads are not validated.
+  If not specified, payloads are not validated. In the GitHub App Configuration
+  page, this is called "Webhook secret".
   See `Securing your webhooks
   <https://developer.github.com/webhooks/securing/>`_.
 
@@ -174,3 +191,5 @@ supplied to the reporter. It has the following options:
   List of strings each representing an exact label name which should
   be removed from the pull request by reporter. Only used for Pull
   Request based events.  ``unlabel: 'test failed'``
+
+.. _Github App: https://developer.github.com/apps/
