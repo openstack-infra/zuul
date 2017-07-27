@@ -25,12 +25,13 @@ class TestPushRequirements(ZuulTestCase):
     def test_push_requirements(self):
         self.executor_server.hold_jobs_in_build = True
 
-        # Create a github change, add a change and emit a push event
         A = self.fake_github.openFakePullRequest('org/project1', 'master', 'A')
-        old_sha = A.head_sha
+        new_sha = A.head_sha
+        A.setMerged("merging A")
         pevent = self.fake_github.getPushEvent(project='org/project1',
                                                ref='refs/heads/master',
-                                               old_rev=old_sha)
+                                               new_rev=new_sha)
+
         self.fake_github.emitEvent(pevent)
 
         self.waitUntilSettled()
@@ -43,7 +44,7 @@ class TestPushRequirements(ZuulTestCase):
         # Make a gerrit change, and emit a ref-updated event
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
         self.fake_gerrit.addEvent(B.getRefUpdatedEvent())
-
+        B.setMerged()
         self.waitUntilSettled()
 
         # All but one pipeline should be skipped, increasing builds by 1

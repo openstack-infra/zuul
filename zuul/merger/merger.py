@@ -20,6 +20,8 @@ import logging
 
 import zuul.model
 
+NULL_REF = '0000000000000000000000000000000000000000'
+
 
 def reset_repo_to_head(repo):
     # This lets us reset the repo even if there is a file in the root
@@ -178,8 +180,13 @@ class Repo(object):
             self.setRef(path, hexsha, repo)
             unseen.discard(path)
         for path in unseen:
-            self.log.debug("Delete reference %s", path)
-            git.refs.SymbolicReference.delete(repo, ref.path)
+            self.deleteRef(path, repo)
+
+    def deleteRef(self, path, repo=None):
+        if repo is None:
+            repo = self.createRepoObject()
+        self.log.debug("Delete reference %s", path)
+        git.refs.SymbolicReference.delete(repo, path)
 
     def checkout(self, ref):
         repo = self.createRepoObject()
@@ -369,6 +376,16 @@ class Merger(object):
                     recent[key] = ref.object
             project[ref.path] = ref.object.hexsha
 
+    def _alterRepoState(self, connection_name, project_name,
+                        repo_state, path, hexsha):
+        projects = repo_state.setdefault(connection_name, {})
+        project = projects.setdefault(project_name, {})
+        if hexsha == NULL_REF:
+            if path in project:
+                del project[path]
+        else:
+            project[path] = hexsha
+
     def _restoreRepoState(self, connection_name, project_name, repo,
                           repo_state):
         projects = repo_state.get(connection_name, {})
@@ -470,12 +487,8 @@ class Merger(object):
         if repo_state is None:
             repo_state = {}
         for item in items:
-            if item.get("number") and item.get("patchset"):
-                self.log.debug("Merging for change %s,%s." %
-                               (item["number"], item["patchset"]))
-            elif item.get("newrev") and item.get("oldrev"):
-                self.log.debug("Merging for rev %s with oldrev %s." %
-                               (item["newrev"], item["oldrev"]))
+            self.log.debug("Merging for change %s,%s" %
+                           (item["number"], item["patchset"]))
             commit = self._mergeItem(item, recent, repo_state)
             if not commit:
                 return None
@@ -491,6 +504,49 @@ class Merger(object):
         for k, v in recent.items():
             ret_recent[k] = v.hexsha
         return commit.hexsha, read_files, repo_state, ret_recent
+
+    def setRepoState(self, items, repo_state):
+        # Sets the repo state for the items
+        seen = set()
+        for item in items:
+            repo = self.getRepo(item['connection'], item['project'])
+            key = (item['connection'], item['project'], item['branch'])
+
+            if key in seen:
+                continue
+
+            repo.reset()
+            self._restoreRepoState(item['connection'], item['project'], repo,
+                                   repo_state)
+
+    def getRepoState(self, items):
+        # Gets the repo state for items.  Generally this will be
+        # called in any non-change pipeline.  We will return the repo
+        # state for each item, but manipulated with any information in
+        # the item (eg, if it creates a ref, that will be in the repo
+        # state regardless of the actual state).
+        seen = set()
+        recent = {}
+        repo_state = {}
+        for item in items:
+            repo = self.getRepo(item['connection'], item['project'])
+            key = (item['connection'], item['project'], item['branch'])
+            if key not in seen:
+                try:
+                    repo.reset()
+                except Exception:
+                    self.log.exception("Unable to reset repo %s" % repo)
+                    return (False, {})
+
+                self._saveRepoState(item['connection'], item['project'], repo,
+                                    repo_state, recent)
+
+            if item.get('newrev'):
+                # This is a ref update rather than a branch tip, so make sure
+                # our returned state includes this change.
+                self._alterRepoState(item['connection'], item['project'],
+                                     repo_state, item['ref'], item['newrev'])
+        return (True, repo_state)
 
     def getFiles(self, connection_name, project_name, branch, files, dirs=[]):
         repo = self.getRepo(connection_name, project_name)

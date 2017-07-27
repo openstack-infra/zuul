@@ -44,6 +44,9 @@ class IndependentPipelineManager(PipelineManager):
         if hasattr(change, 'number'):
             history = history or []
             history.append(change.number)
+        else:
+            # Don't enqueue dependencies ahead of a non-change ref.
+            return True
 
         ret = self.checkForChangesNeededBy(change, change_queue)
         if ret in [True, False]:

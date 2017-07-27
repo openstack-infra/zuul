@@ -139,7 +139,8 @@ class FakeGerritChange(object):
                   'Verified': ('Verified', -2, 2)}
 
     def __init__(self, gerrit, number, project, branch, subject,
-                 status='NEW', upstream_root=None, files={}):
+                 status='NEW', upstream_root=None, files={},
+                 parent=None):
         self.gerrit = gerrit
         self.source = gerrit
         self.reported = 0
@@ -174,16 +175,18 @@ class FakeGerritChange(object):
             'url': 'https://hostname/%s' % number}
 
         self.upstream_root = upstream_root
-        self.addPatchset(files=files)
+        self.addPatchset(files=files, parent=parent)
         self.data['submitRecords'] = self.getSubmitRecords()
         self.open = status == 'NEW'
 
-    def addFakeChangeToRepo(self, msg, files, large):
+    def addFakeChangeToRepo(self, msg, files, large, parent):
         path = os.path.join(self.upstream_root, self.project)
         repo = git.Repo(path)
+        if parent is None:
+            parent = 'refs/tags/init'
         ref = GerritChangeReference.create(
             repo, '1/%s/%s' % (self.number, self.latest_patchset),
-            'refs/tags/init')
+            parent)
         repo.head.reference = ref
         zuul.merger.merger.reset_repo_to_head(repo)
         repo.git.clean('-x', '-f', '-d')
@@ -211,7 +214,7 @@ class FakeGerritChange(object):
         repo.heads['master'].checkout()
         return r
 
-    def addPatchset(self, files=None, large=False):
+    def addPatchset(self, files=None, large=False, parent=None):
         self.latest_patchset += 1
         if not files:
             fn = '%s-%s' % (self.branch.replace('/', '_'), self.number)
@@ -219,7 +222,7 @@ class FakeGerritChange(object):
                     (self.branch, self.number, self.latest_patchset))
             files = {fn: data}
         msg = self.subject + '-' + str(self.latest_patchset)
-        c = self.addFakeChangeToRepo(msg, files, large)
+        c = self.addFakeChangeToRepo(msg, files, large, parent)
         ps_files = [{'file': '/COMMIT_MSG',
                      'type': 'ADDED'},
                     {'file': 'README',
@@ -469,12 +472,12 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
         self.upstream_root = upstream_root
 
     def addFakeChange(self, project, branch, subject, status='NEW',
-                      files=None):
+                      files=None, parent=None):
         """Add a change to the fake Gerrit."""
         self.change_number += 1
         c = FakeGerritChange(self, self.change_number, project, branch,
                              subject, upstream_root=self.upstream_root,
-                             status=status, files=files)
+                             status=status, files=files, parent=parent)
         self.changes[self.change_number] = c
         return c
 
@@ -863,6 +866,13 @@ class FakeGithubPullRequest(object):
         }
         return (name, data)
 
+    def setMerged(self, commit_message):
+        self.is_merged = True
+        self.merge_message = commit_message
+
+        repo = self._getRepo()
+        repo.heads[self.branch].commit = repo.commit(self.head_sha)
+
 
 class FakeGithubConnection(githubconnection.GithubConnection):
     log = logging.getLogger("zuul.test.FakeGithubConnection")
@@ -1011,8 +1021,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
             self.merge_not_allowed_count -= 1
             raise MergeFailure('Merge was not successful due to mergeability'
                                ' conflict')
-        pull_request.is_merged = True
-        pull_request.merge_message = commit_message
+        pull_request.setMerged(commit_message)
 
     def getCommitStatuses(self, project, sha):
         return self.statuses.get(project, {}).get(sha, [])
