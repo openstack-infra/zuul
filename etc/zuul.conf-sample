@@ -27,8 +27,8 @@ zuul_url=http://zuul.example.com/p
 
 [executor]
 default_username=zuul
-trusted_ro_dirs=/opt/zuul-scripts:/var/cache
-trusted_rw_dirs=/opt/zuul-logs
+trusted_ro_paths=/opt/zuul-scripts:/var/cache
+trusted_rw_paths=/opt/zuul-logs
 
 [web]
 listen_address=127.0.0.1

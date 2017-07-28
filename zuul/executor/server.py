@@ -1467,20 +1467,20 @@ class AnsibleJob(object):
             opt_prefix = 'trusted'
         else:
             opt_prefix = 'untrusted'
-        ro_dirs = get_default(self.executor_server.config, 'executor',
-                              '%s_ro_dirs' % opt_prefix)
-        rw_dirs = get_default(self.executor_server.config, 'executor',
-                              '%s_rw_dirs' % opt_prefix)
-        ro_dirs = ro_dirs.split(":") if ro_dirs else []
-        rw_dirs = rw_dirs.split(":") if rw_dirs else []
+        ro_paths = get_default(self.executor_server.config, 'executor',
+                               '%s_ro_paths' % opt_prefix)
+        rw_paths = get_default(self.executor_server.config, 'executor',
+                               '%s_rw_paths' % opt_prefix)
+        ro_paths = ro_paths.split(":") if ro_paths else []
+        rw_paths = rw_paths.split(":") if rw_paths else []
 
-        ro_dirs.append(self.executor_server.ansible_dir)
+        ro_paths.append(self.executor_server.ansible_dir)
 
         if self.executor_variables_file:
-            ro_dirs.append(self.executor_variables_file)
+            ro_paths.append(self.executor_variables_file)
 
-        self.executor_server.execution_wrapper.setMountsMap(ro_dirs,
-                                                            rw_dirs)
+        self.executor_server.execution_wrapper.setMountsMap(ro_paths,
+                                                            rw_paths)
 
         popen = self.executor_server.execution_wrapper.getPopen(
             work_dir=self.jobdir.root,

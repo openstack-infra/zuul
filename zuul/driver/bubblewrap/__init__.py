@@ -83,12 +83,12 @@ class BubblewrapDriver(Driver, WrapperInterface):
     def stop(self):
         pass
 
-    def setMountsMap(self, ro_dirs=None, rw_dirs=None):
-        if not ro_dirs:
-            ro_dirs = []
-        if not rw_dirs:
-            rw_dirs = []
-        self.mounts_map = {'ro': ro_dirs, 'rw': rw_dirs}
+    def setMountsMap(self, ro_paths=None, rw_paths=None):
+        if not ro_paths:
+            ro_paths = []
+        if not rw_paths:
+            rw_paths = []
+        self.mounts_map = {'ro': ro_paths, 'rw': rw_paths}
 
     def getPopen(self, **kwargs):
         # Set zuul_dir if it was not passed in
