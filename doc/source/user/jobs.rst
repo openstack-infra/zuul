@@ -175,6 +175,10 @@ All items provide the following information as Ansible variables:
 **zuul.project.name**
   The name of the project, excluding hostname.  E.g., `org/project`.
 
+**zuul.project.short_name**
+  The name of the project, excluding directories or organizations.
+  E.g., `project`.
+
 **zuul.project.canonical_hostname**
   The canonical hostname where the project lives.  E.g.,
   `git.example.com`.
@@ -198,21 +202,25 @@ All items provide the following information as Ansible variables:
 
   **project.name**
     The name of the project, excluding hostname.  E.g., `org/project`.
-  
+
+  **project.short_name**
+    The name of the project, excluding directories or organizations.
+    E.g., `project`.
+
   **project.canonical_hostname**
     The canonical hostname where the project lives.  E.g.,
     `git.example.com`.
-  
+
   **project.canonical_name**
     The full canonical name of the project including hostname.  E.g.,
     `git.example.com/org/project`.
-  
+
   **branch**
     The target branch of the change (without the `refs/heads/` prefix).
-  
+
   **change**
     The identifier for the change.
-  
+
   **patchset**
     The patchset identifier for the change.  If a change is revised,
     this will have a different value.
