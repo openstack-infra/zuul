@@ -40,6 +40,12 @@ ACCESS_TOKEN_URL = 'https://api.github.com/installations/%s/access_tokens'
 PREVIEW_JSON_ACCEPT = 'application/vnd.github.machine-man-preview+json'
 
 
+def _sign_request(body, secret):
+    signature = 'sha1=' + hmac.new(
+        secret.encode('utf-8'), body, hashlib.sha1).hexdigest()
+    return signature
+
+
 class UTC(datetime.tzinfo):
     """UTC"""
 
@@ -263,7 +269,7 @@ class GithubWebhookListener():
     def _validate_signature(self, request):
         secret = self.connection.connection_config.get('webhook_token', None)
         if secret is None:
-            return True
+            raise RuntimeError("webhook_token is required")
 
         body = request.body
         try:
@@ -272,13 +278,12 @@ class GithubWebhookListener():
             raise webob.exc.HTTPUnauthorized(
                 'Please specify a X-Hub-Signature header with secret.')
 
-        payload_signature = 'sha1=' + hmac.new(secret.encode('utf-8'),
-                                               body,
-                                               hashlib.sha1).hexdigest()
+        payload_signature = _sign_request(body, secret)
 
         self.log.debug("Payload Signature: {0}".format(str(payload_signature)))
         self.log.debug("Request Signature: {0}".format(str(request_signature)))
-        if str(payload_signature) != str(request_signature):
+        if not hmac.compare_digest(
+            str(payload_signature), str(request_signature)):
             raise webob.exc.HTTPUnauthorized(
                 'Request signature does not match calculated payload '
                 'signature. Check that secret is correct.')

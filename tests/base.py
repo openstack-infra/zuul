@@ -918,7 +918,9 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         port = self.webapp.server.socket.getsockname()[1]
         name, data = event
         payload = json.dumps(data).encode('utf8')
-        headers = {'X-Github-Event': name}
+        secret = self.connection_config['webhook_token']
+        signature = githubconnection._sign_request(payload, secret)
+        headers = {'X-Github-Event': name, 'X-Hub-Signature': signature}
         req = urllib.request.Request(
             'http://localhost:%s/connection/%s/payload'
             % (port, self.connection_name),
