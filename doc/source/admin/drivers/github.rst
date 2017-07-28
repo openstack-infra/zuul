@@ -36,11 +36,13 @@ The supported options in zuul.conf connections are:
 **app_id**
   App ID if you are using a GitHub App. Can be found under the "Public Link"
   on the right hand side labeled "ID".
+  ``app_id=1234``
 
 **app_key**
-  The Secret Key Zuul will use to create tokens for the API interactions.
-  In Github this is known as "Private key" and must be collected when
-  generated.
+  Path to a file containing the Secret Key Zuul will use to create tokens for
+  the API interactions. In Github this is known as "Private key" and must be
+  collected when generated.
+  ``app_key=/etc/zuul/github.key``
 
 **api_token**
   API token for accessing GitHub if Zuul is configured with Webhooks.
