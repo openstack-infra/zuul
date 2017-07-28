@@ -5293,6 +5293,7 @@ class TestSemaphoreMultiTenant(ZuulTestCase):
 
 
 class TestSemaphoreInRepo(ZuulTestCase):
+    config_file = 'zuul-connections-gerrit-and-github.conf'
     tenant_config_file = 'config/in-repo/main.yaml'
 
     def test_semaphore_in_repo(self):
