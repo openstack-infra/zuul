@@ -3,6 +3,7 @@
 *.egg-info
 *.pyc
 .idea
+.mypy_cache
 .test
 .testrepository
 .tox
