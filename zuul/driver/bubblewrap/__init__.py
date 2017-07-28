@@ -23,6 +23,8 @@ import shlex
 import subprocess
 import sys
 
+from typing import Dict, List  # flake8: noqa
+
 from zuul.driver import (Driver, WrapperInterface)
 
 
@@ -70,7 +72,7 @@ class BubblewrapDriver(Driver, WrapperInterface):
     name = 'bubblewrap'
     log = logging.getLogger("zuul.BubblewrapDriver")
 
-    mounts_map = {'rw': [], 'ro': []}
+    mounts_map = {'rw': [], 'ro': []}  # type: Dict[str, List]
 
     def __init__(self):
         self.bwrap_command = self._bwrap_command()

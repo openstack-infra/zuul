@@ -13,7 +13,8 @@ import yaml
 from yaml import YAMLObject, YAMLError  # noqa: F401
 
 try:
-    from yaml import cyaml
+    # Explicit type ignore to deal with provisional import failure
+    from yaml import cyaml  # type: ignore
     import _yaml
     SafeLoader = cyaml.CSafeLoader
     SafeDumper = cyaml.CSafeDumper

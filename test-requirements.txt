@@ -14,3 +14,4 @@ sphinxcontrib-programoutput
 oslosphinx
 mock
 PyMySQL
+mypy
