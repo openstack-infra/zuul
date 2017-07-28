@@ -70,6 +70,7 @@ class TestMultipleTenants(AnsibleZuulTestCase):
 class TestInRepoConfig(ZuulTestCase):
     # A temporary class to hold new tests while others are disabled
 
+    config_file = 'zuul-connections-gerrit-and-github.conf'
     tenant_config_file = 'config/in-repo/main.yaml'
 
     def test_in_repo_config(self):
@@ -712,6 +713,7 @@ class TestProjectKeys(ZuulTestCase):
     # sure we exercise that code, in this test we allow Zuul to create
     # keys for the project on startup.
     create_project_keys = True
+    config_file = 'zuul-connections-gerrit-and-github.conf'
     tenant_config_file = 'config/in-repo/main.yaml'
 
     def test_key_generation(self):

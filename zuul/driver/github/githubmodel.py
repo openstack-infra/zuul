@@ -68,8 +68,8 @@ class GithubCommonFilter(object):
                  reject_reviews=[]):
         self._required_reviews = copy.deepcopy(required_reviews)
         self._reject_reviews = copy.deepcopy(reject_reviews)
-        self.required_reviews = self._tidy_reviews(required_reviews)
-        self.reject_reviews = self._tidy_reviews(reject_reviews)
+        self.required_reviews = self._tidy_reviews(self._required_reviews)
+        self.reject_reviews = self._tidy_reviews(self._reject_reviews)
         self.required_statuses = required_statuses
 
     def _tidy_reviews(self, reviews):

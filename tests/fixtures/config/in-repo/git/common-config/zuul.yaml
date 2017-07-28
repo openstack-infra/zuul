@@ -52,6 +52,23 @@
         Verified: 0
     precedence: high
 
+# This pipeline is there to ensure that dynamic pipeline copy operations also
+# work with regex approval filters.
+- pipeline:
+    name: pipeline-with-regex
+    manager: independent
+    require:
+      gerrit:
+        approval:
+          - Code-Review: 2
+            username: maintainer
+    require:
+      github:
+        review:
+          - username: '^(herp|derp)$'
+            type: approved
+    trigger: {}
+
 - job:
     name: common-config-test
 

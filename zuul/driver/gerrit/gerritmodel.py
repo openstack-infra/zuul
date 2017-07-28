@@ -61,9 +61,10 @@ class GerritTriggerEvent(TriggerEvent):
 class GerritApprovalFilter(object):
     def __init__(self, required_approvals=[], reject_approvals=[]):
         self._required_approvals = copy.deepcopy(required_approvals)
-        self.required_approvals = self._tidy_approvals(required_approvals)
+        self.required_approvals = self._tidy_approvals(
+            self._required_approvals)
         self._reject_approvals = copy.deepcopy(reject_approvals)
-        self.reject_approvals = self._tidy_approvals(reject_approvals)
+        self.reject_approvals = self._tidy_approvals(self._reject_approvals)
 
     def _tidy_approvals(self, approvals):
         for a in approvals:
