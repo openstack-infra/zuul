@@ -105,7 +105,7 @@ The supported pipeline trigger options are:
 **approval**
   This is only used for ``comment-added`` events.  It only matches if
   the event has a matching approval associated with it.  Example:
-  ``code-review: 2`` matches a ``+2`` vote on the code review
+  ``Code-Review: 2`` matches a ``+2`` vote on the code review
   category.  Multiple approvals may be listed.
 
 **email**
@@ -179,14 +179,14 @@ As described in :ref:`pipeline.require <pipeline-require>` and
 items meet certain conditions in order to be enqueued into the
 pipeline.  These conditions vary according to the source of the
 project in question.  To supply requirements for changes from a Gerrit
-source named *my-gerrit*, create a congfiguration such as the
+source named *my-gerrit*, create a configuration such as the
 following::
 
   pipeline:
     require:
       my-gerrit:
         approval:
-          - code-review: 2
+          - Code-Review: 2
 
 This indicates that changes originating from the Gerrit connection
 named *my-gerrit* must have a Code Review vote of +2 in order to be
@@ -268,4 +268,4 @@ enqueued into the pipeline.
         reject:
           my-gerrit:
             approval:
-              - code-review: [-1, -2]
+              - Code-Review: [-1, -2]
