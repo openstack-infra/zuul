@@ -20,15 +20,11 @@ from sphinx.directives import ObjectDescription
 class ZuulConfigObject(ObjectDescription):
     object_names = {
         'attr': 'attribute',
-        'configobject': 'configuration object',
     }
 
     def get_path(self):
-        obj = self.env.ref_context.get('zuul:configobject')
         attr_path = self.env.ref_context.get('zuul:attr_path', [])
         path = []
-        if obj:
-            path.append(obj)
         if attr_path:
             path.extend(attr_path)
         return path
@@ -58,17 +54,6 @@ class ZuulConfigObject(ObjectDescription):
             indextext = '%s (%s)' % (name, objname)
         self.indexnode['entries'].append(('single', indextext,
                                           targetname, '', None))
-
-
-class ZuulConfigobjectDirective(ZuulConfigObject):
-    has_content = True
-
-    def before_content(self):
-        self.env.ref_context['zuul:configobject'] = self.names[-1]
-
-    def handle_signature(self, sig, signode):
-        signode += addnodes.desc_name(sig, sig)
-        return sig
 
 
 class ZuulAttrDirective(ZuulConfigObject):
@@ -110,7 +95,6 @@ class ZuulDomain(Domain):
     label = 'Zuul'
 
     directives = {
-        'configobject': ZuulConfigobjectDirective,
         'attr': ZuulAttrDirective,
         'value': ZuulValueDirective,
     }

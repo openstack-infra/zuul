@@ -122,7 +122,7 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
 
 .. TODO: See TODO for more annotated examples of common pipeline configurations.
 
-.. zuul:configobject:: pipeline
+.. zuul:attr:: pipeline
 
    The attributes available on a pipeline are as follows (all are
    optional unless otherwise specified):
