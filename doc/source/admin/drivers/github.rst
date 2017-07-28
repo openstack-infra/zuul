@@ -48,9 +48,8 @@ The supported options in zuul.conf connections are:
   <https://help.github.com/articles/creating-an-access-token-for-command-line-use/>`_.
 
 **webhook_token**
-  Optional: Token for validating the webhook event payloads.
-  If not specified, payloads are not validated. In the GitHub App Configuration
-  page, this is called "Webhook secret".
+  Required token for validating the webhook event payloads.  In the
+  GitHub App Configuration page, this is called "Webhook secret".
   See `Securing your webhooks
   <https://developer.github.com/webhooks/securing/>`_.
 
