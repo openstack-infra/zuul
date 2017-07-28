@@ -174,6 +174,9 @@ class TestInRepoConfig(ZuulTestCase):
         in_repo_conf = textwrap.dedent(
             """
             - job:
+                name: project-test1
+
+            - job:
                 name: project-test2
 
             - project:
@@ -197,8 +200,15 @@ class TestInRepoConfig(ZuulTestCase):
         self.assertTrue(items[0].live)
 
         self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release('project-test1')
+        self.waitUntilSettled()
         self.executor_server.release()
         self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='project-test2', result='ABORTED', changes='1,1'),
+            dict(name='project-test1', result='SUCCESS', changes='1,2'),
+            dict(name='project-test2', result='SUCCESS', changes='1,2')])
 
     def test_dynamic_dependent_pipeline(self):
         # Test dynamically adding a project to a
