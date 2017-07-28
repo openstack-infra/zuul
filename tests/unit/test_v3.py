@@ -926,3 +926,15 @@ class TestDataReturn(AnsibleZuulTestCase):
         self.assertIn('- data-return-relative '
                       'http://example.com/test/log/url/docs/index.html',
                       A.messages[-1])
+
+
+class TestDiskAccounting(AnsibleZuulTestCase):
+    config_file = 'zuul-disk-accounting.conf'
+    tenant_config_file = 'config/disk-accountant/main.yaml'
+
+    def test_disk_accountant_kills_job(self):
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='dd-big-empty-file', result='ABORTED', changes='1,1')])
