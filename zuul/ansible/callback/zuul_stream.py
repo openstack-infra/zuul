@@ -285,10 +285,14 @@ class CallbackModule(default.CallbackModule):
         self._log("")
 
     def v2_runner_on_skipped(self, result):
-        reason = result._result.get('skip_reason')
-        if reason:
-            # No reason means it's an item, which we'll log differently
-            self._log_message(result, status='skipping', msg=reason)
+        if result._task.loop:
+            self._items_done = False
+            self._deferred_result = dict(result._result)
+        else:
+            reason = result._result.get('skip_reason')
+            if reason:
+                # No reason means it's an item, which we'll log differently
+                self._log_message(result, status='skipping', msg=reason)
 
     def v2_runner_item_on_skipped(self, result):
         reason = result._result.get('skip_reason')
@@ -297,13 +301,13 @@ class CallbackModule(default.CallbackModule):
         else:
             self._log_message(result, status='skipping')
 
+        if self._deferred_result:
+            self._process_deferred(result)
+
     def v2_runner_on_ok(self, result):
         if (self._play.strategy == 'free'
                 and self._last_task_banner != result._task._uuid):
             self._print_task_banner(result._task)
-
-        if result._task.action in ('include', 'include_role', 'setup'):
-            return
 
         result_dict = dict(result._result)
 
@@ -388,8 +392,6 @@ class CallbackModule(default.CallbackModule):
 
         if self._deferred_result:
             self._process_deferred(result)
-        # Log an extra blank line to get space after each task
-        self._log("")
 
     def v2_runner_item_on_failed(self, result):
         result_dict = dict(result._result)
@@ -434,10 +436,13 @@ class CallbackModule(default.CallbackModule):
         self._items_done = True
         result_dict = self._deferred_result
         self._deferred_result = None
+        status = result_dict.get('status')
 
-        self._log_message(
-            result, "All items complete",
-            status=result_dict['status'])
+        if status:
+            self._log_message(result, "All items complete", status=status)
+
+        # Log an extra blank line to get space after each task
+        self._log("")
 
     def _print_task_banner(self, task):
 
