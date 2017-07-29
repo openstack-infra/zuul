@@ -192,7 +192,7 @@ This indicates that changes originating from the Gerrit connection
 named *my-gerrit* must have a Code Review vote of +2 in order to be
 enqueued into the pipeline.
 
-.. zuul:attr:: pipeline.require.<source>
+.. zuul:attr:: pipeline.require.<gerrit source>
 
    The dictionary passed to the Gerrit pipeline `require` attribute
    supports the following attributes:
@@ -250,7 +250,7 @@ enqueued into the pipeline.
       A string value that corresponds with the status of the change
       reported by the trigger.
 
-.. zuul:attr:: pipeline.reject.<source>
+.. zuul:attr:: pipeline.reject.<gerrit source>
 
    The `reject` attribute is the mirror of the `require` attribute.  It
    also accepts a dictionary under the connection name.  This

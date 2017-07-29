@@ -14,7 +14,12 @@
 
 from sphinx import addnodes
 from sphinx.domains import Domain
+from sphinx.roles import XRefRole
 from sphinx.directives import ObjectDescription
+from sphinx.util.nodes import make_refnode
+from docutils import nodes
+
+from typing import Dict # noqa
 
 
 class ZuulConfigObject(ObjectDescription):
@@ -45,6 +50,15 @@ class ZuulConfigObject(ObjectDescription):
             signode['ids'].append(targetname)
             signode['first'] = (not self.names)
             self.state.document.note_explicit_target(signode)
+            objects = self.env.domaindata['zuul']['objects']
+            if targetname in objects:
+                self.state_machine.reporter.warning(
+                    'duplicate object description of %s, ' % targetname +
+                    'other instance in ' +
+                    self.env.doc2path(objects[targetname][0]) +
+                    ', use :noindex: for one of them',
+                    line=self.lineno)
+            objects[targetname] = (self.env.docname, self.objtype)
 
         objname = self.object_names.get(self.objtype, self.objtype)
         if self.parent_pathname:
@@ -98,6 +112,29 @@ class ZuulDomain(Domain):
         'attr': ZuulAttrDirective,
         'value': ZuulValueDirective,
     }
+
+    roles = {
+        'attr': XRefRole(innernodeclass=nodes.inline,  # type: ignore
+                         warn_dangling=True),
+    }
+
+    initial_data = {
+        'objects': {},
+    }  # type: Dict[str, Dict]
+
+    def resolve_xref(self, env, fromdocname, builder, type, target,
+                     node, contnode):
+        objects = self.data['objects']
+        name = type + '-' + target
+        obj = objects.get(name)
+        if obj:
+            return make_refnode(builder, fromdocname, obj[0], name,
+                                contnode, name)
+
+    def clear_doc(self, docname):
+        for fullname, (fn, _l) in list(self.data['objects'].items()):
+            if fn == docname:
+                del self.data['objects'][fullname]
 
 
 def setup(app):

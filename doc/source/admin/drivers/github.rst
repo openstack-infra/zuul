@@ -216,7 +216,7 @@ This indicates that changes originating from the GitHub connection
 named *my-github* must have an approved code review in order to be
 enqueued into the pipeline.
 
-.. zuul:attr:: pipeline.require.<source>
+.. zuul:attr:: pipeline.require.<github source>
 
    The dictionary passed to the GitHub pipeline `require` attribute
    supports the following attributes:
@@ -290,7 +290,7 @@ enqueued into the pipeline.
       indicated label (or labels).
 
 
-.. zuul:attr:: pipeline.reject.<source>
+.. zuul:attr:: pipeline.reject.<github source>
 
    The `reject` attribute is the mirror of the `require` attribute.  It
    also accepts a dictionary under the connection name.  This
