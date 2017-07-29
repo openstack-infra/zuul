@@ -216,14 +216,14 @@ This indicates that changes originating from the GitHub connection
 named *my-github* must have an approved code review in order to be
 enqueued into the pipeline.
 
-.. zuul:attr:: pipeline.require.<github source>
+.. attr:: pipeline.require.<github source>
 
    The dictionary passed to the GitHub pipeline `require` attribute
    supports the following attributes:
 
    .. _github-pipeline-require-review:
 
-   .. zuul:attr:: review
+   .. attr:: review
 
       This requires that a certain kind of code review be present for
       the pull request (it could be added by the event in question).
@@ -231,46 +231,46 @@ enqueued into the pipeline.
       are combined together so that there must be a code review
       matching all specified requirements.
 
-      .. zuul:attr:: username
+      .. attr:: username
 
          If present, a code review from this username is required.  It
          is treated as a regular expression.
 
-      .. zuul:attr:: email
+      .. attr:: email
 
          If present, a code review with this email address is
          required.  It is treated as a regular expression.
 
-      .. zuul:attr:: older-than
+      .. attr:: older-than
 
          If present, the code review must be older than this amount of
          time to match.  Provide a time interval as a number with a
          suffix of "w" (weeks), "d" (days), "h" (hours), "m"
          (minutes), "s" (seconds).  Example ``48h`` or ``2d``.
 
-      .. zuul:attr:: newer-than
+      .. attr:: newer-than
 
          If present, the code review must be newer than this amount of
          time to match.  Same format as "older-than".
 
-      .. zuul:attr:: type
+      .. attr:: type
 
          If present, the code review must match this type (or types).
 
          .. TODO: what types are valid?
 
-      .. zuul:attr:: permission
+      .. attr:: permission
 
          If present, the author of the code review must have this
          permission (or permissions).  The available values are
          ``read``, ``write``, and ``admin``.
 
-   .. zuul:attr:: open
+   .. attr:: open
 
       A boolean value (``true`` or ``false``) that indicates whether
       the change must be open or closed in order to be enqueued.
 
-   .. zuul:attr:: current-patchset
+   .. attr:: current-patchset
 
       A boolean value (``true`` or ``false``) that indicates whether
       the item must be associated with the latest commit in the pull
@@ -279,24 +279,24 @@ enqueued into the pipeline.
       .. TODO: this could probably be expanded upon -- under what
          circumstances might this happen with github
 
-   .. zuul:attr:: status
+   .. attr:: status
 
       A string value that corresponds with the status of the pull
       request.  The syntax is ``user:status:value``.
 
-   .. zuul:attr:: label
+   .. attr:: label
 
       A string value indicating that the pull request must have the
       indicated label (or labels).
 
 
-.. zuul:attr:: pipeline.reject.<github source>
+.. attr:: pipeline.reject.<github source>
 
    The `reject` attribute is the mirror of the `require` attribute.  It
    also accepts a dictionary under the connection name.  This
    dictionary supports the following attributes:
 
-   .. zuul:attr:: review
+   .. attr:: review
 
       This takes a list of code reviews.  If a code review matches the
       provided criteria the pull request can not be entered into the

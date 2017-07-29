@@ -122,18 +122,18 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
 
 .. TODO: See TODO for more annotated examples of common pipeline configurations.
 
-.. zuul:attr:: pipeline
+.. attr:: pipeline
 
    The attributes available on a pipeline are as follows (all are
    optional unless otherwise specified):
 
-   .. zuul:attr:: name
+   .. attr:: name
       :required:
 
       This is used later in the project definition to indicate what jobs
       should be run for events in the pipeline.
 
-   .. zuul:attr:: manager
+   .. attr:: manager
       :required:
 
       There are currently two schemes for managing pipelines:
@@ -184,7 +184,7 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
          For more detail on the theory and operation of Zuul's
          dependent pipeline manager, see: :doc:`gating`.
 
-   .. zuul:attr:: allow-secrets
+   .. attr:: allow-secrets
 
       This is a boolean which can be used to prevent jobs which
       require secrets from running in this pipeline.  Some pipelines
@@ -196,34 +196,34 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
 
       For more information, see :ref:`secret`.
 
-   .. zuul:attr:: description
+   .. attr:: description
 
       This field may be used to provide a textual description of the
       pipeline.  It may appear in the status page or in documentation.
 
-   .. zuul:attr:: success-message
+   .. attr:: success-message
 
       The introductory text in reports when all the voting jobs are
       successful.  Defaults to "Build successful."
 
-   .. zuul:attr:: failure-message
+   .. attr:: failure-message
 
       The introductory text in reports when at least one voting job
       fails.  Defaults to "Build failed."
 
-   .. zuul:attr:: merge-failure-message
+   .. attr:: merge-failure-message
 
       The introductory text in the message reported when a change
       fails to merge with the current state of the repository.
       Defaults to "Merge failed."
 
-   .. zuul:attr:: footer-message
+   .. attr:: footer-message
 
       Supplies additional information after test results.  Useful for
       adding information about the CI system such as debugging and
       contact details.
 
-   .. zuul:attr:: trigger
+   .. attr:: trigger
 
       At least one trigger source must be supplied for each pipeline.
       Triggers are not exclusive -- matching events may be placed in
@@ -236,7 +236,7 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
 
    .. _pipeline-require:
 
-   .. zuul:attr:: require
+   .. attr:: require
 
       If this section is present, it establishes pre-requisites for
       any kind of item entering the Pipeline.  Regardless of how the
@@ -251,7 +251,7 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
 
    .. _pipeline-reject:
 
-   .. zuul:attr:: reject
+   .. attr:: reject
 
       If this section is present, it establishes pre-requisites that
       can block an item from being enqueued. It can be considered a
@@ -261,7 +261,7 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
       type of the connection will dictate which options are available.
       See :ref:`drivers`.
 
-   .. zuul:attr:: dequeue-on-new-patchset
+   .. attr:: dequeue-on-new-patchset
 
       Normally, if a new patchset is uploaded to a change that is in a
       pipeline, the existing entry in the pipeline will be removed
@@ -269,7 +269,7 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
       merge as well.  To suppress this behavior (and allow jobs to
       continue running), set this to ``false``.  Default: ``true``.
 
-   .. zuul:attr:: ignore-dependencies
+   .. attr:: ignore-dependencies
 
       In any kind of pipeline (dependent or independent), Zuul will
       attempt to enqueue all dependencies ahead of the current change
@@ -279,7 +279,7 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
       pipeline, set this to ``true``.  This option is ignored by
       dependent pipelines.  The default is: ``false``.
 
-   .. zuul:attr:: precedence
+   .. attr:: precedence
 
       Indicates how the build scheduler should prioritize jobs for
       different pipelines.  Each pipeline may have one precedence,
@@ -295,7 +295,7 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
    driver which implements it.  See :ref:`drivers` for more
    information.
 
-   .. zuul:attr:: success
+   .. attr:: success
 
       Describes where Zuul should report to if all the jobs complete
       successfully.  This section is optional; if it is omitted, Zuul
@@ -305,25 +305,25 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
       connection name. The options available depend on the driver for
       the supplied connection.
 
-   .. zuul:attr:: failure
+   .. attr:: failure
 
       These reporters describe what Zuul should do if at least one job
       fails.
 
-   .. zuul:attr:: merge-failure
+   .. attr:: merge-failure
 
       These reporters describe what Zuul should do if it is unable to
       merge in the patchset. If no merge-failure reporters are listed
       then the ``failure`` reporters will be used to notify of
       unsuccessful merges.
 
-   .. zuul:attr:: start
+   .. attr:: start
 
       These reporters describe what Zuul should do when a change is
       added to the pipeline.  This can be used, for example, to reset
       a previously reported result.
 
-   .. zuul:attr:: disabled
+   .. attr:: disabled
 
       These reporters describe what Zuul should do when a pipeline is
       disabled.  See ``disable-after-consecutive-failures``.
@@ -333,7 +333,7 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
    due to a problem with an external dependency, or unusually high
    non-deterministic test failures).
 
-   .. zuul:attr:: disable-after-consecutive-failures
+   .. attr:: disable-after-consecutive-failures
 
       If set, a pipeline can enter a ''disabled'' state if too many
       changes in a row fail. When this value is exceeded the pipeline
@@ -342,7 +342,7 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
       ``disabled`` reporters.  (No ``start`` reports are made when a
       pipeline is disabled).
 
-   .. zuul:attr:: window
+   .. attr:: window
 
       Dependent pipeline managers only. Zuul can rate limit dependent
       pipelines in a manner similar to TCP flow control.  Jobs are
@@ -352,13 +352,13 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
       be a positive integer value. A value of ``0`` disables rate
       limiting on the DependentPipelineManager.  Default: ``20``.
 
-   .. zuul:attr:: window-floor
+   .. attr:: window-floor
 
       Dependent pipeline managers only. This is the minimum value for
       the window described above. Should be a positive non zero
       integer value.  Default: ``3``.
 
-   .. zuul:attr:: window-increase-type
+   .. attr:: window-increase-type
 
       Dependent pipeline managers only. This value describes how the
       window should grow when changes are successfully merged by
@@ -369,13 +369,13 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
       previous window value and the result will become the window
       size.  Default: ``linear``.
 
-   .. zuul:attr:: window-increase-factor
+   .. attr:: window-increase-factor
 
       Dependent pipeline managers only. The value to be added or
       multiplied against the previous window value to determine the
       new window after successful change merges.  Default: ``1``.
 
-   .. zuul:attr:: window-decrease-type
+   .. attr:: window-decrease-type
 
       Dependent pipeline managers only. This value describes how the
       window should shrink when changes are not able to be merged by
@@ -386,7 +386,7 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
       previous window value and the result will become the window
       size.  Default: ``exponential``.
 
-   .. zuul:attr:: window-decrease-factor
+   .. attr:: window-decrease-factor
 
       Dependent pipline managers only. The value to be subtracted or
       divided against the previous window value to determine the new

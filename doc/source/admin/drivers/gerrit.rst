@@ -192,14 +192,14 @@ This indicates that changes originating from the Gerrit connection
 named *my-gerrit* must have a Code Review vote of +2 in order to be
 enqueued into the pipeline.
 
-.. zuul:attr:: pipeline.require.<gerrit source>
+.. attr:: pipeline.require.<gerrit source>
 
    The dictionary passed to the Gerrit pipeline `require` attribute
    supports the following attributes:
 
    .. _gerrit-pipeline-require-approval:
 
-   .. zuul:attr:: approval
+   .. attr:: approval
 
       This requires that a certain kind of approval be present for the
       current patchset of the change (the approval could be added by
@@ -207,24 +207,24 @@ enqueued into the pipeline.
       which are optional and are combined together so that there must
       be an approval matching all specified requirements.
 
-      .. zuul:attr:: username
+      .. attr:: username
 
          If present, an approval from this username is required.  It is
          treated as a regular expression.
 
-      .. zuul:attr:: email
+      .. attr:: email
 
          If present, an approval with this email address is required.  It is
          treated as a regular expression.
 
-      .. zuul:attr:: older-than
+      .. attr:: older-than
 
          If present, the approval must be older than this amount of time
          to match.  Provide a time interval as a number with a suffix of
          "w" (weeks), "d" (days), "h" (hours), "m" (minutes), "s"
          (seconds).  Example ``48h`` or ``2d``.
 
-      .. zuul:attr:: newer-than
+      .. attr:: newer-than
 
          If present, the approval must be newer than this amount
          of time to match.  Same format as "older-than".
@@ -235,28 +235,28 @@ enqueued into the pipeline.
       may either be a single value or a list: ``Verified: [1, 2]``
       would match either a +1 or +2 vote.
 
-   .. zuul:attr:: open
+   .. attr:: open
 
       A boolean value (``true`` or ``false``) that indicates whether
       the change must be open or closed in order to be enqueued.
 
-   .. zuul:attr:: current-patchset
+   .. attr:: current-patchset
 
       A boolean value (``true`` or ``false``) that indicates whether the
       change must be the current patchset in order to be enqueued.
 
-   .. zuul:attr:: status
+   .. attr:: status
 
       A string value that corresponds with the status of the change
       reported by the trigger.
 
-.. zuul:attr:: pipeline.reject.<gerrit source>
+.. attr:: pipeline.reject.<gerrit source>
 
    The `reject` attribute is the mirror of the `require` attribute.  It
    also accepts a dictionary under the connection name.  This
    dictionary supports the following attributes:
 
-   .. zuul:attr:: approval
+   .. attr:: approval
 
       This takes a list of approvals. If an approval matches the
       provided criteria the change can not be entered into the
