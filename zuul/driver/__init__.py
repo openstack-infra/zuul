@@ -272,11 +272,11 @@ class WrapperInterface(object, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def setMountsMap(self, state_dir, ro_dirs=[], rw_dirs=[]):
+    def setMountsMap(self, state_dir, ro_paths=None, rw_paths=None):
         """Add additional mount point to the execution environment.
 
         :arg str state_dir: the state directory to be read write
-        :arg list ro_dirs: read only directories paths
-        :arg list rw_dirs: read write directories paths
+        :arg list ro_paths: read only files or directories to bind mount
+        :arg list rw_paths: read write files or directories to bind mount
         """
         pass

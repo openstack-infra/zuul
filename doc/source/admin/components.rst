@@ -361,6 +361,26 @@ executor
 
       disk_limit_per_job=100
 
+**trusted_ro_paths**
+
+  List of paths, separated by ':' to read-only bind mount into trusted
+  bubblewrap contexts.
+
+**trusted_rw_paths**
+
+  List of paths, separated by ':' to read-write bind mount into trusted
+  bubblewrap contexts.
+
+**untrusted_ro_paths**
+
+  List of paths, separated by ':' to read-only bind mount into untrusted
+  bubblewrap contexts.
+
+**untrusted_rw_paths**
+
+  List of paths, separated by ':' to read-write bind mount into untrusted
+  bubblewrap contexts.
+
 merger
 """"""
 
