@@ -41,7 +41,7 @@ projects, it may take hours to test changes, and it is easy for
 developers to create changes at a rate faster than they can be tested
 and merged.
 
-Zuul's :ref:`dependent pipeline manager<dependent_pipeline_manager>`
+Zuul's :value:`dependent pipeline manager<pipeline.manager.dependent>`
 allows for parallel execution of test jobs for gating while ensuring
 changes are tested correctly, exactly as if they had been tested one
 at a time.  It does this by performing speculative execution of test

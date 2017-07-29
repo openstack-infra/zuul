@@ -116,6 +116,8 @@ class ZuulDomain(Domain):
     roles = {
         'attr': XRefRole(innernodeclass=nodes.inline,  # type: ignore
                          warn_dangling=True),
+        'value': XRefRole(innernodeclass=nodes.inline,  # type: ignore
+                          warn_dangling=True),
     }
 
     initial_data = {

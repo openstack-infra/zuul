@@ -145,9 +145,9 @@ The supported pipeline trigger options are:
   This may be used for any event.  It requires that a certain kind of
   approval be present for the current patchset of the change (the
   approval could be added by the event in question).  It follows the
-  same syntax as the :ref:`"approval" pipeline requirement
-  <gerrit-pipeline-require-approval>`. For each specified criteria
-  there must exist a matching approval.
+  same syntax as :attr:`pipeline.require.<gerrit
+  source>.approval`. For each specified criteria there must exist a
+  matching approval.
 
 **reject-approval**
   This takes a list of approvals in the same format as
@@ -196,8 +196,6 @@ enqueued into the pipeline.
 
    The dictionary passed to the Gerrit pipeline `require` attribute
    supports the following attributes:
-
-   .. _gerrit-pipeline-require-approval:
 
    .. attr:: approval
 
@@ -260,8 +258,8 @@ enqueued into the pipeline.
 
       This takes a list of approvals. If an approval matches the
       provided criteria the change can not be entered into the
-      pipeline. It follows the same syntax as the :ref:`approval
-      pipeline requirement above <gerrit-pipeline-require-approval>`.
+      pipeline. It follows the same syntax as
+      :attr:`pipeline.require.<gerrit source>.approval`.
 
       Example to reject a change with any negative vote::
 

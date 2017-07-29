@@ -221,8 +221,6 @@ enqueued into the pipeline.
    The dictionary passed to the GitHub pipeline `require` attribute
    supports the following attributes:
 
-   .. _github-pipeline-require-review:
-
    .. attr:: review
 
       This requires that a certain kind of code review be present for
@@ -300,5 +298,5 @@ enqueued into the pipeline.
 
       This takes a list of code reviews.  If a code review matches the
       provided criteria the pull request can not be entered into the
-      pipeline.  It follows the same syntax as the :ref:`review
-      pipeline requirement above <github-pipeline-require-review>`.
+      pipeline.  It follows the same syntax as
+      :attr:`pipeline.require.<github source>.review`

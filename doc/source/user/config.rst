@@ -138,8 +138,6 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
 
       There are currently two schemes for managing pipelines:
 
-      .. _independent_pipeline_manager:
-
       .. zuul:value:: independent
 
          Every event in this pipeline should be treated as independent
@@ -157,8 +155,6 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
          Another type of pipeline that is independent is a post-merge
          pipeline. In that case, the changes have already merged, so
          the results can not affect any other events in the pipeline.
-
-      .. _dependent_pipeline_manager:
 
       .. zuul:value:: dependent
 
