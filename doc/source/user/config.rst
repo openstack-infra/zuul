@@ -105,20 +105,22 @@ pipelines as appropriate.
 Here is an example *check* pipeline, which runs whenever a new
 patchset is created in Gerrit.  If the associated jobs all report
 success, the pipeline reports back to Gerrit with a *Verified* vote of
-+1, or if at least one of them fails, a -1::
++1, or if at least one of them fails, a -1:
 
-  - pipeline:
-      name: check
-      manager: independent
-      trigger:
-        my_gerrit:
-          - event: patchset-created
-      success:
-        my_gerrit:
-          Verified: 1
-      failure:
-        my_gerrit
-          Verified: -1
+.. code-block:: yaml
+
+   - pipeline:
+       name: check
+       manager: independent
+       trigger:
+         my_gerrit:
+           - event: patchset-created
+       success:
+         my_gerrit:
+           Verified: 1
+       failure:
+         my_gerrit
+           Verified: -1
 
 .. TODO: See TODO for more annotated examples of common pipeline configurations.
 
@@ -138,7 +140,7 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
 
       There are currently two schemes for managing pipelines:
 
-      .. zuul:value:: independent
+      .. value:: independent
 
          Every event in this pipeline should be treated as independent
          of other events in the pipeline.  This is appropriate when
@@ -156,7 +158,7 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
          pipeline. In that case, the changes have already merged, so
          the results can not affect any other events in the pipeline.
 
-      .. zuul:value:: dependent
+      .. value:: dependent
 
          The dependent pipeline manager is designed for gating.  It
          ensures that every change is tested exactly as it is going to
@@ -230,8 +232,6 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
       of the connection will dictate which options are available.  See
       :ref:`drivers`.
 
-   .. _pipeline-require:
-
    .. attr:: require
 
       If this section is present, it establishes pre-requisites for
@@ -244,8 +244,6 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
       Requirements are loaded from their connection name. The driver
       type of the connection will dictate which options are available.
       See :ref:`drivers`.
-
-   .. _pipeline-reject:
 
    .. attr:: reject
 
@@ -447,365 +445,418 @@ be:
 
 Further inheritance would nest even deeper.
 
-Here is an example of two job definitions::
+Here is an example of two job definitions:
 
-  - job:
-      name: base
-      pre-run: copy-git-repos
-      post-run: copy-logs
+.. code-block:: yaml
 
-  - job:
-      name: run-tests
-      parent: base
-      nodes:
-        - name: test-node
-          image: fedora
+   - job:
+       name: base
+       pre-run: copy-git-repos
+       post-run: copy-logs
 
-The following attributes are available on a job; all are optional
-unless otherwise specified:
+   - job:
+       name: run-tests
+       parent: base
+       nodes:
+         - name: test-node
+           image: fedora
 
-**name** (required)
-  The name of the job.  By default, Zuul looks for a playbook with
-  this name to use as the main playbook for the job.  This name is
-  also referenced later in a project pipeline configuration.
+.. attr:: job
 
-**parent**
-  Specifies a job to inherit from.  The parent job can be defined in
-  this or any other project.  Any attributes not specified on a job
-  will be collected from its parent.
+   The following attributes are available on a job; all are optional
+   unless otherwise specified:
 
-**description**
-  A textual description of the job.  Not currently used directly by
-  Zuul, but it is used by the zuul-sphinx extension to Sphinx to
-  auto-document Zuul jobs (in which case it is interpreted as
-  ReStructuredText.
+   .. attr:: name
+      :required:
 
-**success-message**
-  Normally when a job succeeds, the string "SUCCESS" is reported as
-  the result for the job.  If set, this option may be used to supply a
-  different string.  Default: "SUCCESS".
+      The name of the job.  By default, Zuul looks for a playbook with
+      this name to use as the main playbook for the job.  This name is
+      also referenced later in a project pipeline configuration.
 
-**failure-message**
-  Normally when a job fails, the string "FAILURE" is reported as
-  the result for the job.  If set, this option may be used to supply a
-  different string.  Default: "FAILURE".
+   .. attr:: parent
 
-**success-url**
-  When a job succeeds, this URL is reported along with the result.  If
-  this value is not supplied, Zuul uses the content of the job
-  :ref:`return value <return_values>` **zuul.log_url**.  This is
-  recommended as it allows the code which stores the URL to the job
-  artifacts to report exactly where they were stored.  To override
-  this value, or if it is not set, supply an absolute URL in this
-  field.  If a relative URL is supplied in this field, and
-  **zuul.log_url** is set, then the two will be combined to produce
-  the URL used for the report.  This can be used to specify that
-  certain jobs should "deep link" into the stored job artifacts.
-  Default: none.
+      Specifie s a job to inherit from.  The parent job can be defined
+      in this or a ny other project.  Any attributes not specified on
+      a job will be collected from its parent.
 
-**failure-url**
-  When a job fails, this URL is reported along with the result.
-  Otherwise behaves the same as **success-url**.
+   .. attr:: description
 
-**hold-following-changes**
-  In a dependent pipeline, this option may be used to indicate that no
-  jobs should start on any items which depend on the current item
-  until this job has completed successfully.  This may be used to
-  conserve build resources, at the expense of inhibiting the
-  parallelization which speeds the processing of items in a dependent
-  pipeline.  A boolean value, default: false.
+      A textual description of the job.  Not currently used directly
+      by Zuul, but it is used by the zuul-sphinx extension to Sphinx
+      to auto-document Zuul jobs (in which case it is interpreted as
+      ReStructuredText.
 
-**voting**
-  Indicates whether the result of this job should be used in
-  determining the overall result of the item.  A boolean value,
-  default: true.
+   .. attr:: success-message
 
-**semaphore**
-  The name of a :ref:`semaphore` which should be acquired and released
-  when the job begins and ends.  If the semaphore is at maximum
-  capacity, then Zuul will wait until it can be acquired before
-  starting the job.  Default: none.
+      Normally when a job succeeds, the string "SUCCESS" is reported
+      as the result for the job.  If set, this option may be used to
+      supply a different string.  Default: "SUCCESS".
 
-**tags**
-  Metadata about this job.  Tags are units of information attached to
-  the job; they do not affect Zuul's behavior, but they can be used
-  within the job to characterize the job.  For example, a job which
-  tests a certain subsystem could be tagged with the name of that
-  subsystem, and if the job's results are reported into a database,
-  then the results of all jobs affecting that subsystem could be
-  queried.  This attribute is specified as a list of strings, and when
-  inheriting jobs or applying variants, tags accumulate in a set, so
-  the result is always a set of all the tags from all the jobs and
-  variants used in constructing the frozen job, with no duplication.
-  Default: none.
+   .. attr:: failure-message
 
-**branches**
-  A regular expression (or list of regular expressions) which describe
-  on what branches a job should run (or in the case of variants: to
-  alter the behavior of a job for a certain branch).
+      Normally when a job fails, the string "FAILURE" is reported as
+      the result for the job.  If set, this option may be used to
+      supply a different string.  Default: "FAILURE".
 
-  If there is no job definition for a given job which matches the
-  branch of an item, then that job is not run for the item.
-  Otherwise, all of the job variants which match that branch (and any
-  other selection criteria) are used when freezing the job.
+   .. attr:: success-url
 
-  This example illustrates a job called *run-tests* which uses a
-  nodeset based on the current release of an operating system to
-  perform its tests, except when testing changes to the stable/2.0
-  branch, in which case it uses an older release::
+      When a job succeeds, this URL is reported along with the result.
+      If this value is not supplied, Zuul uses the content of the job
+      :ref:`return value <return_values>` **zuul.log_url**.  This is
+      recommended as it allows the code which stores the URL to the
+      job artifacts to report exactly where they were stored.  To
+      override this value, or if it is not set, supply an absolute URL
+      in this field.  If a relative URL is supplied in this field, and
+      **zuul.log_url** is set, then the two will be combined to
+      produce the URL used for the report.  This can be used to
+      specify that certain jobs should "deep link" into the stored job
+      artifacts.  Default: none.
 
-    - job:
-        name: run-tests
-        nodes: current-release
+   .. attr:: failure-url
 
-    - job:
-        name: run-tests
-        branch: stable/2.0
-        nodes: old-release
+      When a job fails, this URL is reported along with the result.
+      Otherwise behaves the same as **success-url**.
 
-  In some cases, Zuul uses an implied value for the branch specifier
-  if none is supplied:
+   .. attr:: hold-following-changes
 
-  * For a job definition in a *config-project*, no implied branch
-    specifier is used.  If no branch specifier appears, the job
-    applies to all branches.
+      In a dependent pipeline, this option may be used to indicate
+      that no jobs should start on any items which depend on the
+      current item until this job has completed successfully.  This
+      may be used to conserve build resources, at the expense of
+      inhibiting the parallelization which speeds the processing of
+      items in a dependent pipeline.  A boolean value, default: false.
 
-  * In the case of an *untrusted-project*, no implied branch specifier
-    is applied to the reference definition of a job.  That is to say,
-    that if the first appearance of the job definition appears without
-    a branch specifier, then it will apply to all branches.  Note that
-    when collecting its configuration, Zuul reads the `master` branch
-    of a given project first, then other branches in alphabetical
-    order.
+   .. attr:: voting
 
-  * Any further job variants other than the reference definition in an
-    *untrusted-project* will, if they do not have a branch specifier,
-    will have an implied branch specifier for the current branch
-    applied.
+      Indicates whether the result of this job should be used in
+      determining the overall result of the item.  A boolean value,
+      default: true.
 
-  This allows for the very simple and expected workflow where if a
-  project defines a job on the master branch with no branch specifier,
-  and then creates a new branch based on master, any changes to that
-  job definition within the new branch only affect that branch.
+   .. attr:: semaphore
 
-**files**
-  This attribute indicates that the job should only run on changes
-  where the specified files are modified.  This is a regular
-  expression or list of regular expressions.  Default: none.
+      The name of a :ref:`semaphore` which should be acquired and
+      released when the job begins and ends.  If the semaphore is at
+      maximum capacity, then Zuul will wait until it can be acquired
+      before starting the job.  Default: none.
 
-**irrelevant-files**
-  This is a negative complement of `files`.  It indicates that the job
-  should run unless *all* of the files changed match this list.  In
-  other words, if the regular expression `docs/.*` is supplied, then
-  this job will not run if the only files changed are in the docs
-  directory.  A regular expression or list of regular expressions.
-  Default: none.
+   .. attr:: tags
 
-**auth**
-  Authentication information to be made available to the job.  This is
-  a dictionary with two potential keys:
+      Metadata about this job.  Tags are units of information attached
+      to the job; they do not affect Zuul's behavior, but they can be
+      used within the job to characterize the job.  For example, a job
+      which tests a certain subsystem could be tagged with the name of
+      that subsystem, and if the job's results are reported into a
+      database, then the results of all jobs affecting that subsystem
+      could be queried.  This attribute is specified as a list of
+      strings, and when inheriting jobs or applying variants, tags
+      accumulate in a set, so the result is always a set of all the
+      tags from all the jobs and variants used in constructing the
+      frozen job, with no duplication.  Default: none.
 
-  **inherit**
-  A boolean indicating that the authentication information referenced
-  by this job should be able to be inherited by child jobs.  Normally
-  when a job inherits from another job, the auth section is not
-  included.  This permits jobs to inherit the same basic structure and
-  playbook, but ensures that secret information is unable to be
-  exposed by a child job which may alter the job's behavior.  If it is
-  safe for the contents of the authentication section to be used by
-  child jobs, set this to ``true``.  Default: ``false``.
+   .. attr:: branches
 
-  **secrets**
-  A list of secrets which may be used by the job.  A :ref:`secret` is
-  a named collection of private information defined separately in the
-  configuration.  The secrets that appear here must be defined in the
-  same project as this job definition.
+      A regular expression (or list of regular expressions) which
+      describe on what branches a job should run (or in the case of
+      variants: to alter the behavior of a job for a certain branch).
 
-  In the future, other types of authentication information may be
-  added.
+      If there is no job definition for a given job which matches the
+      branch of an item, then that job is not run for the item.
+      Otherwise, all of the job variants which match that branch (and
+      any other selection criteria) are used when freezing the job.
 
-**nodes**
-  A list of nodes which should be supplied to the job.  This parameter
-  may be supplied either as a string, in which case it references a
-  :ref:`nodeset` definition which appears elsewhere in the
-  configuration, or a list, in which case it is interpreted in the
-  same way as a Nodeset definition (in essence, it is an anonymous
-  Node definition unique to this job).  See the :ref:`nodeset`
-  reference for the syntax to use in that case.
+      This example illustrates a job called *run-tests* which uses a
+      nodeset based on the current release of an operating system to
+      perform its tests, except when testing changes to the stable/2.0
+      branch, in which case it uses an older release:
 
-  If a job has an empty or no node definition, it will still run and
-  may be able to perform actions on the Zuul executor.
+      .. code-block:: yaml
 
-**override-branch**
-  When Zuul runs jobs for a proposed change, it normally checks out
-  the branch associated with that change on every project present in
-  the job.  If jobs are running on a ref (such as a branch tip or
-  tag), then that ref is normally checked out.  This attribute is used
-  to override that behavior and indicate that this job should,
-  regardless of the branch for the queue item, use the indicated
-  branch instead.  This can be used, for example, to run a previous
-  version of the software (from a stable maintenance branch) under
-  test even if the change being tested applies to a different branch
-  (this is only likely to be useful if there is some cross-branch
-  interaction with some component of the system being tested).  See
-  also the project-specific **override-branch** attribute under
-  **required-projects** to apply this behavior to a subset of a job's
-  projects.
+         - job:
+             name: run-tests
+             nodes: current-release
 
-**timeout**
-  The time in minutes that the job should be allowed to run before it
-  is automatically aborted and failure is reported.  If no timeout is
-  supplied, the job may run indefinitely.  Supplying a timeout is
-  highly recommended.
+         - job:
+             name: run-tests
+             branch: stable/2.0
+             nodes: old-release
 
-**attempts**
-  When Zuul encounters an error running a job's pre-run playbook, Zuul
-  will stop and restart the job.  Errors during the main or
-  post-run -playbook phase of a job are not affected by this parameter
-  (they are reported immediately).  This parameter controls the number
-  of attempts to make before an error is reported.  Default: 3.
+      In some cases, Zuul uses an implied value for the branch specifier
+      if none is supplied:
 
-**pre-run**
-  The name of a playbook or list of playbooks without file extension
-  to run before the main body of a job.  The full path to the playbook
-  in the repo where the job is defined is expected.
+      * For a job definition in a *config-project*, no implied branch
+        specifier is used.  If no branch specifier appears, the job
+        applies to all branches.
 
-  When a job inherits from a parent, the child's pre-run playbooks are
-  run after the parent's.  See :ref:`job` for more information.
+      * In the case of an *untrusted-project*, no implied branch specifier
+        is applied to the reference definition of a job.  That is to say,
+        that if the first appearance of the job definition appears without
+        a branch specifier, then it will apply to all branches.  Note that
+        when collecting its configuration, Zuul reads the `master` branch
+        of a given project first, then other branches in alphabetical
+        order.
 
-**post-run**
-  The name of a playbook or list of playbooks without file extension
-  to run after the main body of a job.  The full path to the playbook
-  in the repo where the job is defined is expected.
+      * Any further job variants other than the reference definition in an
+        *untrusted-project* will, if they do not have a branch specifier,
+        will have an implied branch specifier for the current branch
+        applied.
 
-  When a job inherits from a parent, the child's post-run playbooks
-  are run before the parent's.  See :ref:`job` for more information.
+      This allows for the very simple and expected workflow where if a
+      project defines a job on the master branch with no branch specifier,
+      and then creates a new branch based on master, any changes to that
+      job definition within the new branch only affect that branch.
 
-**run**
-  The name of the main playbook for this job.  This parameter is
-  not normally necessary, as it defaults to a playbook with the
-  same name as the job inside of the `playbooks/` directory (e.g.,
-  the `foo` job would default to `playbooks/foo`.  However, if a
-  playbook with a different name is needed, it can be specified
-  here.  The file extension is not required, but the full path
-  within the repo is.  When a child inherits from a parent, a
-  playbook with the name of the child job is implicitly searched
-  first, before falling back on the playbook used by the parent
-  job (unless the child job specifies a ``run`` attribute, in which
-  case that value is used).  Example::
+   .. attr:: files
 
-     run: playbooks/<name of the job>
+      This attribute indicates that the job should only run on changes
+      where the specified files are modified.  This is a regular
+      expression or list of regular expressions.  Default: none.
 
-**roles**
-  A list of Ansible roles to prepare for the job.  Because a job runs
-  an Ansible playbook, any roles which are used by the job must be
-  prepared and installed by Zuul before the job begins.  This value is
-  a list of dictionaries, each of which indicates one of two types of
-  roles: a Galaxy role, which is simply a role that is installed from
-  Ansible Galaxy, or a Zuul role, which is a role provided by a
-  project managed by Zuul.  Zuul roles are able to benefit from
-  speculative merging and cross-project dependencies when used by
-  playbooks in untrusted projects.  Roles are added to the Ansible
-  role path in the order they appear on the job -- roles earlier in
-  the list will take precedence over those which follow.
+   .. attr:: irrelevant-files
 
-  In the case of job inheritance or variance, the roles used for each
-  of the playbooks run by the job will be only those which were
-  defined along with that playbook.  If a child job inherits from a
-  parent which defines a pre and post playbook, then the pre and post
-  playbooks it inherits from the parent job will run only with the
-  roles that were defined on the parent.  If the child adds its own
-  pre and post playbooks, then any roles added by the child will be
-  available to the child's playbooks.  This is so that a job which
-  inherits from a parent does not inadvertantly alter the behavior of
-  the parent's playbooks by the addition of conflicting roles.  Roles
-  added by a child will appear before those it inherits from its
-  parent.
+      This is a negative complement of `files`.  It indicates that the
+      job should run unless *all* of the files changed match this
+      list.  In other words, if the regular expression `docs/.*` is
+      supplied, then this job will not run if the only files changed
+      are in the docs directory.  A regular expression or list of
+      regular expressions.  Default: none.
 
-  A project which supplies a role may be structured in one of two
-  configurations: a bare role (in which the role exists at the root of
-  the project), or a contained role (in which the role exists within
-  the `roles/` directory of the project, perhaps along with other
-  roles).  In the case of a contained role, the `roles/` directory of
-  the project is added to the role search path.  In the case of a bare
-  role, the project itself is added to the role search path.  In case
-  the name of the project is not the name under which the role should
-  be installed (and therefore referenced from Ansible), the `name`
-  attribute may be used to specify an alternate.
+   .. attr:: auth
 
-  A job automatically has the project in which it is defined added to
-  the roles path if that project appears to contain a role or `roles/`
-  directory.  By default, the project is added to the path under its
-  own name, however, that may be changed by explicitly listing the
-  project in the roles list in the usual way.
+      Authentication information to be made available to the job.
+      This is a dictionary with two potential keys:
 
-  .. note:: galaxy roles are not yet implemented
+      .. attr:: inherit
 
-  **galaxy**
-    The name of the role in Ansible Galaxy.  If this attribute is
-    supplied, Zuul will search Ansible Galaxy for a role by this name
-    and install it.  Mutually exclusive with ``zuul``; either
-    ``galaxy`` or ``zuul`` must be supplied.
+         A boolean indicating that the authentication information
+         referenced by this job should be able to be inherited by
+         child jobs.  Normally when a job inherits from another job,
+         the auth section is not included.  This permits jobs to
+         inherit the same basic structure and playbook, but ensures
+         that secret information is unable to be exposed by a child
+         job which may alter the job's behavior.  If it is safe for
+         the contents of the authentication section to be used by
+         child jobs, set this to ``true``.  Default: ``false``.
 
-  **zuul**
-    The name of a Zuul project which supplies the role.  Mutually
-    exclusive with ``galaxy``; either ``galaxy`` or ``zuul`` must be
-    supplied.
+      .. attr:: secrets
 
-  **name**
-    The installation name of the role.  In the case of a bare role,
-    the role will be made available under this name.  Ignored in the
-    case of a contained role.
+         A list of secrets which may be used by the job.  A
+         :ref:`secret` is a named collection of private information
+         defined separately in the configuration.  The secrets that
+         appear here must be defined in the same project as this job
+         definition.
 
-**required-projects**
-  A list of other projects which are used by this job.  Any Zuul
-  projects specified here will also be checked out by Zuul into the
-  working directory for the job.  Speculative merging and cross-repo
-  dependencies will be honored.
+         In the future, other types of authentication information may
+         be added.
 
-  The format for this attribute is either a list of strings or
-  dictionaries.  Strings are interpreted as project names,
-  dictionaries may have the following attributes:
+   .. attr:: nodes
 
-  **name**
-    The name of the required project.
+      A list of nodes which should be supplied to the job.  This
+      parameter may be supplied either as a string, in which case it
+      references a :ref:`nodeset` definition which appears elsewhere
+      in the configuration, or a list, in which case it is interpreted
+      in the same way as a Nodeset definition (in essence, it is an
+      anonymous Node definition unique to this job).  See the
+      :ref:`nodeset` reference for the syntax to use in that case.
 
-  **override-branch**
-    When Zuul runs jobs for a proposed change, it normally checks out
-    the branch associated with that change on every project present in
-    the job.  If jobs are running on a ref (such as a branch tip or
-    tag), then that ref is normally checked out.  This attribute is
-    used to override that behavior and indicate that this job should,
-    regardless of the branch for the queue item, use the indicated
-    branch instead, for only this project.  See also the
-    **override-branch** attribute of jobs to apply the same behavior
-    to all projects in a job.
+      If a job has an empty or no node definition, it will still run
+      and may be able to perform actions on the Zuul executor.
 
-**vars**
+   .. attr:: override-branch
 
-A dictionary of variables to supply to Ansible.  When inheriting from
-a job (or creating a variant of a job) vars are merged with previous
-definitions.  This means a variable definition with the same name will
-override a previously defined variable, but new variable names will be
-added to the set of defined variables.
+      When Zuul runs jobs for a proposed change, it normally checks
+      out the branch associated with that change on every project
+      present in the job.  If jobs are running on a ref (such as a
+      branch tip or tag), then that ref is normally checked out.  This
+      attribute is used to override that behavior and indicate that
+      this job should, regardless of the branch for the queue item,
+      use the indicated branch instead.  This can be used, for
+      example, to run a previous version of the software (from a
+      stable maintenance branch) under test even if the change being
+      tested applies to a different branch (this is only likely to be
+      useful if there is some cross-branch interaction with some
+      component of the system being tested).  See also the
+      project-specific **override-branch** attribute under
+      **required-projects** to apply this behavior to a subset of a
+      job's projects.
 
-**dependencies**
-  A list of other jobs upon which this job depends.  Zuul will not
-  start executing this job until all of its dependencies have
-  completed successfully, and if one or more of them fail, this job
-  will not be run.
+   .. attr:: timeout
 
-**allowed-projects**
-  A list of Zuul projects which may use this job.  By default, a job
-  may be used by any other project known to Zuul, however, some jobs
-  use resources or perform actions which are not appropriate for other
-  projects.  In these cases, a list of projects which are allowed to
-  use this job may be supplied.  If this list is not empty, then it
-  must be an exhaustive list of all projects permitted to use the job.
-  The current project (where the job is defined) is not automatically
-  included, so if it should be able to run this job, then it must be
-  explicitly listed.  Default: the empty list (all projects may use
-  the job).
+      The time in minutes that the job should be allowed to run before
+      it is automatically aborted and failure is reported.  If no
+      timeout is supplied, the job may run indefinitely.  Supplying a
+      timeout is highly recommended.
+
+   .. attr:: attempts
+
+      When Zuul encounters an error running a job's pre-run playbook,
+      Zuul will stop and restart the job.  Errors during the main or
+      post-run -playbook phase of a job are not affected by this
+      parameter (they are reported immediately).  This parameter
+      controls the number of attempts to make before an error is
+      reported.  Default: 3.
+
+   .. attr:: pre-run
+
+      The name of a playbook or list of playbooks without file
+      extension to run before the main body of a job.  The full path
+      to the playbook in the repo where the job is defined is
+      expected.
+
+      When a job inherits from a parent, the child's pre-run playbooks
+      are run after the parent's.  See :ref:`job` for more
+      information.
+
+   .. attr:: post-run
+
+      The name of a playbook or list of playbooks without file
+      extension to run after the main body of a job.  The full path to
+      the playbook in the repo where the job is defined is expected.
+
+      When a job inherits from a parent, the child's post-run
+      playbooks are run before the parent's.  See :ref:`job` for more
+      information.
+
+   .. attr:: run
+
+      The name of the main playbook for this job.  This parameter is
+      not normally necessary, as it defaults to a playbook with the
+      same name as the job inside of the `playbooks/` directory (e.g.,
+      the `foo` job would default to `playbooks/foo`.  However, if a
+      playbook with a different name is needed, it can be specified
+      here.  The file extension is not required, but the full path
+      within the repo is.  When a child inherits from a parent, a
+      playbook with the name of the child job is implicitly searched
+      first, before falling back on the playbook used by the parent
+      job (unless the child job specifies a ``run`` attribute, in
+      which case that value is used).  Example:
+
+      .. code-block:: yaml
+
+         run: playbooks/<name of the job>
+
+   .. attr:: roles
+
+      A list of Ansible roles to prepare for the job.  Because a job
+      runs an Ansible playbook, any roles which are used by the job
+      must be prepared and installed by Zuul before the job begins.
+      This value is a list of dictionaries, each of which indicates
+      one of two types of roles: a Galaxy role, which is simply a role
+      that is installed from Ansible Galaxy, or a Zuul role, which is
+      a role provided by a project managed by Zuul.  Zuul roles are
+      able to benefit from speculative merging and cross-project
+      dependencies when used by playbooks in untrusted projects.
+      Roles are added to the Ansible role path in the order they
+      appear on the job -- roles earlier in the list will take
+      precedence over those which follow.
+
+      In the case of job inheritance or variance, the roles used for
+      each of the playbooks run by the job will be only those which
+      were defined along with that playbook.  If a child job inherits
+      from a parent which defines a pre and post playbook, then the
+      pre and post playbooks it inherits from the parent job will run
+      only with the roles that were defined on the parent.  If the
+      child adds its own pre and post playbooks, then any roles added
+      by the child will be available to the child's playbooks.  This
+      is so that a job which inherits from a parent does not
+      inadvertantly alter the behavior of the parent's playbooks by
+      the addition of conflicting roles.  Roles added by a child will
+      appear before those it inherits from its parent.
+
+      A project which supplies a role may be structured in one of two
+      configurations: a bare role (in which the role exists at the
+      root of the project), or a contained role (in which the role
+      exists within the `roles/` directory of the project, perhaps
+      along with other roles).  In the case of a contained role, the
+      `roles/` directory of the project is added to the role search
+      path.  In the case of a bare role, the project itself is added
+      to the role search path.  In case the name of the project is not
+      the name under which the role should be installed (and therefore
+      referenced from Ansible), the `name` attribute may be used to
+      specify an alternate.
+
+      A job automatically has the project in which it is defined added
+      to the roles path if that project appears to contain a role or
+      `roles/` directory.  By default, the project is added to the
+      path under its own name, however, that may be changed by
+      explicitly listing the project in the roles list in the usual
+      way.
+
+      .. note:: Galaxy roles are not yet implemented.
+
+      .. attr:: galaxy
+
+         The name of the role in Ansible Galaxy.  If this attribute is
+         supplied, Zuul will search Ansible Galaxy for a role by this
+         name and install it.  Mutually exclusive with ``zuul``;
+         either ``galaxy`` or ``zuul`` must be supplied.
+
+      .. attr:: zuul
+
+         The name of a Zuul project which supplies the role.  Mutually
+         exclusive with ``galaxy``; either ``galaxy`` or ``zuul`` must
+         be supplied.
+
+      .. attr:: name
+
+         The installation name of the role.  In the case of a bare
+         role, the role will be made available under this name.
+         Ignored in the case of a contained role.
+
+   .. attr:: required-projects
+
+      A list of other projects which are used by this job.  Any Zuul
+      projects specified here will also be checked out by Zuul into
+      the working directory for the job.  Speculative merging and
+      cross-repo dependencies will be honored.
+
+      The format for this attribute is either a list of strings or
+      dictionaries.  Strings are interpreted as project names,
+      dictionaries, if used, may have the following attributes:
+
+      .. attr:: name
+         :required:
+
+         The name of the required project.
+
+      .. attr:: override-branch
+
+         When Zuul runs jobs for a proposed change, it normally checks
+         out the branch associated with that change on every project
+         present in the job.  If jobs are running on a ref (such as a
+         branch tip or tag), then that ref is normally checked out.
+         This attribute is used to override that behavior and indicate
+         that this job should, regardless of the branch for the queue
+         item, use the indicated branch instead, for only this
+         project.  See also the **override-branch** attribute of jobs
+         to apply the same behavior to all projects in a job.
+
+   .. attr:: vars
+
+      A dictionary of variables to supply to Ansible.  When inheriting
+      from a job (or creating a variant of a job) vars are merged with
+      previous definitions.  This means a variable definition with the
+      same name will override a previously defined variable, but new
+      variable names will be added to the set of defined variables.
+
+   .. attr:: dependencies
+
+      A list of other jobs upon which this job depends.  Zuul will not
+      start executing this job until all of its dependencies have
+      completed successfully, and if one or more of them fail, this
+      job will not be run.
+
+   .. attr:: allowed-projects
+
+      A list of Zuul projects which may use this job.  By default, a
+      job may be used by any other project known to Zuul, however,
+      some jobs use resources or perform actions which are not
+      appropriate for other projects.  In these cases, a list of
+      projects which are allowed to use this job may be supplied.  If
+      this list is not empty, then it must be an exhaustive list of
+      all projects permitted to use the job.  The current project
+      (where the job is defined) is not automatically included, so if
+      it should be able to run this job, then it must be explicitly
+      listed.  Default: the empty list (all projects may use the job).
 
 
 .. _project:
