@@ -155,9 +155,9 @@ class Client(zuul.cmd.ZuulApp):
     def autohold(self):
         client = zuul.rpcclient.RPCClient(
             self.server, self.port, self.ssl_key, self.ssl_cert, self.ssl_ca)
-        r = client.autohold(tenant_name=self.args.tenant,
-                            project_name=self.args.project,
-                            job_name=self.args.job,
+        r = client.autohold(tenant=self.args.tenant,
+                            project=self.args.project,
+                            job=self.args.job,
                             reason=self.args.reason,
                             count=self.args.count)
         return r
