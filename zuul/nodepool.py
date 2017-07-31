@@ -55,12 +55,13 @@ class Nodepool(object):
         if autohold_key not in self.sched.autohold_requests:
             return
 
-        hold_iterations = self.sched.autohold_requests[autohold_key]
+        (hold_iterations, reason) = self.sched.autohold_requests[autohold_key]
         nodes = nodeset.getNodes()
 
         for node in nodes:
             node.state = model.STATE_HOLD
             node.hold_job = " ".join(autohold_key)
+            node.hold_reason = reason
             self.sched.zk.storeNode(node)
 
         # We remove the autohold when the number of nodes in hold
