@@ -51,8 +51,10 @@ class TestDiskAccountant(BaseTestCase):
             if jobdir in executor_server.stopped_jobs:
                 break
             time.sleep(0.1)
-        self.assertEqual(set([jobdir]), executor_server.stopped_jobs)
-        da.stop()
+        try:
+            self.assertEqual(set([jobdir]), executor_server.stopped_jobs)
+        finally:
+            da.stop()
         self.assertFalse(da.thread.is_alive())
 
     def test_cache_hard_links(self):
@@ -83,7 +85,9 @@ class TestDiskAccountant(BaseTestCase):
             if jobdir in executor_server.used:
                 break
             time.sleep(0.1)
-        self.assertEqual(set(), executor_server.stopped_jobs)
-        self.assertIn(jobdir, executor_server.used)
-        self.assertEqual(1, executor_server.used[jobdir])
-        da.stop()
+        try:
+            self.assertEqual(set(), executor_server.stopped_jobs)
+            self.assertIn(jobdir, executor_server.used)
+            self.assertEqual(1, executor_server.used[jobdir])
+        finally:
+            da.stop()
