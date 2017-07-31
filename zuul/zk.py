@@ -23,17 +23,6 @@ from kazoo.recipe.lock import Lock
 import zuul.model
 
 
-# States:
-# We are building this node but it is not ready for use.
-BUILDING = 'building'
-# The node is ready for use.
-READY = 'ready'
-# The node should be deleted.
-DELETING = 'deleting'
-
-STATES = set([BUILDING, READY, DELETING])
-
-
 class LockException(Exception):
     pass
 
