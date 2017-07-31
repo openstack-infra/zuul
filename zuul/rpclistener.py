@@ -111,6 +111,7 @@ class RPCListener(object):
             return
 
         params['job_name'] = args['job_name']
+        params['reason'] = args['reason']
 
         if args['count'] < 0:
             error = "Invalid count: %d" % args['count']

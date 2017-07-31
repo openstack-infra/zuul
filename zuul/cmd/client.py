@@ -54,6 +54,8 @@ class Client(zuul.cmd.ZuulApp):
                                   required=True)
         cmd_autohold.add_argument('--job', help='job name',
                                   required=True)
+        cmd_autohold.add_argument('--reason', help='reason for the hold',
+                                  required=True)
         cmd_autohold.add_argument('--count',
                                   help='number of job runs (default: 1)',
                                   required=False, type=int, default=1)
@@ -156,6 +158,7 @@ class Client(zuul.cmd.ZuulApp):
         r = client.autohold(tenant_name=self.args.tenant,
                             project_name=self.args.project,
                             job_name=self.args.job,
+                            reason=self.args.reason,
                             count=self.args.count)
         return r
 

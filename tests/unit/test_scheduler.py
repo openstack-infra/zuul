@@ -1441,7 +1441,8 @@ class TestScheduler(ZuulTestCase):
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
         self.addCleanup(client.shutdown)
-        r = client.autohold('tenant-one', 'org/project', 'project-test2', 1)
+        r = client.autohold('tenant-one', 'org/project', 'project-test2',
+                            "reason text", 1)
         self.assertTrue(r)
 
         self.executor_server.failJob('project-test2', A)
@@ -1469,6 +1470,7 @@ class TestScheduler(ZuulTestCase):
                       'review.example.com/org/project',
                       'project-test2'])
         )
+        self.assertEqual(held_node['hold_reason'], "reason text")
 
         # Another failed change should not hold any more nodes
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')

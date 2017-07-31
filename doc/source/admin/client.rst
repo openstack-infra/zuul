@@ -28,7 +28,7 @@ Autohold
 
 Example::
 
-  zuul autohold --tenant openstack --project example_project --job example_job ---count 1
+  zuul autohold --tenant openstack --project example_project --job example_job --reason "reason text" --count 1
 
 Enqueue
 ^^^^^^^

@@ -357,6 +357,7 @@ class Node(object):
         self.id = None
         self.lock = None
         self.hold_job = None
+        self.hold_reason = None
         # Attributes from Nodepool
         self._state = 'unknown'
         self.state_time = time.time()
@@ -398,6 +399,7 @@ class Node(object):
         d = {}
         d['state'] = self.state
         d['hold_job'] = self.hold_job
+        d['hold_reason'] = self.hold_reason
         for k in self._keys:
             d[k] = getattr(self, k)
         return d
