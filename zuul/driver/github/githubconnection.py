@@ -349,7 +349,7 @@ class GithubUser(collections.Mapping):
 
 class GithubConnection(BaseConnection):
     driver_name = 'github'
-    log = logging.getLogger("connection.github")
+    log = logging.getLogger("zuul.GithubConnection")
     payload_path = 'payload'
 
     def __init__(self, driver, connection_name, connection_config):
