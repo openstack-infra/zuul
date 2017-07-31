@@ -94,23 +94,23 @@ class RPCListener(object):
         args = json.loads(job.arguments)
         params = {}
 
-        tenant = self.sched.abide.tenants.get(args['tenant_name'])
+        tenant = self.sched.abide.tenants.get(args['tenant'])
         if tenant:
-            params['tenant_name'] = args['tenant_name']
+            params['tenant_name'] = args['tenant']
         else:
-            error = "Invalid tenant: %s" % args['tenant_name']
+            error = "Invalid tenant: %s" % args['tenant']
             job.sendWorkException(error.encode('utf8'))
             return
 
-        (trusted, project) = tenant.getProject(args['project_name'])
+        (trusted, project) = tenant.getProject(args['project'])
         if project:
             params['project_name'] = project.canonical_name
         else:
-            error = "Invalid project: %s" % args['project_name']
+            error = "Invalid project: %s" % args['project']
             job.sendWorkException(error.encode('utf8'))
             return
 
-        params['job_name'] = args['job_name']
+        params['job_name'] = args['job']
         params['reason'] = args['reason']
 
         if args['count'] < 0:
