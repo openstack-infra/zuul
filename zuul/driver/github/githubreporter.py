@@ -19,6 +19,7 @@ import time
 from zuul.reporter import BaseReporter
 from zuul.exceptions import MergeFailure
 from zuul.driver.util import scalar_or_list
+from zuul.driver.github.githubsource import GithubSource
 
 
 class GithubReporter(BaseReporter):
@@ -41,6 +42,17 @@ class GithubReporter(BaseReporter):
 
     def report(self, item):
         """Report on an event."""
+
+        # If the source is not GithubSource we cannot report anything here.
+        if not isinstance(item.change.project.source, GithubSource):
+            return
+
+        # For supporting several Github connections we also must filter by
+        # the canonical hostname.
+        if item.change.project.source.connection.canonical_hostname != \
+                self.connection.canonical_hostname:
+            return
+
         # order is important for github branch protection.
         # A status should be set before a merge attempt
         if self._commit_status is not None:

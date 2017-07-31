@@ -1,5 +1,5 @@
 - pipeline:
-    name: check_github
+    name: check
     manager: independent
     trigger:
       github:
@@ -8,25 +8,23 @@
             - opened
             - changed
             - reopened
-    success:
-      github:
-        status: 'success'
-    failure:
-      github:
-        status: 'failure'
-
-- pipeline:
-    name: check_gerrit
-    manager: independent
-    trigger:
       gerrit:
         - event: patchset-created
     success:
+      github:
+        status: 'success'
       gerrit:
-        verify: 1
+        Verified: 1
     failure:
+      github:
+        status: 'failure'
       gerrit:
-        verify: 1
+        Verified: 1
+    start:
+      github:
+        comment: true
+      gerrit:
+        Verified: 0
 
 - job:
     name: project-gerrit
@@ -35,12 +33,12 @@
 
 - project:
     name: org/project
-    check_gerrit:
+    check:
       jobs:
         - project-gerrit
 
 - project:
     name: org/project1
-    check_github:
+    check:
       jobs:
         - project1-github

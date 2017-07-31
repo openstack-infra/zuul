@@ -406,6 +406,48 @@ class TestGithubDriver(ZuulTestCase):
         self.assertEqual(len(D.comments), 1)
         self.assertEqual(D.comments[0], 'Merge failed')
 
+    @simple_layout('layouts/reporting-multiple-github.yaml', driver='github')
+    def test_reporting_multiple_github(self):
+        project = 'org/project1'
+        # pipeline reports pull status both on start and success
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_github.openFakePullRequest(project, 'master', 'A')
+        self.fake_github.emitEvent(A.getPullRequestOpenedEvent())
+        # open one on B as well, which should not effect A reporting
+        B = self.fake_github.openFakePullRequest('org/project2', 'master',
+                                                 'B')
+        self.fake_github.emitEvent(B.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+        # We should have a status container for the head sha
+        statuses = self.fake_github.statuses[project][A.head_sha]
+        self.assertIn(A.head_sha, self.fake_github.statuses[project].keys())
+        # We should only have one status for the head sha
+        self.assertEqual(1, len(statuses))
+        check_status = statuses[0]
+        check_url = ('http://zuul.example.com/status/#%s,%s' %
+                     (A.number, A.head_sha))
+        self.assertEqual('tenant-one/check', check_status['context'])
+        self.assertEqual('Standard check', check_status['description'])
+        self.assertEqual('pending', check_status['state'])
+        self.assertEqual(check_url, check_status['url'])
+        self.assertEqual(0, len(A.comments))
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+        # We should only have two statuses for the head sha
+        statuses = self.fake_github.statuses[project][A.head_sha]
+        self.assertEqual(2, len(statuses))
+        check_status = statuses[0]
+        check_url = ('http://zuul.example.com/status/#%s,%s' %
+                     (A.number, A.head_sha))
+        self.assertEqual('tenant-one/check', check_status['context'])
+        self.assertEqual('success', check_status['state'])
+        self.assertEqual(check_url, check_status['url'])
+        self.assertEqual(1, len(A.comments))
+        self.assertThat(A.comments[0],
+                        MatchesRegex('.*Build succeeded.*', re.DOTALL))
+
     @simple_layout('layouts/dependent-github.yaml', driver='github')
     def test_parallel_changes(self):
         "Test that changes are tested in parallel and merged in series"

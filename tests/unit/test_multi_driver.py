@@ -43,3 +43,12 @@ class TestGerritAndGithub(ZuulTestCase):
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
         self.waitUntilSettled()
+
+        # Check on reporting results
+        # github should have a success status (only).
+        statuses = self.fake_github.statuses['org/project1'][B.head_sha]
+        self.assertEqual(1, len(statuses))
+        self.assertEqual('success', statuses[0]['state'])
+
+        # gerrit should have only reported twice, on start and success
+        self.assertEqual(A.reported, 2)
