@@ -49,6 +49,7 @@ class RPCListener(object):
         self.thread.start()
 
     def register(self):
+        self.worker.registerFunction("zuul:autohold")
         self.worker.registerFunction("zuul:enqueue")
         self.worker.registerFunction("zuul:enqueue_ref")
         self.worker.registerFunction("zuul:promote")
@@ -88,6 +89,38 @@ class RPCListener(object):
                 return
             except Exception:
                 self.log.exception("Exception while getting job")
+
+    def handle_autohold(self, job):
+        args = json.loads(job.arguments)
+        params = {}
+
+        tenant = self.sched.abide.tenants.get(args['tenant_name'])
+        if tenant:
+            params['tenant_name'] = args['tenant_name']
+        else:
+            error = "Invalid tenant: %s" % args['tenant_name']
+            job.sendWorkException(error.encode('utf8'))
+            return
+
+        (trusted, project) = tenant.getProject(args['project_name'])
+        if project:
+            params['project_name'] = project.canonical_name
+        else:
+            error = "Invalid project: %s" % args['project_name']
+            job.sendWorkException(error.encode('utf8'))
+            return
+
+        params['job_name'] = args['job_name']
+
+        if args['count'] < 0:
+            error = "Invalid count: %d" % args['count']
+            job.sendWorkException(error.encode('utf8'))
+            return
+
+        params['count'] = args['count']
+
+        self.sched.autohold(**params)
+        job.sendWorkComplete()
 
     def _common_enqueue(self, job):
         args = json.loads(job.arguments)

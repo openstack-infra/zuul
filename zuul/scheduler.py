@@ -231,6 +231,7 @@ class Scheduler(threading.Thread):
         self.zuul_version = zuul_version.version_info.release_string()
         self.last_reconfigured = None
         self.tenant_last_reconfigured = {}
+        self.autohold_requests = {}
 
     def stop(self):
         self._stopped = True
@@ -348,6 +349,15 @@ class Scheduler(threading.Thread):
         self.log.debug("Reconfiguration complete")
         self.last_reconfigured = int(time.time())
         # TODOv3(jeblair): reconfigure time should be per-tenant
+
+    def autohold(self, tenant_name, project_name, job_name, count):
+        key = (tenant_name, project_name, job_name)
+        if count == 0 and key in self.autohold_requests:
+            self.log.debug("Removing autohold for %s", key)
+            del self.autohold_requests[key]
+        else:
+            self.log.debug("Autohold requested for %s", key)
+            self.autohold_requests[key] = count
 
     def promote(self, tenant_name, pipeline_name, change_ids):
         event = PromoteEvent(tenant_name, pipeline_name, change_ids)
@@ -828,6 +838,16 @@ class Scheduler(threading.Thread):
         # the nodes to nodepool.
         try:
             nodeset = build.build_set.getJobNodeSet(build.job.name)
+            autohold_key = (build.pipeline.layout.tenant.name,
+                            build.build_set.item.change.project.canonical_name,
+                            build.job.name)
+
+            try:
+                self.nodepool.holdNodeSet(nodeset, autohold_key)
+            except Exception:
+                self.log.exception("Unable to process autohold for %s",
+                                   autohold_key)
+
             self.nodepool.returnNodeSet(nodeset)
         except Exception:
             self.log.exception("Unable to return nodeset %s" % (nodeset,))
