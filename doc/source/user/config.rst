@@ -184,14 +184,16 @@ success, the pipeline reports back to Gerrit with ``Verified`` vote of
          dependent pipeline manager, see: :doc:`gating`.
 
    .. attr:: allow-secrets
+      :default: false
 
       This is a boolean which can be used to prevent jobs which
       require secrets from running in this pipeline.  Some pipelines
       run on proposed changes and therefore execute code which has not
       yet been reviewed.  In such a case, allowing a job to use a
       secret could result in that secret being exposed.  The default
-      is False, meaning that in order to run jobs with secrets, this
-      must be explicitly enabled on each Pipeline where that is safe.
+      is ``false``, meaning that in order to run jobs with secrets,
+      this must be explicitly enabled on each Pipeline where that is
+      safe.
 
       For more information, see :ref:`secret`.
 
@@ -201,16 +203,19 @@ success, the pipeline reports back to Gerrit with ``Verified`` vote of
       pipeline.  It may appear in the status page or in documentation.
 
    .. attr:: success-message
+      :default: Build successful.
 
       The introductory text in reports when all the voting jobs are
-      successful.  Defaults to "Build successful."
+      successful.
 
    .. attr:: failure-message
+      :default: Build failed.
 
       The introductory text in reports when at least one voting job
-      fails.  Defaults to "Build failed."
+      fails.
 
    .. attr:: merge-failure-message
+      :default: Merge failed.
 
       The introductory text in the message reported when a change
       fails to merge with the current state of the repository.
@@ -257,14 +262,16 @@ success, the pipeline reports back to Gerrit with ``Verified`` vote of
       See :ref:`drivers`.
 
    .. attr:: dequeue-on-new-patchset
+      :default: true
 
       Normally, if a new patchset is uploaded to a change that is in a
       pipeline, the existing entry in the pipeline will be removed
       (with jobs canceled and any dependent changes that can no longer
       merge as well.  To suppress this behavior (and allow jobs to
-      continue running), set this to ``false``.  Default: ``true``.
+      continue running), set this to ``false``.
 
    .. attr:: ignore-dependencies
+      :default: false
 
       In any kind of pipeline (dependent or independent), Zuul will
       attempt to enqueue all dependencies ahead of the current change
@@ -272,9 +279,10 @@ success, the pipeline reports back to Gerrit with ``Verified`` vote of
       the results of each change regardless of the results of changes
       ahead).  To ignore dependencies completely in an independent
       pipeline, set this to ``true``.  This option is ignored by
-      dependent pipelines.  The default is: ``false``.
+      dependent pipelines.
 
    .. attr:: precedence
+      :default: normal
 
       Indicates how the build scheduler should prioritize jobs for
       different pipelines.  Each pipeline may have one precedence,
@@ -340,6 +348,7 @@ success, the pipeline reports back to Gerrit with ``Verified`` vote of
       pipeline is disabled).
 
    .. attr:: window
+      :default: 20
 
       Dependent pipeline managers only. Zuul can rate limit dependent
       pipelines in a manner similar to TCP flow control.  Jobs are
@@ -348,15 +357,17 @@ success, the pipeline reports back to Gerrit with ``Verified`` vote of
       window is configurable with this value. The value given should
       be a positive integer value. A value of ``0`` disables rate
       limiting on the :value:`dependent pipeline manager
-      <pipeline.manager.dependent>`.  Default: ``20``.
+      <pipeline.manager.dependent>`.
 
    .. attr:: window-floor
+      :default: 3
 
       Dependent pipeline managers only. This is the minimum value for
       the window described above. Should be a positive non zero
-      integer value.  Default: ``3``.
+      integer value.
 
    .. attr:: window-increase-type
+      :default: linear
 
       Dependent pipeline managers only. This value describes how the
       window should grow when changes are successfully merged by zuul.
@@ -364,7 +375,7 @@ success, the pipeline reports back to Gerrit with ``Verified`` vote of
       .. value:: linear
 
          Indicates that **window-increase-factor** should be added to
-         the previous window value.  This is the default.
+         the previous window value.
 
       .. value:: exponential
 
@@ -373,12 +384,14 @@ success, the pipeline reports back to Gerrit with ``Verified`` vote of
          will become the window size.
 
    .. attr:: window-increase-factor
+      :default: 1
 
       Dependent pipeline managers only. The value to be added or
       multiplied against the previous window value to determine the
-      new window after successful change merges.  Default: ``1``.
+      new window after successful change merges.
 
    .. attr:: window-decrease-type
+      :default: exponential
 
       Dependent pipeline managers only. This value describes how the
       window should shrink when changes are not able to be merged by
@@ -393,14 +406,15 @@ success, the pipeline reports back to Gerrit with ``Verified`` vote of
 
          Indicates that **window-decrease-factor** should be divided
          against the previous window value and the result will become
-         the window size.  This is the default.
+         the window size.
 
    .. attr:: window-decrease-factor
+      :default: 2
 
       :value:`Dependent pipeline managers
       <pipeline.manager.dependent>` only. The value to be subtracted
       or divided against the previous window value to determine the
-      new window after unsuccessful change merges.  Default: ``2``.
+      new window after unsuccessful change merges.
 
 
 .. _job:
@@ -503,16 +517,18 @@ Here is an example of two job definitions:
       ReStructuredText.
 
    .. attr:: success-message
+      :default: SUCCESS
 
       Normally when a job succeeds, the string ``SUCCESS`` is reported
       as the result for the job.  If set, this option may be used to
-      supply a different string.  Default: ``SUCCESS``.
+      supply a different string.
 
    .. attr:: failure-message
+      :default: FAILURE
 
       Normally when a job fails, the string ``FAILURE`` is reported as
       the result for the job.  If set, this option may be used to
-      supply a different string.  Default: ``FAILURE``.
+      supply a different string.
 
    .. attr:: success-url
 
@@ -526,7 +542,7 @@ Here is an example of two job definitions:
       **zuul.log_url** is set, then the two will be combined to
       produce the URL used for the report.  This can be used to
       specify that certain jobs should "deep link" into the stored job
-      artifacts.  Default: none.
+      artifacts.
 
    .. attr:: failure-url
 
@@ -534,26 +550,27 @@ Here is an example of two job definitions:
       Otherwise behaves the same as **success-url**.
 
    .. attr:: hold-following-changes
+      :default: false
 
       In a dependent pipeline, this option may be used to indicate
       that no jobs should start on any items which depend on the
       current item until this job has completed successfully.  This
       may be used to conserve build resources, at the expense of
       inhibiting the parallelization which speeds the processing of
-      items in a dependent pipeline.  A boolean value, default: false.
+      items in a dependent pipeline.
 
    .. attr:: voting
+      :default: true
 
       Indicates whether the result of this job should be used in
-      determining the overall result of the item.  A boolean value,
-      default: true.
+      determining the overall result of the item.
 
    .. attr:: semaphore
 
       The name of a :ref:`semaphore` which should be acquired and
       released when the job begins and ends.  If the semaphore is at
       maximum capacity, then Zuul will wait until it can be acquired
-      before starting the job.  Default: none.
+      before starting the job.
 
    .. attr:: tags
 
@@ -567,7 +584,7 @@ Here is an example of two job definitions:
       strings, and when inheriting jobs or applying variants, tags
       accumulate in a set, so the result is always a set of all the
       tags from all the jobs and variants used in constructing the
-      frozen job, with no duplication.  Default: none.
+      frozen job, with no duplication.
 
    .. attr:: branches
 
@@ -626,7 +643,7 @@ Here is an example of two job definitions:
 
       This attribute indicates that the job should only run on changes
       where the specified files are modified.  This is a regular
-      expression or list of regular expressions.  Default: none.
+      expression or list of regular expressions.
 
    .. attr:: irrelevant-files
 
@@ -635,7 +652,7 @@ Here is an example of two job definitions:
       list.  In other words, if the regular expression ``docs/.*`` is
       supplied, then this job will not run if the only files changed
       are in the docs directory.  A regular expression or list of
-      regular expressions.  Default: none.
+      regular expressions.
 
    .. attr:: auth
 
@@ -643,6 +660,7 @@ Here is an example of two job definitions:
       This is a dictionary with two potential keys:
 
       .. attr:: inherit
+         :default: false
 
          A boolean indicating that the authentication information
          referenced by this job should be able to be inherited by
@@ -652,7 +670,7 @@ Here is an example of two job definitions:
          that secret information is unable to be exposed by a child
          job which may alter the job's behavior.  If it is safe for
          the contents of the authentication section to be used by
-         child jobs, set this to ``true``.  Default: ``false``.
+         child jobs, set this to ``true``.
 
       .. attr:: secrets
 
@@ -704,13 +722,14 @@ Here is an example of two job definitions:
       timeout is highly recommended.
 
    .. attr:: attempts
+      :default: 3
 
       When Zuul encounters an error running a job's pre-run playbook,
       Zuul will stop and restart the job.  Errors during the main or
       post-run -playbook phase of a job are not affected by this
       parameter (they are reported immediately).  This parameter
       controls the number of attempts to make before an error is
-      reported.  Default: ``3``.
+      reported.
 
    .. attr:: pre-run
 
@@ -873,7 +892,7 @@ Here is an example of two job definitions:
       all projects permitted to use the job.  The current project
       (where the job is defined) is not automatically included, so if
       it should be able to run this job, then it must be explicitly
-      listed.  Default: the empty list (all projects may use the job).
+      listed.  By default, all projects may use the job.
 
 
 .. _project:
