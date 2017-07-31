@@ -28,7 +28,6 @@ class MergeServer(object):
 
     def __init__(self, config, connections={}):
         self.config = config
-        self.zuul_url = config.get('merger', 'zuul_url')
 
         merge_root = get_default(self.config, 'merger', 'git_dir',
                                  '/var/lib/zuul/merger-git')
@@ -97,8 +96,7 @@ class MergeServer(object):
         ret = self.merger.mergeChanges(
             args['items'], args.get('files'),
             args.get('dirs'), args.get('repo_state'))
-        result = dict(merged=(ret is not None),
-                      zuul_url=self.zuul_url)
+        result = dict(merged=(ret is not None))
         if ret is None:
             result['commit'] = result['files'] = result['repo_state'] = None
         else:
@@ -113,6 +111,5 @@ class MergeServer(object):
                                      args['branch'], args['files'],
                                      args.get('dirs'))
         result = dict(updated=True,
-                      files=files,
-                      zuul_url=self.zuul_url)
+                      files=files)
         job.sendWorkComplete(json.dumps(result))

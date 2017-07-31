@@ -23,7 +23,6 @@ state_dir=/var/lib/zuul
 git_dir=/var/lib/zuul/git
 ;git_user_email=zuul@example.com
 ;git_user_name=zuul
-zuul_url=http://zuul.example.com/p
 
 [executor]
 default_username=zuul
