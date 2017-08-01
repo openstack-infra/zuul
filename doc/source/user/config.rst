@@ -952,20 +952,76 @@ The ``gate`` project-pipeline definition above specifies that this
 project participates in the ``integrated`` shared queue for that
 pipeline.
 
-In addition to a project-pipeline definition for one or more
-pipelines, the following attributes may appear in a project:
+.. attr:: project
 
-**name** (required)
-  The name of the project.  If Zuul is configured with two or more
-  unique projects with the same name, the canonical hostname for the
-  project should be included (e.g., `git.example.com/foo`).
+   In addition to a project-pipeline definition for one or more
+   pipelines, the following attributes may appear in a project:
 
-**templates**
-  A list of :ref:`project-template` references; the project-pipeline
-  definitions of each Project Template will be applied to this
-  project.  If more than one template includes jobs for a given
-  pipeline, they will be combined, as will any jobs specified in
-  project-pipeline definitions on the project itself.
+   .. attr:: name
+      :required:
+
+      The name of the project.  If Zuul is configured with two or more
+      unique projects with the same name, the canonical hostname for
+      the project should be included (e.g., `git.example.com/foo`).
+
+   .. attr:: templates
+
+      A list of :ref:`project-template` references; the
+      project-pipeline definitions of each Project Template will be
+      applied to this project.  If more than one template includes
+      jobs for a given pipeline, they will be combined, as will any
+      jobs specified in project-pipeline definitions on the project
+      itself.
+
+   .. attr:: merge-mode
+      :default: merge-resolve
+
+      The merge mode which is used by Git for this project.  Be sure
+      this matches what the remote system which performs merges (i.e.,
+      Gerrit or GitHub).  Must be one of the following values:
+
+      .. value:: merge
+
+         Uses the default git merge strategy (recursive).
+
+      .. value:: merge-resolve
+
+         Uses the resolve git merge strategy.  This is a very
+         conservative merge strategy which most closely matches the
+         behavior of Gerrit.
+
+      .. value:: cherry-pick
+
+         Cherry-picks each change onto the branch rather than
+         performing any merges.
+
+   .. attr:: <pipeline>
+
+      Each pipeline that the project participates in should have an
+      entry in the project.  The value for this key should be a
+      dictionary with the following format:
+
+      .. attr:: jobs
+         :required:
+
+         A list of jobs that should be run when items for this project
+         are enqueued into the pipeline.  Each item of this list may
+         be a string, in which case it is treated as a job name, or it
+         may be a dictionary, in which case it is treated as a job
+         variant local to this project and pipeline.  In that case,
+         the format of the dictionary is the same as the top level
+         :attr:`job` definition.  Any attributes set on the job here
+         will override previous versions of the job.
+
+      .. attr:: queue
+
+         If this pipeline is a :value:`dependent
+         <pipeline.manager.dependent>` pipeline, this specifies the
+         name of the shared queue this project is in.  Any projects
+         which interact with each other in tests should be part of the
+         same shared queue in order to ensure that they don't merge
+         changes which break the others.  This is a free-form string;
+         just set the same value for each group of projects.
 
 .. _project-template:
 
