@@ -133,8 +133,8 @@ class WebApp(threading.Thread):
                 return handler(path, '', request)
 
         # Now try with a tenant_name stripped
-        tenant_name = request.path.split('/')[1]
-        path = request.path.replace('/' + tenant_name, '')
+        x, tenant_name, path = request.path.split('/', 2)
+        path = '/' + path
         # Handle keys
         if path.startswith('/keys'):
             try:
