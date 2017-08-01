@@ -675,7 +675,6 @@ class PipelineManager(object):
         build_set = event.build_set
         item = build_set.item
         build_set.merge_state = build_set.COMPLETE
-        build_set.zuul_url = event.zuul_url
         if event.merged:
             build_set.commit = event.commit
             build_set.files.setFiles(event.files)

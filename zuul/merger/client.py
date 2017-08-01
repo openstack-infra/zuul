@@ -128,7 +128,6 @@ class MergeClient(object):
 
     def onBuildCompleted(self, job):
         data = getJobData(job)
-        zuul_url = data.get('zuul_url')
         merged = data.get('merged', False)
         updated = data.get('updated', False)
         commit = data.get('commit')
@@ -140,7 +139,7 @@ class MergeClient(object):
                       (job, merged, updated, commit))
         job.setComplete()
         if job.build_set:
-            self.sched.onMergeCompleted(job.build_set, zuul_url,
+            self.sched.onMergeCompleted(job.build_set,
                                         merged, updated, commit, files,
                                         repo_state)
         # The test suite expects the job to be removed from the

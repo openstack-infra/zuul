@@ -507,7 +507,6 @@ class ExecutorServer(object):
         # perhaps hostname+pid.
         self.hostname = socket.gethostname()
         self.log_streaming_port = log_streaming_port
-        self.zuul_url = config.get('merger', 'zuul_url')
         self.merger_lock = threading.Lock()
         self.verbose = False
         self.command_map = dict(
@@ -798,8 +797,7 @@ class ExecutorServer(object):
                                          args['branch'], args['files'],
                                          args.get('dirs', []))
         result = dict(updated=True,
-                      files=files,
-                      zuul_url=self.zuul_url)
+                      files=files)
         job.sendWorkComplete(json.dumps(result))
 
     def merge(self, job):
@@ -808,8 +806,7 @@ class ExecutorServer(object):
             ret = self.merger.mergeChanges(args['items'], args.get('files'),
                                            args.get('dirs', []),
                                            args.get('repo_state'))
-        result = dict(merged=(ret is not None),
-                      zuul_url=self.zuul_url)
+        result = dict(merged=(ret is not None))
         if ret is None:
             result['commit'] = result['files'] = result['repo_state'] = None
         else:

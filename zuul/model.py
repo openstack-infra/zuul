@@ -1237,7 +1237,6 @@ class BuildSet(object):
         self.previous_build_set = None
         self.uuid = None
         self.commit = None
-        self.zuul_url = None
         self.dependent_items = None
         self.merger_items = None
         self.unable_to_merge = False
