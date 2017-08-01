@@ -41,18 +41,18 @@ class TestDiskAccountant(BaseTestCase):
                             cache_dir)
         da.start()
 
-        jobdir = os.path.join(jobs_dir, '012345')
-        os.mkdir(jobdir)
-        testfile = os.path.join(jobdir, 'tfile')
-        with open(testfile, 'w') as tf:
-            tf.write(2 * 1024 * 1024 * '.')
-
-        # da should catch over-limit dir within 5 seconds
-        for i in range(0, 50):
-            if jobdir in executor_server.stopped_jobs:
-                break
-            time.sleep(0.1)
         try:
+            jobdir = os.path.join(jobs_dir, '012345')
+            os.mkdir(jobdir)
+            testfile = os.path.join(jobdir, 'tfile')
+            with open(testfile, 'w') as tf:
+                tf.write(2 * 1024 * 1024 * '.')
+
+            # da should catch over-limit dir within 5 seconds
+            for i in range(0, 50):
+                if jobdir in executor_server.stopped_jobs:
+                    break
+                time.sleep(0.1)
             self.assertEqual(set([jobdir]), executor_server.stopped_jobs)
         finally:
             da.stop()
@@ -70,6 +70,7 @@ class TestDiskAccountant(BaseTestCase):
         da = DiskAccountant(jobs_dir, 1, executor_server.stopJobByJobDir,
                             cache_dir, executor_server.usage)
         da.start()
+        self.addCleanup(da.stop)
 
         jobdir = os.path.join(jobs_dir, '012345')
         os.mkdir(jobdir)
@@ -87,9 +88,6 @@ class TestDiskAccountant(BaseTestCase):
             if jobdir in executor_server.used:
                 break
             time.sleep(0.1)
-        try:
-            self.assertEqual(set(), executor_server.stopped_jobs)
-            self.assertIn(jobdir, executor_server.used)
-            self.assertTrue(executor_server.used[jobdir] <= 1)
-        finally:
-            da.stop()
+        self.assertEqual(set(), executor_server.stopped_jobs)
+        self.assertIn(jobdir, executor_server.used)
+        self.assertTrue(executor_server.used[jobdir] <= 1)
