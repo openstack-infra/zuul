@@ -1023,20 +1023,27 @@ same time.
 
 Semaphores are never subject to dynamic reconfiguration.  If the value
 of a semaphore is changed, it will take effect only when the change
-where it is updated is merged.  An example follows::
+where it is updated is merged.  An example follows:
 
-  - semaphore:
-      name: semaphore-foo
-      max: 5
-  - semaphore:
-      name: semaphore-bar
-      max: 3
+.. code-block:: yaml
 
-The following attributes are available:
+   - semaphore:
+       name: semaphore-foo
+       max: 5
+   - semaphore:
+       name: semaphore-bar
+       max: 3
 
-**name** (required)
-  The name of the semaphore, referenced by jobs.
+.. attr:: semaphore
 
-**max**
-  The maximum number of running jobs which can use this semaphore.
-  Defaults to 1.
+   The following attributes are available:
+
+   .. attr:: name
+      :required:
+
+      The name of the semaphore, referenced by jobs.
+
+   .. attr:: max
+      :default: 1
+
+      The maximum number of running jobs which can use this semaphore.
