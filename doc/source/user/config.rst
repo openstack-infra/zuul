@@ -994,21 +994,68 @@ specify what nodes they require individually, however, by defining
 groups of node types once and referring to them by name, job
 configuration may be simplified.
 
-A Nodeset requires two attributes:
+.. code-block:: yaml
 
-**name** (required)
-  The name of the Nodeset, to be referenced by a :ref:`job`.
+   - nodeset:
+       name: nodeset1
+       nodes:
+         - name: controller
+           label: controller-label
+         - name: compute1
+           label: compute-label
+         - name: compute2
+           label: compute-label
+       groups:
+         - name: ceph-osd
+           nodes:
+             - controller
+         - name: ceph-monitor
+           nodes:
+             - controller
+             - compute1
+             - compute2
 
-**nodes** (required)
-  A list of node definitions, each of which has the following format:
+.. attr:: nodeset
 
-  **name** (required)
-    The name of the node.  This will appear in the Ansible inventory
-    for the job.
+   A Nodeset requires two attributes:
 
-  **label** (required)
-    The Nodepool label for the node.  Zuul will request a node with
-    this label.
+   .. attr:: name
+      :required:
+
+      The name of the Nodeset, to be referenced by a :ref:`job`.
+
+   .. attr:: nodes
+      :required:
+
+      A list of node definitions, each of which has the following format:
+
+      .. attr:: name
+         :required:
+
+         The name of the node.  This will appear in the Ansible inventory
+         for the job.
+
+      .. attr:: label
+         :required:
+
+         The Nodepool label for the node.  Zuul will request a node with
+         this label.
+
+   .. attr:: groups
+
+      Additional groups can be defined which are accessible from the ansible
+      playbooks.
+
+      .. attr:: name
+         :required:
+
+         The name of the group to be referenced by an ansible playbook.
+
+      .. attr:: nodes
+         :required:
+
+         The nodes that shall be part of the group. This is specified as a list
+         of strings.
 
 .. _semaphore:
 
