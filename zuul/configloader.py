@@ -67,6 +67,15 @@ class DuplicateNodeError(Exception):
         super(DuplicateNodeError, self).__init__(message)
 
 
+class MaxNodeError(Exception):
+    def __init__(self, job, tenant):
+        message = textwrap.dedent("""\
+        The job "{job}" exceeds tenant max-nodes-per-job {maxnodes}.""")
+        message = textwrap.fill(message.format(
+            job=job.name, maxnodes=tenant.max_nodes_per_job))
+        super(MaxNodeError, self).__init__(message)
+
+
 class DuplicateGroupError(Exception):
     def __init__(self, nodeset, group):
         message = textwrap.dedent("""\
@@ -475,6 +484,9 @@ class JobParser(object):
                 for conf_node in conf_nodes:
                     node = model.Node(conf_node['name'], conf_node['label'])
                     ns.addNode(node)
+            if tenant.max_nodes_per_job != -1 and \
+               len(ns) > tenant.max_nodes_per_job:
+                raise MaxNodeError(job, tenant)
             job.nodeset = ns
 
         if 'required-projects' in conf:
@@ -952,6 +964,7 @@ class TenantParser(object):
     @staticmethod
     def getSchema(connections=None):
         tenant = {vs.Required('name'): str,
+                  'max-nodes-per-job': int,
                   'source': TenantParser.validateTenantSources(connections)}
         return vs.Schema(tenant)
 
@@ -960,6 +973,8 @@ class TenantParser(object):
                  cached):
         TenantParser.getSchema(connections)(conf)
         tenant = model.Tenant(conf['name'])
+        if conf.get('max-nodes-per-job') is not None:
+            tenant.max_nodes_per_job = conf['max-nodes-per-job']
         tenant.unparsed_config = conf
         unparsed_config = model.UnparsedTenantConfig()
         # tpcs is TenantProjectConfigs

@@ -948,3 +948,41 @@ class TestDiskAccounting(AnsibleZuulTestCase):
         self.waitUntilSettled()
         self.assertHistory([
             dict(name='dd-big-empty-file', result='ABORTED', changes='1,1')])
+
+
+class TestMaxNodesPerJob(AnsibleZuulTestCase):
+    tenant_config_file = 'config/multi-tenant/main.yaml'
+
+    def test_max_nodes_reached(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: test-job
+                nodes:
+                  - name: node01
+                    label: fake
+                  - name: node02
+                    label: fake
+                  - name: node03
+                    label: fake
+                  - name: node04
+                    label: fake
+                  - name: node05
+                    label: fake
+                  - name: node06
+                    label: fake
+            """)
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertIn('The job "test-job" exceeds tenant max-nodes-per-job 5.',
+                      A.messages[0], "A should fail because of nodes limit")
+
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertNotIn("exceeds tenant max-nodes", B.messages[0],
+                         "B should not fail because of nodes limit")
