@@ -272,7 +272,8 @@ class TestGithubDriver(ZuulTestCase):
         check_url = ('http://zuul.example.com/status/#%s,%s' %
                      (A.number, A.head_sha))
         self.assertEqual('tenant-one/check', check_status['context'])
-        self.assertEqual('Standard check', check_status['description'])
+        self.assertEqual('check status: pending',
+                         check_status['description'])
         self.assertEqual('pending', check_status['state'])
         self.assertEqual(check_url, check_status['url'])
         self.assertEqual(0, len(A.comments))
@@ -287,6 +288,8 @@ class TestGithubDriver(ZuulTestCase):
         check_url = ('http://zuul.example.com/status/#%s,%s' %
                      (A.number, A.head_sha))
         self.assertEqual('tenant-one/check', check_status['context'])
+        self.assertEqual('check status: success',
+                         check_status['description'])
         self.assertEqual('success', check_status['state'])
         self.assertEqual(check_url, check_status['url'])
         self.assertEqual(1, len(A.comments))
@@ -312,6 +315,8 @@ class TestGithubDriver(ZuulTestCase):
         self.assertEqual(3, len(statuses))
         report_status = statuses[0]
         self.assertEqual('tenant-one/reporting', report_status['context'])
+        self.assertEqual('reporting status: success',
+                         report_status['description'])
         self.assertEqual('success', report_status['state'])
         self.assertEqual(2, len(A.comments))
 
@@ -328,6 +333,33 @@ class TestGithubDriver(ZuulTestCase):
         # The rest of the URL is a UUID and a trailing slash.
         self.assertThat(report_status['url'][len(base):],
                         MatchesRegex('^[a-fA-F0-9]{32}\/$'))
+
+    @simple_layout('layouts/reporting-github.yaml', driver='github')
+    def test_truncated_status_description(self):
+        project = 'org/project'
+        # pipeline reports pull status both on start and success
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_github.openFakePullRequest(project, 'master', 'A')
+        self.fake_github.emitEvent(
+            A.getCommentAddedEvent('long pipeline'))
+        self.waitUntilSettled()
+        statuses = self.fake_github.statuses[project][A.head_sha]
+        self.assertEqual(1, len(statuses))
+        check_status = statuses[0]
+        # Status is truncated due to long pipeline name
+        self.assertEqual('status: pending',
+                         check_status['description'])
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+        # We should only have two statuses for the head sha
+        statuses = self.fake_github.statuses[project][A.head_sha]
+        self.assertEqual(2, len(statuses))
+        check_status = statuses[0]
+        # Status is truncated due to long pipeline name
+        self.assertEqual('status: success',
+                         check_status['description'])
 
     @simple_layout('layouts/reporting-github.yaml', driver='github')
     def test_push_reporting(self):
@@ -427,7 +459,7 @@ class TestGithubDriver(ZuulTestCase):
         check_url = ('http://zuul.example.com/status/#%s,%s' %
                      (A.number, A.head_sha))
         self.assertEqual('tenant-one/check', check_status['context'])
-        self.assertEqual('Standard check', check_status['description'])
+        self.assertEqual('check status: pending', check_status['description'])
         self.assertEqual('pending', check_status['state'])
         self.assertEqual(check_url, check_status['url'])
         self.assertEqual(0, len(A.comments))
@@ -443,6 +475,7 @@ class TestGithubDriver(ZuulTestCase):
                      (A.number, A.head_sha))
         self.assertEqual('tenant-one/check', check_status['context'])
         self.assertEqual('success', check_status['state'])
+        self.assertEqual('check status: success', check_status['description'])
         self.assertEqual(check_url, check_status['url'])
         self.assertEqual(1, len(A.comments))
         self.assertThat(A.comments[0],
