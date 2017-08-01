@@ -75,6 +75,7 @@ class ZuulAttrDirective(ZuulConfigObject):
 
     option_spec = {
         'required': lambda x: x,
+        'default': lambda x: x,
     }
 
     def before_content(self):
@@ -88,11 +89,21 @@ class ZuulAttrDirective(ZuulConfigObject):
 
     def handle_signature(self, sig, signode):
         path = self.get_path()
+        signode['is_multiline'] = True
+        line = addnodes.desc_signature_line()
+        line['add_permalink'] = True
         for x in path:
-            signode += addnodes.desc_addname(x + '.', x + '.')
-        signode += addnodes.desc_name(sig, sig)
+            line += addnodes.desc_addname(x + '.', x + '.')
+        line += addnodes.desc_name(sig, sig)
         if 'required' in self.options:
-            signode += addnodes.desc_annotation(' (required)', ' (required)')
+            line += addnodes.desc_annotation(' (required)', ' (required)')
+        signode += line
+        if 'default' in self.options:
+            line = addnodes.desc_signature_line()
+            line += addnodes.desc_type('Default: ', 'Default: ')
+            line += nodes.literal(self.options['default'],
+                                  self.options['default'])
+            signode += line
         return sig
 
 
