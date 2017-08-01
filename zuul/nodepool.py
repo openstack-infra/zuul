@@ -61,7 +61,7 @@ class Nodepool(object):
         for node in nodes:
             node.state = model.STATE_HOLD
             node.hold_job = " ".join(autohold_key)
-            node.hold_reason = reason
+            node.comment = reason
             self.sched.zk.storeNode(node)
 
         # We remove the autohold when the number of nodes in hold

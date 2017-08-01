@@ -1470,7 +1470,7 @@ class TestScheduler(ZuulTestCase):
                       'review.example.com/org/project',
                       'project-test2'])
         )
-        self.assertEqual(held_node['hold_reason'], "reason text")
+        self.assertEqual(held_node['comment'], "reason text")
 
         # Another failed change should not hold any more nodes
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
