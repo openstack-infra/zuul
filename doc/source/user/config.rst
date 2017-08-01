@@ -16,15 +16,15 @@ When a system administrator configures Zuul to operate on a project,
 they specify one of two security contexts for that project.  A
 *config-project* is one which is primarily tasked with holding
 configuration information and job content for Zuul.  Jobs which are
-defined in a *config-project* are run with elevated privileges, and
-all Zuul configuration items are available for use.  It is expected
-that changes to *config-projects* will undergo careful scrutiny before
-being merged.
+defined in a config-project are run with elevated privileges, and all
+Zuul configuration items are available for use.  It is expected that
+changes to config-projects will undergo careful scrutiny before being
+merged.
 
 An *untrusted-project* is a project whose primary focus is not to
 operate Zuul, but rather it is one of the projects being tested or
 deployed.  The Zuul configuration language available to these projects
-is somewhat restricted (as detailed in individual section below), and
+is somewhat restricted (as detailed in individual sections below), and
 jobs defined in these projects run in a restricted execution
 environment since they may be operating on changes which have not yet
 undergone review.
@@ -33,23 +33,23 @@ Configuration Loading
 ---------------------
 
 When Zuul starts, it examines all of the git repositories which are
-specified by the system administrator in :ref:`tenant-config` and searches
-for files in the root of each repository. Zuul looks first for a file named
-`zuul.yaml` or a directory named `zuul.d`, and if they are not found,
-`.zuul.yaml` or `.zuul.d` (with a leading dot). In the case of an
-*untrusted-project*, the configuration from every branch is included,
-however, in the case of a *config-project*, only the `master` branch is
-examined.
+specified by the system administrator in :ref:`tenant-config` and
+searches for files in the root of each repository. Zuul looks first
+for a file named ``zuul.yaml`` or a directory named ``zuul.d``, and if
+they are not found, ``.zuul.yaml`` or ``.zuul.d`` (with a leading
+dot). In the case of an :term:`untrusted-project`, the configuration
+from every branch is included, however, in the case of a
+:term:`config-project`, only the ``master`` branch is examined.
 
 When a change is proposed to one of these files in an
-*untrusted-project*, the configuration proposed in the change is
-merged into the running configuration so that any changes to Zuul's
+untrusted-project, the configuration proposed in the change is merged
+into the running configuration so that any changes to Zuul's
 configuration are self-testing as part of that change.  If there is a
 configuration error, no jobs will be run and the error will be
 reported by any applicable pipelines.  In the case of a change to a
-*config-project*, the new configuration is parsed and examined for
+config-project, the new configuration is parsed and examined for
 errors, but the new configuration is not used in testing the change.
-This is because configuration in *config-projects* is able to access
+This is because configuration in config-projects is able to access
 elevated privileges and should always be reviewed before being merged.
 
 As soon as a change containing a Zuul configuration change merges to
@@ -59,14 +59,15 @@ immediately.
 Configuration Items
 -------------------
 
-The `zuul.yaml` and `.zuul.yaml` configuration files are
+The ``zuul.yaml`` and ``.zuul.yaml`` configuration files are
 YAML-formatted and are structured as a series of items, each of which
 is described below.
 
-In the case of a `zuul.d` directory, Zuul recurses the directory and extends
-the configuration using all the .yaml files in the sorted path order.
-For example, to keep job's variants in a separate file, it needs to be loaded
-after the main entries, for example using number prefixes in file's names::
+In the case of a ``zuul.d`` directory, Zuul recurses the directory and
+extends the configuration using all the .yaml files in the sorted path
+order.  For example, to keep job's variants in a separate file, it
+needs to be loaded after the main entries, for example using number
+prefixes in file's names::
 
 * zuul.d/pipelines.yaml
 * zuul.d/projects.yaml
@@ -87,24 +88,24 @@ easy to apply similar workflow operations to projects or groups of
 projects.
 
 By way of example, one of the primary uses of Zuul is to perform
-project gating.  To do so, one can create a *gate* pipeline which
-tells Zuul that when a certain event (such as approval by a code
+project gating.  To do so, one can create a :term:`gate` pipeline
+which tells Zuul that when a certain event (such as approval by a code
 reviewer) occurs, the corresponding change or pull request should be
 enqueued into the pipeline.  When that happens, the jobs which have
-been configured to run for that project in the *gate* pipeline are
-run, and when they complete, the pipeline reports the results to the
-user.
+been configured to run for that project in the gate pipeline are run,
+and when they complete, the pipeline reports the results to the user.
 
-Pipeline configuration items may only appear in *config-projects*.
+Pipeline configuration items may only appear in :term:`config-projects
+<config-project>`.
 
 Generally, a Zuul administrator would define a small number of
 pipelines which represent the workflow processes used in their
 environment.  Each project can then be added to the available
 pipelines as appropriate.
 
-Here is an example *check* pipeline, which runs whenever a new
+Here is an example :term:`check` pipeline, which runs whenever a new
 patchset is created in Gerrit.  If the associated jobs all report
-success, the pipeline reports back to Gerrit with a *Verified* vote of
+success, the pipeline reports back to Gerrit with ``Verified`` vote of
 +1, or if at least one of them fails, a -1:
 
 .. code-block:: yaml
@@ -234,7 +235,7 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
 
    .. attr:: require
 
-      If this section is present, it establishes pre-requisites for
+      If this section is present, it establishes prerequisites for
       any kind of item entering the Pipeline.  Regardless of how the
       item is to be enqueued (via any trigger or automatic dependency
       resolution), the conditions specified here must be met or the
@@ -247,9 +248,9 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
 
    .. attr:: reject
 
-      If this section is present, it establishes pre-requisites that
+      If this section is present, it establishes prerequisites that
       can block an item from being enqueued. It can be considered a
-      negative version of **require**.
+      negative version of :attr:`pipeline.require`.
 
       Requirements are loaded from their connection name. The driver
       type of the connection will dictate which options are available.
@@ -281,23 +282,25 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
       ones with lower.  The value should be one of ``high``,
       ``normal``, or ``low``.  Default: ``normal``.
 
-   The following options configure *reporters*.  Reporters are
-   complementary to triggers; where a trigger is an event on a
-   connection which causes Zuul to enqueue an item, a reporter is the
-   action performed on a connection when an item is dequeued after its
-   jobs complete.  The actual syntax for a reporter is defined by the
-   driver which implements it.  See :ref:`drivers` for more
-   information.
+   .. _reporters:
+
+   The following options configure :term:`reporters <reporter>`.
+   Reporters are complementary to triggers; where a trigger is an
+   event on a connection which causes Zuul to enqueue an item, a
+   reporter is the action performed on a connection when an item is
+   dequeued after its jobs complete.  The actual syntax for a reporter
+   is defined by the driver which implements it.  See :ref:`drivers`
+   for more information.
 
    .. attr:: success
 
       Describes where Zuul should report to if all the jobs complete
       successfully.  This section is optional; if it is omitted, Zuul
       will run jobs and do nothing on success -- it will not report at
-      all.  If the section is present, the listed reporters will be
-      asked to report on the jobs.  The reporters are listed by their
-      connection name. The options available depend on the driver for
-      the supplied connection.
+      all.  If the section is present, the listed :term:`reporters
+      <reporter>` will be asked to report on the jobs.  The reporters
+      are listed by their connection name. The options available
+      depend on the driver for the supplied connection.
 
    .. attr:: failure
 
@@ -329,11 +332,11 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
 
    .. attr:: disable-after-consecutive-failures
 
-      If set, a pipeline can enter a ''disabled'' state if too many
+      If set, a pipeline can enter a *disabled* state if too many
       changes in a row fail. When this value is exceeded the pipeline
-      will stop reporting to any of the ``success``, ``failure`` or
-      ``merge-failure`` reporters and instead only report to the
-      ``disabled`` reporters.  (No ``start`` reports are made when a
+      will stop reporting to any of the **success**, **failure** or
+      **merge-failure** reporters and instead only report to the
+      **disabled** reporters.  (No **start** reports are made when a
       pipeline is disabled).
 
    .. attr:: window
@@ -344,7 +347,8 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
       actionable window for the pipeline. The initial length of this
       window is configurable with this value. The value given should
       be a positive integer value. A value of ``0`` disables rate
-      limiting on the DependentPipelineManager.  Default: ``20``.
+      limiting on the :value:`dependent pipeline manager
+      <pipeline.manager.dependent>`.  Default: ``20``.
 
    .. attr:: window-floor
 
@@ -355,13 +359,18 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
    .. attr:: window-increase-type
 
       Dependent pipeline managers only. This value describes how the
-      window should grow when changes are successfully merged by
-      zuul. A value of ``linear`` indicates that
-      ``window-increase-factor`` should be added to the previous
-      window value. A value of ``exponential`` indicates that
-      ``window-increase-factor`` should be multiplied against the
-      previous window value and the result will become the window
-      size.  Default: ``linear``.
+      window should grow when changes are successfully merged by zuul.
+
+      .. value:: linear
+
+         Indicates that **window-increase-factor** should be added to
+         the previous window value.  This is the default.
+
+      .. value:: exponential
+
+         Indicates that **window-increase-factor** should be
+         multiplied against the previous window value and the result
+         will become the window size.
 
    .. attr:: window-increase-factor
 
@@ -373,18 +382,25 @@ success, the pipeline reports back to Gerrit with a *Verified* vote of
 
       Dependent pipeline managers only. This value describes how the
       window should shrink when changes are not able to be merged by
-      Zuul. A value of ``linear`` indicates that
-      ``window-decrease-factor`` should be subtracted from the
-      previous window value. A value of ``exponential`` indicates that
-      ``window-decrease-factor`` should be divided against the
-      previous window value and the result will become the window
-      size.  Default: ``exponential``.
+      Zuul.
+
+      .. value:: linear
+
+         Indicates that **window-decrease-factor** should be
+         subtracted from the previous window value.
+
+      .. value:: exponential
+
+         Indicates that **window-decrease-factor** should be divided
+         against the previous window value and the result will become
+         the window size.  This is the default.
 
    .. attr:: window-decrease-factor
 
-      Dependent pipline managers only. The value to be subtracted or
-      divided against the previous window value to determine the new
-      window after unsuccessful change merges.  Default: ``2``.
+      :value:`Dependent pipeline managers
+      <pipeline.manager.dependent>` only. The value to be subtracted
+      or divided against the previous window value to determine the
+      new window after unsuccessful change merges.  Default: ``2``.
 
 
 .. _job:
@@ -407,7 +423,7 @@ starting with very basic jobs which describe characteristics that all
 jobs on the system should have, progressing through stages of
 specialization before arriving at a particular job.  A job may inherit
 from any other job in any project (however, if the other job is marked
-as `final`, some attributes may not be overidden).
+as ``final``, some attributes may not be overidden).
 
 Jobs also support a concept called variance.  The first time a job
 definition appears is called the reference definition of the job.
@@ -475,8 +491,8 @@ Here is an example of two job definitions:
 
    .. attr:: parent
 
-      Specifie s a job to inherit from.  The parent job can be defined
-      in this or a ny other project.  Any attributes not specified on
+      Specifies a job to inherit from.  The parent job can be defined
+      in this or any other project.  Any attributes not specified on
       a job will be collected from its parent.
 
    .. attr:: description
@@ -488,15 +504,15 @@ Here is an example of two job definitions:
 
    .. attr:: success-message
 
-      Normally when a job succeeds, the string "SUCCESS" is reported
+      Normally when a job succeeds, the string ``SUCCESS`` is reported
       as the result for the job.  If set, this option may be used to
-      supply a different string.  Default: "SUCCESS".
+      supply a different string.  Default: ``SUCCESS``.
 
    .. attr:: failure-message
 
-      Normally when a job fails, the string "FAILURE" is reported as
+      Normally when a job fails, the string ``FAILURE`` is reported as
       the result for the job.  If set, this option may be used to
-      supply a different string.  Default: "FAILURE".
+      supply a different string.  Default: ``FAILURE``.
 
    .. attr:: success-url
 
@@ -580,30 +596,31 @@ Here is an example of two job definitions:
              branch: stable/2.0
              nodes: old-release
 
-      In some cases, Zuul uses an implied value for the branch specifier
-      if none is supplied:
+      In some cases, Zuul uses an implied value for the branch
+      specifier if none is supplied:
 
-      * For a job definition in a *config-project*, no implied branch
-        specifier is used.  If no branch specifier appears, the job
-        applies to all branches.
+      * For a job definition in a :term:`config-project`, no implied
+        branch specifier is used.  If no branch specifier appears, the
+        job applies to all branches.
 
-      * In the case of an *untrusted-project*, no implied branch specifier
-        is applied to the reference definition of a job.  That is to say,
-        that if the first appearance of the job definition appears without
-        a branch specifier, then it will apply to all branches.  Note that
-        when collecting its configuration, Zuul reads the `master` branch
-        of a given project first, then other branches in alphabetical
-        order.
+      * In the case of an :term:`untrusted-project`, no implied branch
+        specifier is applied to the reference definition of a job.
+        That is to say, that if the first appearance of the job
+        definition appears without a branch specifier, then it will
+        apply to all branches.  Note that when collecting its
+        configuration, Zuul reads the ``master`` branch of a given
+        project first, then other branches in alphabetical order.
 
-      * Any further job variants other than the reference definition in an
-        *untrusted-project* will, if they do not have a branch specifier,
-        will have an implied branch specifier for the current branch
-        applied.
+      * Any further job variants other than the reference definition
+        in an untrusted-project will, if they do not have a branch
+        specifier, will have an implied branch specifier for the
+        current branch applied.
 
       This allows for the very simple and expected workflow where if a
-      project defines a job on the master branch with no branch specifier,
-      and then creates a new branch based on master, any changes to that
-      job definition within the new branch only affect that branch.
+      project defines a job on the ``master`` branch with no branch
+      specifier, and then creates a new branch based on ``master``,
+      any changes to that job definition within the new branch only
+      affect that branch.
 
    .. attr:: files
 
@@ -613,9 +630,9 @@ Here is an example of two job definitions:
 
    .. attr:: irrelevant-files
 
-      This is a negative complement of `files`.  It indicates that the
-      job should run unless *all* of the files changed match this
-      list.  In other words, if the regular expression `docs/.*` is
+      This is a negative complement of **files**.  It indicates that
+      the job should run unless *all* of the files changed match this
+      list.  In other words, if the regular expression ``docs/.*`` is
       supplied, then this job will not run if the only files changed
       are in the docs directory.  A regular expression or list of
       regular expressions.  Default: none.
@@ -675,9 +692,9 @@ Here is an example of two job definitions:
       tested applies to a different branch (this is only likely to be
       useful if there is some cross-branch interaction with some
       component of the system being tested).  See also the
-      project-specific **override-branch** attribute under
-      **required-projects** to apply this behavior to a subset of a
-      job's projects.
+      project-specific :attr:`job.required-projects.override-branch`
+      attribute to apply this behavior to a subset of a job's
+      projects.
 
    .. attr:: timeout
 
@@ -693,7 +710,7 @@ Here is an example of two job definitions:
       post-run -playbook phase of a job are not affected by this
       parameter (they are reported immediately).  This parameter
       controls the number of attempts to make before an error is
-      reported.  Default: 3.
+      reported.  Default: ``3``.
 
    .. attr:: pre-run
 
@@ -720,15 +737,15 @@ Here is an example of two job definitions:
 
       The name of the main playbook for this job.  This parameter is
       not normally necessary, as it defaults to a playbook with the
-      same name as the job inside of the `playbooks/` directory (e.g.,
-      the `foo` job would default to `playbooks/foo`.  However, if a
-      playbook with a different name is needed, it can be specified
-      here.  The file extension is not required, but the full path
-      within the repo is.  When a child inherits from a parent, a
-      playbook with the name of the child job is implicitly searched
-      first, before falling back on the playbook used by the parent
-      job (unless the child job specifies a ``run`` attribute, in
-      which case that value is used).  Example:
+      same name as the job inside of the ``playbooks/`` directory
+      (e.g., the ``foo`` job would default to ``playbooks/foo``.
+      However, if a playbook with a different name is needed, it can
+      be specified here.  The file extension is not required, but the
+      full path within the repo is.  When a child inherits from a
+      parent, a playbook with the name of the child job is implicitly
+      searched first, before falling back on the playbook used by the
+      parent job (unless the child job specifies a ``run`` attribute,
+      in which case that value is used).  Example:
 
       .. code-block:: yaml
 
@@ -758,25 +775,25 @@ Here is an example of two job definitions:
       child adds its own pre and post playbooks, then any roles added
       by the child will be available to the child's playbooks.  This
       is so that a job which inherits from a parent does not
-      inadvertantly alter the behavior of the parent's playbooks by
+      inadvertently alter the behavior of the parent's playbooks by
       the addition of conflicting roles.  Roles added by a child will
       appear before those it inherits from its parent.
 
       A project which supplies a role may be structured in one of two
       configurations: a bare role (in which the role exists at the
       root of the project), or a contained role (in which the role
-      exists within the `roles/` directory of the project, perhaps
+      exists within the ``roles/`` directory of the project, perhaps
       along with other roles).  In the case of a contained role, the
-      `roles/` directory of the project is added to the role search
+      ``roles/`` directory of the project is added to the role search
       path.  In the case of a bare role, the project itself is added
       to the role search path.  In case the name of the project is not
       the name under which the role should be installed (and therefore
-      referenced from Ansible), the `name` attribute may be used to
+      referenced from Ansible), the ``name`` attribute may be used to
       specify an alternate.
 
       A job automatically has the project in which it is defined added
       to the roles path if that project appears to contain a role or
-      `roles/` directory.  By default, the project is added to the
+      ``roles/`` directory.  By default, the project is added to the
       path under its own name, however, that may be changed by
       explicitly listing the project in the roles list in the usual
       way.
@@ -827,7 +844,7 @@ Here is an example of two job definitions:
          This attribute is used to override that behavior and indicate
          that this job should, regardless of the branch for the queue
          item, use the indicated branch instead, for only this
-         project.  See also the **override-branch** attribute of jobs
+         project.  See also the :attr:`job.override-branch` attribute
          to apply the same behavior to all projects in a job.
 
    .. attr:: vars
@@ -865,14 +882,14 @@ Project
 ~~~~~~~
 
 A project corresponds to a source code repository with which Zuul is
-configured to interact.  The main responsibility of the `Project`
+configured to interact.  The main responsibility of the project
 configuration item is to specify which jobs should run in which
-pipelines for a given project.  Within each `Project` definition, a
-section for each `Pipeline` may appear.  This project-pipeline
-definition is what determines how a project participates in a
-pipeline.
+pipelines for a given project.  Within each project definition, a
+section for each :ref:`pipeline <pipeline>` may appear.  This
+project-pipeline definition is what determines how a project
+participates in a pipeline.
 
-Consider the following `Project` definition::
+Consider the following project definition::
 
   - project:
       name: yoyodyne
@@ -886,13 +903,13 @@ Consider the following `Project` definition::
           - unit-tests
           - integration-tests
 
-The project has two project-pipeline stanzas, one for the `check`
-pipeline, and one for `gate`.  Each specifies which jobs shuld run
-when a change for that project enteres the respective pipeline -- when
-a change enters `check`, the `check-syntax` and `unit-test` jobs are
-run.
+The project has two project-pipeline stanzas, one for the ``check``
+pipeline, and one for ``gate``.  Each specifies which jobs should run
+when a change for that project enters the respective pipeline -- when
+a change enters ``check``, the ``check-syntax`` and ``unit-test`` jobs
+are run.
 
-Pipelines which use the dependent pipeline manager (e.g., the `gate`
+Pipelines which use the dependent pipeline manager (e.g., the ``gate``
 example shown earlier) maintain separate queues for groups of
 projects.  When Zuul serializes a set of changes which represent
 future potential project states, it must know about all of the
@@ -912,12 +929,12 @@ manually.  To group two or more related projects into a shared queue
 for a dependent pipeline, set the ``queue`` parameter to the same
 value for those projects.
 
-The `gate` project-pipeline definition above specifies that this
-project participates in the `integrated` shared queue for that
+The ``gate`` project-pipeline definition above specifies that this
+project participates in the ``integrated`` shared queue for that
 pipeline.
 
 In addition to a project-pipeline definition for one or more
-`Pipelines`, the following attributes may appear in a Project:
+pipelines, the following attributes may appear in a project:
 
 **name** (required)
   The name of the project.  If Zuul is configured with two or more

@@ -21,9 +21,15 @@ Contents:
    admin/index
    developer/index
 
+.. toctree::
+   :hidden:
+
+   glossary
+
 Indices and tables
 ==================
 
 * :ref:`genindex`
 * :ref:`search`
+* :ref:`glossary`
 
