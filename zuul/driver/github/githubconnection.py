@@ -363,6 +363,12 @@ class GithubConnection(BaseConnection):
             'canonical_hostname', self.server)
         self.source = driver.getSource(self)
 
+        # ssl verification must default to true
+        verify_ssl = self.connection_config.get('verify_ssl', 'true')
+        self.verify_ssl = True
+        if verify_ssl.lower() == 'false':
+            self.verify_ssl = False
+
         self._github = None
         self.app_id = None
         self.app_key = None
@@ -395,7 +401,11 @@ class GithubConnection(BaseConnection):
     def _createGithubClient(self):
         if self.server != 'github.com':
             url = 'https://%s/' % self.server
-            github = github3.GitHubEnterprise(url)
+            if not self.verify_ssl:
+                # disabling ssl verification is evil so emit a warning
+                self.log.warning("SSL verification disabled for "
+                                 "GitHub Enterprise")
+            github = github3.GitHubEnterprise(url, verify=self.verify_ssl)
         else:
             github = github3.GitHub()
 
