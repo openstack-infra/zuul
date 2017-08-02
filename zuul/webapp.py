@@ -137,7 +137,11 @@ class WebApp(threading.Thread):
         path = request.path.replace('/' + tenant_name, '')
         # Handle keys
         if path.startswith('/keys'):
-            return self._handle_keys(request, path)
+            try:
+                return self._handle_keys(request, path)
+            except Exception as e:
+                self.log.exception("Issue with _handle_keys")
+                raise
         for path_re, handler in self.routes.values():
             if path_re.match(path):
                 return handler(path, tenant_name, request)
