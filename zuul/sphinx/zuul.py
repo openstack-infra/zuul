@@ -25,18 +25,18 @@ from typing import Dict # noqa
 class ZuulConfigObject(ObjectDescription):
     object_names = {
         'attr': 'attribute',
+        'var': 'variable',
     }
 
     def get_path(self):
-        attr_path = self.env.ref_context.get('zuul:attr_path', [])
-        path = []
-        if attr_path:
-            path.extend(attr_path)
-        return path
+        return self.env.ref_context.get('zuul:attr_path', [])
+
+    def get_display_path(self):
+        return self.env.ref_context.get('zuul:display_attr_path', [])
 
     @property
     def parent_pathname(self):
-        return '.'.join(self.get_path())
+        return '.'.join(self.get_display_path())
 
     @property
     def full_pathname(self):
@@ -81,14 +81,19 @@ class ZuulAttrDirective(ZuulConfigObject):
     def before_content(self):
         path = self.env.ref_context.setdefault('zuul:attr_path', [])
         path.append(self.names[-1])
+        path = self.env.ref_context.setdefault('zuul:display_attr_path', [])
+        path.append(self.names[-1])
 
     def after_content(self):
         path = self.env.ref_context.get('zuul:attr_path')
         if path:
             path.pop()
+        path = self.env.ref_context.get('zuul:display_attr_path')
+        if path:
+            path.pop()
 
     def handle_signature(self, sig, signode):
-        path = self.get_path()
+        path = self.get_display_path()
         signode['is_multiline'] = True
         line = addnodes.desc_signature_line()
         line['add_permalink'] = True
@@ -115,6 +120,50 @@ class ZuulValueDirective(ZuulConfigObject):
         return sig
 
 
+class ZuulVarDirective(ZuulConfigObject):
+    has_content = True
+
+    option_spec = {
+        'type': lambda x: x,
+        'hidden': lambda x: x,
+    }
+
+    type_map = {
+        'list': '[]',
+        'dict': '{}',
+    }
+
+    def get_type_str(self):
+        if 'type' in self.options:
+            return self.type_map[self.options['type']]
+        return ''
+
+    def before_content(self):
+        path = self.env.ref_context.setdefault('zuul:attr_path', [])
+        element = self.names[-1]
+        path.append(element)
+        path = self.env.ref_context.setdefault('zuul:display_attr_path', [])
+        element = self.names[-1] + self.get_type_str()
+        path.append(element)
+
+    def after_content(self):
+        path = self.env.ref_context.get('zuul:attr_path')
+        if path:
+            path.pop()
+        path = self.env.ref_context.get('zuul:display_attr_path')
+        if path:
+            path.pop()
+
+    def handle_signature(self, sig, signode):
+        if 'hidden' in self.options:
+            return sig
+        path = self.get_display_path()
+        for x in path:
+            signode += addnodes.desc_addname(x + '.', x + '.')
+        signode += addnodes.desc_name(sig, sig)
+        return sig
+
+
 class ZuulDomain(Domain):
     name = 'zuul'
     label = 'Zuul'
@@ -122,6 +171,7 @@ class ZuulDomain(Domain):
     directives = {
         'attr': ZuulAttrDirective,
         'value': ZuulValueDirective,
+        'var': ZuulVarDirective,
     }
 
     roles = {
@@ -129,6 +179,8 @@ class ZuulDomain(Domain):
                          warn_dangling=True),
         'value': XRefRole(innernodeclass=nodes.inline,  # type: ignore
                           warn_dangling=True),
+        'var': XRefRole(innernodeclass=nodes.inline,  # type: ignore
+                        warn_dangling=True),
     }
 
     initial_data = {
