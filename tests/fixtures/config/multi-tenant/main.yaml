@@ -10,6 +10,7 @@
 
 - tenant:
     name: tenant-two
+    max-nodes-per-job: 10
     source:
       gerrit:
         config-projects:

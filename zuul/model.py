@@ -501,6 +501,9 @@ class NodeSet(object):
             name = ''
         return '<NodeSet %s%s%s>' % (name, self.nodes, self.groups)
 
+    def __len__(self):
+        return len(self.nodes)
+
 
 class NodeRequest(object):
     """A request for a set of nodes."""
@@ -2447,6 +2450,7 @@ class SemaphoreHandler(object):
 class Tenant(object):
     def __init__(self, name):
         self.name = name
+        self.max_nodes_per_job = 5
         self.layout = None
         # The unparsed configuration from the main zuul config for
         # this tenant.
