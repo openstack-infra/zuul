@@ -277,6 +277,11 @@ class TestExecutorRepos(ZuulTestCase):
                                 'layouts/repo-checkout-no-timer-override.yaml')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
+        # If APScheduler is in mid-event when we remove the job, we
+        # can end up with one more event firing, so give it an extra
+        # second to settle.
+        time.sleep(1)
+        self.waitUntilSettled()
 
         self.assertEquals(1, len(self.builds), "One build is running")
 
@@ -314,6 +319,11 @@ class TestExecutorRepos(ZuulTestCase):
         self.commitConfigUpdate('common-config',
                                 'layouts/repo-checkout-no-timer.yaml')
         self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+        # If APScheduler is in mid-event when we remove the job, we
+        # can end up with one more event firing, so give it an extra
+        # second to settle.
+        time.sleep(1)
         self.waitUntilSettled()
 
         self.assertEquals(2, len(self.builds), "Two builds are running")

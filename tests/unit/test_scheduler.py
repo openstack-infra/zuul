@@ -1892,6 +1892,11 @@ class TestScheduler(ZuulTestCase):
         self.commitConfigUpdate('common-config', 'layouts/no-timer.yaml')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
+        # If APScheduler is in mid-event when we remove the job, we
+        # can end up with one more event firing, so give it an extra
+        # second to settle.
+        time.sleep(1)
+        self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 1, "One timer job")
 
@@ -2855,6 +2860,12 @@ class TestScheduler(ZuulTestCase):
         # below don't race against more jobs being queued.
         self.commitConfigUpdate('common-config', 'layouts/no-timer.yaml')
         self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+        # If APScheduler is in mid-event when we remove the job, we
+        # can end up with one more event firing, so give it an extra
+        # second to settle.
+        time.sleep(1)
+        self.waitUntilSettled()
         self.executor_server.release()
         self.waitUntilSettled()
 
@@ -2901,6 +2912,11 @@ class TestScheduler(ZuulTestCase):
             self.commitConfigUpdate('common-config',
                                     'layouts/no-timer.yaml')
             self.sched.reconfigure(self.config)
+            self.waitUntilSettled()
+            # If APScheduler is in mid-event when we remove the job,
+            # we can end up with one more event firing, so give it an
+            # extra second to settle.
+            time.sleep(1)
             self.waitUntilSettled()
             self.assertEqual(len(self.builds), 1,
                              'Timer builds iteration #%d' % x)
@@ -2980,6 +2996,11 @@ class TestScheduler(ZuulTestCase):
         self.commitConfigUpdate('common-config', 'layouts/no-timer.yaml')
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
+        # If APScheduler is in mid-event when we remove the job, we
+        # can end up with one more event firing, so give it an extra
+        # second to settle.
+        time.sleep(1)
+        self.waitUntilSettled()
         self.executor_server.release('.*')
         self.waitUntilSettled()
 
@@ -3023,6 +3044,11 @@ class TestScheduler(ZuulTestCase):
                         'tests/fixtures/layout-no-timer.yaml')
         self.sched.reconfigure(self.config)
         self.registerJobs()
+        self.waitUntilSettled()
+        # If APScheduler is in mid-event when we remove the job, we
+        # can end up with one more event firing, so give it an extra
+        # second to settle.
+        time.sleep(1)
         self.waitUntilSettled()
         self.worker.release('.*')
         self.waitUntilSettled()
