@@ -322,6 +322,8 @@ executor running the job is available:
 **zuul.executor.log_root**
   The path to the logs directory.
 
+**zuul.executor.work_root**
+  The path to the working directory.
 
 .. _user_sitewide_variables:
 

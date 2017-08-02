@@ -13,6 +13,7 @@
           - zuul.executor.hostname is defined
           - zuul.executor.src_root is defined
           - zuul.executor.log_root is defined
+          - zuul.executor.work_root is defined
 
     - name: Assert zuul.project variables are valid.
       assert:
