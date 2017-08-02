@@ -101,9 +101,15 @@ class GithubReporter(BaseReporter):
                 url_pattern = sched_config.get('webapp', 'status_url')
         url = item.formatUrlPattern(url_pattern) if url_pattern else ''
 
-        description = ''
-        if item.pipeline.description:
-            description = item.pipeline.description
+        description = '%s status: %s' % (item.pipeline.name,
+                                         self._commit_status)
+
+        if len(description) >= 140:
+            # This pipeline is named with a long name and thus this
+            # desciption would overflow the GitHub limit of 1024 bytes.
+            # Truncate the description. In practice, anything over 140
+            # characters seems to trip the limit.
+            description = 'status: %s' % self._commit_status
 
         self.log.debug(
             'Reporting change %s, params %s, status:\n'
