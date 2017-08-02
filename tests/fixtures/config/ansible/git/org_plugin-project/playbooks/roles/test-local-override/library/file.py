@@ -1,4 +1,4 @@
-# Copyright 2016 Red Hat, Inc.
+# Copyright (c) 2017 Red Hat
 #
 # This module is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,19 +13,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this software.  If not, see <http://www.gnu.org/licenses/>.
 
+# This file, by existing, should be found instead of ansible's built in
+# file module.
 
-from zuul.ansible import paths
-fetch = paths._import_ansible_action_plugin("fetch")
 
+def main():
+    module = AnsibleModule(
+        argument_spec=dict(
+            path=dict(required=False, type='str'),
+            state=dict(required=False, type='dict'),
+        )
+    )
 
-class ActionModule(fetch.ActionModule):
+    module.exit_json(changed=False)
 
-    def run(self, tmp=None, task_vars=None):
-        if not paths._is_official_module(self):
-            return paths._fail_module_dict(self._task.action)
-
-        dest = self._task.args.get('dest', None)
-
-        if dest and not paths._is_safe_path(dest):
-            return paths._fail_dict(dest)
-        return super(ActionModule, self).run(tmp, task_vars)
+from ansible.module_utils.basic import *  # noqa
+from ansible.module_utils.basic import AnsibleModule

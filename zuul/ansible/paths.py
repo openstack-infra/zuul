@@ -17,6 +17,7 @@ import imp
 import os
 
 from ansible.errors import AnsibleError
+import ansible.modules
 import ansible.plugins.action
 import ansible.plugins.lookup
 
@@ -67,3 +68,30 @@ def _import_ansible_lookup_plugin(name):
     return imp.load_module(
         'zuul.ansible.protected.lookup.' + name,
         *imp.find_module(name, ansible.plugins.lookup.__path__))
+
+
+def _is_official_module(module):
+    task_module_path = module._shared_loader_obj.module_loader.find_plugin(
+        module._task.action)
+    ansible_module_path = os.path.dirname(ansible.modules.__file__)
+
+    # If the module is not beneath the main ansible library path that means
+    # someone has included a module with a playbook or a role that has the
+    # same name as one of the builtin modules. Normally we don't care, but for
+    # local execution it's a problem because their version could subvert our
+    # path checks and/or do other things on the local machine that we don't
+    # want them to do.
+    return task_module_path.startswith(ansible_module_path)
+
+
+def _fail_module_dict(module_name):
+    return dict(
+        failed=True,
+        msg="Local execution of overridden module {name} is forbidden".format(
+            name=module_name))
+
+
+def _fail_if_local_module(module_name):
+    if not _is_official_module(module_name):
+        msg_dict = _fail_module_dict(module_name)
+        raise AnsibleError(msg_dict['msg'])
