@@ -1032,9 +1032,10 @@ A Project Template defines one or more project-pipeline definitions
 which can be re-used by multiple projects.
 
 A Project Template uses the same syntax as a :ref:`project`
-definition, however, in the case of a template, the ``name`` attribute
-does not refer to the name of a project, but rather names the template
-so that it can be referenced in a `Project` definition.
+definition, however, in the case of a template, the
+:attr:`project.name` attribute does not refer to the name of a
+project, but rather names the template so that it can be referenced in
+a `Project` definition.
 
 .. _secret:
 
@@ -1065,16 +1066,23 @@ used to execute proposed but unreviewed changes can set the
 secrets at all in order to protect against someone proposing a change
 which exposes a secret.
 
-The following attributes are required:
+.. attr:: secret
 
-**name** (required)
-  The name of the secret, used in a :ref:`Job` definition to request
-  the secret.
+   The following attributes must appear on a secret:
 
-**data** (required)
-  A dictionary which will be added to the Ansible variables available
-  to the job.  The values can either be plain text strings, or
-  encrypted values.  See :ref:`encryption` for more information.
+   .. attr:: name
+      :required:
+
+      The name of the secret, used in a :ref:`Job` definition to
+      request the secret.
+
+   .. attr:: data
+      :required:
+
+      A dictionary which will be added to the Ansible variables
+      available to the job.  The values can either be plain text
+      strings, or encrypted values.  See :ref:`encryption` for more
+      information.
 
 .. _nodeset:
 
