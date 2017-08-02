@@ -75,6 +75,12 @@ The supported options in zuul.conf connections are:
   job's working directory, they appear under this directory name.
   ``canonical_hostname=git.example.com``
 
+**verify_ssl**
+  Optional: Enable or disable ssl verification for GitHub Enterprise.  This is
+  useful for a connection to a test installation. If not specified, defaults
+  to ``true``.
+  ``verify_ssl=true``
+
 Trigger Configuration
 ---------------------
 GitHub webhook events can be configured as triggers.
