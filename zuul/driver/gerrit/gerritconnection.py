@@ -25,8 +25,10 @@ import shlex
 import queue
 import voluptuous as v
 
+from typing import Dict, List
+
 from zuul.connection import BaseConnection
-from zuul.model import Ref, Tag, Branch
+from zuul.model import Ref, Tag, Branch, Project
 from zuul import exceptions
 from zuul.driver.gerrit.gerritmodel import GerritChange, GerritTriggerEvent
 
@@ -614,7 +616,7 @@ class GerritConnection(BaseConnection):
                                    (record.get('number'),))
         return changes
 
-    def getProjectBranches(self, project):
+    def getProjectBranches(self, project: Project) -> List[str]:
         refs = self.getInfoRefs(project)
         heads = [str(k[len('refs/heads/'):]) for k in refs.keys()
                  if k.startswith('refs/heads/')]
@@ -711,8 +713,8 @@ class GerritConnection(BaseConnection):
             chunk, more_changes = _query_chunk("%s %s" % (query, resume))
         return alldata
 
-    def _uploadPack(self, project_name):
-        cmd = "git-upload-pack %s" % project_name
+    def _uploadPack(self, project: Project) -> str:
+        cmd = "git-upload-pack %s" % project.name
         out, err = self._ssh(cmd, "0000")
         return out
 
@@ -757,7 +759,7 @@ class GerritConnection(BaseConnection):
             raise Exception("Gerrit error executing %s" % command)
         return (out, err)
 
-    def getInfoRefs(self, project):
+    def getInfoRefs(self, project: Project) -> Dict[str, str]:
         try:
             data = self._uploadPack(project)
         except:
