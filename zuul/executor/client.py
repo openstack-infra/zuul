@@ -152,6 +152,7 @@ class ExecutorClient(object):
         # replace the environment variables below.
         project = dict(
             name=item.change.project.name,
+            short_name=item.change.project.name.split('/')[-1],
             canonical_hostname=item.change.project.canonical_hostname,
             canonical_name=item.change.project.canonical_name)
 
@@ -181,6 +182,7 @@ class ExecutorClient(object):
             d = dict()
             d['project'] = dict(
                 name=i.change.project.name,
+                short_name=i.change.project.name.split('/')[-1],
                 canonical_hostname=i.change.project.canonical_hostname,
                 canonical_name=i.change.project.canonical_name)
             if hasattr(i.change, 'number'):
