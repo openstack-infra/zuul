@@ -29,6 +29,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinxcontrib.blockdiag',
     'sphinxcontrib.programoutput',
+    'zuul.sphinx.ansible',
     'zuul.sphinx.zuul',
 ]
 #extensions = ['sphinx.ext.intersphinx']

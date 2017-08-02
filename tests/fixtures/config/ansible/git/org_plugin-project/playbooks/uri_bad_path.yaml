@@ -1,0 +1,6 @@
+- hosts: localhost
+  tasks:
+    - uri:
+        method: GET
+        url: https://example.com
+        path: /tmp/example.out
