@@ -64,7 +64,7 @@ class BaseSource(object, metaclass=abc.ABCMeta):
         """Get a project."""
 
     @abc.abstractmethod
-    def getProjectBranches(self, project):
+    def getProjectBranches(self, project, tenant):
         """Get branches for a project"""
 
     @abc.abstractmethod

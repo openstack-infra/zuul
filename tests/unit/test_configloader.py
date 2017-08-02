@@ -182,6 +182,7 @@ class TestTenantGroups3(TenantParserTestCase):
 
     def test_tenant_groups3(self):
         tenant = self.sched.abide.tenants.get('tenant-one')
+        self.assertEqual(False, tenant.exclude_unprotected_branches)
         self.assertEqual(['common-config'],
                          [x.name for x in tenant.config_projects])
         self.assertEqual(['org/project1', 'org/project2'],
@@ -210,6 +211,29 @@ class TestTenantGroups3(TenantParserTestCase):
                         project2_config.pipelines['check'].job_list.jobs)
         self.assertTrue('project2-job' in
                         project2_config.pipelines['check'].job_list.jobs)
+
+
+class TestTenantUnprotectedBranches(TenantParserTestCase):
+    tenant_config_file = 'config/tenant-parser/unprotected-branches.yaml'
+
+    def test_tenant_unprotected_branches(self):
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        self.assertEqual(True, tenant.exclude_unprotected_branches)
+
+        self.assertEqual(['common-config'],
+                         [x.name for x in tenant.config_projects])
+        self.assertEqual(['org/project1', 'org/project2'],
+                         [x.name for x in tenant.untrusted_projects])
+
+        tpc = tenant.project_configs
+        project_name = tenant.config_projects[0].canonical_name
+        self.assertEqual(False, tpc[project_name].exclude_unprotected_branches)
+
+        project_name = tenant.untrusted_projects[0].canonical_name
+        self.assertIsNone(tpc[project_name].exclude_unprotected_branches)
+
+        project_name = tenant.untrusted_projects[1].canonical_name
+        self.assertIsNone(tpc[project_name].exclude_unprotected_branches)
 
 
 class TestSplitConfig(ZuulTestCase):

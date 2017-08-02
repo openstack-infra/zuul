@@ -54,8 +54,8 @@ class GerritSource(BaseSource):
     def getProjectOpenChanges(self, project):
         return self.connection.getProjectOpenChanges(project)
 
-    def getProjectBranches(self, project):
-        return self.connection.getProjectBranches(project)
+    def getProjectBranches(self, project, tenant):
+        return self.connection.getProjectBranches(project, tenant)
 
     def getGitUrl(self, project):
         return self.connection.getGitUrl(project)

@@ -68,8 +68,8 @@ class GithubSource(BaseSource):
             self.connection.addProject(p)
         return p
 
-    def getProjectBranches(self, project):
-        return self.connection.getProjectBranches(project)
+    def getProjectBranches(self, project, tenant):
+        return self.connection.getProjectBranches(project, tenant)
 
     def getProjectOpenChanges(self, project):
         """Get the open changes for a project."""

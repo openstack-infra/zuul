@@ -2091,6 +2091,10 @@ class TenantProjectConfig(object):
         self.load_classes = set()
         self.shadow_projects = set()
 
+        # The tenant's default setting of exclude_unprotected_branches will
+        # be overridden by this one if not None.
+        self.exclude_unprotected_branches = None
+
 
 class ProjectConfig(object):
     # Represents a project cofiguration
@@ -2451,6 +2455,7 @@ class Tenant(object):
     def __init__(self, name):
         self.name = name
         self.max_nodes_per_job = 5
+        self.exclude_unprotected_branches = False
         self.layout = None
         # The unparsed configuration from the main zuul config for
         # this tenant.

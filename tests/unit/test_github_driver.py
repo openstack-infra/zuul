@@ -683,3 +683,20 @@ class TestGithubDriver(ZuulTestCase):
             self.fake_github.emitEvent,
             ('ping', pevent),
         )
+
+
+class TestGithubUnprotectedBranches(ZuulTestCase):
+    config_file = 'zuul-github-driver.conf'
+    tenant_config_file = 'config/unprotected-branches/main.yaml'
+
+    def test_unprotected_branches(self):
+        tenant = self.sched.abide.tenants.get('tenant-one')
+
+        project1 = tenant.untrusted_projects[0]
+        project2 = tenant.untrusted_projects[1]
+
+        # project1 should have parsed master
+        self.assertIn('master', project1.unparsed_branch_config.keys())
+
+        # project2 should have no parsed branch
+        self.assertEqual(0, len(project2.unparsed_branch_config.keys()))

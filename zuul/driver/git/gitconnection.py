@@ -48,7 +48,7 @@ class GitConnection(BaseConnection):
     def addProject(self, project):
         self.projects[project.name] = project
 
-    def getProjectBranches(self, project):
+    def getProjectBranches(self, project, tenant):
         # TODO(jeblair): implement; this will need to handle local or
         # remote git urls.
         raise NotImplemented()

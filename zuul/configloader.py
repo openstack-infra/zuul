@@ -929,6 +929,7 @@ class TenantParser(object):
         'include': to_list(classes),
         'exclude': to_list(classes),
         'shadow': to_list(str),
+        'exclude-unprotected-branches': bool,
     }}
 
     project = vs.Any(str, project_dict)
@@ -965,7 +966,9 @@ class TenantParser(object):
     def getSchema(connections=None):
         tenant = {vs.Required('name'): str,
                   'max-nodes-per-job': int,
-                  'source': TenantParser.validateTenantSources(connections)}
+                  'source': TenantParser.validateTenantSources(connections),
+                  'exclude-unprotected-branches': bool,
+                  }
         return vs.Schema(tenant)
 
     @staticmethod
@@ -975,6 +978,10 @@ class TenantParser(object):
         tenant = model.Tenant(conf['name'])
         if conf.get('max-nodes-per-job') is not None:
             tenant.max_nodes_per_job = conf['max-nodes-per-job']
+        if conf.get('exclude-unprotected-branches') is not None:
+            tenant.exclude_unprotected_branches = \
+                conf['exclude-unprotected-branches']
+
         tenant.unparsed_config = conf
         unparsed_config = model.UnparsedTenantConfig()
         # tpcs is TenantProjectConfigs
@@ -993,7 +1000,7 @@ class TenantParser(object):
             TenantParser._loadTenantInRepoLayouts(merger, connections,
                                                   tenant.config_projects,
                                                   tenant.untrusted_projects,
-                                                  cached)
+                                                  cached, tenant)
         unparsed_config.extend(tenant.config_projects_config)
         unparsed_config.extend(tenant.untrusted_projects_config)
         tenant.layout = TenantParser._parseLayout(base, tenant,
@@ -1065,6 +1072,7 @@ class TenantParser(object):
             project = source.getProject(conf)
             project_include = current_include
             shadow_projects = []
+            project_exclude_unprotected_branches = None
         else:
             project_name = list(conf.keys())[0]
             project = source.getProject(project_name)
@@ -1078,10 +1086,14 @@ class TenantParser(object):
                 as_list(conf[project_name].get('exclude', [])))
             if project_exclude:
                 project_include = frozenset(project_include - project_exclude)
+            project_exclude_unprotected_branches = conf[project_name].get(
+                'exclude-unprotected-branches', None)
 
         tenant_project_config = model.TenantProjectConfig(project)
         tenant_project_config.load_classes = frozenset(project_include)
         tenant_project_config.shadow_projects = shadow_projects
+        tenant_project_config.exclude_unprotected_branches = \
+            project_exclude_unprotected_branches
 
         return tenant_project_config
 
@@ -1148,7 +1160,7 @@ class TenantParser(object):
 
     @staticmethod
     def _loadTenantInRepoLayouts(merger, connections, config_projects,
-                                 untrusted_projects, cached):
+                                 untrusted_projects, cached, tenant):
         config_projects_config = model.UnparsedTenantConfig()
         untrusted_projects_config = model.UnparsedTenantConfig()
         jobs = []
@@ -1196,7 +1208,7 @@ class TenantParser(object):
             # branch.  Remember the branch and then implicitly add a
             # branch selector to each job there.  This makes the
             # in-repo configuration apply only to that branch.
-            for branch in project.source.getProjectBranches(project):
+            for branch in project.source.getProjectBranches(project, tenant):
                 project.unparsed_branch_config[branch] = \
                     model.UnparsedTenantConfig()
                 job = merger.getFiles(
@@ -1416,11 +1428,11 @@ class ConfigLoader(object):
         new_abide.tenants[tenant.name] = new_tenant
         return new_abide
 
-    def _loadDynamicProjectData(self, config, project, files, trusted):
+    def _loadDynamicProjectData(self, config, project, files, trusted, tenant):
         if trusted:
             branches = ['master']
         else:
-            branches = project.source.getProjectBranches(project)
+            branches = project.source.getProjectBranches(project, tenant)
 
         for branch in branches:
             fns1 = []
@@ -1472,11 +1484,12 @@ class ConfigLoader(object):
         if include_config_projects:
             config = model.UnparsedTenantConfig()
             for project in tenant.config_projects:
-                self._loadDynamicProjectData(config, project, files, True)
+                self._loadDynamicProjectData(
+                    config, project, files, True, tenant)
         else:
             config = tenant.config_projects_config.copy()
         for project in tenant.untrusted_projects:
-            self._loadDynamicProjectData(config, project, files, False)
+            self._loadDynamicProjectData(config, project, files, False, tenant)
 
         layout = model.Layout(tenant)
         # NOTE: the actual pipeline objects (complete with queues and

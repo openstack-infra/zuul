@@ -81,7 +81,7 @@ class TimerDriver(Driver, TriggerInterface):
     def _onTrigger(self, tenant, pipeline_name, timespec):
         for project_name in tenant.layout.project_configs.keys():
             (trusted, project) = tenant.getProject(project_name)
-            for branch in project.source.getProjectBranches(project):
+            for branch in project.source.getProjectBranches(project, tenant):
                 event = TimerTriggerEvent()
                 event.type = 'timer'
                 event.timespec = timespec

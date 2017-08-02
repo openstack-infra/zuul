@@ -698,11 +698,21 @@ class GithubConnection(BaseConnection):
     def addProject(self, project):
         self.projects[project.name] = project
 
-    def getProjectBranches(self, project):
+    def getProjectBranches(self, project, tenant):
+
+        # Evaluate if unprotected branches should be excluded or not. The first
+        # match wins. The order is project -> tenant (default is false).
+        project_config = tenant.project_configs.get(project.canonical_name)
+        if project_config.exclude_unprotected_branches is not None:
+            exclude_unprotected = project_config.exclude_unprotected_branches
+        else:
+            exclude_unprotected = tenant.exclude_unprotected_branches
+
         github = self.getGithubClient()
         owner, proj = project.name.split('/')
         repository = github.repository(owner, proj)
-        branches = [branch.name for branch in repository.branches()]
+        branches = [branch.name for branch in repository.branches(
+            protected=exclude_unprotected)]
         log_rate_limit(self.log, github)
         return branches
 

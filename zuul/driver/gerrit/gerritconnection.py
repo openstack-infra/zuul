@@ -616,7 +616,7 @@ class GerritConnection(BaseConnection):
                                    (record.get('number'),))
         return changes
 
-    def getProjectBranches(self, project: Project) -> List[str]:
+    def getProjectBranches(self, project: Project, tenant) -> List[str]:
         refs = self.getInfoRefs(project)
         heads = [str(k[len('refs/heads/'):]) for k in refs.keys()
                  if k.startswith('refs/heads/')]
