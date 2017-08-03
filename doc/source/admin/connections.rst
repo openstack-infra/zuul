@@ -23,9 +23,11 @@ connect to a system.  Each connection in Zuul is associated with a
 driver.
 
 To configure a connection in Zuul, select a unique name for the
-connection and add a section to **zuul.conf** with the form
-"[connection NAME]".  For example, a connection to a gerrit server may
-appear as::
+connection and add a section to ``zuul.conf`` with the form
+``[connection NAME]``.  For example, a connection to a gerrit server
+may appear as:
+
+.. code-block:: ini
 
   [connection mygerritserver]
   driver=gerrit
