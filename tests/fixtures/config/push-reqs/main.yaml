@@ -3,7 +3,7 @@
     source:
       github:
         config-projects:
-          - common-config
+          - org/common-config
         untrusted-projects:
           - org/project1
       gerrit:
