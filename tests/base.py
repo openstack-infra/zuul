@@ -559,8 +559,23 @@ class FakeGithub(object):
             self.name = "Github User"
             self.email = "github.user@example.com"
 
+    class FakeBranch(object):
+        def __init__(self, branch='master'):
+            self.name = branch
+
+    class FakeRepository(object):
+        def __init__(self):
+            self._branches = [FakeGithub.FakeBranch()]
+
+        def branches(self):
+            return self._branches
+
     def user(self, login):
         return self.FakeUser(login)
+
+    def repository(self, owner, proj):
+        repo = self.FakeRepository()
+        return repo
 
 
 class FakeGithubPullRequest(object):
@@ -999,12 +1014,6 @@ class FakeGithubConnection(githubconnection.GithubConnection):
 
     def real_getGitUrl(self, project):
         return super(FakeGithubConnection, self).getGitUrl(project)
-
-    def getProjectBranches(self, project):
-        """Masks getProjectBranches since we don't have a real github"""
-
-        # just returns master for now
-        return ['master']
 
     def commentPull(self, project, pr_number, message):
         # record that this got reported
