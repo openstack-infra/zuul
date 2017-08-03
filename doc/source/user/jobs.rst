@@ -91,23 +91,25 @@ the same name.  Each of the three sources is described below.
 Job Variables
 ~~~~~~~~~~~~~
 
-Any variables specified in the job definition are available as Ansible
-host variables.  They are added to the `vars` section of the inventory
-file under the `all` hosts group, so they are available to all hosts.
-Simply refer to them by the name specified in the job's `vars`
-section.
+Any variables specified in the job definition (using the
+:attr:`job.vars` attribute) are available as Ansible host variables.
+They are added to the ``vars`` section of the inventory file under the
+``all`` hosts group, so they are available to all hosts.  Simply refer
+to them by the name specified in the job's ``vars`` section.
 
 Secrets
 ~~~~~~~
 
-Secrets also appear as variables available to Ansible.  Unlike job
-variables, these are not added to the inventory file (so that the
-inventory file may be kept for debugging purposes without revealing
-secrets).  But they are still available to Ansible as normal
+:ref:`Secrets <secret>` also appear as variables available to Ansible.
+Unlike job variables, these are not added to the inventory file (so
+that the inventory file may be kept for debugging purposes without
+revealing secrets).  But they are still available to Ansible as normal
 variables.  Because secrets are groups of variables, they will appear
 as a dictionary structure in templates, with the dictionary itself
 being the name of the secret, and its members the individual items in
-the secret.  For example, a secret defined as::
+the secret.  For example, a secret defined as:
+
+.. code-block:: yaml
 
   - secret:
       name: credentials
@@ -119,13 +121,12 @@ Might be used in a template as::
 
  {{ credentials.username }} {{ credentials.password }}
 
-.. TODO: xref job vars
 
 Zuul Variables
 ~~~~~~~~~~~~~~
 
 Zuul supplies not only the variables specified by the job definition
-to Ansible, but also some variables from the Zuul itself.
+to Ansible, but also some variables from Zuul itself.
 
 When a pipeline is triggered by an action, it enqueues items which may
 vary based on the pipeline's configuration.  For example, when a new
@@ -137,93 +138,123 @@ enqueued in a pipeline are git references, and therefore share some
 attributes in common.  But other attributes may vary based on the type
 of item.
 
-All items provide the following information as Ansible variables:
+.. var:: zuul
 
-**zuul.build**
-  The UUID of the build.  A build is a single execution of a job.
-  When an item is enqueued into a pipeline, this usually results in
-  one build of each job configured for that item's project.  However,
-  items may be re-enqueued in which case another build may run.  In
-  dependent pipelines, the same job may run multiple times for the
-  same item as circumstances change ahead in the queue.  Each time a
-  job is run, for whatever reason, it is acompanied with a new
-  unique id.
+   All items provide the following information as Ansible variables
+   under the ``zuul`` key:
 
-**zuul.buildset**
-  The build set UUID.  When Zuul runs jobs for an item, the collection
-  of those jobs is known as a buildset.  If the configuration of items
-  ahead in a dependent pipeline changes, Zuul creates a new buildset
-  and restarts all of the jobs.
+   .. var:: build
 
-**zuul.ref**
-  The git ref of the item.  This will be the full path (e.g.,
-  'refs/heads/master' or 'refs/changes/...').
+      The UUID of the build.  A build is a single execution of a job.
+      When an item is enqueued into a pipeline, this usually results
+      in one build of each job configured for that item's project.
+      However, items may be re-enqueued in which case another build
+      may run.  In dependent pipelines, the same job may run multiple
+      times for the same item as circumstances change ahead in the
+      queue.  Each time a job is run, for whatever reason, it is
+      acompanied with a new unique id.
 
-**zuul.pipeline**
-  The name of the pipeline in which the job is being run.
+   .. var:: buildset
 
-**zuul.job**
-  The name of the job being run.
+      The build set UUID.  When Zuul runs jobs for an item, the
+      collection of those jobs is known as a buildset.  If the
+      configuration of items ahead in a dependent pipeline changes,
+      Zuul creates a new buildset and restarts all of the jobs.
 
-**zuul.voting**
-  A boolean indicating whether the job is voting.
+   .. var:: ref
 
-**zuul.project**
-  The item's project.  This is a data structure with the following
-  fields:
+      The git ref of the item.  This will be the full path (e.g.,
+      `refs/heads/master` or `refs/changes/...`).
 
-**zuul.project.name**
-  The name of the project, excluding hostname.  E.g., `org/project`.
+   .. var:: pipeline
 
-**zuul.project.short_name**
-  The name of the project, excluding directories or organizations.
-  E.g., `project`.
+      The name of the pipeline in which the job is being run.
 
-**zuul.project.canonical_hostname**
-  The canonical hostname where the project lives.  E.g.,
-  `git.example.com`.
+   .. var:: job
 
-**zuul.project.canonical_name**
-  The full canonical name of the project including hostname.  E.g.,
-  `git.example.com/org/project`.
+      The name of the job being run.
 
-**zuul.tenant**
-  The name of the current Zuul tenant.
+   .. var:: voting
 
-**zuul.jobtags**
-  A list of tags associated with the job.  Not to be confused with git
-  tags, these are simply free-form text fields that can be used by the
-  job for reporting or classification purposes.
+      A boolean indicating whether the job is voting.
 
-**zuul.items**
+   .. var:: project
 
-  A list of dictionaries, each representing an item being tested with
-  this change with the format:
+      The item's project.  This is a data structure with the following
+      fields:
 
-  **project.name**
-    The name of the project, excluding hostname.  E.g., `org/project`.
+      .. var:: name
 
-  **project.short_name**
-    The name of the project, excluding directories or organizations.
-    E.g., `project`.
+         The name of the project, excluding hostname.  E.g., `org/project`.
 
-  **project.canonical_hostname**
-    The canonical hostname where the project lives.  E.g.,
-    `git.example.com`.
+      .. var:: short_name
 
-  **project.canonical_name**
-    The full canonical name of the project including hostname.  E.g.,
-    `git.example.com/org/project`.
+         The name of the project, excluding directories or
+         organizations.  E.g., `project`.
 
-  **branch**
-    The target branch of the change (without the `refs/heads/` prefix).
+      .. var:: canonical_hostname
 
-  **change**
-    The identifier for the change.
+         The canonical hostname where the project lives.  E.g.,
+         `git.example.com`.
 
-  **patchset**
-    The patchset identifier for the change.  If a change is revised,
-    this will have a different value.
+      .. var:: canonical_name
+
+         The full canonical name of the project including hostname.
+         E.g., `git.example.com/org/project`.
+
+   .. var:: tenant
+
+      The name of the current Zuul tenant.
+
+   .. var:: jobtags
+
+      A list of tags associated with the job.  Not to be confused with
+      git tags, these are simply free-form text fields that can be
+      used by the job for reporting or classification purposes.
+
+   .. var:: items
+      :type: list
+
+      A list of dictionaries, each representing an item being tested
+      with this change with the format:
+
+      .. var:: project
+
+         The item's project.  This is a data structure with the
+         following fields:
+
+         .. var:: name
+
+            The name of the project, excluding hostname.  E.g.,
+            `org/project`.
+
+         .. var:: short_name
+
+            The name of the project, excluding directories or
+            organizations.  E.g., `project`.
+
+         .. var:: canonical_hostname
+
+            The canonical hostname where the project lives.  E.g.,
+            `git.example.com`.
+
+         .. var:: canonical_name
+
+            The full canonical name of the project including hostname.
+            E.g., `git.example.com/org/project`.
+
+      .. var:: branch
+
+         The target branch of the change (without the `refs/heads/` prefix).
+
+      .. var:: change
+
+         The identifier for the change.
+
+      .. var:: patchset
+
+         The patchset identifier for the change.  If a change is
+         revised, this will have a different value.
 
 Change Items
 ++++++++++++
@@ -233,15 +264,21 @@ which has not yet been merged into the repository (e.g., a gerrit
 change or a GitHub pull request).  The following additional variables
 are available:
 
-**zuul.branch**
-  The target branch of the change (without the `refs/heads/` prefix).
+.. var:: zuul
+   :hidden:
 
-**zuul.change**
-  The identifier for the change.
+   .. var:: branch
 
-**zuul.patchset**
-  The patchset identifier for the change.  If a change is revised,
-  this will have a different value.
+      The target branch of the change (without the `refs/heads/` prefix).
+
+   .. var:: change
+
+      The identifier for the change.
+
+   .. var:: patchset
+
+      The patchset identifier for the change.  If a change is revised,
+      this will have a different value.
 
 Branch Items
 ++++++++++++
@@ -252,18 +289,25 @@ direct push).  Or it may have been enqueued by a timer for the purpose
 of verifying the current condition of the branch.  The following
 additional variables are available:
 
-**zuul.branch**
-  The name of the item's branch (without the `refs/heads/` prefix).
+.. var:: zuul
+   :hidden:
 
-**zuul.oldrev**
-  If the item was enqueued as the result of a change merging or being
-  pushed to the branch, the git sha of the old revision will be
-  included here.  Otherwise, this variable will be undefined.
+   .. var:: branch
 
-**zuul.newrev**
-  If the item was enqueued as the result of a change merging or being
-  pushed to the branch, the git sha of the new revision will be
-  included here.  Otherwise, this variable will be undefined.
+      The name of the item's branch (without the `refs/heads/`
+      prefix).
+
+   .. var:: oldrev
+
+      If the item was enqueued as the result of a change merging or
+      being pushed to the branch, the git sha of the old revision will
+      be included here.  Otherwise, this variable will be undefined.
+
+   .. var:: newrev
+
+      If the item was enqueued as the result of a change merging or
+      being pushed to the branch, the git sha of the new revision will
+      be included here.  Otherwise, this variable will be undefined.
 
 Tag Items
 +++++++++
@@ -272,18 +316,24 @@ This represents a git tag.  The item may have been enqueued because a
 tag was created or deleted.  The following additional variables are
 available:
 
-**zuul.tag**
-  The name of the item's tag (without the `refs/tags/` prefix).
+.. var:: zuul
+   :hidden:
 
-**zuul.oldrev**
-  If the item was enqueued as the result of a tag being deleted, the
-  previous git sha of the tag will be included here.  If the tag was
-  created, this variable will be undefined.
+   .. var:: tag
 
-**zuul.newrev**
-  If the item was enqueued as the result of a tag being created, the
-  new git sha of the tag will be included here.  If the tag was
-  deleted, this variable will be undefined.
+      The name of the item's tag (without the `refs/tags/` prefix).
+
+   .. var:: oldrev
+
+      If the item was enqueued as the result of a tag being deleted,
+      the previous git sha of the tag will be included here.  If the
+      tag was created, this variable will be undefined.
+
+   .. var:: newrev
+
+      If the item was enqueued as the result of a tag being created,
+      the new git sha of the tag will be included here.  If the tag
+      was deleted, this variable will be undefined.
 
 Ref Items
 +++++++++
@@ -293,15 +343,20 @@ tag.  Note that all items include a `ref` attribute which may be used
 to identify the ref.  The following additional variables are
 available:
 
-**zuul.oldrev**
-  If the item was enqueued as the result of a ref being deleted, the
-  previous git sha of the ref will be included here.  If the ref was
-  created, this variable will be undefined.
+.. var:: zuul
+   :hidden:
 
-**zuul.newrev**
-  If the item was enqueued as the result of a ref being created, the
-  new git sha of the ref will be included here.  If the ref was
-  deleted, this variable will be undefined.
+   .. var:: oldrev
+
+      If the item was enqueued as the result of a ref being deleted,
+      the previous git sha of the ref will be included here.  If the
+      ref was created, this variable will be undefined.
+
+   .. var:: newrev
+
+      If the item was enqueued as the result of a ref being created,
+      the new git sha of the ref will be included here.  If the ref
+      was deleted, this variable will be undefined.
 
 Working Directory
 +++++++++++++++++
@@ -309,17 +364,29 @@ Working Directory
 Additionally, some information about the working directory and the
 executor running the job is available:
 
-**zuul.executor.hostname**
-  The hostname of the executor.
+.. var:: zuul
+   :hidden:
 
-**zuul.executor.src_root**
-  The path to the source directory.
+   .. var:: executor
 
-**zuul.executor.log_root**
-  The path to the logs directory.
+      A number of values related to the executor running the job are
+      available:
 
-**zuul.executor.work_root**
-  The path to the working directory.
+      .. var:: hostname
+
+         The hostname of the executor.
+
+      .. var:: src_root
+
+         The path to the source directory.
+
+      .. var:: log_root
+
+         The path to the logs directory.
+
+      .. var:: work_root
+
+         The path to the working directory.
 
 .. _user_sitewide_variables:
 
@@ -355,7 +422,9 @@ Return Values
 
 The job may return some values to Zuul to affect its behavior.  To
 return a value, use the *zuul_return* Ansible module in a job
-playbook.  For example::
+playbook.  For example:
+
+.. code-block:: yaml
 
   tasks:
     - zuul_return:
@@ -368,7 +437,9 @@ Will return the dictionary "{'foo': 'bar'}" to Zuul.
 
 Several uses of these values are planned, but the only currently
 implemented use is to set the log URL for a build.  To do so, set the
-**zuul.log_url** value.  For example::
+**zuul.log_url** value.  For example:
+
+.. code-block:: yaml
 
   tasks:
     - zuul_return:
