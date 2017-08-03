@@ -7,15 +7,35 @@ Components
 
 Zuul is a distributed system consisting of several components, each of
 which is described below.  All Zuul processes read the
-**/etc/zuul/zuul.conf** file (an alternate location may be supplied on
+``/etc/zuul/zuul.conf`` file (an alternate location may be supplied on
 the command line) which uses an INI file syntax.  Each component may
 have its own configuration file, though you may find it simpler to use
 the same file for all components.
 
-A minimal Zuul system may consist of a *scheduler* and *executor* both
-running on the same host.  Larger installations should consider
-running multiple executors, each on a dedicated host, and running
-mergers on dedicated hosts as well.
+An example ``zuul.conf``:
+
+.. code-block:: ini
+
+   [gearman]
+   server=localhost
+
+   [gearman_server]
+   start=true
+   log_config=/etc/zuul/gearman-logging.yaml
+
+   [zookeeper]
+   hosts=zk1.example.com,zk2.example.com,zk3.example.com
+
+   [webapp]
+   status_url=https://zuul.example.com/status
+
+   [scheduler]
+   log_config=/etc/zuul/scheduler-logging.yaml
+
+A minimal Zuul system may consist of a :ref:`scheduler` and
+:ref:`executor` both running on the same host.  Larger installations
+should consider running multiple executors, each on a dedicated host,
+and running mergers on dedicated hosts as well.
 
 Common
 ------
@@ -25,46 +45,52 @@ The following applies to all Zuul components.
 Configuration
 ~~~~~~~~~~~~~
 
-The following sections of **zuul.conf** are used by all Zuul components:
+The following sections of ``zuul.conf`` are used by all Zuul components:
 
-gearman
-"""""""
 
-Client connection information for gearman.
+.. attr:: gearman
 
-**server** (required)
-  Hostname or IP address of the Gearman server::
+   Client connection information for Gearman.
 
-     server=gearman.example.com
+   .. attr:: server
+      :required:
 
-**port**
-  Port on which the Gearman server is listening::
+      Hostname or IP address of the Gearman server.
 
-     port=4730
+   .. attr:: port
+      :default: 4730
 
-**ssl_ca**
-  An openssl file containing a set of concatenated “certification
-  authority” certificates in PEM formet.
+      Port on which the Gearman server is listening.
 
-**ssl_cert**
-  An openssl file containing the client public certificate in PEM format.
+   .. attr:: ssl_ca
 
-**ssl_key**
-  An openssl file containing the client private key in PEM format.
+      An openssl file containing a set of concatenated “certification
+      authority” certificates in PEM formet.
 
-zookeeper
-"""""""""
+   .. attr:: ssl_cert
+
+      An openssl file containing the client public certificate in PEM format.
+
+   .. attr:: ssl_key
+
+      An openssl file containing the client private key in PEM format.
 
 .. NOTE: this is a white lie at this point, since only the scheduler
    uses this, however, we expect other components to use it later, so
    it's reasonable for admins to plan for this now.
 
-**hosts**
-  A list of zookeeper hosts for Zuul to use when communicating with
-  Nodepool::
+.. attr:: zookeeper
 
-     hosts=zk1.example.com,zk2.example.com,zk3.example.com
+   Client connection information for ZooKeeper
 
+   .. attr:: hosts
+      :required:
+
+      A list of zookeeper hosts for Zuul to use when communicating
+      with Nodepool.
+
+
+.. _scheduler:
 
 Scheduler
 ---------
@@ -79,85 +105,84 @@ results.
 Configuration
 ~~~~~~~~~~~~~
 
-The following sections of **zuul.conf** are used by the scheduler:
+The following sections of ``zuul.conf`` are used by the scheduler:
 
-gearman_server
-""""""""""""""
 
-The builtin gearman server. Zuul can fork a gearman process from itself rather
-than connecting to an external one.
+.. attr:: gearman_server
 
-**start**
-  Whether to start the internal Gearman server (default: False)::
+   The builtin gearman server. Zuul can fork a gearman process from
+   itself rather than connecting to an external one.
 
-     start=true
+   .. attr:: start
+      :default: false
 
-**listen_address**
-  IP address or domain name on which to listen (default: all addresses)::
+      Whether to start the internal Gearman server.
 
-     listen_address=127.0.0.1
+   .. attr:: listen_address
+      :default: all addresses
 
-**log_config**
-  Path to log config file for internal Gearman server::
+      IP address or domain name on which to listen.
 
-     log_config=/etc/zuul/gearman-logging.yaml
+   .. attr:: log_config
 
-**ssl_ca**
-  An openssl file containing a set of concatenated “certification authority”
-  certificates in PEM formet.
+      Path to log config file for internal Gearman server.
 
-**ssl_cert**
-  An openssl file containing the server public certificate in PEM format.
+   .. attr:: ssl_ca
 
-**ssl_key**
-  An openssl file containing the server private key in PEM format.
+      An openssl file containing a set of concatenated “certification
+      authority” certificates in PEM formet.
 
-webapp
-""""""
+   .. attr:: ssl_cert
 
-**listen_address**
-  IP address or domain name on which to listen (default: 0.0.0.0)::
+      An openssl file containing the server public certificate in PEM
+      format.
 
-     listen_address=127.0.0.1
+   .. attr:: ssl_key
 
-**port**
-  Port on which the webapp is listening (default: 8001)::
+      An openssl file containing the server private key in PEM format.
 
-     port=8008
+.. attr:: webapp
 
-**status_expiry**
-  Zuul will cache the status.json file for this many seconds (default: 1)::
+   .. attr:: listen_address
+      :default: all addresses
 
-     status_expiry=1
+      IP address or domain name on which to listen.
 
-**status_url**
-  URL that will be posted in Zuul comments made to changes when
-  starting jobs for a change.  Used by zuul-scheduler only::
+   .. attr:: port
+      :default: 8001
 
-     status_url=https://zuul.example.com/status
+      Port on which the webapp is listening.
 
-scheduler
-"""""""""
+   .. attr:: status_expiry
+      :default: 1
 
-**tenant_config**
-  Path to tenant config file::
+      Zuul will cache the status.json file for this many seconds.
 
-     layout_config=/etc/zuul/tenant.yaml
+   .. attr:: status_url
 
-**log_config**
-  Path to log config file::
+      URL that will be posted in Zuul comments made to changes when
+      starting jobs for a change.
 
-     log_config=/etc/zuul/scheduler-logging.yaml
+      .. TODO: is this effectively required?
 
-**pidfile**
-  Path to PID lock file::
+.. attr:: scheduler
 
-     pidfile=/var/run/zuul/scheduler.pid
+   .. attr:: tenant_config
+      :required:
 
-**state_dir**
-  Path to directory that Zuul should save state to::
+      Path to :ref:`tenant-config` file.
 
-     state_dir=/var/lib/zuul
+   .. attr:: log_config
+
+      Path to log config file.
+
+   .. attr:: pidfile
+
+      Path to PID lock file.
+
+   .. attr:: state_dir
+
+      Path to directory in which Zuul should save its state.
 
 Operation
 ~~~~~~~~~
@@ -169,7 +194,8 @@ Most of Zuul's configuration is automatically updated as changes to
 the repositories which contain it are merged.  However, Zuul must be
 explicitly notified of changes to the tenant config file, since it is
 not read from a git repository.  To do so, send the scheduler PID
-(saved in the pidfile specified in the configuration) a SIGHUP signal.
+(saved in the pidfile specified in the configuration) a `SIGHUP`
+signal.
 
 Merger
 ------
