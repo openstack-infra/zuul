@@ -274,10 +274,10 @@ class GerritConnection(BaseConnection):
         self.gerrit_event_connector = None
         self.source = driver.getSource(self)
 
-    def getProject(self, name):
+    def getProject(self, name: str) -> Project:
         return self.projects.get(name)
 
-    def addProject(self, project):
+    def addProject(self, project: Project) -> None:
         self.projects[project.name] = project
 
     def maintainCache(self, relevant):
@@ -542,7 +542,8 @@ class GerritConnection(BaseConnection):
             return True
         return False
 
-    def _waitForRefSha(self, project, ref, old_sha=''):
+    def _waitForRefSha(self, project: Project,
+                       ref: str, old_sha: str='') -> bool:
         # Wait for the ref to show up in the repo
         start = time.time()
         while time.time() - start < self.replication_timeout:
@@ -552,8 +553,8 @@ class GerritConnection(BaseConnection):
             time.sleep(self.replication_retry_interval)
         return False
 
-    def getRefSha(self, project, ref):
-        refs = {}
+    def getRefSha(self, project: Project, ref: str) -> str:
+        refs = {}  # type: Dict[str, str]
         try:
             refs = self.getInfoRefs(project)
         except:
@@ -598,14 +599,14 @@ class GerritConnection(BaseConnection):
             return False
         return True
 
-    def getProjectOpenChanges(self, project):
+    def getProjectOpenChanges(self, project: Project) -> List[GerritChange]:
         # This is a best-effort function in case Gerrit is unable to return
         # a particular change.  It happens.
         query = "project:%s status:open" % (project.name,)
         self.log.debug("Running query %s to get project open changes" %
                        (query,))
         data = self.simpleQuery(query)
-        changes = []
+        changes = []  # type: List[GerritChange]
         for record in data:
             try:
                 changes.append(
@@ -793,13 +794,13 @@ class GerritConnection(BaseConnection):
             ret[ref] = revision
         return ret
 
-    def getGitUrl(self, project):
+    def getGitUrl(self, project: Project) -> str:
         url = 'ssh://%s@%s:%s/%s' % (self.user, self.server, self.port,
                                      project.name)
         return url
 
-    def _getGitwebUrl(self, project, sha=None):
-        url = '%s/gitweb?p=%s.git' % (self.baseurl, project)
+    def _getGitwebUrl(self, project: Project, sha: str=None) -> str:
+        url = '%s/gitweb?p=%s.git' % (self.baseurl, project.name)
         if sha:
             url += ';a=commitdiff;h=' + sha
         return url
