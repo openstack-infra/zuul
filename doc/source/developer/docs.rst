@@ -20,6 +20,11 @@ Filenames and literal values (such as when we instruct a user to type
 a specific string into a configuration file) should use the RST
 ````literal```` syntax.
 
+YAML supports boolean values expressed with or without an initial
+capital letter.  In examples and documentation, use ``true`` and
+``false`` in lowercase type because the resulting YAML is easier for
+users to type and read.
+
 Terminology
 ~~~~~~~~~~~
 
