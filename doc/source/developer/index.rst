@@ -14,3 +14,4 @@ Zuul, though advanced users may find it interesting.
    drivers
    triggers
    testing
+   docs
