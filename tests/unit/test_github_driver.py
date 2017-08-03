@@ -110,10 +110,8 @@ class TestGithubDriver(ZuulTestCase):
 
         build_params = self.builds[0].parameters
         self.assertEqual('refs/tags/newtag', build_params['zuul']['ref'])
-        self.assertEqual('00000000000000000000000000000000',
-                         build_params['zuul']['oldrev'])
+        self.assertFalse('oldrev' in build_params['zuul'])
         self.assertEqual(sha, build_params['zuul']['newrev'])
-
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
         self.waitUntilSettled()

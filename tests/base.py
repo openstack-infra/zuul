@@ -902,7 +902,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
     def getPushEvent(self, project, ref, old_rev=None, new_rev=None,
                      added_files=[], removed_files=[], modified_files=[]):
         if not old_rev:
-            old_rev = '00000000000000000000000000000000'
+            old_rev = '0' * 40
         if not new_rev:
             new_rev = random_sha1()
         name = 'push'
