@@ -22,7 +22,6 @@ import extras
 # instead it depends on lockfile-0.9.1 which uses pidfile.
 pid_file_module = extras.try_imports(['daemon.pidlockfile', 'daemon.pidfile'])
 
-import os
 import sys
 import signal
 
@@ -79,17 +78,6 @@ def main():
 
     server.read_config()
     server.configure_connections(source_only=True)
-
-    state_dir = get_default(server.config, 'merger', 'state_dir',
-                            '/var/lib/zuul', expand_user=True)
-    test_fn = os.path.join(state_dir, 'test')
-    try:
-        f = open(test_fn, 'w')
-        f.close()
-        os.unlink(test_fn)
-    except Exception:
-        print("\nUnable to write to state directory: %s\n" % state_dir)
-        raise
 
     pid_fn = get_default(server.config, 'merger', 'pidfile',
                          '/var/run/zuul-merger/zuul-merger.pid',
