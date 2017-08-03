@@ -326,25 +326,26 @@ class GithubUser(collections.Mapping):
         self._data = None
 
     def __getitem__(self, key):
-        if self._data is None:
-            self._data = self._init_data()
+        self._init_data()
         return self._data[key]
 
     def __iter__(self):
+        self._init_data()
         return iter(self._data)
 
     def __len__(self):
+        self._init_data()
         return len(self._data)
 
     def _init_data(self):
-        user = self._github.user(self._username)
-        log_rate_limit(self.log, self._github)
-        data = {
-            'username': user.login,
-            'name': user.name,
-            'email': user.email
-        }
-        return data
+        if self._data is None:
+            user = self._github.user(self._username)
+            log_rate_limit(self.log, self._github)
+            self._data = {
+                'username': user.login,
+                'name': user.name,
+                'email': user.email
+            }
 
 
 class GithubConnection(BaseConnection):

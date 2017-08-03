@@ -551,6 +551,18 @@ class GithubChangeReference(git.Reference):
     _points_to_commits_only = True
 
 
+class FakeGithub(object):
+
+    class FakeUser(object):
+        def __init__(self, login):
+            self.login = login
+            self.name = "Github User"
+            self.email = "github.user@example.com"
+
+    def user(self, login):
+        return self.FakeUser(login)
+
+
 class FakeGithubPullRequest(object):
 
     def __init__(self, github, number, project, branch,
@@ -879,6 +891,13 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         self.merge_failure = False
         self.merge_not_allowed_count = 0
         self.reports = []
+        self.github_client = FakeGithub()
+
+    def getGithubClient(self,
+                        project=None,
+                        user_id=None,
+                        use_app=True):
+        return self.github_client
 
     def openFakePullRequest(self, project, branch, subject, files=[],
                             body=None):
@@ -964,14 +983,6 @@ class FakeGithubConnection(githubconnection.GithubConnection):
     def _getPullReviews(self, owner, project, number):
         pr = self.pull_requests[number - 1]
         return pr.reviews
-
-    def getUser(self, login):
-        data = {
-            'username': login,
-            'name': 'Github User',
-            'email': 'github.user@example.com'
-        }
-        return data
 
     def getRepoPermission(self, project, login):
         owner, proj = project.split('/')
