@@ -116,6 +116,11 @@ class MergeClient(object):
                     repo_state=repo_state)
         self.submitJob('merger:merge', data, build_set, precedence)
 
+    def getRepoState(self, items, build_set,
+                     precedence=zuul.model.PRECEDENCE_NORMAL):
+        data = dict(items=items)
+        self.submitJob('merger:refstate', data, build_set, precedence)
+
     def getFiles(self, connection_name, project_name, branch, files, dirs=[],
                  precedence=zuul.model.PRECEDENCE_HIGH):
         data = dict(connection=connection_name,

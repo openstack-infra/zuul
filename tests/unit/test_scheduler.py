@@ -1103,6 +1103,12 @@ class TestScheduler(ZuulTestCase):
 
     def test_post(self):
         "Test that post jobs run"
+        p = "review.example.com/org/project"
+        upstream = self.getUpstreamRepos([p])
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.setMerged()
+        A_commit = str(upstream[p].commit('master'))
+        self.log.debug("A commit: %s" % A_commit)
 
         e = {
             "type": "ref-updated",
@@ -1111,7 +1117,7 @@ class TestScheduler(ZuulTestCase):
             },
             "refUpdate": {
                 "oldRev": "90f173846e3af9154517b88543ffbd1691f31366",
-                "newRev": "d479a0bfcb34da57a31adb2a595c0cf687812543",
+                "newRev": A_commit,
                 "refName": "master",
                 "project": "org/project",
             }
@@ -1156,7 +1162,7 @@ class TestScheduler(ZuulTestCase):
             "refUpdate": {
                 "oldRev": "90f173846e3af9154517b88543ffbd1691f31366",
                 "newRev": "0000000000000000000000000000000000000000",
-                "refName": "master",
+                "refName": "testbranch",
                 "project": "org/project",
             }
         }
@@ -3080,6 +3086,12 @@ class TestScheduler(ZuulTestCase):
 
     def test_client_enqueue_ref(self):
         "Test that the RPC client can enqueue a ref"
+        p = "review.example.com/org/project"
+        upstream = self.getUpstreamRepos([p])
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.setMerged()
+        A_commit = str(upstream[p].commit('master'))
+        self.log.debug("A commit: %s" % A_commit)
 
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
@@ -3091,7 +3103,7 @@ class TestScheduler(ZuulTestCase):
             trigger='gerrit',
             ref='master',
             oldrev='90f173846e3af9154517b88543ffbd1691f31366',
-            newrev='d479a0bfcb34da57a31adb2a595c0cf687812543')
+            newrev=A_commit)
         self.waitUntilSettled()
         job_names = [x.name for x in self.history]
         self.assertEqual(len(self.history), 1)

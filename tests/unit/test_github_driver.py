@@ -125,16 +125,20 @@ class TestGithubDriver(ZuulTestCase):
     def test_push_event(self):
         self.executor_server.hold_jobs_in_build = True
 
-        old_sha = random_sha1()
-        new_sha = random_sha1()
-        self.fake_github.emitEvent(
-            self.fake_github.getPushEvent('org/project', 'refs/heads/master',
-                                          old_sha, new_sha))
+        A = self.fake_github.openFakePullRequest('org/project', 'master', 'A')
+        old_sha = '0' * 40
+        new_sha = A.head_sha
+        A.setMerged("merging A")
+        pevent = self.fake_github.getPushEvent(project='org/project',
+                                               ref='refs/heads/master',
+                                               old_rev=old_sha,
+                                               new_rev=new_sha)
+        self.fake_github.emitEvent(pevent)
         self.waitUntilSettled()
 
         build_params = self.builds[0].parameters
         self.assertEqual('refs/heads/master', build_params['zuul']['ref'])
-        self.assertEqual(old_sha, build_params['zuul']['oldrev'])
+        self.assertFalse('oldrev' in build_params['zuul'])
         self.assertEqual(new_sha, build_params['zuul']['newrev'])
 
         self.executor_server.hold_jobs_in_build = False
@@ -371,9 +375,15 @@ class TestGithubDriver(ZuulTestCase):
         project = 'org/project2'
         # pipeline reports pull status both on start and success
         self.executor_server.hold_jobs_in_build = True
-        pevent = self.fake_github.getPushEvent(project=project,
-                                               ref='refs/heads/master')
 
+        A = self.fake_github.openFakePullRequest(project, 'master', 'A')
+        old_sha = '0' * 40
+        new_sha = A.head_sha
+        A.setMerged("merging A")
+        pevent = self.fake_github.getPushEvent(project=project,
+                                               ref='refs/heads/master',
+                                               old_rev=old_sha,
+                                               new_rev=new_sha)
         self.fake_github.emitEvent(pevent)
         self.waitUntilSettled()
 
