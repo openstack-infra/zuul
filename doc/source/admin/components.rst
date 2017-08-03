@@ -438,9 +438,9 @@ stop``.
 To request that the executor stop executing new jobs and exit when all
 currently running jobs have completed, run ``zuul-executor graceful``.
 
-To enable or disable running Ansible in verbose mode (with the '-vvv'
-argument to ansible-playbook) run ``zuul-executor verbose`` and
-``zuul-executor unverbose``.
+To enable or disable running Ansible in verbose mode (with the
+``-vvv`` argument to ansible-playbook) run ``zuul-executor verbose``
+and ``zuul-executor unverbose``.
 
 Web Server
 ----------
@@ -452,35 +452,34 @@ HTTP interactions with Zuul.
 Configuration
 ~~~~~~~~~~~~~
 
-In addition to the ``gearman`` common configuration section, the following
-sections of **zuul.conf** are used by the web server:
+In addition to the common configuration sections, the following
+sections of ``zuul.conf`` are used by the web server:
 
-web
-"""
+.. attr:: web
 
-**listen_address**
-  IP address or domain name on which to listen (default: 127.0.0.1)::
+   .. attr:: listen_address
+      :default: 127.0.0.1
 
-     listen_address=127.0.0.1
+      IP address or domain name on which to listen.
 
-**log_config**
-  Path to log config file for the web server process::
+   .. attr:: log_config
 
-     log_config=/etc/zuul/logging.yaml
+      Path to log config file for the web server process.
 
-**pidfile**
-  Path to PID lock file for the web server process::
+   .. attr:: pidfile
+      :default: /var/run/zuul-web/zuul-web.pid
 
-     pidfile=/var/run/zuul-web/zuul-web.pid
+      Path to PID lock file for the web server process.
 
-**port**
-  Port to use for web server process::
+   .. attr:: port
+      :default: 9000
 
-     port=9000
+      Port to use for web server process.
 
-**websocket_url**
-  Base URL on which the websocket service is exposed, if different than the
-  base URL of the web app.
+   .. attr:: websocket_url
+
+      Base URL on which the websocket service is exposed, if different
+      than the base URL of the web app.
 
 Operation
 ~~~~~~~~~
