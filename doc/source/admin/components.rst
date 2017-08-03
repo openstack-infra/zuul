@@ -229,6 +229,8 @@ Operation
 To start the merger, run ``zuul-merger``.  To stop it, kill the
 PID which was saved in the pidfile specified in the configuration.
 
+.. _executor:
+
 Executor
 --------
 

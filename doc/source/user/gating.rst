@@ -227,7 +227,8 @@ behind them.  See :ref:`project` for more details.
 
 A given dependent pipeline may have as many shared change queues as
 necessary, so groups of related projects may share a change queue
-without interfering with unrelated projects.  Independent pipelines do
+without interfering with unrelated projects.
+:value:`Independent pipelines <pipeline.manager.independent>` do
 not use shared change queues, however, they may still be used to test
 changes across projects using cross-project dependencies.
 

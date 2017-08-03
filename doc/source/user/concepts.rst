@@ -40,7 +40,8 @@ There are several reporting phases available; each of which may be
 configured with any number of reporters.  See :ref:`drivers` for a
 full list of available reporters.
 
-The items enqueued into a pipeline are each associated with a git ref.
+The items enqueued into a pipeline are each associated with a
+`git ref <https://git-scm.com/book/en/v2/Git-Internals-Git-References>`_.
 That ref may point to a proposed change, or it may be the tip of a
 branch or a tag.  The triggering event determines the ref, and whether
 it represents a proposed or merged commit.  Zuul prepares the ref for
@@ -67,7 +68,7 @@ after the change merges, depending on the type of project in which the
 change appears.
 
 Jobs specify the type and quantity of nodes which they require.
-Before executing each job, Zuul will contact it's companion program,
+Before executing each job, Zuul will contact its companion program,
 Nodepool, to supply them.  Nodepool may be configured to supply static
 nodes or contact cloud providers to create or delete nodes as
 necessary.  The types of nodes available to Zuul are determined by the
@@ -80,6 +81,6 @@ is also easy to use for simple tasks (such as executing a shell
 script) or sophisticated deployment scenarios.  When Zuul runs
 Ansible, it attempts to do so in a manner most similar to the way that
 Ansible might be used to orchestrate remote systems.  Ansible itself
-is run on the executor and acts remotely upon the test nodes supplied
-to a job.  This facilitates continuous delivery by making it possible
-to use the same Ansible playbooks in testing and production.
+is run on the :ref:`executor <executor>` and acts remotely upon the test
+nodes supplied to a job.  This facilitates continuous delivery by making it
+possible to use the same Ansible playbooks in testing and production.
