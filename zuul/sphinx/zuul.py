@@ -76,6 +76,7 @@ class ZuulAttrDirective(ZuulConfigObject):
     option_spec = {
         'required': lambda x: x,
         'default': lambda x: x,
+        'noindex': lambda x: x,
     }
 
     def before_content(self):
@@ -126,6 +127,7 @@ class ZuulVarDirective(ZuulConfigObject):
     option_spec = {
         'type': lambda x: x,
         'hidden': lambda x: x,
+        'noindex': lambda x: x,
     }
 
     type_map = {
