@@ -29,6 +29,7 @@ configuration.  An example tenant definition is::
   - tenant:
       name: my-tenant
       max-nodes-per-job: 5
+      exclude-unprotected-branches: false
       source:
         gerrit:
           config-projects:
@@ -39,7 +40,8 @@ configuration.  An example tenant definition is::
             - zuul-jobs:
                 shadow: common-config
             - project1
-            - project2
+            - project2:
+                exclude-unprotected-branches: true
 
 The following attributes are supported:
 
@@ -52,6 +54,16 @@ The following attributes are supported:
 **max-nodes-per-job** (optional)
   The maximum number of nodes a job can request, default to 5.
   A '-1' value removes the limit.
+
+**exclude-unprotected-branches** (optional)
+  When using a branch and pull model on a shared github repository there are
+  usually one or more protected branches which are gated and a dynamic number of
+  personal/feature branches which are the source for the pull requests. These
+  branches can potentially include broken zuul config and therefore break the
+  global tenant wide configuration. In order to deal with this zuul's operations
+  can be limited to the protected branches which are gated. This is a tenant
+  wide setting and can be overridden per project. If not specified, defaults
+  to ``false``.
 
 **source** (required)
   A dictionary of sources to consult for projects.  A tenant may
@@ -103,6 +115,10 @@ The following attributes are supported:
     if a job definition appears in both the "common-config" and
     "zuul-jobs" projects, the definition in "common-config" will be
     used.
+
+    **exclude-unprotected-branches**
+    Define if unprotected github branches should be processed. Defaults to the
+    tenant wide setting of exclude-unprotected-branches.
 
   The order of the projects listed in a tenant is important.  A job
   which is defined in one project may not be redefined in another

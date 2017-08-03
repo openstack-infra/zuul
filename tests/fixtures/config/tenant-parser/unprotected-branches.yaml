@@ -1,0 +1,11 @@
+- tenant:
+    name: tenant-one
+    exclude-unprotected-branches: true
+    source:
+      gerrit:
+        config-projects:
+          - common-config:
+              exclude-unprotected-branches: false
+        untrusted-projects:
+          - org/project1
+          - org/project2

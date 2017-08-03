@@ -567,7 +567,10 @@ class FakeGithub(object):
         def __init__(self):
             self._branches = [FakeGithub.FakeBranch()]
 
-        def branches(self):
+        def branches(self, protected=False):
+            if protected:
+                # simulate there is no protected branch
+                return []
             return self._branches
 
     def user(self, login):
