@@ -177,10 +177,12 @@ The following sections of ``zuul.conf`` are used by the scheduler:
       Path to log config file.
 
    .. attr:: pidfile
+      :default: /var/run/zuul-schedurecr/zuul-scheduler.pid
 
       Path to PID lock file.
 
    .. attr:: state_dir
+      :default: /var/lib/zuul
 
       Path to directory in which Zuul should save its state.
 
@@ -219,35 +221,32 @@ to reduce the load on executors.
 Configuration
 ~~~~~~~~~~~~~
 
-The following section of **zuul.conf** is used by the merger:
+The following section of ``zuul.conf`` is used by the merger:
 
-merger
-""""""
+.. attr:: merger
 
-**git_dir**
-  Directory that Zuul should clone local git repositories to::
+   .. attr:: git_dir
 
-     git_dir=/var/lib/zuul/git
+      Directory in which Zuul should clone git repositories.
 
-**git_user_email**
-  Value to pass to `git config user.email`::
+   .. attr:: git_user_email
 
-     git_user_email=zuul@example.com
+      Value to pass to `git config user.email
+      <https://git-scm.com/book/en/v2/Getting-Started-First-Time-Git-Setup>`_.
 
-**git_user_name**
-  Value to pass to `git config user.name`::
+   .. attr:: git_user_name
 
-     git_user_name=zuul
+      Value to pass to `git config user.name
+      <https://git-scm.com/book/en/v2/Getting-Started-First-Time-Git-Setup>`_.
 
-**log_config**
-  Path to log config file for the merger process::
+   .. attr:: log_config
 
-     log_config=/etc/zuul/logging.yaml
+      Path to log config file for the merger process.
 
-**pidfile**
-  Path to PID lock file for the merger process::
+   .. attr:: pidfile
+      :default: /var/run/zuul-merger/zuul-merger.pid
 
-     pidfile=/var/run/zuul-merger/merger.pid
+      Path to PID lock file for the merger process.
 
 Operation
 ~~~~~~~~~
@@ -280,10 +279,11 @@ Trusted and Untrusted Playbooks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The executor runs playbooks in one of two execution contexts depending
-on whether the project containing the playbook is a *config project*
-or an *untrusted project*.  If the playbook is in a *config project*,
-the executor runs the playbook in the *trusted* execution context,
-otherwise, it is run in the *untrusted* execution context.
+on whether the project containing the playbook is a
+:term:`config-project` or an :term:`untrusted-project`.  If the
+playbook is in a config project, the executor runs the playbook in the
+*trusted* execution context, otherwise, it is run in the *untrusted*
+execution context.
 
 Both execution contexts use `bubblewrap`_ to create a namespace to
 ensure that playbook executions are isolated and are unable to access
@@ -291,7 +291,7 @@ files outside of a restricted environment.  The administrator may
 configure additional local directories on the executor to be made
 available to the restricted environment.
 
-The *trusted* execution context has access to all Ansible features,
+The trusted execution context has access to all Ansible features,
 including the ability to load custom Ansible modules.  Needless to
 say, extra scrutiny should be given to code that runs in a trusted
 context as it could be used to compromise other jobs running on the
@@ -299,128 +299,129 @@ executor, or the executor itself, especially if the administrator has
 granted additional access through bubblewrap, or a method of escaping
 the restricted environment created by bubblewrap is found.
 
-Playbooks run in the *untrusted* execution context are not permitted
-to load additional Ansible modules or access files outside of the
+Playbooks run in the untrusted execution context are not permitted to
+load additional Ansible modules or access files outside of the
 restricted environment prepared for them by the executor.  In addition
 to the bubblewrap environment applied to both execution contexts, in
-the *untrusted* context some standard Ansible modules are replaced
-with versions which prohibit some actions, including attempts to
-access files outside of the restricted execution context.  These
-redundant protections are made as part of a defense-in-depth strategy.
+the untrusted context some standard Ansible modules are replaced with
+versions which prohibit some actions, including attempts to access
+files outside of the restricted execution context.  These redundant
+protections are made as part of a defense-in-depth strategy.
 
 .. _bubblewrap: https://github.com/projectatomic/bubblewrap
 
 Configuration
 ~~~~~~~~~~~~~
 
-The following sections of **zuul.conf** are used by the executor:
+The following sections of ``zuul.conf`` are used by the executor:
 
-executor
-""""""""
+.. attr:: executor
 
-**finger_port**
-  Port to use for finger log streamer::
+   .. attr:: finger_port
+      :default: 79
 
-     finger_port=79
+      Port to use for finger log streamer.
 
-**git_dir**
-  Directory that Zuul should clone local git repositories to.  The
-  executor keeps a local copy of every git repository it works with to
-  speed operations and perform speculative merging.
+   .. attr:: git_dir
+      :default: /var/lib/zuul/git
 
-  This should be on the same filesystem as **job_dir** so that when
-  git repos are cloned into the job workspaces, they can be
-  hard-linked to the local git cache.  Example::
+      Directory that Zuul should clone local git repositories to.  The
+      executor keeps a local copy of every git repository it works
+      with to speed operations and perform speculative merging.
 
-     git_dir=/var/lib/zuul/git
+      This should be on the same filesystem as
+      :attr:`executor.job_dir` so that when git repos are cloned into
+      the job workspaces, they can be hard-linked to the local git
+      cache.
 
-**job_dir**
-  Directory that Zuul should use to hold temporary job directories.
-  When each job is run, a new entry will be created under this
-  directory to hold the configuration and scratch workspace for that
-  job.  It will be deleted at the end of the job (unless the
-  `--keep-jobdir` command line option is specified).
+   .. attr:: job_dir
+      :default: /tmp
 
-  This should be on the same filesystem as **git_dir** so that when
-  git repos are cloned into the job workspaces, they can be
-  hard-linked to the local git cache.  Example::
+      Directory that Zuul should use to hold temporary job directories.
+      When each job is run, a new entry will be created under this
+      directory to hold the configuration and scratch workspace for
+      that job.  It will be deleted at the end of the job (unless the
+      `--keep-jobdir` command line option is specified).
 
-     job_dir=/var/lib/zuul/jobs
+      This should be on the same filesystem as :attr:`executor.git_dir`
+      so that when git repos are cloned into the job workspaces, they
+      can be hard-linked to the local git cache.
 
-**log_config**
-  Path to log config file for the executor process::
+   .. attr:: log_config
 
-     log_config=/etc/zuul/logging.yaml
+      Path to log config file for the executor process.
 
-**private_key_file**
-  SSH private key file to be used when logging into worker nodes::
+   .. attr:: pidfile
+      :default: /var/run/zuul-executor/zuul-executor.pid
 
-     private_key_file=~/.ssh/id_rsa
+      Path to PID lock file for the executor process.
 
-**user**
-  User ID for the zuul-executor process. In normal operation as a daemon,
-  the executor should be started as the ``root`` user, but it will drop
-  privileges to this user during startup::
+   .. attr:: private_key_file
+      :default: ~/.ssh/id_rsa
 
-     user=zuul
+      SSH private key file to be used when logging into worker nodes.
 
-.. _admin_sitewide_variables:
+   .. attr:: user
+      :default: zuul
 
-**variables**
-  Path to an Ansible variables file to supply site-wide variables.
-  This should be a YAML-formatted file consisting of a single
-  dictionary.  The contents will be made available to all jobs as
-  Ansible variables.  These variables take precedence over all other
-  forms (job variables and secrets).  Care should be taken when naming
-  these variables to avoid potential collisions with those used by
-  jobs.  Prefixing variable names with a site-specific identifier is
-  recommended.  The default is not to add any site-wide variables.
-  See the :ref:`User's Guide <user_sitewide_variables>` for more
-  information.
+      User ID for the zuul-executor process. In normal operation as a
+      daemon, the executor should be started as the ``root`` user, but
+      it will drop privileges to this user during startup.
 
-  Example::
+   .. _admin_sitewide_variables:
 
-     variables=/etc/zuul/variables.yaml
+   .. attr:: variables
 
-**disk_limit_per_job**
-  This integer is the maximum number of megabytes that any one job is
-  allowed to consume on disk while it is running. If a job's scratch
-  space has more than this much space consumed, it will be aborted::
+      Path to an Ansible variables file to supply site-wide variables.
+      This should be a YAML-formatted file consisting of a single
+      dictionary.  The contents will be made available to all jobs as
+      Ansible variables.  These variables take precedence over all
+      other forms (job variables and secrets).  Care should be taken
+      when naming these variables to avoid potential collisions with
+      those used by jobs.  Prefixing variable names with a
+      site-specific identifier is recommended.  The default is not to
+      add any site-wide variables.  See the :ref:`User's Guide
+      <user_sitewide_variables>` for more information.
 
-      disk_limit_per_job=100
+   .. attr:: disk_limit_per_job
+      :default: 250
 
-**trusted_ro_paths**
+      This integer is the maximum number of megabytes that any one job
+      is allowed to consume on disk while it is running. If a job's
+      scratch space has more than this much space consumed, it will be
+      aborted.
 
-  List of paths, separated by ':' to read-only bind mount into trusted
-  bubblewrap contexts.
+   .. attr:: trusted_ro_paths
 
-**trusted_rw_paths**
+      List of paths, separated by ``:`` to read-only bind mount into
+      trusted bubblewrap contexts.
 
-  List of paths, separated by ':' to read-write bind mount into trusted
-  bubblewrap contexts.
+   .. attr:: trusted_rw_paths
 
-**untrusted_ro_paths**
+      List of paths, separated by ``:`` to read-write bind mount into
+      trusted bubblewrap contexts.
 
-  List of paths, separated by ':' to read-only bind mount into untrusted
-  bubblewrap contexts.
+   .. attr:: untrusted_ro_paths
 
-**untrusted_rw_paths**
+      List of paths, separated by ``:`` to read-only bind mount into
+      untrusted bubblewrap contexts.
 
-  List of paths, separated by ':' to read-write bind mount into untrusted
-  bubblewrap contexts.
+   .. attr:: untrusted_rw_paths
 
-merger
-""""""
+      List of paths, separated by ``:`` to read-write bind mount into
+      untrusted bubblewrap contexts.
 
-**git_user_email**
-  Value to pass to `git config user.email`::
+.. attr:: merger
 
-     git_user_email=zuul@example.com
+   .. attr:: git_user_email
 
-**git_user_name**
-  Value to pass to `git config user.name`::
+      Value to pass to `git config user.email
+      <https://git-scm.com/book/en/v2/Getting-Started-First-Time-Git-Setup>`_.
 
-     git_user_name=zuul
+   .. attr:: git_user_name
+
+      Value to pass to `git config user.name
+      <https://git-scm.com/book/en/v2/Getting-Started-First-Time-Git-Setup>`_.
 
 Operation
 ~~~~~~~~~
