@@ -563,9 +563,43 @@ class FakeGithub(object):
         def __init__(self, branch='master'):
             self.name = branch
 
+    class FakeStatus(object):
+        def __init__(self, state, url, description, context, user):
+            self._state = state
+            self._url = url
+            self._description = description
+            self._context = context
+            self._user = user
+
+        def as_dict(self):
+            return {
+                'state': self._state,
+                'url': self._url,
+                'description': self._description,
+                'context': self._context,
+                'creator': {
+                    'login': self._user
+                }
+            }
+
+    class FakeCommit(object):
+        def __init__(self):
+            self._statuses = []
+
+        def set_status(self, state, url, description, context, user):
+            status = FakeGithub.FakeStatus(
+                state, url, description, context, user)
+            # always insert a status to the front of the list, to represent
+            # the last status provided for a commit.
+            self._statuses.insert(0, status)
+
+        def statuses(self):
+            return self._statuses
+
     class FakeRepository(object):
         def __init__(self):
             self._branches = [FakeGithub.FakeBranch()]
+            self._commits = {}
 
         def branches(self, protected=False):
             if protected:
@@ -573,12 +607,40 @@ class FakeGithub(object):
                 return []
             return self._branches
 
+        def create_status(self, sha, state, url, description, context,
+                          user='zuul'):
+            # Since we're bypassing github API, which would require a user, we
+            # default the user as 'zuul' here.
+            commit = self._commits.get(sha, None)
+            if commit is None:
+                commit = FakeGithub.FakeCommit()
+                self._commits[sha] = commit
+            commit.set_status(state, url, description, context, user)
+
+        def commit(self, sha):
+            commit = self._commits.get(sha, None)
+            if commit is None:
+                commit = FakeGithub.FakeCommit()
+                self._commits[sha] = commit
+            return commit
+
+    def __init__(self):
+        self._repos = {}
+
     def user(self, login):
         return self.FakeUser(login)
 
     def repository(self, owner, proj):
-        repo = self.FakeRepository()
-        return repo
+        return self._repos.get((owner, proj), None)
+
+    def repo_from_project(self, project):
+        # This is a convenience method for the tests.
+        owner, proj = project.split('/')
+        return self.repository(owner, proj)
+
+    def addProject(self, project):
+        owner, proj = project.name.split('/')
+        self._repos[(owner, proj)] = self.FakeRepository()
 
 
 class FakeGithubPullRequest(object):
@@ -964,6 +1026,12 @@ class FakeGithubConnection(githubconnection.GithubConnection):
             data=payload, headers=headers)
         return urllib.request.urlopen(req)
 
+    def addProject(self, project):
+        # use the original method here and additionally register it in the
+        # fake github
+        super(FakeGithubConnection, self).addProject(project)
+        self.getGithubClient(project).addProject(project)
+
     def getPull(self, project, number):
         pr = self.pull_requests[number - 1]
         data = {
@@ -1037,27 +1105,13 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         pull_request.is_merged = True
         pull_request.merge_message = commit_message
 
-    def getCommitStatuses(self, project, sha):
-        return self.statuses.get(project, {}).get(sha, [])
-
     def setCommitStatus(self, project, sha, state, url='', description='',
                         context='default', user='zuul'):
-        # record that this got reported
+        # record that this got reported and call original method
         self.reports.append((project, sha, 'status', (user, context, state)))
-        # always insert a status to the front of the list, to represent
-        # the last status provided for a commit.
-        # Since we're bypassing github API, which would require a user, we
-        # default the user as 'zuul' here.
-        self.statuses.setdefault(project, {}).setdefault(sha, [])
-        self.statuses[project][sha].insert(0, {
-            'state': state,
-            'url': url,
-            'description': description,
-            'context': context,
-            'creator': {
-                'login': user
-            }
-        })
+        super(FakeGithubConnection, self).setCommitStatus(
+            project, sha, state,
+            url=url, description=description, context=context)
 
     def labelPull(self, project, pr_number, label):
         # record that this got reported
@@ -2145,15 +2199,15 @@ class ZuulTestCase(BaseTestCase):
         config = [{'tenant':
                    {'name': 'tenant-one',
                     'source': {driver:
-                               {'config-projects': ['common-config'],
+                               {'config-projects': ['org/common-config'],
                                 'untrusted-projects': untrusted_projects}}}}]
         f.write(yaml.dump(config).encode('utf8'))
         f.close()
         self.config.set('scheduler', 'tenant_config',
                         os.path.join(FIXTURE_DIR, f.name))
 
-        self.init_repo('common-config')
-        self.addCommitToRepo('common-config', 'add content from fixture',
+        self.init_repo('org/common-config')
+        self.addCommitToRepo('org/common-config', 'add content from fixture',
                              files, branch='master', tag='init')
 
         return True

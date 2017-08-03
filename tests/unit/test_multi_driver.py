@@ -46,7 +46,8 @@ class TestGerritAndGithub(ZuulTestCase):
 
         # Check on reporting results
         # github should have a success status (only).
-        statuses = self.fake_github.statuses['org/project1'][B.head_sha]
+        statuses = self.fake_github.getCommitStatuses(
+            'org/project1', B.head_sha)
         self.assertEqual(1, len(statuses))
         self.assertEqual('success', statuses[0]['state'])
 

@@ -258,14 +258,19 @@ class TestGithubDriver(ZuulTestCase):
     @simple_layout('layouts/reporting-github.yaml', driver='github')
     def test_reporting(self):
         project = 'org/project'
+        github = self.fake_github.github_client
+
         # pipeline reports pull status both on start and success
         self.executor_server.hold_jobs_in_build = True
         A = self.fake_github.openFakePullRequest(project, 'master', 'A')
         self.fake_github.emitEvent(A.getPullRequestOpenedEvent())
         self.waitUntilSettled()
+
         # We should have a status container for the head sha
-        statuses = self.fake_github.statuses[project][A.head_sha]
-        self.assertIn(A.head_sha, self.fake_github.statuses[project].keys())
+        self.assertIn(
+            A.head_sha, github.repo_from_project(project)._commits.keys())
+        statuses = self.fake_github.getCommitStatuses(project, A.head_sha)
+
         # We should only have one status for the head sha
         self.assertEqual(1, len(statuses))
         check_status = statuses[0]
@@ -282,7 +287,7 @@ class TestGithubDriver(ZuulTestCase):
         self.executor_server.release()
         self.waitUntilSettled()
         # We should only have two statuses for the head sha
-        statuses = self.fake_github.statuses[project][A.head_sha]
+        statuses = self.fake_github.getCommitStatuses(project, A.head_sha)
         self.assertEqual(2, len(statuses))
         check_status = statuses[0]
         check_url = ('http://zuul.example.com/status/#%s,%s' %
@@ -301,7 +306,7 @@ class TestGithubDriver(ZuulTestCase):
         self.fake_github.emitEvent(
             A.getCommentAddedEvent('reporting check'))
         self.waitUntilSettled()
-        statuses = self.fake_github.statuses[project][A.head_sha]
+        statuses = self.fake_github.getCommitStatuses(project, A.head_sha)
         self.assertEqual(2, len(statuses))
         # comments increased by one for the start message
         self.assertEqual(2, len(A.comments))
@@ -311,7 +316,7 @@ class TestGithubDriver(ZuulTestCase):
         self.executor_server.release()
         self.waitUntilSettled()
         # pipeline reports success status
-        statuses = self.fake_github.statuses[project][A.head_sha]
+        statuses = self.fake_github.getCommitStatuses(project, A.head_sha)
         self.assertEqual(3, len(statuses))
         report_status = statuses[0]
         self.assertEqual('tenant-one/reporting', report_status['context'])
@@ -343,7 +348,7 @@ class TestGithubDriver(ZuulTestCase):
         self.fake_github.emitEvent(
             A.getCommentAddedEvent('long pipeline'))
         self.waitUntilSettled()
-        statuses = self.fake_github.statuses[project][A.head_sha]
+        statuses = self.fake_github.getCommitStatuses(project, A.head_sha)
         self.assertEqual(1, len(statuses))
         check_status = statuses[0]
         # Status is truncated due to long pipeline name
@@ -354,7 +359,7 @@ class TestGithubDriver(ZuulTestCase):
         self.executor_server.release()
         self.waitUntilSettled()
         # We should only have two statuses for the head sha
-        statuses = self.fake_github.statuses[project][A.head_sha]
+        statuses = self.fake_github.getCommitStatuses(project, A.head_sha)
         self.assertEqual(2, len(statuses))
         check_status = statuses[0]
         # Status is truncated due to long pipeline name
@@ -441,6 +446,8 @@ class TestGithubDriver(ZuulTestCase):
     @simple_layout('layouts/reporting-multiple-github.yaml', driver='github')
     def test_reporting_multiple_github(self):
         project = 'org/project1'
+        github = self.fake_github.github_client
+
         # pipeline reports pull status both on start and success
         self.executor_server.hold_jobs_in_build = True
         A = self.fake_github.openFakePullRequest(project, 'master', 'A')
@@ -451,8 +458,9 @@ class TestGithubDriver(ZuulTestCase):
         self.fake_github.emitEvent(B.getPullRequestOpenedEvent())
         self.waitUntilSettled()
         # We should have a status container for the head sha
-        statuses = self.fake_github.statuses[project][A.head_sha]
-        self.assertIn(A.head_sha, self.fake_github.statuses[project].keys())
+        statuses = self.fake_github.getCommitStatuses(project, A.head_sha)
+        self.assertIn(
+            A.head_sha, github.repo_from_project(project)._commits.keys())
         # We should only have one status for the head sha
         self.assertEqual(1, len(statuses))
         check_status = statuses[0]
@@ -468,7 +476,7 @@ class TestGithubDriver(ZuulTestCase):
         self.executor_server.release()
         self.waitUntilSettled()
         # We should only have two statuses for the head sha
-        statuses = self.fake_github.statuses[project][A.head_sha]
+        statuses = self.fake_github.getCommitStatuses(project, A.head_sha)
         self.assertEqual(2, len(statuses))
         check_status = statuses[0]
         check_url = ('http://zuul.example.com/status/#%s,%s' %
@@ -656,7 +664,7 @@ class TestGithubDriver(ZuulTestCase):
 
     @simple_layout('layouts/basic-github.yaml', driver='github')
     def test_push_event_reconfigure(self):
-        pevent = self.fake_github.getPushEvent(project='common-config',
+        pevent = self.fake_github.getPushEvent(project='org/common-config',
                                                ref='refs/heads/master',
                                                modified_files=['zuul.yaml'])
 
