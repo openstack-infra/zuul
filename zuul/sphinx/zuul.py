@@ -204,6 +204,17 @@ class ZuulStatDirective(ZuulConfigObject):
         return sig
 
 
+class ZuulAbbreviatedXRefRole(XRefRole):
+
+    def process_link(self, env, refnode, has_explicit_title, title,
+                     target):
+        title, target = super(ZuulAbbreviatedXRefRole, self).process_link(
+            env, refnode, has_explicit_title, title, target)
+        if not has_explicit_title:
+            title = title.split('.')[-1]
+        return title, target
+
+
 class ZuulDomain(Domain):
     name = 'zuul'
     label = 'Zuul'
@@ -218,8 +229,9 @@ class ZuulDomain(Domain):
     roles = {
         'attr': XRefRole(innernodeclass=nodes.inline,  # type: ignore
                          warn_dangling=True),
-        'value': XRefRole(innernodeclass=nodes.inline,  # type: ignore
-                          warn_dangling=True),
+        'value': ZuulAbbreviatedXRefRole(
+            innernodeclass=nodes.inline,  # type: ignore
+            warn_dangling=True),
         'var': XRefRole(innernodeclass=nodes.inline,  # type: ignore
                         warn_dangling=True),
         'stat': XRefRole(innernodeclass=nodes.inline,  # type: ignore
