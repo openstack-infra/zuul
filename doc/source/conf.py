@@ -30,13 +30,14 @@ extensions = [
     'sphinx.ext.graphviz',
     'sphinxcontrib.blockdiag',
     'sphinxcontrib.programoutput',
+    'zuul_sphinx',
     'zuul.sphinx.ansible',
     'zuul.sphinx.zuul',
 ]
 #extensions = ['sphinx.ext.intersphinx']
 #intersphinx_mapping = {'python': ('http://docs.python.org/2.7', None)}
 
-primary_domain = 'zuul'
+primary_domain = 'zuuldoc'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

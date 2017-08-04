@@ -29,10 +29,10 @@ class ZuulConfigObject(ObjectDescription):
     }
 
     def get_path(self):
-        return self.env.ref_context.get('zuul:attr_path', [])
+        return self.env.ref_context.get('zuuldoc:attr_path', [])
 
     def get_display_path(self):
-        return self.env.ref_context.get('zuul:display_attr_path', [])
+        return self.env.ref_context.get('zuuldoc:display_attr_path', [])
 
     @property
     def parent_pathname(self):
@@ -50,7 +50,7 @@ class ZuulConfigObject(ObjectDescription):
             signode['ids'].append(targetname)
             signode['first'] = (not self.names)
             self.state.document.note_explicit_target(signode)
-            objects = self.env.domaindata['zuul']['objects']
+            objects = self.env.domaindata['zuuldoc']['objects']
             if targetname in objects:
                 self.state_machine.reporter.warning(
                     'duplicate object description of %s, ' % targetname +
@@ -80,16 +80,16 @@ class ZuulAttrDirective(ZuulConfigObject):
     }
 
     def before_content(self):
-        path = self.env.ref_context.setdefault('zuul:attr_path', [])
+        path = self.env.ref_context.setdefault('zuuldoc:attr_path', [])
         path.append(self.names[-1])
-        path = self.env.ref_context.setdefault('zuul:display_attr_path', [])
+        path = self.env.ref_context.setdefault('zuuldoc:display_attr_path', [])
         path.append(self.names[-1])
 
     def after_content(self):
-        path = self.env.ref_context.get('zuul:attr_path')
+        path = self.env.ref_context.get('zuuldoc:attr_path')
         if path:
             path.pop()
-        path = self.env.ref_context.get('zuul:display_attr_path')
+        path = self.env.ref_context.get('zuuldoc:display_attr_path')
         if path:
             path.pop()
 
@@ -141,18 +141,18 @@ class ZuulVarDirective(ZuulConfigObject):
         return ''
 
     def before_content(self):
-        path = self.env.ref_context.setdefault('zuul:attr_path', [])
+        path = self.env.ref_context.setdefault('zuuldoc:attr_path', [])
         element = self.names[-1]
         path.append(element)
-        path = self.env.ref_context.setdefault('zuul:display_attr_path', [])
+        path = self.env.ref_context.setdefault('zuuldoc:display_attr_path', [])
         element = self.names[-1] + self.get_type_str()
         path.append(element)
 
     def after_content(self):
-        path = self.env.ref_context.get('zuul:attr_path')
+        path = self.env.ref_context.get('zuuldoc:attr_path')
         if path:
             path.pop()
-        path = self.env.ref_context.get('zuul:display_attr_path')
+        path = self.env.ref_context.get('zuuldoc:display_attr_path')
         if path:
             path.pop()
 
@@ -176,18 +176,18 @@ class ZuulStatDirective(ZuulConfigObject):
     }
 
     def before_content(self):
-        path = self.env.ref_context.setdefault('zuul:attr_path', [])
+        path = self.env.ref_context.setdefault('zuuldoc:attr_path', [])
         element = self.names[-1]
         path.append(element)
-        path = self.env.ref_context.setdefault('zuul:display_attr_path', [])
+        path = self.env.ref_context.setdefault('zuuldoc:display_attr_path', [])
         element = self.names[-1]
         path.append(element)
 
     def after_content(self):
-        path = self.env.ref_context.get('zuul:attr_path')
+        path = self.env.ref_context.get('zuuldoc:attr_path')
         if path:
             path.pop()
-        path = self.env.ref_context.get('zuul:display_attr_path')
+        path = self.env.ref_context.get('zuuldoc:display_attr_path')
         if path:
             path.pop()
 
@@ -216,7 +216,7 @@ class ZuulAbbreviatedXRefRole(XRefRole):
 
 
 class ZuulDomain(Domain):
-    name = 'zuul'
+    name = 'zuuldoc'
     label = 'Zuul'
 
     directives = {

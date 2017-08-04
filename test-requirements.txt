@@ -14,3 +14,4 @@ sphinxcontrib-programoutput
 mock
 PyMySQL
 mypy
+zuul-sphinx
