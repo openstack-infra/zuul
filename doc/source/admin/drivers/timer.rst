@@ -11,14 +11,20 @@ Trgger Configuration
 --------------------
 
 Timers don't require a special connection or driver. Instead they can
-simply be used by listing **timer** as the trigger.
+simply be used by listing ``timer`` as the trigger.
 
-This trigger will run based on a cron-style time specification.
-It will enqueue an event into its pipeline for every project
-defined in the configuration.  Any job associated with the
-pipeline will run in response to that event.
+This trigger will run based on a cron-style time specification.  It
+will enqueue an event into its pipeline for every project defined in
+the configuration.  Any job associated with the pipeline will run in
+response to that event.
 
-**time**
-  The time specification in cron syntax.  Only the 5 part syntax is
-  supported, not the symbolic names.  Example: ``0 0 * * *`` runs at
-  midnight. The first weekday is Monday.
+.. attr:: pipeline.trigger.timer
+
+   The timer trigger supports the following attributes:
+
+   .. attr:: time
+      :required:
+
+      The time specification in cron syntax.  Only the 5 part syntax
+      is supported, not the symbolic names.  Example: ``0 0 * * *``
+      runs at midnight. The first weekday is Monday.
