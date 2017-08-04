@@ -47,7 +47,6 @@ class SMTPReporter(BaseReporter):
 
 def getSchema():
     smtp_reporter = v.Schema({
-        'connection': str,
         'to': str,
         'from': str,
         'subject': str,
