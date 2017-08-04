@@ -6,11 +6,37 @@ Components
 ==========
 
 Zuul is a distributed system consisting of several components, each of
-which is described below.  All Zuul processes read the
-``/etc/zuul/zuul.conf`` file (an alternate location may be supplied on
-the command line) which uses an INI file syntax.  Each component may
-have its own configuration file, though you may find it simpler to use
-the same file for all components.
+which is described below.
+
+
+.. graphviz::
+   :align: center
+
+   graph  {
+      node [shape=box]
+      Gearman [shape=ellipse]
+      Gerrit [fontcolor=grey]
+      Zookeeper [shape=ellipse]
+      Nodepool
+      GitHub [fontcolor=grey]
+
+      Merger -- Gearman
+      Executor -- Gearman
+      Web -- Gearman
+
+      Gearman -- Scheduler;
+      Scheduler -- Gerrit;
+      Scheduler -- Zookeeper;
+      Zookeeper -- Nodepool;
+      Scheduler -- GitHub;
+   }
+
+
+
+All Zuul processes read the ``/etc/zuul/zuul.conf`` file (an alternate
+location may be supplied on the command line) which uses an INI file
+syntax.  Each component may have its own configuration file, though
+you may find it simpler to use the same file for all components.
 
 An example ``zuul.conf``:
 
