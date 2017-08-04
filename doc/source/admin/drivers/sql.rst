@@ -51,11 +51,12 @@ For example:
    - pipeline:
        name: post-merge
        success:
-         mydb_conn: {}
+         mydb_conn:
        failure:
-         mydb_conn: {}
+         mydb_conn:
 
 .. attr:: pipeline.<reporter>.<sql source>
 
-   To report to a database, add an empty dictionary to the desired
-   pipeline :ref:`reporter<reporters>` attributes.
+   To report to a database, add a key with the connection name and an
+   empty value to the desired pipeline :ref:`reporter<reporters>`
+   attributes.

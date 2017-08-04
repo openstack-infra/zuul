@@ -79,5 +79,5 @@ class SQLReporter(BaseReporter):
 
 
 def getSchema():
-    sql_reporter = v.Schema({})
+    sql_reporter = v.Schema(None)
     return sql_reporter

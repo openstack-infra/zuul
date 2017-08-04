@@ -7,12 +7,12 @@
     success:
       gerrit:
         Verified: 1
-      resultsdb: {}
+      resultsdb:
     failure:
       gerrit:
         Verified: -1
-      resultsdb: {}
-      resultsdb_failures: {}
+      resultsdb:
+      resultsdb_failures:
 
 - job:
     name: project-merge
