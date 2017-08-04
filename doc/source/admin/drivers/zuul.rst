@@ -10,18 +10,29 @@ Trigger Configuration
 ---------------------
 
 Zuul events don't require a special connection or driver. Instead they
-can simply be used by listing **zuul** as the trigger.
+can simply be used by listing ``zuul`` as the trigger.
 
-**event**
-  The event name.  Currently supported:
+.. attr:: pipeline.trigger.zuul
 
-  *project-change-merged* when Zuul merges a change to a project, it
-  generates this event for every open change in the project.
+   The Zuul trigger supports the following attributes:
 
-  *parent-change-enqueued* when Zuul enqueues a change into any
-  pipeline, it generates this event for every child of that
-  change.
+   .. attr:: event
+      :required:
 
-**pipeline**
-  Only available for ``parent-change-enqueued`` events.  This is the
-  name of the pipeline in which the parent change was enqueued.
+      The event name.  Currently supported events:
+
+      .. value:: project-change-merged
+
+         When Zuul merges a change to a project, it generates this
+         event for every open change in the project.
+
+      .. value:: parent-change-enqueued
+
+         When Zuul enqueues a change into any pipeline, it generates
+         this event for every child of that change.
+
+   .. attr:: pipeline
+
+      Only available for ``parent-change-enqueued`` events.  This is
+      the name of the pipeline in which the parent change was
+      enqueued.
