@@ -223,7 +223,11 @@ class EncryptedPKCS1_OAEP(yaml.YAMLObject):
     yaml_loader = yaml.SafeLoader
 
     def __init__(self, ciphertext):
-        self.ciphertext = base64.b64decode(ciphertext)
+        if isinstance(ciphertext, list):
+            self.ciphertext = [base64.b64decode(x.value)
+                               for x in ciphertext]
+        else:
+            self.ciphertext = base64.b64decode(ciphertext)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -238,8 +242,14 @@ class EncryptedPKCS1_OAEP(yaml.YAMLObject):
         return cls(node.value)
 
     def decrypt(self, private_key):
-        return encryption.decrypt_pkcs1_oaep(self.ciphertext,
-                                             private_key).decode('utf8')
+        if isinstance(self.ciphertext, list):
+            return ''.join([
+                encryption.decrypt_pkcs1_oaep(chunk, private_key).
+                decode('utf8')
+                for chunk in self.ciphertext])
+        else:
+            return encryption.decrypt_pkcs1_oaep(self.ciphertext,
+                                                 private_key).decode('utf8')
 
 
 class NodeSetParser(object):

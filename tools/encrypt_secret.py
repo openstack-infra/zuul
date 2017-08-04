@@ -14,10 +14,13 @@
 
 import argparse
 import base64
+import math
 import os
+import re
 import subprocess
 import sys
 import tempfile
+import textwrap
 
 # we to import Request and urlopen differently for python 2 and 3
 try:
@@ -68,28 +71,70 @@ def main():
     else:
         plaintext = sys.stdin.read()
 
+    plaintext = plaintext.encode("utf-8")
+
     pubkey_file = tempfile.NamedTemporaryFile(delete=False)
     try:
         pubkey_file.write(pubkey.read())
         pubkey_file.close()
 
-        p = subprocess.Popen(['openssl', 'rsautl', '-encrypt',
-                              '-oaep', '-pubin', '-inkey',
+        p = subprocess.Popen(['openssl', 'rsa', '-text',
+                              '-pubin', '-in',
                               pubkey_file.name],
-                             stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE)
-        (stdout, stderr) = p.communicate(plaintext.encode("utf-8"))
+        (stdout, stderr) = p.communicate()
         if p.returncode != 0:
             raise Exception("Return code %s from openssl" % p.returncode)
-        ciphertext = base64.b64encode(stdout)
+        output = stdout.decode('utf-8')
+        m = re.match(r'^Public-Key: \((\d+) bit\)$', output, re.MULTILINE)
+        nbits = int(m.group(1))
+        nbytes = int(nbits / 8)
+        max_bytes = nbytes - 42  # PKCS1-OAEP overhead
+        chunks = int(math.ceil(float(len(plaintext)) / max_bytes))
+
+        ciphertext_chunks = []
+
+        print("Public key length: {} bits ({} bytes)".format(nbits, nbytes))
+        print("Max plaintext length per chunk: {} bytes".format(max_bytes))
+        print("Input plaintext length: {} bytes".format(len(plaintext)))
+        print("Number of chunks: {}".format(chunks))
+
+        for count in range(chunks):
+            chunk = plaintext[int(count * max_bytes):
+                              int((count + 1) * max_bytes)]
+            p = subprocess.Popen(['openssl', 'rsautl', '-encrypt',
+                                  '-oaep', '-pubin', '-inkey',
+                                  pubkey_file.name],
+                                 stdin=subprocess.PIPE,
+                                 stdout=subprocess.PIPE)
+            (stdout, stderr) = p.communicate(chunk)
+            if p.returncode != 0:
+                raise Exception("Return code %s from openssl" % p.returncode)
+            ciphertext_chunks.append(base64.b64encode(stdout).decode('utf-8'))
+
     finally:
         os.unlink(pubkey_file.name)
 
+    output = textwrap.dedent(
+        '''
+        - secret:
+            name: <name>
+            data:
+              <fieldname>: !encrypted/pkcs1-oaep
+        ''')
+
+    twrap = textwrap.TextWrapper(width=79,
+                                 initial_indent=' ' * 8,
+                                 subsequent_indent=' ' * 10)
+    for chunk in ciphertext_chunks:
+        chunk = twrap.fill('- ' + chunk)
+        output += chunk + '\n'
+
     if args.outfile:
-        with open(args.outfile, "wb") as f:
-            f.write(ciphertext)
+        with open(args.outfile, "w") as f:
+            f.write(output)
     else:
-        print(ciphertext.decode("utf-8"))
+        print(output)
 
 
 if __name__ == '__main__':

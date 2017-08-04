@@ -20,23 +20,40 @@ project and ``<source>`` is the name of that project's connection in
 the main Zuul configuration file.
 
 Zuul currently supports one encryption scheme, PKCS#1 with OAEP, which
-can not store secrets longer than the key length, 4096 bits.  The
-padding used by this scheme ensures that someone examining the
-encrypted data can not determine the length of the plaintext version
-of the data, except to know that it is not longer than 4096 bits.
+can not store secrets longer than the 3760 bits (derived from the key
+length of 4096 bits minus 336 bits of overhead).  The padding used by
+this scheme ensures that someone examining the encrypted data can not
+determine the length of the plaintext version of the data, except to
+know that it is not longer than 3760 bits (or some multiple thereof).
 
 In the config files themselves, Zuul uses an extensible method of
 specifying the encryption scheme used for a secret so that other
 schemes may be added later.  To specify a secret, use the
 ``!encrypted/pkcs1-oaep`` YAML tag along with the base64 encoded
-value.  For example::
+value.  For example:
+
+.. code-block:: yaml
 
   - secret:
       name: test_secret
       data:
         password: !encrypted/pkcs1-oaep |
-          BFhtdnm8uXx7kn79RFL/zJywmzLkT1GY78P3bOtp4WghUFWobkifSu7ZpaV4NeO0s71YUsi1wGZZ
+          BFhtdnm8uXx7kn79RFL/zJywmzLkT1GY78P3bOtp4WghUFWobkifSu7ZpaV4NeO0s71YUsi
           ...
+
+To support secrets longer than 3760 bits, the value after the
+encryption tag may be a list rather than a scalar.  For example:
+
+.. code-block:: yaml
+
+  - secret:
+      name: long_secret
+      data:
+        password: !encrypted/pkcs1-oaep
+          - er1UXNOD3OqtsRJaP0Wvaqiqx0ZY2zzRt6V9vqIsRaz1R5C4/AEtIad/DERZHwk3Nk+KV
+            ...
+          - HdWDS9lCBaBJnhMsm/O9tpzCq+GKRELpRzUwVgU5k822uBwhZemeSrUOLQ8hQ7q/vVHln
+            ...
 
 Zuul provides a standalone script to make encrypting values easy; it
 can be found at `tools/encrypt_secret.py` in the Zuul source
