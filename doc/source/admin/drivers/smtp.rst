@@ -9,25 +9,36 @@ when items report.
 Connection Configuration
 ------------------------
 
-**driver=smtp**
+.. attr:: <smtp connection>
 
-**server**
-  SMTP server hostname or address to use.
-  ``server=localhost``
+   .. attr:: driver
+      :required:
 
-**port**
-  Optional: SMTP server port.
-  ``port=25``
+      .. value:: smtp
 
-**default_from**
-  Who the email should appear to be sent from when emailing the report.
-  This can be overridden by individual pipelines.
-  ``default_from=zuul@example.com``
+         The connection must set ``driver=smtp`` for SMTP connections.
 
-**default_to**
-  Who the report should be emailed to by default.
-  This can be overridden by individual pipelines.
-  ``default_to=you@example.com``
+   .. attr:: server
+      :default: localhost
+
+      SMTP server hostname or address to use.
+
+   .. attr:: port
+      :default: 25
+
+      SMTP server port.
+
+   .. attr:: default_from
+      :default: zuul
+
+      Who the email should appear to be sent from when emailing the report.
+      This can be overridden by individual pipelines.
+
+   .. attr:: default_to
+      :default: zuul
+
+      Who the report should be emailed to by default.
+      This can be overridden by individual pipelines.
 
 Reporter Configuration
 ----------------------
@@ -39,15 +50,38 @@ reporter.  The connection also may specify a default *To* or *From*
 address.
 
 Each pipeline can overwrite the ``subject`` or the ``to`` or ``from`` address by
-providing alternatives as arguments to the reporter. For example, ::
+providing alternatives as arguments to the reporter. For example:
 
-  - pipeline:
-      name: post-merge
-      success:
-        outgoing_smtp:
-          to: you@example.com
-      failure:
-        internal_smtp:
-          to: you@example.com
-          from: alternative@example.com
-          subject: Change {change} failed
+.. code-block:: yaml
+
+   - pipeline:
+       name: post-merge
+       success:
+         outgoing_smtp:
+           to: you@example.com
+       failure:
+         internal_smtp:
+           to: you@example.com
+           from: alternative@example.com
+           subject: Change {change} failed
+
+.. attr:: pipeline.<reporter>.<smtp source>
+
+   To report via email, the dictionaries passed to any of the pipeline
+   :ref:`reporter<reporters>` attributes support the following
+   attributes:
+
+   .. attr:: to
+
+      The SMTP recipient address for the report.  Multiple addresses
+      may be specified as one value separated by commas.
+
+   .. attr:: from
+
+      The SMTP sender address for the report.
+
+   .. attr:: subject
+
+      The Subject of the report email.
+
+      .. TODO: document subject string formatting.
