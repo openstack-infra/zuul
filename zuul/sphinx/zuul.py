@@ -166,6 +166,44 @@ class ZuulVarDirective(ZuulConfigObject):
         return sig
 
 
+class ZuulStatDirective(ZuulConfigObject):
+    has_content = True
+
+    option_spec = {
+        'type': lambda x: x,
+        'hidden': lambda x: x,
+        'noindex': lambda x: x,
+    }
+
+    def before_content(self):
+        path = self.env.ref_context.setdefault('zuul:attr_path', [])
+        element = self.names[-1]
+        path.append(element)
+        path = self.env.ref_context.setdefault('zuul:display_attr_path', [])
+        element = self.names[-1]
+        path.append(element)
+
+    def after_content(self):
+        path = self.env.ref_context.get('zuul:attr_path')
+        if path:
+            path.pop()
+        path = self.env.ref_context.get('zuul:display_attr_path')
+        if path:
+            path.pop()
+
+    def handle_signature(self, sig, signode):
+        if 'hidden' in self.options:
+            return sig
+        path = self.get_display_path()
+        for x in path:
+            signode += addnodes.desc_addname(x + '.', x + '.')
+        signode += addnodes.desc_name(sig, sig)
+        if 'type' in self.options:
+            t = ' (%s)' % self.options['type']
+            signode += addnodes.desc_annotation(t, t)
+        return sig
+
+
 class ZuulDomain(Domain):
     name = 'zuul'
     label = 'Zuul'
@@ -174,6 +212,7 @@ class ZuulDomain(Domain):
         'attr': ZuulAttrDirective,
         'value': ZuulValueDirective,
         'var': ZuulVarDirective,
+        'stat': ZuulStatDirective,
     }
 
     roles = {
@@ -183,6 +222,8 @@ class ZuulDomain(Domain):
                           warn_dangling=True),
         'var': XRefRole(innernodeclass=nodes.inline,  # type: ignore
                         warn_dangling=True),
+        'stat': XRefRole(innernodeclass=nodes.inline,  # type: ignore
+                         warn_dangling=True),
     }
 
     initial_data = {
