@@ -83,7 +83,7 @@ class SQLConnection(BaseConnection):
             sa.Column('change', sa.Integer, nullable=True),
             sa.Column('patchset', sa.Integer, nullable=True),
             sa.Column('ref', sa.String(255)),
-            sa.Column('score', sa.Integer, nullable=True),
+            sa.Column('result', sa.String(255)),
             sa.Column('message', sa.TEXT()),
             sa.Column('tenant', sa.String(255)),
         )

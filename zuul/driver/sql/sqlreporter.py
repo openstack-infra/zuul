@@ -25,12 +25,6 @@ class SQLReporter(BaseReporter):
     name = 'sql'
     log = logging.getLogger("zuul.reporter.mysql.SQLReporter")
 
-    def __init__(self, driver, connection, config={}):
-        super(SQLReporter, self).__init__(
-            driver, connection, config)
-        # TODO(jeblair): document this is stored as NULL if unspecified
-        self.result_score = config.get('score', None)
-
     def report(self, item):
         """Create an entry into a database."""
 
@@ -49,7 +43,7 @@ class SQLReporter(BaseReporter):
                 change=change,
                 patchset=patchset,
                 ref=ref,
-                score=self.result_score,
+                result=item.current_build_set.result,
                 message=self._formatItemReport(
                     item, with_jobs=False),
                 tenant=item.pipeline.layout.tenant.name,
