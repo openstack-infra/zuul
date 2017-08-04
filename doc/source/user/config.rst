@@ -489,7 +489,7 @@ Here is an example of two job definitions:
        parent: base
        nodes:
          - name: test-node
-           image: fedora
+           label: fedora
 
 .. attr:: job
 

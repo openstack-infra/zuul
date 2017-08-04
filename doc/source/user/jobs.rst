@@ -3,7 +3,7 @@
 Job Content
 ===========
 
-Zuul jobs are implemneted as Ansible playbooks.  Zuul prepares the
+Zuul jobs are implemented as Ansible playbooks.  Zuul prepares the
 repositories used for a job, installs any required Ansible roles, and
 then executes the job's playbooks.  Any setup or artifact collection
 required is the responsibility of the job itself.  While this flexible
