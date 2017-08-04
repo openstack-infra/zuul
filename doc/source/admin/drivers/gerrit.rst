@@ -89,7 +89,7 @@ be able to invoke the ``gerrit stream-events`` command over SSH.
 
 .. attr:: pipeline.trigger.<gerrit source>
 
-   The dictionary passed to the Gerrit pipeline `trigger` attribute
+   The dictionary passed to the Gerrit pipeline ``trigger`` attribute
    supports the following attributes:
 
    .. attr:: event
