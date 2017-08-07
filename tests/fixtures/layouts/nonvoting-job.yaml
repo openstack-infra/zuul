@@ -20,6 +20,10 @@
     precedence: high
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: nonvoting-project-merge
     hold-following-changes: true
 

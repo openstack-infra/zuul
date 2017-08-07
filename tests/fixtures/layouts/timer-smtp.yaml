@@ -11,6 +11,10 @@
         subject: Periodic check for {change.project} succeeded
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: project-bitrot-stable-old
     success-url: http://logs.example.com/{job.name}/{build.number}
 

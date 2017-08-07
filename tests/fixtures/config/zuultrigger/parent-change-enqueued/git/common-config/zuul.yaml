@@ -46,6 +46,10 @@
     precedence: high
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: project-check
 
 - job:

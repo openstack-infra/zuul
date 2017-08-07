@@ -8,6 +8,10 @@
           ignore-deletes: false
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: project-post
     nodes:
       - name: static

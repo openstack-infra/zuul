@@ -79,6 +79,10 @@
         status: 'failure'
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: project-test1
 
 - project:

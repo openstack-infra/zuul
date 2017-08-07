@@ -9,6 +9,10 @@
             - changed
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: one-job-project-merge
 
 - project:

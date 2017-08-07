@@ -28,15 +28,24 @@
       github: {}
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: project1-test
+
 - job:
     name: project2-test
+
 - job:
     name: project3-test
+
 - job:
     name: project4-test
+
 - job:
     name: project5-test
+
 - job:
     name: project6-test
 

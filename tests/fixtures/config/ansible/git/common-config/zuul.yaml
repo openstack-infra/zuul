@@ -70,6 +70,10 @@
       value: vartest_secret
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: base-urls
     success-url: https://success.example.com/zuul-logs/{build.uuid}/
     failure-url: https://failure.example.com/zuul-logs/{build.uuid}/

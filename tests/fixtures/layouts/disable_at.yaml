@@ -16,6 +16,10 @@
     disable-after-consecutive-failures: 3
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: project-test1
     nodes:
       - name: controller

@@ -1,0 +1,13 @@
+- job:
+    name: my-job
+
+- job:
+    name: other-job
+    parent: other-base
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - my-job
+        - other-job

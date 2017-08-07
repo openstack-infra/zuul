@@ -2238,6 +2238,9 @@ class Layout(object):
             return self.jobs[name][0]
         raise Exception("Job %s not defined" % (name,))
 
+    def hasJob(self, name):
+        return name in self.jobs
+
     def getJobs(self, name):
         return self.jobs.get(name, [])
 
@@ -2456,6 +2459,7 @@ class Tenant(object):
         self.name = name
         self.max_nodes_per_job = 5
         self.exclude_unprotected_branches = False
+        self.default_base_job = None
         self.layout = None
         # The unparsed configuration from the main zuul config for
         # this tenant.

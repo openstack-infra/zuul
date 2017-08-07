@@ -35,6 +35,7 @@
 
 - job:
     name: base
+    parent: null
     timeout: 30
     nodes:
       - name: controller

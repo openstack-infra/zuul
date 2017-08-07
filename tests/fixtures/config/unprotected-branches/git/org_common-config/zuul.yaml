@@ -17,3 +17,7 @@
     start:
       github:
         comment: true
+
+- job:
+    name: base
+    parent: null

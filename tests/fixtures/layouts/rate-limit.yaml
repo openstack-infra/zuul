@@ -25,6 +25,10 @@
     window-decrease-factor: 2
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: project-merge
 
 - job:

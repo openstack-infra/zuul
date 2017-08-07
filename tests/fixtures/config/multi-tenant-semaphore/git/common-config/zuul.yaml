@@ -10,3 +10,7 @@
     failure:
       gerrit:
         Verified: -1
+
+- job:
+    name: base
+    parent: null

@@ -6,6 +6,13 @@ Glossary
 .. glossary::
    :sorted:
 
+   base job
+
+      A job with no parent.  A base job may only be defined in a
+      :term:`config-project`.  Multiple base jobs may be defined, but
+      each tenant has a single default job which will be used as the
+      parent of any job which does not specify one explicitly.
+
    check
 
       By convention, the name of a pipeline which performs pre-merge

@@ -33,6 +33,10 @@
     precedence: high
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: project-merge
     hold-following-changes: true
 

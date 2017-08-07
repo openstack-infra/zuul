@@ -17,9 +17,10 @@ they specify one of two security contexts for that project.  A
 *config-project* is one which is primarily tasked with holding
 configuration information and job content for Zuul.  Jobs which are
 defined in a config-project are run with elevated privileges, and all
-Zuul configuration items are available for use.  It is expected that
-changes to config-projects will undergo careful scrutiny before being
-merged.
+Zuul configuration items are available for use.  Base jobs (that is,
+jobs without a parent) may only be defined in config-projects.  It is
+expected that changes to config-projects will undergo careful scrutiny
+before being merged.
 
 An *untrusted-project* is a project whose primary focus is not to
 operate Zuul, but rather it is one of the projects being tested or
@@ -439,6 +440,12 @@ specialization before arriving at a particular job.  A job may inherit
 from any other job in any project (however, if the other job is marked
 as ``final``, some attributes may not be overidden).
 
+A job with no parent is called a *base job* and may only be defined in
+a :term:`config-project`.  Every other job must have a parent, and so
+ultimately, all jobs must have an inheritance path which terminates at
+a base job.  Each tenant has a default parent job which will be used
+if no explicit parent is specified.
+
 Jobs also support a concept called variance.  The first time a job
 definition appears is called the reference definition of the job.
 Subsequent job definitions with the same name are called variants.
@@ -503,11 +510,17 @@ Here is an example of two job definitions:
       this name to use as the main playbook for the job.  This name is
       also referenced later in a project pipeline configuration.
 
+   .. TODO: figure out how to link the parent default to tenant.default.parent
+
    .. attr:: parent
+      :default: Tenant default-parent
 
       Specifies a job to inherit from.  The parent job can be defined
-      in this or any other project.  Any attributes not specified on
-      a job will be collected from its parent.
+      in this or any other project.  Any attributes not specified on a
+      job will be collected from its parent.  If no value is supplied
+      here, the job specified by :attr:`tenant.default-parent` will be
+      used.  If **parent** is set to ``null`` (which is only valid in
+      a :term:`config-project`), this is a :term:`base job`.
 
    .. attr:: description
 
