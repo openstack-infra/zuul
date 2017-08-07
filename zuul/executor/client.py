@@ -409,6 +409,10 @@ class ExecutorClient(object):
                 del self.builds[job.unique]
             except:
                 pass
+            # Since this isn't otherwise going to get a build complete
+            # event, send one to the scheduler so that it can unlock
+            # the nodes.
+            self.sched.onBuildCompleted(build, 'CANCELED', {})
             return True
         return False
 
