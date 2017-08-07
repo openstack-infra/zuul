@@ -791,6 +791,8 @@ class TestAnsible(AnsibleZuulTestCase):
             ('credstash', 'FAILURE'),
             ('csvfile_good', 'SUCCESS'),
             ('csvfile_bad', 'FAILURE'),
+            ('uri_bad_path', 'FAILURE'),
+            ('uri_bad_scheme', 'FAILURE'),
         ]
         for job_name, result in plugin_tests:
             count += 1

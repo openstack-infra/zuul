@@ -15,3 +15,4 @@ Zuul, though advanced users may find it interesting.
    triggers
    testing
    docs
+   ansible

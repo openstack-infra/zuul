@@ -30,6 +30,7 @@ extensions = [
     'sphinx.ext.graphviz',
     'sphinxcontrib.blockdiag',
     'sphinxcontrib.programoutput',
+    'zuul.sphinx.ansible',
     'zuul.sphinx.zuul',
 ]
 #extensions = ['sphinx.ext.intersphinx']
