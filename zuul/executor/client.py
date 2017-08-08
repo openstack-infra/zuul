@@ -16,6 +16,7 @@ import copy
 import gear
 import json
 import logging
+import os
 import time
 import threading
 from uuid import uuid4
@@ -154,7 +155,9 @@ class ExecutorClient(object):
             name=item.change.project.name,
             short_name=item.change.project.name.split('/')[-1],
             canonical_hostname=item.change.project.canonical_hostname,
-            canonical_name=item.change.project.canonical_name)
+            canonical_name=item.change.project.canonical_name,
+            src_dir=os.path.join('src', item.change.project.canonical_name),
+        )
 
         zuul_params = dict(build=uuid,
                            buildset=item.current_build_set.uuid,
@@ -186,7 +189,9 @@ class ExecutorClient(object):
                 name=i.change.project.name,
                 short_name=i.change.project.name.split('/')[-1],
                 canonical_hostname=i.change.project.canonical_hostname,
-                canonical_name=i.change.project.canonical_name)
+                canonical_name=i.change.project.canonical_name,
+                src_dir=os.path.join('src', i.change.project.canonical_name),
+            )
             if hasattr(i.change, 'number'):
                 d['change'] = str(i.change.number)
             if hasattr(i.change, 'patchset'):
