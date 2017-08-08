@@ -50,7 +50,7 @@ class ActionModule(normal.ActionModule):
         handler_name = 'handle_{action}'.format(action=self._task.action)
         handler = getattr(self, handler_name, None)
         if handler:
-            handler(self)
+            handler()
             return True
         return False
 
