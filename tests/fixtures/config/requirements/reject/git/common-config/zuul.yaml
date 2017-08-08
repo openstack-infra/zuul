@@ -47,6 +47,10 @@
         Verified: -1
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: project1-job
 
 - job:

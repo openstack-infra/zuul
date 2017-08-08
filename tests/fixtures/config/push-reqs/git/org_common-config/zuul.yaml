@@ -77,6 +77,10 @@
         - event: ref-updated
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: job1
 
 - project:

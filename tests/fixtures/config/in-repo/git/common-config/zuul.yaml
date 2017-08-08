@@ -70,6 +70,10 @@
     trigger: {}
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: common-config-test
 
 - project:

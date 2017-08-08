@@ -26,6 +26,10 @@
     precedence: high
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: project-test1
 #    success-url: http://logs.exxxample.com/{change.number}/{change.patchset}/{pipeline.name}/{job.name}
 

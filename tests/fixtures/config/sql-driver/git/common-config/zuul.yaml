@@ -15,6 +15,10 @@
       resultsdb_failures:
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: project-merge
 
 - job:

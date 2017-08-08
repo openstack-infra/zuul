@@ -17,6 +17,10 @@
         Verified: -1
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: docs-draft-test
     success-url: http://docs-draft.example.org/{change.number:.2}/{change.number}/{change.patchset}/{pipeline.name}/{job.name}/{build.uuid:.7}/publish-docs/
 

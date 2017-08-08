@@ -305,5 +305,6 @@ class TestConfigConflict(ZuulTestCase):
         tenant = self.sched.abide.tenants.get('tenant-one')
         jobs = sorted(tenant.layout.jobs.keys())
         self.assertEquals(
-            ['noop', 'trusted-zuul.yaml-job', 'untrusted-zuul.yaml-job'],
+            ['base', 'noop', 'trusted-zuul.yaml-job',
+             'untrusted-zuul.yaml-job'],
             jobs)

@@ -18,7 +18,12 @@
       github: {}
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: project-test1
+
 - job:
     name: project-test2
 

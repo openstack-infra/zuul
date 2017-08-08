@@ -165,3 +165,12 @@ configuration.  An example tenant definition is:
       can be limited to the protected branches which are gated. This
       is a tenant wide setting and can be overridden per project.
       This currently only affects GitHub projects.
+
+   .. attr:: default-parent
+      :default: base
+
+      If a job is defined without an explicit :attr:`job.parent`
+      attribute, this job will be configured as the job's parent.
+      This allows an administrator to configure a default base job to
+      implement local policies such as node setup and artifact
+      publishing.

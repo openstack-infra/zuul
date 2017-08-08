@@ -65,6 +65,7 @@ class TestJob(BaseTestCase):
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'job',
+            'parent': None,
             'irrelevant-files': [
                 '^docs/.*$'
             ]})
@@ -184,6 +185,7 @@ class TestJob(BaseTestCase):
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'base',
+            'parent': None,
             'timeout': 30,
             'pre-run': 'base-pre',
             'post-run': 'base-post',
@@ -389,6 +391,7 @@ class TestJob(BaseTestCase):
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'base',
+            'parent': None,
             'timeout': 30,
         })
         layout.addJob(base)
@@ -487,6 +490,7 @@ class TestJob(BaseTestCase):
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'base',
+            'parent': None,
             'timeout': 30,
         })
         layout.addJob(base)
@@ -565,6 +569,7 @@ class TestJob(BaseTestCase):
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'base',
+            'parent': None,
             'timeout': 30,
         })
         layout.addJob(base)
@@ -614,6 +619,7 @@ class TestJob(BaseTestCase):
         base = configloader.JobParser.fromYaml(tenant, layout, {
             '_source_context': base_context,
             '_start_mark': self.start_mark,
+            'parent': None,
             'name': 'base',
         })
         layout.addJob(base)
@@ -639,6 +645,7 @@ class TestJob(BaseTestCase):
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'job',
+            'parent': None,
             'allowed-projects': ['project'],
         })
         self.layout.addJob(job)
@@ -679,6 +686,7 @@ class TestJob(BaseTestCase):
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'job',
+            'parent': None,
         })
         auth = model.AuthContext()
         auth.secrets.append('foo')

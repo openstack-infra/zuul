@@ -20,6 +20,10 @@
           - 'test'
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: project-labels
 
 - project:

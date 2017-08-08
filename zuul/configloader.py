@@ -344,7 +344,7 @@ class JobParser(object):
                        'override-branch': str}
 
         job = {vs.Required('name'): str,
-               'parent': str,
+               'parent': vs.Any(str, None),
                'failure-message': str,
                'success-message': str,
                'failure-url': str,
@@ -441,9 +441,19 @@ class JobParser(object):
                 job.auth.secrets.append(secret.decrypt(
                     job.source_context.project.private_key))
 
+        is_variant = layout.hasJob(conf['name'])
         if 'parent' in conf:
-            parent = layout.getJob(conf['parent'])
-            job.inheritFrom(parent)
+            if conf['parent'] is not None:
+                parent = layout.getJob(conf['parent'])
+                job.inheritFrom(parent)
+            else:
+                if not conf['_source_context'].trusted:
+                    raise Exception(
+                        "Base jobs must be defined in config projects")
+        else:
+            if not is_variant:
+                parent = layout.getJob(tenant.default_base_job)
+                job.inheritFrom(parent)
 
         # Roles are part of the playbook context so we must establish
         # them earlier than playbooks.
@@ -984,6 +994,7 @@ class TenantParser(object):
                   'max-nodes-per-job': int,
                   'source': TenantParser.validateTenantSources(connections),
                   'exclude-unprotected-branches': bool,
+                  'default-parent': str,
                   }
         return vs.Schema(tenant)
 
@@ -997,6 +1008,7 @@ class TenantParser(object):
         if conf.get('exclude-unprotected-branches') is not None:
             tenant.exclude_unprotected_branches = \
                 conf['exclude-unprotected-branches']
+        tenant.default_base_job = conf.get('default-parent', 'base')
 
         tenant.unparsed_config = conf
         unparsed_config = model.UnparsedTenantConfig()

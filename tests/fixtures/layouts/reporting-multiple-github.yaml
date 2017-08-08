@@ -23,7 +23,12 @@
         status: 'success'
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: project1-test1
+
 - job:
     name: project2-test2
 

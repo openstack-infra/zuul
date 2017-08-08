@@ -184,23 +184,36 @@
         comment: true
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: project1-pipeline
+
 - job:
     name: project2-trigger
+
 - job:
     name: project3-reviewusername
+
 - job:
     name: project4-reviewreq
+
 - job:
     name: project5-reviewuserstate
+
 - job:
     name: project6-newerthan
+
 - job:
     name: project7-olderthan
+
 - job:
     name: project8-requireopen
+
 - job:
     name: project9-requirecurrent
+
 - job:
     name: project10-label
 

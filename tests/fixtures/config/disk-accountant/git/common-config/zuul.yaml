@@ -13,6 +13,10 @@
         verified: -1
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: dd-big-empty-file
 
 - project:

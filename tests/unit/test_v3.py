@@ -1122,3 +1122,43 @@ class TestMaxNodesPerJob(AnsibleZuulTestCase):
         self.waitUntilSettled()
         self.assertNotIn("exceeds tenant max-nodes", B.messages[0],
                          "B should not fail because of nodes limit")
+
+
+class TestBaseJobs(ZuulTestCase):
+    tenant_config_file = 'config/base-jobs/main.yaml'
+
+    def test_multiple_base_jobs(self):
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='my-job', result='SUCCESS', changes='1,1'),
+            dict(name='other-job', result='SUCCESS', changes='1,1'),
+        ], ordered=False)
+        self.assertEqual(self.getJobFromHistory('my-job').
+                         parameters['zuul']['jobtags'],
+                         ['mybase'])
+        self.assertEqual(self.getJobFromHistory('other-job').
+                         parameters['zuul']['jobtags'],
+                         ['otherbase'])
+
+    def test_untrusted_base_job(self):
+        """Test that a base job may not be defined in an untrusted repo"""
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: fail-base
+                parent: null
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertEqual(A.patchsets[0]['approvals'][0]['value'], "-1")
+        self.assertIn('Base jobs must be defined in config projects',
+                      A.messages[0])
+        self.assertHistory([])

@@ -15,7 +15,12 @@
           ref: ^refs/tags/.*$
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: project-post
+
 - job:
     name: project-tag
 

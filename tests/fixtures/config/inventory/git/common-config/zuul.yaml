@@ -32,6 +32,10 @@
           - compute2
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: single-inventory
     nodes:
       - name: ubuntu-xenial

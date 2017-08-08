@@ -8,6 +8,10 @@
         - event: ref-updated
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: integration
     override-branch: stable/havana
     required-projects:

@@ -7,6 +7,10 @@
           action: opened
 
 - job:
+    name: base
+    parent: null
+
+- job:
     name: project-test1
     files:
       - '.*-requires'
