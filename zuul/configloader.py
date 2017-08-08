@@ -444,13 +444,21 @@ class JobParser(object):
         is_variant = layout.hasJob(conf['name'])
         if 'parent' in conf:
             if conf['parent'] is not None:
+                # Parent job is explicitly specified, so inherit from it.
                 parent = layout.getJob(conf['parent'])
                 job.inheritFrom(parent)
             else:
+                # Parent is explicitly set as None, so user intends
+                # this to be a base job.  That's only okay if we're in
+                # a config project.
                 if not conf['_source_context'].trusted:
                     raise Exception(
                         "Base jobs must be defined in config projects")
         else:
+            # Parent is not explicitly set, so inherit from the
+            # default -- but only if this is the primary definition
+            # for the job (ie, not a variant -- variants don't need to
+            # have a parent as long as the main job does).
             if not is_variant:
                 parent = layout.getJob(tenant.default_base_job)
                 job.inheritFrom(parent)

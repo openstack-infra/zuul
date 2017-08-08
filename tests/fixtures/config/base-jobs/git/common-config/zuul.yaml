@@ -16,7 +16,7 @@
     parent: null
     tags:
       - mybase
-    
+
 - job:
     name: other-base
     parent: null
