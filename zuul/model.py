@@ -651,10 +651,11 @@ class PlaybookContext(object):
 
     """
 
-    def __init__(self, source_context, path, roles):
+    def __init__(self, source_context, path, roles, secrets):
         self.source_context = source_context
         self.path = path
         self.roles = roles
+        self.secrets = secrets
 
     def __repr__(self):
         return '<PlaybookContext %s %s>' % (self.source_context,
@@ -668,16 +669,22 @@ class PlaybookContext(object):
             return False
         return (self.source_context == other.source_context and
                 self.path == other.path and
-                self.roles == other.roles)
+                self.roles == other.roles and
+                self.secrets == other.secrets)
 
     def toDict(self):
         # Render to a dict to use in passing json to the executor
+        secrets = {}
+        for secret in self.secrets:
+            secret_data = copy.deepcopy(secret.secret_data)
+            secrets[secret.name] = secret_data
         return dict(
             connection=self.source_context.project.connection_name,
             project=self.source_context.project.name,
             branch=self.source_context.branch,
             trusted=self.source_context.trusted,
             roles=[r.toDict() for r in self.roles],
+            secrets=secrets,
             path=self.path)
 
 
@@ -740,28 +747,6 @@ class ZuulRole(Role):
         return d
 
 
-class AuthContext(object):
-    """The authentication information for a job.
-
-    Authentication information (both the actual data and metadata such
-    as whether it should be inherited) for a job is grouped together
-    in this object.
-    """
-
-    def __init__(self, inherit=False):
-        self.inherit = inherit
-        self.secrets = []
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __eq__(self, other):
-        if not isinstance(other, AuthContext):
-            return False
-        return (self.inherit == other.inherit and
-                self.secrets == other.secrets)
-
-
 class Job(object):
 
     """A Job represents the defintion of actions to perform.
@@ -804,7 +789,6 @@ class Job(object):
             timeout=None,
             variables={},
             nodeset=NodeSet(),
-            auth=None,
             workspace=None,
             pre_run=(),
             post_run=(),
@@ -817,6 +801,7 @@ class Job(object):
             required_projects={},
             allowed_projects=None,
             override_branch=None,
+            untrusted_secrets=None,
         )
 
         # These are generally internal attributes which are not
@@ -932,13 +917,9 @@ class Job(object):
         if not isinstance(other, Job):
             raise Exception("Job unable to inherit from %s" % (other,))
 
-        do_not_inherit = set()
-        if other.auth and not other.auth.inherit:
-            do_not_inherit.add('auth')
-
         # copy all attributes
         for k in self.inheritable_attributes:
-            if (other._get(k) is not None and k not in do_not_inherit):
+            if (other._get(k) is not None):
                 setattr(self, k, copy.deepcopy(getattr(other, k)))
 
         msg = 'inherit from %s' % (repr(other),)
@@ -2322,11 +2303,6 @@ class Layout(object):
                 # (that is to say that it must match more than just
                 # the job that is defined in the tree).
                 continue
-            # If the job does not allow auth inheritance, do not allow
-            # the project-pipeline variants to update its execution
-            # attributes.
-            if frozen_job.auth and not frozen_job.auth.inherit:
-                frozen_job.final = True
             # Whether the change matches any of the project pipeline
             # variants
             matched = False
@@ -2342,8 +2318,7 @@ class Layout(object):
                 change.project.name not in frozen_job.allowed_projects):
                 raise Exception("Project %s is not allowed to run job %s" %
                                 (change.project.name, frozen_job.name))
-            if ((not pipeline.allow_secrets) and frozen_job.auth and
-                frozen_job.auth.secrets):
+            if ((not pipeline.allow_secrets) and frozen_job.untrusted_secrets):
                 raise Exception("Pipeline %s does not allow jobs with "
                                 "secrets (job %s)" % (
                                     pipeline.name, frozen_job.name))

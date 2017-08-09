@@ -2818,6 +2818,18 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(B.reported, 2)
 
+    @simple_layout('layouts/untrusted-secrets.yaml')
+    def test_untrusted_secrets(self):
+        "Test untrusted secrets"
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([])
+        self.assertEqual(A.patchsets[0]['approvals'][0]['value'], "-1")
+        self.assertIn('does not allow jobs with secrets',
+                      A.messages[0])
+
     @simple_layout('layouts/tags.yaml')
     def test_tags(self):
         "Test job tags"

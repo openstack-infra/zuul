@@ -187,14 +187,14 @@ success, the pipeline reports back to Gerrit with ``Verified`` vote of
    .. attr:: allow-secrets
       :default: false
 
-      This is a boolean which can be used to prevent jobs which
-      require secrets from running in this pipeline.  Some pipelines
-      run on proposed changes and therefore execute code which has not
-      yet been reviewed.  In such a case, allowing a job to use a
-      secret could result in that secret being exposed.  The default
-      is ``false``, meaning that in order to run jobs with secrets,
-      this must be explicitly enabled on each Pipeline where that is
-      safe.
+      This is a boolean which can be used to prevent jobs which use
+      secrets in the untrusted security context from running in this
+      pipeline.  Some pipelines run on proposed changes and therefore
+      execute code which has not yet been reviewed.  In such a case,
+      allowing a job to use a secret could result in that secret being
+      exposed.  The default is ``false``, meaning that in order to run
+      jobs which use secrets in the untrusted security context, this
+      must be explicitly enabled on each Pipeline where that is safe.
 
       For more information, see :ref:`secret`.
 
@@ -672,19 +672,6 @@ Here is an example of two job definitions:
       Authentication information to be made available to the job.
       This is a dictionary with two potential keys:
 
-      .. attr:: inherit
-         :default: false
-
-         A boolean indicating that the authentication information
-         referenced by this job should be able to be inherited by
-         child jobs.  Normally when a job inherits from another job,
-         the auth section is not included.  This permits jobs to
-         inherit the same basic structure and playbook, but ensures
-         that secret information is unable to be exposed by a child
-         job which may alter the job's behavior.  If it is safe for
-         the contents of the authentication section to be used by
-         child jobs, set this to ``true``.
-
       .. attr:: secrets
 
          A list of secrets which may be used by the job.  A
@@ -907,6 +894,16 @@ Here is an example of two job definitions:
       it should be able to run this job, then it must be explicitly
       listed.  By default, all projects may use the job.
 
+   .. attr:: untrusted-secrets
+
+      A boolean value which indicates that this job should not be used
+      in a pipeline where allow-secrets is ``false``.  This is
+      automatically set to ``true`` if this job is defined in a
+      :term:`untrusted-project`.  It may be explicitly set to obtain
+      the same behavior for jobs defined in :term:`config projects
+      <config-project>`.  Once this is set to ``true`` anywhere in the
+      inheritance hierarchy for a job, it will remain set for all
+      child jobs and variants (it can not be set to ``false``).
 
 .. _project:
 
@@ -1062,22 +1059,34 @@ unencrypted as well for convenience.
 
 A Secret may only be used by jobs defined within the same project.  To
 use a secret, a :ref:`job` must specify the secret within its `auth`
-section.  To protect against jobs in other repositories declaring a
-job with a secret as a parent and then exposing that secret, jobs
-which inherit from a job with secrets will not inherit the secrets
-themselves.  To alter that behavior, see the `inherit` job attribute.
-Further, jobs which do not permit children to inherit secrets (the
-default) are also automatically marked `final`, meaning that their
-execution related attributes may not be changed in a project-pipeline
-stanza.  This is to protect against a job with secrets defined in one
-project being used by another project in a way which might expose the
-secrets.  If a job with secrets is unsafe to be used by other
-projects, the `allowed-projects` job attribute can be used to restrict
-the projects which can invoke that job.  Finally, pipelines which are
-used to execute proposed but unreviewed changes can set the
-`allow-secrets` attribute to indicate that they should not supply
-secrets at all in order to protect against someone proposing a change
-which exposes a secret.
+section.  Secrets are bound to the playbooks associated with the
+specific job definition where they were declared.  Additional pre or
+post playbooks which appear in child jobs will not have access to the
+secrets, nor will playbooks which override the main playbook (if any)
+of the job which declared the secret.  This protects against jobs in
+other repositories declaring a job with a secret as a parent and then
+exposing that secret.
+
+It is possible to use secrets for jobs defined in :term:`config
+projects <config-project>` as well as :term:`untrusted projects
+<untrusted-project>`, however their use differs slightly.  Because
+playbooks in a config project which use secrets run in the
+:term:`trusted execution context` where proposed changes are not used
+in executing jobs, it is safe for those secrets to be used in all
+types of pipelines.  However, because playbooks defined in an
+untrusted project are run in the :term:`untrusted execution context`
+where proposed changes are used in job execution, it is dangerous to
+allow those secrets to be used in pipelines which are used to execute
+proposed but unreviewed changes.  By default, pipelines will refuse to
+run jobs which have playbooks that use secrets in the untrusted
+execution context to protect against someone proposing a change which
+exposes a secret.  To permit this (for instance, in a pipeline which
+only runs after code review), the :attr:`pipeline.allow-secrets`
+attribute may be set.
+
+If a job with secrets is unsafe to be used by other projects, the
+`allowed-projects` job attribute can be used to restrict the projects
+which can invoke that job.
 
 .. attr:: secret
 

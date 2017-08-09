@@ -251,6 +251,8 @@ class JobDirPlaybook(object):
         self.roles_path = []
         self.ansible_config = os.path.join(self.root, 'ansible.cfg')
         self.project_link = os.path.join(self.root, 'project')
+        self.secrets = os.path.join(self.root, 'secrets.yaml')
+        self.has_secrets = False
 
     def addRole(self):
         count = len(self.roles)
@@ -271,18 +273,19 @@ class JobDir(object):
             log streaming daemon find job logs.
         '''
         # root
-        #   .ansible
-        #     fact-cache/localhost
-        #   ansible
+        #   ansible (mounted in bwrap read-only)
         #     inventory.yaml
-        #   playbook_0
+        #   .ansible (mounted in bwrap read-write)
+        #     fact-cache/localhost
+        #   playbook_0 (mounted in bwrap for each playbook read-only)
+        #     secrets.yaml
         #     project -> ../trusted/project_0/...
         #     role_0 -> ../trusted/project_0/...
-        #   trusted
+        #   trusted (mounted in bwrap read-only)
         #     project_0
         #       <git.example.com>
         #         <project>
-        #   work
+        #   work (mounted in bwrap read-write)
         #     .ssh
         #       known_hosts
         #     src
@@ -311,8 +314,8 @@ class JobDir(object):
         ssh_dir = os.path.join(self.work_root, '.ssh')
         os.mkdir(ssh_dir, 0o700)
         # Create ansible cache directory
-        ansible_cache = os.path.join(self.root, '.ansible')
-        self.fact_cache = os.path.join(ansible_cache, 'fact-cache')
+        self.ansible_cache_root = os.path.join(self.root, '.ansible')
+        self.fact_cache = os.path.join(self.ansible_cache_root, 'fact-cache')
         os.makedirs(self.fact_cache)
         localhost_facts = os.path.join(self.fact_cache, 'localhost')
         # NOTE(pabelanger): We do not want to leak zuul-executor facts to other
@@ -327,8 +330,6 @@ class JobDir(object):
             pass
         self.known_hosts = os.path.join(ssh_dir, 'known_hosts')
         self.inventory = os.path.join(self.ansible_root, 'inventory.yaml')
-        self.secrets = os.path.join(self.ansible_root, 'secrets.yaml')
-        self.has_secrets = False
         self.playbooks = []  # The list of candidate playbooks
         self.playbook = None  # A pointer to the candidate we have chosen
         self.pre_playbooks = []
@@ -1260,7 +1261,7 @@ class AnsibleJob(object):
         for role in playbook['roles']:
             self.prepareRole(jobdir_playbook, role, args)
 
-        self.writeAnsibleConfig(jobdir_playbook)
+        self.writeAnsibleConfig(jobdir_playbook, playbook)
 
     def checkoutTrustedProject(self, project, branch):
         root = self.jobdir.getTrustedProject(project.canonical_name,
@@ -1381,25 +1382,25 @@ class AnsibleJob(object):
                 for key in node['host_keys']:
                     known_hosts.write('%s\n' % key)
 
-        secrets = args['secrets'].copy()
+    def writeAnsibleConfig(self, jobdir_playbook, playbook):
+        trusted = jobdir_playbook.trusted
+
+        secrets = playbook['secrets'].copy()
         if secrets:
             if 'zuul' in secrets:
                 raise Exception("Defining secrets named 'zuul' is not allowed")
-            with open(self.jobdir.secrets, 'w') as secrets_yaml:
+            with open(jobdir_playbook.secrets, 'w') as secrets_yaml:
                 secrets_yaml.write(
                     yaml.safe_dump(secrets, default_flow_style=False))
-            self.jobdir.has_secrets = True
-
-    def writeAnsibleConfig(self, jobdir_playbook):
-        trusted = jobdir_playbook.trusted
+            jobdir_playbook.has_secrets = True
 
         with open(jobdir_playbook.ansible_config, 'w') as config:
             config.write('[defaults]\n')
             config.write('hostfile = %s\n' % self.jobdir.inventory)
-            config.write('local_tmp = %s/.ansible/local_tmp\n' %
-                         self.jobdir.root)
-            config.write('remote_tmp = %s/.ansible/remote_tmp\n' %
-                         self.jobdir.root)
+            config.write('local_tmp = %s/local_tmp\n' %
+                         self.jobdir.ansible_cache_root)
+            config.write('remote_tmp = %s/remote_tmp\n' %
+                         self.jobdir.ansible_cache_root)
             config.write('retry_files_enabled = False\n')
             config.write('gathering = smart\n')
             config.write('fact_caching = jsonfile\n')
@@ -1425,13 +1426,12 @@ class AnsibleJob(object):
                 config.write('roles_path = %s\n' % ':'.join(
                     jobdir_playbook.roles_path))
 
-            # On trusted jobs, we want to prevent the printing of args,
-            # since trusted jobs might have access to secrets that they may
-            # need to pass to a task or a role. On the other hand, there
-            # should be no sensitive data in untrusted jobs, and printing
-            # the args could be useful for debugging.
+            # On playbooks with secrets we want to prevent the
+            # printing of args since they may be passed to a task or a
+            # role. Otherwise, printing the args could be useful for
+            # debugging.
             config.write('display_args_to_stdout = %s\n' %
-                         str(not trusted))
+                         str(not secrets))
 
             config.write('[ssh_connection]\n')
             # NB: when setting pipelining = True, keep_remote_files
@@ -1464,7 +1464,8 @@ class AnsibleJob(object):
             except Exception:
                 self.log.exception("Exception while killing ansible process:")
 
-    def runAnsible(self, cmd, timeout, config_file, trusted):
+    def runAnsible(self, cmd, timeout, playbook):
+        config_file = playbook.ansible_config
         env_copy = os.environ.copy()
         env_copy.update(self.ssh_agent.env)
         env_copy['ZUUL_JOB_OUTPUT_FILE'] = self.jobdir.job_output_file
@@ -1477,7 +1478,7 @@ class AnsibleJob(object):
         pythonpath = [self.executor_server.ansible_dir] + pythonpath
         env_copy['PYTHONPATH'] = os.path.pathsep.join(pythonpath)
 
-        if trusted:
+        if playbook.trusted:
             opt_prefix = 'trusted'
         else:
             opt_prefix = 'untrusted'
@@ -1489,6 +1490,11 @@ class AnsibleJob(object):
         rw_paths = rw_paths.split(":") if rw_paths else []
 
         ro_paths.append(self.executor_server.ansible_dir)
+        ro_paths.append(self.jobdir.ansible_root)
+        ro_paths.append(self.jobdir.trusted_root)
+        ro_paths.append(playbook.root)
+
+        rw_paths.append(self.jobdir.ansible_cache_root)
 
         if self.executor_variables_file:
             ro_paths.append(self.executor_variables_file)
@@ -1497,7 +1503,7 @@ class AnsibleJob(object):
                                                             rw_paths)
 
         popen = self.executor_server.execution_wrapper.getPopen(
-            work_dir=self.jobdir.root,
+            work_dir=self.jobdir.work_root,
             ssh_auth_sock=env_copy.get('SSH_AUTH_SOCK'))
 
         env_copy['ANSIBLE_CONFIG'] = config_file
@@ -1577,8 +1583,8 @@ class AnsibleJob(object):
             verbose = '-v'
 
         cmd = ['ansible-playbook', verbose, playbook.path]
-        if self.jobdir.has_secrets:
-            cmd.extend(['-e', '@' + self.jobdir.secrets])
+        if playbook.has_secrets:
+            cmd.extend(['-e', '@' + playbook.secrets])
 
         if success is not None:
             cmd.extend(['-e', 'success=%s' % str(bool(success))])
@@ -1600,9 +1606,7 @@ class AnsibleJob(object):
             cmd.extend(['-e@%s' % self.executor_variables_file])
 
         result, code = self.runAnsible(
-            cmd=cmd, timeout=timeout,
-            config_file=playbook.ansible_config,
-            trusted=playbook.trusted)
+            cmd=cmd, timeout=timeout, playbook=playbook)
         self.log.debug("Ansible complete, result %s code %s" % (
             self.RESULT_MAP[result], code))
         return result, code

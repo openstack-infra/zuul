@@ -121,6 +121,9 @@ Might be used in a template as::
 
  {{ credentials.username }} {{ credentials.password }}
 
+Secrets are only available to playbooks associated with the job
+definition which uses the secret; they are not available to playbooks
+associated with child jobs or job variants.
 
 Zuul Variables
 ~~~~~~~~~~~~~~

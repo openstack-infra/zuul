@@ -372,6 +372,7 @@ class JobParser(object):
                'allowed-projects': to_list(str),
                'override-branch': str,
                'description': str,
+               'untrusted-secrets': bool
                }
 
         return vs.Schema(job)
@@ -426,20 +427,6 @@ class JobParser(object):
 
         job = model.Job(conf['name'])
         job.source_context = conf.get('_source_context')
-        if 'auth' in conf:
-            job.auth = model.AuthContext()
-            if 'inherit' in conf['auth']:
-                job.auth.inherit = conf['auth']['inherit']
-
-            for secret_name in conf['auth'].get('secrets', []):
-                secret = layout.secrets[secret_name]
-                if secret.source_context != job.source_context:
-                    raise Exception(
-                        "Unable to use secret %s.  Secrets must be "
-                        "defined in the same project in which they "
-                        "are used" % secret_name)
-                job.auth.secrets.append(secret.decrypt(
-                    job.source_context.project.private_key))
 
         is_variant = layout.hasJob(conf['name'])
         if 'parent' in conf:
@@ -462,6 +449,33 @@ class JobParser(object):
             if not is_variant:
                 parent = layout.getJob(tenant.default_base_job)
                 job.inheritFrom(parent)
+        # Secrets are part of the playbook context so we must establish
+        # them earlier than playbooks.
+        secrets = []
+        if 'auth' in conf:
+            for secret_name in conf['auth'].get('secrets', []):
+                secret = layout.secrets[secret_name]
+                if secret.source_context != job.source_context:
+                    raise Exception(
+                        "Unable to use secret %s.  Secrets must be "
+                        "defined in the same project in which they "
+                        "are used" % secret_name)
+                secrets.append(secret.decrypt(
+                    job.source_context.project.private_key))
+
+        # A job in an untrusted repo that uses secrets requires
+        # special care.  We must note this, and carry this flag
+        # through inheritance to ensure that we don't run this job in
+        # an unsafe check pipeline.
+        if secrets and not conf['_source_context'].trusted:
+            job.untrusted_secrets = True
+
+        if 'untrusted-secrets' in conf:
+            if conf['untrusted-secrets']:
+                job.untrusted_secrets = True
+            else:
+                raise Exception("Once set, the untrusted_secrets "
+                                "attribute may not be unset")
 
         # Roles are part of the playbook context so we must establish
         # them earlier than playbooks.
@@ -481,21 +495,23 @@ class JobParser(object):
 
         for pre_run_name in as_list(conf.get('pre-run')):
             pre_run = model.PlaybookContext(job.source_context,
-                                            pre_run_name, job.roles)
+                                            pre_run_name, job.roles,
+                                            secrets)
             job.pre_run = job.pre_run + (pre_run,)
         for post_run_name in as_list(conf.get('post-run')):
             post_run = model.PlaybookContext(job.source_context,
-                                             post_run_name, job.roles)
+                                             post_run_name, job.roles,
+                                             secrets)
             job.post_run = (post_run,) + job.post_run
         if 'run' in conf:
             run = model.PlaybookContext(job.source_context, conf['run'],
-                                        job.roles)
+                                        job.roles, secrets)
             job.run = (run,)
         else:
             if not project_pipeline:
                 run_name = os.path.join('playbooks', job.name)
                 run = model.PlaybookContext(job.source_context, run_name,
-                                            job.roles)
+                                            job.roles, secrets)
                 job.implied_run = (run,) + job.implied_run
 
         for k in JobParser.simple_attributes:

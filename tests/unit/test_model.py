@@ -54,6 +54,8 @@ class TestJob(BaseTestCase):
                 encryption.deserialize_rsa_keypair(f.read())
         self.context = model.SourceContext(self.project, 'master',
                                            'test', True)
+        self.untrusted_context = model.SourceContext(self.project, 'master',
+                                                     'test', False)
         m = yaml.Mark('name', 0, 0, 0, '', 0)
         self.start_mark = configloader.ZuulMark(m, m, '')
 
@@ -97,16 +99,15 @@ class TestJob(BaseTestCase):
     def test_job_inheritance(self):
         # This is standard job inheritance.
 
-        base_pre = model.PlaybookContext(self.context, 'base-pre', [])
-        base_run = model.PlaybookContext(self.context, 'base-run', [])
-        base_post = model.PlaybookContext(self.context, 'base-post', [])
+        base_pre = model.PlaybookContext(self.context, 'base-pre', [], [])
+        base_run = model.PlaybookContext(self.context, 'base-run', [], [])
+        base_post = model.PlaybookContext(self.context, 'base-post', [], [])
 
         base = model.Job('base')
         base.timeout = 30
         base.pre_run = [base_pre]
         base.run = [base_run]
         base.post_run = [base_post]
-        base.auth = model.AuthContext()
 
         py27 = model.Job('py27')
         self.assertIsNone(py27.timeout)
@@ -118,23 +119,21 @@ class TestJob(BaseTestCase):
                          [x.path for x in py27.run])
         self.assertEqual(['base-post'],
                          [x.path for x in py27.post_run])
-        self.assertIsNone(py27.auth)
 
     def test_job_variants(self):
         # This simulates freezing a job.
 
-        py27_pre = model.PlaybookContext(self.context, 'py27-pre', [])
-        py27_run = model.PlaybookContext(self.context, 'py27-run', [])
-        py27_post = model.PlaybookContext(self.context, 'py27-post', [])
+        secrets = ['foo']
+        py27_pre = model.PlaybookContext(self.context, 'py27-pre', [], secrets)
+        py27_run = model.PlaybookContext(self.context, 'py27-run', [], secrets)
+        py27_post = model.PlaybookContext(self.context, 'py27-post', [],
+                                          secrets)
 
         py27 = model.Job('py27')
         py27.timeout = 30
         py27.pre_run = [py27_pre]
         py27.run = [py27_run]
         py27.post_run = [py27_post]
-        auth = model.AuthContext()
-        auth.secrets.append('foo')
-        py27.auth = auth
 
         job = py27.copy()
         self.assertEqual(30, job.timeout)
@@ -151,7 +150,9 @@ class TestJob(BaseTestCase):
                          [x.path for x in job.run])
         self.assertEqual(['py27-post'],
                          [x.path for x in job.post_run])
-        self.assertEqual(auth, job.auth)
+        self.assertEqual(secrets, job.pre_run[0].secrets)
+        self.assertEqual(secrets, job.run[0].secrets)
+        self.assertEqual(secrets, job.post_run[0].secrets)
 
         # Set the job to final for the following checks
         job.final = True
@@ -341,7 +342,7 @@ class TestJob(BaseTestCase):
 
         conf = yaml.safe_load('''
 - secret:
-    name: pypi-credentials
+    name: trusted-secret
     data:
       username: test-username
       longpassword: !encrypted/pkcs1-oaep
@@ -384,8 +385,14 @@ class TestJob(BaseTestCase):
         conf['_source_context'] = self.context
         conf['_start_mark'] = self.start_mark
 
-        secret = configloader.SecretParser.fromYaml(layout, conf)
-        layout.addSecret(secret)
+        trusted_secret = configloader.SecretParser.fromYaml(layout, conf)
+        layout.addSecret(trusted_secret)
+
+        conf['name'] = 'untrusted-secret'
+        conf['_source_context'] = self.untrusted_context
+
+        untrusted_secret = configloader.SecretParser.fromYaml(layout, conf)
+        layout.addSecret(untrusted_secret)
 
         base = configloader.JobParser.fromYaml(self.tenant, self.layout, {
             '_source_context': self.context,
@@ -395,86 +402,100 @@ class TestJob(BaseTestCase):
             'timeout': 30,
         })
         layout.addJob(base)
-        pypi_upload_without_inherit = configloader.JobParser.fromYaml(
-            tenant, layout, {
-                '_source_context': self.context,
-                '_start_mark': self.start_mark,
-                'name': 'pypi-upload-without-inherit',
-                'parent': 'base',
-                'timeout': 40,
-                'auth': {
-                    'secrets': [
-                        'pypi-credentials',
-                    ]
-                }
-            })
-        layout.addJob(pypi_upload_without_inherit)
-        pypi_upload_with_inherit = configloader.JobParser.fromYaml(
-            tenant, layout, {
-                '_source_context': self.context,
-                '_start_mark': self.start_mark,
-                'name': 'pypi-upload-with-inherit',
-                'parent': 'base',
-                'timeout': 40,
-                'auth': {
-                    'inherit': True,
-                    'secrets': [
-                        'pypi-credentials',
-                    ]
-                }
-            })
-        layout.addJob(pypi_upload_with_inherit)
-        pypi_upload_with_inherit_false = configloader.JobParser.fromYaml(
-            tenant, layout, {
-                '_source_context': self.context,
-                '_start_mark': self.start_mark,
-                'name': 'pypi-upload-with-inherit-false',
-                'parent': 'base',
-                'timeout': 40,
-                'auth': {
-                    'inherit': False,
-                    'secrets': [
-                        'pypi-credentials',
-                    ]
-                }
-            })
-        layout.addJob(pypi_upload_with_inherit_false)
-        in_repo_job_without_inherit = configloader.JobParser.fromYaml(
-            tenant, layout, {
-                '_source_context': self.context,
-                '_start_mark': self.start_mark,
-                'name': 'in-repo-job-without-inherit',
-                'parent': 'pypi-upload-without-inherit',
-            })
-        layout.addJob(in_repo_job_without_inherit)
-        in_repo_job_with_inherit = configloader.JobParser.fromYaml(
-            tenant, layout, {
-                '_source_context': self.context,
-                '_start_mark': self.start_mark,
-                'name': 'in-repo-job-with-inherit',
-                'parent': 'pypi-upload-with-inherit',
-            })
-        layout.addJob(in_repo_job_with_inherit)
-        in_repo_job_with_inherit_false = configloader.JobParser.fromYaml(
-            tenant, layout, {
-                '_source_context': self.context,
-                '_start_mark': self.start_mark,
-                'name': 'in-repo-job-with-inherit-false',
-                'parent': 'pypi-upload-with-inherit-false',
-            })
-        layout.addJob(in_repo_job_with_inherit_false)
 
-        self.assertIsNone(in_repo_job_without_inherit.auth)
-        self.assertEqual(1, len(in_repo_job_with_inherit.auth.secrets))
-        self.assertEqual(in_repo_job_with_inherit.auth.secrets[0].name,
-                         'pypi-credentials')
-        self.assertIsNone(in_repo_job_with_inherit_false.auth)
-        self.assertEqual(in_repo_job_with_inherit.auth.secrets[0].
+        trusted_secrets_job = configloader.JobParser.fromYaml(
+            tenant, layout, {
+                '_source_context': self.context,
+                '_start_mark': self.start_mark,
+                'name': 'trusted-secrets',
+                'parent': 'base',
+                'timeout': 40,
+                'auth': {
+                    'secrets': [
+                        'trusted-secret',
+                    ]
+                }
+            })
+        layout.addJob(trusted_secrets_job)
+        untrusted_secrets_job = configloader.JobParser.fromYaml(
+            tenant, layout, {
+                '_source_context': self.untrusted_context,
+                '_start_mark': self.start_mark,
+                'name': 'untrusted-secrets',
+                'parent': 'base',
+                'timeout': 40,
+                'auth': {
+                    'secrets': [
+                        'untrusted-secret',
+                    ]
+                }
+            })
+        layout.addJob(untrusted_secrets_job)
+        trusted_secrets_trusted_child_job = configloader.JobParser.fromYaml(
+            tenant, layout, {
+                '_source_context': self.context,
+                '_start_mark': self.start_mark,
+                'name': 'trusted-secrets-trusted-child',
+                'parent': 'trusted-secrets',
+            })
+        layout.addJob(trusted_secrets_trusted_child_job)
+        trusted_secrets_untrusted_child_job = configloader.JobParser.fromYaml(
+            tenant, layout, {
+                '_source_context': self.untrusted_context,
+                '_start_mark': self.start_mark,
+                'name': 'trusted-secrets-untrusted-child',
+                'parent': 'trusted-secrets',
+            })
+        layout.addJob(trusted_secrets_untrusted_child_job)
+        untrusted_secrets_trusted_child_job = configloader.JobParser.fromYaml(
+            tenant, layout, {
+                '_source_context': self.context,
+                '_start_mark': self.start_mark,
+                'name': 'untrusted-secrets-trusted-child',
+                'parent': 'untrusted-secrets',
+            })
+        layout.addJob(untrusted_secrets_trusted_child_job)
+        untrusted_secrets_untrusted_child_job = \
+            configloader.JobParser.fromYaml(
+                tenant, layout, {
+                    '_source_context': self.untrusted_context,
+                    '_start_mark': self.start_mark,
+                    'name': 'untrusted-secrets-untrusted-child',
+                    'parent': 'untrusted-secrets',
+                })
+        layout.addJob(untrusted_secrets_untrusted_child_job)
+
+        self.assertIsNone(trusted_secrets_job.untrusted_secrets)
+        self.assertTrue(untrusted_secrets_job.untrusted_secrets)
+        self.assertIsNone(
+            trusted_secrets_trusted_child_job.untrusted_secrets)
+        self.assertIsNone(
+            trusted_secrets_untrusted_child_job.untrusted_secrets)
+        self.assertTrue(
+            untrusted_secrets_trusted_child_job.untrusted_secrets)
+        self.assertTrue(
+            untrusted_secrets_untrusted_child_job.untrusted_secrets)
+
+        self.assertEqual(trusted_secrets_job.implied_run[0].secrets[0].name,
+                         'trusted-secret')
+        self.assertEqual(trusted_secrets_job.implied_run[0].secrets[0].
                          secret_data['longpassword'],
                          'test-passwordtest-password')
-        self.assertEqual(in_repo_job_with_inherit.auth.secrets[0].
+        self.assertEqual(trusted_secrets_job.implied_run[0].secrets[0].
                          secret_data['password'],
                          'test-password')
+        self.assertEqual(
+            len(trusted_secrets_trusted_child_job.implied_run[0].secrets), 0)
+        self.assertEqual(
+            len(trusted_secrets_untrusted_child_job.implied_run[0].secrets), 0)
+
+        self.assertEqual(untrusted_secrets_job.implied_run[0].secrets[0].name,
+                         'untrusted-secret')
+        self.assertEqual(
+            len(untrusted_secrets_trusted_child_job.implied_run[0].secrets), 0)
+        self.assertEqual(
+            len(untrusted_secrets_untrusted_child_job.implied_run[0].secrets),
+            0)
 
     def test_job_inheritance_job_tree(self):
         tenant = model.Tenant('tenant')
@@ -688,9 +709,7 @@ class TestJob(BaseTestCase):
             'name': 'job',
             'parent': None,
         })
-        auth = model.AuthContext()
-        auth.secrets.append('foo')
-        job.auth = auth
+        job.untrusted_secrets = True
 
         self.layout.addJob(job)
 
