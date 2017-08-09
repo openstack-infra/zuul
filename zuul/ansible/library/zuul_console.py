@@ -185,6 +185,7 @@ class Server(object):
                     console = self.chunkConsole(conn, log_uuid)
                     if console:
                         break
+                    conn.send('[Zuul] Log not found\n')
                     time.sleep(0.5)
                 while True:
                     if self.followConsole(console, conn):
