@@ -667,21 +667,13 @@ Here is an example of two job definitions:
       are in the docs directory.  A regular expression or list of
       regular expressions.
 
-   .. attr:: auth
+   .. attr:: secrets
 
-      Authentication information to be made available to the job.
-      This is a dictionary with two potential keys:
-
-      .. attr:: secrets
-
-         A list of secrets which may be used by the job.  A
-         :ref:`secret` is a named collection of private information
-         defined separately in the configuration.  The secrets that
-         appear here must be defined in the same project as this job
-         definition.
-
-         In the future, other types of authentication information may
-         be added.
+      A list of secrets which may be used by the job.  A
+      :ref:`secret` is a named collection of private information
+      defined separately in the configuration.  The secrets that
+      appear here must be defined in the same project as this job
+      definition.
 
    .. attr:: nodes
 
@@ -1058,14 +1050,14 @@ encrypted, however, data which are not sensitive may be provided
 unencrypted as well for convenience.
 
 A Secret may only be used by jobs defined within the same project.  To
-use a secret, a :ref:`job` must specify the secret within its `auth`
-section.  Secrets are bound to the playbooks associated with the
-specific job definition where they were declared.  Additional pre or
-post playbooks which appear in child jobs will not have access to the
-secrets, nor will playbooks which override the main playbook (if any)
-of the job which declared the secret.  This protects against jobs in
-other repositories declaring a job with a secret as a parent and then
-exposing that secret.
+use a secret, a :ref:`job` must specify the secret in
+:attr:`job.secrets`.  Secrets are bound to the playbooks associated
+with the specific job definition where they were declared.  Additional
+pre or post playbooks which appear in child jobs will not have access
+to the secrets, nor will playbooks which override the main playbook
+(if any) of the job which declared the secret.  This protects against
+jobs in other repositories declaring a job with a secret as a parent
+and then exposing that secret.
 
 It is possible to use secrets for jobs defined in :term:`config
 projects <config-project>` as well as :term:`untrusted projects

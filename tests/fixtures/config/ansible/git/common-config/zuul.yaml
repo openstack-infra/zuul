@@ -87,9 +87,8 @@
       flagpath: '{{zuul._test.test_root}}/{{zuul.build}}.flag'
     roles:
       - zuul: bare-role
-    auth:
-      secrets:
-        - test_secret
+    secrets:
+      - test_secret
 
 - job:
     parent: python27
@@ -106,10 +105,9 @@
       vartest_job: vartest_job
       vartest_secret: vartest_job
       vartest_site: vartest_job
-    auth:
-      secrets:
-        - vartest_site
-        - vartest_secret
+    secrets:
+      - vartest_site
+      - vartest_secret
 
 - job:
     parent: base-urls

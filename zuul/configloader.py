@@ -324,10 +324,6 @@ class JobParser(object):
 
     @staticmethod
     def getSchema():
-        auth = {'secrets': to_list(str),
-                'inherit': bool,
-                }
-
         node = {vs.Required('name'): str,
                 vs.Required('label'): str,
                 }
@@ -355,7 +351,7 @@ class JobParser(object):
                'tags': to_list(str),
                'branches': to_list(str),
                'files': to_list(str),
-               'auth': auth,
+               'secrets': to_list(str),
                'irrelevant-files': to_list(str),
                'nodes': vs.Any([node], str),
                'timeout': int,
@@ -452,16 +448,15 @@ class JobParser(object):
         # Secrets are part of the playbook context so we must establish
         # them earlier than playbooks.
         secrets = []
-        if 'auth' in conf:
-            for secret_name in conf['auth'].get('secrets', []):
-                secret = layout.secrets[secret_name]
-                if secret.source_context != job.source_context:
-                    raise Exception(
-                        "Unable to use secret %s.  Secrets must be "
-                        "defined in the same project in which they "
-                        "are used" % secret_name)
-                secrets.append(secret.decrypt(
-                    job.source_context.project.private_key))
+        for secret_name in conf.get('secrets', []):
+            secret = layout.secrets[secret_name]
+            if secret.source_context != job.source_context:
+                raise Exception(
+                    "Unable to use secret %s.  Secrets must be "
+                    "defined in the same project in which they "
+                    "are used" % secret_name)
+            secrets.append(secret.decrypt(
+                job.source_context.project.private_key))
 
         # A job in an untrusted repo that uses secrets requires
         # special care.  We must note this, and carry this flag

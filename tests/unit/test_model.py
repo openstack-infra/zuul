@@ -410,11 +410,9 @@ class TestJob(BaseTestCase):
                 'name': 'trusted-secrets',
                 'parent': 'base',
                 'timeout': 40,
-                'auth': {
-                    'secrets': [
-                        'trusted-secret',
-                    ]
-                }
+                'secrets': [
+                    'trusted-secret',
+                ]
             })
         layout.addJob(trusted_secrets_job)
         untrusted_secrets_job = configloader.JobParser.fromYaml(
@@ -424,11 +422,9 @@ class TestJob(BaseTestCase):
                 'name': 'untrusted-secrets',
                 'parent': 'base',
                 'timeout': 40,
-                'auth': {
-                    'secrets': [
-                        'untrusted-secret',
-                    ]
-                }
+                'secrets': [
+                    'untrusted-secret',
+                ]
             })
         layout.addJob(untrusted_secrets_job)
         trusted_secrets_trusted_child_job = configloader.JobParser.fromYaml(
