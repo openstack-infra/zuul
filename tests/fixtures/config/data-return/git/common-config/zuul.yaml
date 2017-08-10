@@ -1,7 +1,7 @@
 - pipeline:
     name: check
     manager: independent
-    allow-secrets: true
+    post-review: true
     trigger:
       gerrit:
         - event: patchset-created

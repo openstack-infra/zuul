@@ -184,19 +184,19 @@ success, the pipeline reports back to Gerrit with ``Verified`` vote of
          For more detail on the theory and operation of Zuul's
          dependent pipeline manager, see: :doc:`gating`.
 
-   .. attr:: allow-secrets
+   .. attr:: post-review
       :default: false
 
-      This is a boolean which can be used to prevent jobs which use
-      secrets in the untrusted security context from running in this
-      pipeline.  Some pipelines run on proposed changes and therefore
-      execute code which has not yet been reviewed.  In such a case,
-      allowing a job to use a secret could result in that secret being
-      exposed.  The default is ``false``, meaning that in order to run
-      jobs which use secrets in the untrusted security context, this
-      must be explicitly enabled on each Pipeline where that is safe.
+      This is a boolean which indicates that this pipeline executes
+      code that has been reviewed.  Some jobs perform actions which
+      should not be permitted with unreviewed code.  When this value
+      is ``false`` those jobs will not be permitted to run in the
+      pipeline.  If a pipeline is designed only to be used after
+      changes are reviewed or merged, set this value to ``true`` to
+      permit such jobs.
 
-      For more information, see :ref:`secret`.
+      For more information, see :ref:`secret` and
+      :attr:`job.post-review`.
 
    .. attr:: description
 
@@ -895,16 +895,18 @@ Here is an example of two job definitions:
       it should be able to run this job, then it must be explicitly
       listed.  By default, all projects may use the job.
 
-   .. attr:: untrusted-secrets
+   .. attr:: post-review
+      :default: false
 
-      A boolean value which indicates that this job should not be used
-      in a pipeline where allow-secrets is ``false``.  This is
-      automatically set to ``true`` if this job is defined in a
-      :term:`untrusted-project`.  It may be explicitly set to obtain
-      the same behavior for jobs defined in :term:`config projects
-      <config-project>`.  Once this is set to ``true`` anywhere in the
-      inheritance hierarchy for a job, it will remain set for all
-      child jobs and variants (it can not be set to ``false``).
+      A boolean value which indicates whether this job may only be
+      used in pipelines where :attr:`pipeline.post-review` is
+      ``true``.  This is automatically set to ``true`` if this job is
+      defined in a :term:`untrusted-project`.  It may be explicitly
+      set to obtain the same behavior for jobs defined in
+      :term:`config projects <config-project>`.  Once this is set to
+      ``true`` anywhere in the inheritance hierarchy for a job, it
+      will remain set for all child jobs and variants (it can not be
+      set to ``false``).
 
 .. _project:
 
@@ -1078,12 +1080,19 @@ types of pipelines.  However, because playbooks defined in an
 untrusted project are run in the :term:`untrusted execution context`
 where proposed changes are used in job execution, it is dangerous to
 allow those secrets to be used in pipelines which are used to execute
-proposed but unreviewed changes.  By default, pipelines will refuse to
-run jobs which have playbooks that use secrets in the untrusted
-execution context to protect against someone proposing a change which
-exposes a secret.  To permit this (for instance, in a pipeline which
-only runs after code review), the :attr:`pipeline.allow-secrets`
-attribute may be set.
+proposed but unreviewed changes.  By default, pipelines are considered
+`pre-review` and will refuse to run jobs which have playbooks that use
+secrets in the untrusted execution context to protect against someone
+proposing a change which exposes a secret.  To permit this (for
+instance, in a pipeline which only runs after code review), the
+:attr:`pipeline.post-review` attribute may be explicitly set to
+``true``.
+
+In some cases, it may be desirable to prevent a job which is defined
+in a config project from running in a pre-review pipeline (e.g., a job
+used to publish an artifact).  In these cases, the
+:attr:`job.post-review` attribute may be explicitly set to ``true`` to
+indicate the job should only run in post-review pipelines.
 
 If a job with secrets is unsafe to be used by other projects, the
 `allowed-projects` job attribute can be used to restrict the projects

@@ -2827,7 +2827,7 @@ class TestScheduler(ZuulTestCase):
 
         self.assertHistory([])
         self.assertEqual(A.patchsets[0]['approvals'][0]['value'], "-1")
-        self.assertIn('does not allow jobs with secrets',
+        self.assertIn('does not allow post-review job',
                       A.messages[0])
 
     @simple_layout('layouts/tags.yaml')
