@@ -1152,6 +1152,7 @@ class AnsibleJob(object):
                 ansible_port=port,
                 nodepool=dict(
                     az=node.get('az'),
+                    cloud=node.get('cloud'),
                     provider=node.get('provider'),
                     region=node.get('region')))
 
