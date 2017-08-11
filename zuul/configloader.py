@@ -369,7 +369,7 @@ class JobParser(object):
                'allowed-projects': to_list(str),
                'override-branch': str,
                'description': str,
-               'untrusted-secrets': bool
+               'post-review': bool
                }
 
         return vs.Schema(job)
@@ -465,14 +465,14 @@ class JobParser(object):
         # through inheritance to ensure that we don't run this job in
         # an unsafe check pipeline.
         if secrets and not conf['_source_context'].trusted:
-            job.untrusted_secrets = True
+            job.post_review = True
 
-        if 'untrusted-secrets' in conf:
-            if conf['untrusted-secrets']:
-                job.untrusted_secrets = True
+        if 'post-review' in conf:
+            if conf['post-review']:
+                job.post_review = True
             else:
-                raise Exception("Once set, the untrusted_secrets "
-                                "attribute may not be unset")
+                raise Exception("Once set, the post-review attribute "
+                                "may not be unset")
 
         # Roles are part of the playbook context so we must establish
         # them earlier than playbooks.
@@ -836,7 +836,7 @@ class PipelineParser(object):
                     'footer-message': str,
                     'dequeue-on-new-patchset': bool,
                     'ignore-dependencies': bool,
-                    'allow-secrets': bool,
+                    'post-review': bool,
                     'disable-after-consecutive-failures':
                         vs.All(int, vs.Range(min=1)),
                     'window': window,
@@ -886,7 +886,8 @@ class PipelineParser(object):
             'dequeue-on-new-patchset', True)
         pipeline.ignore_dependencies = conf.get(
             'ignore-dependencies', False)
-        pipeline.allow_secrets = conf.get('allow-secrets', False)
+        pipeline.post_review = conf.get(
+            'post-review', False)
 
         for conf_key, action in PipelineParser.reporter_actions.items():
             reporter_set = []
