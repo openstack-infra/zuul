@@ -22,6 +22,7 @@ import pwd
 import shlex
 import subprocess
 import sys
+import re
 
 from typing import Dict, List  # flake8: noqa
 
@@ -73,6 +74,7 @@ class BubblewrapDriver(Driver, WrapperInterface):
     log = logging.getLogger("zuul.BubblewrapDriver")
 
     mounts_map = {'rw': [], 'ro': []}  # type: Dict[str, List]
+    release_file_re = re.compile('^\W+-release$')
 
     def __init__(self):
         self.bwrap_command = self._bwrap_command()
@@ -170,11 +172,16 @@ class BubblewrapDriver(Driver, WrapperInterface):
             '--file', '{gid_fd}', '/etc/group',
         ]
 
-        if os.path.isdir('/lib64'):
-            bwrap_command.extend(['--ro-bind', '/lib64', '/lib64'])
-        if os.path.isfile('/etc/nsswitch.conf'):
-            bwrap_command.extend(['--ro-bind', '/etc/nsswitch.conf',
-                                  '/etc/nsswitch.conf'])
+        for path in ['/lib64',
+                     '/etc/nsswitch.conf',
+                     '/etc/lsb-release.d',
+                     ]:
+            if os.path.exists(path):
+                bwrap_command.extend(['--ro-bind', path, path])
+        for fn in os.listdir('/etc'):
+            if self.release_file_re.match(fn):
+                path = os.path.join('/etc', fn)
+                bwrap_command.extend(['--ro-bind', path, path])
 
         return bwrap_command
 
