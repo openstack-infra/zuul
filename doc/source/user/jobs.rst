@@ -205,6 +205,13 @@ of item.
          The full canonical name of the project including hostname.
          E.g., `git.example.com/org/project`.
 
+      .. var:: src_dir
+
+         The path to the source code on the remote host, relative
+         to the home dir of the remote user.
+         E.g., `src/git.example.com/org/project`.
+
+
    .. var:: tenant
 
       The name of the current Zuul tenant.
@@ -245,6 +252,12 @@ of item.
 
             The full canonical name of the project including hostname.
             E.g., `git.example.com/org/project`.
+
+         .. var:: src_dir
+
+            The path to the source code on the remote host, relative
+            to the home dir of the remote user.
+            E.g., `src/git.example.com/org/project`.
 
       .. var:: branch
 
