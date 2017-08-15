@@ -1245,3 +1245,89 @@ class TestBaseJobs(ZuulTestCase):
         self.assertIn('Base jobs must be defined in config projects',
                       A.messages[0])
         self.assertHistory([])
+
+
+class TestSecretLeaks(AnsibleZuulTestCase):
+    tenant_config_file = 'config/secret-leaks/main.yaml'
+
+    def searchForContent(self, path, content):
+        matches = []
+        for (dirpath, dirnames, filenames) in os.walk(path):
+            for filename in filenames:
+                filepath = os.path.join(dirpath, filename)
+                with open(filepath, 'rb') as f:
+                    if content in f.read():
+                        matches.append(filepath[len(path):])
+        return matches
+
+    def _test_secret_file(self):
+        # Or rather -- test that they *don't* leak.
+        # Keep the jobdir around so we can inspect contents.
+        self.executor_server.keep_jobdir = True
+        conf = textwrap.dedent(
+            """
+            - project:
+                name: org/project
+                check:
+                  jobs:
+                    - secret-file
+            """)
+
+        file_dict = {'.zuul.yaml': conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='secret-file', result='SUCCESS', changes='1,1'),
+        ], ordered=False)
+        matches = self.searchForContent(self.history[0].jobdir.root,
+                                        b'test-password')
+        self.assertEqual(set(['/ansible/playbook_0/secrets.yaml',
+                              '/work/secret-file.txt']),
+                         set(matches))
+
+    def test_secret_file(self):
+        self._test_secret_file()
+
+    def test_secret_file_verbose(self):
+        # Output extra ansible info to exercise alternate logging code
+        # paths.
+        self.executor_server.verbose = True
+        self._test_secret_file()
+
+    def _test_secret_file_fail(self):
+        # Or rather -- test that they *don't* leak.
+        # Keep the jobdir around so we can inspect contents.
+        self.executor_server.keep_jobdir = True
+        conf = textwrap.dedent(
+            """
+            - project:
+                name: org/project
+                check:
+                  jobs:
+                    - secret-file-fail
+            """)
+
+        file_dict = {'.zuul.yaml': conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='secret-file-fail', result='FAILURE', changes='1,1'),
+        ], ordered=False)
+        matches = self.searchForContent(self.history[0].jobdir.root,
+                                        b'test-password')
+        self.assertEqual(set(['/ansible/playbook_0/secrets.yaml',
+                              '/work/failure-file.txt']),
+                         set(matches))
+
+    def test_secret_file_fail(self):
+        self._test_secret_file_fail()
+
+    def test_secret_file_fail_verbose(self):
+        # Output extra ansible info to exercise alternate logging code
+        # paths.
+        self.executor_server.verbose = True
+        self._test_secret_file_fail()
