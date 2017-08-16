@@ -17,6 +17,7 @@ import logging
 import alembic
 import alembic.config
 import sqlalchemy as sa
+import sqlalchemy.pool
 import voluptuous as v
 
 from zuul.connection import BaseConnection
@@ -40,7 +41,14 @@ class SQLConnection(BaseConnection):
         self.tables_established = False
         try:
             self.dburi = self.connection_config.get('dburi')
-            self.engine = sa.create_engine(self.dburi)
+            # Recycle connections if they've been idle for more than 1 second.
+            # MySQL connections are lightweight and thus keeping long-lived
+            # connections around is not valuable.
+            # TODO(mordred) Add a config paramter
+            self.engine = sa.create_engine(
+                self.dburi,
+                poolclass=sqlalchemy.pool.QueuePool,
+                pool_recycle=1)
             self._migrate()
             self._setup_tables()
             self.zuul_buildset_table, self.zuul_build_table \
