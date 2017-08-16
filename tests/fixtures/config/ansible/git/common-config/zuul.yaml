@@ -110,6 +110,16 @@
       - vartest_secret
 
 - job:
+    parent: python27
+    name: check-secret-names
+    nodes:
+      - name: ubuntu-xenial
+        label: ubuntu-xenial
+    secrets:
+      - secret: vartest_secret
+        name: renamed_secret
+
+- job:
     parent: base-urls
     name: hello
     post-run: playbooks/hello-post

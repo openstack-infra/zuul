@@ -799,6 +799,9 @@ class TestAnsible(AnsibleZuulTestCase):
         build_check_vars = self.getJobFromHistory('check-vars')
         with self.jobLog(build_check_vars):
             self.assertEqual(build_check_vars.result, 'SUCCESS')
+        build_check_secret_names = self.getJobFromHistory('check-secret-names')
+        with self.jobLog(build_check_secret_names):
+            self.assertEqual(build_check_secret_names.result, 'SUCCESS')
         build_hello = self.getJobFromHistory('hello-world')
         with self.jobLog(build_hello):
             self.assertEqual(build_hello.result, 'SUCCESS')

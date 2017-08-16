@@ -339,6 +339,9 @@ class JobParser(object):
         job_project = {vs.Required('name'): str,
                        'override-branch': str}
 
+        secret = {vs.Required('name'): str,
+                  vs.Required('secret'): str}
+
         job = {vs.Required('name'): str,
                'parent': vs.Any(str, None),
                'final': bool,
@@ -352,7 +355,7 @@ class JobParser(object):
                'tags': to_list(str),
                'branches': to_list(str),
                'files': to_list(str),
-               'secrets': to_list(str),
+               'secrets': to_list(vs.Any(secret, str)),
                'irrelevant-files': to_list(str),
                'nodes': vs.Any([node], str),
                'timeout': int,
@@ -450,15 +453,24 @@ class JobParser(object):
         # Secrets are part of the playbook context so we must establish
         # them earlier than playbooks.
         secrets = []
-        for secret_name in conf.get('secrets', []):
-            secret = layout.secrets[secret_name]
+        for secret_config in conf.get('secrets', []):
+            if isinstance(secret_config, str):
+                secret_name = secret_config
+                secret = layout.secrets[secret_name]
+            else:
+                secret_name = secret_config['name']
+                secret = layout.secrets[secret_config['secret']]
             if secret.source_context != job.source_context:
                 raise Exception(
                     "Unable to use secret %s.  Secrets must be "
                     "defined in the same project in which they "
                     "are used" % secret_name)
-            secrets.append(secret.decrypt(
-                job.source_context.project.private_key))
+            # If the secret declares a different name, set it on the decrypted
+            # copy of the secret object
+            decrypted_secret = secret.decrypt(
+                job.source_context.project.private_key)
+            decrypted_secret.name = secret_name
+            secrets.append(decrypted_secret)
 
         # A job in an untrusted repo that uses secrets requires
         # special care.  We must note this, and carry this flag

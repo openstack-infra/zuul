@@ -684,6 +684,42 @@ Here is an example of two job definitions:
       appear here must be defined in the same project as this job
       definition.
 
+      Each item in the list may may be supplied either as a string,
+      in which case it references the name of a :ref:`secret` definition,
+      or as a dict. If an element in this list is given as a dict, it
+      must have the following fields.
+
+      .. attr:: name
+
+         The name to use for the Ansible variable into which the secret
+         content will be placed.
+
+      .. attr:: secret
+
+         The name to use to find the secret's definition in the configuration.
+
+      For example:
+
+      .. code-block:: yaml
+
+         - secret:
+             important-secret:
+               key: encrypted-secret-key-data
+
+         - job:
+             name: amazing-job:
+             secrets:
+               - name: ssh_key
+                 secret: important-secret
+
+      will result in the following being passed as a variable to the playbooks
+      in ``amazing-job``:
+
+      .. code-block:: yaml
+
+         ssh_key:
+           key: descrypted-secret-key-data
+
    .. attr:: nodes
 
       A list of nodes which should be supplied to the job.  This
