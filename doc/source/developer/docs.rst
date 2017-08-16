@@ -65,7 +65,7 @@ nice header with its own unique hyperlink target.  It displays the
 entire hierarchy of the attribute, but emphasises the last portion
 (i.e., the field being documented).
 
-To use the hierarchical features, simply nest with indendtation in the
+To use the hierarchical features, simply nest with indentation in the
 normal RST manner.
 
 It supports the ``required`` and ``default`` options and will annotate

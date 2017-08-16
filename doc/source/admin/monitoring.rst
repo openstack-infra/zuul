@@ -31,12 +31,12 @@ Your init script most probably loads a configuration file named
 Metrics
 ~~~~~~~
 
-The metrics are emitted by the Zuul :ref:`scheduler`:
+These metrics are emitted by the Zuul :ref:`scheduler`:
 
 .. stat:: gerrit.event.<type>
    :type: counter
 
-   Gerrit emits different kind of message over its `stream-events`
+   Gerrit emits different kinds of messages over its `stream-events`
    interface.  Zuul will report counters for each type of event it
    receives from Gerrit.
 
@@ -89,7 +89,7 @@ The metrics are emitted by the Zuul :ref:`scheduler`:
       .. stat:: total_changes
          :type: counter
 
-         The number of change processed by the pipeline since Zuul
+         The number of changes processed by the pipeline since Zuul
          started.
 
       .. stat:: wait_time
@@ -119,7 +119,7 @@ The metrics are emitted by the Zuul :ref:`scheduler`:
          .. stat:: total_changes
             :type: counter
 
-            The number of change for this project processed by the
+            The number of changes for this project processed by the
             pipeline since Zuul started.
 
 As an example, given a job named `myjob` triggered by the `gate` pipeline

@@ -30,7 +30,7 @@ Gearman
 
 Gearman is a job distribution system that Zuul uses to communicate
 with its distributed components.  The Zuul scheduler distributes work
-to Zuul mergers and executors use Gearman.  You may supply your own
+to Zuul mergers and executors using Gearman.  You may supply your own
 gearman server, but the Zuul scheduler includes a built-in server
 which is recommended.  Ensure that all Zuul hosts can communicate with
 the gearman server.
@@ -56,7 +56,7 @@ in given a username and ssh private key.
 Nodepool uses Zookeeper to communicate internally among its
 components, and also to communicate with Zuul.  You can run a simple
 single-node Zookeeper instance, or a multi-node cluster.  Ensure that
-The host running the Zuul scheduler has access to the cluster.
+the host running the Zuul scheduler has access to the cluster.
 
 Ansible
 ~~~~~~~
