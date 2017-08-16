@@ -7,9 +7,11 @@
             voting: false
         - tox-pep8
         - tox-py35
-        - tox-tarball
     gate:
       jobs:
         - tox-docs
         - tox-pep8
         - tox-py35
+    post:
+      jobs:
+        - publish-openstack-python-branch-tarball
