@@ -223,6 +223,7 @@ class ExecutorClient(object):
         for node in nodeset.getNodes():
             nodes.append(dict(name=node.name, label=node.label,
                               az=node.az,
+                              cloud=node.cloud,
                               host_keys=node.host_keys,
                               provider=node.provider,
                               region=node.region,

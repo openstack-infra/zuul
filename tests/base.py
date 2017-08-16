@@ -1659,6 +1659,7 @@ class FakeNodepool(object):
         now = time.time()
         path = '/nodepool/nodes/'
         data = dict(type=node_type,
+                    cloud='test-cloud',
                     provider='test-provider',
                     region='test-region',
                     az='test-az',

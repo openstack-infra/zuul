@@ -4,6 +4,7 @@
       assert:
         that:
           - nodepool.az == 'test-az'
+          - nodepool.cloud == 'test-cloud'
           - nodepool.region == 'test-region'
           - nodepool.provider == 'test-provider'
 
