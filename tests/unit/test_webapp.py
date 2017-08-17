@@ -110,3 +110,10 @@ class TestWebapp(ZuulTestCase):
 
         self.webapp.unregister_path('/custom')
         self.assertRaises(urllib.error.HTTPError, urllib.request.urlopen, req)
+
+    def test_webapp_404_on_unknown_tenant(self):
+        req = urllib.request.Request(
+            "http://localhost:{}/non-tenant/status.json".format(self.port))
+        e = self.assertRaises(
+            urllib.error.HTTPError, urllib.request.urlopen, req)
+        self.assertEqual(404, e.code)
