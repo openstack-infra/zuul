@@ -114,6 +114,9 @@ class CallbackModule(default.CallbackModule):
         else:
             level = logging.INFO
         logging.basicConfig(filename=path, level=level, format='%(message)s')
+        # Squelch logging from ara so we don't get the initializing message
+        logging.getLogger('ara').setLevel(logging.ERROR)
+
         self._logger = logging.getLogger('zuul.executor.ansible')
 
     def _log(self, msg, ts=None, job=True, executor=False, debug=False):
@@ -326,7 +329,7 @@ class CallbackModule(default.CallbackModule):
             # We have a custom zuul module that doesn't want the parameters
             # from its returned splatted to stdout. This is typically for
             # modules that are collecting data to be displayed some other way.
-            for key in result_dict.keys():
+            for key in list(result_dict.keys()):
                 if key != 'changed':
                     result_dict.pop(key)
 
