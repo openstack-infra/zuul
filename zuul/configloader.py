@@ -1492,7 +1492,9 @@ class ConfigLoader(object):
         if trusted:
             branches = ['master']
         else:
-            branches = project.source.getProjectBranches(project, tenant)
+            # Use the cached branch list; since this is a dynamic
+            # reconfiguration there should not be any branch changes.
+            branches = project.unparsed_branch_config.keys()
 
         for branch in branches:
             fns1 = []
