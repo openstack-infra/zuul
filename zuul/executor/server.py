@@ -1415,8 +1415,6 @@ class AnsibleJob(object):
             config.write('hostfile = %s\n' % self.jobdir.inventory)
             config.write('local_tmp = %s/local_tmp\n' %
                          self.jobdir.ansible_cache_root)
-            config.write('remote_tmp = %s/remote_tmp\n' %
-                         self.jobdir.ansible_cache_root)
             config.write('retry_files_enabled = False\n')
             config.write('gathering = smart\n')
             config.write('fact_caching = jsonfile\n')
