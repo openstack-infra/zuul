@@ -1390,7 +1390,17 @@ class TenantParser(object):
                     tenant, config_semaphore)
                 if 'semaphore' not in classes:
                     continue
-                layout.addSemaphore(SemaphoreParser.fromYaml(config_semaphore))
+                semaphore = SemaphoreParser.fromYaml(config_semaphore)
+                old_semaphore = layout.semaphores.get(semaphore.name)
+                if (old_semaphore and
+                    (old_semaphore.source_context.project ==
+                     semaphore.source_context.project)):
+                    # If a semaphore shows up twice in the same
+                    # project, it's probably due to showing up in
+                    # two branches.  Ignore subsequent
+                    # definitions.
+                    continue
+                layout.addSemaphore(semaphore)
 
         for config_template in data.project_templates:
             classes = TenantParser._getLoadClasses(tenant, config_template)
