@@ -1406,10 +1406,8 @@ class AnsibleJob(object):
             callback_path = '%s:%s' % (
                 self.executor_server.callback_dir,
                 os.path.dirname(ara_callbacks.__file__))
-            callback_whitelist = 'zuul_json,ara'
         else:
             callback_path = self.executor_server.callback_dir
-            callback_whitelist = 'zuul_json'
         with open(jobdir_playbook.ansible_config, 'w') as config:
             config.write('[defaults]\n')
             config.write('hostfile = %s\n' % self.jobdir.inventory)
@@ -1425,7 +1423,6 @@ class AnsibleJob(object):
             config.write('command_warnings = False\n')
             config.write('callback_plugins = %s\n' % callback_path)
             config.write('stdout_callback = zuul_stream\n')
-            config.write('callback_whitelist = %s\n' % callback_whitelist)
             # bump the timeout because busy nodes may take more than
             # 10s to respond
             config.write('timeout = 30\n')
