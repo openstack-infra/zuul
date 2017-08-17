@@ -1996,6 +1996,8 @@ class TriggerEvent(object):
         # common
         self.type = None
         self.branch_updated = False
+        self.branch_created = False
+        self.branch_deleted = False
         self.ref = None
         # For management events (eg: enqueue / promote)
         self.tenant_name = None

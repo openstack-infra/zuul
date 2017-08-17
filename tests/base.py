@@ -481,6 +481,25 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
         self.changes[self.change_number] = c
         return c
 
+    def getFakeBranchCreatedEvent(self, project, branch):
+        path = os.path.join(self.upstream_root, project)
+        repo = git.Repo(path)
+        oldrev = 40 * '0'
+
+        event = {
+            "type": "ref-updated",
+            "submitter": {
+                "name": "User Name",
+            },
+            "refUpdate": {
+                "oldRev": oldrev,
+                "newRev": repo.heads[branch].commit.hexsha,
+                "refName": branch,
+                "project": project,
+            }
+        }
+        return event
+
     def review(self, project, changeid, message, action):
         number, ps = changeid.split(',')
         change = self.changes[int(number)]
