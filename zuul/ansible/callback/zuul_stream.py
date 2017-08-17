@@ -326,7 +326,7 @@ class CallbackModule(default.CallbackModule):
             # We have a custom zuul module that doesn't want the parameters
             # from its returned splatted to stdout. This is typically for
             # modules that are collecting data to be displayed some other way.
-            for key in result_dict.keys():
+            for key in list(result_dict.keys()):
                 if key != 'changed':
                     result_dict.pop(key)
 
