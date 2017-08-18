@@ -32,5 +32,16 @@ class NullwrapDriver(Driver, WrapperInterface):
     name = 'nullwrap'
     log = logging.getLogger("zuul.NullwrapDriver")
 
-    def getExecutionContext(self, ro_paths=None, rw_paths=None):
+    def getExecutionContext(self, ro_paths=None, rw_paths=None, secrets=None):
+        # The bubblewrap driver writes secrets to a tmpfs so that they
+        # don't hit the disk (unless the kernel swaps the memory to
+        # disk, which can be mitigated with encrypted swap).  We
+        # haven't implemented similar functionality in nullwrap, so
+        # for safety, raise an exception in that case.  If you are
+        # interested in implementing this functionality, please
+        # contact us on the mailing list.
+        if secrets:
+            raise NotImplementedError(
+                "The nullwrap driver does not support the use of secrets. "
+                "Consider using the bubblewrap driver instead.")
         return NullExecutionContext()

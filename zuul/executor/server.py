@@ -255,8 +255,9 @@ class JobDirPlaybook(object):
         self.roles_path = []
         self.ansible_config = os.path.join(self.root, 'ansible.cfg')
         self.project_link = os.path.join(self.root, 'project')
-        self.secrets = os.path.join(self.root, 'secrets.yaml')
-        self.has_secrets = False
+        self.secrets_root = os.path.join(self.root, 'secrets')
+        self.secrets = os.path.join(self.secrets_root, 'secrets.yaml')
+        self.secrets_content = None
 
     def addRole(self):
         count = len(self.roles)
@@ -1266,6 +1267,13 @@ class AnsibleJob(object):
         for role in playbook['roles']:
             self.prepareRole(jobdir_playbook, role, args)
 
+        secrets = playbook['secrets']
+        if secrets:
+            if 'zuul' in secrets:
+                raise Exception("Defining secrets named 'zuul' is not allowed")
+            jobdir_playbook.secrets_content = yaml.safe_dump(
+                secrets, default_flow_style=False)
+
         self.writeAnsibleConfig(jobdir_playbook, playbook)
 
     def checkoutTrustedProject(self, project, branch):
@@ -1390,15 +1398,6 @@ class AnsibleJob(object):
     def writeAnsibleConfig(self, jobdir_playbook, playbook):
         trusted = jobdir_playbook.trusted
 
-        secrets = playbook['secrets'].copy()
-        if secrets:
-            if 'zuul' in secrets:
-                raise Exception("Defining secrets named 'zuul' is not allowed")
-            with open(jobdir_playbook.secrets, 'w') as secrets_yaml:
-                secrets_yaml.write(
-                    yaml.safe_dump(secrets, default_flow_style=False))
-            jobdir_playbook.has_secrets = True
-
         # TODO(mordred) This should likely be extracted into a more generalized
         #               mechanism for deployers being able to add callback
         #               plugins.
@@ -1441,7 +1440,7 @@ class AnsibleJob(object):
             # role. Otherwise, printing the args could be useful for
             # debugging.
             config.write('display_args_to_stdout = %s\n' %
-                         str(not secrets))
+                         str(not playbook['secrets']))
 
             config.write('[ssh_connection]\n')
             # NB: when setting pipelining = True, keep_remote_files
@@ -1509,8 +1508,12 @@ class AnsibleJob(object):
         if self.executor_variables_file:
             ro_paths.append(self.executor_variables_file)
 
+        secrets = {}
+        if playbook.secrets_content:
+            secrets[playbook.secrets] = playbook.secrets_content
+
         context = self.executor_server.execution_wrapper.getExecutionContext(
-            ro_paths, rw_paths)
+            ro_paths, rw_paths, secrets)
 
         popen = context.getPopen(
             work_dir=self.jobdir.work_root,
@@ -1593,7 +1596,7 @@ class AnsibleJob(object):
             verbose = '-v'
 
         cmd = ['ansible-playbook', verbose, playbook.path]
-        if playbook.has_secrets:
+        if playbook.secrets_content:
             cmd.extend(['-e', '@' + playbook.secrets])
 
         if success is not None:

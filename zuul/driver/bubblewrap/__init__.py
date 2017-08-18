@@ -22,6 +22,7 @@ import pwd
 import shlex
 import subprocess
 import sys
+import threading
 import re
 
 from typing import Dict, List  # flake8: noqa
@@ -31,10 +32,9 @@ from zuul.execution_context import BaseExecutionContext
 
 
 class WrappedPopen(object):
-    def __init__(self, command, passwd_r, group_r):
+    def __init__(self, command, fds):
         self.command = command
-        self.passwd_r = passwd_r
-        self.group_r = group_r
+        self.fds = fds
 
     def __call__(self, args, *sub_args, **kwargs):
         try:
@@ -46,7 +46,7 @@ class WrappedPopen(object):
                 # versions. So until we are py3 only we can only bwrap
                 # things that are close_fds=False
                 pass_fds = list(kwargs.get('pass_fds', []))
-                for fd in (self.passwd_r, self.group_r):
+                for fd in self.fds:
                     if fd not in pass_fds:
                         pass_fds.append(fd)
                 kwargs['pass_fds'] = pass_fds
@@ -56,26 +56,32 @@ class WrappedPopen(object):
         return proc
 
     def __del__(self):
-        if self.passwd_r:
+        for fd in self.fds:
             try:
-                os.close(self.passwd_r)
+                os.close(fd)
             except OSError:
                 pass
-            self.passwd_r = None
-        if self.group_r:
-            try:
-                os.close(self.group_r)
-            except OSError:
-                pass
-            self.group_r = None
+        self.fds = []
 
 
 class BubblewrapExecutionContext(BaseExecutionContext):
     log = logging.getLogger("zuul.BubblewrapExecutionContext")
 
-    def __init__(self, bwrap_command, ro_paths, rw_paths):
+    def __init__(self, bwrap_command, ro_paths, rw_paths, secrets):
         self.bwrap_command = bwrap_command
         self.mounts_map = {'ro': ro_paths, 'rw': rw_paths}
+        self.secrets = secrets
+
+    def startPipeWriter(self, pipe, data):
+        # In case we have a large amount of data to write through a
+        # pipe, spawn a thread to handle the writes.
+        t = threading.Thread(target=self._writer, args=(pipe, data))
+        t.daemon = True
+        t.start()
+
+    def _writer(self, pipe, data):
+        os.write(pipe, data)
+        os.close(pipe)
 
     def getPopen(self, **kwargs):
         # Set zuul_dir if it was not passed in
@@ -95,6 +101,9 @@ class BubblewrapExecutionContext(BaseExecutionContext):
             for bind in self.mounts_map[mount_type]:
                 bwrap_command.extend([bind_arg, bind, bind])
 
+        # A list of file descriptors which must be held open so that
+        # bwrap may read from them.
+        read_fds = []
         # Need users and groups
         uid = os.getuid()
         passwd = list(pwd.getpwuid(uid))
@@ -106,6 +115,7 @@ class BubblewrapExecutionContext(BaseExecutionContext):
         os.write(passwd_w, passwd_bytes)
         os.write(passwd_w, b'\n')
         os.close(passwd_w)
+        read_fds.append(passwd_r)
 
         gid = os.getgid()
         group = grp.getgrgid(gid)
@@ -115,6 +125,20 @@ class BubblewrapExecutionContext(BaseExecutionContext):
         os.write(group_w, group_bytes)
         os.write(group_w, b'\n')
         os.close(group_w)
+        read_fds.append(group_r)
+
+        # Create a tmpfs for each directory which holds secrets, and
+        # tell bubblewrap to write the contents to a file therein.
+        secret_dirs = set()
+        for fn, content in self.secrets.items():
+            secret_dir = os.path.dirname(fn)
+            if secret_dir not in secret_dirs:
+                bwrap_command.extend(['--tmpfs', secret_dir])
+                secret_dirs.add(secret_dir)
+            secret_r, secret_w = os.pipe()
+            self.startPipeWriter(secret_w, content.encode('utf8'))
+            bwrap_command.extend(['--file', str(secret_r), fn])
+            read_fds.append(secret_r)
 
         kwargs = dict(kwargs)  # Don't update passed in dict
         kwargs['uid'] = uid
@@ -126,7 +150,7 @@ class BubblewrapExecutionContext(BaseExecutionContext):
         self.log.debug("Bubblewrap command: %s",
                        " ".join(shlex.quote(c) for c in command))
 
-        wrapped_popen = WrappedPopen(command, passwd_r, group_r)
+        wrapped_popen = WrappedPopen(command, read_fds)
 
         return wrapped_popen
 
@@ -186,14 +210,17 @@ class BubblewrapDriver(Driver, WrapperInterface):
 
         return bwrap_command
 
-    def getExecutionContext(self, ro_paths=None, rw_paths=None):
+    def getExecutionContext(self, ro_paths=None, rw_paths=None, secrets=None):
         if not ro_paths:
             ro_paths = []
         if not rw_paths:
             rw_paths = []
+        if not secrets:
+            secrets = {}
         return BubblewrapExecutionContext(
             self.bwrap_command,
-            ro_paths, rw_paths)
+            ro_paths, rw_paths,
+            secrets)
 
 
 def main(args=None):
@@ -204,14 +231,22 @@ def main(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--ro-paths', nargs='+')
     parser.add_argument('--rw-paths', nargs='+')
+    parser.add_argument('--secret', nargs='+')
     parser.add_argument('work_dir')
     parser.add_argument('run_args', nargs='+')
     cli_args = parser.parse_args()
 
     ssh_auth_sock = os.environ.get('SSH_AUTH_SOCK')
 
+    secrets = {}
+    if cli_args.secret:
+        for secret in cli_args.secret:
+            fn, content = secret.split('=', 1)
+            secrets[fn]=content
+
     context = driver.getExecutionContext(
-        cli_args.ro_paths, cli_args.rw_paths)
+        cli_args.ro_paths, cli_args.rw_paths,
+        secrets)
 
     popen = context.getPopen(work_dir=cli_args.work_dir,
                              ssh_auth_sock=ssh_auth_sock)

@@ -258,7 +258,7 @@ class WrapperInterface(object, metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def getExecutionContext(self, ro_paths=None, rw_paths=None):
+    def getExecutionContext(self, ro_paths=None, rw_paths=None, secrets=None):
         """Create and return an execution context.
 
         The execution context is meant to be used for a single
@@ -268,6 +268,9 @@ class WrapperInterface(object, metaclass=abc.ABCMeta):
 
         :arg list ro_paths: read only files or directories to bind mount
         :arg list rw_paths: read write files or directories to bind mount
+        :arg dict secrets: a dictionary where the key is a file path,
+             and the value is the content which should be written to
+             that path in a secure manner.
 
         :returns: a new ExecutionContext object.
         :rtype: BaseExecutionContext
