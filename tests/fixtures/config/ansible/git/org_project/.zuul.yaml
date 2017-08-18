@@ -13,6 +13,7 @@
         - python27
         - faillocal
         - check-vars
+        - check-secret-names
         - timeout
         - hello-world
         - failpost
