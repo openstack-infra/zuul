@@ -753,12 +753,15 @@ class Scheduler(threading.Thread):
                                    "source %s",
                                    e.change, project.source)
                     continue
-                if (event.branch_updated and
-                    hasattr(change, 'files') and
-                    change.updatesConfig()):
-                    # The change that just landed updates the config.
-                    # Clear out cached data for this project and
-                    # perform a reconfiguration.
+                if ((event.branch_updated and
+                     hasattr(change, 'files') and
+                     change.updatesConfig()) or
+                    event.branch_created or
+                    event.branch_deleted):
+                    # The change that just landed updates the config
+                    # or a branch was just created or deleted.  Clear
+                    # out cached data for this project and perform a
+                    # reconfiguration.
                     change.project.unparsed_config = None
                     self.reconfigureTenant(tenant)
                 for pipeline in tenant.layout.pipelines.values():

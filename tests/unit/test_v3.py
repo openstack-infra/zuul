@@ -444,6 +444,9 @@ class TestInRepoConfig(ZuulTestCase):
         file_dict = {'.zuul.yaml': in_repo_conf,
                      'playbooks/project-test2.yaml': in_repo_playbook}
         self.create_branch('org/project', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project', 'stable'))
         A = self.fake_gerrit.addFakeChange('org/project', 'stable', 'A',
                                            files=file_dict)
         A.addApproval('Code-Review', 2)
@@ -484,6 +487,9 @@ class TestInRepoConfig(ZuulTestCase):
         # it from a different branch on a different repo.
 
         self.create_branch('org/project1', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project1', 'stable'))
 
         in_repo_conf = textwrap.dedent(
             """

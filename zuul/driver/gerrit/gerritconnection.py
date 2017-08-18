@@ -122,6 +122,17 @@ class GerritEventConnector(threading.Thread):
                              "from Gerrit. Can not get account information." %
                              (event.type,))
 
+        # This checks whether the event created or deleted a branch so
+        # that Zuul may know to perform a reconfiguration on the
+        # project.
+        if event.type == 'ref-updated' and not event.ref.startswith('refs/'):
+            if event.oldrev == '0' * 40:
+                event.branch_created = True
+                event.branch = event.ref
+            if event.newrev == '0' * 40:
+                event.branch_deleted = True
+                event.branch = event.ref
+
         if event.change_number:
             # TODO(jhesketh): Check if the project exists?
             # and self.connection.sched.getProject(event.project_name):

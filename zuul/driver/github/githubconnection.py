@@ -163,6 +163,14 @@ class GithubWebhookListener():
             # necessary for the scheduler to match against particular branches
             event.branch = ref_parts[2]
 
+        # This checks whether the event created or deleted a branch so
+        # that Zuul may know to perform a reconfiguration on the
+        # project.
+        if event.oldrev == '0' * 40:
+            event.branch_created = True
+        if event.newrev == '0' * 40:
+            event.branch_deleted = True
+
         return event
 
     def _event_pull_request(self, body):
