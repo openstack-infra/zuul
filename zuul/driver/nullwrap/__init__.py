@@ -18,14 +18,19 @@ import logging
 import subprocess
 
 from zuul.driver import (Driver, WrapperInterface)
+from zuul.execution_context import BaseExecutionContext
+
+
+class NullExecutionContext(BaseExecutionContext):
+    log = logging.getLogger("zuul.NullExecutionContext")
+
+    def getPopen(self, **kwargs):
+        return subprocess.Popen
 
 
 class NullwrapDriver(Driver, WrapperInterface):
     name = 'nullwrap'
     log = logging.getLogger("zuul.NullwrapDriver")
 
-    def getPopen(self, **kwargs):
-        return subprocess.Popen
-
-    def setMountsMap(self, **kwargs):
-        pass
+    def getExecutionContext(self, ro_paths=None, rw_paths=None):
+        return NullExecutionContext()

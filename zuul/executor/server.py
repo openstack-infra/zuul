@@ -1509,10 +1509,10 @@ class AnsibleJob(object):
         if self.executor_variables_file:
             ro_paths.append(self.executor_variables_file)
 
-        self.executor_server.execution_wrapper.setMountsMap(ro_paths,
-                                                            rw_paths)
+        context = self.executor_server.execution_wrapper.getExecutionContext(
+            ro_paths, rw_paths)
 
-        popen = self.executor_server.execution_wrapper.getPopen(
+        popen = context.getPopen(
             work_dir=self.jobdir.work_root,
             ssh_auth_sock=env_copy.get('SSH_AUTH_SOCK'))
 

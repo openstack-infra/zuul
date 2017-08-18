@@ -27,6 +27,7 @@ import re
 from typing import Dict, List  # flake8: noqa
 
 from zuul.driver import (Driver, WrapperInterface)
+from zuul.execution_context import BaseExecutionContext
 
 
 class WrappedPopen(object):
@@ -69,27 +70,11 @@ class WrappedPopen(object):
             self.group_r = None
 
 
-class BubblewrapDriver(Driver, WrapperInterface):
-    name = 'bubblewrap'
-    log = logging.getLogger("zuul.BubblewrapDriver")
+class BubblewrapExecutionContext(BaseExecutionContext):
+    log = logging.getLogger("zuul.BubblewrapExecutionContext")
 
-    mounts_map = {'rw': [], 'ro': []}  # type: Dict[str, List]
-    release_file_re = re.compile('^\W+-release$')
-
-    def __init__(self):
-        self.bwrap_command = self._bwrap_command()
-
-    def reconfigure(self, tenant):
-        pass
-
-    def stop(self):
-        pass
-
-    def setMountsMap(self, ro_paths=None, rw_paths=None):
-        if not ro_paths:
-            ro_paths = []
-        if not rw_paths:
-            rw_paths = []
+    def __init__(self, bwrap_command, ro_paths, rw_paths):
+        self.bwrap_command = bwrap_command
         self.mounts_map = {'ro': ro_paths, 'rw': rw_paths}
 
     def getPopen(self, **kwargs):
@@ -145,6 +130,22 @@ class BubblewrapDriver(Driver, WrapperInterface):
 
         return wrapped_popen
 
+
+class BubblewrapDriver(Driver, WrapperInterface):
+    log = logging.getLogger("zuul.BubblewrapDriver")
+    name = 'bubblewrap'
+
+    release_file_re = re.compile('^\W+-release$')
+
+    def __init__(self):
+        self.bwrap_command = self._bwrap_command()
+
+    def reconfigure(self, tenant):
+        pass
+
+    def stop(self):
+        pass
+
     def _bwrap_command(self):
         bwrap_command = [
             'bwrap',
@@ -185,6 +186,15 @@ class BubblewrapDriver(Driver, WrapperInterface):
 
         return bwrap_command
 
+    def getExecutionContext(self, ro_paths=None, rw_paths=None):
+        if not ro_paths:
+            ro_paths = []
+        if not rw_paths:
+            rw_paths = []
+        return BubblewrapExecutionContext(
+            self.bwrap_command,
+            ro_paths, rw_paths)
+
 
 def main(args=None):
     logging.basicConfig(level=logging.DEBUG)
@@ -192,18 +202,19 @@ def main(args=None):
     driver = BubblewrapDriver()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ro-bind', nargs='+')
-    parser.add_argument('--rw-bind', nargs='+')
+    parser.add_argument('--ro-paths', nargs='+')
+    parser.add_argument('--rw-paths', nargs='+')
     parser.add_argument('work_dir')
     parser.add_argument('run_args', nargs='+')
     cli_args = parser.parse_args()
 
     ssh_auth_sock = os.environ.get('SSH_AUTH_SOCK')
 
-    driver.setMountsMap(cli_args.ro_bind, cli_args.rw_bind)
+    context = driver.getExecutionContext(
+        cli_args.ro_paths, cli_args.rw_paths)
 
-    popen = driver.getPopen(work_dir=cli_args.work_dir,
-                            ssh_auth_sock=ssh_auth_sock)
+    popen = context.getPopen(work_dir=cli_args.work_dir,
+                             ssh_auth_sock=ssh_auth_sock)
     x = popen(cli_args.run_args)
     x.wait()
 
