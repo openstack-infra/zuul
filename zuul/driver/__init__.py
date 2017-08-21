@@ -258,25 +258,19 @@ class WrapperInterface(object, metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def getPopen(self, **kwargs):
-        """Create and return a subprocess.Popen factory wrapped however the
-        driver sees fit.
+    def getExecutionContext(self, ro_paths=None, rw_paths=None):
+        """Create and return an execution context.
+
+        The execution context is meant to be used for a single
+        invocation of a command.
 
         This method is required by the interface
 
-        :arg dict kwargs: key/values for use by driver as needed
-
-        :returns: a callable that takes the same args as subprocess.Popen
-        :rtype: Callable
-        """
-        pass
-
-    @abc.abstractmethod
-    def setMountsMap(self, state_dir, ro_paths=None, rw_paths=None):
-        """Add additional mount point to the execution environment.
-
-        :arg str state_dir: the state directory to be read write
         :arg list ro_paths: read only files or directories to bind mount
         :arg list rw_paths: read write files or directories to bind mount
+
+        :returns: a new ExecutionContext object.
+        :rtype: BaseExecutionContext
+
         """
         pass

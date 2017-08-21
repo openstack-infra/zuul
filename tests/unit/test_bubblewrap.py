@@ -32,12 +32,13 @@ class TestBubblewrap(testtools.TestCase):
 
     def test_bubblewrap_wraps(self):
         bwrap = bubblewrap.BubblewrapDriver()
+        context = bwrap.getExecutionContext()
         work_dir = tempfile.mkdtemp()
         ssh_agent = SshAgent()
         self.addCleanup(ssh_agent.stop)
         ssh_agent.start()
-        po = bwrap.getPopen(work_dir=work_dir,
-                            ssh_auth_sock=ssh_agent.env['SSH_AUTH_SOCK'])
+        po = context.getPopen(work_dir=work_dir,
+                              ssh_auth_sock=ssh_agent.env['SSH_AUTH_SOCK'])
         self.assertTrue(po.passwd_r > 2)
         self.assertTrue(po.group_r > 2)
         self.assertTrue(work_dir in po.command)
@@ -55,14 +56,15 @@ class TestBubblewrap(testtools.TestCase):
 
     def test_bubblewrap_leak(self):
         bwrap = bubblewrap.BubblewrapDriver()
+        context = bwrap.getExecutionContext()
         work_dir = tempfile.mkdtemp()
         ansible_dir = tempfile.mkdtemp()
         ssh_agent = SshAgent()
         self.addCleanup(ssh_agent.stop)
         ssh_agent.start()
-        po = bwrap.getPopen(work_dir=work_dir,
-                            ansible_dir=ansible_dir,
-                            ssh_auth_sock=ssh_agent.env['SSH_AUTH_SOCK'])
+        po = context.getPopen(work_dir=work_dir,
+                              ansible_dir=ansible_dir,
+                              ssh_auth_sock=ssh_agent.env['SSH_AUTH_SOCK'])
         leak_time = 60
         # Use hexadecimal notation to avoid false-positive
         true_proc = po(['bash', '-c', 'sleep 0x%X & disown' % leak_time])
