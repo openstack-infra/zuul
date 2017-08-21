@@ -484,18 +484,12 @@ class CallbackModule(default.CallbackModule):
     def _get_task_hosts(self, task):
         # If this task has as delegate to, we don't care about the play hosts,
         # we care about the task's delegate target.
-        delegate_to = task.delegate_to
-        if delegate_to:
-            return [delegate_to]
-        hosts = self._play.hosts
-        if 'all' in hosts:
-            # NOTE(jamielennox): play.hosts is purely the list of hosts
-            # that was provided not interpretted by inventory. We don't
-            # have inventory access here but we can assume that 'all' is
-            # everything in hostvars.
-            play_vars = self._play._variable_manager._hostvars
-            hosts = play_vars.keys()
-        return hosts
+        if task.delegate_to:
+            return [task.delegate_to]
+
+        # _restriction returns the parsed/compiled list of hosts after
+        # applying subsets/limits
+        return self.play._variable_manager._inventory._restriction
 
     def _dump_result_dict(self, result_dict):
         result_dict = result_dict.copy()
