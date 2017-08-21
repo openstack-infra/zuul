@@ -39,8 +39,8 @@ class TestBubblewrap(testtools.TestCase):
         ssh_agent.start()
         po = context.getPopen(work_dir=work_dir,
                               ssh_auth_sock=ssh_agent.env['SSH_AUTH_SOCK'])
-        self.assertTrue(po.passwd_r > 2)
-        self.assertTrue(po.group_r > 2)
+        self.assertTrue(po.fds[0] > 2)
+        self.assertTrue(po.fds[1] > 2)
         self.assertTrue(work_dir in po.command)
         # Now run /usr/bin/id to verify passwd/group entries made it in
         true_proc = po(['/usr/bin/id'], stdout=subprocess.PIPE,
@@ -51,8 +51,7 @@ class TestBubblewrap(testtools.TestCase):
         # And that it did not print things on stderr
         self.assertEqual(0, len(errs.strip()))
         # Make sure the _r's are closed
-        self.assertIsNone(po.passwd_r)
-        self.assertIsNone(po.group_r)
+        self.assertEqual([], po.fds)
 
     def test_bubblewrap_leak(self):
         bwrap = bubblewrap.BubblewrapDriver()

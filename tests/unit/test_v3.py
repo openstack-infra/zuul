@@ -1292,8 +1292,7 @@ class TestSecretLeaks(AnsibleZuulTestCase):
         ], ordered=False)
         matches = self.searchForContent(self.history[0].jobdir.root,
                                         b'test-password')
-        self.assertEqual(set(['/ansible/playbook_0/secrets.yaml',
-                              '/work/secret-file.txt']),
+        self.assertEqual(set(['/work/secret-file.txt']),
                          set(matches))
 
     def test_secret_file(self):
@@ -1328,8 +1327,7 @@ class TestSecretLeaks(AnsibleZuulTestCase):
         ], ordered=False)
         matches = self.searchForContent(self.history[0].jobdir.root,
                                         b'test-password')
-        self.assertEqual(set(['/ansible/playbook_0/secrets.yaml',
-                              '/work/failure-file.txt']),
+        self.assertEqual(set(['/work/failure-file.txt']),
                          set(matches))
 
     def test_secret_file_fail(self):
