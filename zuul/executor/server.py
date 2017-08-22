@@ -256,6 +256,7 @@ class JobDirPlaybook(object):
         self.ansible_config = os.path.join(self.root, 'ansible.cfg')
         self.project_link = os.path.join(self.root, 'project')
         self.secrets_root = os.path.join(self.root, 'secrets')
+        os.makedirs(self.secrets_root)
         self.secrets = os.path.join(self.secrets_root, 'secrets.yaml')
         self.secrets_content = None
 
