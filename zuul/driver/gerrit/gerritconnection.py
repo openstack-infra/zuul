@@ -230,13 +230,16 @@ class GerritWatcher(threading.Thread):
                     stdout.channel.close()
             ret = stdout.channel.recv_exit_status()
             self.log.debug("SSH exit status: %s" % ret)
-            client.close()
 
             if ret and ret not in [-1, 130]:
                 raise Exception("Gerrit error executing stream-events")
         except:
             self.log.exception("Exception on ssh event stream:")
             time.sleep(5)
+        finally:
+            # If we don't close on exceptions to connect we can leak the
+            # connection and DoS Gerrit.
+            client.close()
 
     def run(self):
         while not self._stopped:
@@ -731,16 +734,25 @@ class GerritConnection(BaseConnection):
         return out
 
     def _open(self):
-        client = paramiko.SSHClient()
-        client.load_system_host_keys()
-        client.set_missing_host_key_policy(paramiko.WarningPolicy())
-        client.connect(self.server,
-                       username=self.user,
-                       port=self.port,
-                       key_filename=self.keyfile)
-        transport = client.get_transport()
-        transport.set_keepalive(self.keepalive)
-        self.client = client
+        if self.client:
+            # Paramiko needs explicit closes, its possible we will open even
+            # with an unclosed client so explicitly close here.
+            self.client.close()
+        try:
+            client = paramiko.SSHClient()
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.WarningPolicy())
+            client.connect(self.server,
+                           username=self.user,
+                           port=self.port,
+                           key_filename=self.keyfile)
+            transport = client.get_transport()
+            transport.set_keepalive(self.keepalive)
+            self.client = client
+        except Exception:
+            client.close()
+            self.client = None
+            raise
 
     def _ssh(self, command, stdin_data=None):
         if not self.client:
