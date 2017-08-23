@@ -990,5 +990,5 @@ def log_rate_limit(log, github):
 
 
 def getSchema():
-    github_connection = v.Any(str, v.Schema({}, extra=True))
+    github_connection = v.Any(str, v.Schema(dict))
     return github_connection
