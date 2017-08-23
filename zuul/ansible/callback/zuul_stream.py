@@ -256,8 +256,12 @@ class CallbackModule(default.CallbackModule):
                 is_localhost = True
         else:
             task_hostvars = result._task._variable_manager._hostvars[task_host]
+            # Normally hosts in the inventory will have ansible_host
+            # or ansible_inventory host defined.  The implied
+            # inventory record for 'localhost' will have neither, so
+            # default to that if none are supplied.
             if task_hostvars.get('ansible_host', task_hostvars.get(
-                    'ansible_inventory_host')) in localhost_names:
+                    'ansible_inventory_host', 'localhost')) in localhost_names:
                 is_localhost = True
 
         if not is_localhost and is_task:
