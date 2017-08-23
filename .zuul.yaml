@@ -1,0 +1,14 @@
+- project:
+    name: openstack-infra/zuul
+    check:
+      jobs:
+        - tox-docs
+        - tox-cover:
+            voting: false
+        - tox-pep8
+        - tox-py27
+    gate:
+      jobs:
+        - tox-docs
+        - tox-pep8
+        - tox-py27
