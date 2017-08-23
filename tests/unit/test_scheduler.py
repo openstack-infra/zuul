@@ -3836,19 +3836,23 @@ For CI problems and help debugging, contact ci@example.org"""
         self.create_branch('org/project2', 'mp')
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
-        C = self.fake_gerrit.addFakeChange('org/project2', 'mp', 'C')
-        C.data['id'] = B.data['id']
+        C1 = self.fake_gerrit.addFakeChange('org/project2', 'mp', 'C1')
+        C2 = self.fake_gerrit.addFakeChange('org/project2', 'mp', 'C2',
+                                            status='ABANDONED')
+        C1.data['id'] = B.data['id']
+        C2.data['id'] = B.data['id']
+
         A.addApproval('Code-Review', 2)
         B.addApproval('Code-Review', 2)
-        C.addApproval('Code-Review', 2)
+        C1.addApproval('Code-Review', 2)
 
-        # A Depends-On: B+C
+        # A Depends-On: B+C1
         A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
             A.subject, B.data['id'])
 
         self.executor_server.hold_jobs_in_build = True
         B.addApproval('Approved', 1)
-        C.addApproval('Approved', 1)
+        C1.addApproval('Approved', 1)
         self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
 
@@ -3864,10 +3868,10 @@ For CI problems and help debugging, contact ci@example.org"""
 
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(B.data['status'], 'MERGED')
-        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(C1.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
         self.assertEqual(B.reported, 2)
-        self.assertEqual(C.reported, 2)
+        self.assertEqual(C1.reported, 2)
 
         changes = self.getJobFromHistory(
             'project-merge', 'org/project1').changes
