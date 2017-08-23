@@ -1223,7 +1223,8 @@ class AnsibleJob(object):
                                  args, required=True)
 
     def preparePlaybook(self, jobdir_playbook, playbook, args, required):
-        self.log.debug("Prepare playbook repo for %s" % (playbook,))
+        self.log.debug("Prepare playbook repo for %s" %
+                       (playbook['project'],))
         # Check out the playbook repo if needed and set the path to
         # the playbook that should be run.
         source = self.executor_server.connections.getSource(
