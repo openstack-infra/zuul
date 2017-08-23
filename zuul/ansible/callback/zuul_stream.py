@@ -489,7 +489,7 @@ class CallbackModule(default.CallbackModule):
 
         # _restriction returns the parsed/compiled list of hosts after
         # applying subsets/limits
-        return self.play._variable_manager._inventory._restriction
+        return self._play._variable_manager._inventory._restriction
 
     def _dump_result_dict(self, result_dict):
         result_dict = result_dict.copy()
