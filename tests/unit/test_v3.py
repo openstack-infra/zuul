@@ -14,6 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import json
 import os
 import textwrap
 
@@ -1338,3 +1339,39 @@ class TestSecretLeaks(AnsibleZuulTestCase):
         # paths.
         self.executor_server.verbose = True
         self._test_secret_file_fail()
+
+
+class TestJobOutput(AnsibleZuulTestCase):
+    tenant_config_file = 'config/job-output/main.yaml'
+
+    def _get_file(self, build, path):
+        p = os.path.join(build.jobdir.root, path)
+        with open(p) as f:
+            return f.read()
+
+    def test_job_output(self):
+        # Verify that command standard output appears in the job output
+
+        # This currently only verifies we receive output from
+        # localhost.  Notably, it does not verify we receive output
+        # via zuul_console streaming.
+        self.executor_server.keep_jobdir = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='job-output', result='SUCCESS', changes='1,1'),
+        ], ordered=False)
+
+        token = 'Standard output test %s' % (self.history[0].jobdir.src_root)
+        j = json.loads(self._get_file(self.history[0],
+                                      'work/logs/job-output.json'))
+        self.assertEqual(token,
+                         j[0]['plays'][0]['tasks'][0]
+                         ['hosts']['localhost']['stdout'])
+
+        print(self._get_file(self.history[0],
+                             'work/logs/job-output.txt'))
+        self.assertIn(token,
+                      self._get_file(self.history[0],
+                                     'work/logs/job-output.txt'))
