@@ -114,6 +114,9 @@ class CallbackModule(default.CallbackModule):
         else:
             level = logging.INFO
         logging.basicConfig(filename=path, level=level, format='%(message)s')
+        # Squelch logging from ara so we don't get the initializing message
+        logging.getLogger('ara').setLevel(logging.ERROR)
+
         self._logger = logging.getLogger('zuul.executor.ansible')
 
     def _log(self, msg, ts=None, job=True, executor=False, debug=False):
