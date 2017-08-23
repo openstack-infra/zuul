@@ -202,7 +202,7 @@ class TestJob(BaseTestCase):
             'name': 'python27',
             'parent': 'base',
             'pre-run': 'py27-pre',
-            'post-run': 'py27-post',
+            'post-run': ['py27-post-a', 'py27-post-b'],
             'nodes': [{
                 'name': 'controller',
                 'label': 'new',
@@ -275,7 +275,8 @@ class TestJob(BaseTestCase):
                          ['base-pre',
                           'py27-pre'])
         self.assertEqual([x.path for x in job.post_run],
-                         ['py27-post',
+                         ['py27-post-a',
+                          'py27-post-b',
                           'base-post'])
         self.assertEqual([x.path for x in job.run],
                          ['playbooks/python27',
@@ -305,7 +306,8 @@ class TestJob(BaseTestCase):
                           'py27-diablo-pre'])
         self.assertEqual([x.path for x in job.post_run],
                          ['py27-diablo-post',
-                          'py27-post',
+                          'py27-post-a',
+                          'py27-post-b',
                           'base-post'])
         self.assertEqual([x.path for x in job.run],
                          ['py27-diablo']),
@@ -330,7 +332,8 @@ class TestJob(BaseTestCase):
                           'py27-essex-pre'])
         self.assertEqual([x.path for x in job.post_run],
                          ['py27-essex-post',
-                          'py27-post',
+                          'py27-post-a',
+                          'py27-post-b',
                           'base-post'])
         self.assertEqual([x.path for x in job.run],
                          ['playbooks/python27',

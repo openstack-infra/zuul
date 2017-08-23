@@ -507,7 +507,10 @@ class JobParser(object):
                                             pre_run_name, job.roles,
                                             secrets)
             job.pre_run = job.pre_run + (pre_run,)
-        for post_run_name in as_list(conf.get('post-run')):
+        # NOTE(pabelanger): Reverse the order of our post-run list. We prepend
+        # post-runs for inherits however, we want to execute post-runs in the
+        # order they are listed within the job.
+        for post_run_name in reversed(as_list(conf.get('post-run'))):
             post_run = model.PlaybookContext(job.source_context,
                                              post_run_name, job.roles,
                                              secrets)
