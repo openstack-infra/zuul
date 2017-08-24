@@ -625,7 +625,7 @@
                     setTimeout(function() {app.schedule(app);}, 5000);
                     return;
                 }
-                app.update().complete(function () {
+                app.update().always(function () {
                     setTimeout(function() {app.schedule(app);}, 5000);
                 });
 
@@ -695,7 +695,7 @@
                             .removeClass('zuul-msg-wrap-off')
                             .show();
                     })
-                    .complete(function () {
+                    .always(function () {
                         xhr = undefined;
                         app.emit('update-end');
                     });
