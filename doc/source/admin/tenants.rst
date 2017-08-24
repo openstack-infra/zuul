@@ -113,16 +113,26 @@ configuration.  An example tenant definition is:
 
          .. attr:: include
 
-            Normally Zuul will load all of the configuration classes
+            Normally Zuul will load all of the :ref:`configuration-items`
             appropriate for the type of project (config or untrusted)
             in question.  However, if you only want to load some
             items, the **include** attribute can be used to specify
-            that *only* the specified classes should be loaded.
+            that *only* the specified items should be loaded.
             Supplied as a string, or a list of strings.
+
+            The following **configuration items** are recognized:
+
+            * pipeline
+            * job
+            * semaphore
+            * project
+            * project-template
+            * nodeset
+            * secret
 
          .. attr:: exclude
 
-            A list of configuration classes that should not be loaded.
+            A list of **configuration items** that should not be loaded.
 
          .. attr:: shadow
 

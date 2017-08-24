@@ -57,6 +57,8 @@ As soon as a change containing a Zuul configuration change merges to
 any Zuul-managed repository, the new configuration takes effect
 immediately.
 
+.. _configuration-items:
+
 Configuration Items
 -------------------
 
