@@ -15,6 +15,7 @@
 # under the License.
 
 import argparse
+import fcntl
 import grp
 import logging
 import os
@@ -24,6 +25,7 @@ import subprocess
 import sys
 import threading
 import re
+import struct
 
 from typing import Dict, List  # flake8: noqa
 
@@ -83,7 +85,16 @@ class BubblewrapExecutionContext(BaseExecutionContext):
         os.write(pipe, data)
         os.close(pipe)
 
+    def setpag(self):
+        # If we are on a system with AFS, ensure that each playbook
+        # invocation ends up in its own PAG.
+        # http://asa.scripts.mit.edu/trac/attachment/ticket/145/setpag.txt#L315
+        if os.path.exists("/proc/fs/openafs/afs_ioctl"):
+            fcntl.ioctl(open("/proc/fs/openafs/afs_ioctl"), 0x40084301,
+                        struct.pack("lllll", 0, 0, 0, 0, 21))
+
     def getPopen(self, **kwargs):
+        self.setpag()
         # Set zuul_dir if it was not passed in
         if 'zuul_dir' in kwargs:
             zuul_dir = kwargs['zuul_dir']
@@ -186,6 +197,7 @@ class BubblewrapDriver(Driver, WrapperInterface):
             '--ro-bind', '/etc/hosts', '/etc/hosts',
             '--ro-bind', '{ssh_auth_sock}', '{ssh_auth_sock}',
             '--bind', '{work_dir}', '{work_dir}',
+            '--proc', '/proc',
             '--dev', '/dev',
             '--chdir', '{work_dir}',
             '--unshare-all',
