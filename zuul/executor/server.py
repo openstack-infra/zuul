@@ -1159,7 +1159,11 @@ class AnsibleJob(object):
                     az=node.get('az'),
                     cloud=node.get('cloud'),
                     provider=node.get('provider'),
-                    region=node.get('region')))
+                    region=node.get('region'),
+                    interface_ip=node.get('interface_ip'),
+                    public_ipv4=node.get('public_ipv4'),
+                    private_ipv4=node.get('private_ipv4'),
+                    public_ipv6=node.get('public_ipv6')))
 
             host_keys = []
             for key in node.get('host_keys'):
