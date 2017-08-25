@@ -153,6 +153,8 @@ class WebApp(threading.Thread):
             return webob.Response(body=self.cache[tenant_name],
                                   content_type='application/json',
                                   charset='utf8')
+        if tenant_name not in self.scheduler.abide.tenants:
+            raise webob.exc.HTTPNotFound()
         return self._response_with_status_cache(func, tenant_name)
 
     def change(self, path, tenant_name, request):
