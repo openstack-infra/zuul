@@ -1098,6 +1098,7 @@ class AnsibleJob(object):
         result = None
 
         pre_failed = False
+        success = False
         for index, playbook in enumerate(self.jobdir.pre_playbooks):
             # TODOv3(pabelanger): Implement pre-run timeout setting.
             pre_status, pre_code = self.runAnsiblePlaybook(
@@ -1106,26 +1107,28 @@ class AnsibleJob(object):
                 # These should really never fail, so return None and have
                 # zuul try again
                 pre_failed = True
-                success = False
                 break
 
         if not pre_failed:
             job_status, job_code = self.runAnsiblePlaybook(
                 self.jobdir.playbook, args['timeout'], phase='run')
-            if job_status == self.RESULT_TIMED_OUT:
-                return 'TIMED_OUT'
             if job_status == self.RESULT_ABORTED:
                 return 'ABORTED'
-            if job_status != self.RESULT_NORMAL:
+            elif job_status == self.RESULT_TIMED_OUT:
+                # Set the pre-failure flag so this doesn't get
+                # overridden by a post-failure.
+                pre_failed = True
+                result = 'TIMED_OUT'
+            elif job_status == self.RESULT_NORMAL:
+                success = (job_code == 0)
+                if success:
+                    result = 'SUCCESS'
+                else:
+                    result = 'FAILURE'
+            else:
                 # The result of the job is indeterminate.  Zuul will
                 # run it again.
-                return result
-
-            success = (job_code == 0)
-            if success:
-                result = 'SUCCESS'
-            else:
-                result = 'FAILURE'
+                return None
 
         for index, playbook in enumerate(self.jobdir.post_playbooks):
             # TODOv3(pabelanger): Implement post-run timeout setting.
