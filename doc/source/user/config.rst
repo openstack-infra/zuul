@@ -755,7 +755,7 @@ Here is an example of two job definitions:
 
    .. attr:: timeout
 
-      The time in minutes that the job should be allowed to run before
+      The time in seconds that the job should be allowed to run before
       it is automatically aborted and failure is reported.  If no
       timeout is supplied, the job may run indefinitely.  Supplying a
       timeout is highly recommended.
