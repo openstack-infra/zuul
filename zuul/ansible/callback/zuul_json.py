@@ -33,6 +33,8 @@ except ImportError:
     # It's here in 2.3
     from ansible.vars.manager import strip_internal_keys
 
+from zuul.ansible import logconfig
+
 
 class CallbackModule(CallbackBase):
     CALLBACK_VERSION = 2.0
@@ -45,8 +47,12 @@ class CallbackModule(CallbackBase):
         self.results = []
         self.output = []
         self.playbook = {}
+        logging_config = logconfig.load_job_config(
+            os.environ['ZUUL_JOB_LOG_CONFIG'])
+
         self.output_path = os.path.splitext(
-            os.environ['ZUUL_JOB_OUTPUT_FILE'])[0] + '.json'
+            logging_config.job_output_file)[0] + '.json'
+
         # For now, just read in the old file and write it all out again
         # This may well not scale from a memory perspective- but let's see how
         # it goes.

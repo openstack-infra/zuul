@@ -26,8 +26,8 @@ import traceback
 
 yappi = extras.try_import('yappi')
 
+from zuul.ansible import logconfig
 import zuul.lib.connections
-from zuul.lib import yamlutil as yaml
 
 # Do not import modules that will pull in paramiko which must not be
 # imported until after the daemonization.
@@ -84,19 +84,18 @@ class ZuulApp(object):
     def setup_logging(self, section, parameter):
         if self.config.has_option(section, parameter):
             fp = os.path.expanduser(self.config.get(section, parameter))
-            if not os.path.exists(fp):
-                raise Exception("Unable to read logging config file at %s" %
-                                fp)
-
-            if os.path.splitext(fp)[1] in ('.yml', '.yaml'):
-                with open(fp, 'r') as f:
-                    logging.config.dictConfig(yaml.safe_load(f))
-
-            else:
-                logging.config.fileConfig(fp)
-
+            logging_config = logconfig.load_config_from_file(fp)
         else:
-            logging.basicConfig(level=logging.DEBUG)
+            # If someone runs in the foreground and doesn't give a logging
+            # config, leave the config set to emit to stdout.
+            if hasattr(self.args, 'nodaemon') and not self.args.nodaemon:
+                logging_config = logconfig.ServerLoggingConfig()
+            else:
+                # Setting a server value updates the defaults to use
+                # WatchedFileHandler on /var/log/zuul/{server}-debug.log
+                # and /var/log/zuul/{server}.log
+                logging_config = logconfig.ServerLoggingConfig(server=section)
+        logging_config.apply()
 
     def configure_connections(self, source_only=False):
         self.connections = zuul.lib.connections.ConnectionRegistry()
