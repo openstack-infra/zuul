@@ -219,6 +219,13 @@ class ServerLoggingConfig(DictLoggingConfig):
             if logger['handlers'] == ['console']:
                 logger['handlers'] = ['normal']
 
+    def setDebug(self):
+        # Change level from INFO to DEBUG
+        for section in ('handlers', 'loggers'):
+            for handler in self._config[section].values():
+                if handler.get('level') == 'INFO':
+                    handler['level'] = 'DEBUG'
+
 
 class FileLoggingConfig(LoggingConfig):
 
