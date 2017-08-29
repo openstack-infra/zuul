@@ -205,7 +205,7 @@ class ServerLoggingConfig(DictLoggingConfig):
             server_handler = handler.copy()
             server_handler['filename'] = server_handler['filename'].format(
                 server=server)
-            self._config['handlers'][name] = handler
+            self._config['handlers'][name] = server_handler
         # Change everything configured to write to stdout to write to
         # log files instead.
         for logger in self._config['loggers'].values():
