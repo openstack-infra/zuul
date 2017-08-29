@@ -1228,6 +1228,14 @@ class TenantParser(object):
                                  untrusted_projects, cached, tenant):
         config_projects_config = model.UnparsedTenantConfig()
         untrusted_projects_config = model.UnparsedTenantConfig()
+        # project -> config; these will replace
+        # project.unparsed_config if this method succesfully
+        # completes
+        new_project_unparsed_config = {}
+        # project -> branch -> config; these will replace
+        # project.unparsed_branch_config if this method succesfully
+        # completes
+        new_project_unparsed_branch_config = {}
         jobs = []
 
         # In some cases, we can use cached data, but it's still
@@ -1247,7 +1255,7 @@ class TenantParser(object):
                 continue
             # Otherwise, prepare an empty unparsed config object to
             # hold cached data later.
-            project.unparsed_config = model.UnparsedTenantConfig()
+            new_project_unparsed_config[project] = model.UnparsedTenantConfig()
             # Get main config files.  These files are permitted the
             # full range of configuration.
             job = merger.getFiles(
@@ -1266,7 +1274,8 @@ class TenantParser(object):
                 continue
             # Otherwise, prepare an empty unparsed config object to
             # hold cached data later.
-            project.unparsed_config = model.UnparsedTenantConfig()
+            new_project_unparsed_config[project] = model.UnparsedTenantConfig()
+            new_project_unparsed_branch_config[project] = {}
             # Get in-project-repo config files which have a restricted
             # set of options.
             # For each branch in the repo, get the zuul.yaml for that
@@ -1274,7 +1283,7 @@ class TenantParser(object):
             # branch selector to each job there.  This makes the
             # in-repo configuration apply only to that branch.
             for branch in project.source.getProjectBranches(project, tenant):
-                project.unparsed_branch_config[branch] = \
+                new_project_unparsed_branch_config[project][branch] = \
                     model.UnparsedTenantConfig()
                 job = merger.getFiles(
                     project.source.connection.connection_name,
@@ -1333,9 +1342,19 @@ class TenantParser(object):
                         incdata = TenantParser._parseUntrustedProjectLayout(
                             job.files[fn], job.source_context)
                         untrusted_projects_config.extend(incdata)
-                    project.unparsed_config.extend(incdata)
-                    if branch in project.unparsed_branch_config:
-                        project.unparsed_branch_config[branch].extend(incdata)
+                    new_project_unparsed_config[project].extend(incdata)
+                    if branch in new_project_unparsed_branch_config.get(
+                            project, {}):
+                        new_project_unparsed_branch_config[project][branch].\
+                            extend(incdata)
+        # Now that we've sucessfully loaded all of the configuration,
+        # cache the unparsed data on the project objects.
+        for project, data in new_project_unparsed_config.items():
+            project.unparsed_config = data
+        for project, branch_config in \
+            new_project_unparsed_branch_config.items():
+            for branch, data in branch_config.items():
+                project.unparsed_branch_config[branch] = data
         return config_projects_config, untrusted_projects_config
 
     @staticmethod
