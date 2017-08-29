@@ -106,10 +106,7 @@ _DEFAULT_SERVER_LOGGING_CONFIG = {
             'level': 'WARN',
         },
     },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
-    },
+    'root': {'handlers': []},
 }
 
 _DEFAULT_SERVER_FILE_HANDLERS = {
@@ -210,11 +207,7 @@ class ServerLoggingConfig(DictLoggingConfig):
                 server=server)
             self._config['handlers'][name] = handler
         # Change everything configured to write to stdout to write to
-        # log files instead. This leaves root going to console, which is
-        # how the loggers infra uses work.
-        # NOTE(mordred) root -> console may not actually be intentional. It can
-        #               be changed by changing
-        #               _DEFAULT_SERVER_LOGGING_CONFIG['root']['handlers']
+        # log files instead.
         for logger in self._config['loggers'].values():
             if logger['handlers'] == ['console']:
                 logger['handlers'] = ['normal']
