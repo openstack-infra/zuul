@@ -1,5 +1,6 @@
 [gearman]
 server=127.0.0.1
+;port=4730
 ;ssl_ca=/path/to/ca.pem
 ;ssl_cert=/path/to/client.pem
 ;ssl_key=/path/to/client.key
@@ -12,6 +13,7 @@ start=true
 ;ssl_ca=/path/to/ca.pem
 ;ssl_cert=/path/to/server.pem
 ;ssl_key=/path/to/server.key
+;port=4730
 
 [scheduler]
 tenant_config=/etc/zuul/main.yaml

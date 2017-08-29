@@ -149,6 +149,11 @@ The following sections of ``zuul.conf`` are used by the scheduler:
 
       IP address or domain name on which to listen.
 
+   .. attr:: port
+      :default: 4730
+
+      TCP port on which to listen.
+
    .. attr:: log_config
 
       Path to log config file for internal Gearman server.
