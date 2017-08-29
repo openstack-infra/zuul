@@ -90,6 +90,7 @@ class ZuulApp(object):
             # config, leave the config set to emit to stdout.
             if hasattr(self.args, 'nodaemon') and self.args.nodaemon:
                 logging_config = logconfig.ServerLoggingConfig()
+                logging_config.setDebug()
             else:
                 # Setting a server value updates the defaults to use
                 # WatchedFileHandler on /var/log/zuul/{server}-debug.log
