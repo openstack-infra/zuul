@@ -80,14 +80,14 @@ _DEFAULT_SERVER_LOGGING_CONFIG = {
             # Used for printing to stdout
             'class': 'logging.StreamHandler',
             'stream': 'ext://sys.stdout',
-            'level': 'WARNING',
+            'level': 'INFO',
             'formatter': 'simple',
         },
     },
     'loggers': {
         'zuul': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': 'INFO',
         },
         'sqlalchemy.engine': {
             'handlers': ['console'],
@@ -108,7 +108,7 @@ _DEFAULT_SERVER_LOGGING_CONFIG = {
     },
     'root': {
         'handlers': ['console'],
-        'level': 'WARN',
+        'level': 'INFO',
     },
 }
 
