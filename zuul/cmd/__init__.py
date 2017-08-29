@@ -84,7 +84,7 @@ class ZuulApp(object):
     def setup_logging(self, section, parameter):
         if self.config.has_option(section, parameter):
             fp = os.path.expanduser(self.config.get(section, parameter))
-            logging_config = logconfig.load_config_from_file(fp)
+            logging_config = logconfig.load_config(fp)
         else:
             # If someone runs in the foreground and doesn't give a logging
             # config, leave the config set to emit to stdout.
