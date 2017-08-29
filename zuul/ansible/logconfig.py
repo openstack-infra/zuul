@@ -208,7 +208,7 @@ class ServerLoggingConfig(DictLoggingConfig):
             server_handler = handler.copy()
             server_handler['filename'] = server_handler['filename'].format(
                 server=server)
-            self._config['handlers'][name] = handler
+            self._config['handlers'][name] = server_handler
         # Change everything configured to write to stdout to write to
         # log files instead. This leaves root going to console, which is
         # how the loggers infra uses work.
