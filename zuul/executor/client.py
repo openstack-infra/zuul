@@ -182,6 +182,7 @@ class ExecutorClient(object):
         if (hasattr(item.change, 'newrev') and item.change.newrev
             and item.change.newrev != '0' * 40):
             zuul_params['newrev'] = item.change.newrev
+        zuul_params['projects'] = []  # Set below
         zuul_params['items'] = []
         for i in all_items:
             d = dict()
@@ -200,7 +201,6 @@ class ExecutorClient(object):
                 d['branch'] = i.change.branch
             zuul_params['items'].append(d)
 
-        # Legacy environment variables
         params = dict()
         params['job'] = job.name
         params['timeout'] = job.timeout
@@ -260,6 +260,15 @@ class ExecutorClient(object):
                 project = i.change.project
                 params['projects'].append(make_project_dict(project))
                 projects.add(project)
+
+        for p in projects:
+            zuul_params['projects'].append(dict(
+                name=p.name,
+                short_name=p.name.split('/')[-1],
+                canonical_hostname=p.canonical_hostname,
+                canonical_name=p.canonical_name,
+                src_dir=os.path.join('src', p.canonical_name),
+            ))
 
         build = Build(job, uuid)
         build.parameters = params

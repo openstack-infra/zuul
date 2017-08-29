@@ -207,10 +207,42 @@ of item.
 
       .. var:: src_dir
 
-         The path to the source code on the remote host, relative
-         to the home dir of the remote user.
-         E.g., `src/git.example.com/org/project`.
+         The path to the source code relative to the work dir.  E.g.,
+         `src/git.example.com/org/project`.
 
+   .. var:: projects
+      :type: list
+
+      A list of all projects prepared by Zuul for the item.  It
+      includes, at least, the item's own project.  It also includes
+      the projects of any items this item depends on, as well as the
+      projects that appear in :attr:`job.required-projects`.
+
+      This is a list of dictionaries, with each element consisting of:
+
+      .. var:: name
+
+         The name of the project, excluding hostname.  E.g., `org/project`.
+
+      .. var:: short_name
+
+         The name of the project, excluding directories or
+         organizations.  E.g., `project`.
+
+      .. var:: canonical_hostname
+
+         The canonical hostname where the project lives.  E.g.,
+         `git.example.com`.
+
+      .. var:: canonical_name
+
+         The full canonical name of the project including hostname.
+         E.g., `git.example.com/org/project`.
+
+      .. var:: src_dir
+
+         The path to the source code, relative to the work dir.  E.g.,
+         `src/git.example.com/org/project`.
 
    .. var:: tenant
 
