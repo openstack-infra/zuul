@@ -88,7 +88,7 @@ class ZuulApp(object):
         else:
             # If someone runs in the foreground and doesn't give a logging
             # config, leave the config set to emit to stdout.
-            if hasattr(self.args, 'nodaemon') and not self.args.nodaemon:
+            if hasattr(self.args, 'nodaemon') and self.args.nodaemon:
                 logging_config = logconfig.ServerLoggingConfig()
             else:
                 # Setting a server value updates the defaults to use
