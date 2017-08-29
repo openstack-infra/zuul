@@ -75,7 +75,9 @@ class GithubWebhookListener():
             raise webob.exc.HTTPMethodNotAllowed(
                 'Only POST method is allowed.')
 
-        self.log.debug("Github Webhook Received.")
+        delivery = request.headers.get('X-GitHub-Delivery')
+        self.log.debug("Github Webhook Received: {delivery}".format(
+            delivery=delivery))
 
         self._validate_signature(request)
 
