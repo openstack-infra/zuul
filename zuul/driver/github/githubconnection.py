@@ -351,6 +351,7 @@ class GithubUser(collections.Mapping):
     def _init_data(self):
         if self._data is None:
             user = self._github.user(self._username)
+            self.log.debug("Initialized data for user %s", self._username)
             log_rate_limit(self.log, self._github)
             self._data = {
                 'username': user.login,
@@ -424,6 +425,9 @@ class GithubConnection(BaseConnection):
         # anything going through requests to http/s goes through cache
         github.session.mount('http://', self.cache_adapter)
         github.session.mount('https://', self.cache_adapter)
+        # Add properties to store project and user for logging later
+        github._zuul_project = None
+        github._zuul_user_id = None
         return github
 
     def _authenticateGithubAPI(self):
@@ -510,6 +514,8 @@ class GithubConnection(BaseConnection):
         if use_app and project and self.app_id:
             github = self._createGithubClient()
             github.login(token=self._get_installation_key(project, user_id))
+            github._zuul_project = project
+            github._zuul_user_id = user_id
             return github
 
         # if we're using api_key authentication then this is already token
@@ -615,6 +621,7 @@ class GithubConnection(BaseConnection):
             prs.append(pr)
             seen.add(issue)
 
+        self.log.debug("Ran search issues: %s", query)
         log_rate_limit(self.log, github)
         return prs
 
@@ -724,6 +731,7 @@ class GithubConnection(BaseConnection):
         repository = github.repository(owner, proj)
         branches = [branch.name for branch in repository.branches(
             protected=exclude_unprotected)]
+        self.log.debug('Got project branches for %s', project.name)
         log_rate_limit(self.log, github)
         return branches
 
@@ -745,6 +753,7 @@ class GithubConnection(BaseConnection):
         pr = probj.as_dict()
         pr['files'] = [f.filename for f in probj.files()]
         pr['labels'] = [l.name for l in issueobj.labels()]
+        self.log.debug('Got PR %s#%s', project_name, number)
         log_rate_limit(self.log, github)
         return pr
 
@@ -773,6 +782,7 @@ class GithubConnection(BaseConnection):
                 continue
             pulls.append(pr.as_dict())
 
+        self.log.debug('Got PR on project %s for sha %s', project, sha)
         log_rate_limit(self.log, github)
         if len(pulls) > 1:
             raise Exception('Multiple pulls found with head sha %s' % sha)
@@ -841,6 +851,7 @@ class GithubConnection(BaseConnection):
         reviews = [review.as_dict() for review in
                    github.pull_request(owner, project, number).reviews()]
 
+        self.log.debug('Got reviews for PR %s/%s#%s', owner, project, number)
         log_rate_limit(self.log, github)
         return reviews
 
@@ -869,6 +880,7 @@ class GithubConnection(BaseConnection):
         # Get the data
         perms = repository._get(url, headers=headers)
 
+        self.log.debug("Got repo permissions for %s/%s", owner, proj)
         log_rate_limit(self.log, github)
 
         # no known user, maybe deleted since review?
@@ -884,6 +896,7 @@ class GithubConnection(BaseConnection):
         repository = github.repository(owner, proj)
         pull_request = repository.issue(pr_number)
         pull_request.create_comment(message)
+        self.log.debug("Commented on PR %s/%s#%s", owner, proj, pr_number)
         log_rate_limit(self.log, github)
 
     def mergePull(self, project, pr_number, commit_message='', sha=None):
@@ -895,6 +908,8 @@ class GithubConnection(BaseConnection):
         except MethodNotAllowed as e:
             raise MergeFailure('Merge was not successful due to mergeability'
                                ' conflict, original error is %s' % e)
+
+        self.log.debug("Merged PR %s/%s#%s", owner, proj, pr_number)
         log_rate_limit(self.log, github)
         if not result:
             raise Exception('Pull request was not merged')
@@ -908,6 +923,7 @@ class GithubConnection(BaseConnection):
         # API transaction
         statuses = [status.as_dict() for status in commit.statuses()]
 
+        self.log.debug("Got commit statuses for sha %s on %s", sha, project)
         log_rate_limit(self.log, github)
         return statuses
 
@@ -917,6 +933,8 @@ class GithubConnection(BaseConnection):
         owner, proj = project.split('/')
         repository = github.repository(owner, proj)
         repository.create_status(sha, state, url, description, context)
+        self.log.debug("Set commit status to %s for sha %s on %s",
+                       state, sha, project)
         log_rate_limit(self.log, github)
 
     def labelPull(self, project, pr_number, label):
@@ -924,6 +942,7 @@ class GithubConnection(BaseConnection):
         owner, proj = project.split('/')
         pull_request = github.issue(owner, proj, pr_number)
         pull_request.add_labels(label)
+        self.log.debug("Added label %s to %s#%s", label, proj, pr_number)
         log_rate_limit(self.log, github)
 
     def unlabelPull(self, project, pr_number, label):
@@ -931,6 +950,7 @@ class GithubConnection(BaseConnection):
         owner, proj = project.split('/')
         pull_request = github.issue(owner, proj, pr_number)
         pull_request.remove_label(label)
+        self.log.debug("Removed label %s from %s#%s", label, proj, pr_number)
         log_rate_limit(self.log, github)
 
     def getPushedFileNames(self, event):
@@ -982,8 +1002,12 @@ def log_rate_limit(log, github):
         reset = rate_limit['resources']['core']['reset']
     except:
         return
-    log.debug('GitHub API rate limit remaining: %s reset: %s' %
-              (remaining, reset))
+    if github._zuul_user:
+        log.debug('GitHub API rate limit (%s, %s) remaining: %s reset: %s',
+                  github._zuul_project, github._zuul_user_id, remaining, reset)
+    else:
+        log.debug('GitHub API rate limit remaining: %s reset: %s',
+                  remaining, reset)
 
 
 def getSchema():
