@@ -22,6 +22,9 @@ class ActionModule(assemble.ActionModule):
 
     def run(self, tmp=None, task_vars=None):
 
+        if not paths._is_official_module(self):
+            return paths._fail_module_dict(self._task.action)
+
         source = self._task.args.get('src', None)
         remote_src = self._task.args.get('remote_src', False)
 

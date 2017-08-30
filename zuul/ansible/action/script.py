@@ -22,6 +22,8 @@ class ActionModule(script.ActionModule):
 
     def run(self, tmp=None, task_vars=None):
 
+        if not paths._is_official_module(self):
+            return paths._fail_module_dict(self._task.action)
         # the script name is the first item in the raw params, so we split it
         # out now so we know the file name we need to transfer to the remote,
         # and everything else is an argument to the script which we need later

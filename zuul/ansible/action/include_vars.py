@@ -21,6 +21,8 @@ include_vars = paths._import_ansible_action_plugin("include_vars")
 class ActionModule(include_vars.ActionModule):
 
     def run(self, tmp=None, task_vars=None):
+        if not paths._is_official_module(self):
+            return paths._fail_module_dict(self._task.action)
 
         source_dir = self._task.args.get('dir', None)
         source_file = self._task.args.get('file', None)
