@@ -859,10 +859,7 @@ class GithubConnection(BaseConnection):
     def _getPullReviews(self, owner, project, number):
         # make a list out of the reviews so that we complete our
         # API transaction
-        # reviews are not yet supported by integrations, use api_key:
-        # https://platform.github.community/t/api-endpoint-for-pr-reviews/409
-        github = self.getGithubClient("%s/%s" % (owner, project),
-                                      use_app=False)
+        github = self.getGithubClient("%s/%s" % (owner, project))
         reviews = [review.as_dict() for review in
                    github.pull_request(owner, project, number).reviews()]
 
