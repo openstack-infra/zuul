@@ -648,6 +648,7 @@ class ProjectTemplateParser(object):
     def getSchema(layout):
         project_template = {
             vs.Required('name'): str,
+            'description': str,
             'merge-mode': vs.Any(
                 'merge', 'merge-resolve',
                 'cherry-pick'),
@@ -717,6 +718,7 @@ class ProjectParser(object):
     def getSchema(layout):
         project = {
             vs.Required('name'): str,
+            'description': str,
             'templates': [str],
             'merge-mode': vs.Any('merge', 'merge-resolve',
                                  'cherry-pick'),
