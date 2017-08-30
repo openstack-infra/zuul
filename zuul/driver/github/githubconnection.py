@@ -726,7 +726,11 @@ class GithubConnection(BaseConnection):
         else:
             exclude_unprotected = tenant.exclude_unprotected_branches
 
-        github = self.getGithubClient()
+        # TODO(mordred) Does it work for Github Apps to get repository
+        # branches? If not, can we avoid doing this as an API for projects that
+        # aren't trying to exclude protected branches by doing a git command
+        # (gerrit driver does an upload pack over ssh)
+        github = self.getGithubClient(project.name)
         owner, proj = project.name.split('/')
         repository = github.repository(owner, proj)
         branches = [branch.name for branch in repository.branches(
