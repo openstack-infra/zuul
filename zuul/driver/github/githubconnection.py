@@ -1017,7 +1017,7 @@ def log_rate_limit(log, github):
         reset = rate_limit['resources']['core']['reset']
     except:
         return
-    if github._zuul_user:
+    if github._zuul_user_id:
         log.debug('GitHub API rate limit (%s, %s) remaining: %s reset: %s',
                   github._zuul_project, github._zuul_user_id, remaining, reset)
     else:
