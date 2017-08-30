@@ -29,7 +29,7 @@ import webob
 import webob.dec
 import voluptuous as v
 import github3
-from github3.exceptions import MethodNotAllowed
+import github3.exceptions
 
 from zuul.connection import BaseConnection
 from zuul.model import Ref, Branch, Tag
@@ -369,6 +369,7 @@ class GithubConnection(BaseConnection):
         super(GithubConnection, self).__init__(
             driver, connection_name, connection_config)
         self._change_cache = {}
+        self._project_branch_cache = {}
         self.projects = {}
         self.git_ssh_key = self.connection_config.get('sshkey')
         self.server = self.connection_config.get('server', 'github.com')
@@ -731,13 +732,23 @@ class GithubConnection(BaseConnection):
         # aren't trying to exclude protected branches by doing a git command
         # (gerrit driver does an upload pack over ssh)
         github = self.getGithubClient(project.name)
-        owner, proj = project.name.split('/')
-        repository = github.repository(owner, proj)
-        branches = [branch.name for branch in repository.branches(
-            protected=exclude_unprotected)]
-        self.log.debug('Got project branches for %s', project.name)
-        log_rate_limit(self.log, github)
-        return branches
+        try:
+            owner, proj = project.name.split('/')
+            repository = github.repository(owner, proj)
+            self._project_branch_cache[project.name] = [
+                branch.name for branch in repository.branches(
+                    protected=exclude_unprotected)]
+            self.log.debug('Got project branches for %s', project.name)
+            log_rate_limit(self.log, github)
+        except github3.exceptions.ForbiddenError as e:
+            self.log.error(str(e), exc_info=True)
+            rate_limit = github.rate_limit()
+            if rate_limit['resources']['core']['remaining'] == 0:
+                self.log.debug("Rate limit exceeded, using stale branch list")
+            else:
+                self.log.error(str(e), exc_info=True)
+
+        return self._project_branch_cache[project.name]
 
     def getPullUrl(self, project, number):
         return '%s/pull/%s' % (self.getGitwebUrl(project), number)
@@ -909,7 +920,7 @@ class GithubConnection(BaseConnection):
         pull_request = github.pull_request(owner, proj, pr_number)
         try:
             result = pull_request.merge(commit_message=commit_message, sha=sha)
-        except MethodNotAllowed as e:
+        except github3.exceptions.MethodNotAllowed as e:
             raise MergeFailure('Merge was not successful due to mergeability'
                                ' conflict, original error is %s' % e)
 
