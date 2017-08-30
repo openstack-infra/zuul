@@ -105,6 +105,10 @@ _DEFAULT_SERVER_LOGGING_CONFIG = {
             'handlers': ['console'],
             'level': 'WARN',
         },
+        'cachecontrol': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
     },
     'root': {'handlers': []},
 }
