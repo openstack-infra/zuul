@@ -554,11 +554,14 @@
                         }
 
                         $.each(changes, function (change_i, change) {
-                            var $change_box =
-                                format.change_with_status_tree(
-                                    change, change_queue);
-                            $html.append($change_box);
-                            format.display_patchset($change_box);
+                            // Only add a change when it has jobs
+                            if (change.jobs.length > 0) {
+                                var $change_box =
+                                    format.change_with_status_tree(
+                                        change, change_queue);
+                                $html.append($change_box);
+                                format.display_patchset($change_box);
+                            }
                         });
                     });
                 });
