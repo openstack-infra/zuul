@@ -1,0 +1,6 @@
+- hosts: localhost
+  tasks:
+    - name: Try to verify a file in a bad location
+      file:
+        dest: /tmp/unreadable
+        state: absent

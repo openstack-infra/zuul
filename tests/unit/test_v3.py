@@ -887,6 +887,8 @@ class TestAnsible(AnsibleZuulTestCase):
             ('uri_bad_path', 'FAILURE'),
             ('uri_bad_scheme', 'FAILURE'),
             ('block_local_override', 'FAILURE'),
+            ('file_local_good', 'SUCCESS'),
+            ('file_local_bad', 'FAILURE'),
         ]
         for job_name, result in plugin_tests:
             count += 1
