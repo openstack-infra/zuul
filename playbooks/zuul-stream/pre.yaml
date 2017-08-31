@@ -4,11 +4,9 @@
     - role: bindep
       bindep_profile: test
       bindep_dir: src/git.openstack.org/openstack-infra/zuul
-      bindep_command: /usr/bindep-env/bin/bindep
 
     - role: bindep
       bindep_dir: src/git.openstack.org/openstack/ara
-      bindep_command: /usr/bindep-env/bin/bindep
 
   post_tasks:
 
