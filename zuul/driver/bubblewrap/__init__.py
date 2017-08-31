@@ -212,6 +212,7 @@ class BubblewrapDriver(Driver, WrapperInterface):
         for path in ['/lib64',
                      '/etc/nsswitch.conf',
                      '/etc/lsb-release.d',
+                     '/etc/alternatives',
                      ]:
             if os.path.exists(path):
                 bwrap_command.extend(['--ro-bind', path, path])
