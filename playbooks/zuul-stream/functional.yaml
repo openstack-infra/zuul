@@ -1,14 +1,14 @@
 - hosts: controller
   tasks:
 
-    - name: Run ansible
-      command: ansible-playbook -vvv src/git.openstack.org/openstack-infra/zuul/playbooks/zuul-stream/fixtures/test-stream.yaml
+    - name: Run ansible that should succeed
+      command: ansible-playbook src/git.openstack.org/openstack-infra/zuul/playbooks/zuul-stream/fixtures/test-stream.yaml
       environment:
         ZUUL_JOB_LOG_CONFIG: "{{ ansible_user_dir}}/logging.json"
         ARA_LOG_CONFIG: "{{ ansible_user_dir}}/logging.json"
 
     - name: Run ansible playbook that should fail
-      command: ansible-playbook -vvv src/git.openstack.org/openstack-infra/zuul/playbooks/zuul-stream/fixtures/test-stream-failure.yaml
+      command: ansible-playbook src/git.openstack.org/openstack-infra/zuul/playbooks/zuul-stream/fixtures/test-stream-failure.yaml
       register: failed_results
       failed_when: "failed_results.rc != 2"
       environment:
