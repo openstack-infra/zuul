@@ -1,3 +1,21 @@
+- nodeset:
+    name: zuul-two-node
+    nodes:
+      - name: controller
+        label: ubuntu-xenial
+      - name: node
+        label: ubuntu-xenial
+
+- job:
+    name: zuul-stream-functional
+    parent: multinode
+    nodes: zuul-two-node
+    pre-run: playbooks/zuul-stream/pre
+    run: playbooks/zuul-stream/functional
+    post-run: playbooks/zuul-stream/post
+    required-projects:
+      - openstack/ara
+
 - project:
     name: openstack-infra/zuul
     check:
@@ -7,6 +25,7 @@
             voting: false
         - tox-pep8
         - tox-py35
+        - zuul-stream-functional
     gate:
       jobs:
         - tox-docs
