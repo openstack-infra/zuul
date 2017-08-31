@@ -91,7 +91,7 @@ def _fail_module_dict(module_name):
             name=module_name))
 
 
-def _fail_if_local_module(module_name):
-    if not _is_official_module(module_name):
-        msg_dict = _fail_module_dict(module_name)
+def _fail_if_local_module(module):
+    if not _is_official_module(module):
+        msg_dict = _fail_module_dict(module._task.action)
         raise AnsibleError(msg_dict['msg'])
