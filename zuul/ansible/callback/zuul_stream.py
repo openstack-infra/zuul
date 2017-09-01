@@ -202,10 +202,11 @@ class CallbackModule(default.CallbackModule):
         msg = u"PLAY [{name}]".format(name=name)
 
         self._log(msg)
-        # Log an extra blank line to get space after each play
-        self._log("")
 
     def v2_playbook_on_task_start(self, task, is_conditional):
+        # Log an extra blank line to get space before each task
+        self._log("")
+
         self._task = task
 
         if self._play.strategy != 'free':
@@ -303,8 +304,6 @@ class CallbackModule(default.CallbackModule):
                 result=result, status='ERROR', result_dict=result_dict)
         if ignore_errors:
             self._log_message(result, "Ignoring Errors", status="ERROR")
-        # Log an extra blank line to get space after each task
-        self._log("")
 
     def v2_runner_on_skipped(self, result):
         if result._task.loop:
@@ -315,8 +314,6 @@ class CallbackModule(default.CallbackModule):
             if reason:
                 # No reason means it's an item, which we'll log differently
                 self._log_message(result, status='skipping', msg=reason)
-                # Log an extra blank line to get space after each skip
-                self._log("")
 
     def v2_runner_item_on_skipped(self, result):
         reason = result._result.get('skip_reason')
@@ -400,8 +397,6 @@ class CallbackModule(default.CallbackModule):
                 result,
                 "Runtime: {delta} Start: {start} End: {end}".format(
                     **result_dict))
-        # Log an extra blank line to get space after each task
-        self._log("")
 
     def v2_runner_item_on_ok(self, result):
         result_dict = dict(result._result)
@@ -463,10 +458,11 @@ class CallbackModule(default.CallbackModule):
 
         if self._deferred_result:
             self._process_deferred(result)
-        # Log an extra blank line to get space after each task
-        self._log("")
 
     def v2_playbook_on_stats(self, stats):
+        # Add a spacer line before the stats so that there will be a line
+        # between the last task and the recap
+        self._log("")
 
         self._log("PLAY RECAP")
 
