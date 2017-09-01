@@ -1,15 +1,22 @@
 - nodeset:
-    name: zuul-two-node
+    name: zuul-functional
     nodes:
       - name: controller
         label: ubuntu-xenial
-      - name: node
+      - name: node1
         label: ubuntu-xenial
+      - name: node2
+        label: ubuntu-xenial
+    groups:
+      - name: node
+        nodes:
+          - node1
+          - node2
 
 - job:
     name: zuul-stream-functional
     parent: multinode
-    nodes: zuul-two-node
+    nodes: zuul-functional
     pre-run: playbooks/zuul-stream/pre
     run: playbooks/zuul-stream/functional
     post-run: playbooks/zuul-stream/post
