@@ -22,6 +22,9 @@
     post-run: playbooks/zuul-stream/post
     required-projects:
       - openstack/ara
+    files:
+      - "zuul/ansible/callback/.*"
+      - "playbooks/zuul-stream/.*"
 
 - project:
     name: openstack-infra/zuul
