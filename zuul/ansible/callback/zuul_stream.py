@@ -428,10 +428,16 @@ class CallbackModule(default.CallbackModule):
                                    indent=2, sort_keys=True),
                     status=status)
         else:
-            self._log_message(
-                result,
-                "Item: {item} Runtime: {delta}"
-                " Start: {start} End: {end}".format(**result_dict))
+            if isinstance(result_dict['item'], str):
+                self._log_message(
+                    result,
+                    "Item: {item} Runtime: {delta}"
+                    " Start: {start} End: {end}".format(**result_dict))
+            else:
+                self._log_message(
+                    result,
+                    "Item: Runtime: {delta} Start: {start} End: {end}".format(
+                        **result_dict))
 
         if self._deferred_result:
             self._process_deferred(result)

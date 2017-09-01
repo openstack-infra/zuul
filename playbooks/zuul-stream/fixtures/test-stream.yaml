@@ -20,6 +20,13 @@
         - item2
         - item3
 
+    - name: Loop with complex items
+      command: "echo {{ item.name }}"
+      with_items:
+        - name: complex1
+        - name: complex2
+        - name: complex3
+
     - name: Run a shell task with an ansible python exception
       command: echo foo
       args:
