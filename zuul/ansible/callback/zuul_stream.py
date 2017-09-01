@@ -389,13 +389,13 @@ class CallbackModule(default.CallbackModule):
             for res in result_dict['results']:
                 self._log_message(
                     result,
-                    "Runtime: {delta} Start: {start} End: {end}".format(**res))
+                    "Runtime: {delta}".format(**res))
         elif result_dict.get('msg') == 'All items completed':
             self._log_message(result, result_dict['msg'])
         else:
             self._log_message(
                 result,
-                "Runtime: {delta} Start: {start} End: {end}".format(
+                "Runtime: {delta}".format(
                     **result_dict))
 
     def v2_runner_item_on_ok(self, result):
@@ -426,12 +426,11 @@ class CallbackModule(default.CallbackModule):
             if isinstance(result_dict['item'], str):
                 self._log_message(
                     result,
-                    "Item: {item} Runtime: {delta}"
-                    " Start: {start} End: {end}".format(**result_dict))
+                    "Item: {item} Runtime: {delta}".format(**result_dict))
             else:
                 self._log_message(
                     result,
-                    "Item: Runtime: {delta} Start: {start} End: {end}".format(
+                    "Item: Runtime: {delta}".format(
                         **result_dict))
 
         if self._deferred_result:
