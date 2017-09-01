@@ -248,6 +248,10 @@ of item.
 
       The name of the current Zuul tenant.
 
+   .. var:: timeout
+
+      The job timeout, in seconds.
+
    .. var:: jobtags
 
       A list of tags associated with the job.  Not to be confused with

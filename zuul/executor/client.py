@@ -167,6 +167,7 @@ class ExecutorClient(object):
                            voting=job.voting,
                            project=project,
                            tenant=tenant.name,
+                           timeout=job.timeout,
                            jobtags=sorted(job.tags))
         if hasattr(item.change, 'branch'):
             zuul_params['branch'] = item.change.branch
