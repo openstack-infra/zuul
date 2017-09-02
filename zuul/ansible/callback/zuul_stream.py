@@ -293,11 +293,19 @@ class CallbackModule(default.CallbackModule):
         if result._task.loop and 'results' in result_dict:
             # items have their own events
             pass
-        elif (result_dict.get('msg') == 'MODULE FAILURE' and
-              'module_stdout' in result_dict):
-            self._log_message(
-                result, status='MODULE FAILURE',
-                msg=result_dict['module_stdout'])
+        elif (result_dict.get('msg') == 'MODULE FAILURE'):
+            if 'module_stdout' in result_dict:
+                self._log_message(
+                    result, status='MODULE FAILURE',
+                    msg=result_dict['module_stdout'])
+            elif 'exception' in result_dict:
+                self._log_message(
+                    result, status='MODULE FAILURE',
+                    msg=result_dict['exception'])
+            elif 'module_stderr' in result_dict:
+                self._log_message(
+                    result, status='MODULE FAILURE',
+                    msg=result_dict['module_stderr'])
         else:
             self._log_message(
                 result=result, status='ERROR', result_dict=result_dict)
@@ -366,11 +374,19 @@ class CallbackModule(default.CallbackModule):
             # items have their own events
             pass
 
-        elif (result_dict.get('msg') == 'MODULE FAILURE' and
-              'module_stdout' in result_dict):
-            self._log_message(
-                result, status='MODULE FAILURE',
-                msg=result_dict['module_stdout'])
+        elif (result_dict.get('msg') == 'MODULE FAILURE'):
+            if 'module_stdout' in result_dict:
+                self._log_message(
+                    result, status='MODULE FAILURE',
+                    msg=result_dict['module_stdout'])
+            elif 'exception' in result_dict:
+                self._log_message(
+                    result, status='MODULE FAILURE',
+                    msg=result_dict['exception'])
+            elif 'module_stderr' in result_dict:
+                self._log_message(
+                    result, status='MODULE FAILURE',
+                    msg=result_dict['module_stderr'])
         elif (len([key for key in result_dict.keys()
                    if not key.startswith('_ansible')]) == 1):
             # this is a debug statement, handle it special
