@@ -30,7 +30,7 @@
     - name: Run a shell task with an ansible python exception
       command: echo foo
       args:
-        chdir: /somewhere/that/does/not/exist
+        chdir: /shelltask/somewhere/that/does/not/exist
       failed_when: false
 
     - name: Loop with items on an ansible python exception
@@ -40,5 +40,5 @@
         - item2
         - item3
       args:
-        chdir: /somewhere/that/does/not/exist
+        chdir: /itemloop/somewhere/that/does/not/exist
       failed_when: false

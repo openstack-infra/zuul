@@ -7,9 +7,9 @@
       - name: Run a shell task with an ansible python exception
         command: echo foo
         args:
-          chdir: /somewhere/that/does/not/exist
+          chdir: /failure-shelltask/somewhere/that/does/not/exist
 
-    - always:
+      always:
 
       - name: Loop with items on an ansible python exception
         command: "echo {{ item }}"
@@ -18,4 +18,4 @@
           - item2
           - item3
         args:
-          chdir: /somewhere/that/does/not/exist
+          chdir: /failure-itemloop/somewhere/that/does/not/exist
