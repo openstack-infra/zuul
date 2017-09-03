@@ -45,5 +45,5 @@
       jobs:
         - publish-openstack-python-docs:
             vars:
-              afs_target: 'infra/zuul'
+              afs_publisher_target: 'infra/zuul'
         - publish-openstack-python-branch-tarball
