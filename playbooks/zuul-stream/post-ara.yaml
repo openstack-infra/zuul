@@ -1,0 +1,14 @@
+- hosts: controller
+  tasks:
+
+    - name: Generate ARA html
+      command: ara generate html ara-output
+
+    - name: Compress ARA html
+      command: gzip --recursive --best ara-output
+
+    - name: Fetch ARA files
+      synchronize:
+        src: "{{ ansible_user_dir }}/ara-output"
+        dest: "{{ zuul.executor.log_root }}/stream-files"
+        mode: pull

@@ -58,9 +58,3 @@
       shell: |
         egrep "^.+\| node1 \| OSError.+\/failure-itemloop\/" job-output.txt
         egrep "^.+\| node2 \| OSError.+\/failure-itemloop\/" job-output.txt
-
-    - name: Generate ARA html
-      command: ara generate html ara-output
-
-    - name: Compress ARA html
-      command: gzip --recursive --best ara-output

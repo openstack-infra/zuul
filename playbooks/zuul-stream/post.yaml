@@ -23,4 +23,3 @@
         - ansible.cfg
         - stream-job-output.txt
         - job-output.json
-        - ara-output

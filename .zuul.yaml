@@ -19,7 +19,9 @@
     nodes: zuul-functional
     pre-run: playbooks/zuul-stream/pre
     run: playbooks/zuul-stream/functional
-    post-run: playbooks/zuul-stream/post
+    post-run:
+      - playbooks/zuul-stream/post
+      - playbooks/zuul-stream/post-ara
     required-projects:
       - openstack/ara
 
