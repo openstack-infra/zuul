@@ -134,10 +134,9 @@ class CallbackModule(default.CallbackModule):
     def _read_log(self, host, ip, log_id, task_name, hosts):
         self._log("[%s] Starting to log %s for task %s"
                   % (host, log_id, task_name), job=False, executor=True)
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         while True:
             try:
-                s.connect((ip, LOG_STREAM_PORT))
+                s = socket.create_connection((ip, LOG_STREAM_PORT))
             except Exception:
                 self._log("[%s] Waiting on logger" % host,
                           executor=True, debug=True)
