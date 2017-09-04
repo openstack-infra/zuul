@@ -23,7 +23,7 @@ class SQLReporter(BaseReporter):
     """Sends off reports to a database."""
 
     name = 'sql'
-    log = logging.getLogger("zuul.reporter.mysql.SQLReporter")
+    log = logging.getLogger("zuul.SQLReporter")
 
     def report(self, item):
         """Create an entry into a database."""

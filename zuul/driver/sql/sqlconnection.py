@@ -28,7 +28,7 @@ BUILD_TABLE = 'zuul_build'
 
 class SQLConnection(BaseConnection):
     driver_name = 'sql'
-    log = logging.getLogger("connection.sql")
+    log = logging.getLogger("zuul.SQLConnection")
 
     def __init__(self, driver, connection_name, connection_config):
 
