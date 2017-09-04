@@ -946,7 +946,7 @@ class AnsibleJob(object):
             repos += playbook['roles']
 
         for repo in repos:
-            self.log.debug("Updating playbook or role %s" % (repo,))
+            self.log.debug("Updating playbook or role %s" % (repo['project'],))
             key = (repo['connection'], repo['project'])
             if key not in projects:
                 tasks.append(self.executor_server.update(*key))
