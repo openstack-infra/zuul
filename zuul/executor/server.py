@@ -203,7 +203,7 @@ class SshAgent(object):
             except OSError:
                 self.log.exception(
                     'Problem sending SIGTERM to agent {}'.format(self.env))
-            self.log.info('Sent SIGTERM to SSH Agent, {}'.format(self.env))
+            self.log.debug('Sent SIGTERM to SSH Agent, {}'.format(self.env))
             self.env = {}
 
     def add(self, key_path):
