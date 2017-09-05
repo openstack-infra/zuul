@@ -416,15 +416,15 @@ class TestAnsibleJob(ZuulTestCase):
                                                         job)
 
     def test_getHostList_host_keys(self):
-        # Test without ssh_port set
+        # Test without connection_port set
         node = {'name': 'fake-host',
                 'host_keys': ['fake-host-key'],
                 'interface_ip': 'localhost'}
         keys = self.test_job.getHostList({'nodes': [node]})[0]['host_keys']
         self.assertEqual(keys[0], 'localhost fake-host-key')
 
-        # Test with custom ssh_port set
-        node['ssh_port'] = 22022
+        # Test with custom connection_port set
+        node['connection_port'] = 22022
         keys = self.test_job.getHostList({'nodes': [node]})[0]['host_keys']
         self.assertEqual(keys[0], '[localhost]:22022 fake-host-key')
 

@@ -911,7 +911,7 @@ class AnsibleJob(object):
             # results in the wrong thing being in interface_ip
             # TODO(jeblair): Move this notice to the docs.
             ip = node.get('interface_ip')
-            port = node.get('ssh_port', 22)
+            port = node.get('connection_port', node.get('ssh_port', 22))
             host_vars = dict(
                 ansible_host=ip,
                 ansible_user=self.executor_server.default_username,
