@@ -159,9 +159,14 @@ class Console(object):
         # Jenkins format but with microsecond resolution instead of
         # millisecond.  It is kept so log parsing/formatting remains
         # consistent.
-        ts = datetime.datetime.now()
-        outln = '%s | %s' % (ts, ln)
-        self.logfile.write(outln.encode('utf-8'))
+        ts = str(datetime.datetime.now()).encode('utf-8')
+        if not isinstance(ln, bytes):
+            try:
+                ln = ln.encode('utf-8')
+            except Exception:
+                ln = repr(ln).encode('utf-8') + b'\n'
+        outln = b'%s | %s' % (ts, ln)
+        self.logfile.write(outln)
 
 
 def follow(fd, log_uuid):
