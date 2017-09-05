@@ -36,7 +36,7 @@ except ImportError:
 import gear
 
 import zuul.merger.merger
-import zuul.ansible
+import zuul.ansible.logconfig
 from zuul.lib import commandsocket
 
 BUFFER_LINES_FOR_SYNTAX = 200
