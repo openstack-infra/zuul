@@ -444,7 +444,9 @@ class PipelineManager(object):
             loader.createDynamicLayout(
                 item.pipeline.layout.tenant,
                 build_set.files,
-                include_config_projects=True)
+                include_config_projects=True,
+                scheduler=self.sched,
+                connections=self.sched.connections)
 
             # Then create the config a second time but without changes
             # to config repos so that we actually use this config.
@@ -540,6 +542,7 @@ class PipelineManager(object):
     def _processOneItem(self, item, nnfi):
         changed = False
         ready = False
+        dequeued = False
         failing_reasons = []  # Reasons this item is failing
 
         item_ahead = item.item_ahead
@@ -594,8 +597,14 @@ class PipelineManager(object):
                     item.reported_start = True
                 if item.current_build_set.unable_to_merge:
                     failing_reasons.append("it has a merge conflict")
+                    if (not item.live) and (not dequeued):
+                        self.dequeueItem(item)
+                        changed = dequeued = True
                 if item.current_build_set.config_error:
                     failing_reasons.append("it has an invalid configuration")
+                    if (not item.live) and (not dequeued):
+                        self.dequeueItem(item)
+                        changed = dequeued = True
                 if ready and self.provisionNodes(item):
                     changed = True
         if ready and self.executeJobs(item):
@@ -603,10 +612,10 @@ class PipelineManager(object):
 
         if item.didAnyJobFail():
             failing_reasons.append("at least one job failed")
-        if (not item.live) and (not item.items_behind):
+        if (not item.live) and (not item.items_behind) and (not dequeued):
             failing_reasons.append("is a non-live item with no items behind")
             self.dequeueItem(item)
-            changed = True
+            changed = dequeued = True
         if ((not item_ahead) and item.areAllJobsComplete() and item.live):
             try:
                 self.reportItem(item)
@@ -618,7 +627,7 @@ class PipelineManager(object):
                                   (item_behind.change, item))
                     self.cancelJobs(item_behind)
             self.dequeueItem(item)
-            changed = True
+            changed = dequeued = True
         elif not failing_reasons and item.live:
             nnfi = item
         item.current_build_set.failing_reasons = failing_reasons

@@ -1471,6 +1471,8 @@ class TenantParser(object):
 
     @staticmethod
     def _parseLayout(base, tenant, data, scheduler, connections):
+        # Don't call this method from dynamic reconfiguration because
+        # it interacts with drivers and connections.
         layout = model.Layout(tenant)
 
         TenantParser._parseLayoutItems(layout, tenant, data,
@@ -1582,7 +1584,8 @@ class ConfigLoader(object):
                     config.extend(incdata)
 
     def createDynamicLayout(self, tenant, files,
-                            include_config_projects=False):
+                            include_config_projects=False,
+                            scheduler=None, connections=None):
         if include_config_projects:
             config = model.UnparsedTenantConfig()
             for project in tenant.config_projects:
@@ -1594,22 +1597,29 @@ class ConfigLoader(object):
             self._loadDynamicProjectData(config, project, files, False, tenant)
 
         layout = model.Layout(tenant)
-        # NOTE: the actual pipeline objects (complete with queues and
-        # enqueued items) are copied by reference here.  This allows
-        # our shadow dynamic configuration to continue to interact
-        # with all the other changes, each of which may have their own
-        # version of reality.  We do not support creating, updating,
-        # or deleting pipelines in dynamic layout changes.
-        layout.pipelines = tenant.layout.pipelines
+        if not include_config_projects:
+            # NOTE: the actual pipeline objects (complete with queues
+            # and enqueued items) are copied by reference here.  This
+            # allows our shadow dynamic configuration to continue to
+            # interact with all the other changes, each of which may
+            # have their own version of reality.  We do not support
+            # creating, updating, or deleting pipelines in dynamic
+            # layout changes.
+            layout.pipelines = tenant.layout.pipelines
 
-        # NOTE: the semaphore definitions are copied from the static layout
-        # here. For semaphores there should be no per patch max value but
-        # exactly one value at any time. So we do not support dynamic semaphore
-        # configuration changes.
-        layout.semaphores = tenant.layout.semaphores
+            # NOTE: the semaphore definitions are copied from the
+            # static layout here. For semaphores there should be no
+            # per patch max value but exactly one value at any
+            # time. So we do not support dynamic semaphore
+            # configuration changes.
+            layout.semaphores = tenant.layout.semaphores
+            skip_pipelines = skip_semaphores = True
+        else:
+            skip_pipelines = skip_semaphores = False
 
-        TenantParser._parseLayoutItems(layout, tenant, config, None, None,
-                                       skip_pipelines=True,
-                                       skip_semaphores=True)
+        TenantParser._parseLayoutItems(layout, tenant, config,
+                                       scheduler, connections,
+                                       skip_pipelines=skip_pipelines,
+                                       skip_semaphores=skip_semaphores)
 
         return layout

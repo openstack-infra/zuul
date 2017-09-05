@@ -195,9 +195,16 @@ class FakeGerritChange(object):
         if not large:
             for fn, content in files.items():
                 fn = os.path.join(path, fn)
-                with open(fn, 'w') as f:
-                    f.write(content)
-                repo.index.add([fn])
+                if content is None:
+                    os.unlink(fn)
+                    repo.index.remove([fn])
+                else:
+                    d = os.path.dirname(fn)
+                    if not os.path.exists(d):
+                        os.makedirs(d)
+                    with open(fn, 'w') as f:
+                        f.write(content)
+                    repo.index.add([fn])
         else:
             for fni in range(100):
                 fn = os.path.join(path, str(fni))

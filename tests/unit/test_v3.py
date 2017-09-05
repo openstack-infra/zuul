@@ -775,6 +775,76 @@ class TestInRepoConfig(ZuulTestCase):
         # isn't this will raise an exception.
         tenant.layout.getJob('project-test2')
 
+    def test_pipeline_error(self):
+        with open(os.path.join(FIXTURE_DIR,
+                               'config/in-repo/git/',
+                               'common-config/zuul.yaml')) as f:
+            base_common_config = f.read()
+
+        in_repo_conf_A = textwrap.dedent(
+            """
+            - pipeline:
+                name: periodic
+                foo: error
+            """)
+
+        file_dict = {'zuul.yaml': None,
+                     'zuul.d/main.yaml': base_common_config,
+                     'zuul.d/test1.yaml': in_repo_conf_A}
+        A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn('syntax error',
+                      A.messages[0],
+                      "A should have an error reported")
+
+    def test_change_series_error(self):
+        with open(os.path.join(FIXTURE_DIR,
+                               'config/in-repo/git/',
+                               'common-config/zuul.yaml')) as f:
+            base_common_config = f.read()
+
+        in_repo_conf_A = textwrap.dedent(
+            """
+            - pipeline:
+                name: periodic
+                foo: error
+            """)
+
+        file_dict = {'zuul.yaml': None,
+                     'zuul.d/main.yaml': base_common_config,
+                     'zuul.d/test1.yaml': in_repo_conf_A}
+        A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A',
+                                           files=file_dict)
+
+        in_repo_conf_B = textwrap.dedent(
+            """
+            - job:
+                name: project-test2
+                foo: error
+            """)
+
+        file_dict = {'zuul.yaml': None,
+                     'zuul.d/main.yaml': base_common_config,
+                     'zuul.d/test1.yaml': in_repo_conf_A,
+                     'zuul.d/test2.yaml': in_repo_conf_B}
+        B = self.fake_gerrit.addFakeChange('common-config', 'master', 'B',
+                                           files=file_dict)
+        B.setDependsOn(A, 1)
+        C = self.fake_gerrit.addFakeChange('common-config', 'master', 'C')
+        C.setDependsOn(B, 1)
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(C.reported, 1,
+                         "C should report failure")
+        self.assertIn('depends on a change that failed to merge',
+                      C.messages[0],
+                      "C should have an error reported")
+
 
 class TestAnsible(AnsibleZuulTestCase):
     # A temporary class to hold new tests while others are disabled
