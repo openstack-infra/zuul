@@ -161,7 +161,8 @@ class DictLoggingConfig(LoggingConfig, metaclass=abc.ABCMeta):
         logging.config.dictConfig(self._config)
 
     def writeJson(self, filename: str):
-        open(filename, 'w').write(json.dumps(self._config, indent=2))
+        with open(filename, 'w') as f:
+            f.write(json.dumps(self._config, indent=2))
 
 
 class JobLoggingConfig(DictLoggingConfig):
