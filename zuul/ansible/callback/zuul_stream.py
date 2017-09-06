@@ -122,6 +122,7 @@ class CallbackModule(default.CallbackModule):
         self._logger = logging.getLogger('zuul.executor.ansible')
 
     def _log(self, msg, ts=None, job=True, executor=False, debug=False):
+        msg = msg.rstrip()
         if job:
             now = ts or datetime.datetime.now()
             self._logger.info("{now} | {msg}".format(now=now, msg=msg))
@@ -154,7 +155,6 @@ class CallbackModule(default.CallbackModule):
                     pass
                 else:
                     ts, ln = line.split(' | ', 1)
-                    ln = ln.strip()
 
                     self._log("%s | %s " % (host, ln), ts=ts)
 
@@ -275,7 +275,7 @@ class CallbackModule(default.CallbackModule):
             if is_localhost:
                 for line in stdout_lines:
                     hostname = self._get_hostname(result)
-                    self._log("%s | %s " % (hostname, line.strip()))
+                    self._log("%s | %s " % (hostname, line))
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
         result_dict = dict(result._result)
@@ -554,7 +554,7 @@ class CallbackModule(default.CallbackModule):
             msg = result_dict['msg']
             result_dict = None
         if msg:
-            msg_lines = msg.strip().split('\n')
+            msg_lines = msg.rstrip().split('\n')
             if len(msg_lines) > 1:
                 self._log("{host} | {status}:".format(
                     host=hostname, status=status))

@@ -22,8 +22,8 @@
 
     - name: Validate output - shell task
       shell: |
-        egrep "^.*\| node1 \| link/loopback" job-output.txt
-        egrep "^.*\| node2 \| link/loopback" job-output.txt
+        egrep "^.*\| node1 \|     link/loopback" job-output.txt
+        egrep "^.*\| node2 \|     link/loopback" job-output.txt
 
     - name: Validate output - loop with items
       shell: |
