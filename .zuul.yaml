@@ -45,7 +45,7 @@
         - tox-py35
     post:
       jobs:
-        - publish-openstack-python-docs:
+        - publish-openstack-python-docs-infra:
             vars:
               afs_publisher_target: 'infra/zuul'
         - publish-openstack-python-branch-tarball
