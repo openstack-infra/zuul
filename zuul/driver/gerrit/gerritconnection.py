@@ -298,12 +298,17 @@ class GerritConnection(BaseConnection):
         # This lets the user supply a list of change objects that are
         # still in use.  Anything in our cache that isn't in the supplied
         # list should be safe to remove from the cache.
-        remove = []
-        for key, change in self._change_cache.items():
-            if change not in relevant:
-                remove.append(key)
-        for key in remove:
-            del self._change_cache[key]
+        remove = {}
+        for change_number, patchsets in self._change_cache.items():
+            for patchset, change in patchsets.items():
+                if change not in relevant:
+                    remove.setdefault(change_number, [])
+                    remove[change_number].append(patchset)
+        for change_number, patchsets in remove.items():
+            for patchset in patchsets:
+                del self._change_cache[change_number][patchset]
+            if not self._change_cache[change_number]:
+                del self._change_cache[change_number]
 
     def getChange(self, event, refresh=False):
         if event.change_number:
@@ -349,21 +354,22 @@ class GerritConnection(BaseConnection):
         return change
 
     def _getChange(self, number, patchset, refresh=False, history=None):
-        key = '%s,%s' % (number, patchset)
-        change = self._change_cache.get(key)
+        change = self._change_cache.get(number, {}).get(patchset)
         if change and not refresh:
             return change
         if not change:
             change = GerritChange(None)
             change.number = number
             change.patchset = patchset
-        key = '%s,%s' % (change.number, change.patchset)
-        self._change_cache[key] = change
+        self._change_cache.setdefault(change.number, {})
+        self._change_cache[change.number][change.patchset] = change
         try:
             self._updateChange(change, history)
         except Exception:
-            if key in self._change_cache:
-                del self._change_cache[key]
+            if self._change_cache.get(change.number, {}).get(change.patchset):
+                del self._change_cache[change.number][change.patchset]
+                if not self._change_cache[change.number]:
+                    del self._change_cache[change.number]
             raise
         return change
 
