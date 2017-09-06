@@ -2145,6 +2145,7 @@ class ZuulTestCase(BaseTestCase):
         def getGithubConnection(driver, name, config):
             con = FakeGithubConnection(driver, name, config,
                                        upstream_root=self.upstream_root)
+            self.event_queues.append(con.event_queue)
             setattr(self, 'fake_' + name, con)
             return con
 
