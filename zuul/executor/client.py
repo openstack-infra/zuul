@@ -174,6 +174,8 @@ class ExecutorClient(object):
             zuul_params['tag'] = item.change.tag
         if hasattr(item.change, 'number'):
             zuul_params['change'] = str(item.change.number)
+        if hasattr(item.change, 'url'):
+            zuul_params['change_url'] = item.change.url
         if hasattr(item.change, 'patchset'):
             zuul_params['patchset'] = str(item.change.patchset)
         if (hasattr(item.change, 'oldrev') and item.change.oldrev
@@ -195,6 +197,8 @@ class ExecutorClient(object):
             )
             if hasattr(i.change, 'number'):
                 d['change'] = str(i.change.number)
+            if hasattr(i.change, 'url'):
+                d['change_url'] = i.change.url
             if hasattr(i.change, 'patchset'):
                 d['patchset'] = str(i.change.patchset)
             if hasattr(i.change, 'branch'):
