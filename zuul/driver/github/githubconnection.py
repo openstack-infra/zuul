@@ -17,6 +17,8 @@ import datetime
 import logging
 import hmac
 import hashlib
+import queue
+import threading
 import time
 import re
 
@@ -80,11 +82,10 @@ class GithubWebhookListener():
             delivery=delivery))
 
         self._validate_signature(request)
+        # TODO(jlk): Validate project in the request is a project we know
 
         try:
             self.__dispatch_event(request)
-        except webob.exc.HTTPNotFound:
-            raise
         except:
             self.log.exception("Exception handling Github event:")
 
@@ -98,19 +99,57 @@ class GithubWebhookListener():
                                            'header.')
 
         try:
-            method = getattr(self, '_event_' + event)
-        except AttributeError:
-            message = "Unhandled X-Github-Event: {0}".format(event)
-            self.log.debug(message)
-            # Returns empty 200 on unhandled events
-            raise webob.exc.HTTPOk()
-
-        try:
             json_body = request.json_body
+            self.connection.addEvent(json_body, event)
         except:
             message = 'Exception deserializing JSON body'
             self.log.exception(message)
             raise webob.exc.HTTPBadRequest(message)
+
+    def _validate_signature(self, request):
+        secret = self.connection.connection_config.get('webhook_token', None)
+        if secret is None:
+            raise RuntimeError("webhook_token is required")
+
+        body = request.body
+        try:
+            request_signature = request.headers['X-Hub-Signature']
+        except KeyError:
+            raise webob.exc.HTTPUnauthorized(
+                'Please specify a X-Hub-Signature header with secret.')
+
+        payload_signature = _sign_request(body, secret)
+
+        self.log.debug("Payload Signature: {0}".format(str(payload_signature)))
+        self.log.debug("Request Signature: {0}".format(str(request_signature)))
+        if not hmac.compare_digest(
+            str(payload_signature), str(request_signature)):
+            raise webob.exc.HTTPUnauthorized(
+                'Request signature does not match calculated payload '
+                'signature. Check that secret is correct.')
+
+        return True
+
+
+class GithubEventConnector(threading.Thread):
+    """Move events from GitHub into the scheduler"""
+
+    log = logging.getLogger("zuul.GithubEventConnector")
+
+    def __init__(self, connection):
+        super(GithubEventConnector, self).__init__()
+        self.daemon = True
+        self.connection = connection
+        self._stopped = False
+
+    def stop(self):
+        self._stopped = True
+        self.connection.addEvent(None)
+
+    def _handleEvent(self):
+        json_body, event_type = self.connection.getEvent()
+        if self._stopped:
+            return
 
         # If there's any installation mapping information in the body then
         # update the project mapping before any requests are made.
@@ -127,9 +166,17 @@ class GithubWebhookListener():
             self.connection.installation_map[project_name] = installation_id
 
         try:
+            method = getattr(self, '_event_' + event_type)
+        except AttributeError:
+            # TODO(jlk): Gracefully handle event types we don't care about
+            # instead of logging an exception.
+            message = "Unhandled X-Github-Event: {0}".format(event_type)
+            self.log.debug(message)
+            # Returns empty on unhandled events
+            return
+
+        try:
             event = method(json_body)
-        except webob.exc.HTTPNotFound:
-            raise
         except:
             self.log.exception('Exception when handling event:')
             event = None
@@ -240,14 +287,6 @@ class GithubWebhookListener():
         event.action = body.get('action')
         return event
 
-    def _event_ping(self, body):
-        project_name = body['repository']['full_name']
-        if not self.connection.getProject(project_name):
-            self.log.warning("Ping received for unknown project %s" %
-                             project_name)
-            raise webob.exc.HTTPNotFound("Sorry, this project is not "
-                                         "registered")
-
     def _event_status(self, body):
         action = body.get('action')
         if action == 'pending':
@@ -277,30 +316,6 @@ class GithubWebhookListener():
                            (number, project_name))
         return pr_body
 
-    def _validate_signature(self, request):
-        secret = self.connection.connection_config.get('webhook_token', None)
-        if secret is None:
-            raise RuntimeError("webhook_token is required")
-
-        body = request.body
-        try:
-            request_signature = request.headers['X-Hub-Signature']
-        except KeyError:
-            raise webob.exc.HTTPUnauthorized(
-                'Please specify a X-Hub-Signature header with secret.')
-
-        payload_signature = _sign_request(body, secret)
-
-        self.log.debug("Payload Signature: {0}".format(str(payload_signature)))
-        self.log.debug("Request Signature: {0}".format(str(request_signature)))
-        if not hmac.compare_digest(
-            str(payload_signature), str(request_signature)):
-            raise webob.exc.HTTPUnauthorized(
-                'Request signature does not match calculated payload '
-                'signature. Check that secret is correct.')
-
-        return True
-
     def _pull_request_to_event(self, pr_body):
         event = GithubTriggerEvent()
         event.trigger_name = 'github'
@@ -326,6 +341,17 @@ class GithubWebhookListener():
         login = body.get('sender').get('login')
         if login:
             return self.connection.getUser(login)
+
+    def run(self):
+        while True:
+            if self._stopped:
+                return
+            try:
+                self._handleEvent()
+            except:
+                self.log.exception("Exception moving GitHub event:")
+            finally:
+                self.connection.eventDone()
 
 
 class GithubUser(collections.Mapping):
@@ -376,6 +402,7 @@ class GithubConnection(BaseConnection):
         self.canonical_hostname = self.connection_config.get(
             'canonical_hostname', self.server)
         self.source = driver.getSource(self)
+        self.event_queue = queue.Queue()
 
         # ssl verification must default to true
         verify_ssl = self.connection_config.get('verify_ssl', 'true')
@@ -408,9 +435,20 @@ class GithubConnection(BaseConnection):
         self.registerHttpHandler(self.payload_path,
                                  webhook_listener.handle_request)
         self._authenticateGithubAPI()
+        self._start_event_connector()
 
     def onStop(self):
         self.unregisterHttpHandler(self.payload_path)
+        self._stop_event_connector()
+
+    def _start_event_connector(self):
+        self.github_event_connector = GithubEventConnector(self)
+        self.github_event_connector.start()
+
+    def _stop_event_connector(self):
+        if self.github_event_connector:
+            self.github_event_connector.stop()
+            self.github_event_connector.join()
 
     def _createGithubClient(self):
         if self.server != 'github.com':
@@ -503,6 +541,15 @@ class GithubConnection(BaseConnection):
             self.installation_token_cache[installation_id] = (token, expiry)
 
         return token
+
+    def addEvent(self, data, event=None):
+        return self.event_queue.put((data, event))
+
+    def getEvent(self):
+        return self.event_queue.get()
+
+    def eventDone(self):
+        self.event_queue.task_done()
 
     def getGithubClient(self,
                         project=None,
