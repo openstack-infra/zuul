@@ -895,6 +895,26 @@ class TestInRepoJoin(ZuulTestCase):
             dict(name='project-test1', result='FAILURE', changes='1,1 2,1'),
         ], ordered=False)
 
+    def test_dynamic_dependent_pipeline_absent(self):
+        # Test that a series of dependent changes don't report merge
+        # failures to a pipeline they aren't in.
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        B.setDependsOn(A, 1)
+
+        A.addApproval('Code-Review', 2)
+        A.addApproval('Approved', 1)
+        B.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.assertEqual(A.reported, 0,
+                         "A should not report")
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.reported, 0,
+                         "B should not report")
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertHistory([])
+
 
 class TestAnsible(AnsibleZuulTestCase):
     # A temporary class to hold new tests while others are disabled
