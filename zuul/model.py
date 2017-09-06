@@ -21,6 +21,7 @@ import struct
 import time
 from uuid import uuid4
 import urllib.parse
+import textwrap
 
 MERGER_MERGE = 1          # "git merge"
 MERGER_MERGE_RESOLVE = 2  # "git merge -s resolve"
@@ -2095,6 +2096,83 @@ class ProjectConfig(object):
         self.private_key_file = None
 
 
+class ConfigItemNotListError(Exception):
+    def __init__(self):
+        message = textwrap.dedent("""\
+        Configuration file is not a list.  Each zuul.yaml configuration
+        file must be a list of items, for example:
+
+        - job:
+            name: foo
+
+        - project:
+            name: bar
+
+        Ensure that every item starts with "- " so that it is parsed as a
+        YAML list.
+        """)
+        super(ConfigItemNotListError, self).__init__(message)
+
+
+class ConfigItemNotDictError(Exception):
+    def __init__(self):
+        message = textwrap.dedent("""\
+        Configuration item is not a dictionary.  Each zuul.yaml
+        configuration file must be a list of dictionaries, for
+        example:
+
+        - job:
+            name: foo
+
+        - project:
+            name: bar
+
+        Ensure that every item in the list is a dictionary with one
+        key (in this example, 'job' and 'project').
+        """)
+        super(ConfigItemNotDictError, self).__init__(message)
+
+
+class ConfigItemMultipleKeysError(Exception):
+    def __init__(self):
+        message = textwrap.dedent("""\
+        Configuration item has more than one key.  Each zuul.yaml
+        configuration file must be a list of dictionaries with a
+        single key, for example:
+
+        - job:
+            name: foo
+
+        - project:
+            name: bar
+
+        Ensure that every item in the list is a dictionary with only
+        one key (in this example, 'job' and 'project').  This error
+        may be caused by insufficient indentation of the keys under
+        the configuration item ('name' in this example).
+        """)
+        super(ConfigItemMultipleKeysError, self).__init__(message)
+
+
+class ConfigItemUnknownError(Exception):
+    def __init__(self):
+        message = textwrap.dedent("""\
+        Configuration item not recognized.  Each zuul.yaml
+        configuration file must be a list of dictionaries, for
+        example:
+
+        - job:
+            name: foo
+
+        - project:
+            name: bar
+
+        The dictionary keys must match one of the configuration item
+        types recognized by zuul (for example, 'job' or 'project').
+        """)
+        super(ConfigItemUnknownError, self).__init__(message)
+
+
 class UnparsedAbideConfig(object):
 
     """A collection of yaml lists that has not yet been parsed into objects.
@@ -2111,25 +2189,18 @@ class UnparsedAbideConfig(object):
             return
 
         if not isinstance(conf, list):
-            raise Exception("Configuration items must be in the form of "
-                            "a list of dictionaries (when parsing %s)" %
-                            (conf,))
+            raise ConfigItemNotListError()
+
         for item in conf:
             if not isinstance(item, dict):
-                raise Exception("Configuration items must be in the form of "
-                                "a list of dictionaries (when parsing %s)" %
-                                (conf,))
+                raise ConfigItemNotDictError()
             if len(item.keys()) > 1:
-                raise Exception("Configuration item dictionaries must have "
-                                "a single key (when parsing %s)" %
-                                (conf,))
+                raise ConfigItemMultipleKeysError()
             key, value = list(item.items())[0]
             if key == 'tenant':
                 self.tenants.append(value)
             else:
-                raise Exception("Configuration item not recognized "
-                                "(when parsing %s)" %
-                                (conf,))
+                raise ConfigItemUnknownError()
 
 
 class UnparsedTenantConfig(object):
@@ -2168,19 +2239,13 @@ class UnparsedTenantConfig(object):
             return
 
         if not isinstance(conf, list):
-            raise Exception("Configuration items must be in the form of "
-                            "a list of dictionaries (when parsing %s)" %
-                            (conf,))
+            raise ConfigItemNotListError()
 
         for item in conf:
             if not isinstance(item, dict):
-                raise Exception("Configuration items must be in the form of "
-                                "a list of dictionaries (when parsing %s)" %
-                                (conf,))
+                raise ConfigItemNotDictError()
             if len(item.keys()) > 1:
-                raise Exception("Configuration item dictionaries must have "
-                                "a single key (when parsing %s)" %
-                                (conf,))
+                raise ConfigItemMultipleKeysError()
             key, value = list(item.items())[0]
             if key == 'project':
                 name = value['name']
@@ -2198,9 +2263,7 @@ class UnparsedTenantConfig(object):
             elif key == 'semaphore':
                 self.semaphores.append(value)
             else:
-                raise Exception("Configuration item `%s` not recognized "
-                                "(when parsing %s)" %
-                                (item, conf,))
+                raise ConfigItemUnknownError()
 
 
 class Layout(object):
