@@ -22,6 +22,7 @@ import os
 import os.path
 import socket
 import tempfile
+import testtools
 import threading
 import time
 
@@ -46,16 +47,13 @@ class TestLogStreamer(tests.base.BaseTestCase):
         streamer = self.startStreamer(port)
         self.addCleanup(streamer.stop)
 
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.addCleanup(s.close)
-        self.assertEqual(0, s.connect_ex((self.host, port)))
+        s = socket.create_connection((self.host, port))
         s.close()
 
         streamer.stop()
 
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.addCleanup(s.close)
-        self.assertNotEqual(0, s.connect_ex((self.host, port)))
+        with testtools.ExpectedException(ConnectionRefusedError):
+            s = socket.create_connection((self.host, port))
         s.close()
 
 
@@ -80,8 +78,7 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
             root = tempfile.gettempdir()
         self.streamer = zuul.lib.log_streamer.LogStreamer(None, self.host,
                                                           port, root)
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((self.host, port))
+        s = socket.create_connection((self.host, port))
         self.addCleanup(s.close)
 
         req = '%s\n' % build_uuid
@@ -237,8 +234,11 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         self.addCleanup(web_server.stop)
 
         # Wait until web server is started
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            while s.connect_ex((self.host, 9000)):
+        while True:
+            try:
+                with socket.create_connection((self.host, 9000)):
+                    break
+            except ConnectionRefusedError:
                 time.sleep(0.1)
 
         # Start a thread with the websocket client
