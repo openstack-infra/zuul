@@ -10,6 +10,10 @@
       debug:
         var: setupvar
 
+    - name: Output a debug sentence
+      debug:
+        msg: This is a debug message
+
     - name: Run a shell task
       command: ip addr show
 
