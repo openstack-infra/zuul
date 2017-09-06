@@ -1374,6 +1374,7 @@ class QueueItem(object):
         self.quiet = False
         self.active = False  # Whether an item is within an active window
         self.live = True  # Whether an item is intended to be processed at all
+        # TODO(jeblair): move job_graph to buildset
         self.job_graph = None
 
     def __repr__(self):
@@ -1391,6 +1392,7 @@ class QueueItem(object):
         old.next_build_set = self.current_build_set
         self.current_build_set.previous_build_set = old
         self.build_sets.append(self.current_build_set)
+        self.job_graph = None
 
     def addBuild(self, build):
         self.current_build_set.addBuild(build)
@@ -2331,19 +2333,21 @@ class Layout(object):
             job_graph.addJob(frozen_job)
 
     def createJobGraph(self, item):
-        project_config = self.project_configs.get(
-            item.change.project.canonical_name, None)
-        ret = JobGraph()
         # NOTE(pabelanger): It is possible for a foreign project not to have a
         # configured pipeline, if so return an empty JobGraph.
-        if project_config and item.pipeline.name in project_config.pipelines:
-            project_job_list = \
-                project_config.pipelines[item.pipeline.name].job_list
-            self._createJobGraph(item, project_job_list, ret)
+        ret = JobGraph()
+        ppc = self.getProjectPipelineConfig(item.change.project,
+                                            item.pipeline)
+        if ppc:
+            self._createJobGraph(item, ppc.job_list, ret)
         return ret
 
-    def hasProject(self, project):
-        return project.canonical_name in self.project_configs
+    def getProjectPipelineConfig(self, project, pipeline):
+        project_config = self.project_configs.get(
+            project.canonical_name, None)
+        if not project_config:
+            return None
+        return project_config.pipelines.get(pipeline.name, None)
 
 
 class Semaphore(object):

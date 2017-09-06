@@ -529,11 +529,12 @@ class PipelineManager(object):
 
         if not item.job_graph:
             try:
+                self.log.debug("Freezing job graph for %s" % (item,))
                 item.freezeJobGraph()
             except Exception as e:
                 # TODOv3(jeblair): nicify this exception as it will be reported
                 self.log.exception("Error freezing job graph for %s" %
-                                   item)
+                                   (item,))
                 item.setConfigError("Unable to freeze job graph: %s" %
                                     (str(e)))
                 return False
@@ -752,9 +753,12 @@ class PipelineManager(object):
         layout = (item.current_build_set.layout or
                   self.pipeline.layout)
 
-        if not layout.hasProject(item.change.project):
+        project_in_pipeline = True
+        if not layout.getProjectPipelineConfig(item.change.project,
+                                               self.pipeline):
             self.log.debug("Project %s not in pipeline %s for change %s" % (
                 item.change.project, self.pipeline, item.change))
+            project_in_pipeline = False
             actions = []
         elif item.getConfigError():
             self.log.debug("Invalid config for change %s" % item.change)
@@ -780,7 +784,7 @@ class PipelineManager(object):
             actions = self.pipeline.failure_actions
             item.setReportedResult('FAILURE')
             self.pipeline._consecutive_failures += 1
-        if layout.hasProject(item.change.project) and self.pipeline._disabled:
+        if project_in_pipeline and self.pipeline._disabled:
             actions = self.pipeline.disabled_actions
         # Check here if we should disable so that we only use the disabled
         # reporters /after/ the last disable_at failure is still reported as

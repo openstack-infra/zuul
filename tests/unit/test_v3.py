@@ -371,55 +371,6 @@ class TestInRepoConfig(ZuulTestCase):
             dict(name='project-test1', result='SUCCESS', changes='1,2'),
             dict(name='project-test2', result='SUCCESS', changes='1,2')])
 
-    def test_dynamic_dependent_pipeline(self):
-        # Test dynamically adding a project to a
-        # dependent pipeline for the first time
-        self.executor_server.hold_jobs_in_build = True
-
-        tenant = self.sched.abide.tenants.get('tenant-one')
-        gate_pipeline = tenant.layout.pipelines['gate']
-
-        in_repo_conf = textwrap.dedent(
-            """
-            - job:
-                name: project-test1
-
-            - job:
-                name: project-test2
-
-            - project:
-                name: org/project
-                gate:
-                  jobs:
-                    - project-test2
-            """)
-
-        in_repo_playbook = textwrap.dedent(
-            """
-            - hosts: all
-              tasks: []
-            """)
-
-        file_dict = {'.zuul.yaml': in_repo_conf,
-                     'playbooks/project-test2.yaml': in_repo_playbook}
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
-                                           files=file_dict)
-        A.addApproval('Approved', 1)
-        self.fake_gerrit.addEvent(A.addApproval('Code-Review', 2))
-        self.waitUntilSettled()
-
-        items = gate_pipeline.getAllItems()
-        self.assertEqual(items[0].change.number, '1')
-        self.assertEqual(items[0].change.patchset, '1')
-        self.assertTrue(items[0].live)
-
-        self.executor_server.hold_jobs_in_build = False
-        self.executor_server.release()
-        self.waitUntilSettled()
-
-        # Make sure the dynamic queue got cleaned up
-        self.assertEqual(gate_pipeline.queues, [])
-
     def test_in_repo_branch(self):
         in_repo_conf = textwrap.dedent(
             """
@@ -844,6 +795,105 @@ class TestInRepoConfig(ZuulTestCase):
         self.assertIn('depends on a change that failed to merge',
                       C.messages[0],
                       "C should have an error reported")
+
+
+class TestInRepoJoin(ZuulTestCase):
+    # In this config, org/project is not a member of any pipelines, so
+    # that we may test the changes that cause it to join them.
+
+    tenant_config_file = 'config/in-repo-join/main.yaml'
+
+    def test_dynamic_dependent_pipeline(self):
+        # Test dynamically adding a project to a
+        # dependent pipeline for the first time
+        self.executor_server.hold_jobs_in_build = True
+
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        gate_pipeline = tenant.layout.pipelines['gate']
+
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test1
+
+            - job:
+                name: project-test2
+
+            - project:
+                name: org/project
+                gate:
+                  jobs:
+                    - project-test2
+            """)
+
+        in_repo_playbook = textwrap.dedent(
+            """
+            - hosts: all
+              tasks: []
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf,
+                     'playbooks/project-test2.yaml': in_repo_playbook}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        items = gate_pipeline.getAllItems()
+        self.assertEqual(items[0].change.number, '1')
+        self.assertEqual(items[0].change.patchset, '1')
+        self.assertTrue(items[0].live)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        # Make sure the dynamic queue got cleaned up
+        self.assertEqual(gate_pipeline.queues, [])
+
+    def test_dynamic_dependent_pipeline_failure(self):
+        # Test that a change behind a failing change adding a project
+        # to a dependent pipeline is dequeued.
+        self.executor_server.hold_jobs_in_build = True
+
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test1
+
+            - project:
+                name: org/project
+                gate:
+                  jobs:
+                    - project-test1
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.executor_server.failJob('project-test1', A)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        B.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+        self.assertEqual(A.reported, 2,
+                         "A should report start and failure")
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.reported, 1,
+                         "B should report start")
+        self.assertHistory([
+            dict(name='project-test1', result='FAILURE', changes='1,1'),
+            dict(name='project-test1', result='FAILURE', changes='1,1 2,1'),
+        ], ordered=False)
 
 
 class TestAnsible(AnsibleZuulTestCase):

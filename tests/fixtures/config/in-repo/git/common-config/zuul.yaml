@@ -78,6 +78,8 @@
 
 - project:
     name: common-config
+    check:
+      jobs: []
     tenant-one-gate:
       jobs:
         - common-config-test
