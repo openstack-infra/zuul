@@ -1195,7 +1195,7 @@ class FakeStatsd(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         self.daemon = True
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
         self.sock.bind(('', 0))
         self.port = self.sock.getsockname()[1]
         self.wake_read, self.wake_write = os.pipe()
