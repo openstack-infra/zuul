@@ -120,6 +120,30 @@ def indent(s):
 
 
 @contextmanager
+def early_configuration_exceptions(context):
+    try:
+        yield
+    except ConfigurationSyntaxError:
+        raise
+    except Exception as e:
+        intro = textwrap.fill(textwrap.dedent("""\
+        Zuul encountered a syntax error while parsing its configuration in the
+        repo {repo} on branch {branch}.  The error was:""".format(
+            repo=context.project.name,
+            branch=context.branch,
+        )))
+
+        m = textwrap.dedent("""\
+        {intro}
+
+        {error}""")
+
+        m = m.format(intro=intro,
+                     error=indent(str(e)))
+        raise ConfigurationSyntaxError(m)
+
+
+@contextmanager
 def configuration_exceptions(stanza, conf):
     try:
         yield
@@ -1367,13 +1391,15 @@ class TenantParser(object):
     def _parseConfigProjectLayout(data, source_context):
         # This is the top-level configuration for a tenant.
         config = model.UnparsedTenantConfig()
-        config.extend(safe_load_yaml(data, source_context))
+        with early_configuration_exceptions(source_context):
+            config.extend(safe_load_yaml(data, source_context))
         return config
 
     @staticmethod
     def _parseUntrustedProjectLayout(data, source_context):
         config = model.UnparsedTenantConfig()
-        config.extend(safe_load_yaml(data, source_context))
+        with early_configuration_exceptions(source_context):
+            config.extend(safe_load_yaml(data, source_context))
         if config.pipelines:
             with configuration_exceptions('pipeline', config.pipelines[0]):
                 raise PipelineNotPermittedError()

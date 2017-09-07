@@ -495,6 +495,84 @@ class TestInRepoConfig(ZuulTestCase):
             dict(name='project-test2', result='SUCCESS', changes='1,1 2,1'),
         ])
 
+    def test_yaml_list_error(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            job: foo
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn('not a list', A.messages[0],
+                      "A should have a syntax error reported")
+
+    def test_yaml_dict_error(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn('not a dictionary', A.messages[0],
+                      "A should have a syntax error reported")
+
+    def test_yaml_key_error(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+              name: project-test2
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn('has more than one key', A.messages[0],
+                      "A should have a syntax error reported")
+
+    def test_yaml_unknown_error(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - foobar:
+                foo: bar
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn('not recognized', A.messages[0],
+                      "A should have a syntax error reported")
+
     def test_untrusted_syntax_error(self):
         in_repo_conf = textwrap.dedent(
             """
