@@ -303,6 +303,12 @@ of item.
 
          The identifier for the change.
 
+      .. var:: change_url
+
+         The URL to the source location of the given change.
+         E.g., `https://review.example.org/#/c/123456/` or
+         `https://github.com/example/example/pull/1234`.
+
       .. var:: patchset
 
          The patchset identifier for the change.  If a change is
@@ -331,6 +337,12 @@ are available:
 
       The patchset identifier for the change.  If a change is revised,
       this will have a different value.
+
+   .. var:: change_url
+
+      The URL to the source location of the given change.
+      E.g., `https://review.example.org/#/c/123456/` or
+      `https://github.com/example/example/pull/1234`.
 
 Branch Items
 ++++++++++++
