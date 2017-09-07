@@ -960,8 +960,7 @@ class TestInRepoJoin(ZuulTestCase):
         self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
         self.waitUntilSettled()
 
-        self.executor_server.hold_jobs_in_build = False
-        self.executor_server.release()
+        self.orderedRelease()
         self.waitUntilSettled()
         self.assertEqual(A.reported, 2,
                          "A should report start and failure")
@@ -970,7 +969,7 @@ class TestInRepoJoin(ZuulTestCase):
                          "B should report start")
         self.assertHistory([
             dict(name='project-test1', result='FAILURE', changes='1,1'),
-            dict(name='project-test1', result='FAILURE', changes='1,1 2,1'),
+            dict(name='project-test1', result='ABORTED', changes='1,1 2,1'),
         ], ordered=False)
 
     def test_dynamic_dependent_pipeline_absent(self):
