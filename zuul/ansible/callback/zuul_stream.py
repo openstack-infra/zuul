@@ -373,9 +373,20 @@ class CallbackModule(default.CallbackModule):
             for key in [k for k in result_dict.keys()
                         if k.startswith('_ansible')]:
                 del result_dict[key]
-            self._log_message(
-                msg=json.dumps(result_dict, indent=2, sort_keys=True),
-                status=status, result=result)
+            keyname = next(iter(result_dict.keys()))
+            # If it has msg, that means it was like:
+            #
+            #  debug:
+            #    msg: Some debug text the user was looking for
+            #
+            # So we log it with self._log to get just the raw string the
+            # user provided.
+            if keyname == 'msg':
+                self._log(msg=result_dict['msg'])
+            else:
+                self._log_message(
+                    msg=json.dumps(result_dict, indent=2, sort_keys=True),
+                    status=status, result=result)
         elif result._task.action not in ('command', 'shell'):
             if 'msg' in result_dict:
                 self._log_message(msg=result_dict['msg'],
