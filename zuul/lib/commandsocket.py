@@ -44,9 +44,9 @@ class CommandSocket(object):
         # First, wake up our listener thread with a connection and
         # tell it to stop running.
         self.running = False
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        s.connect(self.path)
-        s.sendall(b'_stop\n')
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+            s.connect(self.path)
+            s.sendall(b'_stop\n')
         # The command '_stop' will be ignored by our listener, so
         # directly inject it into the queue so that consumers of this
         # class which are waiting in .get() are awakened.  They can
