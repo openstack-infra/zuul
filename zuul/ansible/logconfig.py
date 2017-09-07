@@ -13,6 +13,7 @@
 # under the License.
 
 import abc
+import copy
 import logging.config
 import json
 import os
@@ -169,7 +170,7 @@ class JobLoggingConfig(DictLoggingConfig):
 
     def __init__(self, config=None, job_output_file=None):
         if not config:
-            config = _DEFAULT_JOB_LOGGING_CONFIG.copy()
+            config = copy.deepcopy(_DEFAULT_JOB_LOGGING_CONFIG)
         super(JobLoggingConfig, self).__init__(config=config)
         if job_output_file:
             self.job_output_file = job_output_file
@@ -191,7 +192,7 @@ class ServerLoggingConfig(DictLoggingConfig):
 
     def __init__(self, config=None, server=None):
         if not config:
-            config = _DEFAULT_SERVER_LOGGING_CONFIG.copy()
+            config = copy.deepcopy(_DEFAULT_SERVER_LOGGING_CONFIG)
         super(ServerLoggingConfig, self).__init__(config=config)
         if server:
             self.server = server
@@ -207,7 +208,7 @@ class ServerLoggingConfig(DictLoggingConfig):
         # config above because we're templating out the filename. Also, we
         # only want to add the handler if we're actually going to use it.
         for name, handler in _DEFAULT_SERVER_FILE_HANDLERS.items():
-            server_handler = handler.copy()
+            server_handler = copy.deepcopy(handler)
             server_handler['filename'] = server_handler['filename'].format(
                 server=server)
             self._config['handlers'][name] = server_handler
