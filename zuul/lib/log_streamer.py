@@ -168,6 +168,8 @@ class CustomForkingTCPServer(socketserver.ForkingTCPServer):
     '''
     Custom version that allows us to drop privileges after port binding.
     '''
+    address_family = socket.AF_INET6
+
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user')
         self.jobdir_root = kwargs.pop('jobdir_root')
