@@ -384,6 +384,7 @@ class Node(object):
         self.private_ipv4 = None
         self.public_ipv6 = None
         self.connection_port = 22
+        self.connection_type = None
         self._keys = []
         self.az = None
         self.provider = None
