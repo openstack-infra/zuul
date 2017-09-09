@@ -344,10 +344,6 @@ class Merger(object):
         return self._addProject(hostname, project_name, url, sshkey)
 
     def updateRepo(self, connection_name, project_name):
-        # TODOv3(jhesketh): Reimplement
-        # da90a50b794f18f74de0e2c7ec3210abf79dda24 after merge..
-        # Likely we'll handle connection context per projects differently.
-        # self._setGitSsh()
         repo = self.getRepo(connection_name, project_name)
         try:
             self.log.info("Updating local repository %s/%s",
