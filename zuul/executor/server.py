@@ -1162,6 +1162,7 @@ class AnsibleJob(object):
                 ansible_user=self.executor_server.default_username,
                 ansible_port=port,
                 nodepool=dict(
+                    label=node.get('label'),
                     az=node.get('az'),
                     cloud=node.get('cloud'),
                     provider=node.get('provider'),
