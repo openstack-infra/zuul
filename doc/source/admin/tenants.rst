@@ -163,6 +163,11 @@ configuration.  An example tenant definition is:
       The maximum number of nodes a job can request.  A value of
       '-1' value removes the limit.
 
+   .. attr:: max-job-timeout
+      :default: 10800
+
+      The maximum timeout for jobs. A value of '-1' value removes the limit.
+
    .. attr:: exclude-unprotected-branches
       :default: false
 

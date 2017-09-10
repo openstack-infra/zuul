@@ -1402,7 +1402,7 @@ class TestDiskAccounting(AnsibleZuulTestCase):
 class TestMaxNodesPerJob(AnsibleZuulTestCase):
     tenant_config_file = 'config/multi-tenant/main.yaml'
 
-    def test_max_nodes_reached(self):
+    def test_max_timeout_exceeded(self):
         in_repo_conf = textwrap.dedent(
             """
             - job:
@@ -1435,6 +1435,32 @@ class TestMaxNodesPerJob(AnsibleZuulTestCase):
         self.waitUntilSettled()
         self.assertNotIn("exceeds tenant max-nodes", B.messages[0],
                          "B should not fail because of nodes limit")
+
+
+class TestMaxTimeout(AnsibleZuulTestCase):
+    tenant_config_file = 'config/multi-tenant/main.yaml'
+
+    def test_max_nodes_reached(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: test-job
+                timeout: 3600
+            """)
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertIn('The job "test-job" exceeds tenant max-job-timeout',
+                      A.messages[0], "A should fail because of timeout limit")
+
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertNotIn("exceeds tenant max-job-timeout", B.messages[0],
+                         "B should not fail because of timeout limit")
 
 
 class TestBaseJobs(ZuulTestCase):

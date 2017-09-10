@@ -76,6 +76,15 @@ class MaxNodeError(Exception):
         super(MaxNodeError, self).__init__(message)
 
 
+class MaxTimeoutError(Exception):
+    def __init__(self, job, tenant):
+        message = textwrap.dedent("""\
+        The job "{job}" exceeds tenant max-job-timeout {maxtimeout}.""")
+        message = textwrap.fill(message.format(
+            job=job.name, maxtimeout=tenant.max_job_timeout))
+        super(MaxTimeoutError, self).__init__(message)
+
+
 class DuplicateGroupError(Exception):
     def __init__(self, nodeset, group):
         message = textwrap.dedent("""\
@@ -504,6 +513,10 @@ class JobParser(object):
         # an unsafe check pipeline.
         if secrets and not conf['_source_context'].trusted:
             job.post_review = True
+
+        if conf.get('timeout') and tenant.max_job_timeout != -1 and \
+           int(conf['timeout']) > tenant.max_job_timeout:
+            raise MaxTimeoutError(job, tenant)
 
         if 'post-review' in conf:
             if conf['post-review']:
@@ -1059,6 +1072,7 @@ class TenantParser(object):
     def getSchema(connections=None):
         tenant = {vs.Required('name'): str,
                   'max-nodes-per-job': int,
+                  'max-job-timeout': int,
                   'source': TenantParser.validateTenantSources(connections),
                   'exclude-unprotected-branches': bool,
                   'default-parent': str,
@@ -1072,6 +1086,8 @@ class TenantParser(object):
         tenant = model.Tenant(conf['name'])
         if conf.get('max-nodes-per-job') is not None:
             tenant.max_nodes_per_job = conf['max-nodes-per-job']
+        if conf.get('max-job-timeout') is not None:
+            tenant.max_job_timeout = int(conf['max-job-timeout'])
         if conf.get('exclude-unprotected-branches') is not None:
             tenant.exclude_unprotected_branches = \
                 conf['exclude-unprotected-branches']
