@@ -35,7 +35,7 @@ class TestLogStreamer(tests.base.BaseTestCase):
 
     def setUp(self):
         super(TestLogStreamer, self).setUp()
-        self.host = '0.0.0.0'
+        self.host = '::'
 
     def startStreamer(self, port, root=None):
         if not root:
@@ -64,7 +64,7 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
 
     def setUp(self):
         super(TestStreaming, self).setUp()
-        self.host = '0.0.0.0'
+        self.host = '::'
         self.streamer = None
         self.stop_streamer = False
         self.streaming_data = ''
@@ -158,7 +158,7 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
 
     def runWSClient(self, build_uuid, event):
         async def client(loop, build_uuid, event):
-            uri = 'http://127.0.0.1:9000/console-stream'
+            uri = 'http://[::1]:9000/console-stream'
             try:
                 session = aiohttp.ClientSession(loop=loop)
                 async with session.ws_connect(uri) as ws:
@@ -223,7 +223,7 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
 
         # Start the web server
         web_server = zuul.web.ZuulWeb(
-            listen_address='127.0.0.1', listen_port=9000,
+            listen_address='::', listen_port=9000,
             gear_server='127.0.0.1', gear_port=self.gearman_server.port)
         loop = asyncio.new_event_loop()
         loop.set_debug(True)
