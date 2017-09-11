@@ -1634,7 +1634,7 @@ class AnsibleJob(object):
             cmd.extend(['-e', '@' + playbook.secrets])
 
         if success is not None:
-            cmd.extend(['-e', 'success=%s' % str(bool(success))])
+            cmd.extend(['-e', 'zuul_success=%s' % str(bool(success))])
 
         if phase:
             cmd.extend(['-e', 'zuul_execution_phase=%s' % phase])
