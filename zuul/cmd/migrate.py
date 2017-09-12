@@ -261,6 +261,21 @@ class JJB(jenkins_jobs.builder.Builder):
             job[component_list_type] = new_components
 
 
+class OldProject:
+    def __init__(self, name, gate_jobs):
+        self.name = name
+        self.gate_jobs = gate_jobs
+
+
+class OldJob:
+    def __init__(self, name):
+        self.name = name
+        self.queue_name = None
+
+    def __repr__(self):
+        return self.name
+
+
 class Job:
 
     def __init__(self,
@@ -461,6 +476,43 @@ class JobMapping:
 
         return new_job
 
+class ChangeQueue:
+    def __init__(self):
+        self.name = ''
+        self.assigned_name = None
+        self.generated_name = None
+        self.projects = []
+        self._jobs = set()
+
+    def getJobs(self):
+        return self._jobs
+
+    def getProjects(self):
+        return [p.name for p in self.projects]
+
+    def addProject(self, project):
+        if project not in self.projects:
+            self.projects.append(project)
+            self._jobs |= project.gate_jobs
+
+            names = [x.name for x in self.projects]
+            names.sort()
+            self.generated_name = names[0].split('/')[-1]
+
+            for job in self._jobs:
+                if job.queue_name:
+                    if (self.assigned_name and
+                        job.queue_name != self.assigned_name):
+                        raise Exception("More than one name assigned to "
+                                        "change queue: %s != %s" %
+                                        (self.assigned_name,
+                                         job.queue_name))
+                    self.assigned_name = job.queue_name
+            self.name = self.assigned_name or self.generated_name
+
+    def mergeChangeQueue(self, other):
+        for project in other.projects:
+            self.addProject(project)
 
 class ZuulMigrate:
 
@@ -475,9 +527,11 @@ class ZuulMigrate:
         self.move = move
 
         self.jobs = {}
+        self.old_jobs = {}
 
     def run(self):
         self.loadJobs()
+        self.buildChangeQueues()
         self.convertJobs()
         self.writeJobs()
 
@@ -493,6 +547,88 @@ class ZuulMigrate:
             unseen.discard(job['name'])
         for name in unseen:
             del self.jobs[name]
+
+    def getOldJob(self, name):
+        if name not in self.old_jobs:
+            self.old_jobs[name] = OldJob(name)
+        return self.old_jobs[name]
+
+    def flattenOldJobs(self, tree, name=None):
+        if isinstance(tree, str):
+            n = tree.format(name=name)
+            return [self.getOldJob(n)]
+
+        new_list = []  # type: ignore
+        if isinstance(tree, list):
+            for job in tree:
+                new_list.extend(self.flattenOldJobs(job, name))
+        elif isinstance(tree, dict):
+            parent_name = get_single_key(tree)
+            jobs = self.flattenOldJobs(tree[parent_name], name)
+            for job in jobs:
+                new_list.append(self.getOldJob(job))
+            new_list.append(self.getOldJob(parent_name))
+        return new_list
+
+    def buildChangeQueues(self):
+        self.log.debug("Building shared change queues")
+
+        for j in self.layout['jobs']:
+            if '^' in j['name'] or '$' in j['name']:
+                continue
+            job = self.getOldJob(j['name'])
+            job.queue_name = j.get('queue-name')
+
+        change_queues = []
+
+        for project in self.layout.get('projects'):
+            if 'gate' not in project:
+                continue
+            gate_jobs = set()
+            for template in project['template']:
+                for pt in self.layout.get('project-templates'):
+                    if pt['name'] != template['name']:
+                        continue
+                    if 'gate' not in pt['name']:
+                        continue
+                    gate_jobs |= set(self.flattenOldJobs(pt['gate'], project['name']))
+            gate_jobs |= set(self.flattenOldJobs(project['gate']))
+            old_project = OldProject(project['name'], gate_jobs)
+            change_queue = ChangeQueue()
+            change_queue.addProject(old_project)
+            change_queues.append(change_queue)
+            self.log.debug("Created queue: %s" % change_queue)
+
+        # Iterate over all queues trying to combine them, and keep doing
+        # so until they can not be combined further.
+        last_change_queues = change_queues
+        while True:
+            new_change_queues = self.combineChangeQueues(last_change_queues)
+            if len(last_change_queues) == len(new_change_queues):
+                break
+            last_change_queues = new_change_queues
+
+        self.log.debug("  Shared change queues:")
+        for queue in new_change_queues:
+            self.log.debug("    %s containing %s" % (
+                queue, queue.generated_name))
+        self.change_queues = new_change_queues
+
+    def combineChangeQueues(self, change_queues):
+        self.log.debug("Combining shared queues")
+        new_change_queues = []
+        for a in change_queues:
+            merged_a = False
+            for b in new_change_queues:
+                if not a.getJobs().isdisjoint(b.getJobs()):
+                    self.log.debug("Merging queue %s into %s" % (a, b))
+                    b.mergeChangeQueue(a)
+                    merged_a = True
+                    break  # this breaks out of 'for b' and continues 'for a'
+            if not merged_a:
+                self.log.debug("Keeping queue %s" % (a))
+                new_change_queues.append(a)
+        return new_change_queues
 
     def convertJobs(self):
         pass
@@ -563,8 +699,16 @@ class ZuulMigrate:
             if key in ('name', 'template'):
                 continue
             else:
+                new_project[key] = collections.OrderedDict()
+                if key == 'gate':
+                    for queue in self.change_queues:
+                        if project['name'] not in queue.getProjects():
+                            continue
+                        if len(queue.getProjects()) == 1:
+                            continue
+                        new_project[key]['queue'] = queue.name
                 jobs = [job.toDict() for job in self.makeNewJobs(value)]
-                new_project[key] = dict(jobs=jobs)
+                new_project[key]['jobs'] = jobs
 
         return new_project
 
