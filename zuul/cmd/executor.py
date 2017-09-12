@@ -82,7 +82,7 @@ class Executor(zuul.cmd.ZuulApp):
 
             self.log.info("Starting log streamer")
             streamer = zuul.lib.log_streamer.LogStreamer(
-                self.user, '0.0.0.0', self.finger_port, self.job_dir)
+                self.user, '::', self.finger_port, self.job_dir)
 
             # Keep running until the parent dies:
             pipe_read = os.fdopen(pipe_read)
