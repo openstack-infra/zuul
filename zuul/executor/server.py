@@ -1618,7 +1618,8 @@ class AnsibleJob(object):
                     now=datetime.datetime.now()))
                 for line in syntax_buffer:
                     job_output.write("{now} | {line}\n".format(
-                        now=datetime.datetime.now(), line=line))
+                        now=datetime.datetime.now(),
+                        line=line.decode('utf-8').rstrip()))
 
         return (self.RESULT_NORMAL, ret)
 
