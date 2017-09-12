@@ -314,6 +314,13 @@ of item.
          The patchset identifier for the change.  If a change is
          revised, this will have a different value.
 
+.. var:: zuul_success
+
+   Post run playbook(s) will be passed this variable to indicate if the run
+   phase of the job was successful or not. This variable is meant to be used
+   with the `boolean` filter.
+
+
 Change Items
 ++++++++++++
 
