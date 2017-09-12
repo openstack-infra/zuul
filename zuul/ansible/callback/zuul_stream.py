@@ -36,23 +36,6 @@ from zuul.ansible import logconfig
 LOG_STREAM_PORT = 19885
 
 
-def linesplit(socket):
-    buff = socket.recv(4096).decode("utf-8")
-    buffering = True
-    while buffering:
-        if "\n" in buff:
-            (line, buff) = buff.split("\n", 1)
-            yield line + "\n"
-        else:
-            more = socket.recv(4096).decode("utf-8")
-            if not more:
-                buffering = False
-            else:
-                buff += more
-    if buff:
-        yield buff
-
-
 def zuul_filter_result(result):
     """Remove keys from shell/command output.
 
@@ -145,18 +128,36 @@ class CallbackModule(default.CallbackModule):
                 continue
             msg = "%s\n" % log_id
             s.send(msg.encode("utf-8"))
-            for line in linesplit(s):
-                if "[Zuul] Task exit code" in line:
-                    return
-                elif self._streamers_stop and "[Zuul] Log not found" in line:
-                    return
-                elif "[Zuul] Log not found" in line:
-                    # don't output this line
-                    pass
+            buff = s.recv(4096).decode("utf-8")
+            buffering = True
+            while buffering:
+                if "\n" in buff:
+                    (line, buff) = buff.split("\n", 1)
+                    done = self._log_streamline(host, line)
+                    if done:
+                        return
                 else:
-                    ts, ln = line.split(' | ', 1)
+                    more = s.recv(4096).decode("utf-8")
+                    if not more:
+                        buffering = False
+                    else:
+                        buff += more
+            if buff:
+                self._log_streamline(host, line)
 
-                    self._log("%s | %s " % (host, ln), ts=ts)
+    def _log_streamline(self, host, line):
+        if "[Zuul] Task exit code" in line:
+            return True
+        elif self._streamers_stop and "[Zuul] Log not found" in line:
+            return True
+        elif "[Zuul] Log not found" in line:
+            # don't output this line
+            return False
+        else:
+            ts, ln = line.split(' | ', 1)
+
+            self._log("%s | %s " % (host, ln), ts=ts)
+            return False
 
     def v2_playbook_on_start(self, playbook):
         self._playbook_name = os.path.splitext(playbook._file_name)[0]
