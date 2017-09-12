@@ -279,6 +279,7 @@ class Job:
         self.required_projects = required_projects or []
         self.nodes = nodes or []
         self.parent = parent
+        self.branch = None
 
         if self.content and not self.name:
             self.name = get_single_key(content)
@@ -352,15 +353,20 @@ class Job:
             job_vars = output[self.name].get('vars', collections.OrderedDict())
             job_vars.update(self.vars)
 
+        if self.branch:
+            output[self.name]['branch'] = self.branch
+
         if not output[self.name]:
             return self.name
+
         return output
 
 
 class JobMapping:
     log = logging.getLogger("zuul.Migrate.JobMapping")
 
-    def __init__(self, nodepool_config, mapping_file=None):
+    def __init__(self, nodepool_config, layout, mapping_file=None):
+        self.layout = layout
         self.job_direct = {}
         self.labels = []
         self.job_mapping = []
@@ -408,6 +414,7 @@ class JobMapping:
         if 'required-projects' in info:
             job.setRequiredProjects(
                 self._expandRequiredProjects(info, match_dict))
+
         return job
 
     def _expandVars(self, info, match_dict):
@@ -436,12 +443,22 @@ class JobMapping:
             if new_job:
                 break
         if not new_job:
+            orig_name = job_name
             if remove_gate:
                 job_name = job_name.replace('gate-', '', 1)
             job_name = 'legacy-{job_name}'.format(job_name=job_name)
-            new_job = Job(orig=job_name, name=job_name)
+            new_job = Job(orig=orig_name, name=job_name)
 
         new_job.extractNode(self.default_node, self.labels)
+
+        # Handle matchers
+        for layout_job in self.layout.get('jobs', []):
+            if re.search(layout_job['name'], new_job.orig):
+                if not layout_job.get('voting', True):
+                    new_job.voting = False
+                if layout_job.get('branch'):
+                    new_job.branch = layout_job['branch']
+
         return new_job
 
 
@@ -454,7 +471,7 @@ class ZuulMigrate:
         self.layout = ordered_load(open(layout, 'r'))
         self.job_config = job_config
         self.outdir = outdir
-        self.mapping = JobMapping(nodepool_config, mapping)
+        self.mapping = JobMapping(nodepool_config, self.layout, mapping)
         self.move = move
 
         self.jobs = {}
