@@ -1012,8 +1012,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
 
     def getGithubClient(self,
                         project=None,
-                        user_id=None,
-                        use_app=True):
+                        user_id=None):
         return self.github_client
 
     def openFakePullRequest(self, project, branch, subject, files=[],

@@ -553,13 +553,10 @@ class GithubConnection(BaseConnection):
 
     def getGithubClient(self,
                         project=None,
-                        user_id=None,
-                        use_app=True):
+                        user_id=None):
         # if you're authenticating for a project and you're an integration then
-        # you need to use the installation specific token. There are some
-        # operations that are not yet supported by integrations so
-        # use_app lets you use api_key auth.
-        if use_app and project and self.app_id:
+        # you need to use the installation specific token.
+        if project and self.app_id:
             github = self._createGithubClient()
             github.login(token=self._get_installation_key(project, user_id))
             github._zuul_project = project
