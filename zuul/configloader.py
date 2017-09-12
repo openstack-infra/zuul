@@ -1342,6 +1342,8 @@ class TenantParser(object):
                 continue
             TenantParser.log.debug("Waiting for cat job %s" % (job,))
             job.wait()
+            if not job.updated:
+                raise Exception("Cat job %s failed" % (job,))
             TenantParser.log.debug("Cat job %s got files %s" %
                                    (job, job.files))
             loaded = False
