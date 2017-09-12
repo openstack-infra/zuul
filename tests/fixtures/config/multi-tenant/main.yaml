@@ -1,5 +1,6 @@
 - tenant:
     name: tenant-one
+    max-job-timeout: 1800
     source:
       gerrit:
         config-projects:
