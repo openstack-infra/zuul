@@ -148,6 +148,31 @@ class LogStreamingHandler(object):
         return ws
 
 
+class GearmanHandler(object):
+    log = logging.getLogger("zuul.web.GearmanHandler")
+
+    def __init__(self, rpc):
+        self.rpc = rpc
+        self.controllers = {
+            'tenant_list': self.tenant_list,
+        }
+
+    def tenant_list(self, request):
+        job = self.rpc.submitJob('zuul:tenant_list', {})
+        return web.json_response(json.loads(job.data[0]))
+
+    async def processRequest(self, request, action):
+        try:
+            resp = self.controllers[action](request)
+        except asyncio.CancelledError:
+            self.log.debug("request handling cancelled")
+        except Exception as e:
+            self.log.exception("exception:")
+            resp = web.json_response({'error_description': 'Internal error'},
+                                     status=500)
+        return resp
+
+
 class ZuulWeb(object):
 
     log = logging.getLogger("zuul.web.ZuulWeb")
@@ -163,10 +188,21 @@ class ZuulWeb(object):
         self.rpc = zuul.rpcclient.RPCClient(gear_server, gear_port,
                                             ssl_key, ssl_cert, ssl_ca)
         self.log_streaming_handler = LogStreamingHandler(self.rpc)
+        self.gearman_handler = GearmanHandler(self.rpc)
 
     async def _handleWebsocket(self, request):
         return await self.log_streaming_handler.processRequest(
             request)
+
+    async def _handleTenantsRequest(self, request):
+        return await self.gearman_handler.processRequest(request,
+                                                         'tenant_list')
+
+    async def _handleStaticRequest(self, request):
+        fp = None
+        if request.path.endswith("tenants.html") or request.path.endswith("/"):
+            fp = os.path.join(STATIC_DIR, "index.html")
+        return web.FileResponse(fp)
 
     def run(self, loop=None):
         """
@@ -181,6 +217,9 @@ class ZuulWeb(object):
         """
         routes = [
             ('GET', '/console-stream', self._handleWebsocket),
+            ('GET', '/tenants.json', self._handleTenantsRequest),
+            ('GET', '/tenants.html', self._handleStaticRequest),
+            ('GET', '/', self._handleStaticRequest),
         ]
 
         self.log.debug("ZuulWeb starting")

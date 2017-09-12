@@ -1,0 +1,33 @@
+External requirements needs to be installed in these locations
+* /static/js/angular.min.js
+* /static/js/jquery.min.js
+* /static/js/jquery-visibility.min.js
+* /static/js/jquery.graphite.min.js
+* /static/bootstrap/css/bootstrap.min.css
+
+Here is an example apache vhost configuration:
+<VirtualHost zuul-web.example.com:80>
+  DocumentRoot /var/www/zuul-web
+
+  LogLevel warn
+
+  Alias "/static" "/var/www/zuul-web"
+  AliasMatch "^/.*/(.*).html" "/var/www/zuul-web/$1.html"
+  AliasMatch "^/.*.html" "/var/www/zuul-web/index.html"
+  <Directory /var/www/zuul-web>
+      Require all granted
+      Order allow,deny
+      Allow from all
+  </Directory>
+
+  # Console-stream needs a special proxy-pass for websocket
+  ProxyPass /console-stream ws://localhost:9000/console-stream nocanon retry=0
+  ProxyPassReverse /console-stream ws://localhost:9000/console-stream
+
+  # Then only the json calls are sent to the zuul-web endpoints
+  ProxyPassMatch ^/(.*.json)$ http://localhost:9000/$1 nocanon retry=0
+  ProxyPassReverse / http://localhost:9000/
+</VirtualHost>
+
+Then copy the zuul/web/static/ files and external requirements to
+/var/www/zuul-web
