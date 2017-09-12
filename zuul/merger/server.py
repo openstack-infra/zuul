@@ -111,7 +111,7 @@ class MergeServer(object):
     def refstate(self, job):
         args = json.loads(job.arguments)
 
-        success, repo_state = self.merger.getItemRepoState(args['items'])
+        success, repo_state = self.merger.getRepoState(args['items'])
         result = dict(updated=success,
                       repo_state=repo_state)
         job.sendWorkComplete(json.dumps(result))
