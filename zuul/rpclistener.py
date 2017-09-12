@@ -21,6 +21,7 @@ import traceback
 import gear
 
 from zuul import model
+from zuul.lib import encryption
 from zuul.lib.config import get_default
 
 
@@ -59,6 +60,7 @@ class RPCListener(object):
         self.worker.registerFunction("zuul:tenant_list")
         self.worker.registerFunction("zuul:status_get")
         self.worker.registerFunction("zuul:job_list")
+        self.worker.registerFunction("zuul:key_get")
 
     def getFunctions(self):
         functions = {}
@@ -298,3 +300,11 @@ class RPCListener(object):
             output.append({"name": job_name,
                            "description": desc})
         job.sendWorkComplete(json.dumps(output))
+
+    def handle_key_get(self, job):
+        args = json.loads(job.arguments)
+        source_name, project_name = args.get("source"), args.get("project")
+        source = self.sched.connections.getSource(source_name)
+        project = source.getProject(project_name)
+        job.sendWorkComplete(
+            encryption.serialize_rsa_public_key(project.public_key))
