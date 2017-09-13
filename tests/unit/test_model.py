@@ -800,14 +800,22 @@ class TestTimeDataBase(BaseTestCase):
         self.db = model.TimeDataBase(self.tmp_root)
 
     def test_timedatabase(self):
-        self.assertEqual(self.db.getEstimatedTime('job-name'), 0)
-        self.db.update('job-name', 50, 'SUCCESS')
-        self.assertEqual(self.db.getEstimatedTime('job-name'), 50)
-        self.db.update('job-name', 100, 'SUCCESS')
-        self.assertEqual(self.db.getEstimatedTime('job-name'), 75)
+        pipeline = Dummy(layout=Dummy(tenant=Dummy(name='test-tenant')))
+        change = Dummy(project=Dummy(canonical_name='git.example.com/foo/bar'))
+        job = Dummy(name='job-name')
+        item = Dummy(pipeline=pipeline,
+                     change=change)
+        build = Dummy(build_set=Dummy(item=item),
+                      job=job)
+
+        self.assertEqual(self.db.getEstimatedTime(build), 0)
+        self.db.update(build, 50, 'SUCCESS')
+        self.assertEqual(self.db.getEstimatedTime(build), 50)
+        self.db.update(build, 100, 'SUCCESS')
+        self.assertEqual(self.db.getEstimatedTime(build), 75)
         for x in range(10):
-            self.db.update('job-name', 100, 'SUCCESS')
-        self.assertEqual(self.db.getEstimatedTime('job-name'), 100)
+            self.db.update(build, 100, 'SUCCESS')
+        self.assertEqual(self.db.getEstimatedTime(build), 100)
 
 
 class TestGraph(BaseTestCase):
