@@ -37,6 +37,7 @@ import jenkins_jobs.formatter
 import jenkins_jobs.parser
 import yaml
 
+SUFFIXES = []  # type: ignore
 DESCRIPTION = """Migrate zuul v2 and Jenkins Job Builder to Zuul v3.
 
 This program takes a zuul v2 layout.yaml and a collection of Jenkins Job
@@ -307,14 +308,12 @@ class Job:
         if not self.name:
             self.name = self.orig
         self.name = self.name.replace('-{name}', '').replace('{name}-', '')
-        if self.orig.endswith('-nv'):
-            self.voting = False
-        if self.name.endswith('-nv'):
-            # NOTE(mordred) This MIGHT not be safe - it's possible, although
-            # silly, for someone to have -nv and normal versions of the same
-            # job in the same pipeline. Let's deal with that if we find it
-            # though.
-            self.name = self.name.replace('-nv', '')
+
+        for suffix in SUFFIXES:
+            suffix = '-{suffix}'.format(suffix=suffix)
+
+            if self.name.endswith(suffix):
+                self.name = self.name.replace(suffix, '')
 
     def _stripNodeName(self, node):
         node_key = '-{node}'.format(node=node)
@@ -350,7 +349,7 @@ class Job:
     def getNodes(self):
         return self.nodes
 
-    def toDict(self):
+    def toPipelineDict(self):
         if self.content:
             output = self.content
         else:
@@ -403,6 +402,8 @@ class JobMapping:
         else:
             mapping_data = ordered_load(open(mapping_file, 'r'))
             self.default_node = mapping_data['default-node']
+            global SUFFIXES
+            SUFFIXES = mapping_data.get('strip-suffixes', [])
             for map_info in mapping_data.get('job-mapping', []):
                 if map_info['old'].startswith('^'):
                     map_info['pattern'] = re.compile(map_info['old'])
@@ -702,7 +703,7 @@ class ZuulMigrate:
             # job name to new job name when expanding templates into projects.
             tmp = [job for job in self.makeNewJobs(value)]
             self.job_objects.extend(tmp)
-            jobs = [job.toDict() for job in tmp]
+            jobs = [job.toPipelineDict() for job in tmp]
             new_template[key] = dict(jobs=jobs)
 
         return new_template
@@ -868,7 +869,7 @@ class ZuulMigrate:
                         new_project[key]['queue'] = queue.name
                 tmp = [job for job in self.makeNewJobs(value)]
                 self.job_objects.extend(tmp)
-                jobs = [job.toDict() for job in tmp]
+                jobs = [job.toPipelineDict() for job in tmp]
                 new_project[key]['jobs'] = jobs
 
         for name in templates_to_expand:
