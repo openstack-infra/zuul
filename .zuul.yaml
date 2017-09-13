@@ -57,6 +57,7 @@
         - tox-docs
         - tox-pep8
         - tox-py35
+        - zuul-stream-functional
     post:
       jobs:
         - publish-openstack-python-docs-infra:
