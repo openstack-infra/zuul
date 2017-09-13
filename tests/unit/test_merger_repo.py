@@ -65,12 +65,12 @@ class TestMergerRepo(ZuulTestCase):
             os.path.join(self.workspace_root, 'subdir', '.git')),
             msg='Cloned over the submodule placeholder')
 
-        self.assertEquals(
+        self.assertEqual(
             os.path.join(self.upstream_root, 'org/project1'),
             work_repo.createRepoObject().remotes[0].url,
             message="Parent clone still point to upstream project1")
 
-        self.assertEquals(
+        self.assertEqual(
             os.path.join(self.upstream_root, 'org/project2'),
             sub_repo.createRepoObject().remotes[0].url,
             message="Sub repository points to upstream project2")

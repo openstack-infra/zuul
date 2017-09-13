@@ -35,17 +35,17 @@ class TestExecutorRepos(ZuulTestCase):
                              'Project %s commit for build %s #%s should '
                              'not have a detached HEAD' % (
                                  project, build, number))
-            self.assertEquals(repo.active_branch.name,
-                              state['branch'],
-                              'Project %s commit for build %s #%s should '
-                              'be on the correct branch' % (
-                                  project, build, number))
+            self.assertEqual(repo.active_branch.name,
+                             state['branch'],
+                             'Project %s commit for build %s #%s should '
+                             'be on the correct branch' % (
+                                 project, build, number))
         if 'commit' in state:
-            self.assertEquals(state['commit'],
-                              str(repo.commit('HEAD')),
-                              'Project %s commit for build %s #%s should '
-                              'be correct' % (
-                                  project, build, number))
+            self.assertEqual(state['commit'],
+                             str(repo.commit('HEAD')),
+                             'Project %s commit for build %s #%s should '
+                             'be correct' % (
+                                 project, build, number))
         ref = repo.commit('HEAD')
         repo_messages = set(
             [c.message.strip() for c in repo.iter_commits(ref)])
@@ -93,7 +93,7 @@ class TestExecutorRepos(ZuulTestCase):
 
         self.waitUntilSettled()
 
-        self.assertEquals(2, len(self.builds), "Two builds are running")
+        self.assertEqual(2, len(self.builds), "Two builds are running")
 
         upstream = self.getUpstreamRepos(projects)
         states = [
@@ -133,7 +133,7 @@ class TestExecutorRepos(ZuulTestCase):
 
         self.waitUntilSettled()
 
-        self.assertEquals(3, len(self.builds), "Three builds are running")
+        self.assertEqual(3, len(self.builds), "Three builds are running")
 
         upstream = self.getUpstreamRepos(projects)
         states = [
@@ -194,7 +194,7 @@ class TestExecutorRepos(ZuulTestCase):
 
         self.waitUntilSettled()
 
-        self.assertEquals(4, len(self.builds), "Four builds are running")
+        self.assertEqual(4, len(self.builds), "Four builds are running")
 
         upstream = self.getUpstreamRepos(projects)
         states = [
@@ -283,7 +283,7 @@ class TestExecutorRepos(ZuulTestCase):
         time.sleep(1)
         self.waitUntilSettled()
 
-        self.assertEquals(1, len(self.builds), "One build is running")
+        self.assertEqual(1, len(self.builds), "One build is running")
 
         upstream = self.getUpstreamRepos(projects)
         states = [
@@ -326,7 +326,7 @@ class TestExecutorRepos(ZuulTestCase):
         time.sleep(1)
         self.waitUntilSettled()
 
-        self.assertEquals(2, len(self.builds), "Two builds are running")
+        self.assertEqual(2, len(self.builds), "Two builds are running")
 
         upstream = self.getUpstreamRepos(projects)
         states = [

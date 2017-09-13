@@ -63,11 +63,11 @@ class TestGerrit(BaseTestCase):
         result = gerrit.simpleQuery('project:openstack-infra/zuul')
 
         _ssh_mock.assert_has_calls(calls)
-        self.assertEquals(len(calls), _ssh_mock.call_count,
-                          '_ssh should be called %d times' % len(calls))
+        self.assertEqual(len(calls), _ssh_mock.call_count,
+                         '_ssh should be called %d times' % len(calls))
         self.assertIsNotNone(result, 'Result is not none')
-        self.assertEquals(len(result), expected_patches,
-                          'There must be %d patches.' % expected_patches)
+        self.assertEqual(len(result), expected_patches,
+                         'There must be %d patches.' % expected_patches)
 
     def test_simple_query_pagination_new(self):
         files = ['simple_query_pagination_new_1',
