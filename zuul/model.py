@@ -2668,20 +2668,30 @@ class JobTimeData(object):
 class TimeDataBase(object):
     def __init__(self, root):
         self.root = root
-        self.jobs = {}
 
-    def _getTD(self, name):
-        td = self.jobs.get(name)
-        if not td:
-            td = JobTimeData(os.path.join(self.root, name))
-            self.jobs[name] = td
-            td.load()
+    def _getTD(self, build):
+        if hasattr(build.build_set.item.change, 'branch'):
+            branch = build.build_set.item.change.branch
+        else:
+            branch = ''
+
+        dir_path = os.path.join(
+            self.root,
+            build.build_set.item.pipeline.layout.tenant.name,
+            build.build_set.item.change.project.canonical_name,
+            branch)
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        path = os.path.join(dir_path, build.job.name)
+
+        td = JobTimeData(path)
+        td.load()
         return td
 
     def getEstimatedTime(self, name):
         return self._getTD(name).getEstimatedTime()
 
-    def update(self, name, elapsed, result):
-        td = self._getTD(name)
+    def update(self, build, elapsed, result):
+        td = self._getTD(build)
         td.add(elapsed, result)
         td.save()
