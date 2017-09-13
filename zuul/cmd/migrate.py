@@ -34,9 +34,11 @@ from typing import Any, Dict, List, Optional  # flake8: noqa
 import jenkins_jobs.builder
 from jenkins_jobs.formatter import deep_format
 import jenkins_jobs.formatter
+from jenkins_jobs.parser import matches
 import jenkins_jobs.parser
 import yaml
 
+JOBS_BY_ORIG_TEMPLATE = {}  # type: ignore
 SUFFIXES = []  # type: ignore
 DESCRIPTION = """Migrate zuul v2 and Jenkins Job Builder to Zuul v3.
 
@@ -135,7 +137,7 @@ def has_single_key(var):
     dict_keys = list(var.keys())
     if len(dict_keys) != 1:
         return False
-    if var[get_single_key(from_dict)]:
+    if var[get_single_key(var)]:
         return False
     return True
 
@@ -215,9 +217,16 @@ def expandYamlForTemplateJob(self, project, template, jobs_glob=None):
                 params[key] = template[key]
 
         params['template-name'] = template_name
+        project_name = params['name']
+        params['name'] = '$ZUUL_SHORT_PROJECT_NAME'
         expanded = deep_format(template, params, allow_empty_variables)
 
         job_name = expanded.get('name')
+        templated_job_name = job_name
+        if job_name:
+            job_name = job_name.replace(
+                '$ZUUL_SHORT_PROJECT_NAME', project_name)
+            expanded['name'] = job_name
         if jobs_glob and not matches(job_name, jobs_glob):
             continue
 
@@ -225,7 +234,7 @@ def expandYamlForTemplateJob(self, project, template, jobs_glob=None):
         expanded['orig_template'] = orig_template
         expanded['template_name'] = template_name
         self.jobs.append(expanded)
-
+        JOBS_BY_ORIG_TEMPLATE[templated_job_name] = expanded
 
 jenkins_jobs.parser.YamlParser.expandYamlForTemplateJob = expandYamlForTemplateJob
 
@@ -302,6 +311,7 @@ class Job:
         self.parent = parent
         self.branch = None
         self.files = None
+        self.jjb_job = None
 
         if self.content and not self.name:
             self.name = get_single_key(content)
@@ -349,6 +359,42 @@ class Job:
     def getNodes(self):
         return self.nodes
 
+    def addJJBJob(self, jobs):
+        if '{name}' in self.orig:
+            self.jjb_job = JOBS_BY_ORIG_TEMPLATE[self.orig.format(
+                name='$ZUUL_SHORT_PROJECT_NAME')]
+        else:
+            self.jjb_job = jobs[self.orig]
+
+    def getTimeout(self):
+        if self.jjb_job:
+            for wrapper in self.jjb_job.get('wrappers', []):
+                if isinstance(wrapper, dict):
+                    build_timeout = wrapper.get('timeout')
+                    if isinstance(build_timeout, dict):
+                        timeout = build_timeout.get('timeout')
+                        if timeout is not None:
+                            timeout = int(timeout) * 60
+
+    def toJobDict(self):
+        output = collections.OrderedDict()
+        output['name'] = self.name
+
+        if self.vars:
+            output['vars'] = self.vars.copy()
+        timeout = self.getTimeout()
+        if timeout:
+            output['timeout'] = timeout
+            output['vars']['BUILD_TIMEOUT'] = str(timeout * 1000)
+
+        if self.nodes:
+            output['nodes'] = self.getNodes()
+
+        if self.required_projects:
+            output['required-projects'] = self.required_projects
+
+        return output
+
     def toPipelineDict(self):
         if self.content:
             output = self.content
@@ -361,9 +407,6 @@ class Job:
 
         if not self.voting:
             output[self.name].setdefault('voting', False)
-
-        if self.nodes:
-            output[self.name].setdefault('nodes', self.getNodes())
 
         if self.required_projects:
             output[self.name].setdefault(
@@ -394,6 +437,8 @@ class JobMapping:
         self.labels = []
         self.job_mapping = []
         self.template_mapping = {}
+        self.jjb_jobs = {}
+        self.seen_new_jobs = []
         nodepool_data = ordered_load(open(nodepool_config, 'r'))
         for label in nodepool_data['labels']:
             self.labels.append(label['name'])
@@ -419,6 +464,9 @@ class JobMapping:
 
     def hasProjectTemplate(self, old_name):
         return old_name in self.template_mapping
+
+    def setJJBJobs(self, jjb_jobs):
+        self.jjb_jobs = jjb_jobs
 
     def getNewTemplateName(self, old_name):
         return self.template_mapping.get(old_name, old_name)
@@ -460,12 +508,16 @@ class JobMapping:
             if isinstance(self.job_direct[job_name], dict):
                 return Job(job_name, content=self.job_direct[job_name])
             else:
+                if job_name not in self.seen_new_jobs:
+                    self.seen_new_jobs.append(self.job_direct[job_name])
                 return Job(job_name, name=self.job_direct[job_name])
 
         new_job = None
         for map_info in self.job_mapping:
             new_job = self.mapNewJob(job_name, map_info)
             if new_job:
+                if job_name not in self.seen_new_jobs:
+                    self.seen_new_jobs.append(new_job.name)
                 break
         if not new_job:
             orig_name = job_name
@@ -489,6 +541,7 @@ class JobMapping:
                 if layout_job.get('files'):
                     new_job.files = layout_job['files']
 
+        new_job.addJJBJob(self.jjb_jobs)
         return new_job
 
 class ChangeQueue:
@@ -564,6 +617,7 @@ class ZuulMigrate:
             unseen.discard(job['name'])
         for name in unseen:
             del self.jobs[name]
+        self.mapping.setJJBJobs(self.jobs)
 
     def getOldJob(self, name):
         if name not in self.old_jobs:
@@ -896,6 +950,13 @@ class ZuulMigrate:
         for project in self.layout.get('projects', []):
             config.append(
                 {'project': self.writeProject(project)})
+
+        seen_jobs = []
+        for job in self.job_objects:
+            if (job.name not in seen_jobs
+                    and job.name not in self.mapping.seen_new_jobs):
+                config.append({'job': job.toJobDict()})
+                seen_jobs.append(job.name)
 
         with open(outfile, 'w') as yamlout:
             # Insert an extra space between top-level list items
