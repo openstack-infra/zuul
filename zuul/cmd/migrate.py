@@ -300,6 +300,7 @@ class Job:
         self.nodes = nodes or []
         self.parent = parent
         self.branch = None
+        self.files = None
 
         if self.content and not self.name:
             self.name = get_single_key(content)
@@ -375,6 +376,9 @@ class Job:
 
         if self.branch:
             output[self.name]['branch'] = self.branch
+
+        if self.files:
+            output[self.name]['files'] = self.files
 
         if not output[self.name]:
             return self.name
@@ -481,6 +485,8 @@ class JobMapping:
                     new_job.voting = False
                 if layout_job.get('branch'):
                     new_job.branch = layout_job['branch']
+                if layout_job.get('files'):
+                    new_job.files = layout_job['files']
 
         return new_job
 
