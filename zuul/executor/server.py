@@ -567,6 +567,7 @@ class ExecutorServer(object):
         self.action_dir = os.path.join(plugin_dir, 'action')
         self.callback_dir = os.path.join(plugin_dir, 'callback')
         self.lookup_dir = os.path.join(plugin_dir, 'lookup')
+        self.filter_dir = os.path.join(plugin_dir, 'filter')
 
         _copy_ansible_files(zuul.ansible, plugin_dir)
 
@@ -1446,6 +1447,8 @@ class AnsibleJob(object):
             config.write('command_warnings = False\n')
             config.write('callback_plugins = %s\n' % callback_path)
             config.write('stdout_callback = zuul_stream\n')
+            config.write('filter_plugins = %s\n'
+                         % self.executor_server.filter_dir)
             # bump the timeout because busy nodes may take more than
             # 10s to respond
             config.write('timeout = 30\n')

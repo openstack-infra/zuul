@@ -24,6 +24,12 @@
           - zuul.project.canonical_name == 'review.example.com/org/project'
           - zuul.project.src_dir == 'src/review.example.com/org/project'
 
+    - name: Assert legacy zuul vars are valid
+      assert:
+        that:
+          - zuul.project.name == '{{ (zuul | zuul_legacy_vars).ZUUL_PROJECT }}'
+          - zuul.branch == '{{ (zuul | zuul_legacy_vars).ZUUL_BRANCH }}'
+
     - debug:
         msg: "vartest secret {{ vartest_secret }}"
 
