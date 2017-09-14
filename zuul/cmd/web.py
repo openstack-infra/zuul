@@ -23,6 +23,7 @@ import zuul.cmd
 import zuul.web
 
 from zuul.driver.sql import sqlconnection
+from zuul.driver.github import githubconnection
 from zuul.lib.config import get_default
 
 
@@ -72,6 +73,11 @@ class WebServer(zuul.cmd.ZuulDaemonApp):
                 # use this sql connection by default
                 sql_conn = connections[0]
         params['sql_connection'] = sql_conn
+
+        params['github_connections'] = {}
+        for conn_name, connection in self.connections.connections.items():
+            if isinstance(connection, githubconnection.GithubConnection):
+                params['github_connections'][conn_name] = connection
 
         try:
             self.web = zuul.web.ZuulWeb(**params)

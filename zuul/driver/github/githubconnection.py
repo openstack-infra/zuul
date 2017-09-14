@@ -21,6 +21,8 @@ import queue
 import threading
 import time
 import re
+import json
+import traceback
 
 import cachecontrol
 from cachecontrol.cache import DictCache
@@ -28,13 +30,14 @@ from cachecontrol.heuristics import BaseHeuristic
 import iso8601
 import jwt
 import requests
-import webob
-import webob.dec
 import voluptuous as v
 import github3
 import github3.exceptions
 
+import gear
+
 from zuul.connection import BaseConnection
+from zuul.lib.config import get_default
 from zuul.model import Ref, Branch, Tag, Project
 from zuul.exceptions import MergeFailure
 from zuul.driver.github.githubmodel import PullRequest, GithubTriggerEvent
@@ -65,71 +68,101 @@ class UTC(datetime.tzinfo):
 utc = UTC()
 
 
-class GithubWebhookListener():
-
-    log = logging.getLogger("zuul.GithubWebhookListener")
+class GithubGearmanWorker(object):
+    """A thread that answers gearman requests"""
+    log = logging.getLogger("zuul.GithubGearmanWorker")
 
     def __init__(self, connection):
+        self.config = connection.sched.config
         self.connection = connection
+        self.thread = threading.Thread(target=self._run,
+                                       name='github-gearman-worker')
+        self._running = False
+        handler = "github:%s:payload" % self.connection.connection_name
+        self.jobs = {
+            handler: self.handle_payload,
+        }
 
-    def handle_request(self, path, tenant_name, request):
-        if request.method != 'POST':
-            self.log.debug("Only POST method is allowed.")
-            raise webob.exc.HTTPMethodNotAllowed(
-                'Only POST method is allowed.')
+    def _run(self):
+        while self._running:
+            try:
+                job = self.gearman.getJob()
+                try:
+                    if job.name not in self.jobs:
+                        self.log.exception("Exception while running job")
+                        job.sendWorkException(
+                            traceback.format_exc().encode('utf8'))
+                        continue
+                    output = self.jobs[job.name](json.loads(job.arguments))
+                    job.sendWorkComplete(json.dumps(output))
+                except Exception:
+                    self.log.exception("Exception while running job")
+                    job.sendWorkException(
+                        traceback.format_exc().encode('utf8'))
+            except gear.InterruptedError:
+                pass
+            except Exception:
+                self.log.exception("Exception while getting job")
 
-        delivery = request.headers.get('X-GitHub-Delivery')
+    def handle_payload(self, args):
+        headers = args.get("headers")
+        body = args.get("body")
+
+        delivery = headers.get('X-GitHub-Delivery')
         self.log.debug("Github Webhook Received: {delivery}".format(
             delivery=delivery))
 
-        self._validate_signature(request)
         # TODO(jlk): Validate project in the request is a project we know
 
         try:
-            self.__dispatch_event(request)
+            self.__dispatch_event(body, headers)
+            output = {'return_code': 200}
         except Exception:
+            output = {'return_code': 503}
             self.log.exception("Exception handling Github event:")
 
-    def __dispatch_event(self, request):
+        return output
+
+    def __dispatch_event(self, body, headers):
         try:
-            event = request.headers['X-Github-Event']
+            event = headers['x-github-event']
             self.log.debug("X-Github-Event: " + event)
         except KeyError:
             self.log.debug("Request headers missing the X-Github-Event.")
-            raise webob.exc.HTTPBadRequest('Please specify a X-Github-Event '
-                                           'header.')
+            raise Exception('Please specify a X-Github-Event header.')
 
         try:
-            json_body = request.json_body
-            self.connection.addEvent(json_body, event)
+            self.connection.addEvent(body, event)
         except Exception:
             message = 'Exception deserializing JSON body'
             self.log.exception(message)
-            raise webob.exc.HTTPBadRequest(message)
+            # TODO(jlk): Raise this as something different?
+            raise Exception(message)
 
-    def _validate_signature(self, request):
-        secret = self.connection.connection_config.get('webhook_token', None)
-        if secret is None:
-            raise RuntimeError("webhook_token is required")
+    def start(self):
+        self._running = True
+        server = self.config.get('gearman', 'server')
+        port = get_default(self.config, 'gearman', 'port', 4730)
+        ssl_key = get_default(self.config, 'gearman', 'ssl_key')
+        ssl_cert = get_default(self.config, 'gearman', 'ssl_cert')
+        ssl_ca = get_default(self.config, 'gearman', 'ssl_ca')
+        self.gearman = gear.TextWorker('Zuul Github Connector')
+        self.log.debug("Connect to gearman")
+        self.gearman.addServer(server, port, ssl_key, ssl_cert, ssl_ca)
+        self.log.debug("Waiting for server")
+        self.gearman.waitForServer()
+        self.log.debug("Registering")
+        for job in self.jobs:
+            self.gearman.registerFunction(job)
+        self.thread.start()
 
-        body = request.body
-        try:
-            request_signature = request.headers['X-Hub-Signature']
-        except KeyError:
-            raise webob.exc.HTTPUnauthorized(
-                'Please specify a X-Hub-Signature header with secret.')
-
-        payload_signature = _sign_request(body, secret)
-
-        self.log.debug("Payload Signature: {0}".format(str(payload_signature)))
-        self.log.debug("Request Signature: {0}".format(str(request_signature)))
-        if not hmac.compare_digest(
-            str(payload_signature), str(request_signature)):
-            raise webob.exc.HTTPUnauthorized(
-                'Request signature does not match calculated payload '
-                'signature. Check that secret is correct.')
-
-        return True
+    def stop(self):
+        self._running = False
+        self.gearman.stopWaitingForJobs()
+        # We join here to avoid whitelisting the thread -- if it takes more
+        # than 5s to stop in tests, there's a problem.
+        self.thread.join(timeout=5)
+        self.gearman.shutdown()
 
 
 class GithubEventConnector(threading.Thread):
@@ -456,15 +489,18 @@ class GithubConnection(BaseConnection):
             re.MULTILINE | re.IGNORECASE)
 
     def onLoad(self):
-        webhook_listener = GithubWebhookListener(self)
-        self.registerHttpHandler(self.payload_path,
-                                 webhook_listener.handle_request)
+        self.log.info('Starting GitHub connection: %s' % self.connection_name)
+        self.gearman_worker = GithubGearmanWorker(self)
+        self.log.info('Authing to GitHub')
         self._authenticateGithubAPI()
         self._prime_installation_map()
+        self.log.info('Starting event connector')
         self._start_event_connector()
+        self.log.info('Starting GearmanWorker')
+        self.gearman_worker.start()
 
     def onStop(self):
-        self.unregisterHttpHandler(self.payload_path)
+        self.gearman_worker.stop()
         self._stop_event_connector()
 
     def _start_event_connector(self):
