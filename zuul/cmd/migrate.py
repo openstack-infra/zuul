@@ -293,6 +293,8 @@ class OldJob:
 
 class Job:
 
+    log = logging.getLogger("zuul.Migrate")
+
     def __init__(self,
                  orig: str,
                  name: str=None,
@@ -376,9 +378,215 @@ class Job:
                         if timeout is not None:
                             timeout = int(timeout) * 60
 
-    def toJobDict(self):
+    @property
+    def short_name(self):
+        return self.name.replace('legacy-', '')
+
+    @property
+    def job_path(self):
+        return 'playbooks/legacy/{name}'.format(name=self.short_name)
+
+    def _getRsyncOptions(self, source):
+        # If the source starts with ** then we want to match any
+        # number of directories, so don't anchor the include filter.
+        # If it does not start with **, then the intent is likely to
+        # at least start by matching an immediate file or subdirectory
+        # (even if later we have a ** in the middle), so in this case,
+        # anchor it to the root of the transfer (the workspace).
+        if not source.startswith('**'):
+            source = os.path.join('/', source)
+        # These options mean: include the thing we want, include any
+        # directories (so that we continue to search for the thing we
+        # want no matter how deep it is), exclude anything that
+        # doesn't match the thing we want or is a directory, then get
+        # rid of empty directories left over at the end.
+        rsync_opts = ['--include="%s"' % source,
+                      '--include="*/"',
+                      '--exclude="*"',
+                      '--prune-empty-dirs']
+        return rsync_opts
+
+    def _makeSCPTask(self, publisher):
+        tasks = []
+        artifacts = False
+        site = publisher['scp']['site']
+        for scpfile in publisher['scp']['files']:
+            if 'ZUUL_PROJECT' in scpfile.get('source', ''):
+                self.log.error(
+                    "Job {name} uses ZUUL_PROJECT in source".format(
+                        name=self.name))
+                continue
+
+            if scpfile.get('copy-console'):
+                continue
+            else:
+                rsync_opts = self._getRsyncOptions(scpfile['source'])
+
+            target = scpfile['target']
+            # TODO(mordred) Generalize this next section, it's SUPER
+            # openstack specific. We can likely do this in mapping.yaml
+            if site == 'static.openstack.org':
+                for f in ('service-types', 'specs', 'docs-draft'):
+                    if target.startswith(f):
+                        self.log.error(
+                            "Job {name} uses {f} publishing".format(
+                                name=self.name, f=f))
+                        continue
+                target = target.replace(
+                    'logs/$LOG_PATH', "{{ zuul.executor.work_root }}")
+            elif site == 'tarballs.openstack.org':
+                if not target.startswith('tarballs'):
+                    self.log.error(
+                        'Job {name} wants to publish artifacts to non'
+                        ' tarballs dir'.format(name=self.name))
+                    continue
+                if target.startswith('tarballs/ci'):
+                    target = target.split('/', 3)[-1]
+                else:
+                    target = target.split('/', 2)[-1]
+                target = "{{ zuul.executor.work_root }}/artifacts/" + target
+                artifacts = True
+            elif site == 'yaml2ical':
+                self.log.error('Job {name} uses yaml2ical publisher')
+                continue
+
+            syncargs = collections.OrderedDict(
+                src="{{ ansible_user_dir }}",
+                dest=target,
+                copy_links='yes',
+                verify_host=True,
+                mode='pull')
+            if rsync_opts:
+                syncargs['rsync_opts'] = rsync_opts
+            task = collections.OrderedDict(
+                name='copy files from node',
+                synchronize=syncargs,
+                no_log=True)
+            # We don't use retry_args here because there is a bug in
+            # the synchronize module that breaks subsequent attempts at
+            # retrying. Better to try once and get an accurate error
+            # message if it fails.
+            # https://github.com/ansible/ansible/issues/18281
+            tasks.append(task)
+
+        if artifacts:
+            ensure_task = collections.OrderedDict()
+            ensure_task['name'] = 'Ensure artifacts directory exists'
+            ensure_task['file'] = collections.OrderedDict(
+                path="{{ zuul.executor.work_root }}/artifacts",
+                state='directory')
+            ensure_task['delegate_to'] = 'localhost'
+            tasks.insert(0, ensure_task)
+        return tasks, artifacts
+
+    def _makeBuilderTask(self, playbook_dir, builder, sequence):
+        script_fn = '%s-%02d.sh' % (self.short_name, sequence)
+        script_path = os.path.join(playbook_dir, script_fn)
+        # Don't write a script to echo the template line
+        if builder['shell'].startswith('echo JJB template: '):
+            return
+        with open(script_path, 'w') as script:
+            data = builder['shell']
+            if not data.startswith('#!'):
+                data = '#!/bin/bash -x\n %s' % (data,)
+            script.write(data)
+
+        task = collections.OrderedDict()
+        task['name'] = 'Builder script {seq} translated from {old}'.format(
+                seq=sequence, old=self.orig)
+        task['script'] = script_fn
+        task['environment'] = (
+            '{{ host_vars[inventory_hostname] | zuul_legacy_vars }}')
+        return task
+
+    def _transformPublishers(self, jjb_job):
+        early_publishers = []
+        late_publishers = []
+        old_publishers = jjb_job.get('publishers', [])
+        for publisher in old_publishers:
+            early_scpfiles = []
+            late_scpfiles = []
+            if 'scp' not in publisher:
+                early_publishers.append(publisher)
+                continue
+            copy_console = False
+            for scpfile in publisher['scp']['files']:
+                if scpfile.get('copy-console'):
+                    scpfile['keep-hierarchy'] = True
+                    late_scpfiles.append(scpfile)
+                    copy_console = True
+                else:
+                    early_scpfiles.append(scpfile)
+            publisher['scp']['files'] = early_scpfiles + late_scpfiles
+            if copy_console:
+                late_publishers.append(publisher)
+            else:
+                early_publishers.append(publisher)
+        publishers = early_publishers + late_publishers
+        if old_publishers != publishers:
+            self.log.debug("Transformed job publishers")
+        return early_publishers, late_publishers
+
+    def emitPlaybooks(self, jobsdir):
+        has_artifacts = False
+        if not self.jjb_job:
+            self.log.error(
+                'Job {name} has no job content'.format(name=self.name))
+            return False, False
+
+        playbook_dir = os.path.join(jobsdir, self.job_path)
+        if not os.path.exists(playbook_dir):
+            os.makedirs(playbook_dir)
+
+        run_playbook = os.path.join(self.job_path, 'run.yaml')
+        post_playbook = os.path.join(self.job_path, 'post.yaml')
+        tasks = []
+        sequence = 0
+        tasks.append(collections.OrderedDict(
+            debug=collections.OrderedDict(
+                msg='Autoconverted job {name} from old job {old}'.format(
+                    name=self.name, old=self.orig))))
+        for builder in self.jjb_job.get('builders', []):
+            if 'shell' in builder:
+                task = self._makeBuilderTask(playbook_dir, builder, sequence)
+                if task:
+                    sequence += 1
+                    tasks.append(task)
+        play = collections.OrderedDict(
+            hosts='all',
+            tasks=tasks)
+        with open(run_playbook, 'w') as run_playbook_out:
+            ordered_dump([play], run_playbook_out)
+
+        has_post = False
+        tasks = []
+        early_publishers, late_publishers = self._transformPublishers(
+            self.jjb_job)
+        for publishers in [early_publishers, late_publishers]:
+            for publisher in publishers:
+                if 'scp' in publisher:
+                    task, artifacts = self._makeSCPTask(publisher)
+                    if artifacts:
+                        has_artifacts = True
+                    tasks.extend(task)
+                if 'afs' in builder:
+                    self.log.error(
+                        "Job {name} uses AFS publisher".format(name=self.name))
+        if tasks:
+            has_post = True
+            play = collections.OrderedDict(hosts='all', tasks=tasks)
+            with open(post_playbook, 'w') as post_playbook_out:
+                ordered_dump([play], post_playbook_out)
+        return has_artifacts, has_post
+
+    def toJobDict(self, has_artifacts=True, has_post=True):
         output = collections.OrderedDict()
         output['name'] = self.name
+        if has_artifacts:
+            output['parent'] = 'publish-openstack-artifacts'
+        output['run'] = os.path.join(self.job_path, 'run.yaml')
+        if has_post:
+            output['post-run'] = os.path.join(self.job_path, 'post.yaml')
 
         if self.vars:
             output['vars'] = self.vars.copy()
@@ -957,7 +1165,9 @@ class ZuulMigrate:
         for job in self.job_objects:
             if (job.name not in seen_jobs
                     and job.name not in self.mapping.seen_new_jobs):
-                job_config.append({'job': job.toJobDict()})
+                has_artifacts, has_post = job.emitPlaybooks(self.outdir)
+                job_config.append({'job': job.toJobDict(
+                    has_artifacts, has_post)})
                 seen_jobs.append(job.name)
 
         with open(job_outfile, 'w') as yamlout:

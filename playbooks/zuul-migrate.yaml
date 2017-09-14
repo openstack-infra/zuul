@@ -9,10 +9,18 @@
       args:
         chdir: src/git.openstack.org/openstack-infra/project-config
 
-    - name: Collect generated files
+    - name: Collect generated job config
       synchronize:
         dest: "{{ zuul.executor.log_root }}"
         mode: pull
         src: "src/git.openstack.org/openstack-infra/project-config/zuul.d"
+        verify_host: true
+      no_log: true
+
+    - name: Collect generated playbooks
+      synchronize:
+        dest: "{{ zuul.executor.log_root }}"
+        mode: pull
+        src: "src/git.openstack.org/openstack-infra/project-config/playbooks"
         verify_host: true
       no_log: true
