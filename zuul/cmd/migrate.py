@@ -110,8 +110,13 @@ def ordered_load(stream, *args, **kwargs):
     return yaml.load(stream=stream, *args, **kwargs)
 
 def ordered_dump(data, stream=None, *args, **kwargs):
+    dumper = IndentedDumper
+    # We need to do this because of how template expasion into a project
+    # works. Without it, we end up with YAML references to the expanded jobs.
+    dumper.ignore_aliases = lambda self, data: True
+
     return yaml.dump(data, stream=stream, default_flow_style=False,
-                     Dumper=IndentedDumper, width=80, *args, **kwargs)
+                     Dumper=dumper, width=80, *args, **kwargs)
 
 def get_single_key(var):
     if isinstance(var, str):
@@ -469,6 +474,9 @@ class JobMapping:
         # Handle matchers
         for layout_job in self.layout.get('jobs', []):
             if re.search(layout_job['name'], new_job.orig):
+                # Matchers that can apply to templates must be processed first
+                # since project-specific matchers can cause the template to
+                # be expanded into a project.
                 if not layout_job.get('voting', True):
                     new_job.voting = False
                 if layout_job.get('branch'):
@@ -528,6 +536,8 @@ class ZuulMigrate:
 
         self.jobs = {}
         self.old_jobs = {}
+        self.job_objects = []
+        self.new_templates = {}
 
     def run(self):
         self.loadJobs()
@@ -681,20 +691,163 @@ class ZuulMigrate:
         for key, value in template.items():
             if key == 'name':
                 continue
-            jobs = [job.toDict() for job in self.makeNewJobs(value)]
+
+            # keep a cache of the Job objects so we can use it to get old
+            # job name to new job name when expanding templates into projects.
+            tmp = [job for job in self.makeNewJobs(value)]
+            self.job_objects.extend(tmp)
+            jobs = [job.toDict() for job in tmp]
             new_template[key] = dict(jobs=jobs)
 
         return new_template
 
+    def scanForProjectMatchers(self, project_name):
+        ''' Get list of job matchers that reference the given project name '''
+        job_matchers = []
+        for matcher in self.layout.get('jobs', []):
+            for skipper in matcher.get('skip-if', []):
+                if skipper.get('project'):
+                    if re.search(skipper['project'], project_name):
+                        job_matchers.append(matcher)
+        return job_matchers
+
+    def findReferencedTemplateNames(self, job_matchers, project_name):
+        ''' Search templates in the layout file for matching jobs '''
+        template_names = []
+
+        def search_jobs(template):
+            def _search(job):
+                if isinstance(job, str):
+                    for matcher in job_matchers:
+                        if re.search(matcher['name'],
+                                     job.format(name=project_name)):
+                            template_names.append(template['name'])
+                            return True
+                elif isinstance(job, list):
+                    for i in job:
+                        if _search(i):
+                            return True
+                elif isinstance(job, dict):
+                    for k, v in job.items():
+                        if _search(k) or _search(v):
+                            return True
+                return False
+
+            for key, value in template.items():
+                if key == 'name':
+                    continue
+                for job in template[key]:
+                    if _search(job):
+                        return
+
+        for template in self.layout.get('project-templates', []):
+            search_jobs(template)
+        return template_names
+
+    def expandTemplateIntoProject(self, template_name, project):
+        self.log.debug("EXPAND template %s into project %s",
+                       template_name, project['name'])
+        # find the new template since that's the thing we're expanding
+        if template_name not in self.new_templates:
+            self.log.error(
+                "Template %s not found for expansion into project %s",
+                template_name, project['name'])
+            return
+
+        template = self.new_templates[template_name]
+
+        for pipeline, value in template.items():
+            if pipeline == 'name':
+                continue
+            if pipeline not in project:
+                project[pipeline] = dict(jobs=[])
+            project[pipeline]['jobs'].extend(value['jobs'])
+
+    def getOldJobName(self, new_job_name):
+        for job in self.job_objects:
+            if job.name == new_job_name:
+                return job.orig
+        return None
+
+    def applyProjectMatchers(self, matchers, project):
+        '''
+        Apply per-project job matchers to the given project.
+
+        :param matchers: Job matchers that referenced the given project.
+        :param project: The new project object.
+        '''
+
+        def processPipeline(pipeline_jobs, job_name_regex, files):
+            for job in pipeline_jobs:
+                if isinstance(job, str):
+                    old_job_name = self.getOldJobName(job)
+                    if not old_job_name:
+                        continue
+                    if re.search(job_name_regex, old_job_name):
+                        self.log.debug(
+                            "Applied irrelevant-files to job %s in project %s",
+                            job, project['name'])
+                        job = dict(job={'irrelevant-files': files})
+                elif isinstance(job, dict):
+                    # should really only be one key (job name)
+                    job_name = list(job.keys())[0]
+                    extras = job[job_name]
+                    old_job_name = self.getOldJobName(job_name)
+                    if not old_job_name:
+                        continue
+                    if re.search(job_name_regex, old_job_name):
+                        self.log.debug(
+                            "Applied irrelevant-files to complex job "
+                            "%s in project %s", job_name, project['name'])
+                        if 'irrelevant-files' not in extras:
+                            extras['irrelevant-files'] = []
+                        extras['irrelevant-files'].extend(files)
+
+        def applyIrrelevantFiles(job_name_regex, files):
+            for k, v in project.items():
+                if k in ('template', 'name'):
+                    continue
+                processPipeline(project[k]['jobs'], job_name_regex, files)
+            
+        for matcher in matchers:
+            # find the project-specific section
+            for skipper in matcher.get('skip-if', []):
+                if skipper.get('project'):
+                    if re.search(skipper['project'], project['name']):
+                       if 'all-files-match-any' in skipper:
+                           applyIrrelevantFiles(matcher['name'],
+                                                skipper['all-files-match-any'])
+
     def writeProject(self, project):
+        '''
+        Create a new v3 project definition.
+
+        As part of creating the project, scan for project-specific job matchers
+        referencing this project and remove the templates matching the job
+        regex for that matcher. Expand the matched template(s) into the project
+        so we can apply the project-specific matcher to the job(s).
+        '''
         new_project = collections.OrderedDict()
         if 'name' in project:
             new_project['name'] = project['name']
+
+        job_matchers = self.scanForProjectMatchers(project['name'])
+        if job_matchers:
+            exp_template_names = self.findReferencedTemplateNames(
+                job_matchers, project['name'])
+        else:
+            exp_template_names = []
+
+        templates_to_expand = []
         if 'template' in project:
             new_project['template'] = []
             for template in project['template']:
+                if template['name'] in exp_template_names:
+                    templates_to_expand.append(template['name'])
+                    continue
                 new_project['template'].append(dict(
                     name=self.mapping.getNewTemplateName(template['name'])))
+
         for key, value in project.items():
             if key in ('name', 'template'):
                 continue
@@ -707,8 +860,18 @@ class ZuulMigrate:
                         if len(queue.getProjects()) == 1:
                             continue
                         new_project[key]['queue'] = queue.name
-                jobs = [job.toDict() for job in self.makeNewJobs(value)]
+                tmp = [job for job in self.makeNewJobs(value)]
+                self.job_objects.extend(tmp)
+                jobs = [job.toDict() for job in tmp]
                 new_project[key]['jobs'] = jobs
+
+        for name in templates_to_expand:
+            self.expandTemplateIntoProject(name, new_project)
+
+        # Need a deep copy after expansion, else our templates end up
+        # also getting this change.
+        new_project = copy.deepcopy(new_project)
+        self.applyProjectMatchers(job_matchers, new_project)
 
         return new_project
 
@@ -719,8 +882,9 @@ class ZuulMigrate:
         for template in self.layout.get('project-templates', []):
             self.log.debug("Processing template: %s", template)
             if not self.mapping.hasProjectTemplate(template['name']):
-                config.append(
-                    {'project-template': self.writeProjectTemplate(template)})
+                new_template = self.writeProjectTemplate(template)
+                self.new_templates[new_template['name']] = new_template
+                config.append({'project-template': new_template})
 
         for project in self.layout.get('projects', []):
             config.append(
