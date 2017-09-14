@@ -40,7 +40,7 @@ class ActionModule(normal.ActionModule):
                 or self._play_context.remote_addr.startswith('127.')
                 or self._task.delegate_to == 'localhost'
                 or (self._task.delegate_to
-                    and self._task.delegate_to.startswtih('127.'))):
+                    and self._task.delegate_to.startswith('127.'))):
             if not self.dispatch_handler():
                 raise AnsibleError("Executing local code is prohibited")
         return super(ActionModule, self).run(tmp, task_vars)
