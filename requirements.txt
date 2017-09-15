@@ -17,6 +17,7 @@ apscheduler>=3.0
 PrettyTable>=0.6,<0.8
 babel>=1.0
 ansible>=2.3.0.0,<2.4
+netaddr
 kazoo
 sqlalchemy
 alembic
