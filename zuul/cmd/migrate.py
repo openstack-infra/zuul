@@ -574,7 +574,9 @@ class Job:
                         "Job {name} uses AFS publisher".format(name=self.name))
         if tasks:
             has_post = True
-            play = collections.OrderedDict(hosts='all', tasks=tasks)
+            play = collections.OrderedDict()
+            play['hosts'] = 'all'
+            play['tasks'] = tasks
             with open(post_playbook, 'w') as post_playbook_out:
                 ordered_dump([play], post_playbook_out)
         return has_artifacts, has_post
