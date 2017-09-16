@@ -193,9 +193,9 @@ class GearmanHandler(object):
         return web.json_response(json.loads(job.data[0]))
 
     def key_get(self, request):
-        source = request.match_info["source"]
+        tenant = request.match_info["tenant"]
         project = request.match_info["project"]
-        job = self.rpc.submitJob('zuul:key_get', {'source': source,
+        job = self.rpc.submitJob('zuul:key_get', {'tenant': tenant,
                                                   'project': project})
         return web.Response(body=job.data[0])
 
@@ -375,7 +375,7 @@ class ZuulWeb(object):
             ('GET', '/{tenant}/status.json', self._handleStatusRequest),
             ('GET', '/{tenant}/jobs.json', self._handleJobsRequest),
             ('GET', '/{tenant}/console-stream', self._handleWebsocket),
-            ('GET', '/{source}/{project}.pub', self._handleKeyRequest),
+            ('GET', '/{tenant}/{project}.pub', self._handleKeyRequest),
             ('GET', '/{tenant}/status.html', self._handleStaticRequest),
             ('GET', '/{tenant}/jobs.html', self._handleStaticRequest),
             ('GET', '/{tenant}/stream.html', self._handleStaticRequest),
