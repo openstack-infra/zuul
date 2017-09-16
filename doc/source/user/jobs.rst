@@ -83,9 +83,12 @@ order of precedence is:
 
 * Job variables
 
+* Parent job results
+
 Meaning that a site-wide variable with the same name as any other will
 override its value, and similarly, secrets override job variables of
-the same name.  Each of the three sources is described below.
+the same name which override data returned from parent jobs.  Each of
+the sources is described below.
 
 
 Job Variables
@@ -475,6 +478,11 @@ not be altered by jobs.  See the :ref:`Administrator's Guide
 <admin_sitewide_variables>` for information on how a site
 administrator may define these variables.
 
+Parent Job Results
+~~~~~~~~~~~~~~~~~~
+
+A job may return data to Zuul for later use by jobs which depend on
+it.  For details, see :ref:`return_values`.
 
 SSH Keys
 --------
@@ -496,9 +504,9 @@ untrusted job content.
 Return Values
 -------------
 
-The job may return some values to Zuul to affect its behavior.  To
-return a value, use the *zuul_return* Ansible module in a job
-playbook.  For example:
+A job may return some values to Zuul to affect its behavior and for
+use by other jobs..  To return a value, use the ``zuul_return``
+Ansible module in a job playbook.  For example:
 
 .. code-block:: yaml
 
@@ -507,12 +515,11 @@ playbook.  For example:
         data:
           foo: bar
 
-Will return the dictionary "{'foo': 'bar'}" to Zuul.
+Will return the dictionary ``{'foo': 'bar'}`` to Zuul.
 
 .. TODO: xref to section describing formatting
 
-Several uses of these values are planned, but the only currently
-implemented use is to set the log URL for a build.  To do so, set the
+To set the log URL for a build, use *zuul_return* to set the
 **zuul.log_url** value.  For example:
 
 .. code-block:: yaml
@@ -522,3 +529,10 @@ implemented use is to set the log URL for a build.  To do so, set the
         data:
           zuul:
             log_url: http://logs.example.com/path/to/build/logs
+
+Any values other than those in the ``zuul`` hierarchy will be supplied
+as Ansible variables to child jobs.  These variables have less
+precedence than any other type of variable in Zuul, so be sure their
+names are not shared by any job variables.  If more than one parent
+job returns the same variable, the value from the later job in the job
+graph will take precedence.

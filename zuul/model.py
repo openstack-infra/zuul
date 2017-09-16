@@ -818,6 +818,7 @@ class Job(object):
             name=None,
             source_context=None,
             inheritance_path=(),
+            parent_data=None,
         )
 
         self.inheritable_attributes = {}
@@ -901,6 +902,21 @@ class Job(object):
     def updateVariables(self, other_vars):
         v = self.variables
         Job._deepUpdate(v, other_vars)
+        self.variables = v
+
+    def updateParentData(self, other_vars):
+        # Update variables, but give the current values priority (used
+        # for job return data which is lower precedence than defined
+        # job vars).
+        v = self.parent_data or {}
+        Job._deepUpdate(v, other_vars)
+        # To avoid running afoul of checks that jobs don't set zuul
+        # variables, remove them from parent data here.
+        if 'zuul' in v:
+            del v['zuul']
+        self.parent_data = v
+        v = copy.deepcopy(self.parent_data)
+        Job._deepUpdate(v, self.variables)
         self.variables = v
 
     def updateProjects(self, other_projects):
@@ -1531,8 +1547,8 @@ class QueueItem(object):
             else:
                 jobs_not_started.add(job)
 
-        # Attempt to request nodes for jobs in the order jobs appear
-        # in configuration.
+        # Attempt to run jobs in the order they appear in
+        # configuration.
         for job in self.job_graph.getJobs():
             if job not in jobs_not_started:
                 continue
@@ -1542,6 +1558,9 @@ class QueueItem(object):
                 if parent_job.name not in successful_job_names:
                     all_parent_jobs_successful = False
                     break
+                parent_build = self.current_build_set.getBuild(parent_job.name)
+                if parent_build.result_data:
+                    job.updateParentData(parent_build.result_data)
             if all_parent_jobs_successful:
                 nodeset = self.current_build_set.getJobNodeSet(job.name)
                 if nodeset is None:

@@ -1,0 +1,7 @@
+- hosts: localhost
+  tasks:
+    - name: Assert returned variables are valid
+      assert:
+        that:
+          - child.value1 == 'data-return-relative'
+          - child.value2 == 'data-return'
