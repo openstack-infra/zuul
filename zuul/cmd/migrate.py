@@ -314,6 +314,7 @@ class Job:
         self.branch = None
         self.files = None
         self.jjb_job = None
+        self.emit = True
 
         if self.content and not self.name:
             self.name = get_single_key(content)
@@ -330,6 +331,9 @@ class Job:
     def _stripNodeName(self, node):
         node_key = '-{node}'.format(node=node)
         self.name = self.name.replace(node_key, '')
+
+    def setNoEmit(self):
+        self.emit = False
 
     def setVars(self, vars):
         self.vars = vars
@@ -530,8 +534,9 @@ class Job:
     def emitPlaybooks(self, jobsdir):
         has_artifacts = False
         if not self.jjb_job:
-            self.log.error(
-                'Job {name} has no job content'.format(name=self.name))
+            if self.emit:
+                self.log.error(
+                    'Job {name} has no job content'.format(name=self.name))
             return False, False
 
         playbook_dir = os.path.join(jobsdir, self.job_path)
@@ -716,11 +721,13 @@ class JobMapping:
     def getNewJob(self, job_name, remove_gate):
         if job_name in self.job_direct:
             if isinstance(self.job_direct[job_name], dict):
-                return Job(job_name, content=self.job_direct[job_name])
+                job = Job(job_name, content=self.job_direct[job_name])
             else:
-                if job_name not in self.seen_new_jobs:
-                    self.seen_new_jobs.append(self.job_direct[job_name])
-                return Job(job_name, name=self.job_direct[job_name])
+                job = Job(job_name, name=self.job_direct[job_name])
+            if job_name not in self.seen_new_jobs:
+                self.seen_new_jobs.append(self.job_direct[job_name])
+            job.setNoEmit()
+            return job
 
         new_job = None
         for map_info in self.job_mapping:
@@ -728,6 +735,7 @@ class JobMapping:
             if new_job:
                 if job_name not in self.seen_new_jobs:
                     self.seen_new_jobs.append(new_job.name)
+                new_job.setNoEmit()
                 break
         if not new_job:
             orig_name = job_name
@@ -948,7 +956,7 @@ class ZuulMigrate:
 
         elif isinstance(old_job, dict):
             parent_name = get_single_key(old_job)
-            parent = Job(orig=parent_name, parent=parent)
+            parent = self.makeNewJobs(parent_name, parent=parent)[0]
 
             jobs = self.makeNewJobs(old_job[parent_name], parent=parent)
             for job in jobs:
@@ -1154,9 +1162,9 @@ class ZuulMigrate:
 
         for template in self.layout.get('project-templates', []):
             self.log.debug("Processing template: %s", template)
+            new_template = self.writeProjectTemplate(template)
+            self.new_templates[new_template['name']] = new_template
             if not self.mapping.hasProjectTemplate(template['name']):
-                new_template = self.writeProjectTemplate(template)
-                self.new_templates[new_template['name']] = new_template
                 job_config.append({'project-template': new_template})
 
         for project in self.layout.get('projects', []):
@@ -1166,7 +1174,8 @@ class ZuulMigrate:
         seen_jobs = []
         for job in self.job_objects:
             if (job.name not in seen_jobs
-                    and job.name not in self.mapping.seen_new_jobs):
+                    and job.name not in self.mapping.seen_new_jobs
+                    and job.emit):
                 has_artifacts, has_post = job.emitPlaybooks(self.outdir)
                 job_config.append({'job': job.toJobDict(
                     has_artifacts, has_post)})
