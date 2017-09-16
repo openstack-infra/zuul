@@ -47,6 +47,8 @@ Builder job definitions and transforms them into a Zuul v3 config. An
 optional mapping config can be given that defines how to map old jobs
 to new jobs.
 """
+
+
 def project_representer(dumper, data):
     return dumper.represent_mapping('tag:yaml.org,2002:map',
                                     data.items())
@@ -112,6 +114,7 @@ class IndentedDumper(IndentedEmitter, yaml.serializer.Serializer,
 def ordered_load(stream, *args, **kwargs):
     return yaml.load(stream=stream, *args, **kwargs)
 
+
 def ordered_dump(data, stream=None, *args, **kwargs):
     dumper = IndentedDumper
     # We need to do this because of how template expasion into a project
@@ -120,6 +123,7 @@ def ordered_dump(data, stream=None, *args, **kwargs):
 
     return yaml.dump(data, stream=stream, default_flow_style=False,
                      Dumper=dumper, width=80, *args, **kwargs)
+
 
 def get_single_key(var):
     if isinstance(var, str):
@@ -236,7 +240,8 @@ def expandYamlForTemplateJob(self, project, template, jobs_glob=None):
         self.jobs.append(expanded)
         JOBS_BY_ORIG_TEMPLATE[templated_job_name] = expanded
 
-jenkins_jobs.parser.YamlParser.expandYamlForTemplateJob = expandYamlForTemplateJob
+jenkins_jobs.parser.YamlParser.expandYamlForTemplateJob = \
+    expandYamlForTemplateJob
 
 
 class JJB(jenkins_jobs.builder.Builder):
@@ -762,6 +767,7 @@ class JobMapping:
         new_job.addJJBJob(self.jjb_jobs)
         return new_job
 
+
 class ChangeQueue:
     def __init__(self):
         self.name = ''
@@ -788,7 +794,7 @@ class ChangeQueue:
             for job in self._jobs:
                 if job.queue_name:
                     if (self.assigned_name and
-                        job.queue_name != self.assigned_name):
+                            job.queue_name != self.assigned_name):
                         raise Exception("More than one name assigned to "
                                         "change queue: %s != %s" %
                                         (self.assigned_name,
@@ -799,6 +805,7 @@ class ChangeQueue:
     def mergeChangeQueue(self, other):
         for project in other.projects:
             self.addProject(project)
+
 
 class ZuulMigrate:
 
@@ -880,7 +887,8 @@ class ZuulMigrate:
                         continue
                     if 'gate' not in pt['name']:
                         continue
-                    gate_jobs |= set(self.flattenOldJobs(pt['gate'], project['name']))
+                    gate_jobs |= set(self.flattenOldJobs(pt['gate'],
+                                                         project['name']))
             gate_jobs |= set(self.flattenOldJobs(project['gate']))
             old_project = OldProject(project['name'], gate_jobs)
             change_queue = ChangeQueue()
@@ -1088,15 +1096,16 @@ class ZuulMigrate:
                 if k in ('template', 'name'):
                     continue
                 processPipeline(project[k]['jobs'], job_name_regex, files)
-            
+
         for matcher in matchers:
             # find the project-specific section
             for skipper in matcher.get('skip-if', []):
                 if skipper.get('project'):
                     if re.search(skipper['project'], project['name']):
-                       if 'all-files-match-any' in skipper:
-                           applyIrrelevantFiles(matcher['name'],
-                                                skipper['all-files-match-any'])
+                        if 'all-files-match-any' in skipper:
+                            applyIrrelevantFiles(
+                                matcher['name'],
+                                skipper['all-files-match-any'])
 
     def writeProject(self, project):
         '''
@@ -1172,10 +1181,10 @@ class ZuulMigrate:
                 {'project': self.writeProject(project)})
 
         seen_jobs = []
-        for job in self.job_objects:
-            if (job.name not in seen_jobs
-                    and job.name not in self.mapping.seen_new_jobs
-                    and job.emit):
+        for job in sorted(self.job_objects, key=lambda job: job.name):
+            if (job.name not in seen_jobs and
+                    job.name not in self.mapping.seen_new_jobs and
+                    job.emit):
                 has_artifacts, has_post = job.emitPlaybooks(self.outdir)
                 job_config.append({'job': job.toJobDict(
                     has_artifacts, has_post)})
