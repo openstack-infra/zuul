@@ -1,0 +1,4 @@
+- project:
+    name: org/project
+    check:
+      jobs: []

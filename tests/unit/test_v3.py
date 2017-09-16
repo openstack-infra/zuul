@@ -74,44 +74,43 @@ class TestMultipleTenants(AnsibleZuulTestCase):
 
 
 class TestProtected(ZuulTestCase):
-
     tenant_config_file = 'config/protected/main.yaml'
 
     def test_protected_ok(self):
-            # test clean usage of final parent job
-            in_repo_conf = textwrap.dedent(
-                """
-                - job:
-                    name: job-protected
-                    protected: true
-                    run: playbooks/job-protected.yaml
+        # test clean usage of final parent job
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: job-protected
+                protected: true
+                run: playbooks/job-protected.yaml
 
-                - project:
-                    name: org/project
-                    check:
-                      jobs:
-                        - job-child-ok
+            - project:
+                name: org/project
+                check:
+                  jobs:
+                    - job-child-ok
 
-                - job:
-                    name: job-child-ok
-                    parent: job-protected
+            - job:
+                name: job-child-ok
+                parent: job-protected
 
-                - project:
-                    name: org/project
-                    check:
-                      jobs:
-                        - job-child-ok
+            - project:
+                name: org/project
+                check:
+                  jobs:
+                    - job-child-ok
 
-                """)
+            """)
 
-            file_dict = {'zuul.yaml': in_repo_conf}
-            A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
-                                               files=file_dict)
-            self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
-            self.waitUntilSettled()
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
 
-            self.assertEqual(A.reported, 1)
-            self.assertEqual(A.patchsets[-1]['approvals'][0]['value'], '1')
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(A.patchsets[-1]['approvals'][0]['value'], '1')
 
     def test_protected_reset(self):
         # try to reset protected flag
@@ -175,6 +174,47 @@ class TestProtected(ZuulTestCase):
         self.assertIn(
             "which is defined in review.example.com/org/project is protected "
             "and cannot be inherited from other projects.", A.messages[0])
+
+
+class TestAbstract(ZuulTestCase):
+    tenant_config_file = 'config/abstract/main.yaml'
+
+    def test_abstract_fail(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - project:
+                check:
+                  jobs:
+                    - job-abstract
+            """)
+
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(A.patchsets[-1]['approvals'][0]['value'], '-1')
+        self.assertIn('may not be directly run', A.messages[0])
+
+    def test_child_of_abstract(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - project:
+                check:
+                  jobs:
+                    - job-child
+            """)
+
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(A.patchsets[-1]['approvals'][0]['value'], '1')
 
 
 class TestFinal(ZuulTestCase):
