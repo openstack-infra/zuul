@@ -418,6 +418,7 @@ class Job:
     def _makeSCPTask(self, publisher):
         tasks = []
         artifacts = False
+        draft = False
         site = publisher['scp']['site']
         for scpfile in publisher['scp']['files']:
             if 'ZUUL_PROJECT' in scpfile.get('source', ''):
@@ -435,14 +436,21 @@ class Job:
             # TODO(mordred) Generalize this next section, it's SUPER
             # openstack specific. We can likely do this in mapping.yaml
             if site == 'static.openstack.org':
-                for f in ('service-types', 'specs', 'docs-draft'):
+                for f in ('service-types', 'specs'):
                     if target.startswith(f):
                         self.log.error(
                             "Job {name} uses {f} publishing".format(
                                 name=self.name, f=f))
                         continue
-                target = target.replace(
-                    'logs/$LOG_PATH', "{{ zuul.executor.work_root }}")
+                if target.startswith('docs-draft'):
+                    target = target.replace(
+                        'docs-draft/$LOG_PATH',
+                        "{{ zuul.executor.work_root }}/docs-draft")
+                    draft = True
+                else:
+                    target = target.replace(
+                        'logs/$LOG_PATH',
+                        "{{ zuul.executor.work_root }}/logs")
             elif site == 'tarballs.openstack.org':
                 if not target.startswith('tarballs'):
                     self.log.error(
@@ -486,7 +494,7 @@ class Job:
                 state='directory')
             ensure_task['delegate_to'] = 'localhost'
             tasks.insert(0, ensure_task)
-        return tasks, artifacts
+        return dict(tasks=tasks, artifacts=artifacts, draft=draft)
 
     def _makeBuilderTask(self, playbook_dir, builder, sequence):
         script_fn = '%s-%02d.sh' % (self.short_name, sequence)
@@ -538,11 +546,12 @@ class Job:
 
     def emitPlaybooks(self, jobsdir):
         has_artifacts = False
+        has_draft = False
         if not self.jjb_job:
             if self.emit:
                 self.log.error(
                     'Job {name} has no job content'.format(name=self.name))
-            return False, False
+            return False, False, False
 
         playbook_dir = os.path.join(jobsdir, self.job_path)
         if not os.path.exists(playbook_dir):
@@ -575,10 +584,12 @@ class Job:
         for publishers in [early_publishers, late_publishers]:
             for publisher in publishers:
                 if 'scp' in publisher:
-                    task, artifacts = self._makeSCPTask(publisher)
-                    if artifacts:
+                    ret = self._makeSCPTask(publisher)
+                    if ret['artifacts']:
                         has_artifacts = True
-                    tasks.extend(task)
+                    if ret['draft']:
+                        has_draft = True
+                    tasks.extend(ret['tasks'])
                 if 'afs' in builder:
                     self.log.error(
                         "Job {name} uses AFS publisher".format(name=self.name))
@@ -589,13 +600,15 @@ class Job:
             play['tasks'] = tasks
             with open(post_playbook, 'w') as post_playbook_out:
                 ordered_dump([play], post_playbook_out)
-        return has_artifacts, has_post
+        return has_artifacts, has_post, has_draft
 
-    def toJobDict(self, has_artifacts=True, has_post=True):
+    def toJobDict(self, has_artifacts=False, has_post=False, has_draft=False):
         output = collections.OrderedDict()
         output['name'] = self.name
         if has_artifacts:
             output['parent'] = 'publish-openstack-artifacts'
+        elif has_draft:
+            output['parent'] = 'publish-docs-draft'
         output['run'] = os.path.join(self.job_path, 'run.yaml')
         if has_post:
             output['post-run'] = os.path.join(self.job_path, 'post.yaml')
@@ -1185,9 +1198,10 @@ class ZuulMigrate:
             if (job.name not in seen_jobs and
                     job.name not in self.mapping.seen_new_jobs and
                     job.emit):
-                has_artifacts, has_post = job.emitPlaybooks(self.outdir)
+                has_artifacts, has_post, has_draft = job.emitPlaybooks(
+                    self.outdir)
                 job_config.append({'job': job.toJobDict(
-                    has_artifacts, has_post)})
+                    has_artifacts, has_post, has_draft)})
                 seen_jobs.append(job.name)
 
         with open(job_outfile, 'w') as yamlout:
