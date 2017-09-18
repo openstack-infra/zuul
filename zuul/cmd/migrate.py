@@ -780,6 +780,7 @@ class JobMapping:
         self.template_mapping = {}
         self.jjb_jobs = {}
         self.seen_new_jobs = []
+        self.unshare = []
         nodepool_data = ordered_load(open(nodepool_config, 'r'))
         for label in nodepool_data['labels']:
             self.labels.append(label['name'])
@@ -790,6 +791,7 @@ class JobMapping:
             self.default_node = mapping_data['default-node']
             global SUFFIXES
             SUFFIXES = mapping_data.get('strip-suffixes', [])
+            self.unshare = mapping_data.get('unshare', [])
             for map_info in mapping_data.get('job-mapping', []):
                 if map_info['old'].startswith('^'):
                     map_info['pattern'] = re.compile(map_info['old'])
@@ -974,6 +976,8 @@ class ZuulMigrate:
     def flattenOldJobs(self, tree, name=None):
         if isinstance(tree, str):
             n = tree.format(name=name)
+            if n in self.mapping.unshare:
+                return []
             return [self.getOldJob(n)]
 
         new_list = []  # type: ignore
@@ -984,8 +988,10 @@ class ZuulMigrate:
             parent_name = get_single_key(tree)
             jobs = self.flattenOldJobs(tree[parent_name], name)
             for job in jobs:
-                new_list.append(self.getOldJob(job))
-            new_list.append(self.getOldJob(parent_name))
+                if job not in self.mapping.unshare:
+                    new_list.append(self.getOldJob(job))
+            if parent_name not in self.mapping.unshare:
+                new_list.append(self.getOldJob(parent_name))
         return new_list
 
     def buildChangeQueues(self):
