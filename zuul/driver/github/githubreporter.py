@@ -112,10 +112,10 @@ class GithubReporter(BaseReporter):
             description = 'status: %s' % self._commit_status
 
         self.log.debug(
-            'Reporting change %s, params %s, status:\n'
+            'Reporting change %s, params %s, '
             'context: %s, state: %s, description: %s, url: %s' %
-            (item.change, self.config, context, state,
-             description, url))
+            (item.change, self.config,
+             context, state, description, url))
 
         self.connection.setCommitStatus(
             project, sha, state, url, description, context)
