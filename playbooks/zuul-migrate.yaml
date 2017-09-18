@@ -19,8 +19,8 @@
 
     - name: Collect generated playbooks
       synchronize:
-        dest: "{{ zuul.executor.log_root }}"
+        dest: "{{ zuul.executor.log_root }}/playbooks"
         mode: pull
-        src: "src/git.openstack.org/openstack-infra/project-config/playbooks"
+        src: "src/git.openstack.org/openstack-infra/project-config/playbooks/legacy"
         verify_host: true
       no_log: true

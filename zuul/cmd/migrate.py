@@ -26,8 +26,11 @@ import argparse
 import collections
 import copy
 import itertools
+import getopt
 import logging
 import os
+import subprocess
+import tempfile
 import re
 from typing import Any, Dict, List, Optional  # flake8: noqa
 
@@ -40,6 +43,7 @@ import yaml
 
 JOBS_BY_ORIG_TEMPLATE = {}  # type: ignore
 SUFFIXES = []  # type: ignore
+ENVIRONMENT = '{{ host_vars[inventory_hostname] | zuul_legacy_vars }}'
 DESCRIPTION = """Migrate zuul v2 and Jenkins Job Builder to Zuul v3.
 
 This program takes a zuul v2 layout.yaml and a collection of Jenkins Job
@@ -48,6 +52,65 @@ optional mapping config can be given that defines how to map old jobs
 to new jobs.
 """
 
+def deal_with_shebang(data):
+    # Ansible shell blocks do not honor shebang lines. That's fine - but
+    # we do have a bunch of scripts that have either nothing, -x, -xe,
+    # -ex or -eux. Transform those into leading set commands
+    if not data.startswith('#!'):
+        return (None, data)
+    data_lines = data.split('\n')
+    data_lines.reverse()
+    shebang = data_lines.pop()
+    split_line = shebang.split()
+    # Strip the # and the !
+    executable = split_line[0][2:]
+    if executable == '/bin/sh':
+        # Ansible default
+        executable = None
+    if len(split_line) > 1:
+        flag_x = False
+        flag_e = False
+        flag_u = False
+        optlist, args = getopt.getopt(split_line[1:], 'uex')
+        for opt, _ in optlist:
+            if opt == '-x':
+                flag_x = True
+            elif opt == '-e':
+                flag_e = True
+            elif opt == '-u':
+                flag_u = True
+
+        if flag_x:
+            data_lines.append('set -x')
+        if flag_e:
+            data_lines.append('set -e')
+        if flag_u:
+            data_lines.append('set -u')
+    data_lines.reverse()
+    data = '\n'.join(data_lines)
+    return (executable, data)
+
+
+# from:
+# http://stackoverflow.com/questions/8640959/how-can-i-control-what-scalar-form-pyyaml-uses-for-my-data  flake8: noqa
+def should_use_block(value):
+    for c in u"\u000a\u000d\u001c\u001d\u001e\u0085\u2028\u2029":
+        if c in value:
+            return True
+    return False
+
+
+def my_represent_scalar(self, tag, value, style=None):
+    if style is None:
+        if should_use_block(value):
+             style='|'
+        else:
+            style = self.default_style
+
+    node = yaml.representer.ScalarNode(tag, value, style=style)
+    if self.alias_key is not None:
+        self.represented_objects[self.alias_key] = node
+    return node
 
 def project_representer(dumper, data):
     return dumper.represent_mapping('tag:yaml.org,2002:map',
@@ -121,8 +184,14 @@ def ordered_dump(data, stream=None, *args, **kwargs):
     # works. Without it, we end up with YAML references to the expanded jobs.
     dumper.ignore_aliases = lambda self, data: True
 
-    return yaml.dump(data, stream=stream, default_flow_style=False,
-                     Dumper=dumper, width=80, *args, **kwargs)
+    output = yaml.dump(
+        data, default_flow_style=False,
+        Dumper=dumper, width=80, *args, **kwargs).replace(
+            '\n    -', '\n\n    -')
+    if stream:
+        stream.write(output)
+    else:
+        return output
 
 
 def get_single_key(var):
@@ -496,24 +565,62 @@ class Job:
             tasks.insert(0, ensure_task)
         return dict(tasks=tasks, artifacts=artifacts, draft=draft)
 
-    def _makeBuilderTask(self, playbook_dir, builder, sequence):
-        script_fn = '%s-%02d.sh' % (self.short_name, sequence)
+    def _emitShellTask(self, data, syntax_check):
+        shell, data = deal_with_shebang(data)
+        task = collections.OrderedDict()
+        task['shell'] = data
+        if shell:
+            task['args'] = dict(executable=shell)
+
+        if syntax_check:
+            # Emit a test playbook with this shell task in it then run
+            # ansible-playbook --syntax-check on it. This will fail if there
+            # are embedding issues, such as with unbalanced single quotes
+            # The end result should be less scripts and more shell
+            play = dict(hosts='all', tasks=[task])
+            (fd, tmp_path) = tempfile.mkstemp()
+            try:
+                f = os.fdopen(fd, 'w')
+                ordered_dump([play], f)
+                f.close()
+                proc = subprocess.run(
+                    ['ansible-playbook', '--syntax-check', tmp_path],
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                if proc.returncode != 0:
+                    # Return of None means we must emit a script
+                    self.log.error(
+                        "Job {name} had an ansible syntax error, using script"
+                        " instead of shell".format(name=self.name))
+                    return None
+            finally:
+                os.unlink(tmp_path)
+        return task
+
+    def _emitScriptContent(self, data, playbook_dir, seq):
+        script_fn = '%s-%02d.sh' % (self.short_name, seq)
         script_path = os.path.join(playbook_dir, script_fn)
-        # Don't write a script to echo the template line
-        if builder['shell'].startswith('echo JJB template: '):
-            return
+
         with open(script_path, 'w') as script:
-            data = builder['shell']
             if not data.startswith('#!'):
                 data = '#!/bin/bash -x\n %s' % (data,)
             script.write(data)
 
         task = collections.OrderedDict()
-        task['name'] = 'Builder script {seq} translated from {old}'.format(
-                seq=sequence, old=self.orig)
+        task['name'] = 'Running playbooks/legacy/{playbook}'.format(
+            playbook=script_fn)
         task['script'] = script_fn
-        task['environment'] = (
-            '{{ host_vars[inventory_hostname] | zuul_legacy_vars }}')
+        return task
+
+    def _makeBuilderTask(self, playbook_dir, builder, sequence, syntax_check):
+        # Don't write a script to echo the template line
+        if builder['shell'].startswith('echo JJB template: '):
+            return
+
+        task = self._emitShellTask(builder['shell'], syntax_check)
+        if not task:
+            task = self._emitScriptContent(
+                builder['shell'], playbook_dir, sequence)
+        task['environment'] = ENVIRONMENT
         return task
 
     def _transformPublishers(self, jjb_job):
@@ -544,7 +651,7 @@ class Job:
             self.log.debug("Transformed job publishers")
         return early_publishers, late_publishers
 
-    def emitPlaybooks(self, jobsdir):
+    def emitPlaybooks(self, jobsdir, syntax_check=False):
         has_artifacts = False
         has_draft = False
         if not self.jjb_job:
@@ -561,19 +668,20 @@ class Job:
         post_playbook = os.path.join(self.job_path, 'post.yaml')
         tasks = []
         sequence = 0
-        tasks.append(collections.OrderedDict(
-            debug=collections.OrderedDict(
-                msg='Autoconverted job {name} from old job {old}'.format(
-                    name=self.name, old=self.orig))))
         for builder in self.jjb_job.get('builders', []):
             if 'shell' in builder:
-                task = self._makeBuilderTask(playbook_dir, builder, sequence)
+                task = self._makeBuilderTask(
+                    playbook_dir, builder, sequence, syntax_check)
                 if task:
-                    sequence += 1
+                    if 'script' in task:
+                        sequence += 1
                     tasks.append(task)
-        play = collections.OrderedDict(
-            hosts='all',
-            tasks=tasks)
+        play = collections.OrderedDict()
+        play['hosts'] = 'all'
+        play['name'] = 'Autoconverted job {name} from old job {old}'.format(
+            name=self.name, old=self.orig)
+        play['tasks'] = tasks
+
         with open(run_playbook, 'w') as run_playbook_out:
             ordered_dump([play], run_playbook_out)
 
@@ -825,12 +933,13 @@ class ZuulMigrate:
     log = logging.getLogger("zuul.Migrate")
 
     def __init__(self, layout, job_config, nodepool_config,
-                 outdir, mapping, move):
+                 outdir, mapping, move, syntax_check):
         self.layout = ordered_load(open(layout, 'r'))
         self.job_config = job_config
         self.outdir = outdir
         self.mapping = JobMapping(nodepool_config, self.layout, mapping)
         self.move = move
+        self.syntax_check = syntax_check
 
         self.jobs = {}
         self.old_jobs = {}
@@ -1199,7 +1308,7 @@ class ZuulMigrate:
                     job.name not in self.mapping.seen_new_jobs and
                     job.emit):
                 has_artifacts, has_post, has_draft = job.emitPlaybooks(
-                    self.outdir)
+                    self.outdir, self.syntax_check)
                 job_config.append({'job': job.toJobDict(
                     has_artifacts, has_post, has_draft)})
                 seen_jobs.append(job.name)
@@ -1219,6 +1328,7 @@ def main():
 
     yaml.add_representer(collections.OrderedDict, project_representer,
                          Dumper=IndentedDumper)
+    yaml.representer.BaseRepresenter.represent_scalar = my_represent_scalar
 
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument(
@@ -1240,6 +1350,9 @@ def main():
     parser.add_argument(
         '-v', dest='verbose', action='store_true', help='verbose output')
     parser.add_argument(
+        '--syntax-check', dest='syntax_check', action='store_true',
+        help='Run ansible-playbook --syntax-check on generated playbooks')
+    parser.add_argument(
         '-m', dest='move', action='store_true',
         help='Move zuul.yaml to zuul.d if it exists')
 
@@ -1250,7 +1363,7 @@ def main():
         logging.basicConfig(level=logging.INFO)
 
     ZuulMigrate(args.layout, args.job_config, args.nodepool_config,
-                args.outdir, args.mapping, args.move).run()
+                args.outdir, args.mapping, args.move, args.syntax_check).run()
 
 
 if __name__ == '__main__':
