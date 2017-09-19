@@ -542,6 +542,11 @@
                 // Toggle showing/hiding the patchset when the header is
                 // clicked.
 
+                if (e.target.nodeName.toLowerCase() === 'a') {
+                    // Ignore clicks from gerrit patch set link
+                    return;
+                }
+
                 // Grab the patchset panel
                 var $panel = $(e.target).parents('.zuul-change');
                 var $body = $panel.children('.zuul-patchset-body');
