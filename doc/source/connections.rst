@@ -42,6 +42,13 @@ Create a connection with gerrit.
   Optional: Keepalive timeout, 0 means no keepalive.
   ``keepalive=60``
 
+**strip_branch_ref**
+  Optional: Earlier versions of Gerrit reported branch refs in the
+  form "master" and later forms as "refs/heads/master".  Set this to 1
+  to enable compatibility with the earlier form by stripping the
+  "refs/heads/" portion of the ref.
+  ``strip_branch_ref=1``
+
 Gerrit Configuration
 ~~~~~~~~~~~~~~~~~~~~
 

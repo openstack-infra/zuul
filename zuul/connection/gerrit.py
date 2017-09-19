@@ -75,6 +75,9 @@ class GerritEventConnector(threading.Thread):
         if refupdate:
             event.project_name = refupdate.get('project')
             event.ref = refupdate.get('refName')
+            if (self.connection.strip_branch_ref and
+                event.ref.startswith('refs/heads/')):
+                event.ref = event.ref[len('refs/heads/'):]
             event.oldrev = refupdate.get('oldRev')
             event.newrev = refupdate.get('newRev')
         # Map the event types to a field name holding a Gerrit
@@ -231,6 +234,8 @@ class GerritConnection(BaseConnection):
         self.port = int(self.connection_config.get('port', 29418))
         self.keyfile = self.connection_config.get('sshkey', None)
         self.keepalive = int(self.connection_config.get('keepalive', 60))
+        self.strip_branch_ref = bool(self.connection_config.get(
+            'strip_branch_ref'))
         self.watcher_thread = None
         self.event_queue = None
         self.client = None
