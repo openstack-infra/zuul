@@ -513,7 +513,7 @@ class JobParser(object):
                 raise SecretNotFoundError(secret_name)
             if secret_name == 'zuul':
                 raise Exception("Secrets named 'zuul' are not allowed.")
-            if secret.source_context != job.source_context:
+            if not secret.source_context.isSameProject(job.source_context):
                 raise Exception(
                     "Unable to use secret %s.  Secrets must be "
                     "defined in the same project in which they "
