@@ -87,7 +87,7 @@ def deal_with_shebang(data):
         if flag_u:
             data_lines.append('set -u')
     data_lines.reverse()
-    data = '\n'.join(data_lines)
+    data = '\n'.join(data_lines).lstrip()
     return (executable, data)
 
 
@@ -613,7 +613,10 @@ class Job:
 
     def _makeBuilderTask(self, playbook_dir, builder, sequence, syntax_check):
         # Don't write a script to echo the template line
+        # TODO(mordred) Put these into mapping.yaml
         if builder['shell'].startswith('echo JJB template: '):
+            return
+        if 'echo "Detailed logs:' in builder['shell']:
             return
 
         task = self._emitShellTask(builder['shell'], syntax_check)
