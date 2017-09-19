@@ -42,7 +42,7 @@ fi
 
 cat >$WORK_DIR/ansible.cfg <<EOF
 [defaults]
-hostfile = $INVENTORY
+inventory = $INVENTORY
 gathering = smart
 gather_subset = !all
 fact_caching = jsonfile

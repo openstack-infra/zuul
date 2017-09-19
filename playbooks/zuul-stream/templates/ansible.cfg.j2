@@ -1,5 +1,5 @@
 [defaults]
-hostfile = {{ ansible_user_dir }}/inventory.yaml
+inventory = {{ ansible_user_dir }}/inventory.yaml
 gathering = smart
 gather_subset = !all
 lookup_plugins = {{ ansible_user_dir }}/src/git.openstack.org/openstack-infra/zuul/zuul/ansible/lookup
