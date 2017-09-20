@@ -340,7 +340,7 @@ class GerritConnection(BaseConnection):
             change.newrev = event.newrev
             change.url = self._getGitwebUrl(project, sha=event.newrev)
         elif event.ref and not event.ref.startswith('refs/'):
-            # Gerrit ref-updated events don't have branch prefixes.
+            # Pre 2.13 Gerrit ref-updated events don't have branch prefixes.
             project = self.source.getProject(event.project_name)
             change = Branch(project)
             change.branch = event.ref
@@ -349,11 +349,11 @@ class GerritConnection(BaseConnection):
             change.newrev = event.newrev
             change.url = self._getGitwebUrl(project, sha=event.newrev)
         elif event.ref and event.ref.startswith('refs/heads/'):
-            # From the timer trigger
+            # From the timer trigger or Post 2.13 Gerrit
             project = self.source.getProject(event.project_name)
             change = Branch(project)
             change.ref = event.ref
-            change.branch = event.branch
+            change.branch = event.ref[len('refs/heads/'):]
             change.oldrev = event.oldrev
             change.newrev = event.newrev
             change.url = self._getGitwebUrl(project, sha=event.newrev)
