@@ -50,8 +50,7 @@ Here is an example apache vhost configuration:
   </Directory>
 
   # Console-stream needs a special proxy-pass for websocket
-  ProxyPass /console-stream ws://localhost:9000/console-stream nocanon retry=0
-  ProxyPassReverse /console-stream ws://localhost:9000/console-stream
+  ProxyPassMatch /(.*)/console-stream ws://localhost:9000/$1/console-stream nocanon retry=0
 
   # Then only the json calls are sent to the zuul-web endpoints
   ProxyPassMatch ^/(.*.json)$ http://localhost:9000/$1 nocanon retry=0

@@ -158,7 +158,7 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
 
     def runWSClient(self, build_uuid, event):
         async def client(loop, build_uuid, event):
-            uri = 'http://[::1]:9000/console-stream'
+            uri = 'http://[::1]:9000/tenant-one/console-stream'
             try:
                 session = aiohttp.ClientSession(loop=loop)
                 async with session.ws_connect(uri) as ws:

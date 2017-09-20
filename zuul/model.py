@@ -1863,7 +1863,7 @@ class QueueItem(object):
                 result = build.result
                 finger_url = build.url
                 # TODO(tobiash): add support for custom web root
-                urlformat = 'static/stream.html?' \
+                urlformat = 'stream.html?' \
                             'uuid={build.uuid}&' \
                             'logfile=console.log'
                 if websocket_url:

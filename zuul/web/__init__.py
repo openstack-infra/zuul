@@ -340,6 +340,8 @@ class ZuulWeb(object):
             fp = os.path.join(STATIC_DIR, "jobs.html")
         elif request.path.endswith("builds.html"):
             fp = os.path.join(STATIC_DIR, "builds.html")
+        elif request.path.endswith("stream.html"):
+            fp = os.path.join(STATIC_DIR, "stream.html")
         headers = {}
         if self.static_cache_expiry:
             headers['Cache-Control'] = "public, max-age=%d" % \
@@ -358,12 +360,13 @@ class ZuulWeb(object):
             is run within a separate (non-main) thread.
         """
         routes = [
-            ('GET', '/console-stream', self._handleWebsocket),
             ('GET', '/tenants.json', self._handleTenantsRequest),
             ('GET', '/{tenant}/status.json', self._handleStatusRequest),
             ('GET', '/{tenant}/jobs.json', self._handleJobsRequest),
+            ('GET', '/{tenant}/console-stream', self._handleWebsocket),
             ('GET', '/{tenant}/status.html', self._handleStaticRequest),
             ('GET', '/{tenant}/jobs.html', self._handleStaticRequest),
+            ('GET', '/{tenant}/stream.html', self._handleStaticRequest),
             ('GET', '/tenants.html', self._handleStaticRequest),
             ('GET', '/', self._handleStaticRequest),
         ]

@@ -2581,7 +2581,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual('project-merge', status_jobs[0]['name'])
         # TODO(mordred) pull uuids from self.builds
         self.assertEqual(
-            'static/stream.html?uuid={uuid}&logfile=console.log'.format(
+            'stream.html?uuid={uuid}&logfile=console.log'.format(
                 uuid=status_jobs[0]['uuid']),
             status_jobs[0]['url'])
         self.assertEqual(
@@ -2597,7 +2597,7 @@ class TestScheduler(ZuulTestCase):
             status_jobs[0]['report_url'])
         self.assertEqual('project-test1', status_jobs[1]['name'])
         self.assertEqual(
-            'static/stream.html?uuid={uuid}&logfile=console.log'.format(
+            'stream.html?uuid={uuid}&logfile=console.log'.format(
                 uuid=status_jobs[1]['uuid']),
             status_jobs[1]['url'])
         self.assertEqual(
@@ -2613,7 +2613,7 @@ class TestScheduler(ZuulTestCase):
 
         self.assertEqual('project-test2', status_jobs[2]['name'])
         self.assertEqual(
-            'static/stream.html?uuid={uuid}&logfile=console.log'.format(
+            'stream.html?uuid={uuid}&logfile=console.log'.format(
                 uuid=status_jobs[2]['uuid']),
             status_jobs[2]['url'])
         self.assertEqual(
@@ -4210,7 +4210,7 @@ For CI problems and help debugging, contact ci@example.org"""
                 self.assertEqual('gate', job['pipeline'])
                 self.assertEqual(False, job['retry'])
                 self.assertEqual(
-                    'static/stream.html?uuid={uuid}&logfile=console.log'
+                    'stream.html?uuid={uuid}&logfile=console.log'
                     .format(uuid=job['uuid']), job['url'])
                 self.assertEqual(
                     'finger://{hostname}/{uuid}'.format(

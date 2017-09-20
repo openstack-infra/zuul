@@ -73,7 +73,7 @@
               } else {
                   protocol = 'ws://';
               }
-              path = url['pathname'].replace(/static\/.*$/g, '') + 'console-stream';
+              path = url['pathname'].replace(/stream.html.*$/g, '') + 'console-stream';
               params['websocket_url'] = protocol + url['host'] + path;
           }
           var ws = new WebSocket(params['websocket_url']);
