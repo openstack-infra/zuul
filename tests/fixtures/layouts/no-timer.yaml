@@ -29,9 +29,10 @@
 
 - job:
     name: project-bitrot
-    nodes:
-      - name: static
-        label: ubuntu-xenial
+    nodeset:
+      nodes:
+        - name: static
+          label: ubuntu-xenial
 
 - project:
     name: org/project

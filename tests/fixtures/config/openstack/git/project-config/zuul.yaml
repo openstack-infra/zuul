@@ -37,9 +37,10 @@
     name: base
     parent: null
     timeout: 30
-    nodes:
-      - name: controller
-        label: ubuntu-xenial
+    nodeset:
+      nodes:
+        - name: controller
+          label: ubuntu-xenial
 
 - job:
     name: python27
@@ -49,9 +50,10 @@
     name: python27
     parent: base
     branches: stable/mitaka
-    nodes:
-      - name: controller
-        label: ubuntu-trusty
+    nodeset:
+      nodes:
+        - name: controller
+          label: ubuntu-trusty
 
 - job:
     name: python35

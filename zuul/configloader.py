@@ -287,7 +287,7 @@ class EncryptedPKCS1_OAEP(yaml.YAMLObject):
 
 class NodeSetParser(object):
     @staticmethod
-    def getSchema():
+    def getSchema(anonymous=False):
         node = {vs.Required('name'): str,
                 vs.Required('label'): str,
                 }
@@ -296,19 +296,20 @@ class NodeSetParser(object):
                  vs.Required('nodes'): to_list(str),
                  }
 
-        nodeset = {vs.Required('name'): str,
-                   vs.Required('nodes'): to_list(node),
+        nodeset = {vs.Required('nodes'): to_list(node),
                    'groups': to_list(group),
                    '_source_context': model.SourceContext,
                    '_start_mark': ZuulMark,
                    }
 
+        if not anonymous:
+            nodeset[vs.Required('name')] = str
         return vs.Schema(nodeset)
 
     @staticmethod
-    def fromYaml(layout, conf):
-        NodeSetParser.getSchema()(conf)
-        ns = model.NodeSet(conf['name'])
+    def fromYaml(conf, anonymous=False):
+        NodeSetParser.getSchema(anonymous)(conf)
+        ns = model.NodeSet(conf.get('name'))
         node_names = set()
         group_names = set()
         for conf_node in as_list(conf['nodes']):
@@ -391,6 +392,8 @@ class JobParser(object):
                'secrets': to_list(vs.Any(secret, str)),
                'irrelevant-files': to_list(str),
                'nodes': vs.Any([node], str),
+               # validation happens in NodeSetParser
+               'nodeset': vs.Any(dict, str),
                'timeout': int,
                'attempts': int,
                'pre-run': to_list(str),
@@ -569,7 +572,18 @@ class JobParser(object):
             a = k.replace('-', '_')
             if k in conf:
                 setattr(job, a, conf[k])
-        if 'nodes' in conf:
+        if 'nodeset' in conf:
+            conf_nodeset = conf['nodeset']
+            if isinstance(conf_nodeset, str):
+                # This references an existing named nodeset in the layout.
+                ns = layout.nodesets[conf_nodeset]
+            else:
+                ns = NodeSetParser.fromYaml(conf_nodeset, anonymous=True)
+            if tenant.max_nodes_per_job != -1 and \
+               len(ns) > tenant.max_nodes_per_job:
+                raise MaxNodeError(job, tenant)
+            job.nodeset = ns
+        elif 'nodes' in conf:
             conf_nodes = conf['nodes']
             if isinstance(conf_nodes, str):
                 # This references an existing named nodeset in the layout.
@@ -1448,7 +1462,7 @@ class TenantParser(object):
                 continue
             with configuration_exceptions('nodeset', config_nodeset):
                 layout.addNodeSet(NodeSetParser.fromYaml(
-                    layout, config_nodeset))
+                    config_nodeset))
 
         for config_secret in data.secrets:
             classes = TenantParser._getLoadClasses(tenant, config_secret)

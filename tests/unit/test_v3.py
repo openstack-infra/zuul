@@ -1407,19 +1407,20 @@ class TestMaxNodesPerJob(AnsibleZuulTestCase):
             """
             - job:
                 name: test-job
-                nodes:
-                  - name: node01
-                    label: fake
-                  - name: node02
-                    label: fake
-                  - name: node03
-                    label: fake
-                  - name: node04
-                    label: fake
-                  - name: node05
-                    label: fake
-                  - name: node06
-                    label: fake
+                nodeset:
+                  nodes:
+                    - name: node01
+                      label: fake
+                    - name: node02
+                      label: fake
+                    - name: node03
+                      label: fake
+                    - name: node04
+                      label: fake
+                    - name: node05
+                      label: fake
+                    - name: node06
+                      label: fake
             """)
         file_dict = {'.zuul.yaml': in_repo_conf}
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A',

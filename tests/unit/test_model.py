@@ -190,10 +190,12 @@ class TestJob(BaseTestCase):
             'timeout': 30,
             'pre-run': 'base-pre',
             'post-run': 'base-post',
-            'nodes': [{
-                'name': 'controller',
-                'label': 'base',
-            }],
+            'nodeset': {
+                'nodes': [{
+                    'name': 'controller',
+                    'label': 'base',
+                }],
+            },
         })
         layout.addJob(base)
         python27 = configloader.JobParser.fromYaml(tenant, layout, {
@@ -203,10 +205,12 @@ class TestJob(BaseTestCase):
             'parent': 'base',
             'pre-run': 'py27-pre',
             'post-run': ['py27-post-a', 'py27-post-b'],
-            'nodes': [{
-                'name': 'controller',
-                'label': 'new',
-            }],
+            'nodeset': {
+                'nodes': [{
+                    'name': 'controller',
+                    'label': 'new',
+                }],
+            },
             'timeout': 40,
         })
         layout.addJob(python27)
@@ -220,10 +224,12 @@ class TestJob(BaseTestCase):
             'pre-run': 'py27-diablo-pre',
             'run': 'py27-diablo',
             'post-run': 'py27-diablo-post',
-            'nodes': [{
-                'name': 'controller',
-                'label': 'old',
-            }],
+            'nodeset': {
+                'nodes': [{
+                    'name': 'controller',
+                    'label': 'old',
+                }],
+            },
             'timeout': 50,
         })
         layout.addJob(python27diablo)

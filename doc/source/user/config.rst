@@ -497,9 +497,10 @@ Here is an example of two job definitions:
    - job:
        name: run-tests
        parent: base
-       nodes:
-         - name: test-node
-           label: fedora
+       nodeset:
+         nodes:
+           - name: test-node
+             label: fedora
 
 .. attr:: job
 
@@ -630,12 +631,12 @@ Here is an example of two job definitions:
 
          - job:
              name: run-tests
-             nodes: current-release
+             nodeset: current-release
 
          - job:
              name: run-tests
              branch: stable/2.0
-             nodes: old-release
+             nodeset: old-release
 
       In some cases, Zuul uses an implied value for the branch
       specifier if none is supplied:
@@ -722,18 +723,19 @@ Here is an example of two job definitions:
          ssh_key:
            key: descrypted-secret-key-data
 
-   .. attr:: nodes
+   .. attr:: nodeset
 
-      A list of nodes which should be supplied to the job.  This
-      parameter may be supplied either as a string, in which case it
-      references a :ref:`nodeset` definition which appears elsewhere
-      in the configuration, or a list, in which case it is interpreted
-      in the same way as a Nodeset definition (in essence, it is an
-      anonymous Node definition unique to this job).  See the
-      :ref:`nodeset` reference for the syntax to use in that case.
+      The nodes which should be supplied to the job.  This parameter
+      may be supplied either as a string, in which case it references
+      a :ref:`nodeset` definition which appears elsewhere in the
+      configuration, or a dictionary, in which case it is interpreted
+      in the same way as a Nodeset definition, though the ``name``
+      attribute should be omitted (in essence, it is an anonymous
+      Nodeset definition unique to this job).  See the :ref:`nodeset`
+      reference for the syntax to use in that case.
 
-      If a job has an empty or no node definition, it will still run
-      and may be able to perform actions on the Zuul executor.
+      If a job has an empty or no nodeset definition, it will still
+      run and may be able to perform actions on the Zuul executor.
 
    .. attr:: override-branch
 

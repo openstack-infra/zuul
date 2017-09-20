@@ -17,9 +17,10 @@
 
 - job:
     name: project-test2
-    nodes:
-      - name: controller
-        label: label1
+    nodeset:
+      nodes:
+        - name: controller
+          label: label1
 
 - project:
     name: org/project

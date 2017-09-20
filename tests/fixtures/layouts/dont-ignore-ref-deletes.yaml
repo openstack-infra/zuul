@@ -13,9 +13,10 @@
 
 - job:
     name: project-post
-    nodes:
-      - name: static
-        label: ubuntu-xenial
+    nodeset:
+      nodes:
+        - name: static
+          label: ubuntu-xenial
 
 - project:
     name: org/project

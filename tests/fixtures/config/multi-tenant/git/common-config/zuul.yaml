@@ -17,6 +17,7 @@
 
 - job:
     name: python27
-    nodes:
-      - name: controller
-        label: ubuntu-trusty
+    nodeset:
+      nodes:
+        - name: controller
+          label: ubuntu-trusty

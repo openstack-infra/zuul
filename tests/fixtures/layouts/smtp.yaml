@@ -48,16 +48,18 @@
 
 - job:
     name: project-test1
-    nodes:
-      - name: controller
-        label: label1
+    nodeset:
+      nodes:
+        - name: controller
+          label: label1
 
 - job:
     name: project-test1
     branches: stable
-    nodes:
-      - name: controller
-        label: label2
+    nodeset:
+      nodes:
+        - name: controller
+          label: label2
 
 - job:
     name: project-test2

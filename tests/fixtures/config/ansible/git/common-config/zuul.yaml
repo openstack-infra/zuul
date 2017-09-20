@@ -98,9 +98,10 @@
 - job:
     parent: python27
     name: check-vars
-    nodes:
-      - name: ubuntu-xenial
-        label: ubuntu-xenial
+    nodeset:
+      nodes:
+        - name: ubuntu-xenial
+          label: ubuntu-xenial
     vars:
       vartest_job: vartest_job
       vartest_secret: vartest_job
@@ -112,9 +113,10 @@
 - job:
     parent: python27
     name: check-secret-names
-    nodes:
-      - name: ubuntu-xenial
-        label: ubuntu-xenial
+    nodeset:
+      nodes:
+        - name: ubuntu-xenial
+          label: ubuntu-xenial
     secrets:
       - secret: vartest_secret
         name: renamed_secret

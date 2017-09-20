@@ -47,41 +47,47 @@
 - job:
     name: project-merge
     hold-following-changes: true
-    nodes:
-      - name: controller
-        label: label1
+    nodeset:
+      nodes:
+        - name: controller
+          label: label1
 
 - job:
     name: project-test1
     attempts: 4
-    nodes:
-      - name: controller
-        label: label1
+    nodeset:
+      nodes:
+        - name: controller
+          label: label1
 
 - job:
     name: project-test1
     branches: stable
-    nodes:
-      - name: controller
-        label: label2
+    nodeset:
+      nodes:
+        - name: controller
+          label: label2
 
 - job:
     name: project-post
-    nodes:
-      - name: static
-        label: ubuntu-xenial
+    nodeset:
+      nodes:
+        - name: static
+          label: ubuntu-xenial
 
 - job:
     name: project-test2
-    nodes:
-      - name: controller
-        label: label1
+    nodeset:
+      nodes:
+        - name: controller
+          label: label1
 
 - job:
     name: project1-project2-integration
-    nodes:
-      - name: controller
-        label: label1
+    nodeset:
+      nodes:
+        - name: controller
+          label: label1
 
 - job:
     name: project-testfile
