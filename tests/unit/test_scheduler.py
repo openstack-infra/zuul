@@ -2434,6 +2434,35 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
+    def test_live_reconfiguration_abort(self):
+        # Raise an exception during reconfiguration and verify we
+        # still function.
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        pipeline = tenant.layout.pipelines['gate']
+        change = pipeline.getAllItems()[0].change
+        # Set this to an invalid value to cause an exception during
+        # reconfiguration.
+        change.branch = None
+
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
+                         'ABORTED')
+        self.assertEqual(A.data['status'], 'NEW')
+        # The final report fails because of the invalid value set above.
+        self.assertEqual(A.reported, 1)
+
     def test_live_reconfiguration_merge_conflict(self):
         # A real-world bug: a change in a gate queue has a merge
         # conflict and a job is added to its project while it's

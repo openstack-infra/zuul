@@ -543,9 +543,16 @@ class Scheduler(threading.Thread):
                         tenant, item)
                     item.item_ahead = None
                     item.items_behind = []
-                    if (item.change.project and
-                        new_pipeline.manager.reEnqueueItem(item,
-                                                           last_head)):
+                    reenqueued = False
+                    if item.change.project:
+                        try:
+                            reenqueued = new_pipeline.manager.reEnqueueItem(
+                                item, last_head)
+                        except Exception:
+                            self.log.exception(
+                                "Exception while re-enqueing item %s",
+                                item)
+                    if reenqueued:
                         for build in item.current_build_set.getBuilds():
                             new_job = item.getJob(build.job.name)
                             if new_job:
