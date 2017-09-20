@@ -358,10 +358,6 @@ class JobParser(object):
 
     @staticmethod
     def getSchema():
-        node = {vs.Required('name'): str,
-                vs.Required('label'): str,
-                }
-
         zuul_role = {vs.Required('zuul'): str,
                      'name': str}
 
@@ -391,7 +387,6 @@ class JobParser(object):
                'files': to_list(str),
                'secrets': to_list(vs.Any(secret, str)),
                'irrelevant-files': to_list(str),
-               'nodes': vs.Any([node], str),
                # validation happens in NodeSetParser
                'nodeset': vs.Any(dict, str),
                'timeout': int,
@@ -579,20 +574,6 @@ class JobParser(object):
                 ns = layout.nodesets[conf_nodeset]
             else:
                 ns = NodeSetParser.fromYaml(conf_nodeset, anonymous=True)
-            if tenant.max_nodes_per_job != -1 and \
-               len(ns) > tenant.max_nodes_per_job:
-                raise MaxNodeError(job, tenant)
-            job.nodeset = ns
-        elif 'nodes' in conf:
-            conf_nodes = conf['nodes']
-            if isinstance(conf_nodes, str):
-                # This references an existing named nodeset in the layout.
-                ns = layout.nodesets[conf_nodes]
-            else:
-                ns = model.NodeSet()
-                for conf_node in conf_nodes:
-                    node = model.Node(conf_node['name'], conf_node['label'])
-                    ns.addNode(node)
             if tenant.max_nodes_per_job != -1 and \
                len(ns) > tenant.max_nodes_per_job:
                 raise MaxNodeError(job, tenant)
