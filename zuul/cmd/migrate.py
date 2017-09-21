@@ -875,7 +875,10 @@ class JobMapping:
             return None
         match_dict = matches.groupdict()
         if isinstance(info['new'], dict):
-            job = Job(orig=name, content=info['new'])
+            new_job = info['new']
+            old_name = get_single_key(new_job)
+            new_name = old_name.format(**match_dict)
+            job = Job(orig=name, content={new_name: new_job[old_name]})
         else:
             job = Job(orig=name, name=info['new'].format(**match_dict))
 
