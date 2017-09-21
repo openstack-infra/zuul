@@ -1300,36 +1300,41 @@ class ZuulMigrate:
         '''
 
         def processPipeline(pipeline_jobs, job_name_regex, files):
+            new_jobs = []
             for job in pipeline_jobs:
                 if isinstance(job, str):
                     old_job_name = self.getOldJobName(job)
-                    if not old_job_name:
-                        continue
-                    if re.search(job_name_regex, old_job_name):
+                    if old_job_name and re.search(
+                            job_name_regex, old_job_name):
                         self.log.debug(
                             "Applied irrelevant-files to job %s in project %s",
                             job, project['name'])
-                        job = dict(job={'irrelevant-files': files})
+                        job = {job: {'irrelevant-files': list(set(files))}}
                 elif isinstance(job, dict):
-                    # should really only be one key (job name)
-                    job_name = list(job.keys())[0]
+                    job = job.copy()
+                    job_name = get_single_key(job)
                     extras = job[job_name]
                     old_job_name = self.getOldJobName(job_name)
-                    if not old_job_name:
-                        continue
-                    if re.search(job_name_regex, old_job_name):
+                    if old_job_name and re.search(
+                            job_name_regex, old_job_name):
                         self.log.debug(
                             "Applied irrelevant-files to complex job "
                             "%s in project %s", job_name, project['name'])
                         if 'irrelevant-files' not in extras:
                             extras['irrelevant-files'] = []
                         extras['irrelevant-files'].extend(files)
+                        extras['irrelevant-files'] = list(
+                            set(extras['irrelevant-files']))
+                    job[job_name] = extras
+                new_jobs.append(job)
+            return new_jobs
 
         def applyIrrelevantFiles(job_name_regex, files):
             for k, v in project.items():
                 if k in ('template', 'name'):
                     continue
-                processPipeline(project[k]['jobs'], job_name_regex, files)
+                project[k]['jobs'] = processPipeline(
+                    project[k]['jobs'], job_name_regex, files)
 
         for matcher in matchers:
             # find the project-specific section
