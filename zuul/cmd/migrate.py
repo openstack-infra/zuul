@@ -550,7 +550,7 @@ class Job:
         # html dir inside of logs such that if the node's contents have an
         # index.html in them setting the success-url to html/ will render
         # things as expected. Existing builder macros look like:
-        # 
+        #
         #   - publisher:
         #     name: upload-sphinx-draft
         #     publishers:
@@ -567,7 +567,7 @@ class Job:
         # docs-draft/$LOG_PATH.
         #
         # Then there is a success-pattern in layout.yaml that looks like:
-        # 
+        #
         #     http://{url}/{log_path}/doc/build/html/
         #
         # Which gets reports. There are many variations on that URL. So rather
@@ -629,13 +629,13 @@ class Job:
             syncargs = collections.OrderedDict()
             syncargs['src'] = src
             syncargs['dest'] = target
-            syncargs['copy_links'] = 'yes'
             syncargs['mode'] = 'pull'
+            syncargs['copy_links'] = True
             syncargs['verify_host'] = True
             if rsync_opts:
                 syncargs['rsync_opts'] = rsync_opts
             task = collections.OrderedDict()
-            task['name'] = 'copy files from {src} on node to'.format(src=src)
+            task['name'] = 'Copy files from {src} on node'.format(src=src)
             task['synchronize'] = syncargs
             # We don't use retry_args here because there is a bug in
             # the synchronize module that breaks subsequent attempts at
