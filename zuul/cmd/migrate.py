@@ -91,20 +91,46 @@ def deal_with_shebang(data):
     return (executable, data)
 
 
-def extract_projects(data):
+def _extract_from_vars(line):
     # export PROJECTS="openstack/blazar $PROJECTS"
     # export DEVSTACK_PROJECT_FROM_GIT=python-swiftclient
     # export DEVSTACK_PROJECT_FROM_GIT="python-octaviaclient"
     # export DEVSTACK_PROJECT_FROM_GIT+=",glean"
     projects = []
+    line = line.replace('"', '').replace('+', '').replace(',', ' ')
+    if (line.startswith('export PROJECTS') or
+            line.startswith('export DEVSTACK_PROJECT_FROM_GIT')):
+        nothing, project_string = line.split('=')
+        project_string = project_string.replace('$PROJECTS', '').strip()
+        projects = project_string.split()
+    return projects
+
+
+def extract_projects(data):
+    # clonemap:
+    #   - name: openstack/windmill
+    #     dest: .
+    # EOF
+    projects = []
     data_lines = data.split('\n')
+    in_clonemap = False
     for line in data_lines:
-        line = line.strip().replace('"', '').replace('+', '').replace(',', ' ')
-        if (line.startswith('export PROJECTS') or
-                line.startswith('export DEVSTACK_PROJECT_FROM_GIT')):
-            nothing, project_string = line.split('=')
-            project_string = project_string.replace('$PROJECTS', '').strip()
-            projects.extend(project_string.split())
+        line = line.strip()
+        if line == 'clonemap:':
+            in_clonemap = True
+            continue
+        elif line == 'EOF':
+            in_clonemap = False
+            continue
+        if in_clonemap:
+            if line.startswith('- name:'):
+                garbage, project = line.split(':')
+                project = project.strip().replace("'", '').replace('"', '')
+                if project == '$ZUUL_PROJECT':
+                    continue
+                projects.append(project)
+        else:
+            projects.extend(_extract_from_vars(line))
     return projects
 
 
@@ -790,8 +816,13 @@ class Job:
             output['nodes'] = self.getNodes()
 
         if self.required_projects:
-            output['required-projects'] = expand_project_names(
+            expanded_projects = expand_project_names(
                 self.required_projects, project_names)
+            # Look for project names in the job name. Lookie there - the
+            # python in operator works on lists and strings.
+            expanded_projects.extend(expand_project_names(
+                self.name, project_names))
+            output['required-projects'] = list(set(expanded_projects))
 
         return output
 
