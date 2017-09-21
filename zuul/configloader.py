@@ -106,6 +106,24 @@ class ProjectNotFoundError(Exception):
         super(ProjectNotFoundError, self).__init__(message)
 
 
+class SecretNotFoundError(Exception):
+    def __init__(self, secret):
+        message = textwrap.dedent("""\
+        The secret "{secret}" was not found.
+        """)
+        message = textwrap.fill(message.format(secret=secret))
+        super(SecretNotFoundError, self).__init__(message)
+
+
+class NodesetNotFoundError(Exception):
+    def __init__(self, nodeset):
+        message = textwrap.dedent("""\
+        The nodeset "{nodeset}" was not found.
+        """)
+        message = textwrap.fill(message.format(nodeset=nodeset))
+        super(NodesetNotFoundError, self).__init__(message)
+
+
 class PipelineNotPermittedError(Exception):
     def __init__(self):
         message = textwrap.dedent("""\
@@ -484,13 +502,15 @@ class JobParser(object):
         # Secrets are part of the playbook context so we must establish
         # them earlier than playbooks.
         secrets = []
-        for secret_config in conf.get('secrets', []):
+        for secret_config in as_list(conf.get('secrets', [])):
             if isinstance(secret_config, str):
                 secret_name = secret_config
-                secret = layout.secrets[secret_name]
+                secret = layout.secrets.get(secret_name)
             else:
                 secret_name = secret_config['name']
-                secret = layout.secrets[secret_config['secret']]
+                secret = layout.secrets.get(secret_config['secret'])
+            if secret is None:
+                raise SecretNotFoundError(secret_name)
             if secret_name == 'zuul':
                 raise Exception("Secrets named 'zuul' are not allowed.")
             if secret.source_context != job.source_context:
@@ -571,7 +591,9 @@ class JobParser(object):
             conf_nodeset = conf['nodeset']
             if isinstance(conf_nodeset, str):
                 # This references an existing named nodeset in the layout.
-                ns = layout.nodesets[conf_nodeset]
+                ns = layout.nodesets.get(conf_nodeset)
+                if ns is None:
+                    raise NodesetNotFoundError(conf_nodeset)
             else:
                 ns = NodeSetParser.fromYaml(conf_nodeset, anonymous=True)
             if tenant.max_nodes_per_job != -1 and \

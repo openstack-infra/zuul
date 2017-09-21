@@ -748,6 +748,48 @@ class TestInRepoConfig(ZuulTestCase):
         self.assertIn('appears multiple times', A.messages[0],
                       "A should have a syntax error reported")
 
+    def test_secret_not_found_error(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: test
+                secrets: does-not-exist
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn('secret "does-not-exist" was not found', A.messages[0],
+                      "A should have a syntax error reported")
+
+    def test_nodeset_not_found_error(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: test
+                nodeset: does-not-exist
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn('nodeset "does-not-exist" was not found', A.messages[0],
+                      "A should have a syntax error reported")
+
     def test_multi_repo(self):
         downstream_repo_conf = textwrap.dedent(
             """
