@@ -91,7 +91,33 @@ def deal_with_shebang(data):
     return (executable, data)
 
 
-# from:
+def extract_projects(data):
+    # export PROJECTS="openstack/blazar $PROJECTS"
+    # export DEVSTACK_PROJECT_FROM_GIT=python-swiftclient
+    # export DEVSTACK_PROJECT_FROM_GIT="python-octaviaclient"
+    # export DEVSTACK_PROJECT_FROM_GIT+=",glean"
+    projects = []
+    data_lines = data.split('\n')
+    for line in data_lines:
+        line = line.strip().replace('"', '').replace('+', '').replace(',', ' ')
+        if (line.startswith('export PROJECTS') or
+                line.startswith('export DEVSTACK_PROJECT_FROM_GIT')):
+            nothing, project_string = line.split('=')
+            project_string = project_string.replace('$PROJECTS', '').strip()
+            projects.extend(project_string.split())
+    return projects
+
+
+def expand_project_names(required, full):
+    projects = []
+    for name in full:
+        org, repo = name.split('/')
+        if repo in required or name in required:
+            projects.append(name)
+    return projects
+
+
+# from :
 # http://stackoverflow.com/questions/8640959/how-can-i-control-what-scalar-form-pyyaml-uses-for-my-data  flake8: noqa
 def should_use_block(value):
     for c in u"\u000a\u000d\u001c\u001d\u001e\u0085\u2028\u2029":
@@ -374,7 +400,6 @@ class Job:
                  name: str=None,
                  content: Dict[str, Any]=None,
                  vars: Dict[str, str]=None,
-                 required_projects: List[str]=None,
                  nodes: List[str]=None,
                  parent=None) -> None:
         self.orig = orig
@@ -382,7 +407,7 @@ class Job:
         self.name = name
         self.content = content.copy() if content else None
         self.vars = vars or {}
-        self.required_projects = required_projects or []
+        self.required_projects = []  # type: ignore
         self.nodes = nodes or []
         self.parent = parent
         self.branch = None
@@ -411,9 +436,6 @@ class Job:
 
     def setVars(self, vars):
         self.vars = vars
-
-    def setRequiredProjects(self, required_projects):
-        self.required_projects = required_projects
 
     def setParent(self, parent):
         self.parent = parent
@@ -702,6 +724,8 @@ class Job:
         sequence = 0
         for builder in self.jjb_job.get('builders', []):
             if 'shell' in builder:
+                self.required_projects.extend(
+                    extract_projects(builder['shell']))
                 task = self._makeBuilderTask(
                     playbook_dir, builder, sequence, syntax_check)
                 if task:
@@ -742,7 +766,9 @@ class Job:
                 ordered_dump([play], post_playbook_out)
         return has_artifacts, has_post, has_draft
 
-    def toJobDict(self, has_artifacts=False, has_post=False, has_draft=False):
+    def toJobDict(
+            self, has_artifacts=False, has_post=False, has_draft=False,
+            project_names=[]):
         output = collections.OrderedDict()
         output['name'] = self.name
         if has_artifacts:
@@ -764,7 +790,8 @@ class Job:
             output['nodes'] = self.getNodes()
 
         if self.required_projects:
-            output['required-projects'] = self.required_projects
+            output['required-projects'] = expand_project_names(
+                self.required_projects, project_names)
 
         return output
 
@@ -780,10 +807,6 @@ class Job:
 
         if not self.voting:
             output[self.name].setdefault('voting', False)
-
-        if self.required_projects:
-            output[self.name].setdefault(
-                'required-projects', self.required_projects)
 
         if self.vars:
             job_vars = output[self.name].get('vars', collections.OrderedDict())
@@ -859,10 +882,6 @@ class JobMapping:
         if 'vars' in info:
             job.setVars(self._expandVars(info, match_dict))
 
-        if 'required-projects' in info:
-            job.setRequiredProjects(
-                self._expandRequiredProjects(info, match_dict))
-
         return job
 
     def _expandVars(self, info, match_dict):
@@ -870,13 +889,6 @@ class JobMapping:
         for key in job_vars.keys():
             job_vars[key] = job_vars[key].format(**match_dict)
         return job_vars
-
-    def _expandRequiredProjects(self, info, match_dict):
-        required_projects = []
-        job_projects = info['required-projects'].copy()
-        for project in job_projects:
-            required_projects.append(project.format(**match_dict))
-        return required_projects
 
     def getNewJob(self, job_name, remove_gate):
         if job_name in self.job_direct:
@@ -1336,7 +1348,9 @@ class ZuulMigrate:
             if not self.mapping.hasProjectTemplate(template['name']):
                 job_config.append({'project-template': new_template})
 
+        project_names = []
         for project in self.layout.get('projects', []):
+            project_names.append(project['name'])
             project_config.append(
                 {'project': self.writeProject(project)})
 
@@ -1348,7 +1362,7 @@ class ZuulMigrate:
                 has_artifacts, has_post, has_draft = job.emitPlaybooks(
                     self.outdir, self.syntax_check)
                 job_config.append({'job': job.toJobDict(
-                    has_artifacts, has_post, has_draft)})
+                    has_artifacts, has_post, has_draft, project_names)})
                 seen_jobs.append(job.name)
 
         with open(job_outfile, 'w') as yamlout:
