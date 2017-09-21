@@ -707,6 +707,9 @@ class Job:
             return
         if 'echo "Detailed logs:' in builder['shell']:
             return
+        if ('cat /etc/dib-builddate.txt' in builder['shell'] and
+                'echo "Network configuration data..."' in builder['shell']):
+            return
 
         task = self._emitShellTask(builder['shell'], syntax_check)
         if not task:
