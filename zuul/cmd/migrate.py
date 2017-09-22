@@ -114,6 +114,7 @@ def extract_projects(data):
     projects = []
     data_lines = data.split('\n')
     in_clonemap = False
+    in_clonemap_cli = False
     for line in data_lines:
         line = line.strip()
         if line == 'clonemap:':
@@ -122,6 +123,12 @@ def extract_projects(data):
         elif line == 'EOF':
             in_clonemap = False
             continue
+        elif line.startswith('/usr/zuul-env/bin/zuul-cloner'):
+            in_clonemap_cli = True
+            continue
+        elif in_clonemap_cli and not line.endswith('\\'):
+            in_clonemap_cli = False
+            continue
         if in_clonemap:
             if line.startswith('- name:'):
                 garbage, project = line.split(':')
@@ -129,6 +136,11 @@ def extract_projects(data):
                 if project == '$ZUUL_PROJECT':
                     continue
                 projects.append(project)
+        elif in_clonemap_cli and line.startswith('openstack/'):
+            line = line.replace('\\', '').strip()
+            projects.append(line)
+        elif in_clonemap_cli:
+            continue
         else:
             projects.extend(_extract_from_vars(line))
     return projects
