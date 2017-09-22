@@ -592,7 +592,7 @@ class Job:
             if scpfile.get('copy-console'):
                 continue
             else:
-                src = "{{ ansible_user_dir }}"
+                src = "{{ ansible_user_dir }}/"
                 rsync_opts = self._getRsyncOptions(scpfile['source'])
 
             target = scpfile['target']
