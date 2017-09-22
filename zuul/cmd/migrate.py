@@ -841,7 +841,10 @@ class Job:
             output['vars']['BUILD_TIMEOUT'] = str(timeout * 1000)
 
         if self.nodes:
-            output['nodes'] = self.getNodes()
+            if len(self.nodes) == 1:
+                output['nodeset'] = self.getNodes()[0]
+            else:
+                output['nodeset'] = dict(nodes=self.getNodes())
 
         if expanded_projects:
             output['required-projects'] = list(set(expanded_projects))
