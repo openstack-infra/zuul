@@ -824,6 +824,7 @@ class Job:
             expanded_projects.extend(expand_project_names(
                 self.name, project_names))
 
+        output['parent'] = 'legacy-base'
         if 'dsvm' in self.name:
             output['parent'] = 'legacy-dsvm-base'
         elif 'puppet-openstack-integration' in self.name:
