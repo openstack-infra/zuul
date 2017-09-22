@@ -809,7 +809,9 @@ class Job:
             project_names=[]):
         output = collections.OrderedDict()
         output['name'] = self.name
-        if has_artifacts:
+        if 'dsvm' in self.name:
+            output['parent'] = 'legacy-dsvm-base'
+        elif has_artifacts:
             output['parent'] = 'publish-openstack-artifacts'
         elif has_draft:
             output['success-url'] = 'html/'
