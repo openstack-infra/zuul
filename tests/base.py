@@ -2419,7 +2419,7 @@ class ZuulTestCase(BaseTestCase):
 
     def create_branch(self, project, branch):
         path = os.path.join(self.upstream_root, project)
-        repo = git.Repo.init(path)
+        repo = git.Repo(path)
         fn = os.path.join(path, 'README')
 
         branch_head = repo.create_head(branch)
