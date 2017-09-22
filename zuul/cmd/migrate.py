@@ -507,14 +507,18 @@ class Job:
             self.jjb_job = jobs[self.orig]
 
     def getTimeout(self):
+        timeout = None
         if self.jjb_job:
             for wrapper in self.jjb_job.get('wrappers', []):
                 if isinstance(wrapper, dict):
-                    build_timeout = wrapper.get('timeout')
+                    build_timeout = wrapper.get(
+                        'build-timeout', wrapper.get('timeout'))
                     if isinstance(build_timeout, dict):
                         timeout = build_timeout.get('timeout')
                         if timeout is not None:
                             timeout = int(timeout) * 60
+
+        return timeout
 
     @property
     def short_name(self):
@@ -845,9 +849,11 @@ class Job:
 
         if self.vars:
             output['vars'] = self.vars.copy()
+
         timeout = self.getTimeout()
         if timeout:
             output['timeout'] = timeout
+            output.setdefault('vars', {})
             output['vars']['BUILD_TIMEOUT'] = str(timeout * 1000)
 
         if self.nodes:
