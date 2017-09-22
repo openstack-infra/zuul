@@ -43,7 +43,8 @@
     name: openstack-infra/zuul
     check:
       jobs:
-        - tox-docs
+        - build-openstack-infra-sphinx-docs:
+            success-url: 'html/feature/zuulv3/'
         - tox-cover:
             voting: false
         - tox-pep8
@@ -55,7 +56,8 @@
               - playbooks/zuul-migrate.yaml
     gate:
       jobs:
-        - tox-docs
+        - build-openstack-infra-sphinx-docs:
+            success-url: 'html/feature/zuulv3/'
         - tox-pep8
         - tox-py35
         - zuul-stream-functional
