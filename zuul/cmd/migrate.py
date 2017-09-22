@@ -43,7 +43,7 @@ import yaml
 
 JOBS_BY_ORIG_TEMPLATE = {}  # type: ignore
 SUFFIXES = []  # type: ignore
-ENVIRONMENT = '{{ host_vars[inventory_hostname] | zuul_legacy_vars }}'
+ENVIRONMENT = '{{ zuul | zuul_legacy_vars }}'
 DESCRIPTION = """Migrate zuul v2 and Jenkins Job Builder to Zuul v3.
 
 This program takes a zuul v2 layout.yaml and a collection of Jenkins Job
