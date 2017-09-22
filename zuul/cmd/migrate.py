@@ -485,6 +485,39 @@ class Job:
         return rsync_opts
 
     def _makeSCPTask(self, publisher):
+        # NOTE(mordred) About docs-draft manipulation:
+        # The target of html/ was chosen to put the node contents into the
+        # html dir inside of logs such that if the node's contents have an
+        # index.html in them setting the success-url to html/ will render
+        # things as expected. Existing builder macros look like:
+        # 
+        #   - publisher:
+        #     name: upload-sphinx-draft
+        #     publishers:
+        #       - scp:
+        #           site: 'static.openstack.org'
+        #           files:
+        #             - target: 'docs-draft/$LOG_PATH'
+        #               source: 'doc/build/html/**'
+        #               keep-hierarchy: true
+        #               copy-after-failure: true
+        #
+        # Which is pulling the tree of the remote html directory starting with
+        # doc/build/html and putting that whole thing into
+        # docs-draft/$LOG_PATH.
+        #
+        # Then there is a success-pattern in layout.yaml that looks like:
+        # 
+        #     http://{url}/{log_path}/doc/build/html/
+        #
+        # Which gets reports. There are many variations on that URL. So rather
+        # than needing to figure out varying success-urls to report in v3,
+        # we'll remote the ** and not process this through the rsync_opts
+        # processing we use for the other publishers, but instead will just
+        # pass doc/build/html/ to get the contents of doc/build/html/ and we'll
+        # put those in {{ log_root }}/html/ locally meaning the success-url
+        # can always be html/. This should work for all values of source
+        # from v2.
         tasks = []
         artifacts = False
         draft = False
@@ -499,6 +532,7 @@ class Job:
             if scpfile.get('copy-console'):
                 continue
             else:
+                src = "{{ ansible_user_dir }}"
                 rsync_opts = self._getRsyncOptions(scpfile['source'])
 
             target = scpfile['target']
@@ -512,14 +546,10 @@ class Job:
                                 name=self.name, f=f))
                         continue
                 if target.startswith('docs-draft'):
-                    target = target.replace(
-                        'docs-draft/$LOG_PATH',
-                        "{{ zuul.executor.work_root }}/docs-draft")
+                    target = "{{ zuul.executor.log_root }}/html/"
+                    src = scpfile['source'].replace('**', '')
+                    rsync_opts = None
                     draft = True
-                else:
-                    target = target.replace(
-                        'logs/$LOG_PATH',
-                        "{{ zuul.executor.work_root }}/logs")
             elif site == 'tarballs.openstack.org':
                 if not target.startswith('tarballs'):
                     self.log.error(
@@ -536,18 +566,17 @@ class Job:
                 self.log.error('Job {name} uses yaml2ical publisher')
                 continue
 
-            syncargs = collections.OrderedDict(
-                src="{{ ansible_user_dir }}",
-                dest=target,
-                copy_links='yes',
-                verify_host=True,
-                mode='pull')
+            syncargs = collections.OrderedDict()
+            syncargs['src'] = src
+            syncargs['dest'] = target
+            syncargs['copy_links'] = 'yes'
+            syncargs['mode'] = 'pull'
+            syncargs['verify_host'] = True
             if rsync_opts:
                 syncargs['rsync_opts'] = rsync_opts
-            task = collections.OrderedDict(
-                name='copy files from node',
-                synchronize=syncargs,
-                no_log=True)
+            task = collections.OrderedDict()
+            task['name'] = 'copy files from {src} on node to'.format(src=src)
+            task['synchronize'] = syncargs
             # We don't use retry_args here because there is a bug in
             # the synchronize module that breaks subsequent attempts at
             # retrying. Better to try once and get an accurate error
@@ -719,7 +748,7 @@ class Job:
         if has_artifacts:
             output['parent'] = 'publish-openstack-artifacts'
         elif has_draft:
-            output['parent'] = 'publish-docs-draft'
+            output['success-url'] = 'html/'
         output['run'] = os.path.join(self.job_path, 'run.yaml')
         if has_post:
             output['post-run'] = os.path.join(self.job_path, 'post.yaml')
