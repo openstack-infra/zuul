@@ -587,6 +587,12 @@ class AnsibleJob(object):
         self.private_key_file = get_default(self.executor_server.config,
                                             'executor', 'private_key_file',
                                             '~/.ssh/id_rsa')
+        self.winrm_key_file = get_default(self.executor_server.config,
+                                          'executor', 'winrm_cert_key_file',
+                                          '~/.winrm/winrm_client_cert.key')
+        self.winrm_pem_file = get_default(self.executor_server.config,
+                                          'executor', 'winrm_cert_pem_file',
+                                          '~/.winrm/winrm_client_cert.pem')
         self.ssh_agent = SshAgent()
 
         self.executor_variables_file = None
@@ -1007,6 +1013,18 @@ class AnsibleJob(object):
                 connection_type = node.get('connection_type')
                 if connection_type:
                     host_vars['ansible_connection'] = connection_type
+                    if connection_type == "winrm":
+                        host_vars['ansible_winrm_transport'] = 'certificate'
+                        host_vars['ansible_winrm_cert_pem'] = \
+                            self.winrm_pem_file
+                        host_vars['ansible_winrm_cert_key_pem'] = \
+                            self.winrm_key_file
+                        # NOTE(tobiash): This is necessary when using default
+                        # winrm self-signed certificates. This is probably what
+                        # most installations want so hard code this here for
+                        # now.
+                        host_vars['ansible_winrm_server_cert_validation'] = \
+                            'ignore'
 
                 host_keys = []
                 for key in node.get('host_keys'):
