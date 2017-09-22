@@ -610,6 +610,10 @@ class Job:
                     src = scpfile['source'].replace('**', '')
                     rsync_opts = None
                     draft = True
+                else:
+                    target = target.replace(
+                        'logs/$LOG_PATH',
+                        "{{ zuul.executor.log_root }}")
             elif site == 'tarballs.openstack.org':
                 if not target.startswith('tarballs'):
                     self.log.error(
