@@ -809,8 +809,22 @@ class Job:
             project_names=[]):
         output = collections.OrderedDict()
         output['name'] = self.name
+
+        expanded_projects = []
+        if self.required_projects:
+            expanded_projects = expand_project_names(
+                self.required_projects, project_names)
+            # Look for project names in the job name. Lookie there - the
+            # python in operator works on lists and strings.
+            expanded_projects.extend(expand_project_names(
+                self.name, project_names))
+
         if 'dsvm' in self.name:
             output['parent'] = 'legacy-dsvm-base'
+        elif 'puppet-openstack-integration' in self.name:
+            output['parent'] = 'legacy-puppet-openstack-integration'
+        elif 'openstack/puppet-openstack-integration' in expanded_projects:
+            output['parent'] = 'legacy-puppet-openstack-integration'
         elif has_artifacts:
             output['parent'] = 'publish-openstack-artifacts'
         elif has_draft:
@@ -829,13 +843,7 @@ class Job:
         if self.nodes:
             output['nodes'] = self.getNodes()
 
-        if self.required_projects:
-            expanded_projects = expand_project_names(
-                self.required_projects, project_names)
-            # Look for project names in the job name. Lookie there - the
-            # python in operator works on lists and strings.
-            expanded_projects.extend(expand_project_names(
-                self.name, project_names))
+        if expanded_projects:
             output['required-projects'] = list(set(expanded_projects))
 
         return output
