@@ -542,9 +542,9 @@ class Job:
         # want no matter how deep it is), exclude anything that
         # doesn't match the thing we want or is a directory, then get
         # rid of empty directories left over at the end.
-        rsync_opts = ['--include="%s"' % source,
-                      '--include="*/"',
-                      '--exclude="*"',
+        rsync_opts = ['--include=%s' % source,
+                      '--include=*/',
+                      '--exclude=*',
                       '--prune-empty-dirs']
         return rsync_opts
 
