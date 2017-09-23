@@ -435,7 +435,7 @@ class PipelineManager(object):
         loader = zuul.configloader.ConfigLoader()
 
         build_set = item.current_build_set
-        self.log.debug("Load dynamic layout with %s" % build_set.files)
+        self.log.debug("Loading dynamic layout")
         try:
             # First parse the config as it will land with the
             # full set of config and project repos.  This lets us
@@ -456,13 +456,11 @@ class PipelineManager(object):
                 include_config_projects=False)
         except zuul.configloader.ConfigurationSyntaxError as e:
             self.log.info("Configuration syntax error "
-                          "in dynamic layout %s" %
-                          build_set.files)
+                          "in dynamic layout")
             item.setConfigError(str(e))
             return None
         except Exception:
-            self.log.exception("Error in dynamic layout %s" %
-                               build_set.files)
+            self.log.exception("Error in dynamic layout")
             item.setConfigError("Unknown configuration error")
             return None
         return layout
