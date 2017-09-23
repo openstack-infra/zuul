@@ -16,7 +16,7 @@
 - job:
     name: zuul-stream-functional
     parent: multinode
-    nodes: zuul-functional
+    nodeset: zuul-functional
     pre-run: playbooks/zuul-stream/pre
     run: playbooks/zuul-stream/functional
     post-run:
