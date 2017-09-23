@@ -627,6 +627,13 @@ class SourceContext(object):
         return self.__class__(self.project, self.branch, self.path,
                               self.trusted)
 
+    def isSameProject(self, other):
+        if not isinstance(other, SourceContext):
+            return False
+        return (self.project == other.project and
+                self.branch == other.branch and
+                self.trusted == other.trusted)
+
     def __ne__(self, other):
         return not self.__eq__(other)
 
