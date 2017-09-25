@@ -29,6 +29,7 @@ import itertools
 import getopt
 import logging
 import os
+import operator
 import subprocess
 import tempfile
 import re
@@ -1181,15 +1182,17 @@ class ZuulMigrate:
         zuul_yaml = os.path.join(self.outdir, 'zuul.yaml')
         zuul_d = os.path.join(self.outdir, 'zuul.d')
         orig = os.path.join(zuul_d, '01zuul.yaml')
-        job_outfile = os.path.join(zuul_d, '99converted-jobs.yaml')
-        project_outfile = os.path.join(zuul_d, '99converted-projects.yaml')
+        job_outfile = os.path.join(zuul_d, '99legacy-jobs.yaml')
+        project_outfile = os.path.join(zuul_d, '99legacy-projects.yaml')
+        project_template_outfile = os.path.join(
+            zuul_d, '99legacy-project-templates.yaml')
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
         if not os.path.exists(zuul_d):
             os.makedirs(zuul_d)
         if os.path.exists(zuul_yaml) and self.move:
             os.rename(zuul_yaml, orig)
-        return job_outfile, project_outfile
+        return job_outfile, project_outfile, project_template_outfile
 
     def makeNewJobs(self, old_job, parent: Job=None):
         self.log.debug("makeNewJobs(%s)", old_job)
@@ -1417,22 +1420,28 @@ class ZuulMigrate:
         return new_project
 
     def writeJobs(self):
-        job_outfile, project_outfile = self.setupDir()
+        job_outfile, project_outfile, template_outfile = self.setupDir()
         job_config = []
         project_config = []
+        template_config = []
 
         for template in self.layout.get('project-templates', []):
             self.log.debug("Processing template: %s", template)
             new_template = self.writeProjectTemplate(template)
             self.new_templates[new_template['name']] = new_template
             if not self.mapping.hasProjectTemplate(template['name']):
-                job_config.append({'project-template': new_template})
+                template_config.append({'project-template': new_template})
+        template_config = sorted(
+            template_config,
+            key=lambda template: template['project-template']['name'])
 
         project_names = []
         for project in self.layout.get('projects', []):
             project_names.append(project['name'])
             project_config.append(
                 {'project': self.writeProject(project)})
+        project_config = sorted(
+            project_config, key=lambda project: project['project']['name'])
 
         seen_jobs = []
         for job in sorted(self.job_objects, key=lambda job: job.name):
@@ -1444,10 +1453,17 @@ class ZuulMigrate:
                 job_config.append({'job': job.toJobDict(
                     has_artifacts, has_post, has_draft, project_names)})
                 seen_jobs.append(job.name)
+        job_config = sorted(
+            job_config, key=lambda job: job['job']['name'])
 
         with open(job_outfile, 'w') as yamlout:
             # Insert an extra space between top-level list items
             yamlout.write(ordered_dump(job_config).replace('\n-', '\n\n-'))
+
+        with open(template_outfile, 'w') as yamlout:
+            # Insert an extra space between top-level list items
+            yamlout.write(
+                ordered_dump(template_config).replace('\n-', '\n\n-'))
 
         with open(project_outfile, 'w') as yamlout:
             # Insert an extra space between top-level list items
