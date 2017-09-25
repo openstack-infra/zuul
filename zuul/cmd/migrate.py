@@ -916,7 +916,7 @@ class Job:
             job_vars.update(self.vars)
 
         if self.branch:
-            output[self.name]['branch'] = self.branch
+            output[self.name]['branches'] = self.branch
 
         if self.files:
             output[self.name]['files'] = self.files
