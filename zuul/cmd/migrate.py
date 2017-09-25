@@ -156,6 +156,36 @@ def expand_project_names(required, full):
     return projects
 
 
+def list_to_project_dicts(projects):
+    project_dicts = dict()
+    for project in projects:
+        project_dicts[project['project']['name']] = project['project']
+    return project_dicts
+
+
+def project_dicts_to_list(project_dicts):
+    project_config = []
+    for key in sorted(project_dicts.keys()):
+        project_config.append(dict(project=project_dicts[key]))
+    return project_config
+
+
+def merge_project_dict(project_dicts, name, project):
+    if name not in project_dicts:
+        project_dicts[name] = project
+        return
+
+    old = project_dicts[name]
+    for key in project.keys():
+        if key not in old:
+            old[key] = project[key]
+        elif isinstance(old[key], list):
+            old[key].extend(project[key])
+        elif isinstance(old[key], dict) and 'jobs' in old[key]:
+            old[key]['jobs'].extend(project[key]['jobs'])
+    return
+
+
 # from :
 # http://stackoverflow.com/questions/8640959/how-can-i-control-what-scalar-form-pyyaml-uses-for-my-data  flake8: noqa
 def should_use_block(value):
@@ -1183,7 +1213,8 @@ class ZuulMigrate:
         zuul_d = os.path.join(self.outdir, 'zuul.d')
         orig = os.path.join(zuul_d, '01zuul.yaml')
         job_outfile = os.path.join(zuul_d, '99legacy-jobs.yaml')
-        project_outfile = os.path.join(zuul_d, '99legacy-projects.yaml')
+        project_outfile = os.path.join(zuul_d, 'projects.yaml')
+        projects = []
         project_template_outfile = os.path.join(
             zuul_d, '99legacy-project-templates.yaml')
         if not os.path.exists(self.outdir):
@@ -1192,7 +1223,14 @@ class ZuulMigrate:
             os.makedirs(zuul_d)
         if os.path.exists(zuul_yaml) and self.move:
             os.rename(zuul_yaml, orig)
-        return job_outfile, project_outfile, project_template_outfile
+        elif os.path.exists(project_outfile):
+            projects = ordered_load(open(project_outfile, 'r'))
+        return dict(
+            job_outfile=job_outfile,
+            project_outfile=project_outfile,
+            projects=projects,
+            project_template_outfile=project_template_outfile,
+        )
 
     def makeNewJobs(self, old_job, parent: Job=None):
         self.log.debug("makeNewJobs(%s)", old_job)
@@ -1420,9 +1458,13 @@ class ZuulMigrate:
         return new_project
 
     def writeJobs(self):
-        job_outfile, project_outfile, template_outfile = self.setupDir()
+        output_dir = self.setupDir()
+        job_outfile = output_dir['job_outfile']
+        project_outfile = output_dir['project_outfile']
+        project_config = output_dir['projects']
+        project_dicts = list_to_project_dicts(project_config)
+        project_template_outfile = output_dir['project_template_outfile']
         job_config = []
-        project_config = []
         template_config = []
 
         for template in self.layout.get('project-templates', []):
@@ -1438,10 +1480,11 @@ class ZuulMigrate:
         project_names = []
         for project in self.layout.get('projects', []):
             project_names.append(project['name'])
-            project_config.append(
-                {'project': self.writeProject(project)})
-        project_config = sorted(
-            project_config, key=lambda project: project['project']['name'])
+            project_dict = self.writeProject(project)
+            merge_project_dict(
+                project_dicts, project['name'],
+                self.writeProject(project))
+        project_config = project_dicts_to_list(project_dicts)
 
         seen_jobs = []
         for job in sorted(self.job_objects, key=lambda job: job.name):
@@ -1460,7 +1503,7 @@ class ZuulMigrate:
             # Insert an extra space between top-level list items
             yamlout.write(ordered_dump(job_config).replace('\n-', '\n\n-'))
 
-        with open(template_outfile, 'w') as yamlout:
+        with open(project_template_outfile, 'w') as yamlout:
             # Insert an extra space between top-level list items
             yamlout.write(
                 ordered_dump(template_config).replace('\n-', '\n\n-'))
