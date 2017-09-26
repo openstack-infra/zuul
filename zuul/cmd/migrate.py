@@ -689,9 +689,10 @@ class Job:
         if artifacts:
             ensure_task = collections.OrderedDict()
             ensure_task['name'] = 'Ensure artifacts directory exists'
-            ensure_task['file'] = collections.OrderedDict(
-                path="{{ zuul.executor.work_root }}/artifacts",
-                state='directory')
+            ensure_task['file'] = collections.OrderedDict()
+            ensure_task['file']['path'] = \
+                    "{{ zuul.executor.work_root }}/artifacts"
+            ensure_task['file']['state'] = 'directory'
             ensure_task['delegate_to'] = 'localhost'
             tasks.insert(0, ensure_task)
         return dict(tasks=tasks, artifacts=artifacts, draft=draft)
