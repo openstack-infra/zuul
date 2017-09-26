@@ -399,6 +399,7 @@ class TestInRepoConfig(ZuulTestCase):
         self.fake_gerrit.addEvent(
             self.fake_gerrit.getFakeBranchCreatedEvent(
                 'org/project', 'stable'))
+        self.waitUntilSettled()
         A = self.fake_gerrit.addFakeChange('org/project', 'stable', 'A',
                                            files=file_dict)
         A.addApproval('Code-Review', 2)
