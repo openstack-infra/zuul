@@ -894,7 +894,7 @@ class Job:
                 output['nodeset'] = dict(nodes=self.getNodes())
 
         if expanded_projects:
-            output['required-projects'] = list(set(expanded_projects))
+            output['required-projects'] = sorted(list(set(expanded_projects)))
 
         return output
 
