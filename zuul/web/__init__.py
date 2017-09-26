@@ -108,7 +108,7 @@ class LogStreamingHandler(object):
         except Exception as e:
             self.log.exception("Finger client exception:")
             msg = "Failure from finger client: %s" % e
-            ws.send_str(msg.decode('utf8'))
+            await ws.send_str(msg.decode('utf8'))
 
         return (1000, "No more data")
 
