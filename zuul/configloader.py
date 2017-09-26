@@ -1391,7 +1391,7 @@ class TenantParser(object):
             if not job.updated:
                 raise Exception("Cat job %s failed" % (job,))
             TenantParser.log.debug("Cat job %s got files %s" %
-                                   (job, job.files))
+                                   (job, job.files.keys()))
             loaded = False
             files = sorted(job.files.keys())
             for conf_root in ['zuul.yaml', 'zuul.d', '.zuul.yaml', '.zuul.d']:
