@@ -106,6 +106,15 @@ class ProjectNotFoundError(Exception):
         super(ProjectNotFoundError, self).__init__(message)
 
 
+class TemplateNotFoundError(Exception):
+    def __init__(self, template):
+        message = textwrap.dedent("""\
+        The project template "{template}" was not found.
+        """)
+        message = textwrap.fill(message.format(template=template))
+        super(TemplateNotFoundError, self).__init__(message)
+
+
 class SecretNotFoundError(Exception):
     def __init__(self, secret):
         message = textwrap.dedent("""\
@@ -810,25 +819,29 @@ class ProjectParser(object):
                     if project != conf['_source_context'].project:
                         raise ProjectNotPermittedError()
 
-            # Make a copy since we modify this later via pop
-            conf = copy.deepcopy(conf)
-            conf_templates = conf.pop('templates', [])
-            # The way we construct a project definition is by parsing the
-            # definition as a template, then applying all of the
-            # templates, including the newly parsed one, in order.
-            project_template = ProjectTemplateParser.fromYaml(
-                tenant, layout, conf)
-            configs.extend([layout.project_templates[name]
-                            for name in conf_templates])
-            configs.append(project_template)
-            # Set the following values to the first one that we find and
-            # ignore subsequent settings.
-            mode = conf.get('merge-mode')
-            if mode and project_config.merge_mode is None:
-                project_config.merge_mode = model.MERGER_MAP[mode]
-            default_branch = conf.get('default-branch')
-            if default_branch and project_config.default_branch is None:
-                project_config.default_branch = default_branch
+                # Make a copy since we modify this later via pop
+                conf = copy.deepcopy(conf)
+                conf_templates = conf.pop('templates', [])
+                # The way we construct a project definition is by
+                # parsing the definition as a template, then applying
+                # all of the templates, including the newly parsed
+                # one, in order.
+                project_template = ProjectTemplateParser.fromYaml(
+                    tenant, layout, conf)
+                for name in conf_templates:
+                    if name not in layout.project_templates:
+                        raise TemplateNotFoundError(name)
+                configs.extend([layout.project_templates[name]
+                                for name in conf_templates])
+                configs.append(project_template)
+                # Set the following values to the first one that we
+                # find and ignore subsequent settings.
+                mode = conf.get('merge-mode')
+                if mode and project_config.merge_mode is None:
+                    project_config.merge_mode = model.MERGER_MAP[mode]
+                default_branch = conf.get('default-branch')
+                if default_branch and project_config.default_branch is None:
+                    project_config.default_branch = default_branch
         if project_config.merge_mode is None:
             # If merge mode was not specified in any project stanza,
             # set it to the default.
