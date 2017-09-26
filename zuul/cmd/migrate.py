@@ -548,6 +548,9 @@ class Job:
                         timeout = build_timeout.get('timeout')
                         if timeout is not None:
                             timeout = int(timeout) * 60
+                            # NOTE: This should be read from tenant config
+                            if timeout > 10800:
+                                timeout = 10800
 
         return timeout
 
