@@ -77,7 +77,5 @@
         - zuul-stream-functional
     post:
       jobs:
-        - publish-openstack-python-docs-infra:
-            vars:
-              afs_publisher_target: 'infra/zuul'
+        - publish-openstack-python-docs-infra
         - publish-openstack-python-branch-tarball
