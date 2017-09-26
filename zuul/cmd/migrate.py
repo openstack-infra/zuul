@@ -1385,7 +1385,7 @@ class ZuulMigrate:
 
         def applyIrrelevantFiles(job_name_regex, files):
             for k, v in project.items():
-                if k in ('template', 'name'):
+                if k in ('templates', 'name'):
                     continue
                 project[k]['jobs'] = processPipeline(
                     project[k]['jobs'], job_name_regex, files)
@@ -1422,13 +1422,13 @@ class ZuulMigrate:
 
         templates_to_expand = []
         if 'template' in project:
-            new_project['template'] = []
+            new_project['templates'] = []
             for template in project['template']:
                 if template['name'] in exp_template_names:
                     templates_to_expand.append(template['name'])
                     continue
-                new_project['template'].append(dict(
-                    name=self.mapping.getNewTemplateName(template['name'])))
+                new_project['templates'].append(
+                    self.mapping.getNewTemplateName(template['name']))
 
         for key, value in project.items():
             if key in ('name', 'template'):
