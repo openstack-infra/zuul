@@ -100,9 +100,15 @@ class LogStreamingHandler(object):
         if not port_location:
             return (4011, "Error with Gearman")
 
-        await self._fingerClient(
-            ws, port_location['server'], port_location['port'], request['uuid']
-        )
+        try:
+            await self._fingerClient(
+                ws, port_location['server'], port_location['port'],
+                request['uuid']
+            )
+        except Exception as e:
+            self.log.exception("Finger client exception:")
+            msg = "Failure from finger client: %s" % e
+            ws.send_str(msg.decode('utf8'))
 
         return (1000, "No more data")
 
