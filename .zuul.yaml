@@ -45,10 +45,19 @@
       jobs:
         - build-openstack-infra-sphinx-docs:
             success-url: 'html/feature/zuulv3/'
+            irrelevant-files:
+              - zuul/cmd/migrate.py
+              - playbooks/zuul-migrate.yaml
         - tox-cover:
+            irrelevant-files:
+              - zuul/cmd/migrate.py
+              - playbooks/zuul-migrate.yaml
             voting: false
         - tox-pep8
-        - tox-py35
+        - tox-py35:
+            irrelevant-files:
+              - zuul/cmd/migrate.py
+              - playbooks/zuul-migrate.yaml
         - zuul-stream-functional
         - zuul-migrate:
             files:
@@ -59,7 +68,10 @@
         - build-openstack-infra-sphinx-docs:
             success-url: 'html/feature/zuulv3/'
         - tox-pep8
-        - tox-py35
+        - tox-py35:
+            irrelevant-files:
+              - zuul/cmd/migrate.py
+              - playbooks/zuul-migrate.yaml
         - zuul-stream-functional
     post:
       jobs:

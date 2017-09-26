@@ -5,7 +5,7 @@
       command: "python3 -m pip install --user src/git.openstack.org/openstack-infra/zuul[migrate]"
 
     - name: Migrate the data
-      command: "python3 ../zuul/zuul/cmd/migrate.py zuul/layout.yaml jenkins/jobs nodepool/nodepool.yaml . --mapping=zuul/mapping.yaml -v -m"
+      command: "python3 ../zuul/zuul/cmd/migrate.py zuul/layout.yaml jenkins/jobs nodepool/nodepool.yaml . --mapping=zuul/mapping.yaml -v"
       args:
         chdir: src/git.openstack.org/openstack-infra/project-config
 

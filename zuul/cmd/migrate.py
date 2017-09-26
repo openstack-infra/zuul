@@ -1085,12 +1085,11 @@ class ZuulMigrate:
     log = logging.getLogger("zuul.Migrate")
 
     def __init__(self, layout, job_config, nodepool_config,
-                 outdir, mapping, move, syntax_check):
+                 outdir, mapping, syntax_check):
         self.layout = ordered_load(open(layout, 'r'))
         self.job_config = job_config
         self.outdir = outdir
         self.mapping = JobMapping(nodepool_config, self.layout, mapping)
-        self.move = move
         self.syntax_check = syntax_check
 
         self.jobs = {}
@@ -1211,18 +1210,15 @@ class ZuulMigrate:
     def setupDir(self):
         zuul_yaml = os.path.join(self.outdir, 'zuul.yaml')
         zuul_d = os.path.join(self.outdir, 'zuul.d')
-        orig = os.path.join(zuul_d, '01zuul.yaml')
-        job_outfile = os.path.join(zuul_d, '99legacy-jobs.yaml')
+        job_outfile = os.path.join(zuul_d, 'zuul-legacy-jobs.yaml')
         project_outfile = os.path.join(zuul_d, 'projects.yaml')
         projects = []
         project_template_outfile = os.path.join(
-            zuul_d, '99legacy-project-templates.yaml')
+            zuul_d, 'zuul-legacy-project-templates.yaml')
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
         if not os.path.exists(zuul_d):
             os.makedirs(zuul_d)
-        if os.path.exists(zuul_yaml) and self.move:
-            os.rename(zuul_yaml, orig)
         elif os.path.exists(project_outfile):
             projects = ordered_load(open(project_outfile, 'r'))
         return dict(
@@ -1543,10 +1539,6 @@ def main():
     parser.add_argument(
         '--syntax-check', dest='syntax_check', action='store_true',
         help='Run ansible-playbook --syntax-check on generated playbooks')
-    parser.add_argument(
-        '-m', dest='move', action='store_true',
-        help='Move zuul.yaml to zuul.d if it exists')
-
     args = parser.parse_args()
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
@@ -1554,7 +1546,7 @@ def main():
         logging.basicConfig(level=logging.INFO)
 
     ZuulMigrate(args.layout, args.job_config, args.nodepool_config,
-                args.outdir, args.mapping, args.move, args.syntax_check).run()
+                args.outdir, args.mapping, args.syntax_check).run()
 
 
 if __name__ == '__main__':
