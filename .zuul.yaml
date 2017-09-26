@@ -31,10 +31,12 @@
 - job:
     name: zuul-migrate
     parent: unittests
-    run: playbooks/zuul-migrate
+    run: playbooks/zuul-migrate/run
+    post-run: playbooks/zuul-migrate/post
     # We're adding zuul to the required-projects so that we can also trigger
     # this from project-config changes
     required-projects:
+      - openstack-infra/openstack-zuul-jobs
       - openstack-infra/project-config
       - name: openstack-infra/zuul
         override-branch: feature/zuulv3
@@ -47,22 +49,22 @@
             success-url: 'html/feature/zuulv3/'
             irrelevant-files:
               - zuul/cmd/migrate.py
-              - playbooks/zuul-migrate.yaml
+              - playbooks/zuul-migrate/.*
         - tox-cover:
             irrelevant-files:
               - zuul/cmd/migrate.py
-              - playbooks/zuul-migrate.yaml
+              - playbooks/zuul-migrate/.*
             voting: false
         - tox-pep8
         - tox-py35:
             irrelevant-files:
               - zuul/cmd/migrate.py
-              - playbooks/zuul-migrate.yaml
+              - playbooks/zuul-migrate/.*
         - zuul-stream-functional
         - zuul-migrate:
             files:
               - zuul/cmd/migrate.py
-              - playbooks/zuul-migrate.yaml
+              - playbooks/zuul-migrate/.*
     gate:
       jobs:
         - build-openstack-infra-sphinx-docs:
@@ -71,7 +73,7 @@
         - tox-py35:
             irrelevant-files:
               - zuul/cmd/migrate.py
-              - playbooks/zuul-migrate.yaml
+              - playbooks/zuul-migrate/.*
         - zuul-stream-functional
     post:
       jobs:

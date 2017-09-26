@@ -17,7 +17,44 @@
 # Stupid script I'm using to test migration script locally
 # Assumes project-config is adjacent to zuul and has the mapping file
 
+OPTS=$(getopt -o v --long final -n $0 -- "$@")
+if [ $? != 0 ] ; then
+    echo "Failed parsing options." >&2
+    exit 1
+fi
+eval set -- "$OPTS"
+set -ex
+
+FINAL=0
+VERBOSE=""
+
+while true; do
+    case "$1" in
+        --final)
+            FINAL=1
+            shift
+            ;;
+        -v)
+            VERBOSE=-v
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+    esac
+done
+
 BASE_DIR=$(cd $(dirname $0)/../..; pwd)
 cd $BASE_DIR/project-config
+if [[ $FINAL ]] ; then
+    git reset --hard
+fi
 python3 $BASE_DIR/zuul/zuul/cmd/migrate.py  --mapping=zuul/mapping.yaml \
-    zuul/layout.yaml jenkins/jobs nodepool/nodepool.yaml .
+    zuul/layout.yaml jenkins/jobs nodepool/nodepool.yaml . $VERBOSE
+if [[ $FINAL ]] ; then
+    find ../openstack-zuul-jobs/playbooks/legacy -maxdepth 1 -mindepth 1 \
+        -type d  | xargs rm -rf
+    mv zuul.d/zuul-legacy-* ../openstack-zuul-jobs/zuul.d/
+    mv playbooks/legacy/* ../openstack-zuul-jobs/playbooks/legacy/
+fi
