@@ -919,7 +919,7 @@ class Job:
         elif 'openstack/puppet-openstack-integration' in expanded_projects:
             output['parent'] = 'legacy-puppet-openstack-integration'
         elif has_artifacts:
-            output['parent'] = 'publish-openstack-artifacts'
+            output['parent'] = 'legacy-publish-openstack-artifacts'
         elif has_draft:
             output['success-url'] = 'html/'
         output['run'] = os.path.join(self.job_path, 'run')
