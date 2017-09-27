@@ -244,6 +244,11 @@ of item.
          The path to the source code, relative to the work dir.  E.g.,
          `src/git.example.com/org/project`.
 
+      .. var:: required
+
+         A boolean indicating whether this project appears in the
+         :attr:`job.required-projects` list for this job.
+
    .. var:: tenant
 
       The name of the current Zuul tenant.
