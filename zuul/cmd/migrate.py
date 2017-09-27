@@ -630,7 +630,7 @@ class Job:
             if scpfile.get('copy-console'):
                 continue
             else:
-                src = "{{ ansible_user_dir }}/"
+                src = "{{ ansible_user_dir }}/workspace/"
                 rsync_opts = self._getRsyncOptions(scpfile['source'])
 
             target = scpfile['target']
@@ -705,6 +705,7 @@ class Job:
         task['shell']['cmd'] = data
         if shell:
             task['shell']['executable'] = shell
+        task['shell']['chdir'] = '{{ ansible_user_dir }}/workspace'
 
         if syntax_check:
             # Emit a test playbook with this shell task in it then run
@@ -761,6 +762,7 @@ class Job:
             task = self._emitScriptContent(
                 builder['shell'], playbook_dir, sequence)
         task['environment'] = ENVIRONMENT
+
         return task
 
     def _transformPublishers(self, jjb_job):
@@ -806,7 +808,15 @@ class Job:
 
         run_playbook = os.path.join(self.job_path, 'run.yaml')
         post_playbook = os.path.join(self.job_path, 'post.yaml')
+
         tasks = []
+        workspace_task = collections.OrderedDict()
+        workspace_task['name'] = "Ensure legacy workspace directory"
+        workspace_task['file'] = collections.OrderedDict()
+        workspace_task['file']['path'] = '{{ ansible_user_dir }}/workspace'
+        workspace_task['file']['state'] = 'directory'
+        tasks.append(workspace_task)
+
         sequence = 0
         for builder in self.jjb_job.get('builders', []):
             if 'shell' in builder:
