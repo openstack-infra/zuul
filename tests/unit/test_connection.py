@@ -69,7 +69,7 @@ class TestSQLConnection(ZuulDBTestCase):
         insp = sa.engine.reflection.Inspector(
             self.connections.connections['resultsdb'].engine)
 
-        self.assertEqual(11, len(insp.get_columns(buildset_table)))
+        self.assertEqual(13, len(insp.get_columns(buildset_table)))
         self.assertEqual(10, len(insp.get_columns(build_table)))
 
     def test_sql_results(self):
