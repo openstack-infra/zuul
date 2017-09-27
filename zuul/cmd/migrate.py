@@ -1493,7 +1493,7 @@ class ZuulMigrate:
             project_dict = self.writeProject(project)
             merge_project_dict(
                 project_dicts, project['name'],
-                self.writeProject(project))
+                project_dict)
         project_config = project_dicts_to_list(project_dicts)
 
         seen_jobs = []
