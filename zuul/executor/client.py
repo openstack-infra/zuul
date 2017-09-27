@@ -234,6 +234,7 @@ class ExecutorClient(object):
         params['vars'] = copy.deepcopy(job.variables)
         params['zuul'] = zuul_params
         projects = set()
+        required_projects = set()
 
         def make_project_dict(project, override_branch=None):
             project_config = item.current_build_set.layout.project_configs.get(
@@ -260,6 +261,7 @@ class ExecutorClient(object):
                     make_project_dict(project,
                                       job_project.override_branch))
                 projects.add(project)
+                required_projects.add(project)
         for i in all_items:
             if i.change.project not in projects:
                 project = i.change.project
@@ -273,6 +275,7 @@ class ExecutorClient(object):
                 canonical_hostname=p.canonical_hostname,
                 canonical_name=p.canonical_name,
                 src_dir=os.path.join('src', p.canonical_name),
+                required=(p in required_projects),
             ))
 
         build = Build(job, uuid)
