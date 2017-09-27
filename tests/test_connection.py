@@ -60,7 +60,7 @@ class TestConnections(ZuulDBTestCase):
         self.waitUntilSettled()
 
         self.assertEqual(len(A.patchsets[-1]['approvals']), 1)
-        self.assertEqual(A.patchsets[-1]['approvals'][0]['type'], 'VRFY')
+        self.assertEqual(A.patchsets[-1]['approvals'][0]['type'], 'Verified')
         self.assertEqual(A.patchsets[-1]['approvals'][0]['value'], '1')
         self.assertEqual(A.patchsets[-1]['approvals'][0]['by']['username'],
                          'jenkins')
@@ -72,7 +72,7 @@ class TestConnections(ZuulDBTestCase):
         self.waitUntilSettled()
 
         self.assertEqual(len(B.patchsets[-1]['approvals']), 1)
-        self.assertEqual(B.patchsets[-1]['approvals'][0]['type'], 'VRFY')
+        self.assertEqual(B.patchsets[-1]['approvals'][0]['type'], 'Verified')
         self.assertEqual(B.patchsets[-1]['approvals'][0]['value'], '-1')
         self.assertEqual(B.patchsets[-1]['approvals'][0]['by']['username'],
                          'civoter')

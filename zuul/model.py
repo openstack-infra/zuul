@@ -1123,7 +1123,8 @@ class BaseFilter(object):
             else:
                 if not isinstance(v, list):
                     v = [v]
-                if (normalizeCategory(approval['description']) != k or
+                if (normalizeCategory(approval['description']) !=
+                        normalizeCategory(k) or
                         int(approval['value']) not in v):
                     return False
         return True
@@ -1303,8 +1304,9 @@ class EventFilter(BaseFilter):
         for category, value in self.event_approvals.items():
             matches_approval = False
             for eapproval in event.approvals:
-                if (normalizeCategory(eapproval['description']) == category and
-                    int(eapproval['value']) == int(value)):
+                if (normalizeCategory(eapproval['description']) ==
+                        normalizeCategory(category) and
+                        int(eapproval['value']) == int(value)):
                     matches_approval = True
             if not matches_approval:
                 return False
