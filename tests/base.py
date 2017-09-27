@@ -1485,7 +1485,10 @@ class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
             result = super(RecordingAnsibleJob, self).runAnsible(
                 cmd, timeout, playbook)
         else:
-            result = build.run()
+            if playbook.path:
+                result = build.run()
+            else:
+                result = (self.RESULT_NORMAL, 0)
         return result
 
     def getHostList(self, args):

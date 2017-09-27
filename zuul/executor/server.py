@@ -346,6 +346,15 @@ class JobDir(object):
         self.trusted_projects = []
         self.trusted_project_index = {}
 
+        # Create a JobDirPlaybook for the Ansible setup run.  This
+        # doesn't use an actual playbook, but it lets us use the same
+        # methods to write an ansible.cfg as the rest of the Ansible
+        # runs.
+        setup_root = os.path.join(self.ansible_root, 'setup_playbook')
+        os.makedirs(setup_root)
+        self.setup_playbook = JobDirPlaybook(setup_root)
+        self.setup_playbook.trusted = True
+
     def addTrustedProject(self, canonical_name, branch):
         # Trusted projects are placed in their own directories so that
         # we can support using different branches of the same project
@@ -1101,6 +1110,17 @@ class AnsibleJob(object):
     def runPlaybooks(self, args):
         result = None
 
+        # Run the Ansible 'setup' module on all hosts in the inventory
+        # at the start of the job with a 60 second timeout.  If we
+        # aren't able to connect to all the hosts and gather facts
+        # within that timeout, there is likely a network problem
+        # between here and the hosts in the inventory; return them and
+        # reschedule the job.
+        setup_status, setup_code = self.runAnsibleSetup(
+            self.jobdir.setup_playbook)
+        if setup_status != self.RESULT_NORMAL or setup_code != 0:
+            return result
+
         pre_failed = False
         success = False
         for index, playbook in enumerate(self.jobdir.pre_playbooks):
@@ -1213,6 +1233,8 @@ class AnsibleJob(object):
         return None
 
     def preparePlaybooks(self, args):
+        self.writeAnsibleConfig(self.jobdir.setup_playbook)
+
         for playbook in args['pre_playbooks']:
             jobdir_playbook = self.jobdir.addPrePlaybook()
             self.preparePlaybook(jobdir_playbook, playbook,
@@ -1289,7 +1311,7 @@ class AnsibleJob(object):
             jobdir_playbook.secrets_content = yaml.safe_dump(
                 secrets, default_flow_style=False)
 
-        self.writeAnsibleConfig(jobdir_playbook, playbook)
+        self.writeAnsibleConfig(jobdir_playbook)
 
     def checkoutTrustedProject(self, project, branch):
         root = self.jobdir.getTrustedProject(project.canonical_name,
@@ -1420,7 +1442,7 @@ class AnsibleJob(object):
             job_output_file=self.jobdir.job_output_file)
         logging_config.writeJson(self.jobdir.logging_json)
 
-    def writeAnsibleConfig(self, jobdir_playbook, playbook):
+    def writeAnsibleConfig(self, jobdir_playbook):
         trusted = jobdir_playbook.trusted
 
         # TODO(mordred) This should likely be extracted into a more generalized
@@ -1467,7 +1489,7 @@ class AnsibleJob(object):
             # role. Otherwise, printing the args could be useful for
             # debugging.
             config.write('display_args_to_stdout = %s\n' %
-                         str(not playbook['secrets']))
+                         str(not jobdir_playbook.secrets_content))
 
             config.write('[ssh_connection]\n')
             # NB: when setting pipelining = True, keep_remote_files
@@ -1639,6 +1661,21 @@ class AnsibleJob(object):
                         line=line.decode('utf-8').rstrip()))
 
         return (self.RESULT_NORMAL, ret)
+
+    def runAnsibleSetup(self, playbook):
+        if self.executor_server.verbose:
+            verbose = '-vvv'
+        else:
+            verbose = '-v'
+
+        cmd = ['ansible', '*', verbose, '-m', 'setup',
+               '-a', 'gather_subset=!all']
+
+        result, code = self.runAnsible(
+            cmd=cmd, timeout=60, playbook=playbook)
+        self.log.debug("Ansible complete, result %s code %s" % (
+            self.RESULT_MAP[result], code))
+        return result, code
 
     def runAnsiblePlaybook(self, playbook, timeout, success=None,
                            phase=None, index=None):
