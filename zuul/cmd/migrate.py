@@ -932,8 +932,6 @@ class Job:
         timeout = self.getTimeout()
         if timeout:
             output['timeout'] = timeout
-            output.setdefault('vars', {})
-            output['vars']['BUILD_TIMEOUT'] = str(timeout * 1000)
 
         if self.nodes:
             if len(self.nodes) == 1:

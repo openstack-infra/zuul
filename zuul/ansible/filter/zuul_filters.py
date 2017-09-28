@@ -25,7 +25,8 @@ def zuul_legacy_vars(zuul):
                   ZUUL_SHORT_PROJECT_NAME=short_name,
                   ZUUL_PIPELINE=zuul['pipeline'],
                   ZUUL_VOTING=zuul['voting'],
-                  WORKSPACE='/home/zuul/workspace')
+                  WORKSPACE='/home/zuul/workspace',
+                  BUILD_TIMEOUT=str(int(zuul['timeout']) * 1000))
     if 'branch' in zuul:
         params['ZUUL_BRANCH'] = zuul['branch']
 
