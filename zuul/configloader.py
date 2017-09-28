@@ -856,9 +856,6 @@ class ProjectParser(object):
             pipeline_defined = False
             for template in configs:
                 if pipeline.name in template.pipelines:
-                    ProjectParser.log.debug(
-                        "Applying template %s to pipeline %s" %
-                        (template.name, pipeline.name))
                     pipeline_defined = True
                     template_pipeline = template.pipelines[pipeline.name]
                     project_pipeline.job_list.inheritFrom(
