@@ -435,12 +435,12 @@ class PipelineManager(object):
         loader = zuul.configloader.ConfigLoader()
 
         build_set = item.current_build_set
-        self.log.debug("Loading dynamic layout")
         try:
             # First parse the config as it will land with the
             # full set of config and project repos.  This lets us
             # catch syntax errors in config repos even though we won't
             # actually run with that config.
+            self.log.debug("Loading dynamic layout (phase 1)")
             loader.createDynamicLayout(
                 item.pipeline.layout.tenant,
                 build_set.files,
@@ -450,10 +450,12 @@ class PipelineManager(object):
 
             # Then create the config a second time but without changes
             # to config repos so that we actually use this config.
+            self.log.debug("Loading dynamic layout (phase 2)")
             layout = loader.createDynamicLayout(
                 item.pipeline.layout.tenant,
                 build_set.files,
                 include_config_projects=False)
+            self.log.debug("Loading dynamic layout complete")
         except zuul.configloader.ConfigurationSyntaxError as e:
             self.log.info("Configuration syntax error "
                           "in dynamic layout")
