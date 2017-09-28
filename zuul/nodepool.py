@@ -117,7 +117,7 @@ class Nodepool(object):
         try:
             for node in nodes:
                 self.log.debug("Locking node %s" % (node,))
-                self.sched.zk.lockNode(node)
+                self.sched.zk.lockNode(node, timeout=30)
                 locked_nodes.append(node)
         except Exception:
             self.log.exception("Error locking nodes:")
