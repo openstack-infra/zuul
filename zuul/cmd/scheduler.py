@@ -154,8 +154,10 @@ class Scheduler(zuul.cmd.ZuulApp):
         zookeeper = zuul.zk.ZooKeeper()
         zookeeper_hosts = get_default(self.config, 'zookeeper',
                                       'hosts', '127.0.0.1:2181')
+        zookeeper_timeout = float(get_default(self.config, 'zookeeper',
+                                              'session_timeout', 10.0))
 
-        zookeeper.connect(zookeeper_hosts)
+        zookeeper.connect(zookeeper_hosts, timeout=zookeeper_timeout)
 
         cache_expiry = get_default(self.config, 'webapp', 'status_expiry', 1)
         listen_address = get_default(self.config, 'webapp', 'listen_address',

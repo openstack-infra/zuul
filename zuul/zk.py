@@ -90,7 +90,7 @@ class ZooKeeper(object):
     def resetLostFlag(self):
         self._became_lost = False
 
-    def connect(self, hosts, read_only=False):
+    def connect(self, hosts, read_only=False, timeout=10.0):
         '''
         Establish a connection with ZooKeeper cluster.
 
@@ -100,10 +100,12 @@ class ZooKeeper(object):
         :param str hosts: Comma-separated list of hosts to connect to (e.g.
             127.0.0.1:2181,127.0.0.1:2182,[::1]:2183).
         :param bool read_only: If True, establishes a read-only connection.
-
+        :param float timeout: The ZooKeeper session timeout, in
+            seconds (default: 10.0).
         '''
         if self.client is None:
-            self.client = KazooClient(hosts=hosts, read_only=read_only)
+            self.client = KazooClient(hosts=hosts, read_only=read_only,
+                                      timeout=timeout)
             self.client.add_listener(self._connection_listener)
             self.client.start()
 
