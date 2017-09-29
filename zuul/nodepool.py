@@ -90,10 +90,15 @@ class Nodepool(object):
         self.log.info("Returning nodeset %s" % (nodeset,))
         for node in nodeset.getNodes():
             if node.lock is None:
-                raise Exception("Node %s is not locked" % (node,))
-            if node.state == model.STATE_IN_USE:
-                node.state = model.STATE_USED
-                self.sched.zk.storeNode(node)
+                self.log.error("Node %s is not locked" % (node,))
+            else:
+                try:
+                    if node.state == model.STATE_IN_USE:
+                        node.state = model.STATE_USED
+                        self.sched.zk.storeNode(node)
+                except Exception:
+                    self.log.exception("Exception storing node %s "
+                                       "while unlocking:" % (node,))
         self._unlockNodes(nodeset.getNodes())
 
     def unlockNodeSet(self, nodeset):

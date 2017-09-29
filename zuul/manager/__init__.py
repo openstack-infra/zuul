@@ -407,13 +407,8 @@ class PipelineManager(object):
                     old_build_set.item, build.job)
 
             if not was_running:
-                try:
-                    nodeset = build.build_set.getJobNodeSet(build.job.name)
-                    self.sched.nodepool.returnNodeSet(nodeset)
-                except Exception:
-                    self.log.exception("Unable to return nodeset %s for "
-                                       "canceled build request %s" %
-                                       (nodeset, build))
+                nodeset = build.build_set.getJobNodeSet(build.job.name)
+                self.sched.nodepool.returnNodeSet(nodeset)
             build.result = 'CANCELED'
             canceled = True
             canceled_jobs.add(build.job.name)
