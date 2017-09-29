@@ -27,6 +27,9 @@
 - job:
     name: project-test2
 
+- job:
+    name: project-test3
+
 - project:
     name: org/project
     check:
@@ -36,3 +39,9 @@
             dependencies: project-merge
         - project-test2:
             dependencies: project-merge
+        # Make sure we have a "SKIPPED" result
+        - project-test3:
+            dependencies: project-test1
+        # The noop job can have timing quirks
+        - noop:
+            dependencies: project-test2

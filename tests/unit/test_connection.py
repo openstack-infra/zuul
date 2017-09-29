@@ -74,6 +74,7 @@ class TestSQLConnection(ZuulDBTestCase):
 
     def test_sql_results(self):
         "Test results are entered into an sql table"
+        self.executor_server.hold_jobs_in_build = True
         # Grab the sa tables
         tenant = self.sched.abide.tenants.get('tenant-one')
         reporter = _get_reporter_from_connection_name(
@@ -85,12 +86,16 @@ class TestSQLConnection(ZuulDBTestCase):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
+        self.orderedRelease()
+        self.waitUntilSettled()
 
         # Add a failed result
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
 
         self.executor_server.failJob('project-test1', B)
         self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.orderedRelease()
         self.waitUntilSettled()
 
         conn = self.connections.connections['resultsdb'].engine.connect()
@@ -141,15 +146,15 @@ class TestSQLConnection(ZuulDBTestCase):
             )
         ).fetchall()
 
-        # Check the second last result, which should be the project-test1 job
+        # Check the second result, which should be the project-test1 job
         # which failed
-        self.assertEqual('project-test1', buildset1_builds[-2]['job_name'])
-        self.assertEqual("FAILURE", buildset1_builds[-2]['result'])
+        self.assertEqual('project-test1', buildset1_builds[1]['job_name'])
+        self.assertEqual("FAILURE", buildset1_builds[1]['result'])
         self.assertEqual(
             'finger://{hostname}/{uuid}'.format(
                 hostname=self.executor_server.hostname,
-                uuid=buildset1_builds[-2]['uuid']),
-            buildset1_builds[-2]['log_url'])
+                uuid=buildset1_builds[1]['uuid']),
+            buildset1_builds[1]['log_url'])
 
     def test_multiple_sql_connections(self):
         "Test putting results in different databases"

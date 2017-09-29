@@ -61,15 +61,19 @@ class SQLReporter(BaseReporter):
 
                 (result, url) = item.formatJobResult(job)
 
+                start = end = None
+                if build.start_time:
+                    start = datetime.datetime.fromtimestamp(build.start_time)
+                if build.end_time:
+                    end = datetime.datetime.fromtimestamp(build.end_time)
+
                 build_inserts.append({
                     'buildset_id': buildset_ins_result.inserted_primary_key,
                     'uuid': build.uuid,
                     'job_name': build.job.name,
                     'result': result,
-                    'start_time': datetime.datetime.fromtimestamp(
-                        build.start_time),
-                    'end_time': datetime.datetime.fromtimestamp(
-                        build.end_time),
+                    'start_time': start,
+                    'end_time': end,
                     'voting': build.job.voting,
                     'log_url': url,
                     'node_name': build.node_name,

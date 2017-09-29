@@ -282,6 +282,7 @@ class ExecutorClient(object):
         build.parameters = params
 
         if job.name == 'noop':
+            self.sched.onBuildStarted(build)
             self.sched.onBuildCompleted(build, 'SUCCESS', {})
             return build
 
