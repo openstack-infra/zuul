@@ -44,6 +44,12 @@ PRECEDENCE_MAP = {
     'high': PRECEDENCE_HIGH,
 }
 
+PRIORITY_MAP = {
+    PRECEDENCE_NORMAL: 200,
+    PRECEDENCE_LOW: 300,
+    PRECEDENCE_HIGH: 100,
+}
+
 # Request states
 STATE_REQUESTED = 'requested'
 STATE_PENDING = 'pending'
@@ -523,6 +529,10 @@ class NodeRequest(object):
         # overwritten).
         self.failed = False
         self.canceled = False
+
+    @property
+    def priority(self):
+        return PRIORITY_MAP[self.build_set.item.pipeline.precedence]
 
     @property
     def fulfilled(self):

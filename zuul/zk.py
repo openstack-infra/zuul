@@ -147,12 +147,10 @@ class ZooKeeper(object):
             from ZooKeeper).  The watcher should return False when
             further updates are no longer necessary.
         '''
-        priority = 100  # TODO(jeblair): integrate into nodereq
-
         data = node_request.toDict()
         data['created_time'] = time.time()
 
-        path = '%s/%s-' % (self.REQUEST_ROOT, priority)
+        path = '%s/%s-' % (self.REQUEST_ROOT, node_request.priority)
         path = self.client.create(path, self._dictToStr(data),
                                   makepath=True,
                                   sequence=True, ephemeral=True)

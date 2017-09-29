@@ -4613,6 +4613,45 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertIn('project-test1 : SKIPPED', A.messages[1])
         self.assertIn('project-test2 : SKIPPED', A.messages[1])
 
+    def test_nodepool_priority(self):
+        "Test that nodes are requested at the correct priority"
+
+        self.fake_nodepool.paused = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getRefUpdatedEvent())
+
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        C.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(C.addApproval('Approved', 1))
+
+        self.waitUntilSettled()
+
+        reqs = self.fake_nodepool.getNodeRequests()
+
+        # The requests come back sorted by oid. Since we have three requests
+        # for the three changes each with a different priority.
+        # Also they get a serial number based on order they were received
+        # so the number on the endof the oid should map to order submitted.
+
+        # * gate first - high priority - change C
+        self.assertEqual(reqs[0]['_oid'], '100-0000000002')
+        self.assertEqual(reqs[0]['node_types'], ['label1'])
+        # * check second - normal priority - change B
+        self.assertEqual(reqs[1]['_oid'], '200-0000000001')
+        self.assertEqual(reqs[1]['node_types'], ['label1'])
+        # * post third - low priority - change A
+        # additionally, the post job defined uses an ubuntu-xenial node,
+        # so we include that check just as an extra verification
+        self.assertEqual(reqs[2]['_oid'], '300-0000000000')
+        self.assertEqual(reqs[2]['node_types'], ['ubuntu-xenial'])
+
+        self.fake_nodepool.paused = False
+        self.waitUntilSettled()
+
     @simple_layout('layouts/multiple-templates.yaml')
     def test_multiple_project_templates(self):
         # Test that applying multiple project templates to a project
