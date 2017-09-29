@@ -168,7 +168,8 @@ class ExecutorClient(object):
                            project=project,
                            tenant=tenant.name,
                            timeout=job.timeout,
-                           jobtags=sorted(job.tags))
+                           jobtags=sorted(job.tags),
+                           _inheritance_path=list(job.inheritance_path))
         if hasattr(item.change, 'branch'):
             zuul_params['branch'] = item.change.branch
         if hasattr(item.change, 'tag'):
