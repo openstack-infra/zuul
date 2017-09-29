@@ -1030,7 +1030,9 @@ class JobList(object):
             if jobname in self.jobs:
                 self.jobs[jobname].extend(jobs)
             else:
-                self.jobs[jobname] = jobs
+                # Be sure to make a copy here since this list may be
+                # modified.
+                self.jobs[jobname] = jobs[:]
 
 
 class JobGraph(object):

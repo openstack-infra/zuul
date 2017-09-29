@@ -4613,6 +4613,17 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertIn('project-test1 : SKIPPED', A.messages[1])
         self.assertIn('project-test2 : SKIPPED', A.messages[1])
 
+    @simple_layout('layouts/multiple-templates.yaml')
+    def test_multiple_project_templates(self):
+        # Test that applying multiple project templates to a project
+        # doesn't alter them when used for a second project.
+        A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        build = self.getJobFromHistory('py27')
+        self.assertEqual(build.parameters['zuul']['jobtags'], [])
+
 
 class TestExecutor(ZuulTestCase):
     tenant_config_file = 'config/single-tenant/main.yaml'
