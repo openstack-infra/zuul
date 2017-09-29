@@ -20,14 +20,15 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('url', help='The URL of the running Zuul instance')
-parser.add_argument('pipeline_name', help='The name of the Zuul pipeline')
+parser.add_argument('tenant', help='The Zuul tenant')
+parser.add_argument('pipeline', help='The name of the Zuul pipeline')
 options = parser.parse_args()
 
 data = urllib2.urlopen('%s/status.json' % options.url).read()
 data = json.loads(data)
 
 for pipeline in data['pipelines']:
-    if pipeline['name'] != options.pipeline_name:
+    if pipeline['name'] != options.pipeline:
         continue
     for queue in pipeline['change_queues']:
         for head in queue['heads']:
@@ -36,9 +37,10 @@ for pipeline in data['pipelines']:
                     continue
                 cid, cps = change['id'].split(',')
                 print(
-                    "zuul enqueue --trigger gerrit --pipeline %s "
-                    "--project %s --change %s,%s" % (
-                        options.pipeline_name,
+                    "zuul enqueue --tenant %s --trigger gerrit "
+                    "--pipeline %s --project %s --change %s,%s" % (
+                        options.tenant,
+                        options.pipeline,
                         change['project'],
                         cid, cps)
                 )
