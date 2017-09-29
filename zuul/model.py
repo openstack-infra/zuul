@@ -827,6 +827,7 @@ class Job(object):
         self.other_attributes = dict(
             name=None,
             source_context=None,
+            source_line=None,
             inheritance_path=(),
         )
 
@@ -861,9 +862,11 @@ class Job(object):
         return self.name
 
     def __repr__(self):
-        return '<Job %s branches: %s source: %s>' % (self.name,
-                                                     self.branch_matcher,
-                                                     self.source_context)
+        return '<Job %s branches: %s source: %s#%s>' % (
+            self.name,
+            self.branch_matcher,
+            self.source_context,
+            self.source_line)
 
     def __getattr__(self, name):
         v = self.__dict__.get(name)

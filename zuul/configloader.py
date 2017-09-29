@@ -486,6 +486,7 @@ class JobParser(object):
 
         job = model.Job(conf['name'])
         job.source_context = conf.get('_source_context')
+        job.source_line = conf.get('_start_mark').line +1
 
         is_variant = layout.hasJob(conf['name'])
         if 'parent' in conf:
@@ -1403,19 +1404,20 @@ class TenantParser(object):
                             (job.source_context,))
                         continue
                     loaded = conf_root
-                    job.source_context.path = fn
+                    source_context = job.source_context.copy()
+                    source_context.path = fn
                     TenantParser.log.info(
                         "Loading configuration from %s" %
-                        (job.source_context,))
-                    project = job.source_context.project
-                    branch = job.source_context.branch
-                    if job.source_context.trusted:
+                        (source_context,))
+                    project = source_context.project
+                    branch = source_context.branch
+                    if source_context.trusted:
                         incdata = TenantParser._parseConfigProjectLayout(
-                            job.files[fn], job.source_context)
+                            job.files[fn], source_context)
                         config_projects_config.extend(incdata)
                     else:
                         incdata = TenantParser._parseUntrustedProjectLayout(
-                            job.files[fn], job.source_context)
+                            job.files[fn], source_context)
                         untrusted_projects_config.extend(incdata)
                     new_project_unparsed_config[project].extend(incdata)
                     if branch in new_project_unparsed_branch_config.get(
