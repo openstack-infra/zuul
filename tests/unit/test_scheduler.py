@@ -4841,6 +4841,42 @@ class TestSchedulerTemplatedProject(ZuulTestCase):
         self.assertEqual(self.getJobFromHistory('project-test6').result,
                          'SUCCESS')
 
+    def test_unimplied_branch_matchers(self):
+        # This tests that there are no implied branch matchers added
+        # by project templates.
+        self.create_branch('org/layered-project', 'stable')
+
+        A = self.fake_gerrit.addFakeChange(
+            'org/layered-project', 'stable', 'A')
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        print(self.getJobFromHistory('project-test1').
+              parameters['zuul']['_inheritance_path'])
+
+    def test_implied_branch_matchers(self):
+        # This tests that there is an implied branch matcher when a
+        # template is used on an in-repo project pipeline definition.
+        self.create_branch('untrusted-config', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'untrusted-config', 'stable'))
+        self.waitUntilSettled()
+
+        A = self.fake_gerrit.addFakeChange(
+            'untrusted-config', 'stable', 'A')
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        print(self.getJobFromHistory('project-test1').
+              parameters['zuul']['_inheritance_path'])
+
 
 class TestSchedulerSuccessURL(ZuulTestCase):
     tenant_config_file = 'config/success-url/main.yaml'
