@@ -22,6 +22,7 @@ import extras
 # instead it depends on lockfile-0.9.1 which uses pidfile.
 pid_file_module = extras.try_imports(['daemon.pidlockfile', 'daemon.pidfile'])
 
+import grp
 import logging
 import os
 import pwd
@@ -101,7 +102,10 @@ class Executor(zuul.cmd.ZuulApp):
         if os.getuid() != 0:
             return
         pw = pwd.getpwnam(self.user)
-        os.setgroups([])
+        # get a list of supplementary groups for the target user, and make sure
+        # we set them when dropping privileges.
+        groups = [g.gr_gid for g in grp.getgrall() if self.user in g.gr_mem]
+        os.setgroups(groups)
         os.setgid(pw.pw_gid)
         os.setuid(pw.pw_uid)
         os.umask(0o022)
