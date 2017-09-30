@@ -486,7 +486,7 @@ class JobParser(object):
 
         job = model.Job(conf['name'])
         job.source_context = conf.get('_source_context')
-        job.source_line = conf.get('_start_mark').line +1
+        job.source_line = conf.get('_start_mark').line + 1
 
         is_variant = layout.hasJob(conf['name'])
         if 'parent' in conf:

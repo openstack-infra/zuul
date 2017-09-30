@@ -532,7 +532,11 @@ class NodeRequest(object):
 
     @property
     def priority(self):
-        return PRIORITY_MAP[self.build_set.item.pipeline.precedence]
+        if self.build_set:
+            precedence = self.build_set.item.pipeline.precedence
+        else:
+            precedence = PRECEDENCE_NORMAL
+        return PRIORITY_MAP[precedence]
 
     @property
     def fulfilled(self):
