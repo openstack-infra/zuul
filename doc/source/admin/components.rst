@@ -468,6 +468,23 @@ The following sections of ``zuul.conf`` are used by the executor:
       `bubblewrap` has become integral to securely operating Zuul.  If you
       have a valid use case for it, we encourage you to let us know.
 
+   .. attr:: load_multiplier
+      :default: 2.5
+
+      When an executor host gets too busy, the system may suffer
+      timeouts and other ill effects. The executor will stop accepting
+      more than 1 job at a time until load has lowered below a safe
+      level.  This level is determined by multiplying the number of
+      CPU's by `load_multiplier`.
+
+      So for example, if the system has 2 CPUs, and load_multiplier
+      is 2.5, the safe load for the system is 5.00. Any time the
+      system load average is over 5.00, the executor will quit
+      accepting multiple jobs at one time.
+
+      The executor will observe system load and determine whether
+      to accept more jobs every 30 seconds.
+
 .. attr:: merger
 
    .. attr:: git_user_email
