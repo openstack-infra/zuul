@@ -59,6 +59,14 @@ def main():
             if fn in ['zuul.yaml', '.zuul.yaml']:
                 print_file('File: ' + os.path.join(gitrepo, fn),
                            os.path.join(reporoot, fn))
+        for subdir in ['.zuul.d', 'zuul.d']:
+            zuuld = os.path.join(reporoot, subdir)
+            if not os.path.exists(zuuld):
+                continue
+            filenames = os.listdir(zuuld)
+            for fn in filenames:
+                print_file('File: ' + os.path.join(gitrepo, subdir, fn),
+                           os.path.join(zuuld, fn))
 
 
 if __name__ == '__main__':

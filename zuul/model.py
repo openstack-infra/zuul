@@ -23,6 +23,8 @@ from uuid import uuid4
 import urllib.parse
 import textwrap
 
+from zuul import change_matcher
+
 MERGER_MERGE = 1          # "git merge"
 MERGER_MERGE_RESOLVE = 2  # "git merge -s resolve"
 MERGER_CHERRY_PICK = 3    # "git cherry-pick"
@@ -915,6 +917,13 @@ class Job(object):
         if changed:
             self.roles = tuple(newroles)
 
+    def setBranchMatcher(self, branches):
+        # Set the branch matcher to match any of the supplied branches
+        matchers = []
+        for branch in branches:
+            matchers.append(change_matcher.BranchMatcher(branch))
+        self.branch_matcher = change_matcher.MatchAny(matchers)
+
     def updateVariables(self, other_vars):
         v = self.variables
         Job._deepUpdate(v, other_vars)
@@ -1042,14 +1051,14 @@ class JobList(object):
         else:
             self.jobs[job.name] = [job]
 
-    def inheritFrom(self, other):
+    def inheritFrom(self, other, implied_branch):
         for jobname, jobs in other.jobs.items():
-            if jobname in self.jobs:
-                self.jobs[jobname].extend(jobs)
-            else:
-                # Be sure to make a copy here since this list may be
-                # modified.
-                self.jobs[jobname] = jobs[:]
+            joblist = self.jobs.setdefault(jobname, [])
+            for job in jobs:
+                if not job.branch_matcher and implied_branch:
+                    job = job.copy()
+                    job.setBranchMatcher([implied_branch])
+                joblist.append(job)
 
 
 class JobGraph(object):
@@ -2117,6 +2126,7 @@ class ProjectConfig(object):
     def __init__(self, name):
         self.name = name
         self.merge_mode = None
+        # The default branch for the project (usually master).
         self.default_branch = None
         self.pipelines = {}
         self.private_key_file = None

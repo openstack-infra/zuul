@@ -653,10 +653,22 @@ Here is an example of two job definitions:
         configuration, Zuul reads the ``master`` branch of a given
         project first, then other branches in alphabetical order.
 
+      * In the case of a job variant defined within a :ref:`project`,
+        if the project definition is in a :term:`config-project`, no
+        implied branch specifier is used.  If it appears in an
+        :term:`untrusted-project`, with no branch specifier, the
+        branch containing the project definition is used as an implied
+        branch specifier.
+
+      * In the case of a job variant defined within a
+        :ref:`project-template`, if no branch specifier appears, the
+        implied branch specifier for the :ref:`project` definition which
+        uses the project-template will be used.
+
       * Any further job variants other than the reference definition
         in an untrusted-project will, if they do not have a branch
-        specifier, will have an implied branch specifier for the
-        current branch applied.
+        specifier, have an implied branch specifier for the current
+        branch applied.
 
       This allows for the very simple and expected workflow where if a
       project defines a job on the ``master`` branch with no branch

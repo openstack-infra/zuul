@@ -456,19 +456,22 @@ class JobParser(object):
         # the reference definition of this job, and this is a project
         # repo, add an implicit branch matcher for this branch
         # (assuming there are no explicit branch matchers).  But only
-        # for top-level job definitions and variants.
-        # Project-pipeline job variants should more closely attach to
-        # their branch if they appear in a project-repo.
+        # for top-level job definitions and variants.  Never for
+        # project-templates.  They, and in-project project-pipeline
+        # job variants, should more closely attach to their branch if
+        # they appear in a project-repo.  That's handled in the
+        # ProjectParser.
         if (reference and
             reference.source_context and
             reference.source_context.branch != job.source_context.branch):
-            same_context = False
+            same_branch = False
         else:
-            same_context = True
+            same_branch = True
 
         if (job.source_context and
             (not job.source_context.trusted) and
-            ((not same_context) or project_pipeline)):
+            (not project_pipeline) and
+            (not same_branch)):
             return [job.source_context.branch]
         return None
 
@@ -669,10 +672,7 @@ class JobParser(object):
         if (not branches) and ('branches' in conf):
             branches = as_list(conf['branches'])
         if branches:
-            matchers = []
-            for branch in branches:
-                matchers.append(change_matcher.BranchMatcher(branch))
-            job.branch_matcher = change_matcher.MatchAny(matchers)
+            job.setBranchMatcher(branches)
         if 'files' in conf:
             matchers = []
             for fn in as_list(conf['files']):
@@ -730,8 +730,12 @@ class ProjectTemplateParser(object):
         return vs.Schema(project_template)
 
     @staticmethod
-    def fromYaml(tenant, layout, conf):
-        with configuration_exceptions('project or project-template', conf):
+    def fromYaml(tenant, layout, conf, template):
+        if template:
+            project_or_template = 'project-template'
+        else:
+            project_or_template = 'project'
+        with configuration_exceptions(project_or_template, conf):
             ProjectTemplateParser.getSchema(layout)(conf)
         # Make a copy since we modify this later via pop
         conf = copy.deepcopy(conf)
@@ -747,12 +751,13 @@ class ProjectTemplateParser(object):
             project_pipeline.queue_name = conf_pipeline.get('queue')
             ProjectTemplateParser._parseJobList(
                 tenant, layout, conf_pipeline.get('jobs', []),
-                source_context, start_mark, project_pipeline.job_list)
+                source_context, start_mark, project_pipeline.job_list,
+                template)
         return project_template
 
     @staticmethod
     def _parseJobList(tenant, layout, conf, source_context,
-                      start_mark, job_list):
+                      start_mark, job_list, template):
         for conf_job in conf:
             if isinstance(conf_job, str):
                 attrs = dict(name=conf_job)
@@ -815,6 +820,7 @@ class ProjectParser(object):
 
         configs = []
         for conf in conf_list:
+            implied_branch = None
             with configuration_exceptions('project', conf):
                 if not conf['_source_context'].trusted:
                     if project != conf['_source_context'].project:
@@ -828,13 +834,18 @@ class ProjectParser(object):
                 # all of the templates, including the newly parsed
                 # one, in order.
                 project_template = ProjectTemplateParser.fromYaml(
-                    tenant, layout, conf)
+                    tenant, layout, conf, template=False)
+                # If this project definition is in a place where it
+                # should get implied branch matchers, set it.
+                if (not conf['_source_context'].trusted):
+                    implied_branch = conf['_source_context'].branch
                 for name in conf_templates:
                     if name not in layout.project_templates:
                         raise TemplateNotFoundError(name)
-                configs.extend([layout.project_templates[name]
+                configs.extend([(layout.project_templates[name],
+                                 implied_branch)
                                 for name in conf_templates])
-                configs.append(project_template)
+                configs.append((project_template, implied_branch))
                 # Set the following values to the first one that we
                 # find and ignore subsequent settings.
                 mode = conf.get('merge-mode')
@@ -855,12 +866,13 @@ class ProjectParser(object):
             # For every template, iterate over the job tree and replace or
             # create the jobs in the final definition as needed.
             pipeline_defined = False
-            for template in configs:
+            for (template, implied_branch) in configs:
                 if pipeline.name in template.pipelines:
                     pipeline_defined = True
                     template_pipeline = template.pipelines[pipeline.name]
                     project_pipeline.job_list.inheritFrom(
-                        template_pipeline.job_list)
+                        template_pipeline.job_list,
+                        implied_branch)
                     if template_pipeline.queue_name:
                         queue_name = template_pipeline.queue_name
             if queue_name:
@@ -1520,7 +1532,7 @@ class TenantParser(object):
             if 'project-template' not in classes:
                 continue
             layout.addProjectTemplate(ProjectTemplateParser.fromYaml(
-                tenant, layout, config_template))
+                tenant, layout, config_template, template=True))
 
         for config_projects in data.projects.values():
             # Unlike other config classes, we expect multiple project
