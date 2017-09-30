@@ -445,7 +445,9 @@ class ExecutorClient(object):
 
     def lookForLostBuilds(self):
         self.log.debug("Looking for lost builds")
-        for build in self.builds.values():
+        # Construct a list from the values iterator to protect from it changing
+        # out from underneath us.
+        for build in list(self.builds.values()):
             if build.result:
                 # The build has finished, it will be removed
                 continue
