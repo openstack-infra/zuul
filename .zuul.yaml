@@ -77,5 +77,5 @@
         - zuul-stream-functional
     post:
       jobs:
-        - publish-openstack-python-docs-infra
+        - publish-openstack-sphinx-docs-infra
         - publish-openstack-python-branch-tarball
