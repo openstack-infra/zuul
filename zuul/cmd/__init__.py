@@ -25,6 +25,7 @@ import sys
 import traceback
 
 yappi = extras.try_import('yappi')
+objgraph = extras.try_import('objgraph')
 
 from zuul.ansible import logconfig
 import zuul.lib.connections
@@ -54,6 +55,11 @@ def stack_dump_handler(signum, frame):
             log.debug(yappi_out.getvalue())
             yappi_out.close()
             yappi.clear_stats()
+    if objgraph:
+        objgraph_out = io.StringIO()
+        objgraph.show_growth(limit=100, file=objgraph_out)
+        log.debug(objgraph_out.getvalue())
+        objgraph_out.close()
     signal.signal(signal.SIGUSR2, stack_dump_handler)
 
 
