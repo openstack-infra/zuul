@@ -2532,6 +2532,7 @@ class Layout(object):
         # that override some attribute of the job.  These aspects all
         # inherit from the reference definition.
         noop = Job('noop')
+        noop.description = 'A job that will always succeed, no operation.'
         noop.parent = noop.BASE_JOB_MARKER
         noop.run = 'noop.yaml'
         self.jobs = {'noop': [noop]}
