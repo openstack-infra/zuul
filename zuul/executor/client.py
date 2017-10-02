@@ -101,7 +101,7 @@ class ZuulGearmanClient(gear.Client):
             job = super(ZuulGearmanClient, self).handleStatusRes(packet)
         except gear.UnknownJobError:
             handle = packet.getArgument(0)
-            for build in self.__zuul_gearman.builds:
+            for build in self.__zuul_gearman.builds.values():
                 if build.__gearman_job.handle == handle:
                     self.__zuul_gearman.onUnknownJob(job)
 
