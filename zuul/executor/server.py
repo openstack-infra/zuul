@@ -1507,6 +1507,13 @@ class AnsibleJob(object):
             config.write('display_args_to_stdout = %s\n' %
                          str(not jobdir_playbook.secrets_content))
 
+            # Increase the internal poll interval of ansible.
+            # The default interval of 0.001s is optimized for interactive
+            # ui at the expense of CPU load. As we have a non-interactive
+            # automation use case a longer poll interval is more suitable
+            # and reduces CPU load of the ansible process.
+            config.write('internal_poll_interval = 0.01\n')
+
             config.write('[ssh_connection]\n')
             # NB: when setting pipelining = True, keep_remote_files
             # must be False (the default).  Otherwise it apparently
