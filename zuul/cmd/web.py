@@ -106,6 +106,8 @@ class WebServer(zuul.cmd.ZuulDaemonApp):
 
         self.configure_connections()
 
+        signal.signal(signal.SIGUSR2, zuul.cmd.stack_dump_handler)
+
         try:
             self._run()
         except Exception:
