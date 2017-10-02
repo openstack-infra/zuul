@@ -60,11 +60,13 @@ class ProjectMatcher(AbstractChangeMatcher):
 class BranchMatcher(AbstractChangeMatcher):
 
     def matches(self, change):
-        return (
-            (hasattr(change, 'branch') and self.regex.match(change.branch)) or
-            (hasattr(change, 'ref') and
-             change.ref is not None and self.regex.match(change.ref))
-        )
+        if hasattr(change, 'branch'):
+            if self.regex.match(change.branch):
+                return True
+            return False
+        if self.regex.match(change.ref):
+            return True
+        return False
 
 
 class FileMatcher(AbstractChangeMatcher):

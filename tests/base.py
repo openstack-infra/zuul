@@ -2620,6 +2620,13 @@ class ZuulTestCase(BaseTestCase):
                 return build
         raise Exception("Unable to find build %s" % name)
 
+    def assertJobNotInHistory(self, name, project=None):
+        for job in self.history:
+            if (project is None or
+                job.parameters['zuul']['project']['name'] == project):
+                self.assertNotEqual(job.name, name,
+                                    'Job %s found in history' % name)
+
     def getJobFromHistory(self, name, project=None):
         for job in self.history:
             if (job.name == name and
