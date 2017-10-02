@@ -262,7 +262,7 @@ class TestJob(BaseTestCase):
         # Test master
         change.branch = 'master'
         item = queue.enqueueChange(change)
-        item.current_build_set.layout = layout
+        item.layout = layout
 
         self.assertTrue(base.changeMatches(change))
         self.assertTrue(python27.changeMatches(change))
@@ -291,7 +291,7 @@ class TestJob(BaseTestCase):
         # Test diablo
         change.branch = 'stable/diablo'
         item = queue.enqueueChange(change)
-        item.current_build_set.layout = layout
+        item.layout = layout
 
         self.assertTrue(base.changeMatches(change))
         self.assertTrue(python27.changeMatches(change))
@@ -321,7 +321,7 @@ class TestJob(BaseTestCase):
         # Test essex
         change.branch = 'stable/essex'
         item = queue.enqueueChange(change)
-        item.current_build_set.layout = layout
+        item.layout = layout
 
         self.assertTrue(base.changeMatches(change))
         self.assertTrue(python27.changeMatches(change))
@@ -554,7 +554,7 @@ class TestJob(BaseTestCase):
         change = model.Change(self.project)
         change.branch = 'master'
         item = queue.enqueueChange(change)
-        item.current_build_set.layout = layout
+        item.layout = layout
 
         self.assertTrue(base.changeMatches(change))
         self.assertTrue(python27.changeMatches(change))
@@ -568,7 +568,7 @@ class TestJob(BaseTestCase):
 
         change.branch = 'stable/diablo'
         item = queue.enqueueChange(change)
-        item.current_build_set.layout = layout
+        item.layout = layout
 
         self.assertTrue(base.changeMatches(change))
         self.assertTrue(python27.changeMatches(change))
@@ -625,7 +625,7 @@ class TestJob(BaseTestCase):
         change.branch = 'master'
         change.files = ['/COMMIT_MSG', 'ignored-file']
         item = queue.enqueueChange(change)
-        item.current_build_set.layout = layout
+        item.layout = layout
 
         self.assertTrue(base.changeMatches(change))
         self.assertFalse(python27.changeMatches(change))
@@ -700,7 +700,7 @@ class TestJob(BaseTestCase):
         # Test master
         change.branch = 'master'
         item = self.queue.enqueueChange(change)
-        item.current_build_set.layout = self.layout
+        item.layout = self.layout
         with testtools.ExpectedException(
                 Exception,
                 "Project project2 is not allowed to run job job"):
@@ -736,7 +736,7 @@ class TestJob(BaseTestCase):
         # Test master
         change.branch = 'master'
         item = self.queue.enqueueChange(change)
-        item.current_build_set.layout = self.layout
+        item.layout = self.layout
         with testtools.ExpectedException(
                 Exception,
                 "Pre-review pipeline gate does not allow post-review job"):

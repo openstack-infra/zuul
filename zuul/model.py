@@ -1271,7 +1271,6 @@ class BuildSet(object):
         self.node_requests = {}  # job -> reqs
         self.files = RepoFiles()
         self.repo_state = {}
-        self.layout = None
         self.tries = {}
 
     @property
@@ -1366,7 +1365,7 @@ class BuildSet(object):
         item = self.item
         layout = None
         while item:
-            layout = item.current_build_set.layout
+            layout = item.layout
             if layout:
                 break
             item = item.item_ahead
@@ -1410,7 +1409,7 @@ class QueueItem(object):
         self.quiet = False
         self.active = False  # Whether an item is within an active window
         self.live = True  # Whether an item is intended to be processed at all
-        # TODO(jeblair): move job_graph to buildset
+        self.layout = None
         self.job_graph = None
 
     def __repr__(self):
@@ -1428,6 +1427,7 @@ class QueueItem(object):
         old.next_build_set = self.current_build_set
         self.current_build_set.previous_build_set = old
         self.build_sets.append(self.current_build_set)
+        self.layout = None
         self.job_graph = None
 
     def addBuild(self, build):
@@ -1443,8 +1443,7 @@ class QueueItem(object):
     def freezeJobGraph(self):
         """Find or create actual matching jobs for this item's change and
         store the resulting job tree."""
-        layout = self.current_build_set.layout
-        job_graph = layout.createJobGraph(self)
+        job_graph = self.layout.createJobGraph(self)
         for job in job_graph.getJobs():
             # Ensure that each jobs's dependencies are fully
             # accessible.  This will raise an exception if not.
@@ -2527,14 +2526,14 @@ class SemaphoreHandler(object):
 
     @staticmethod
     def _max_count(item, semaphore_name):
-        if not item.current_build_set.layout:
+        if not item.layout:
             # This should not occur as the layout of the item must already be
             # built when acquiring or releasing a semaphore for a job.
             raise Exception("Item {} has no layout".format(item))
 
         # find the right semaphore
         default_semaphore = Semaphore(semaphore_name, 1)
-        semaphores = item.current_build_set.layout.semaphores
+        semaphores = item.layout.semaphores
         return semaphores.get(semaphore_name, default_semaphore).max
 
 

@@ -238,7 +238,7 @@ class ExecutorClient(object):
         required_projects = set()
 
         def make_project_dict(project, override_branch=None):
-            project_config = item.current_build_set.layout.project_configs.get(
+            project_config = item.layout.project_configs.get(
                 project.canonical_name, None)
             if project_config:
                 project_default_branch = project_config.default_branch

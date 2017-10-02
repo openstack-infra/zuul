@@ -236,11 +236,11 @@ class PipelineManager(object):
                 #    in-repo files stored in the buildset.
                 # 3) None in the case that a fetch of the files from
                 #    the merger is still pending.
-                item.current_build_set.layout = self.getLayout(item)
+                item.layout = self.getLayout(item)
 
                 # Rebuild the frozen job tree from the new layout, if
                 # we have one.  If not, it will be built later.
-                if item.current_build_set.layout:
+                if item.layout:
                     item.freezeJobGraph()
 
                 # Re-set build results in case any new jobs have been
@@ -373,7 +373,7 @@ class PipelineManager(object):
     def executeJobs(self, item):
         # TODO(jeblair): This should return a value indicating a job
         # was executed.  Appears to be a longstanding bug.
-        if not item.current_build_set.layout:
+        if not item.layout:
             return False
 
         jobs = item.findJobsToRun(
@@ -465,7 +465,7 @@ class PipelineManager(object):
     def getLayout(self, item):
         if not item.change.updatesConfig():
             if item.item_ahead:
-                return item.item_ahead.current_build_set.layout
+                return item.item_ahead.layout
             else:
                 return item.queue.pipeline.layout
         # This item updates the config, ask the merger for the result.
@@ -516,10 +516,9 @@ class PipelineManager(object):
     def prepareJobs(self, item):
         # This only runs once the item is in the pipeline's action window
         # Returns True if the item is ready, false otherwise
-        build_set = item.current_build_set
-        if not build_set.layout:
-            build_set.layout = self.getLayout(item)
-        if not build_set.layout:
+        if not item.layout:
+            item.layout = self.getLayout(item)
+        if not item.layout:
             return False
 
         if not item.job_graph:
@@ -745,8 +744,7 @@ class PipelineManager(object):
         # pipeline, use the dynamic layout if available, otherwise,
         # fall back to the current static layout as a best
         # approximation.
-        layout = (item.current_build_set.layout or
-                  self.pipeline.layout)
+        layout = (item.layout or self.pipeline.layout)
 
         project_in_pipeline = True
         if not layout.getProjectPipelineConfig(item.change.project,
