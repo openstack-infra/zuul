@@ -1518,6 +1518,7 @@ class FakeGearmanServer(gear.Server):
 
     def __init__(self, use_ssl=False):
         self.hold_jobs_in_queue = False
+        self.hold_merge_jobs_in_queue = False
         if use_ssl:
             ssl_ca = os.path.join(FIXTURE_DIR, 'gearman/root-ca.pem')
             ssl_cert = os.path.join(FIXTURE_DIR, 'gearman/server.pem')
@@ -1537,6 +1538,8 @@ class FakeGearmanServer(gear.Server):
                 if not hasattr(job, 'waiting'):
                     if job.name.startswith(b'executor:execute'):
                         job.waiting = self.hold_jobs_in_queue
+                    elif job.name.startswith(b'merger:'):
+                        job.waiting = self.hold_merge_jobs_in_queue
                     else:
                         job.waiting = False
                 if job.waiting:
@@ -1562,10 +1565,15 @@ class FakeGearmanServer(gear.Server):
                 len(self.low_queue))
         self.log.debug("releasing queued job %s (%s)" % (regex, qlen))
         for job in self.getQueue():
-            if job.name != b'executor:execute':
-                continue
-            parameters = json.loads(job.arguments.decode('utf8'))
-            if not regex or re.match(regex, parameters.get('job')):
+            match = False
+            if job.name == b'executor:execute':
+                parameters = json.loads(job.arguments.decode('utf8'))
+                if not regex or re.match(regex, parameters.get('job')):
+                    match = True
+            if job.name == b'merger:merge':
+                if not regex:
+                    match = True
+            if match:
                 self.log.debug("releasing queued job %s" %
                                job.unique)
                 job.waiting = False
@@ -2556,6 +2564,26 @@ class ZuulTestCase(BaseTestCase):
             return False
         return True
 
+    def areAllMergeJobsWaiting(self):
+        for client_job in list(self.merge_client.jobs):
+            if not client_job.handle:
+                self.log.debug("%s has no handle" % client_job)
+                return False
+            server_job = self.gearman_server.jobs.get(client_job.handle)
+            if not server_job:
+                self.log.debug("%s is not known to the gearman server" %
+                               client_job)
+                return False
+            if not hasattr(server_job, 'waiting'):
+                self.log.debug("%s is being enqueued" % server_job)
+                return False
+            if server_job.waiting:
+                self.log.debug("%s is waiting" % server_job)
+                continue
+            self.log.debug("%s is not waiting" % server_job)
+            return False
+        return True
+
     def eventQueuesEmpty(self):
         for event_queue in self.event_queues:
             yield event_queue.empty()
@@ -2592,7 +2620,7 @@ class ZuulTestCase(BaseTestCase):
                 # processed
                 self.eventQueuesJoin()
                 self.sched.run_handler_lock.acquire()
-                if (not self.merge_client.jobs and
+                if (self.areAllMergeJobsWaiting() and
                     self.haveAllBuildsReported() and
                     self.areAllBuildsWaiting() and
                     self.areAllNodeRequestsComplete() and
