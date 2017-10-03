@@ -1740,6 +1740,37 @@ class AnsibleJob(object):
             self.RESULT_MAP[result], code))
         return result, code
 
+    def emitPlaybookBanner(self, playbook, step, phase, result=None):
+        # This is used to print a header and a footer, respectively at the
+        # beginning and the end of each playbook execution.
+        # We are doing it from the executor rather than from a callback because
+        # the parameters are not made available to the callback until it's too
+        # late.
+        phase = phase or ''
+        trusted = playbook.trusted
+        trusted = 'trusted' if trusted else 'untrusted'
+        branch = playbook.branch
+        playbook = playbook.canonical_name_and_path
+
+        if phase and phase != 'run':
+            phase = '{phase}-run'.format(phase=phase)
+        phase = phase.upper()
+
+        if result is not None:
+            result = self.RESULT_MAP[result]
+            msg = "{phase} {step} {result}: [{trusted} : {playbook}@{branch}]"
+            msg.format(phase=phase, step=step, result=result,
+                       trusted=trusted, playbook=playbook, branch=branch)
+        else:
+            msg = "{phase} {step}: [{trusted} : {playbook}@{branch}]"
+            msg.format(phase=phase, step=step, trusted=trusted,
+                       playbook=playbook, branch=branch)
+
+        with open(self.jobdir.job_output_file, 'a') as job_output:
+            job_output.write("{now} | {msg}".format(
+                now=datetime.datetime.now(),
+                msg=msg))
+
     def runAnsiblePlaybook(self, playbook, timeout, success=None,
                            phase=None, index=None):
         if self.executor_server.verbose:
@@ -1770,8 +1801,12 @@ class AnsibleJob(object):
         if self.executor_variables_file is not None:
             cmd.extend(['-e@%s' % self.executor_variables_file])
 
+        self.emitPlaybookBanner(playbook, 'START', phase)
+
         result, code = self.runAnsible(
             cmd=cmd, timeout=timeout, playbook=playbook)
         self.log.debug("Ansible complete, result %s code %s" % (
             self.RESULT_MAP[result], code))
+
+        self.emitPlaybookBanner(playbook, 'END', phase, result=result)
         return result, code
