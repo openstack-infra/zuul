@@ -43,7 +43,7 @@
 
 - project:
     name: openstack-infra/zuul
-    check:
+    infra-check:
       jobs:
         - build-openstack-infra-sphinx-docs:
             success-url: 'html/feature/zuulv3/'
@@ -65,7 +65,7 @@
             files:
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
-    gate:
+    infra-gate:
       jobs:
         - build-openstack-infra-sphinx-docs:
             success-url: 'html/feature/zuulv3/'
@@ -75,7 +75,7 @@
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
         - zuul-stream-functional
-    post:
+    infra-post:
       jobs:
         - publish-openstack-sphinx-docs-infra
         - publish-openstack-python-branch-tarball
