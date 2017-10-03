@@ -60,18 +60,13 @@ class TestBranchMatcher(BaseTestMatcher):
         self.assertTrue(self.matcher.matches(self.change))
 
     def test_matches_returns_true_on_matching_ref(self):
-        self.change.branch = 'bar'
+        delattr(self.change, 'branch')
         self.change.ref = 'foo'
         self.assertTrue(self.matcher.matches(self.change))
 
     def test_matches_returns_false_for_no_match(self):
         self.change.branch = 'bar'
         self.change.ref = 'baz'
-        self.assertFalse(self.matcher.matches(self.change))
-
-    def test_matches_returns_false_for_missing_attrs(self):
-        delattr(self.change, 'branch')
-        # ref is by default not an attribute
         self.assertFalse(self.matcher.matches(self.change))
 
 

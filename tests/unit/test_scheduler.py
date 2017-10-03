@@ -5642,3 +5642,30 @@ class TestSemaphoreInRepo(ZuulTestCase):
         self.assertEqual(A.reported, 2)
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
+
+
+class TestSchedulerBranchMatcher(ZuulTestCase):
+
+    @simple_layout('layouts/matcher-test.yaml')
+    def test_job_branch_ignored(self):
+        '''
+        Test that branch matching logic works.
+
+        The 'ignore-branch' job has a branch matcher that is supposed to
+        match every branch except for the 'featureA' branch, so it should
+        not be run on a change to that branch.
+        '''
+        self.create_branch('org/project', 'featureA')
+        A = self.fake_gerrit.addFakeChange('org/project', 'featureA', 'A')
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.printHistory()
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertJobNotInHistory('ignore-branch')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2,
+                         "A should report start and success")
+        self.assertIn('gate', A.messages[1],
+                      "A should transit gate")
