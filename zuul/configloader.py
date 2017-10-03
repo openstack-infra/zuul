@@ -383,57 +383,55 @@ class SecretParser(object):
 class JobParser(object):
     ANSIBLE_ROLE_RE = re.compile(r'^(ansible[-_.+]*)*(role[-_.+]*)*')
 
-    @staticmethod
-    def getSchema():
-        zuul_role = {vs.Required('zuul'): str,
-                     'name': str}
+    zuul_role = {vs.Required('zuul'): str,
+                 'name': str}
 
-        galaxy_role = {vs.Required('galaxy'): str,
-                       'name': str}
+    galaxy_role = {vs.Required('galaxy'): str,
+                   'name': str}
 
-        role = vs.Any(zuul_role, galaxy_role)
+    role = vs.Any(zuul_role, galaxy_role)
 
-        job_project = {vs.Required('name'): str,
-                       'override-branch': str}
+    job_project = {vs.Required('name'): str,
+                   'override-branch': str}
 
-        secret = {vs.Required('name'): str,
-                  vs.Required('secret'): str}
+    secret = {vs.Required('name'): str,
+              vs.Required('secret'): str}
 
-        job = {vs.Required('name'): str,
-               'parent': vs.Any(str, None),
-               'final': bool,
-               'failure-message': str,
-               'success-message': str,
-               'failure-url': str,
-               'success-url': str,
-               'hold-following-changes': bool,
-               'voting': bool,
-               'semaphore': str,
-               'tags': to_list(str),
-               'branches': to_list(str),
-               'files': to_list(str),
-               'secrets': to_list(vs.Any(secret, str)),
-               'irrelevant-files': to_list(str),
-               # validation happens in NodeSetParser
-               'nodeset': vs.Any(dict, str),
-               'timeout': int,
-               'attempts': int,
-               'pre-run': to_list(str),
-               'post-run': to_list(str),
-               'run': str,
-               '_source_context': model.SourceContext,
-               '_start_mark': ZuulMark,
-               'roles': to_list(role),
-               'required-projects': to_list(vs.Any(job_project, str)),
-               'vars': dict,
-               'dependencies': to_list(str),
-               'allowed-projects': to_list(str),
-               'override-branch': str,
-               'description': str,
-               'post-review': bool
-               }
+    job = {vs.Required('name'): str,
+           'parent': vs.Any(str, None),
+           'final': bool,
+           'failure-message': str,
+           'success-message': str,
+           'failure-url': str,
+           'success-url': str,
+           'hold-following-changes': bool,
+           'voting': bool,
+           'semaphore': str,
+           'tags': to_list(str),
+           'branches': to_list(str),
+           'files': to_list(str),
+           'secrets': to_list(vs.Any(secret, str)),
+           'irrelevant-files': to_list(str),
+           # validation happens in NodeSetParser
+           'nodeset': vs.Any(dict, str),
+           'timeout': int,
+           'attempts': int,
+           'pre-run': to_list(str),
+           'post-run': to_list(str),
+           'run': str,
+           '_source_context': model.SourceContext,
+           '_start_mark': ZuulMark,
+           'roles': to_list(role),
+           'required-projects': to_list(vs.Any(job_project, str)),
+           'vars': dict,
+           'dependencies': to_list(str),
+           'allowed-projects': to_list(str),
+           'override-branch': str,
+           'description': str,
+           'post-review': bool
+           }
 
-        return vs.Schema(job)
+    schema = vs.Schema(job)
 
     simple_attributes = [
         'final',
@@ -478,7 +476,7 @@ class JobParser(object):
     @staticmethod
     def fromYaml(tenant, layout, conf, project_pipeline=False):
         with configuration_exceptions('job', conf):
-            JobParser.getSchema()(conf)
+            JobParser.schema(conf)
 
         # NB: The default detection system in the Job class requires
         # that we always assign values directly rather than modifying
@@ -710,10 +708,13 @@ class JobParser(object):
 
 
 class ProjectTemplateParser(object):
-    log = logging.getLogger("zuul.ProjectTemplateParser")
+    def __init__(self, tenant, layout):
+        self.log = logging.getLogger("zuul.ProjectTemplateParser")
+        self.tenant = tenant
+        self.layout = layout
+        self.schema = self.getSchema()
 
-    @staticmethod
-    def getSchema(layout):
+    def getSchema(self):
         project_template = {
             vs.Required('name'): str,
             'description': str,
@@ -724,40 +725,31 @@ class ProjectTemplateParser(object):
             '_start_mark': ZuulMark,
         }
 
-        for p in layout.pipelines.values():
+        for p in self.layout.pipelines.values():
             project_template[p.name] = {'queue': str,
                                         'jobs': [vs.Any(str, dict)]}
         return vs.Schema(project_template)
 
-    @staticmethod
-    def fromYaml(tenant, layout, conf, template):
-        if template:
-            project_or_template = 'project-template'
-        else:
-            project_or_template = 'project'
-        with configuration_exceptions(project_or_template, conf):
-            ProjectTemplateParser.getSchema(layout)(conf)
-        # Make a copy since we modify this later via pop
-        conf = copy.deepcopy(conf)
+    def fromYaml(self, conf, validate=True):
+        if validate:
+            with configuration_exceptions('project-template', conf):
+                self.schema(conf)
         project_template = model.ProjectConfig(conf['name'])
         source_context = conf['_source_context']
         start_mark = conf['_start_mark']
-        for pipeline in layout.pipelines.values():
+        for pipeline in self.layout.pipelines.values():
             conf_pipeline = conf.get(pipeline.name)
             if not conf_pipeline:
                 continue
             project_pipeline = model.ProjectPipelineConfig()
             project_template.pipelines[pipeline.name] = project_pipeline
             project_pipeline.queue_name = conf_pipeline.get('queue')
-            ProjectTemplateParser._parseJobList(
-                tenant, layout, conf_pipeline.get('jobs', []),
-                source_context, start_mark, project_pipeline.job_list,
-                template)
+            self.parseJobList(
+                conf_pipeline.get('jobs', []),
+                source_context, start_mark, project_pipeline.job_list)
         return project_template
 
-    @staticmethod
-    def _parseJobList(tenant, layout, conf, source_context,
-                      start_mark, job_list, template):
+    def parseJobList(self, conf, source_context, start_mark, job_list):
         for conf_job in conf:
             if isinstance(conf_job, str):
                 attrs = dict(name=conf_job)
@@ -778,17 +770,21 @@ class ProjectTemplateParser(object):
             # validate that the job is existing
             with configuration_exceptions('project or project-template',
                                           attrs):
-                layout.getJob(attrs['name'])
+                self.layout.getJob(attrs['name'])
 
-            job_list.addJob(JobParser.fromYaml(tenant, layout, attrs,
-                                               project_pipeline=True))
+            job_list.addJob(JobParser.fromYaml(self.tenant, self.layout,
+                                               attrs, project_pipeline=True))
 
 
 class ProjectParser(object):
-    log = logging.getLogger("zuul.ProjectParser")
+    def __init__(self, tenant, layout, project_template_parser):
+        self.log = logging.getLogger("zuul.ProjectParser")
+        self.tenant = tenant
+        self.layout = layout
+        self.project_template_parser = project_template_parser
+        self.schema = self.getSchema()
 
-    @staticmethod
-    def getSchema(layout):
+    def getSchema(self):
         project = {
             vs.Required('name'): str,
             'description': str,
@@ -800,20 +796,19 @@ class ProjectParser(object):
             '_start_mark': ZuulMark,
         }
 
-        for p in layout.pipelines.values():
+        for p in self.layout.pipelines.values():
             project[p.name] = {'queue': str,
                                'jobs': [vs.Any(str, dict)]}
         return vs.Schema(project)
 
-    @staticmethod
-    def fromYaml(tenant, layout, conf_list):
+    def fromYaml(self, conf_list):
         for conf in conf_list:
             with configuration_exceptions('project', conf):
-                ProjectParser.getSchema(layout)(conf)
+                self.schema(conf)
 
         with configuration_exceptions('project', conf_list[0]):
             project_name = conf_list[0]['name']
-            (trusted, project) = tenant.getProject(project_name)
+            (trusted, project) = self.tenant.getProject(project_name)
             if project is None:
                 raise ProjectNotFoundError(project_name)
             project_config = model.ProjectConfig(project.canonical_name)
@@ -826,23 +821,21 @@ class ProjectParser(object):
                     if project != conf['_source_context'].project:
                         raise ProjectNotPermittedError()
 
-                # Make a copy since we modify this later via pop
-                conf = copy.deepcopy(conf)
-                conf_templates = conf.pop('templates', [])
+                conf_templates = conf.get('templates', [])
                 # The way we construct a project definition is by
                 # parsing the definition as a template, then applying
                 # all of the templates, including the newly parsed
                 # one, in order.
-                project_template = ProjectTemplateParser.fromYaml(
-                    tenant, layout, conf, template=False)
+                project_template = self.project_template_parser.fromYaml(
+                    conf, validate=False)
                 # If this project definition is in a place where it
                 # should get implied branch matchers, set it.
                 if (not conf['_source_context'].trusted):
                     implied_branch = conf['_source_context'].branch
                 for name in conf_templates:
-                    if name not in layout.project_templates:
+                    if name not in self.layout.project_templates:
                         raise TemplateNotFoundError(name)
-                configs.extend([(layout.project_templates[name],
+                configs.extend([(self.layout.project_templates[name],
                                  implied_branch)
                                 for name in conf_templates])
                 configs.append((project_template, implied_branch))
@@ -860,7 +853,7 @@ class ProjectParser(object):
             project_config.merge_mode = model.MERGER_MAP['merge-resolve']
         if project_config.default_branch is None:
             project_config.default_branch = 'master'
-        for pipeline in layout.pipelines.values():
+        for pipeline in self.layout.pipelines.values():
             project_pipeline = model.ProjectPipelineConfig()
             queue_name = None
             # For every template, iterate over the job tree and replace or
@@ -1527,13 +1520,15 @@ class TenantParser(object):
                     continue
                 layout.addSemaphore(semaphore)
 
+        project_template_parser = ProjectTemplateParser(tenant, layout)
         for config_template in data.project_templates:
             classes = TenantParser._getLoadClasses(tenant, config_template)
             if 'project-template' not in classes:
                 continue
-            layout.addProjectTemplate(ProjectTemplateParser.fromYaml(
-                tenant, layout, config_template, template=True))
+            layout.addProjectTemplate(project_template_parser.fromYaml(
+                config_template))
 
+        project_parser = ProjectParser(tenant, layout, project_template_parser)
         for config_projects in data.projects.values():
             # Unlike other config classes, we expect multiple project
             # stanzas with the same name, so that a config repo can
@@ -1551,8 +1546,8 @@ class TenantParser(object):
             if not filtered_projects:
                 continue
 
-            layout.addProjectConfig(ProjectParser.fromYaml(
-                tenant, layout, filtered_projects))
+            layout.addProjectConfig(project_parser.fromYaml(
+                filtered_projects))
 
     @staticmethod
     def _parseLayout(base, tenant, data, scheduler, connections):
