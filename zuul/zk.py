@@ -160,7 +160,6 @@ class ZooKeeper(object):
         def callback(data, stat):
             if data:
                 data = self._strToDict(data)
-                node_request.updateFromDict(data)
                 request_nodes = list(node_request.nodeset.getNodes())
                 for i, nodeid in enumerate(data.get('nodes', [])):
                     node_path = '%s/%s' % (self.NODE_ROOT, nodeid)
@@ -168,6 +167,7 @@ class ZooKeeper(object):
                     node_data = self._strToDict(node_data)
                     request_nodes[i].id = nodeid
                     request_nodes[i].updateFromDict(node_data)
+                node_request.updateFromDict(data)
             deleted = (data is None)  # data *are* none
             return watcher(node_request, deleted)
 
