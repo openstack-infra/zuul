@@ -56,7 +56,7 @@ def stack_dump_handler(signum, frame):
             else:
                 log.debug("Stopping Yappi")
                 yappi.stop()
-                yappi_out = io.BytesIO()
+                yappi_out = io.StringIO()
                 yappi.get_func_stats().print_all(out=yappi_out)
                 yappi.get_thread_stats().print_all(out=yappi_out)
                 log.debug(yappi_out.getvalue())
