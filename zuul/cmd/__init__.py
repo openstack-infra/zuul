@@ -38,28 +38,42 @@ import zuul.lib.connections
 
 def stack_dump_handler(signum, frame):
     signal.signal(signal.SIGUSR2, signal.SIG_IGN)
-    log_str = ""
-    for thread_id, stack_frame in sys._current_frames().items():
-        log_str += "Thread: %s\n" % thread_id
-        log_str += "".join(traceback.format_stack(stack_frame))
     log = logging.getLogger("zuul.stack_dump")
-    log.debug(log_str)
-    if yappi:
-        if not yappi.is_running():
-            yappi.start()
-        else:
-            yappi.stop()
-            yappi_out = io.BytesIO()
-            yappi.get_func_stats().print_all(out=yappi_out)
-            yappi.get_thread_stats().print_all(out=yappi_out)
-            log.debug(yappi_out.getvalue())
-            yappi_out.close()
-            yappi.clear_stats()
-    if objgraph:
-        objgraph_out = io.StringIO()
-        objgraph.show_growth(limit=100, file=objgraph_out)
-        log.debug(objgraph_out.getvalue())
-        objgraph_out.close()
+    log.debug("Beginning debug handler")
+    try:
+        log_str = ""
+        for thread_id, stack_frame in sys._current_frames().items():
+            log_str += "Thread: %s\n" % thread_id
+            log_str += "".join(traceback.format_stack(stack_frame))
+        log.debug(log_str)
+    except Exception:
+        log.exception("Thread dump error:")
+    try:
+        if yappi:
+            if not yappi.is_running():
+                log.debug("Starting Yappi")
+                yappi.start()
+            else:
+                log.debug("Stopping Yappi")
+                yappi.stop()
+                yappi_out = io.BytesIO()
+                yappi.get_func_stats().print_all(out=yappi_out)
+                yappi.get_thread_stats().print_all(out=yappi_out)
+                log.debug(yappi_out.getvalue())
+                yappi_out.close()
+                yappi.clear_stats()
+    except Exception:
+        log.exception("Yappi error:")
+    try:
+        if objgraph:
+            log.debug("Most common types:")
+            objgraph_out = io.StringIO()
+            objgraph.show_growth(limit=100, file=objgraph_out)
+            log.debug(objgraph_out.getvalue())
+            objgraph_out.close()
+    except Exception:
+        log.exception("Objgraph error:")
+    log.debug("End debug handler")
     signal.signal(signal.SIGUSR2, stack_dump_handler)
 
 
