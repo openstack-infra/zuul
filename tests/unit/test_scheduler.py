@@ -2430,6 +2430,62 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(rp, set(['org/project', 'org/project0',
                                   'org/project3']))
 
+    @simple_layout('layouts/job-variants.yaml')
+    def test_job_branch_variants(self):
+        self.create_branch('org/project', 'stable/diablo')
+        self.create_branch('org/project', 'stable/essex')
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        B = self.fake_gerrit.addFakeChange('org/project', 'stable/diablo', 'B')
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        C = self.fake_gerrit.addFakeChange('org/project', 'stable/essex', 'C')
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='python27', result='SUCCESS'),
+            dict(name='python27', result='SUCCESS'),
+            dict(name='python27', result='SUCCESS'),
+        ])
+
+        p = self.history[0].parameters
+        self.assertEqual(p['timeout'], 40)
+        self.assertEqual(len(p['nodes']), 1)
+        self.assertEqual(p['nodes'][0]['label'], 'new')
+        self.assertEqual([x['path'] for x in p['pre_playbooks']],
+                         ['base-pre', 'py27-pre'])
+        self.assertEqual([x['path'] for x in p['post_playbooks']],
+                         ['py27-post-a', 'py27-post-b', 'base-post'])
+        self.assertEqual([x['path'] for x in p['playbooks']],
+                         ['playbooks/python27', 'playbooks/base'])
+
+        p = self.history[1].parameters
+        self.assertEqual(p['timeout'], 50)
+        self.assertEqual(len(p['nodes']), 1)
+        self.assertEqual(p['nodes'][0]['label'], 'old')
+        self.assertEqual([x['path'] for x in p['pre_playbooks']],
+                         ['base-pre', 'py27-pre', 'py27-diablo-pre'])
+        self.assertEqual([x['path'] for x in p['post_playbooks']],
+                         ['py27-diablo-post', 'py27-post-a', 'py27-post-b',
+                          'base-post'])
+        self.assertEqual([x['path'] for x in p['playbooks']],
+                         ['py27-diablo'])
+
+        p = self.history[2].parameters
+        self.assertEqual(p['timeout'], 40)
+        self.assertEqual(len(p['nodes']), 1)
+        self.assertEqual(p['nodes'][0]['label'], 'new')
+        self.assertEqual([x['path'] for x in p['pre_playbooks']],
+                         ['base-pre', 'py27-pre', 'py27-essex-pre'])
+        self.assertEqual([x['path'] for x in p['post_playbooks']],
+                         ['py27-essex-post', 'py27-post-a', 'py27-post-b',
+                          'base-post'])
+        self.assertEqual([x['path'] for x in p['playbooks']],
+                         ['playbooks/python27', 'playbooks/base'])
+
     def test_queue_names(self):
         "Test shared change queue names"
         tenant = self.sched.abide.tenants.get('tenant-one')
