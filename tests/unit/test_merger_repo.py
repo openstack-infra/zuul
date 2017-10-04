@@ -19,9 +19,10 @@ import logging
 import os
 
 import git
+import testtools
 
 from zuul.merger.merger import Repo
-from tests.base import ZuulTestCase
+from tests.base import ZuulTestCase, FIXTURE_DIR
 
 
 class TestMergerRepo(ZuulTestCase):
@@ -74,3 +75,28 @@ class TestMergerRepo(ZuulTestCase):
             os.path.join(self.upstream_root, 'org/project2'),
             sub_repo.createRepoObject().remotes[0].url,
             message="Sub repository points to upstream project2")
+
+    def test_clone_timeout(self):
+        parent_path = os.path.join(self.upstream_root, 'org/project1')
+        self.patch(git.Git, 'GIT_PYTHON_GIT_EXECUTABLE',
+                   os.path.join(FIXTURE_DIR, 'fake_git.sh'))
+        work_repo = Repo(parent_path, self.workspace_root,
+                         'none@example.org', 'User Name', '0', '0',
+                         git_timeout=0.001)
+        # TODO: have the merger and repo classes catch fewer
+        # exceptions, including this one on initialization.  For the
+        # test, we try cloning again.
+        with testtools.ExpectedException(git.exc.GitCommandError,
+                                         '.*exit code\(-9\)'):
+            work_repo._ensure_cloned()
+
+    def test_fetch_timeout(self):
+        parent_path = os.path.join(self.upstream_root, 'org/project1')
+        work_repo = Repo(parent_path, self.workspace_root,
+                         'none@example.org', 'User Name', '0', '0')
+        work_repo.git_timeout = 0.001
+        self.patch(git.Git, 'GIT_PYTHON_GIT_EXECUTABLE',
+                   os.path.join(FIXTURE_DIR, 'fake_git.sh'))
+        with testtools.ExpectedException(git.exc.GitCommandError,
+                                         '.*exit code\(-9\)'):
+            work_repo.update()
