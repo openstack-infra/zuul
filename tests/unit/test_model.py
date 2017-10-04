@@ -96,30 +96,6 @@ class TestJob(BaseTestCase):
     def test_job_sets_defaults_for_boolean_attributes(self):
         self.assertIsNotNone(self.job.voting)
 
-    def test_job_inheritance(self):
-        # This is standard job inheritance.
-
-        base_pre = model.PlaybookContext(self.context, 'base-pre', [], [])
-        base_run = model.PlaybookContext(self.context, 'base-run', [], [])
-        base_post = model.PlaybookContext(self.context, 'base-post', [], [])
-
-        base = model.Job('base')
-        base.timeout = 30
-        base.pre_run = [base_pre]
-        base.run = [base_run]
-        base.post_run = [base_post]
-
-        py27 = model.Job('py27')
-        self.assertIsNone(py27.timeout)
-        py27.inheritFrom(base)
-        self.assertEqual(30, py27.timeout)
-        self.assertEqual(['base-pre'],
-                         [x.path for x in py27.pre_run])
-        self.assertEqual(['base-run'],
-                         [x.path for x in py27.run])
-        self.assertEqual(['base-post'],
-                         [x.path for x in py27.post_run])
-
     def test_job_variants(self):
         # This simulates freezing a job.
 
