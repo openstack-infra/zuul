@@ -168,32 +168,8 @@ class CallbackModule(default.CallbackModule):
                 host=host.name,
                 filename=included_file._filename))
 
-    def _emit_playbook_banner(self):
-        # Get the hostvars from just one host - the vars we're looking for will
-        # be identical on all of them
-        hostvars = next(iter(self._play._variable_manager._hostvars.values()))
-        self._playbook_name = None
-
-        phase = hostvars.get('zuul_execution_phase', '')
-        playbook = hostvars.get('zuul_execution_canonical_name_and_path')
-        trusted = hostvars.get('zuul_execution_trusted')
-        trusted = 'trusted' if trusted == "True" else 'untrusted'
-        branch = hostvars.get('zuul_execution_branch')
-
-        if phase and phase != 'run':
-            phase = '{phase}-run'.format(phase=phase)
-        phase = phase.upper()
-
-        self._log("{phase} [{trusted} : {playbook}@{branch}]".format(
-            trusted=trusted, phase=phase, playbook=playbook, branch=branch))
-
     def v2_playbook_on_play_start(self, play):
         self._play = play
-
-        # We can't fill in this information until the first play
-        if self._playbook_name:
-            self._emit_playbook_banner()
-
         # Log an extra blank line to get space before each play
         self._log("")
 
