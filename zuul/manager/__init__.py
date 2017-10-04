@@ -43,7 +43,9 @@ class PipelineManager(object):
     """Abstract Base Class for enqueing and processing Changes in a Pipeline"""
 
     def __init__(self, sched, pipeline):
-        self.log = logging.getLogger("zuul.Pipeline.%s" % (pipeline.name,))
+        self.log = logging.getLogger("zuul.Pipeline.%s.%s" %
+                                     (pipeline.layout.tenant.name,
+                                      pipeline.name,))
         self.sched = sched
         self.pipeline = pipeline
         self.event_filters = []
