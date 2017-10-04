@@ -2269,6 +2269,58 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(set(['project-test-nomatch-starts-empty',
                               'project-test-nomatch-starts-full']), run_jobs)
 
+    @simple_layout('layouts/job-vars.yaml')
+    def test_inherited_job_variables(self):
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='parentjob', result='SUCCESS'),
+            dict(name='child1', result='SUCCESS'),
+            dict(name='child2', result='SUCCESS'),
+            dict(name='child3', result='SUCCESS'),
+        ], ordered=False)
+        j = self.getJobFromHistory('parentjob')
+        rp = set([p['name'] for p in j.parameters['projects']])
+        self.assertEqual(j.parameters['vars']['override'], 0)
+        self.assertEqual(j.parameters['vars']['child1override'], 0)
+        self.assertEqual(j.parameters['vars']['parent'], 0)
+        self.assertFalse('child1' in j.parameters['vars'])
+        self.assertFalse('child2' in j.parameters['vars'])
+        self.assertFalse('child3' in j.parameters['vars'])
+        self.assertEqual(rp, set(['org/project', 'org/project0',
+                                  'org/project0']))
+        j = self.getJobFromHistory('child1')
+        rp = set([p['name'] for p in j.parameters['projects']])
+        self.assertEqual(j.parameters['vars']['override'], 1)
+        self.assertEqual(j.parameters['vars']['child1override'], 1)
+        self.assertEqual(j.parameters['vars']['parent'], 0)
+        self.assertEqual(j.parameters['vars']['child1'], 1)
+        self.assertFalse('child2' in j.parameters['vars'])
+        self.assertFalse('child3' in j.parameters['vars'])
+        self.assertEqual(rp, set(['org/project', 'org/project0',
+                                  'org/project1']))
+        j = self.getJobFromHistory('child2')
+        rp = set([p['name'] for p in j.parameters['projects']])
+        self.assertEqual(j.parameters['vars']['override'], 2)
+        self.assertEqual(j.parameters['vars']['child1override'], 0)
+        self.assertEqual(j.parameters['vars']['parent'], 0)
+        self.assertFalse('child1' in j.parameters['vars'])
+        self.assertEqual(j.parameters['vars']['child2'], 2)
+        self.assertFalse('child3' in j.parameters['vars'])
+        self.assertEqual(rp, set(['org/project', 'org/project0',
+                                  'org/project2']))
+        j = self.getJobFromHistory('child3')
+        rp = set([p['name'] for p in j.parameters['projects']])
+        self.assertEqual(j.parameters['vars']['override'], 3)
+        self.assertEqual(j.parameters['vars']['child1override'], 0)
+        self.assertEqual(j.parameters['vars']['parent'], 0)
+        self.assertFalse('child1' in j.parameters['vars'])
+        self.assertFalse('child2' in j.parameters['vars'])
+        self.assertEqual(j.parameters['vars']['child3'], 3)
+        self.assertEqual(rp, set(['org/project', 'org/project0',
+                                  'org/project3']))
+
     def test_queue_names(self):
         "Test shared change queue names"
         tenant = self.sched.abide.tenants.get('tenant-one')

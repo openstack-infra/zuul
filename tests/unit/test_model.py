@@ -246,7 +246,11 @@ class TestJob(BaseTestCase):
         })
         layout.addJob(python27essex)
 
-        project_config = configloader.ProjectParser.fromYaml(tenant, layout, [{
+        project_template_parser = configloader.ProjectTemplateParser(
+            tenant, layout)
+        project_parser = configloader.ProjectParser(
+            tenant, layout, project_template_parser)
+        project_config = project_parser.fromYaml([{
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'project',
@@ -505,6 +509,7 @@ class TestJob(BaseTestCase):
     def test_job_inheritance_job_tree(self):
         tenant = model.Tenant('tenant')
         layout = model.Layout(tenant)
+
         tpc = model.TenantProjectConfig(self.project)
         tenant.addUntrustedProject(tpc)
 
@@ -539,7 +544,11 @@ class TestJob(BaseTestCase):
         })
         layout.addJob(python27diablo)
 
-        project_config = configloader.ProjectParser.fromYaml(tenant, layout, [{
+        project_template_parser = configloader.ProjectTemplateParser(
+            tenant, layout)
+        project_parser = configloader.ProjectParser(
+            tenant, layout, project_template_parser)
+        project_config = project_parser.fromYaml([{
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'project',
@@ -609,7 +618,11 @@ class TestJob(BaseTestCase):
         })
         layout.addJob(python27)
 
-        project_config = configloader.ProjectParser.fromYaml(tenant, layout, [{
+        project_template_parser = configloader.ProjectTemplateParser(
+            tenant, layout)
+        project_parser = configloader.ProjectParser(
+            tenant, layout, project_template_parser)
+        project_config = project_parser.fromYaml([{
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'project',
@@ -682,8 +695,12 @@ class TestJob(BaseTestCase):
         context2 = model.SourceContext(project2, 'master',
                                        'test', True)
 
-        project2_config = configloader.ProjectParser.fromYaml(
-            self.tenant, self.layout, [{
+        project_template_parser = configloader.ProjectTemplateParser(
+            self.tenant, self.layout)
+        project_parser = configloader.ProjectParser(
+            self.tenant, self.layout, project_template_parser)
+        project2_config = project_parser.fromYaml(
+            [{
                 '_source_context': context2,
                 '_start_mark': self.start_mark,
                 'name': 'project2',
@@ -718,8 +735,12 @@ class TestJob(BaseTestCase):
 
         self.layout.addJob(job)
 
-        project_config = configloader.ProjectParser.fromYaml(
-            self.tenant, self.layout, [{
+        project_template_parser = configloader.ProjectTemplateParser(
+            self.tenant, self.layout)
+        project_parser = configloader.ProjectParser(
+            self.tenant, self.layout, project_template_parser)
+        project_config = project_parser.fromYaml(
+            [{
                 '_source_context': self.context,
                 '_start_mark': self.start_mark,
                 'name': 'project',
