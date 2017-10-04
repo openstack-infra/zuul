@@ -281,38 +281,38 @@
 
             change_header: function(change) {
                 var change_id = change.id || 'NA';
-                if (change_id.length === 40) {
-                    change_id = change_id.substr(0, 7);
-                }
 
                 var $change_link = $('<small />');
                 if (change.url !== null) {
-                    var github_id = change.id.match(/^([0-9]+),([0-9a-f]{40})$/);
+                    var github_id = change_id.match(/^([0-9]+),([0-9a-f]{40})$/);
                     if (github_id) {
                         $change_link.append(
                             $('<a />').attr('href', change.url).append(
                                 $('<abbr />')
-                                    .attr('title', change.id)
+                                    .attr('title', change_id)
                                     .text('#' + github_id[1])
                             )
                         );
-                    } else if (/^[0-9a-f]{40}$/.test(change.id)) {
-                        var change_id_short = change.id.slice(0, 7);
+                    } else if (/^[0-9a-f]{40}$/.test(change_id)) {
+                        var change_id_short = change_id.slice(0, 7);
                         $change_link.append(
                             $('<a />').attr('href', change.url).append(
                                 $('<abbr />')
-                                    .attr('title', change.id)
+                                    .attr('title', change_id)
                                     .text(change_id_short)
                             )
                         );
                     }
                     else {
                         $change_link.append(
-                            $('<a />').attr('href', change.url).text(change.id)
+                            $('<a />').attr('href', change.url).text(change_id)
                         );
                     }
                 }
                 else {
+                    if (change_id.length === 40) {
+                        change_id = change_id.substr(0, 7);
+                    }
                     $change_link.text(change_id);
                 }
 
