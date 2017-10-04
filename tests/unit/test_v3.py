@@ -17,6 +17,8 @@
 import json
 import os
 import textwrap
+import gc
+from unittest import skip
 
 import testtools
 
@@ -169,6 +171,39 @@ class TestInRepoConfig(ZuulTestCase):
                          "A should report start and success")
         self.assertIn('tenant-one-gate', A.messages[1],
                       "A should transit tenant-one gate")
+
+    @skip("This test is useful, but not reliable")
+    def test_full_and_dynamic_reconfig(self):
+        self.executor_server.hold_jobs_in_build = True
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test1
+
+            - project:
+                name: org/project
+                tenant-one-gate:
+                  jobs:
+                    - project-test1
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        gc.collect()
+        pipelines = [obj for obj in gc.get_objects()
+                     if isinstance(obj, zuul.model.Pipeline)]
+        self.assertEqual(len(pipelines), 4)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
 
     def test_dynamic_config(self):
         in_repo_conf = textwrap.dedent(
