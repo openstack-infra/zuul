@@ -42,9 +42,8 @@ class StaticChangeQueueContextManager(object):
 class PipelineManager(object):
     """Abstract Base Class for enqueing and processing Changes in a Pipeline"""
 
-    log = logging.getLogger("zuul.PipelineManager")
-
     def __init__(self, sched, pipeline):
+        self.log = logging.getLogger("zuul.Pipeline.%s" % (pipeline.name,))
         self.sched = sched
         self.pipeline = pipeline
         self.event_filters = []

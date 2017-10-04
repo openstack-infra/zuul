@@ -46,10 +46,9 @@ class BaseConnection(object, metaclass=abc.ABCMeta):
 
     def logEvent(self, event):
         self.log.debug(
-            'Scheduling {driver} event from {connection}: {event}'.format(
-                driver=self.driver.name,
+            'Scheduling event from {connection}: {event}'.format(
                 connection=self.connection_name,
-                event=event.type))
+                event=event))
         try:
             if self.statsd:
                 self.statsd.incr(

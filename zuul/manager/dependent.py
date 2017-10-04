@@ -10,8 +10,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import logging
-
 from zuul import model
 from zuul.manager import PipelineManager, StaticChangeQueueContextManager
 from zuul.manager import DynamicChangeQueueContextManager
@@ -25,7 +23,6 @@ class DependentPipelineManager(PipelineManager):
     using the Optmistic Branch Prediction logic with Nearest Non-Failing Item
     reparenting algorithm for handling errors.
     """
-    log = logging.getLogger("zuul.DependentPipelineManager")
     changes_merge = True
 
     def __init__(self, *args, **kwargs):

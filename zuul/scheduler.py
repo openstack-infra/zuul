@@ -262,22 +262,16 @@ class Scheduler(threading.Thread):
         self.zk = zk
 
     def addEvent(self, event):
-        self.log.debug("Adding trigger event: %s" % event)
         self.trigger_event_queue.put(event)
         self.wake_event.set()
-        self.log.debug("Done adding trigger event: %s" % event)
 
     def onBuildStarted(self, build):
-        self.log.debug("Adding start event for build: %s" % build)
         build.start_time = time.time()
         event = BuildStartedEvent(build)
         self.result_event_queue.put(event)
         self.wake_event.set()
-        self.log.debug("Done adding start event for build: %s" % build)
 
     def onBuildCompleted(self, build, result, result_data):
-        self.log.debug("Adding complete event for build: %s result: %s" % (
-            build, result))
         build.end_time = time.time()
         build.result_data = result_data
         # Note, as soon as the result is set, other threads may act
@@ -316,20 +310,15 @@ class Scheduler(threading.Thread):
         event = BuildCompletedEvent(build)
         self.result_event_queue.put(event)
         self.wake_event.set()
-        self.log.debug("Done adding complete event for build: %s" % build)
 
     def onMergeCompleted(self, build_set, merged, updated,
                          commit, files, repo_state):
-        self.log.debug("Adding merge complete event for build set: %s" %
-                       build_set)
         event = MergeCompletedEvent(build_set, merged,
                                     updated, commit, files, repo_state)
         self.result_event_queue.put(event)
         self.wake_event.set()
 
     def onNodesProvisioned(self, req):
-        self.log.debug("Adding nodes provisioned event for build set: %s" %
-                       req.build_set)
         event = NodesProvisionedEvent(req)
         self.result_event_queue.put(event)
         self.wake_event.set()
