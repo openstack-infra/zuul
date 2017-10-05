@@ -4715,6 +4715,28 @@ For CI problems and help debugging, contact ci@example.org"""
         build = self.getJobFromHistory('py27')
         self.assertEqual(build.parameters['zuul']['jobtags'], [])
 
+    def test_pending_merge_in_reconfig(self):
+        # Test that if we are waiting for an outstanding merge on
+        # reconfiguration that we continue to do so.
+        self.gearman_server.hold_merge_jobs_in_queue = True
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        A.setMerged()
+        self.fake_gerrit.addEvent(A.getRefUpdatedEvent())
+        self.waitUntilSettled()
+        # Reconfigure while we still have an outstanding merge job
+        self.sched.reconfigureTenant(self.sched.abide.tenants['tenant-one'],
+                                     None)
+        self.waitUntilSettled()
+        # Verify the merge job is still running and that the item is
+        # in the pipeline
+        self.assertEqual(len(self.sched.merger.jobs), 1)
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        pipeline = tenant.layout.pipelines['post']
+        self.assertEqual(len(pipeline.getAllItems()), 1)
+        self.gearman_server.hold_merge_jobs_in_queue = False
+        self.gearman_server.release()
+        self.waitUntilSettled()
+
 
 class TestExecutor(ZuulTestCase):
     tenant_config_file = 'config/single-tenant/main.yaml'

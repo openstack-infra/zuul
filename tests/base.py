@@ -1570,7 +1570,7 @@ class FakeGearmanServer(gear.Server):
                 parameters = json.loads(job.arguments.decode('utf8'))
                 if not regex or re.match(regex, parameters.get('job')):
                     match = True
-            if job.name == b'merger:merge':
+            if job.name.startswith(b'merger:'):
                 if not regex:
                     match = True
             if match:
