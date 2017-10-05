@@ -50,10 +50,14 @@ class Repo(object):
             self.log = logging.getLogger("zuul.Repo")
         else:
             self.log = logger
+        # TODO(pabelanger): Expose to user via zuul.conf.
+        self.env = {
+            'GIT_HTTP_LOW_SPEED_LIMIT': '1000',
+            'GIT_HTTP_LOW_SPEED_TIME': '30',
+        }
         if sshkey:
-            self.env = {'GIT_SSH_COMMAND': 'ssh -i %s' % (sshkey,)}
-        else:
-            self.env = {}
+            self.env['GIT_SSH_COMMAND'] = 'ssh -i %s' % (sshkey,)
+
         self.remote_url = remote
         self.local_path = local
         self.email = email
