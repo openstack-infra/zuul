@@ -265,6 +265,22 @@ The following section of ``zuul.conf`` is used by the merger:
 
       Directory in which Zuul should clone git repositories.
 
+   .. attr:: git_http_low_speed_limit
+      :default: 1000
+
+      If the HTTP transfer speed is less then git_http_low_speed_limit for
+      longer then git_http_low_speed_time, the transfer is aborted.
+
+      Value in bytes, setting to 0 will disable.
+
+   .. attr:: git_http_low_speed_time
+      :default: 30
+
+      If the HTTP transfer speed is less then git_http_low_speed_limit for
+      longer then git_http_low_speed_time, the transfer is aborted.
+
+      Value in seconds, setting to 0 will disable.
+
    .. attr:: git_user_email
 
       Value to pass to `git config user.email
