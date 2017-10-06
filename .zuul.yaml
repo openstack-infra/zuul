@@ -45,8 +45,7 @@
     name: openstack-infra/zuul
     infra-check:
       jobs:
-        - build-openstack-infra-sphinx-docs:
-            success-url: 'html/feature/zuulv3/'
+        - build-openstack-sphinx-docs:
             irrelevant-files:
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
@@ -67,8 +66,10 @@
               - playbooks/zuul-migrate/.*
     infra-gate:
       jobs:
-        - build-openstack-infra-sphinx-docs:
-            success-url: 'html/feature/zuulv3/'
+        - build-openstack-sphinx-docs:
+            irrelevant-files:
+              - zuul/cmd/migrate.py
+              - playbooks/zuul-migrate/.*
         - tox-pep8
         - tox-py35:
             irrelevant-files:
