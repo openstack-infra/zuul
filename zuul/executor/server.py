@@ -1759,15 +1759,15 @@ class AnsibleJob(object):
         if result is not None:
             result = self.RESULT_MAP[result]
             msg = "{phase} {step} {result}: [{trusted} : {playbook}@{branch}]"
-            msg.format(phase=phase, step=step, result=result,
-                       trusted=trusted, playbook=playbook, branch=branch)
+            msg = msg.format(phase=phase, step=step, result=result,
+                             trusted=trusted, playbook=playbook, branch=branch)
         else:
             msg = "{phase} {step}: [{trusted} : {playbook}@{branch}]"
-            msg.format(phase=phase, step=step, trusted=trusted,
-                       playbook=playbook, branch=branch)
+            msg = msg.format(phase=phase, step=step, trusted=trusted,
+                             playbook=playbook, branch=branch)
 
         with open(self.jobdir.job_output_file, 'a') as job_output:
-            job_output.write("{now} | {msg}".format(
+            job_output.write("{now} | {msg}\n".format(
                 now=datetime.datetime.now(),
                 msg=msg))
 
