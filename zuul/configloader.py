@@ -11,6 +11,7 @@
 # under the License.
 
 import base64
+import collections
 from contextlib import contextmanager
 import copy
 import os
@@ -397,39 +398,42 @@ class JobParser(object):
     secret = {vs.Required('name'): str,
               vs.Required('secret'): str}
 
-    job = {vs.Required('name'): str,
-           'parent': vs.Any(str, None),
-           'final': bool,
-           'failure-message': str,
-           'success-message': str,
-           'failure-url': str,
-           'success-url': str,
-           'hold-following-changes': bool,
-           'voting': bool,
-           'semaphore': str,
-           'tags': to_list(str),
-           'branches': to_list(str),
-           'files': to_list(str),
-           'secrets': to_list(vs.Any(secret, str)),
-           'irrelevant-files': to_list(str),
-           # validation happens in NodeSetParser
-           'nodeset': vs.Any(dict, str),
-           'timeout': int,
-           'attempts': int,
-           'pre-run': to_list(str),
-           'post-run': to_list(str),
-           'run': str,
-           '_source_context': model.SourceContext,
-           '_start_mark': ZuulMark,
-           'roles': to_list(role),
-           'required-projects': to_list(vs.Any(job_project, str)),
-           'vars': dict,
-           'dependencies': to_list(str),
-           'allowed-projects': to_list(str),
-           'override-branch': str,
-           'description': str,
-           'post-review': bool
-           }
+    # Attributes of a job that can also be used in Project and ProjectTemplate
+    job_attributes = {'parent': vs.Any(str, None),
+                      'final': bool,
+                      'failure-message': str,
+                      'success-message': str,
+                      'failure-url': str,
+                      'success-url': str,
+                      'hold-following-changes': bool,
+                      'voting': bool,
+                      'semaphore': str,
+                      'tags': to_list(str),
+                      'branches': to_list(str),
+                      'files': to_list(str),
+                      'secrets': to_list(vs.Any(secret, str)),
+                      'irrelevant-files': to_list(str),
+                      # validation happens in NodeSetParser
+                      'nodeset': vs.Any(dict, str),
+                      'timeout': int,
+                      'attempts': int,
+                      'pre-run': to_list(str),
+                      'post-run': to_list(str),
+                      'run': str,
+                      '_source_context': model.SourceContext,
+                      '_start_mark': ZuulMark,
+                      'roles': to_list(role),
+                      'required-projects': to_list(vs.Any(job_project, str)),
+                      'vars': dict,
+                      'dependencies': to_list(str),
+                      'allowed-projects': to_list(str),
+                      'override-branch': str,
+                      'description': str,
+                      'post-review': bool}
+
+    job_name = {vs.Required('name'): str}
+
+    job = dict(collections.ChainMap(job_name, job_attributes))
 
     schema = vs.Schema(job)
 
@@ -725,9 +729,12 @@ class ProjectTemplateParser(object):
             '_start_mark': ZuulMark,
         }
 
+        job = {str: vs.Any(str, JobParser.job_attributes)}
+        job_list = [vs.Any(str, job)]
+        pipeline_contents = {'queue': str, 'jobs': job_list}
+
         for p in self.layout.pipelines.values():
-            project_template[p.name] = {'queue': str,
-                                        'jobs': [vs.Any(str, dict)]}
+            project_template[p.name] = pipeline_contents
         return vs.Schema(project_template)
 
     def fromYaml(self, conf, validate=True):
@@ -796,9 +803,12 @@ class ProjectParser(object):
             '_start_mark': ZuulMark,
         }
 
+        job = {str: vs.Any(str, JobParser.job_attributes)}
+        job_list = [vs.Any(str, job)]
+        pipeline_contents = {'queue': str, 'jobs': job_list}
+
         for p in self.layout.pipelines.values():
-            project[p.name] = {'queue': str,
-                               'jobs': [vs.Any(str, dict)]}
+            project[p.name] = pipeline_contents
         return vs.Schema(project)
 
     def fromYaml(self, conf_list):

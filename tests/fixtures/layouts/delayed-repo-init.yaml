@@ -67,7 +67,7 @@
             dependencies: project-merge
     gate:
       jobs:
-        - project-merge:
+        - project-merge
         - project-test1:
             dependencies: project-merge
         - project-test2:
