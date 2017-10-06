@@ -24,7 +24,7 @@ import ansible.plugins.lookup
 
 def _is_safe_path(path):
     full_path = os.path.realpath(os.path.abspath(os.path.expanduser(path)))
-    if not full_path.startswith(os.path.abspath(os.path.curdir)):
+    if not full_path.startswith(os.path.abspath(os.path.expanduser('~'))):
         return False
     return True
 
