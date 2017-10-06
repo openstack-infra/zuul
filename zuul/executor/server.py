@@ -1697,6 +1697,13 @@ class AnsibleJob(object):
         elif ret == -9:
             # Received abort request.
             return (self.RESULT_ABORTED, None)
+        elif ret == 1:
+            if syntax_buffer[0].startswith('ERROR!'):
+                with open(self.jobdir.job_output_file, 'a') as job_output:
+                    for line in syntax_buffer:
+                        job_output.write("{now} | {line}\n".format(
+                            now=datetime.datetime.now(),
+                            line=line.decode('utf-8').rstrip()))
         elif ret == 4:
             # Ansible could not parse the yaml.
             self.log.debug("Ansible parse error")
