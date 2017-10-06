@@ -1157,7 +1157,6 @@ class Build(object):
         self.start_time = None
         self.end_time = None
         self.estimated_time = None
-        self.pipeline = None
         self.canceled = False
         self.retry = False
         self.parameters = {}
@@ -1168,6 +1167,10 @@ class Build(object):
     def __repr__(self):
         return ('<Build %s of %s on %s>' %
                 (self.uuid, self.job.name, self.worker))
+
+    @property
+    def pipeline(self):
+        return self.build_set.item.pipeline
 
     def getSafeAttributes(self):
         return Attributes(uuid=self.uuid,
@@ -1432,7 +1435,6 @@ class QueueItem(object):
 
     def addBuild(self, build):
         self.current_build_set.addBuild(build)
-        build.pipeline = self.pipeline
 
     def removeBuild(self, build):
         self.current_build_set.removeBuild(build)
