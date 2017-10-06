@@ -1520,6 +1520,25 @@ class QueueItem(object):
     def wasDequeuedNeedingChange(self):
         return self.dequeued_needing_change
 
+    def includesConfigUpdates(self):
+        includes_trusted = False
+        includes_untrusted = False
+        tenant = self.pipeline.layout.tenant
+        item = self
+        while item:
+            if item.change.updatesConfig():
+                (trusted, project) = tenant.getProject(
+                    item.change.project.canonical_name)
+                if trusted:
+                    includes_trusted = True
+                else:
+                    includes_untrusted = True
+            if includes_trusted and includes_untrusted:
+                # We're done early
+                return (includes_trusted, includes_untrusted)
+            item = item.item_ahead
+        return (includes_trusted, includes_untrusted)
+
     def isHoldingFollowingChanges(self):
         if not self.live:
             return False

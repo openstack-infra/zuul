@@ -430,27 +430,39 @@ class PipelineManager(object):
         import zuul.configloader
         loader = zuul.configloader.ConfigLoader()
 
+        self.log.debug("Loading dynamic layout")
+        (trusted_updates, untrusted_updates) = item.includesConfigUpdates()
         build_set = item.current_build_set
         try:
             # First parse the config as it will land with the
             # full set of config and project repos.  This lets us
             # catch syntax errors in config repos even though we won't
             # actually run with that config.
-            self.log.debug("Loading dynamic layout (phase 1)")
-            loader.createDynamicLayout(
-                item.pipeline.layout.tenant,
-                build_set.files,
-                include_config_projects=True,
-                scheduler=self.sched,
-                connections=self.sched.connections)
+            if trusted_updates:
+                self.log.debug("Loading dynamic layout (phase 1)")
+                loader.createDynamicLayout(
+                    item.pipeline.layout.tenant,
+                    build_set.files,
+                    include_config_projects=True,
+                    scheduler=self.sched,
+                    connections=self.sched.connections)
 
             # Then create the config a second time but without changes
             # to config repos so that we actually use this config.
-            self.log.debug("Loading dynamic layout (phase 2)")
-            layout = loader.createDynamicLayout(
-                item.pipeline.layout.tenant,
-                build_set.files,
-                include_config_projects=False)
+            if untrusted_updates:
+                self.log.debug("Loading dynamic layout (phase 2)")
+                layout = loader.createDynamicLayout(
+                    item.pipeline.layout.tenant,
+                    build_set.files,
+                    include_config_projects=False)
+            else:
+                # We're a change to a config repo (with no untrusted
+                # items ahead), so just use the most recently
+                # generated layout.
+                if item.item_ahead:
+                    return item.item_ahead.layout
+                else:
+                    return item.queue.pipeline.layout
             self.log.debug("Loading dynamic layout complete")
         except zuul.configloader.ConfigurationSyntaxError as e:
             self.log.info("Configuration syntax error "
