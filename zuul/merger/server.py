@@ -33,9 +33,13 @@ class MergeServer(object):
                                  '/var/lib/zuul/merger-git')
         merge_email = get_default(self.config, 'merger', 'git_user_email')
         merge_name = get_default(self.config, 'merger', 'git_user_name')
-
-        self.merger = merger.Merger(merge_root, connections, merge_email,
-                                    merge_name)
+        speed_limit = get_default(
+            config, 'merger', 'git_http_low_speed_limit', '1000')
+        speed_time = get_default(
+            config, 'merger', 'git_http_low_speed_time', '30')
+        self.merger = merger.Merger(
+            merge_root, connections, merge_email, merge_name, speed_limit,
+            speed_time)
 
     def start(self):
         self._running = True
