@@ -367,7 +367,7 @@ class ExecutorClient(object):
             if result is None:
                 result = data.get('result')
                 build.error_detail = data.get('error_detail')
-            if result is None:
+            if result is None or result == 'ABORTED':
                 if (build.build_set.getTries(build.job.name) >=
                     build.job.attempts):
                     result = 'RETRY_LIMIT'

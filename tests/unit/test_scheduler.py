@@ -4596,6 +4596,30 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(B.data['status'], 'MERGED')
         self.assertEqual(B.reported, 2)
 
+    def test_job_aborted(self):
+        "Test that if a execute server aborts a job, it is run again"
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.executor_server.release('.*-merge')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 2)
+        self.builds[0].aborted = True
+        self.executor_server.release('.*-test*')
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 1)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.history), 4)
+        self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 1)
+        self.assertEqual(self.countJobResults(self.history, 'SUCCESS'), 3)
+
     def test_rerun_on_abort(self):
         "Test that if a execute server fails to run a job, it is run again"
 
