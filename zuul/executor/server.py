@@ -614,7 +614,7 @@ class ExecutorServer(object):
         self.job_workers = {}
         self.disk_accountant = DiskAccountant(self.jobdir_root,
                                               self.disk_limit_per_job,
-                                              self.stopJobByJobdir,
+                                              self.stopJobDiskFull,
                                               self.merge_root)
 
     def _getMerger(self, root, logger=None):
@@ -847,9 +847,9 @@ class ExecutorServer(object):
     def finishJob(self, unique):
         del(self.job_workers[unique])
 
-    def stopJobByJobdir(self, jobdir):
+    def stopJobDiskFull(self, jobdir):
         unique = os.path.basename(jobdir)
-        self.stopJobByUnique(unique)
+        self.stopJobByUnique(unique, reason=AnsibleJob.RESULT_DISK_FULL)
 
     def stopJob(self, job):
         try:
@@ -860,13 +860,13 @@ class ExecutorServer(object):
         finally:
             job.sendWorkComplete()
 
-    def stopJobByUnique(self, unique):
+    def stopJobByUnique(self, unique, reason=None):
         job_worker = self.job_workers.get(unique)
         if not job_worker:
             self.log.debug("Unable to find worker for job %s" % (unique,))
             return
         try:
-            job_worker.stop()
+            job_worker.stop(reason)
         except Exception:
             self.log.exception("Exception sending stop command "
                                "to worker:")
@@ -918,12 +918,14 @@ class AnsibleJob(object):
     RESULT_TIMED_OUT = 2
     RESULT_UNREACHABLE = 3
     RESULT_ABORTED = 4
+    RESULT_DISK_FULL = 5
 
     RESULT_MAP = {
         RESULT_NORMAL: 'RESULT_NORMAL',
         RESULT_TIMED_OUT: 'RESULT_TIMED_OUT',
         RESULT_UNREACHABLE: 'RESULT_UNREACHABLE',
         RESULT_ABORTED: 'RESULT_ABORTED',
+        RESULT_DISK_FULL: 'RESULT_DISK_FULL',
     }
 
     def __init__(self, executor_server, job):
@@ -936,6 +938,7 @@ class AnsibleJob(object):
         self.proc_lock = threading.Lock()
         self.running = False
         self.aborted = False
+        self.aborted_reason = None
         self.thread = None
         self.private_key_file = get_default(self.executor_server.config,
                                             'executor', 'private_key_file',
@@ -953,8 +956,9 @@ class AnsibleJob(object):
         self.thread = threading.Thread(target=self.execute)
         self.thread.start()
 
-    def stop(self):
+    def stop(self, reason=None):
         self.aborted = True
+        self.aborted_reason = reason
         self.abortRunningProc()
         if self.thread:
             self.thread.join()
@@ -1102,6 +1106,8 @@ class AnsibleJob(object):
         self.job.sendWorkStatus(0, 100)
 
         result = self.runPlaybooks(args)
+        if self.aborted_reason == self.RESULT_DISK_FULL:
+            result = 'DISK_FULL'
         data = self.getResultData()
         result_data = json.dumps(dict(result=result,
                                       data=data))
