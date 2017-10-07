@@ -478,22 +478,27 @@ class JobParser(object):
         return None
 
     @staticmethod
-    def fromYaml(tenant, layout, conf, project_pipeline=False):
-        with configuration_exceptions('job', conf):
-            JobParser.schema(conf)
+    def fromYaml(tenant, layout, conf, project_pipeline=False,
+                 name=None, validate=True):
+        if validate:
+            with configuration_exceptions('job', conf):
+                JobParser.schema(conf)
+
+        if name is None:
+            name = conf['name']
 
         # NB: The default detection system in the Job class requires
         # that we always assign values directly rather than modifying
         # them (e.g., "job.run = ..." rather than
         # "job.run.append(...)").
 
-        reference = layout.jobs.get(conf['name'], [None])[0]
+        reference = layout.jobs.get(name, [None])[0]
 
-        job = model.Job(conf['name'])
+        job = model.Job(name)
         job.source_context = conf.get('_source_context')
         job.source_line = conf.get('_start_mark').line + 1
 
-        is_variant = layout.hasJob(conf['name'])
+        is_variant = layout.hasJob(name)
         if 'parent' in conf:
             if conf['parent'] is not None:
                 # Parent job is explicitly specified, so inherit from it.
@@ -759,16 +764,11 @@ class ProjectTemplateParser(object):
     def parseJobList(self, conf, source_context, start_mark, job_list):
         for conf_job in conf:
             if isinstance(conf_job, str):
-                attrs = dict(name=conf_job)
+                jobname = conf_job
+                attrs = {}
             elif isinstance(conf_job, dict):
                 # A dictionary in a job tree may override params
                 jobname, attrs = list(conf_job.items())[0]
-                if attrs:
-                    # We are overriding params, so make a new job def
-                    attrs['name'] = jobname
-                else:
-                    # Not overriding, so add a blank job
-                    attrs = dict(name=jobname)
             else:
                 raise Exception("Job must be a string or dictionary")
             attrs['_source_context'] = source_context
@@ -777,10 +777,11 @@ class ProjectTemplateParser(object):
             # validate that the job is existing
             with configuration_exceptions('project or project-template',
                                           attrs):
-                self.layout.getJob(attrs['name'])
+                self.layout.getJob(jobname)
 
             job_list.addJob(JobParser.fromYaml(self.tenant, self.layout,
-                                               attrs, project_pipeline=True))
+                                               attrs, project_pipeline=True,
+                                               name=jobname, validate=False))
 
 
 class ProjectParser(object):

@@ -905,6 +905,50 @@ class TestInRepoConfig(ZuulTestCase):
         self.assertIn('expected str for dictionary value',
                       A.messages[0], "A should have a syntax error reported")
 
+    def test_project_template(self):
+        # Tests that a project template is not modified when used, and
+        # can therefore be used in subsequent reconfigurations.
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test1
+            - project-template:
+                name: some-jobs
+                tenant-one-gate:
+                  jobs:
+                    - project-test1:
+                        required-projects:
+                          - org/project1
+            - project:
+                name: org/project
+                templates:
+                  - some-jobs
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+        self.waitUntilSettled()
+        in_repo_conf = textwrap.dedent(
+            """
+            - project:
+                name: org/project1
+                templates:
+                  - some-jobs
+            """)
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B',
+                                           files=file_dict)
+        B.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.assertEqual(B.data['status'], 'MERGED')
+
     def test_multi_repo(self):
         downstream_repo_conf = textwrap.dedent(
             """
