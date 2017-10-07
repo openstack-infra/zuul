@@ -4607,6 +4607,26 @@ For CI problems and help debugging, contact ci@example.org"""
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 2)
+
+        # first abort
+        self.builds[0].aborted = True
+        self.executor_server.release('.*-test*')
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 1)
+
+        # second abort
+        self.builds[0].aborted = True
+        self.executor_server.release('.*-test*')
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 1)
+
+        # third abort
+        self.builds[0].aborted = True
+        self.executor_server.release('.*-test*')
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 1)
+
+        # fourth abort
         self.builds[0].aborted = True
         self.executor_server.release('.*-test*')
         self.waitUntilSettled()
@@ -4616,8 +4636,8 @@ For CI problems and help debugging, contact ci@example.org"""
         self.executor_server.release()
         self.waitUntilSettled()
 
-        self.assertEqual(len(self.history), 4)
-        self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 1)
+        self.assertEqual(len(self.history), 7)
+        self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 4)
         self.assertEqual(self.countJobResults(self.history, 'SUCCESS'), 3)
 
     def test_rerun_on_abort(self):
