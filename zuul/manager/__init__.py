@@ -229,20 +229,17 @@ class PipelineManager(object):
                                (item.change, change_queue))
                 change_queue.enqueueItem(item)
 
-                # Get an updated copy of the layout if necessary.
-                # This will return one of the following:
-                # 1) An existing layout from the item ahead or pipeline.
-                # 2) A newly created layout from the cached pipeline
-                #    layout config plus the previously returned
-                #    in-repo files stored in the buildset.
-                # 3) None in the case that a fetch of the files from
-                #    the merger is still pending.
-                item.layout = self.getLayout(item)
-
-                # Rebuild the frozen job tree from the new layout, if
-                # we have one.  If not, it will be built later.
-                if item.layout:
-                    item.freezeJobGraph()
+                # Get an updated copy of the layout and update the job
+                # graph if necessary.  This resumes the buildset merge
+                # state machine.  If we have an up-to-date layout, it
+                # will go ahead and refresh the job graph if needed;
+                # or it will send a new merge job if necessary, or it
+                # will do nothing if we're waiting on a merge job.
+                item.job_graph = None
+                item.layout = None
+                if item.active:
+                    if self.prepareItem(item):
+                        self.prepareJobs(item)
 
                 # Re-set build results in case any new jobs have been
                 # added to the tree.
