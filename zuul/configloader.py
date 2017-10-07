@@ -1632,9 +1632,22 @@ class ConfigLoader(object):
         for branch in branches:
             fns1 = []
             fns2 = []
-            files_list = files.connections.get(
+            files_entry = files.connections.get(
                 project.source.connection.connection_name, {}).get(
-                    project.name, {}).get(branch, {}).keys()
+                    project.name, {}).get(branch)
+            # If there is no files entry at all for this
+            # project-branch, then use the cached config.
+            if files_entry is None:
+                if trusted:
+                    incdata = project.unparsed_config
+                else:
+                    incdata = project.unparsed_branch_config.get(branch)
+                if incdata:
+                    config.extend(incdata)
+                continue
+            # Otherwise, do not use the cached config (even if the
+            # files are empty as that likely means they were deleted).
+            files_list = files_entry.keys()
             for fn in files_list:
                 if fn.startswith("zuul.d/"):
                     fns1.append(fn)
@@ -1664,14 +1677,6 @@ class ConfigLoader(object):
                         incdata = TenantParser._parseUntrustedProjectLayout(
                             data, source_context)
 
-                    config.extend(incdata)
-
-            if not loaded:
-                if trusted:
-                    incdata = project.unparsed_config
-                else:
-                    incdata = project.unparsed_branch_config.get(branch)
-                if incdata:
                     config.extend(incdata)
 
     def createDynamicLayout(self, tenant, files,

@@ -949,6 +949,52 @@ class TestInRepoConfig(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(B.data['status'], 'MERGED')
 
+    def test_job_remove_add(self):
+        # Tests that a job can be removed from one repo and added in another.
+        # First, remove the current config for project1 since it
+        # references the job we want to remove.
+        file_dict = {'.zuul.yaml': None}
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A',
+                                           files=file_dict)
+        A.setMerged()
+        self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+        self.waitUntilSettled()
+        # Then propose a change to delete the job from one repo...
+        file_dict = {'.zuul.yaml': None}
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        # ...and a second that depends on it that adds it to another repo.
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test1
+
+            - project:
+                name: org/project1
+                check:
+                  jobs:
+                    - project-test1
+            """)
+        in_repo_playbook = textwrap.dedent(
+            """
+            - hosts: all
+              tasks: []
+            """)
+        file_dict = {'.zuul.yaml': in_repo_conf,
+                     'playbooks/project-test1.yaml': in_repo_playbook}
+        C = self.fake_gerrit.addFakeChange('org/project1', 'master', 'C',
+                                           files=file_dict,
+                                           parent='refs/changes/1/1/1')
+        C.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            C.subject, B.data['id'])
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='project-test1', result='SUCCESS', changes='2,1 3,1'),
+        ], ordered=False)
+
     def test_multi_repo(self):
         downstream_repo_conf = textwrap.dedent(
             """
