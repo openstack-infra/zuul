@@ -89,25 +89,34 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.getJobFromHistory('project-test2').node,
                          'label1')
 
+        for stat in self.statsd.stats:
+            k, v = stat.decode('utf-8').split(':')
+            self.log.debug('stat %s:%s', k, v)
         # TODOv3(jeblair): we may want to report stats by tenant (also?).
         # Per-driver
         self.assertReportedStat('zuul.event.gerrit.comment-added', value='1|c')
         # Per-driver per-connection
         self.assertReportedStat('zuul.event.gerrit.gerrit.comment-added',
                                 value='1|c')
-        self.assertReportedStat('zuul.pipeline.gate.current_changes',
-                                value='1|g')
-        self.assertReportedStat('zuul.pipeline.gate.job.project-merge.SUCCESS',
-                                kind='ms')
-        self.assertReportedStat('zuul.pipeline.gate.job.project-merge.SUCCESS',
-                                value='1|c')
-        self.assertReportedStat('zuul.pipeline.gate.resident_time', kind='ms')
-        self.assertReportedStat('zuul.pipeline.gate.total_changes',
-                                value='1|c')
         self.assertReportedStat(
-            'zuul.pipeline.gate.org.project.resident_time', kind='ms')
+            'zuul.tenant.tenant-one.pipeline.gate.current_changes',
+            value='1|g')
         self.assertReportedStat(
-            'zuul.pipeline.gate.org.project.total_changes', value='1|c')
+            'zuul.tenant.tenant-one.pipeline.gate.project.review_example_com.'
+            'org_project.master.job.project-merge.SUCCESS', kind='ms')
+        self.assertReportedStat(
+            'zuul.tenant.tenant-one.pipeline.gate.project.review_example_com.'
+            'org_project.master.job.project-merge.SUCCESS', value='1|c')
+        self.assertReportedStat(
+            'zuul.tenant.tenant-one.pipeline.gate.resident_time', kind='ms')
+        self.assertReportedStat(
+            'zuul.tenant.tenant-one.pipeline.gate.total_changes', value='1|c')
+        self.assertReportedStat(
+            'zuul.tenant.tenant-one.pipeline.gate.project.review_example_com.'
+            'org_project.master.resident_time', kind='ms')
+        self.assertReportedStat(
+            'zuul.tenant.tenant-one.pipeline.gate.project.review_example_com.'
+            'org_project.master.total_changes', value='1|c')
 
         for build in self.history:
             self.assertTrue(build.parameters['zuul']['voting'])

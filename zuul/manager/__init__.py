@@ -820,19 +820,28 @@ class PipelineManager(object):
                 dt = None
             items = len(self.pipeline.getAllItems())
 
-            # stats.timers.zuul.pipeline.NAME.resident_time
-            # stats_counts.zuul.pipeline.NAME.total_changes
-            # stats.gauges.zuul.pipeline.NAME.current_changes
-            key = 'zuul.pipeline.%s' % self.pipeline.name
+            tenant = self.pipeline.layout.tenant
+            basekey = 'zuul.tenant.%s' % tenant.name
+            key = '%s.pipeline.%s' % (basekey, self.pipeline.name)
+            # stats.timers.zuul.tenant.<tenant>.pipeline.<pipeline>.resident_time
+            # stats_counts.zuul.tenant.<tenant>.pipeline.<pipeline>.total_changes
+            # stats.gauges.zuul.tenant.<tenant>.pipeline.<pipeline>.current_changes
             self.sched.statsd.gauge(key + '.current_changes', items)
             if dt:
                 self.sched.statsd.timing(key + '.resident_time', dt)
                 self.sched.statsd.incr(key + '.total_changes')
 
-            # stats.timers.zuul.pipeline.NAME.ORG.PROJECT.resident_time
-            # stats_counts.zuul.pipeline.NAME.ORG.PROJECT.total_changes
-            project_name = item.change.project.name.replace('/', '.')
-            key += '.%s' % project_name
+            hostname = (item.change.project.canonical_hostname.
+                        replace('.', '_'))
+            projectname = (item.change.project.name.
+                           replace('.', '_').replace('/', '.'))
+            projectname = projectname.replace('.', '_').replace('/', '.')
+            branchname = item.change.branch.replace('.', '_').replace('/', '.')
+            # stats.timers.zuul.tenant.<tenant>.pipeline.<pipeline>.
+            #   project.<host>.<project>.<branch>.resident_time
+            # stats_counts.zuul.tenant.<tenant>.pipeline.<pipeline>.
+            #   project.<host>.<project>.<branch>.total_changes
+            key += '.project.%s.%s.%s' % (hostname, projectname, branchname)
             if dt:
                 self.sched.statsd.timing(key + '.resident_time', dt)
                 self.sched.statsd.incr(key + '.total_changes')

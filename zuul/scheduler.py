@@ -282,31 +282,34 @@ class Scheduler(threading.Thread):
         build.result = result
         try:
             if self.statsd and build.pipeline:
-                jobname = build.job.name.replace('.', '_')
-                key = 'zuul.pipeline.%s.all_jobs' % build.pipeline.name
+                tenant = build.pipeline.layout.tenant
+                jobname = build.job.name.replace('.', '_').replace('/', '_')
+                hostname = (build.build_set.item.change.project.
+                            canonical_hostname.replace('.', '_'))
+                projectname = (build.build_set.item.change.project.name.
+                               replace('.', '_').replace('/', '_'))
+                branchname = (build.build_set.item.change.branch.
+                              replace('.', '_').replace('/', '_'))
+                basekey = 'zuul.tenant.%s' % tenant.name
+                pipekey = '%s.pipeline.%s' % (basekey, build.pipeline.name)
+                # zuul.tenant.<tenant>.pipeline.<pipeline>.all_jobs
+                key = '%s.all_jobs' % pipekey
                 self.statsd.incr(key)
-                for label in build.node_labels:
-                    # Jenkins includes the node name in its list of labels, so
-                    # we filter it out here, since that is not statistically
-                    # interesting.
-                    if label == build.node_name:
-                        continue
-                    dt = int((build.start_time - build.execute_time) * 1000)
-                    key = 'zuul.pipeline.%s.label.%s.wait_time' % (
-                        build.pipeline.name, label)
-                    self.statsd.timing(key, dt)
-                key = 'zuul.pipeline.%s.job.%s.%s' % (build.pipeline.name,
-                                                      jobname, build.result)
+                jobkey = '%s.project.%s.%s.%s.job.%s' % (
+                    pipekey, hostname, projectname, branchname, jobname)
+                # zuul.tenant.<tenant>.pipeline.<pipeline>.project.
+                #   <host>.<project>.<branch>.job.<job>.<result>
+                key = '%s.%s' % (jobkey, build.result)
                 if build.result in ['SUCCESS', 'FAILURE'] and build.start_time:
                     dt = int((build.end_time - build.start_time) * 1000)
                     self.statsd.timing(key, dt)
                 self.statsd.incr(key)
-
-                key = 'zuul.pipeline.%s.job.%s.wait_time' % (
-                    build.pipeline.name, jobname)
+                # zuul.tenant.<tenant>.pipeline.<pipeline>.project.
+                #  <host>.<project>.<branch>.job.<job>.wait_time
+                key = '%s.wait_time' % jobkey
                 dt = int((build.start_time - build.execute_time) * 1000)
                 self.statsd.timing(key, dt)
-        except:
+        except Exception:
             self.log.exception("Exception reporting runtime stats")
         event = BuildCompletedEvent(build)
         self.result_event_queue.put(event)

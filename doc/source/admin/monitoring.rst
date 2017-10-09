@@ -33,17 +33,13 @@ Metrics
 
 These metrics are emitted by the Zuul :ref:`scheduler`:
 
-.. stat:: gerrit.event.<type>
+.. stat:: zuul.event.<driver>.event.<type>
    :type: counter
 
-   Gerrit emits different kinds of messages over its `stream-events`
-   interface.  Zuul will report counters for each type of event it
-   receives from Gerrit.
+   Zuul will report counters for each type of event it receives from
+   each of its configured drivers.
 
-   Refer to your Gerrit installation documentation for a complete
-   list of Gerrit event types.
-
-.. stat:: zuul.pipeline
+.. stat:: zuul.<tenant>.pipeline
 
    Holds metrics specific to jobs. This hierarchy includes:
 
@@ -63,22 +59,60 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
          The number of items currently being processed by this
          pipeline.
 
-      .. stat:: job
+      .. stat:: project
 
-         Subtree detailing per jobs statistics:
+         This hierarchy holds more specific metrics for each project
+         participating in the pipeline.
 
-         .. stat:: <jobname>
+         .. stat:: <canonical_hostname>
 
-            The triggered job name.
+            The canonical hostname for the triggering project.
+            Embedded ``.`` characters will be translated to ``_``.
 
-            .. stat:: <result>
-               :type: counter, timer
+            .. stat:: <project>
 
-               A counter for each type of result (e.g., ``SUCCESS`` or
-               ``FAILURE``, ``ERROR``, etc.) for the job.  If the
-               result is ``SUCCESS`` or ``FAILURE``, Zuul will
-               additionally report the duration of the build as a
-               timer.
+               The name of the triggering project.  Embedded ``/`` or
+               ``.`` characters will be translated to ``_``.
+
+               .. stat:: <branch>
+
+                  The name of the triggering branch.  Embedded ``/`` or
+                  ``.`` characters will be translated to ``_``.
+
+                  .. stat:: job
+
+                     Subtree detailing per-project job statistics:
+
+                     .. stat:: <jobname>
+
+                        The triggered job name.
+
+                        .. stat:: <result>
+                           :type: counter, timer
+
+                           A counter for each type of result (e.g., ``SUCCESS`` or
+                           ``FAILURE``, ``ERROR``, etc.) for the job.  If the
+                           result is ``SUCCESS`` or ``FAILURE``, Zuul will
+                           additionally report the duration of the build as a
+                           timer.
+
+                  .. stat:: current_changes
+                     :type: gauge
+
+                     The number of items of this project currently being
+                     processed by this pipeline.
+
+                  .. stat:: resident_time
+                     :type: timer
+
+                     A timer metric reporting how long each item for this
+                     project has been in the pipeline.
+
+                  .. stat:: total_changes
+                     :type: counter
+
+                     The number of changes for this project processed by the
+                     pipeline since Zuul started.
 
       .. stat:: resident_time
          :type: timer
@@ -98,34 +132,12 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
          How long each item spent in the pipeline before its first job
          started.
 
-      .. stat:: <project>
 
-         This hierarchy holds more specific metrics for each project
-         participating in the pipeline.  If the project name contains
-         a ``/`` character, it will be replaced with a ``.``.
+As an example, given a job named `myjob` in `mytenant` triggered by a
+change to `myproject` on the `master` branch in the `gate` pipeline
+which took 40 seconds to build, the Zuul scheduler will emit the
+following statsd events:
 
-         .. stat:: current_changes
-            :type: gauge
-
-            The number of items of this project currently being
-            processed by this pipeline.
-
-         .. stat:: resident_time
-            :type: timer
-
-            A timer metric reporting how long each item for this
-            project has been in the pipeline.
-
-         .. stat:: total_changes
-            :type: counter
-
-            The number of changes for this project processed by the
-            pipeline since Zuul started.
-
-As an example, given a job named `myjob` triggered by the `gate` pipeline
-which took 40 seconds to build, the Zuul scheduler will emit the following
-statsd events:
-
-  * ``zuul.pipeline.gate.job.myjob.SUCCESS`` +1
-  * ``zuul.pipeline.gate.job.myjob``  40 seconds
-  * ``zuul.pipeline.gate.all_jobs`` +1
+  * ``zuul.tenant.mytenant.pipeline.gate.project.example_com.myproject.master.job.myjob.SUCCESS`` +1
+  * ``zuul.tenant.mytenant.pipeline.gate.project.example_com.myproject.master.job.myjob.SUCCESS``  40 seconds
+  * ``zuul.tenant.mytenant.pipeline.gate.all_jobs`` +1
