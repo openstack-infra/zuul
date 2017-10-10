@@ -973,6 +973,12 @@ section for each :ref:`pipeline <pipeline>` may appear.  This
 project-pipeline definition is what determines how a project
 participates in a pipeline.
 
+Multiple project definitions may appear for the same project (for
+example, in a central :term:`config projects <config-project>` as wall
+as in a repo's own ``.zuul.yaml``).  In this case, all of the project
+definitions are combined (the jobs listed in all of the definitions
+will be run).
+
 Consider the following project definition::
 
   - project:
@@ -1019,8 +1025,7 @@ pipeline.
 
 .. attr:: project
 
-   In addition to a project-pipeline definition for one or more
-   pipelines, the following attributes may appear in a project:
+   The following attributes may appear in a project:
 
    .. attr:: name
       :required:
