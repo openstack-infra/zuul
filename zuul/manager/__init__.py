@@ -11,6 +11,7 @@
 # under the License.
 
 import logging
+import textwrap
 
 from zuul import exceptions
 from zuul import model
@@ -430,6 +431,7 @@ class PipelineManager(object):
         self.log.debug("Loading dynamic layout")
         (trusted_updates, untrusted_updates) = item.includesConfigUpdates()
         build_set = item.current_build_set
+        trusted_layout_verified = False
         try:
             # First parse the config as it will land with the
             # full set of config and project repos.  This lets us
@@ -443,6 +445,7 @@ class PipelineManager(object):
                     include_config_projects=True,
                     scheduler=self.sched,
                     connections=self.sched.connections)
+                trusted_layout_verified = True
 
             # Then create the config a second time but without changes
             # to config repos so that we actually use this config.
@@ -462,9 +465,23 @@ class PipelineManager(object):
                     return item.queue.pipeline.layout
             self.log.debug("Loading dynamic layout complete")
         except zuul.configloader.ConfigurationSyntaxError as e:
-            self.log.info("Configuration syntax error "
-                          "in dynamic layout")
-            item.setConfigError(str(e))
+            self.log.info("Configuration syntax error in dynamic layout")
+            if trusted_layout_verified:
+                # The config is good if we include config-projects,
+                # but is currently invalid if we omit them.  Instead
+                # of returning the whole error message, just leave a
+                # note that the config will work once the dependent
+                # changes land.
+                msg = "This change depends on a change "\
+                      "to a config project.\n\n"
+                msg += textwrap.fill(textwrap.dedent("""\
+                The syntax of the configuration in this change has
+                been verified to be correct once the config project
+                change upon which it depends is merged, but it can not
+                be used until that occurs."""))
+                item.setConfigError(msg)
+            else:
+                item.setConfigError(str(e))
             return None
         except Exception:
             self.log.exception("Error in dynamic layout")
