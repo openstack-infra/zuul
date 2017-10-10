@@ -32,7 +32,7 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
    Zuul will report counters for each type of event it receives from
    each of its configured drivers.
 
-.. stat:: zuul.<tenant>.pipeline
+.. stat:: zuul.tenant.<tenant>.pipeline
 
    Holds metrics specific to jobs. This hierarchy includes:
 
@@ -124,6 +124,27 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
 
          How long each item spent in the pipeline before its first job
          started.
+
+.. stat:: zuul.executor.<executor>
+
+   Holds metrics emitted by individual executors.  The ``<executor>``
+   component of the key will be replaced with the hostname of the
+   executor.
+
+   .. stat:: builds
+      :type: counter
+
+      Incremented each time the executor starts a build.
+
+   .. stat:: running_builds
+      :type: gauge
+
+      The number of builds currently running on this executor.
+
+   .. stat:: load_average
+      :type: gauge
+
+      The one-minute load average of this executor, multiplied by 100.
 
 
 As an example, given a job named `myjob` in `mytenant` triggered by a
