@@ -731,6 +731,47 @@ class TestInRepoConfig(ZuulTestCase):
         self.assertIn('the only project definition permitted', A.messages[0],
                       "A should have a syntax error reported")
 
+    def test_untrusted_depends_on_trusted(self):
+        with open(os.path.join(FIXTURE_DIR,
+                               'config/in-repo/git/',
+                               'common-config/zuul.yaml')) as f:
+            common_config = f.read()
+
+        common_config += textwrap.dedent(
+            """
+            - job:
+                name: project-test9
+            """)
+
+        file_dict = {'zuul.yaml': common_config}
+        A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A',
+                                           files=file_dict)
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test1
+            - project:
+                name: org/project
+                check:
+                  jobs:
+                    - project-test9
+            """)
+
+        file_dict = {'zuul.yaml': in_repo_conf}
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B',
+                                           files=file_dict)
+        B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            B.subject, A.data['id'])
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(B.reported, 1,
+                         "B should report failure")
+        self.assertIn('depends on a change to a config project',
+                      B.messages[0],
+                      "A should have a syntax error reported")
+
     def test_duplicate_node_error(self):
         in_repo_conf = textwrap.dedent(
             """
