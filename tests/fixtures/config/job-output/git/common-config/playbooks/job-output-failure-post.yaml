@@ -1,0 +1,4 @@
+- hosts: all
+  tasks:
+    - shell: echo "Failure test {{ zuul.executor.src_root }}"
+    - shell: exit 1
