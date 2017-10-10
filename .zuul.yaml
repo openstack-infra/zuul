@@ -43,7 +43,7 @@
 
 - project:
     name: openstack-infra/zuul
-    infra-check:
+    check:
       jobs:
         - build-openstack-sphinx-docs:
             irrelevant-files:
@@ -64,7 +64,7 @@
             files:
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
-    infra-gate:
+    gate:
       jobs:
         - build-openstack-sphinx-docs:
             irrelevant-files:
@@ -76,7 +76,7 @@
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
         - zuul-stream-functional
-    infra-post:
+    post:
       jobs:
         - publish-openstack-sphinx-docs-infra
         - publish-openstack-python-branch-tarball
