@@ -20,8 +20,19 @@
     parent: base
     name: job-output
 
+- job:
+    name: job-output-failure
+    run: playbooks/job-output
+    post-run: playbooks/job-output-failure-post
+
 - project:
     name: org/project
     check:
       jobs:
         - job-output
+
+- project:
+    name: org/project2
+    check:
+      jobs:
+        - job-output-failure

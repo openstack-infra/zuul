@@ -14,7 +14,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import io
 import json
+import logging
 import os
 import textwrap
 import gc
@@ -1844,7 +1846,8 @@ class TestJobOutput(AnsibleZuulTestCase):
             return f.read()
 
     def test_job_output(self):
-        # Verify that command standard output appears in the job output
+        # Verify that command standard output appears in the job output,
+        # and that failures in the final playbook get logged.
 
         # This currently only verifies we receive output from
         # localhost.  Notably, it does not verify we receive output
@@ -1869,3 +1872,36 @@ class TestJobOutput(AnsibleZuulTestCase):
         self.assertIn(token,
                       self._get_file(self.history[0],
                                      'work/logs/job-output.txt'))
+
+    def test_job_output_failure_log(self):
+        logger = logging.getLogger('zuul.AnsibleJob')
+        output = io.StringIO()
+        logger.addHandler(logging.StreamHandler(output))
+
+        # Verify that a failure in the last post playbook emits the contents
+        # of the json output to the log
+        self.executor_server.keep_jobdir = True
+        A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='job-output-failure',
+                 result='POST_FAILURE', changes='1,1'),
+        ], ordered=False)
+
+        token = 'Standard output test %s' % (self.history[0].jobdir.src_root)
+        j = json.loads(self._get_file(self.history[0],
+                                      'work/logs/job-output.json'))
+        self.assertEqual(token,
+                         j[0]['plays'][0]['tasks'][0]
+                         ['hosts']['localhost']['stdout'])
+
+        print(self._get_file(self.history[0],
+                             'work/logs/job-output.json'))
+        self.assertIn(token,
+                      self._get_file(self.history[0],
+                                     'work/logs/job-output.txt'))
+
+        log_output = output.getvalue()
+        self.assertIn('Final playbook failed', log_output)
+        self.assertIn('Failure test', log_output)

@@ -1229,7 +1229,35 @@ class AnsibleJob(object):
                 # precedence over the post result.
                 if not pre_failed:
                     result = 'POST_FAILURE'
+                if (index + 1) == len(self.jobdir.post_playbooks):
+                    self._logFinalPlaybookError()
+
         return result
+
+    def _logFinalPlaybookError(self):
+        # Failures in the final post playbook can include failures
+        # uploading logs, which makes diagnosing issues difficult.
+        # Grab the output from the last playbook from the json
+        # file and log it.
+        json_output = self.jobdir.job_output_file.replace('txt', 'json')
+        self.log.debug("Final playbook failed")
+        if not os.path.exists(json_output):
+            self.log.debug("JSON logfile {logfile} is missing".format(
+                logfile=json_output))
+            return
+        try:
+            output = json.load(open(json_output, 'r'))
+            last_playbook = output[-1]
+            # Transform json to yaml - because it's easier to read and given
+            # the size of the data it'll be extra-hard to read this as an
+            # all on one line stringified nested dict.
+            yaml_out = yaml.safe_dump(last_playbook, default_flow_style=False)
+            for line in yaml_out.split('\n'):
+                self.log.debug(line)
+        except Exception:
+            self.log.exception(
+                "Could not decode json from {logfile}".format(
+                    logfile=json_output))
 
     def getHostList(self, args):
         hosts = []
