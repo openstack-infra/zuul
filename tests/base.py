@@ -20,7 +20,6 @@ from contextlib import contextmanager
 import datetime
 import gc
 import hashlib
-import importlib
 from io import StringIO
 import json
 import logging
@@ -48,7 +47,6 @@ import fixtures
 import kazoo.client
 import kazoo.exceptions
 import pymysql
-import statsd
 import testtools
 import testtools.content
 import testtools.content_type
@@ -2047,14 +2045,9 @@ class ZuulTestCase(BaseTestCase):
         self.config.set('executor', 'state_dir', self.executor_state_root)
 
         self.statsd = FakeStatsd()
-        # note, use 127.0.0.1 rather than localhost to avoid getting ipv6
-        # see: https://github.com/jsocol/pystatsd/issues/61
-        os.environ['STATSD_HOST'] = '127.0.0.1'
-        os.environ['STATSD_PORT'] = str(self.statsd.port)
+        if self.config.has_section('statsd'):
+            self.config.set('statsd', 'port', str(self.statsd.port))
         self.statsd.start()
-        # the statsd client object is configured in the statsd module import
-        importlib.reload(statsd)
-        importlib.reload(zuul.scheduler)
 
         self.gearman_server = FakeGearmanServer(self.use_ssl)
 

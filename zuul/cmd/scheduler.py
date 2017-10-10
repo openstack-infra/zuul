@@ -29,6 +29,7 @@ import signal
 
 import zuul.cmd
 from zuul.lib.config import get_default
+from zuul.lib.statsd import get_statsd_config
 
 # No zuul imports here because they pull in paramiko which must not be
 # imported until after the daemonization.
@@ -97,8 +98,14 @@ class Scheduler(zuul.cmd.ZuulApp):
             os.close(pipe_write)
             self.setup_logging('gearman_server', 'log_config')
             import zuul.lib.gearserver
-            statsd_host = os.environ.get('STATSD_HOST')
-            statsd_port = int(os.environ.get('STATSD_PORT', 8125))
+
+            (statsd_host, statsd_port, statsd_prefix) = get_statsd_config(
+                self.config)
+            if statsd_prefix:
+                statsd_prefix += '.zuul.geard'
+            else:
+                statsd_prefix = 'zuul.geard'
+
             host = get_default(self.config, 'gearman_server', 'listen_address')
             port = int(get_default(self.config, 'gearman_server', 'port',
                                    4730))
@@ -112,7 +119,7 @@ class Scheduler(zuul.cmd.ZuulApp):
                                            host=host,
                                            statsd_host=statsd_host,
                                            statsd_port=statsd_port,
-                                           statsd_prefix='zuul.geard')
+                                           statsd_prefix=statsd_prefix)
 
             # Keep running until the parent dies:
             pipe_read = os.fdopen(pipe_read)
