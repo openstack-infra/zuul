@@ -7,6 +7,10 @@ PyYAML>=3.1.0
 Paste
 WebOb>=1.2.3
 paramiko>=1.8.0,<2.0.0
+# Using a local fork of gitpython until at least these changes are in a
+# release.
+# https://github.com/gitpython-developers/GitPython/pull/682
+# https://github.com/gitpython-developers/GitPython/pull/686
 -e git+https://github.com/jeblair/GitPython.git@zuul#egg=GitPython
 python-daemon>=2.0.4,<2.1.0
 extras
