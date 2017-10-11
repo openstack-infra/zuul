@@ -22,6 +22,35 @@ class Nodepool(object):
         self.requests = {}
         self.sched = scheduler
 
+    def emitStats(self, request):
+        if not self.sched.statsd:
+            return
+        statsd = self.sched.statsd
+        # counter zuul.nodepool.requested
+        # counter zuul.nodepool.requested.label.<label>
+        # counter zuul.nodepool.requested.size.<size>
+        # gauge zuul.nodepool.current_requests
+        state = request.state
+        if request.canceled:
+            state = 'canceled'
+            dt = None
+        elif request.state in (model.STATE_FULFILLED, model.STATE_FAILED):
+            dt = int((request.state_time - request.requested_time) * 1000)
+        else:
+            dt = None
+        key = 'zuul.nodepool.%s' % state
+        statsd.incr(key)
+        if dt:
+            statsd.timing(key, dt)
+        for node in request.nodeset.getNodes():
+            statsd.incr(key + '.label.%s' % node.label)
+            if dt:
+                statsd.timing(key + '.label.%s' % node.label, dt)
+        statsd.incr(key + '.size.%s' % len(request.nodeset.nodes))
+        if dt:
+            statsd.timing(key + '.size.%s' % len(request.nodeset.nodes), dt)
+        statsd.gauge('zuul.nodepool.current_requests', len(self.requests))
+
     def requestNodes(self, build_set, job):
         # Create a copy of the nodeset to represent the actual nodes
         # returned by nodepool.
@@ -33,6 +62,7 @@ class Nodepool(object):
             self.sched.zk.submitNodeRequest(req, self._updateNodeRequest)
             # Logged after submission so that we have the request id
             self.log.info("Submited node request %s" % (req,))
+            self.emitStats(req)
         else:
             self.log.info("Fulfilling empty node request %s" % (req,))
             req.state = model.STATE_FULFILLED
@@ -142,6 +172,7 @@ class Nodepool(object):
 
         if request.canceled:
             del self.requests[request.uid]
+            self.emitStats(request)
             return False
 
         # TODOv3(jeblair): handle allocation failure
@@ -155,6 +186,8 @@ class Nodepool(object):
             # Give our results to the scheduler.
             self.sched.onNodesProvisioned(request)
             del self.requests[request.uid]
+
+            self.emitStats(request)
 
             # Stop watching this request node.
             return False

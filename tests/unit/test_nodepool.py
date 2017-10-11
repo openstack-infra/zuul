@@ -29,6 +29,7 @@ class TestNodepool(BaseTestCase):
     def setUp(self):
         super(TestNodepool, self).setUp()
 
+        self.statsd = None
         self.zk_chroot_fixture = self.useFixture(
             ChrootedKazooFixture(self.id()))
         self.zk_config = '%s:%s%s' % (
