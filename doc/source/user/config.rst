@@ -448,9 +448,7 @@ ultimately, all jobs must have an inheritance path which terminates at
 a base job.  Each tenant has a default parent job which will be used
 if no explicit parent is specified.
 
-Jobs also support a concept called variance.  The first time a job
-definition appears is called the reference definition of the job.
-Subsequent job definitions with the same name are called variants.
+Multiple job definitions with the same name are called variants.
 These may have different selection criteria which indicate to Zuul
 that, for instance, the job should behave differently on a different
 git branch.  Unlike inheritance, all job variants must be defined in

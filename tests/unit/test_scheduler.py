@@ -4968,6 +4968,39 @@ For CI problems and help debugging, contact ci@example.org"""
         self.gearman_server.release()
         self.waitUntilSettled()
 
+    @simple_layout('layouts/parent-matchers.yaml')
+    def test_parent_matchers(self):
+        "Test that if a job's parent does not match, the job does not run"
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([])
+
+        files = {'foo.txt': ''}
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B',
+                                           files=files)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        files = {'bar.txt': ''}
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C',
+                                           files=files)
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        files = {'foo.txt': '', 'bar.txt': ''}
+        D = self.fake_gerrit.addFakeChange('org/project', 'master', 'D',
+                                           files=files)
+        self.fake_gerrit.addEvent(D.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='child-job', result='SUCCESS', changes='2,1'),
+            dict(name='child-job', result='SUCCESS', changes='3,1'),
+            dict(name='child-job', result='SUCCESS', changes='4,1'),
+        ])
+
 
 class TestExecutor(ZuulTestCase):
     tenant_config_file = 'config/single-tenant/main.yaml'
