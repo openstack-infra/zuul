@@ -1225,6 +1225,7 @@ class AnsibleJob(object):
             post_status, post_code = self.runAnsiblePlaybook(
                 playbook, args['timeout'], success, phase='post', index=index)
             if post_status != self.RESULT_NORMAL or post_code != 0:
+                success = False
                 # If we encountered a pre-failure, that takes
                 # precedence over the post result.
                 if not pre_failed:
