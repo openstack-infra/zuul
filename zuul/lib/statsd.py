@@ -12,7 +12,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import extras
 from zuul.lib.config import get_default
 
 
@@ -24,10 +23,8 @@ def get_statsd_config(config):
 
 
 def get_statsd(config):
-    statsd = extras.try_import('statsd')
-    if statsd is None:
-        return None
     (statsd_host, statsd_port, statsd_prefix) = get_statsd_config(config)
     if statsd_host is None:
         return None
+    import statsd
     return statsd.StatsClient(statsd_host, statsd_port, statsd_prefix)
