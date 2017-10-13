@@ -29,6 +29,7 @@ import time
 import traceback
 from zuul.lib.yamlutil import yaml
 from zuul.lib.config import get_default
+from zuul.lib.statsd import get_statsd
 
 try:
     import ara.plugins.callbacks as ara_callbacks
@@ -1483,6 +1484,7 @@ class ExecutorExecuteWorker(gear.TextWorker):
 
 class ExecutorServer(object):
     log = logging.getLogger("zuul.ExecutorServer")
+    _job_class = AnsibleJob
 
     def __init__(self, config, connections={}, jobdir_root=None,
                  keep_jobdir=False, log_streaming_port=DEFAULT_FINGER_PORT):
@@ -1506,6 +1508,7 @@ class ExecutorServer(object):
             nokeep=self.nokeep,
         )
 
+        self.statsd = get_statsd(config)
         self.merge_root = get_default(self.config, 'executor', 'git_dir',
                                       '/var/lib/zuul/executor-git')
         self.default_username = get_default(self.config, 'executor',
@@ -1652,6 +1655,10 @@ class ExecutorServer(object):
                                    "to worker:")
         self.merger_worker.shutdown()
         self.executor_worker.shutdown()
+        if self.statsd:
+            base_key = 'zuul.executor.%s' % self.hostname
+            self.statsd.gauge(base_key + '.load_average', 0)
+            self.statsd.gauge(base_key + '.running_builds', 0)
         self.log.debug("Stopped")
 
     def pause(self):
@@ -1776,7 +1783,10 @@ class ExecutorServer(object):
             self.manageLoad()
 
     def executeJob(self, job):
-        self.job_workers[job.unique] = AnsibleJob(self, job)
+        if self.statsd:
+            base_key = 'zuul.executor.%s' % self.hostname
+            self.statsd.incr(base_key + '.builds')
+        self.job_workers[job.unique] = self._job_class(self, job)
         self.job_workers[job.unique].run()
 
     def manageLoad(self):
@@ -1795,6 +1805,12 @@ class ExecutorServer(object):
                 "Re-registering as load is within limits {} <= {}".format(
                     load_avg, self.max_load_avg))
             self.register_work()
+        if self.statsd:
+            base_key = 'zuul.executor.%s' % self.hostname
+            self.statsd.gauge(base_key + '.load_average',
+                              int(load_avg * 100))
+            self.statsd.gauge(base_key + '.running_builds',
+                              len(self.job_workers))
 
     def finishJob(self, unique):
         del(self.job_workers[unique])

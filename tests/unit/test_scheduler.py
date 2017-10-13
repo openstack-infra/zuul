@@ -117,6 +117,8 @@ class TestScheduler(ZuulTestCase):
         self.assertReportedStat(
             'zuul.tenant.tenant-one.pipeline.gate.project.review_example_com.'
             'org_project.master.total_changes', value='1|c')
+        exec_key = 'zuul.executor.%s' % self.executor_server.hostname
+        self.assertReportedStat(exec_key + '.builds', value='1|c')
 
         for build in self.history:
             self.assertTrue(build.parameters['zuul']['voting'])

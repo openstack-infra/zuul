@@ -1429,6 +1429,9 @@ class RecordingExecutorServer(zuul.executor.server.ExecutorServer):
         be explicitly released.
 
     """
+
+    _job_class = RecordingAnsibleJob
+
     def __init__(self, *args, **kw):
         self._run_ansible = kw.pop('_run_ansible', False)
         self._test_root = kw.pop('_test_root', False)
@@ -1483,8 +1486,7 @@ class RecordingExecutorServer(zuul.executor.server.ExecutorServer):
         args = json.loads(job.arguments)
         args['zuul']['_test'] = dict(test_root=self._test_root)
         job.arguments = json.dumps(args)
-        self.job_workers[job.unique] = RecordingAnsibleJob(self, job)
-        self.job_workers[job.unique].run()
+        super(RecordingExecutorServer, self).executeJob(job)
 
     def stopJob(self, job):
         self.log.debug("handle stop")
