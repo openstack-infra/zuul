@@ -1361,6 +1361,63 @@ class FakeBuild(object):
         return repos
 
 
+class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
+    def doMergeChanges(self, merger, items, repo_state):
+        # Get a merger in order to update the repos involved in this job.
+        commit = super(RecordingAnsibleJob, self).doMergeChanges(
+            merger, items, repo_state)
+        if not commit:  # merge conflict
+            self.recordResult('MERGER_FAILURE')
+        return commit
+
+    def recordResult(self, result):
+        build = self.executor_server.job_builds[self.job.unique]
+        self.executor_server.lock.acquire()
+        self.executor_server.build_history.append(
+            BuildHistory(name=build.name, result=result, changes=build.changes,
+                         node=build.node, uuid=build.unique,
+                         ref=build.parameters['zuul']['ref'],
+                         parameters=build.parameters, jobdir=build.jobdir,
+                         pipeline=build.parameters['zuul']['pipeline'])
+        )
+        self.executor_server.running_builds.remove(build)
+        del self.executor_server.job_builds[self.job.unique]
+        self.executor_server.lock.release()
+
+    def runPlaybooks(self, args):
+        build = self.executor_server.job_builds[self.job.unique]
+        build.jobdir = self.jobdir
+
+        result = super(RecordingAnsibleJob, self).runPlaybooks(args)
+        self.recordResult(result)
+        return result
+
+    def runAnsible(self, cmd, timeout, playbook):
+        build = self.executor_server.job_builds[self.job.unique]
+
+        if self.executor_server._run_ansible:
+            result = super(RecordingAnsibleJob, self).runAnsible(
+                cmd, timeout, playbook)
+        else:
+            if playbook.path:
+                result = build.run()
+            else:
+                result = (self.RESULT_NORMAL, 0)
+        return result
+
+    def getHostList(self, args):
+        self.log.debug("hostlist")
+        hosts = super(RecordingAnsibleJob, self).getHostList(args)
+        for host in hosts:
+            host['host_vars']['ansible_connection'] = 'local'
+
+        hosts.append(dict(
+            name='localhost',
+            host_vars=dict(ansible_connection='local'),
+            host_keys=[]))
+        return hosts
+
+
 class RecordingExecutorServer(zuul.executor.server.ExecutorServer):
     """An Ansible executor to be used in tests.
 
@@ -1443,63 +1500,6 @@ class RecordingExecutorServer(zuul.executor.server.ExecutorServer):
         for build in self.running_builds:
             build.release()
         super(RecordingExecutorServer, self).stop()
-
-
-class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
-    def doMergeChanges(self, merger, items, repo_state):
-        # Get a merger in order to update the repos involved in this job.
-        commit = super(RecordingAnsibleJob, self).doMergeChanges(
-            merger, items, repo_state)
-        if not commit:  # merge conflict
-            self.recordResult('MERGER_FAILURE')
-        return commit
-
-    def recordResult(self, result):
-        build = self.executor_server.job_builds[self.job.unique]
-        self.executor_server.lock.acquire()
-        self.executor_server.build_history.append(
-            BuildHistory(name=build.name, result=result, changes=build.changes,
-                         node=build.node, uuid=build.unique,
-                         ref=build.parameters['zuul']['ref'],
-                         parameters=build.parameters, jobdir=build.jobdir,
-                         pipeline=build.parameters['zuul']['pipeline'])
-        )
-        self.executor_server.running_builds.remove(build)
-        del self.executor_server.job_builds[self.job.unique]
-        self.executor_server.lock.release()
-
-    def runPlaybooks(self, args):
-        build = self.executor_server.job_builds[self.job.unique]
-        build.jobdir = self.jobdir
-
-        result = super(RecordingAnsibleJob, self).runPlaybooks(args)
-        self.recordResult(result)
-        return result
-
-    def runAnsible(self, cmd, timeout, playbook):
-        build = self.executor_server.job_builds[self.job.unique]
-
-        if self.executor_server._run_ansible:
-            result = super(RecordingAnsibleJob, self).runAnsible(
-                cmd, timeout, playbook)
-        else:
-            if playbook.path:
-                result = build.run()
-            else:
-                result = (self.RESULT_NORMAL, 0)
-        return result
-
-    def getHostList(self, args):
-        self.log.debug("hostlist")
-        hosts = super(RecordingAnsibleJob, self).getHostList(args)
-        for host in hosts:
-            host['host_vars']['ansible_connection'] = 'local'
-
-        hosts.append(dict(
-            name='localhost',
-            host_vars=dict(ansible_connection='local'),
-            host_keys=[]))
-        return hosts
 
 
 class FakeGearmanServer(gear.Server):
