@@ -269,6 +269,9 @@ class ZooKeeper(object):
         for nodeid in nodes:
             node_path = '%s/%s' % (self.NODE_ROOT, nodeid)
             node_data, node_stat = self.client.get(node_path)
+            if not node_data:
+                self.log.warning("Node ID %s has no data", nodeid)
+                continue
             node_data = self._strToDict(node_data)
             if (node_data['state'] == zuul.model.STATE_HOLD and
                     node_data.get('hold_job') == identifier):
