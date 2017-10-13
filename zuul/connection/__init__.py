@@ -14,8 +14,6 @@
 
 import abc
 
-import extras
-
 
 class BaseConnection(object, metaclass=abc.ABCMeta):
     """Base class for connections.
@@ -42,7 +40,6 @@ class BaseConnection(object, metaclass=abc.ABCMeta):
         self.driver = driver
         self.connection_name = connection_name
         self.connection_config = connection_config
-        self.statsd = extras.try_import('statsd.statsd')
 
     def logEvent(self, event):
         self.log.debug(
@@ -50,11 +47,11 @@ class BaseConnection(object, metaclass=abc.ABCMeta):
                 connection=self.connection_name,
                 event=event))
         try:
-            if self.statsd:
-                self.statsd.incr(
+            if self.sched.statsd:
+                self.sched.statsd.incr(
                     'zuul.event.{driver}.{event}'.format(
                         driver=self.driver.name, event=event.type))
-                self.statsd.incr(
+                self.sched.statsd.incr(
                     'zuul.event.{driver}.{connection}.{event}'.format(
                         driver=self.driver.name,
                         connection=self.connection_name,

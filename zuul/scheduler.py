@@ -15,7 +15,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import extras
 import json
 import logging
 import os
@@ -31,6 +30,7 @@ from zuul import model
 from zuul import exceptions
 from zuul import version as zuul_version
 from zuul.lib.config import get_default
+from zuul.lib.statsd import get_statsd
 
 
 class ManagementEvent(object):
@@ -211,7 +211,7 @@ class Scheduler(threading.Thread):
         self.executor = None
         self.merger = None
         self.connections = None
-        self.statsd = extras.try_import('statsd.statsd')
+        self.statsd = get_statsd(config)
         # TODO(jeblair): fix this
         # Despite triggers being part of the pipeline, there is one trigger set
         # per scheduler. The pipeline handles the trigger filters but since

@@ -3,6 +3,8 @@
 Monitoring
 ==========
 
+.. _statsd:
+
 Statsd reporting
 ----------------
 
@@ -13,20 +15,11 @@ which let you in turn generate nice graphics.
 Configuration
 ~~~~~~~~~~~~~
 
-Statsd support uses the statsd python module. Note that Zuul will start without
-the statsd python module, so an existing Zuul installation may be missing it.
+Statsd support uses the ``statsd`` python module.  Note that support
+is optional and Zuul will start without the statsd python module
+present.
 
-The configuration is done via environment variables STATSD_HOST and
-STATSD_PORT. They are interpreted by the statsd module directly and there is no
-such parameter in zuul.conf yet. Your init script will have to initialize both
-of them before executing Zuul.
-
-Your init script most probably loads a configuration file named
-``/etc/default/zuul`` which would contain the environment variables::
-
-  $ cat /etc/default/zuul
-  STATSD_HOST=10.0.0.1
-  STATSD_PORT=8125
+Configuration is in the :attr:`statsd` section of ``zuul.conf``.
 
 Metrics
 ~~~~~~~

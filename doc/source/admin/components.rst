@@ -101,6 +101,27 @@ The following sections of ``zuul.conf`` are used by all Zuul components:
 
       An openssl file containing the client private key in PEM format.
 
+.. attr:: statsd
+
+   Information about the optional statsd server.  If the ``statsd``
+   python module is installed and this section is configured,
+   statistics will be reported to statsd.  See :ref:`statsd` for more
+   information.
+
+   .. attr:: server
+
+      Hostname or IP address of the statsd server.
+
+   .. attr:: port
+      :default: 8125
+
+      The UDP port on which the statsd server is listening.
+
+   .. attr:: prefix
+
+      If present, this will be prefixed to all of the keys before
+      transmitting to the statsd server.
+
 .. NOTE: this is a white lie at this point, since only the scheduler
    uses this, however, we expect other components to use it later, so
    it's reasonable for admins to plan for this now.
