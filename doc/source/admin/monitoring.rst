@@ -146,6 +146,84 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
 
       The one-minute load average of this executor, multiplied by 100.
 
+.. stat:: zuul.nodepool
+
+   Holds metrics related to Zuul requests from Nodepool.
+
+   .. stat:: requested
+      :type: counter
+
+      Incremented each time a node request is submitted to Nodepool.
+
+      .. stat:: label.<label>
+         :type: counter
+
+         Incremented each time a request for a specific label is
+         submitted to Nodepool.
+
+      .. stat:: size.<size>
+         :type: counter
+
+         Incremented each time a request of a specific size is submitted
+         to Nodepool.  For example, a request for 3 nodes would use the
+         key ``zuul.nodepool.requested.size.3``.
+
+   .. stat:: canceled
+      :type: counter, timer
+
+      The counter is incremented each time a node request is canceled
+      by Zuul.  The timer records the elapsed time from request to
+      cancelation.
+
+      .. stat:: label.<label>
+         :type: counter, timer
+
+         The same, for a specific label.
+
+      .. stat:: size.<size>
+         :type: counter, timer
+
+         The same, for a specific request size.
+
+   .. stat:: fulfilled
+      :type: counter, timer
+
+      The counter is incremented each time a node request is fulfilled
+      by Nodepool.  The timer records the elapsed time from request to
+      fulfillment.
+
+      .. stat:: label.<label>
+         :type: counter, timer
+
+         The same, for a specific label.
+
+      .. stat:: size.<size>
+         :type: counter, timer
+
+         The same, for a specific request size.
+
+   .. stat:: failed
+      :type: counter, timer
+
+      The counter is incremented each time Nodepool fails to fulfill a
+      node request.  The timer records the elapsed time from request
+      to failure.
+
+      .. stat:: label.<label>
+         :type: counter, timer
+
+         The same, for a specific label.
+
+      .. stat:: size.<size>
+         :type: counter, timer
+
+         The same, for a specific request size.
+
+   .. stat:: current_requests
+      :type: gauge
+
+      The number of outstanding nodepool requests from Zuul.
+
 
 As an example, given a job named `myjob` in `mytenant` triggered by a
 change to `myproject` on the `master` branch in the `gate` pipeline

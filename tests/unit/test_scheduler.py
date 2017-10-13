@@ -119,6 +119,14 @@ class TestScheduler(ZuulTestCase):
             'org_project.master.total_changes', value='1|c')
         exec_key = 'zuul.executor.%s' % self.executor_server.hostname
         self.assertReportedStat(exec_key + '.builds', value='1|c')
+        self.assertReportedStat('zuul.nodepool.requested', value='1|c')
+        self.assertReportedStat('zuul.nodepool.requested.label.label1',
+                                value='1|c')
+        self.assertReportedStat('zuul.nodepool.fulfilled.label.label1',
+                                value='1|c')
+        self.assertReportedStat('zuul.nodepool.requested.size.1', value='1|c')
+        self.assertReportedStat('zuul.nodepool.fulfilled.size.1', value='1|c')
+        self.assertReportedStat('zuul.nodepool.current_requests', value='1|g')
 
         for build in self.history:
             self.assertTrue(build.parameters['zuul']['voting'])

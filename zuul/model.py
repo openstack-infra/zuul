@@ -523,6 +523,7 @@ class NodeRequest(object):
         self.job = job
         self.nodeset = nodeset
         self._state = STATE_REQUESTED
+        self.requested_time = time.time()
         self.state_time = time.time()
         self.stat = None
         self.uid = uuid4().hex
