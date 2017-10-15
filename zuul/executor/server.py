@@ -1328,7 +1328,7 @@ class AnsibleJob(object):
             # Received abort request.
             return (self.RESULT_ABORTED, None)
         elif ret == 1:
-            if syntax_buffer[0].startswith('ERROR!'):
+            if syntax_buffer[0].startswith(b'ERROR!'):
                 with open(self.jobdir.job_output_file, 'a') as job_output:
                     for line in syntax_buffer:
                         job_output.write("{now} | {line}\n".format(
@@ -1356,7 +1356,7 @@ class AnsibleJob(object):
                     now=datetime.datetime.now()))
                 found_marker = False
                 for line in syntax_buffer:
-                    if line.startswith('ERROR! Unexpected Exception'):
+                    if line.startswith(b'ERROR! Unexpected Exception'):
                         found_marker = True
                     if not found_marker:
                         continue
