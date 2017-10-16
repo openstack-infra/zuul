@@ -36,7 +36,7 @@ def zuul_legacy_vars(zuul):
             ['%s:%s:refs/changes/%s/%s/%s' % (
                 i['project']['name'],
                 i['branch'],
-                str(i['change'])[:-2:],
+                str(i['change'])[-2:],
                 i['change'],
                 i['patchset'])
              for i in zuul['items']])
