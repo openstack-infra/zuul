@@ -875,7 +875,8 @@ class TestScheduler(ZuulTestCase):
         # already (without approvals), we need to clear the cache
         # first.
         for connection in self.connections.connections.values():
-            connection.maintainCache([])
+            if hasattr(connection, '_change_cache'):
+                connection._change_cache.clear()
 
         self.executor_server.hold_jobs_in_build = True
         A.addApproval('Approved', 1)
@@ -945,7 +946,8 @@ class TestScheduler(ZuulTestCase):
 
         self.log.debug("len %s" % self.fake_gerrit._change_cache.keys())
         # there should still be changes in the cache
-        self.assertNotEqual(len(self.fake_gerrit._change_cache.keys()), 0)
+        self.assertNotEqual(len(list(self.fake_gerrit._change_cache.keys())),
+                            0)
 
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
@@ -3906,7 +3908,8 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(B.data['status'], 'NEW')
 
         for connection in self.connections.connections.values():
-            connection.maintainCache([])
+            if hasattr(connection, '_change_cache'):
+                connection._change_cache.clear()
 
         self.executor_server.hold_jobs_in_build = True
         B.addApproval('Approved', 1)
