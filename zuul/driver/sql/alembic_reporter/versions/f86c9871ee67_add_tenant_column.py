@@ -35,4 +35,4 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_column('zuul_buildset', 'tenant')
+    raise Exception("Downgrades not supported")

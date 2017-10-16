@@ -53,4 +53,4 @@ def upgrade():
 
 
 def downgrade():
-    pass
+    raise Exception("Downgrades not supported")
