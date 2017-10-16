@@ -1513,6 +1513,31 @@ class TestScheduler(ZuulTestCase):
                 held_nodes += 1
         self.assertEqual(held_nodes, 1)
 
+    @simple_layout('layouts/autohold.yaml')
+    def test_autohold_list(self):
+        client = zuul.rpcclient.RPCClient('127.0.0.1',
+                                          self.gearman_server.port)
+        self.addCleanup(client.shutdown)
+
+        r = client.autohold('tenant-one', 'org/project', 'project-test2',
+                            "reason text", 1)
+        self.assertTrue(r)
+
+        autohold_requests = client.autohold_list()
+        self.assertNotEqual({}, autohold_requests)
+        self.assertEqual(1, len(autohold_requests.keys()))
+
+        # The single dict key should be a CSV string value
+        key = list(autohold_requests.keys())[0]
+        tenant, project, job = key.split(',')
+
+        self.assertEqual('tenant-one', tenant)
+        self.assertIn('org/project', project)
+        self.assertEqual('project-test2', job)
+
+        # Note: the value is converted from set to list by json.
+        self.assertEqual([1, "reason text"], autohold_requests[key])
+
     @simple_layout('layouts/three-projects.yaml')
     def test_dependent_behind_dequeue(self):
         # This particular test does a large amount of merges and needs a little

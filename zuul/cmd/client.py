@@ -61,6 +61,10 @@ class Client(zuul.cmd.ZuulApp):
                                   required=False, type=int, default=1)
         cmd_autohold.set_defaults(func=self.autohold)
 
+        cmd_autohold_list = subparsers.add_parser(
+            'autohold-list', help='list autohold requests')
+        cmd_autohold_list.set_defaults(func=self.autohold_list)
+
         cmd_enqueue = subparsers.add_parser('enqueue', help='enqueue a change')
         cmd_enqueue.add_argument('--tenant', help='tenant name',
                                  required=True)
@@ -161,6 +165,27 @@ class Client(zuul.cmd.ZuulApp):
                             reason=self.args.reason,
                             count=self.args.count)
         return r
+
+    def autohold_list(self):
+        client = zuul.rpcclient.RPCClient(
+            self.server, self.port, self.ssl_key, self.ssl_cert, self.ssl_ca)
+        autohold_requests = client.autohold_list()
+
+        if len(autohold_requests.keys()) == 0:
+            print("No autohold requests found")
+            return True
+
+        table = prettytable.PrettyTable(
+            field_names=['Tenant', 'Project', 'Job', 'Count', 'Reason'])
+
+        for key, value in autohold_requests.items():
+            # The key comes to us as a CSV string because json doesn't like
+            # non-str keys.
+            tenant_name, project_name, job_name = key.split(',')
+            count, reason = value
+            table.add_row([tenant_name, project_name, job_name, count, reason])
+        print(table)
+        return True
 
     def enqueue(self):
         client = zuul.rpcclient.RPCClient(
