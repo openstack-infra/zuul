@@ -28,6 +28,14 @@ The connection options for the SQL driver are:
       <http://docs.sqlalchemy.org/en/rel_1_0/core/engines.html#database-urls>`_
       for more information.
 
+      The driver will automatically set up the database creating and managing
+      the necesssary tables. Therefore the provided user should have sufficient
+      permissions to manage the database. For example:
+
+      .. code-block:: sql
+
+        GRANT ALL ON my_database TO 'my_user'@'%';
+
 Reporter Configuration
 ----------------------
 
