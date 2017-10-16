@@ -1300,6 +1300,7 @@ class AnsibleJob(object):
             self.proc = popen(
                 cmd,
                 cwd=self.jobdir.work_root,
+                stdin=subprocess.DEVNULL,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 preexec_fn=os.setsid,
