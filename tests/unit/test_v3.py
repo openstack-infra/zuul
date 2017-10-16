@@ -155,6 +155,29 @@ class TestFinal(ZuulTestCase):
         self.assertIn('Unable to inherit from final job', A.messages[0])
 
 
+class TestBranchVariants(ZuulTestCase):
+    tenant_config_file = 'config/branch-variants/main.yaml'
+
+    def test_branch_variants(self):
+        # Test branch variants of jobs with inheritance
+        self.executor_server.hold_jobs_in_build = True
+        # This creates a new branch with a copy of the config in master
+        self.create_branch('puppet-integration', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'puppet-integration', 'stable'))
+        self.waitUntilSettled()
+
+        A = self.fake_gerrit.addFakeChange('puppet-integration', 'stable', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds[0].parameters['pre_playbooks']), 3)
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+
 class TestInRepoConfig(ZuulTestCase):
     # A temporary class to hold new tests while others are disabled
 

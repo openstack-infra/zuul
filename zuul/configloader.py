@@ -499,26 +499,28 @@ class JobParser(object):
         job.source_line = conf.get('_start_mark').line + 1
 
         is_variant = layout.hasJob(name)
-        if 'parent' in conf:
-            if conf['parent'] is not None:
-                # Parent job is explicitly specified, so inherit from it.
-                parent = layout.getJob(conf['parent'])
-                job.inheritFrom(parent)
+        if not is_variant:
+            if 'parent' in conf:
+                if conf['parent'] is not None:
+                    # Parent job is explicitly specified, so inherit from it.
+                    parent = layout.getJob(conf['parent'])
+                    job.inheritFrom(parent)
+                else:
+                    # Parent is explicitly set as None, so user intends
+                    # this to be a base job.  That's only okay if we're in
+                    # a config project.
+                    if not conf['_source_context'].trusted:
+                        raise Exception(
+                            "Base jobs must be defined in config projects")
             else:
-                # Parent is explicitly set as None, so user intends
-                # this to be a base job.  That's only okay if we're in
-                # a config project.
-                if not conf['_source_context'].trusted:
-                    raise Exception(
-                        "Base jobs must be defined in config projects")
-        else:
-            # Parent is not explicitly set, so inherit from the
-            # default -- but only if this is the primary definition
-            # for the job (ie, not a variant -- variants don't need to
-            # have a parent as long as the main job does).
-            if not is_variant:
                 parent = layout.getJob(tenant.default_base_job)
                 job.inheritFrom(parent)
+        else:
+            if 'parent' in conf:
+                # TODO(jeblair): warn the user that we're ignoring the
+                # parent setting on this variant job definition.
+                pass
+
         # Secrets are part of the playbook context so we must establish
         # them earlier than playbooks.
         secrets = []
