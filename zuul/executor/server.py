@@ -286,6 +286,7 @@ class JobDir(object):
         #     inventory.yaml
         #   .ansible (mounted in bwrap read-write)
         #     fact-cache/localhost
+        #     cp
         #   playbook_0 (mounted in bwrap for each playbook read-only)
         #     secrets.yaml
         #     project -> ../trusted/project_0/...
@@ -326,6 +327,8 @@ class JobDir(object):
         self.ansible_cache_root = os.path.join(self.root, '.ansible')
         self.fact_cache = os.path.join(self.ansible_cache_root, 'fact-cache')
         os.makedirs(self.fact_cache)
+        self.control_path = os.path.join(self.ansible_cache_root, 'cp')
+        os.makedirs(self.control_path)
         localhost_facts = os.path.join(self.fact_cache, 'localhost')
         # NOTE(pabelanger): We do not want to leak zuul-executor facts to other
         # playbooks now that smart fact gathering is enabled by default.  We
@@ -701,6 +704,11 @@ class AnsibleJob(object):
         self.job.sendWorkStatus(0, 100)
 
         result = self.runPlaybooks(args)
+
+        # Stop the persistent SSH connections.
+        setup_status, setup_code = self.runAnsibleCleanup(
+            self.jobdir.setup_playbook)
+
         if self.aborted_reason == self.RESULT_DISK_FULL:
             result = 'DISK_FULL'
         data = self.getResultData()
@@ -1198,6 +1206,7 @@ class AnsibleJob(object):
             # command which expects interactive input on a tty (such
             # as sudo) it does not hang.
             config.write('pipelining = True\n')
+            config.write('control_path_dir = %s\n' % self.jobdir.control_path)
             ssh_args = "-o ControlMaster=auto -o ControlPersist=60s " \
                 "-o UserKnownHostsFile=%s" % self.jobdir.known_hosts
             config.write('ssh_args = %s\n' % ssh_args)
@@ -1219,7 +1228,7 @@ class AnsibleJob(object):
             except Exception:
                 self.log.exception("Exception while killing ansible process:")
 
-    def runAnsible(self, cmd, timeout, playbook):
+    def runAnsible(self, cmd, timeout, playbook, wrapped=True):
         config_file = playbook.ansible_config
         env_copy = os.environ.copy()
         env_copy.update(self.ssh_agent.env)
@@ -1260,8 +1269,12 @@ class AnsibleJob(object):
         if playbook.secrets_content:
             secrets[playbook.secrets] = playbook.secrets_content
 
-        context = self.executor_server.execution_wrapper.getExecutionContext(
-            ro_paths, rw_paths, secrets)
+        if wrapped:
+            wrapper = self.executor_server.execution_wrapper
+        else:
+            wrapper = self.executor_server.connections.drivers['nullwrap']
+
+        context = wrapper.getExecutionContext(ro_paths, rw_paths, secrets)
 
         popen = context.getPopen(
             work_dir=self.jobdir.work_root,
@@ -1376,7 +1389,28 @@ class AnsibleJob(object):
                '-a', 'gather_subset=!all']
 
         result, code = self.runAnsible(
-            cmd=cmd, timeout=60, playbook=playbook)
+            cmd=cmd, timeout=60, playbook=playbook,
+            wrapped=False)
+        self.log.debug("Ansible complete, result %s code %s" % (
+            self.RESULT_MAP[result], code))
+        return result, code
+
+    def runAnsibleCleanup(self, playbook):
+        # TODO(jeblair): This requires a bugfix in Ansible 2.4
+        # Once this is used, increase the controlpersist timeout.
+        return (self.RESULT_NORMAL, 0)
+
+        if self.executor_server.verbose:
+            verbose = '-vvv'
+        else:
+            verbose = '-v'
+
+        cmd = ['ansible', '*', verbose, '-m', 'meta',
+               '-a', 'reset_connection']
+
+        result, code = self.runAnsible(
+            cmd=cmd, timeout=60, playbook=playbook,
+            wrapped=False)
         self.log.debug("Ansible complete, result %s code %s" % (
             self.RESULT_MAP[result], code))
         return result, code

@@ -1392,12 +1392,12 @@ class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
         self.recordResult(result)
         return result
 
-    def runAnsible(self, cmd, timeout, playbook):
+    def runAnsible(self, cmd, timeout, playbook, wrapped=True):
         build = self.executor_server.job_builds[self.job.unique]
 
         if self.executor_server._run_ansible:
             result = super(RecordingAnsibleJob, self).runAnsible(
-                cmd, timeout, playbook)
+                cmd, timeout, playbook, wrapped)
         else:
             if playbook.path:
                 result = build.run()
