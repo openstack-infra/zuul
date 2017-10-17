@@ -56,6 +56,14 @@ class RPCClient(object):
                 'count': count}
         return not self.submitJob('zuul:autohold', data).failure
 
+    def autohold_list(self):
+        data = {}
+        job = self.submitJob('zuul:autohold_list', data)
+        if job.failure:
+            return False
+        else:
+            return json.loads(job.data[0])
+
     def enqueue(self, tenant, pipeline, project, trigger, change):
         data = {'tenant': tenant,
                 'pipeline': pipeline,
