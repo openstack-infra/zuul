@@ -379,6 +379,11 @@ class ExecutorClient(object):
             result_data = data.get('data', {})
             self.log.info("Build %s complete, result %s" %
                           (job, result))
+            # If the build should be retried, don't supply the result
+            # so that elsewhere we don't have to deal with keeping
+            # track of which results are non-final.
+            if build.retry:
+                result = None
             self.sched.onBuildCompleted(build, result, result_data)
             # The test suite expects the build to be removed from the
             # internal dict after it's added to the report queue.
