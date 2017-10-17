@@ -31,4 +31,5 @@ class TestStackDump(testtools.TestCase):
 
         zuul.cmd.stack_dump_handler(signal.SIGUSR2, None)
         self.assertIn("Thread", self.log_fixture.output)
+        self.assertIn("MainThread", self.log_fixture.output)
         self.assertIn("test_stack_dump_logs", self.log_fixture.output)

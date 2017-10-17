@@ -95,7 +95,7 @@ class DiskAccountant(object):
         if cache_dir == jobs_base:
             raise Exception("Cache dir and jobs dir cannot be the same")
         self.thread = threading.Thread(target=self._run,
-                                       name='executor-diskaccountant')
+                                       name='diskaccountant')
         self.thread.daemon = True
         self._running = False
         self.jobs_base = jobs_base
@@ -154,7 +154,7 @@ class Watchdog(object):
         self.function = function
         self.args = args
         self.thread = threading.Thread(target=self._run,
-                                       name='executor-watchdog')
+                                       name='watchdog')
         self.thread.daemon = True
         self.timed_out = None
 
@@ -556,7 +556,8 @@ class AnsibleJob(object):
 
     def run(self):
         self.running = True
-        self.thread = threading.Thread(target=self.execute)
+        self.thread = threading.Thread(target=self.execute,
+                                       name='build-%s' % self.job.unique)
         self.thread.start()
 
     def stop(self, reason=None):
@@ -1645,22 +1646,27 @@ class ExecutorServer(object):
 
         self.log.debug("Starting command processor")
         self.command_socket.start()
-        self.command_thread = threading.Thread(target=self.runCommand)
+        self.command_thread = threading.Thread(target=self.runCommand,
+                                               name='command')
         self.command_thread.daemon = True
         self.command_thread.start()
 
         self.log.debug("Starting worker")
-        self.update_thread = threading.Thread(target=self._updateLoop)
+        self.update_thread = threading.Thread(target=self._updateLoop,
+                                              name='update')
         self.update_thread.daemon = True
         self.update_thread.start()
-        self.merger_thread = threading.Thread(target=self.run_merger)
+        self.merger_thread = threading.Thread(target=self.run_merger,
+                                              name='merger')
         self.merger_thread.daemon = True
         self.merger_thread.start()
-        self.executor_thread = threading.Thread(target=self.run_executor)
+        self.executor_thread = threading.Thread(target=self.run_executor,
+                                                name='executor')
         self.executor_thread.daemon = True
         self.executor_thread.start()
         self.governor_stop_event = threading.Event()
-        self.governor_thread = threading.Thread(target=self.run_governor)
+        self.governor_thread = threading.Thread(target=self.run_governor,
+                                                name='governor')
         self.governor_thread.daemon = True
         self.governor_thread.start()
         self.disk_accountant.start()
@@ -1869,7 +1875,10 @@ class ExecutorServer(object):
 
     def run_governor(self):
         while not self.governor_stop_event.wait(30):
-            self.manageLoad()
+            try:
+                self.manageLoad()
+            except Exception:
+                self.log.exception("Exception in governor thread:")
 
     def manageLoad(self):
         ''' Apply some heuristics to decide whether or not we should

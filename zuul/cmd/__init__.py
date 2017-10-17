@@ -23,6 +23,7 @@ import os
 import signal
 import sys
 import traceback
+import threading
 
 yappi = extras.try_import('yappi')
 objgraph = extras.try_import('objgraph')
@@ -41,9 +42,17 @@ def stack_dump_handler(signum, frame):
     log = logging.getLogger("zuul.stack_dump")
     log.debug("Beginning debug handler")
     try:
+        threads = {}
+        for t in threading.enumerate():
+            threads[t.ident] = t
         log_str = ""
         for thread_id, stack_frame in sys._current_frames().items():
-            log_str += "Thread: %s\n" % thread_id
+            thread = threads.get(thread_id)
+            if thread:
+                thread_name = thread.name
+            else:
+                thread_name = thread.ident
+            log_str += "Thread: %s %s\n" % (thread_id, thread_name)
             log_str += "".join(traceback.format_stack(stack_frame))
         log.debug(log_str)
     except Exception:
