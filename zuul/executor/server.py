@@ -1535,7 +1535,8 @@ class ExecutorServer(object):
         self.jobdir_root = jobdir_root
         # TODOv3(mordred): make the executor name more unique --
         # perhaps hostname+pid.
-        self.hostname = socket.gethostname()
+        self.hostname = get_default(self.config, 'executor', 'hostname',
+                                    socket.gethostname())
         self.log_streaming_port = log_streaming_port
         self.merger_lock = threading.Lock()
         self.run_lock = threading.Lock()

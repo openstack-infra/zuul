@@ -401,3 +401,12 @@ class TestAnsibleJob(ZuulTestCase):
         node['ssh_port'] = 22022
         keys = self.test_job.getHostList({'nodes': [node]})[0]['host_keys']
         self.assertEqual(keys[0], '[localhost]:22022 fake-host-key')
+
+
+class TestExecutorHostname(ZuulTestCase):
+    config_file = 'zuul-executor-hostname.conf'
+    tenant_config_file = 'config/single-tenant/main.yaml'
+
+    def test_executor_hostname(self):
+        self.assertEqual('test-executor-hostname.openstack.org',
+                         self.executor_server.hostname)
