@@ -835,6 +835,8 @@ class AnsibleJob(object):
             # TODOv3(pabelanger): Implement post-run timeout setting.
             post_status, post_code = self.runAnsiblePlaybook(
                 playbook, args['timeout'], success, phase='post', index=index)
+            if post_status == self.RESULT_ABORTED:
+                return 'ABORTED'
             if post_status != self.RESULT_NORMAL or post_code != 0:
                 success = False
                 # If we encountered a pre-failure, that takes

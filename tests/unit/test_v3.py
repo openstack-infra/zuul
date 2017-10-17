@@ -20,6 +20,7 @@ import logging
 import os
 import textwrap
 import gc
+import time
 from unittest import skip
 
 import testtools
@@ -1458,6 +1459,40 @@ class TestPrePlaybooks(AnsibleZuulTestCase):
                                       '.post.flag')
         self.assertTrue(os.path.exists(post_flag_path),
                         "The file %s should exist" % post_flag_path)
+
+
+class TestPostPlaybooks(AnsibleZuulTestCase):
+    tenant_config_file = 'config/post-playbook/main.yaml'
+
+    def test_post_playbook_abort(self):
+        # Test that when we abort a job in the post playbook, that we
+        # don't send back POST_FAILURE.
+        self.executor_server.verbose = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+
+        while not len(self.builds):
+            time.sleep(0.1)
+        build = self.builds[0]
+
+        post_start = os.path.join(self.test_root, build.uuid +
+                                  '.post_start.flag')
+        start = time.time()
+        while time.time() < start + 90:
+            if os.path.exists(post_start):
+                break
+            time.sleep(0.1)
+        # The post playbook has started, abort the job
+        self.fake_gerrit.addEvent(A.getChangeAbandonedEvent())
+        self.waitUntilSettled()
+
+        build = self.getJobFromHistory('python27')
+        self.assertEqual('ABORTED', build.result)
+
+        post_end = os.path.join(self.test_root, build.uuid +
+                                '.post_end.flag')
+        self.assertTrue(os.path.exists(post_start))
+        self.assertFalse(os.path.exists(post_end))
 
 
 class TestBrokenConfig(ZuulTestCase):
