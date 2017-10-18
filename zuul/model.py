@@ -888,6 +888,8 @@ class Job(object):
         return Attributes(name=self.name)
 
     def setRun(self):
+        msg = 'self %s' % (repr(self),)
+        self.inheritance_path = self.inheritance_path + (msg,)
         if not self.run:
             self.run = self.implied_run
 

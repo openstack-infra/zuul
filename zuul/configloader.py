@@ -1374,7 +1374,12 @@ class TenantParser(object):
             # branch.  Remember the branch and then implicitly add a
             # branch selector to each job there.  This makes the
             # in-repo configuration apply only to that branch.
-            for branch in project.source.getProjectBranches(project, tenant):
+            branches = sorted(project.source.getProjectBranches(
+                project, tenant))
+            if 'master' in branches:
+                branches.remove('master')
+                branches = ['master'] + branches
+            for branch in branches:
                 new_project_unparsed_branch_config[project][branch] = \
                     model.UnparsedTenantConfig()
                 job = merger.getFiles(
