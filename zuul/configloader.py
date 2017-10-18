@@ -1572,6 +1572,7 @@ class TenantParser(object):
         # Don't call this method from dynamic reconfiguration because
         # it interacts with drivers and connections.
         layout = model.Layout(tenant)
+        TenantParser.log.debug("Created layout id %s", layout.uuid)
 
         TenantParser._parseLayoutItems(layout, tenant, data,
                                        scheduler, connections)
@@ -1700,6 +1701,7 @@ class ConfigLoader(object):
             self._loadDynamicProjectData(config, project, files, False, tenant)
 
         layout = model.Layout(tenant)
+        self.log.debug("Created layout id %s", layout.uuid)
         if not include_config_projects:
             # NOTE: the actual pipeline objects (complete with queues
             # and enqueued items) are copied by reference here.  This

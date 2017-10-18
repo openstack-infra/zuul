@@ -2329,6 +2329,7 @@ class Layout(object):
     """Holds all of the Pipelines."""
 
     def __init__(self, tenant):
+        self.uuid = uuid4().hex
         self.tenant = tenant
         self.project_configs = {}
         self.project_templates = {}
