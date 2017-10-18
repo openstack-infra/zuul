@@ -2506,6 +2506,28 @@ class TestScheduler(ZuulTestCase):
         self.assertIn('project-merge', status_jobs[1]['dependencies'])
         self.assertIn('project-merge', status_jobs[2]['dependencies'])
 
+    def test_reconfigure_merge(self):
+        """Test that two reconfigure events are merged"""
+
+        tenant = self.sched.abide.tenants['tenant-one']
+        (trusted, project) = tenant.getProject('org/project')
+
+        self.sched.run_handler_lock.acquire()
+        self.assertEqual(self.sched.management_event_queue.qsize(), 0)
+
+        self.sched.reconfigureTenant(tenant, project)
+        self.assertEqual(self.sched.management_event_queue.qsize(), 1)
+
+        self.sched.reconfigureTenant(tenant, project)
+        # The second event should have been combined with the first
+        # so we should still only have one entry.
+        self.assertEqual(self.sched.management_event_queue.qsize(), 1)
+
+        self.sched.run_handler_lock.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(self.sched.management_event_queue.qsize(), 0)
+
     def test_live_reconfiguration(self):
         "Test that live reconfiguration works"
         self.executor_server.hold_jobs_in_build = True
