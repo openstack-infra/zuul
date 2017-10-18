@@ -23,10 +23,9 @@ import logging
 import pprint
 import shlex
 import queue
-import weakref
+import voluptuous as v
 
 from typing import Dict, List
-import voluptuous as v
 
 from zuul.connection import BaseConnection
 from zuul.model import Ref, Tag, Branch, Project
@@ -143,8 +142,7 @@ class GerritEventConnector(threading.Thread):
         # cache as it may be a dependency
         if event.change_number:
             refresh = True
-            if ((event.change_number, event.patch_number) not in
-                self.connection._change_cache):
+            if event.change_number not in self.connection._change_cache:
                 refresh = False
                 for tenant in self.connection.sched.abide.tenants.values():
                     # TODO(fungi): it would be better to have some simple means
@@ -302,7 +300,7 @@ class GerritConnection(BaseConnection):
         self.baseurl = self.connection_config.get('baseurl',
                                                   'https://%s' % self.server)
 
-        self._change_cache = weakref.WeakValueDictionary()
+        self._change_cache = {}
         self.projects = {}
         self.gerrit_event_connector = None
         self.source = driver.getSource(self)
@@ -312,6 +310,22 @@ class GerritConnection(BaseConnection):
 
     def addProject(self, project: Project) -> None:
         self.projects[project.name] = project
+
+    def maintainCache(self, relevant):
+        # This lets the user supply a list of change objects that are
+        # still in use.  Anything in our cache that isn't in the supplied
+        # list should be safe to remove from the cache.
+        remove = {}
+        for change_number, patchsets in self._change_cache.items():
+            for patchset, change in patchsets.items():
+                if change not in relevant:
+                    remove.setdefault(change_number, [])
+                    remove[change_number].append(patchset)
+        for change_number, patchsets in remove.items():
+            for patchset in patchsets:
+                del self._change_cache[change_number][patchset]
+            if not self._change_cache[change_number]:
+                del self._change_cache[change_number]
 
     def getChange(self, event, refresh=False):
         if event.change_number:
@@ -357,19 +371,22 @@ class GerritConnection(BaseConnection):
         return change
 
     def _getChange(self, number, patchset, refresh=False, history=None):
-        change = self._change_cache.get((number, patchset))
+        change = self._change_cache.get(number, {}).get(patchset)
         if change and not refresh:
             return change
         if not change:
             change = GerritChange(None)
             change.number = number
             change.patchset = patchset
-        self._change_cache[(change.number, change.patchset)] = change
+        self._change_cache.setdefault(change.number, {})
+        self._change_cache[change.number][change.patchset] = change
         try:
             self._updateChange(change, history)
         except Exception:
-            if self._change_cache.get((change.number, change.patchset)):
-                del self._change_cache[(change.number, change.patchset)]
+            if self._change_cache.get(change.number, {}).get(change.patchset):
+                del self._change_cache[change.number][change.patchset]
+                if not self._change_cache[change.number]:
+                    del self._change_cache[change.number]
             raise
         return change
 

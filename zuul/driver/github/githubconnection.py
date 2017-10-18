@@ -21,7 +21,6 @@ import queue
 import threading
 import time
 import re
-import weakref
 
 import cachecontrol
 from cachecontrol.cache import DictCache
@@ -395,7 +394,7 @@ class GithubConnection(BaseConnection):
     def __init__(self, driver, connection_name, connection_config):
         super(GithubConnection, self).__init__(
             driver, connection_name, connection_config)
-        self._change_cache = weakref.WeakValueDictionary()
+        self._change_cache = {}
         self._project_branch_cache = {}
         self.projects = {}
         self.git_ssh_key = self.connection_config.get('sshkey')
@@ -567,6 +566,11 @@ class GithubConnection(BaseConnection):
         # if we're using api_key authentication then this is already token
         # authenticated, if not then anonymous is the best we have.
         return self._github
+
+    def maintainCache(self, relevant):
+        for key, change in self._change_cache.items():
+            if change not in relevant:
+                del self._change_cache[key]
 
     def getChange(self, event, refresh=False):
         """Get the change representing an event."""
