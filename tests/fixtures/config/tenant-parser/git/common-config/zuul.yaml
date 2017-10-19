@@ -18,8 +18,10 @@
 - job:
     name: common-config-job
 
+# Use the canonical name here. This should be merged with the org/project1 in
+# the other repo.
 - project:
-    name: org/project1
+    name: review.example.com/org/project1
     check:
       jobs:
         - common-config-job

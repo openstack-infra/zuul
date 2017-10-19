@@ -1161,8 +1161,8 @@ class TenantParser(object):
                                                   tenant.config_projects,
                                                   tenant.untrusted_projects,
                                                   cached, tenant)
-        unparsed_config.extend(tenant.config_projects_config)
-        unparsed_config.extend(tenant.untrusted_projects_config)
+        unparsed_config.extend(tenant.config_projects_config, tenant=tenant)
+        unparsed_config.extend(tenant.untrusted_projects_config, tenant=tenant)
         tenant.layout = TenantParser._parseLayout(base, tenant,
                                                   unparsed_config,
                                                   scheduler,
