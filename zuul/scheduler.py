@@ -939,6 +939,9 @@ class Scheduler(threading.Thread):
         data['result_event_queue'] = {}
         data['result_event_queue']['length'] = \
             self.result_event_queue.qsize()
+        data['management_event_queue'] = {}
+        data['management_event_queue']['length'] = \
+            self.management_event_queue.qsize()
 
         if self.last_reconfigured:
             data['last_reconfigured'] = self.last_reconfigured * 1000
