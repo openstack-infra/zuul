@@ -43,6 +43,7 @@ class SQLReporter(BaseReporter):
                 change=change,
                 patchset=patchset,
                 ref=ref,
+                ref_url=item.change.url,
                 result=item.current_build_set.result,
                 message=self._formatItemReport(
                     item, with_jobs=False),
