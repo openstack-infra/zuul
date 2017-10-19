@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import base64
 import sys
 import os
 
@@ -27,8 +28,10 @@ def main():
         private_key, public_key = \
             encryption.deserialize_rsa_keypair(f.read())
 
-    ciphertext = encryption.encrypt_pkcs1_oaep(sys.argv[1], public_key)
-    print(ciphertext.encode('base64'))
+    plaintext = sys.argv[1].encode('utf-8')
+
+    ciphertext = encryption.encrypt_pkcs1_oaep(plaintext, public_key)
+    print(base64.b64encode(ciphertext).decode('utf-8'))
 
 
 if __name__ == '__main__':
