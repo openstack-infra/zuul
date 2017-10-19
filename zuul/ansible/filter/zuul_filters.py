@@ -14,10 +14,19 @@
 
 
 def zuul_legacy_vars(zuul):
-    # omitted:
-    # ZUUL_URL
-    # ZUUL_REF
+    # intentionally omitted:
+    # BASE_LOG_PATH
+    # JOB_TAGS
+    # LOG_PATH
     # ZUUL_COMMIT
+    # ZUUL_REF
+    # ZUUL_URL
+    #
+    # newly added to all builds:
+    # ZUUL_SHORT_PROJECT_NAME
+    #
+    # existing in most builds but newly added for periodic:
+    # ZUUL_BRANCH
 
     short_name = zuul['project']['name'].split('/')[-1]
     params = dict(ZUUL_UUID=zuul['build'],
