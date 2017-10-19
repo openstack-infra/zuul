@@ -1263,8 +1263,6 @@ class BuildSet(object):
         self.item = item
         self.builds = {}
         self.result = None
-        self.next_build_set = None
-        self.previous_build_set = None
         self.uuid = None
         self.commit = None
         self.dependent_items = None
@@ -1402,10 +1400,8 @@ class QueueItem(object):
         self.pipeline = queue.pipeline
         self.queue = queue
         self.change = change  # a ref
-        self.build_sets = []
         self.dequeued_needing_change = False
         self.current_build_set = BuildSet(self)
-        self.build_sets.append(self.current_build_set)
         self.item_ahead = None
         self.items_behind = []
         self.enqueue_time = None
@@ -1427,12 +1423,7 @@ class QueueItem(object):
             id(self), self.change, pipeline)
 
     def resetAllBuilds(self):
-        old = self.current_build_set
-        self.current_build_set.result = 'CANCELED'
         self.current_build_set = BuildSet(self)
-        old.next_build_set = self.current_build_set
-        self.current_build_set.previous_build_set = old
-        self.build_sets.append(self.current_build_set)
         self.layout = None
         self.job_graph = None
 
