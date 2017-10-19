@@ -31,6 +31,7 @@ from zuul import exceptions
 from zuul import version as zuul_version
 from zuul.lib.config import get_default
 from zuul.lib.statsd import get_statsd
+import zuul.lib.queue
 
 
 class ManagementEvent(object):
@@ -76,8 +77,23 @@ class TenantReconfigureEvent(ManagementEvent):
     """
     def __init__(self, tenant, project):
         super(TenantReconfigureEvent, self).__init__()
-        self.tenant = tenant
-        self.project = project
+        self.tenant_name = tenant.name
+        self.projects = set([project])
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        if not isinstance(other, TenantReconfigureEvent):
+            return False
+        # We don't check projects because they will get combined when
+        # merged.
+        return (self.tenant_name == other.tenant_name)
+
+    def merge(self, other):
+        if self.tenant_name != other.tenant_name:
+            raise Exception("Can not merge events from different tenants")
+        self.projects |= other.projects
 
 
 class PromoteEvent(ManagementEvent):
@@ -223,7 +239,7 @@ class Scheduler(threading.Thread):
 
         self.trigger_event_queue = queue.Queue()
         self.result_event_queue = queue.Queue()
-        self.management_event_queue = queue.Queue()
+        self.management_event_queue = zuul.lib.queue.MergedQueue()
         self.abide = model.Abide()
 
         if not testonly:
@@ -475,15 +491,16 @@ class Scheduler(threading.Thread):
             self.log.debug("Tenant reconfiguration beginning")
             # If a change landed to a project, clear out the cached
             # config before reconfiguring.
-            if event.project:
-                event.project.unparsed_config = None
+            for project in event.projects:
+                project.unparsed_config = None
+            old_tenant = self.abide.tenants[event.tenant_name]
             loader = configloader.ConfigLoader()
             abide = loader.reloadTenant(
                 self.config.get('scheduler', 'tenant_config'),
                 self._get_project_key_dir(),
                 self, self.merger, self.connections,
-                self.abide, event.tenant)
-            tenant = abide.tenants[event.tenant.name]
+                self.abide, old_tenant)
+            tenant = abide.tenants[event.tenant_name]
             self._reconfigureTenant(tenant)
             self.abide = abide
         finally:
