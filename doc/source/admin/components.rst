@@ -522,6 +522,15 @@ The following sections of ``zuul.conf`` are used by the executor:
       The executor will observe system load and determine whether
       to accept more jobs every 30 seconds.
 
+   .. attr:: hostname
+      :default: hostname of the server
+
+      The executor needs to know its hostname under which it is reachable by
+      zuul-web. Otherwise live console log streaming doesn't work. In most cases
+      This is automatically detected correctly. But when running in environments
+      where it cannot determine its hostname correctly this can be overridden
+      here.
+
 .. attr:: merger
 
    .. attr:: git_user_email
