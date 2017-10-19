@@ -53,6 +53,7 @@
             'msg_id': '#zuul_msg',
             'pipelines_id': '#zuul_pipelines',
             'queue_events_num': '#zuul_queue_events_num',
+            'queue_management_events_num': '#zuul_queue_management_events_num',
             'queue_results_num': '#zuul_queue_results_num',
         }, options);
 
@@ -712,6 +713,10 @@
                         $(options.queue_events_num).text(
                             data.trigger_event_queue ?
                                 data.trigger_event_queue.length : '0'
+                        );
+                        $(options.queue_management_events_num).text(
+                            data.management_event_queue ?
+                                data.management_event_queue.length : '0'
                         );
                         $(options.queue_results_num).text(
                             data.result_event_queue ?
