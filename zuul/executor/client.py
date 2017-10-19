@@ -133,7 +133,7 @@ class ExecutorClient(object):
         self.gearman.shutdown()
         self.log.debug("Stopped")
 
-    def execute(self, job, item, pipeline, dependent_items=[],
+    def execute(self, job, item, pipeline, dependent_changes=[],
                 merger_items=[]):
         tenant = pipeline.layout.tenant
         uuid = str(uuid4().hex)
@@ -143,11 +143,7 @@ class ExecutorClient(object):
                 job, uuid,
                 item.current_build_set.getJobNodeSet(job.name),
                 item.change,
-                [x.change for x in dependent_items]))
-
-        dependent_items = dependent_items[:]
-        dependent_items.reverse()
-        all_items = dependent_items + [item]
+                dependent_changes))
 
         # TODOv3(jeblair): This ansible vars data structure will
         # replace the environment variables below.
@@ -188,25 +184,7 @@ class ExecutorClient(object):
             zuul_params['newrev'] = item.change.newrev
         zuul_params['projects'] = []  # Set below
         zuul_params['_projects'] = {}  # transitional to convert to dict
-        zuul_params['items'] = []
-        for i in all_items:
-            d = dict()
-            d['project'] = dict(
-                name=i.change.project.name,
-                short_name=i.change.project.name.split('/')[-1],
-                canonical_hostname=i.change.project.canonical_hostname,
-                canonical_name=i.change.project.canonical_name,
-                src_dir=os.path.join('src', i.change.project.canonical_name),
-            )
-            if hasattr(i.change, 'number'):
-                d['change'] = str(i.change.number)
-            if hasattr(i.change, 'url'):
-                d['change_url'] = i.change.url
-            if hasattr(i.change, 'patchset'):
-                d['patchset'] = str(i.change.patchset)
-            if hasattr(i.change, 'branch'):
-                d['branch'] = i.change.branch
-            zuul_params['items'].append(d)
+        zuul_params['items'] = dependent_changes
 
         params = dict()
         params['job'] = job.name
@@ -264,12 +242,15 @@ class ExecutorClient(object):
                                       job_project.override_branch))
                 projects.add(project)
                 required_projects.add(project)
-        for i in all_items:
-            if i.change.project not in projects:
-                project = i.change.project
+        for change in dependent_changes:
+            # We have to find the project this way because it may not
+            # be registered in the tenant (ie, a foreign project).
+            source = self.sched.connections.getSourceByHostname(
+                change['project']['canonical_hostname'])
+            project = source.getProject(change['project']['name'])
+            if project not in projects:
                 params['projects'].append(make_project_dict(project))
                 projects.add(project)
-
         for p in projects:
             zuul_params['_projects'][p.canonical_name] = (dict(
                 name=p.name,
