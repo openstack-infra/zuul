@@ -33,7 +33,7 @@ function zuul_build_dom($, container) {
         + '<div class="zuul-container" id="zuul-container">'
         + '<div style="display: none;" class="alert" id="zuul_msg"></div>'
         + '<button class="btn pull-right zuul-spinner">updating <span class="glyphicon glyphicon-refresh"></span></button>'
-        + '<p>Queue lengths: <span id="zuul_queue_events_num">0</span> events, <span id="zuul_queue_results_num">0</span> results.</p>'
+        + '<p>Queue lengths: <span id="zuul_queue_events_num">0</span> events, <span id="zuul_queue_management_events_num">0</span> management events, <span id="zuul_queue_results_num">0</span> results.</p>'
         + '<div id="zuul_controls"></div>'
         + '<div id="zuul_pipelines" class="row"></div>'
         + '<p>Zuul version: <span id="zuul-version-span"></span></p>'
