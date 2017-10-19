@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Project stanzas now support regex matching of :attr:`project.name`.
+    This can be used to apply project pipelines to many projects at once.

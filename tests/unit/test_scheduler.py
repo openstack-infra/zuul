@@ -5039,6 +5039,44 @@ class TestDuplicatePipeline(ZuulTestCase):
             self.assertIn('project-test1', A.messages[0])
 
 
+class TestSchedulerRegexProject(ZuulTestCase):
+    tenant_config_file = 'config/regex-project/main.yaml'
+
+    def test_regex_project(self):
+        "Test that changes are tested in parallel and merged in series"
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+
+        self.waitUntilSettled()
+
+        # We expect the following builds:
+        #  - 1 for org/project
+        #  - 3 for org/project1
+        #  - 3 for org/project2
+        self.assertEqual(len(self.history), 7)
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.reported, 1)
+        self.assertEqual(C.reported, 1)
+
+        self.assertHistory([
+            dict(name='project-test', result='SUCCESS', changes='1,1'),
+            dict(name='project-test1', result='SUCCESS', changes='2,1'),
+            dict(name='project-common-test', result='SUCCESS', changes='2,1'),
+            dict(name='project-common-test-canonical', result='SUCCESS',
+                 changes='2,1'),
+            dict(name='project-test2', result='SUCCESS', changes='3,1'),
+            dict(name='project-common-test', result='SUCCESS', changes='3,1'),
+            dict(name='project-common-test-canonical', result='SUCCESS',
+                 changes='3,1'),
+        ], ordered=False)
+
+
 class TestSchedulerTemplatedProject(ZuulTestCase):
     tenant_config_file = 'config/templated-project/main.yaml'
 

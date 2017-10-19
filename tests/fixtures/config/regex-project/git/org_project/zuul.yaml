@@ -1,0 +1,13 @@
+- job:
+    name: project-test
+    run: playbooks/project-test.yaml
+    nodeset:
+      nodes:
+        - name: controller
+          label: label1
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-test

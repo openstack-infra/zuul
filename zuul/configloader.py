@@ -929,24 +929,43 @@ class ProjectParser(object):
             # There is no name defined so implicitly add the name
             # of the project where it is defined.
             project_name = (conf['_source_context'].project.canonical_name)
-        (trusted, project) = self.pcontext.tenant.getProject(project_name)
-        if project is None:
-            raise ProjectNotFoundError(project_name)
 
-        # Parse the project as a template since they're mostly the
-        # same.
-        project_config = self.pcontext.project_template_parser.\
-            fromYaml(conf, validate=False, freeze=False)
-        project_config.name = project.canonical_name
-
-        if not conf['_source_context'].trusted:
-            if project != conf['_source_context'].project:
+        # regex matched projects need to be validatd later
+        regex = False
+        if project_name.startswith('^'):
+            # regex matching is designed to match other projects so disallow
+            # in untrusted contexts
+            if not conf['_source_context'].trusted:
                 raise ProjectNotPermittedError()
 
-            # If this project definition is in a place where it
-            # should get implied branch matchers, set it.
-            project_config.addImpliedBranchMatcher(
-                conf['_source_context'].branch)
+            # Parse the project as a template since they're mostly the
+            # same.
+            regex = True
+            project_config = self.pcontext.project_template_parser. \
+                fromYaml(conf, validate=False, freeze=False)
+
+            project_config.name = project_name
+        else:
+            (trusted, project) = self.pcontext.tenant.getProject(project_name)
+            if project is None:
+                raise ProjectNotFoundError(project_name)
+
+            if not conf['_source_context'].trusted:
+                if project != conf['_source_context'].project:
+                    raise ProjectNotPermittedError()
+
+            # Parse the project as a template since they're mostly the
+            # same.
+            project_config = self.pcontext.project_template_parser.\
+                fromYaml(conf, validate=False, freeze=False)
+
+            project_config.name = project.canonical_name
+
+            if not conf['_source_context'].trusted:
+                # If this project definition is in a place where it
+                # should get implied branch matchers, set it.
+                project_config.addImpliedBranchMatcher(
+                    conf['_source_context'].branch)
 
         # Add templates
         for name in conf.get('templates', []):
@@ -959,7 +978,9 @@ class ProjectParser(object):
         default_branch = conf.get('default-branch', 'master')
         project_config.default_branch = default_branch
 
-        project_config.freeze()
+        # we need to freeze regex projects later
+        if not regex:
+            project_config.freeze()
         return project_config
 
 
@@ -1592,8 +1613,16 @@ class TenantParser(object):
 
         for config_project in unparsed_config.projects:
             with configuration_exceptions('project', config_project):
-                parsed_config.projects.append(
-                    pcontext.project_parser.fromYaml(config_project))
+                # we need to separate the regex projects as they are processed
+                # differently later
+                name = config_project.get('name')
+                parsed_project = pcontext.project_parser.fromYaml(
+                    config_project)
+                if name and name.startswith('^'):
+                    parsed_config.projects_by_regex.setdefault(
+                        name, []).append(parsed_project)
+                else:
+                    parsed_config.projects.append(parsed_project)
 
         return parsed_config
 
@@ -1699,6 +1728,22 @@ class TenantParser(object):
                 continue
             with reference_exceptions('project-template', template):
                 layout.addProjectTemplate(template)
+
+        # The project stanzas containing a regex are separated from the normal
+        # project stanzas and organized by regex. We need to loop over each
+        # regex and copy each stanza below the regex for each matching project.
+        for regex, config_projects in parsed_config.projects_by_regex.items():
+            projects_matching_regex = tenant.getProjectsByRegex(regex)
+
+            for trusted, project in projects_matching_regex:
+                for config_project in config_projects:
+                    # we just override the project name here so a simple copy
+                    # should be enough
+                    conf = copy.copy(config_project)
+                    name = project.canonical_name
+                    conf.name = name
+                    conf.freeze()
+                    parsed_config.projects.append(conf)
 
         for project in parsed_config.projects:
             classes = self._getLoadClasses(tenant, project)
