@@ -64,9 +64,6 @@ class TestZuulTriggerParentChangeEnqueued(ZuulTestCase):
 
 class TestZuulTriggerProjectChangeMerged(ZuulTestCase):
 
-    def setUp(self):
-        self.skip("Disabled because v3 noop job does not perform merge")
-
     tenant_config_file = 'config/zuultrigger/project-change-merged/main.yaml'
 
     def test_zuul_trigger_project_change_merged(self):
