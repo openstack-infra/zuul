@@ -91,6 +91,8 @@ class SQLConnection(BaseConnection):
             sa.Column('change', sa.Integer, nullable=True),
             sa.Column('patchset', sa.Integer, nullable=True),
             sa.Column('ref', sa.String(255)),
+            sa.Column('oldrev', sa.String(255)),
+            sa.Column('newrev', sa.String(255)),
             sa.Column('ref_url', sa.String(255)),
             sa.Column('result', sa.String(255)),
             sa.Column('message', sa.TEXT()),
