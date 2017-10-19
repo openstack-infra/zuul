@@ -35,4 +35,4 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_column('zuul_buildset', 'ref_url')
+    raise Exception("Downgrades not supported")

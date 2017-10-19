@@ -22,5 +22,4 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_column('zuul_buildset', 'newrev')
-    op.drop_column('zuul_buildset', 'oldrev')
+    raise Exception("Downgrades not supported")

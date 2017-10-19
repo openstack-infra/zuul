@@ -35,15 +35,4 @@ def upgrade():
 
 
 def downgrade():
-    op.add_column(BUILDSET_TABLE, sa.Column('score', sa.Integer))
-
-    connection = op.get_bind()
-    connection.execute(
-        """
-        UPDATE {buildset_table}
-         SET score=(
-             SELECT CASE result
-                WHEN 'SUCCESS' THEN 1
-                ELSE -1 END)
-        """.format(buildset_table=BUILDSET_TABLE))
-    op.drop_column(BUILDSET_TABLE, 'result')
+    raise Exception("Downgrades not supported")
