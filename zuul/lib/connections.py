@@ -161,3 +161,10 @@ class ConnectionRegistry(object):
     def getTrigger(self, connection_name, config=None):
         connection = self.connections[connection_name]
         return connection.driver.getTrigger(connection, config)
+
+    def getSourceByHostname(self, canonical_hostname):
+        for connection in self.connections.values():
+            if hasattr(connection, 'canonical_hostname'):
+                if connection.canonical_hostname == canonical_hostname:
+                    return self.getSource(connection.connection_name)
+        return None

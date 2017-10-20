@@ -1265,7 +1265,7 @@ class BuildSet(object):
         self.result = None
         self.uuid = None
         self.commit = None
-        self.dependent_items = None
+        self.dependent_changes = None
         self.merger_items = None
         self.unable_to_merge = False
         self.config_error = None  # None or an error message string.
@@ -1294,18 +1294,16 @@ class BuildSet(object):
         # The change isn't enqueued until after it's created
         # so we don't know what the other changes ahead will be
         # until jobs start.
-        if self.dependent_items is None:
-            items = []
+        if not self.uuid:
+            self.uuid = uuid4().hex
+        if self.dependent_changes is None:
+            items = [self.item]
             next_item = self.item.item_ahead
             while next_item:
                 items.append(next_item)
                 next_item = next_item.item_ahead
-            self.dependent_items = items
-        if not self.uuid:
-            self.uuid = uuid4().hex
-        if self.merger_items is None:
-            items = [self.item] + self.dependent_items
             items.reverse()
+            self.dependent_changes = [i.change.toDict() for i in items]
             self.merger_items = [i.makeMergerItem() for i in items]
 
     def getStateName(self, state_num):
@@ -1970,12 +1968,30 @@ class Ref(object):
                           oldrev=self.oldrev,
                           newrev=self.newrev)
 
+    def toDict(self):
+        # Render to a dict to use in passing json to the executor
+        d = dict()
+        d['project'] = dict(
+            name=self.project.name,
+            short_name=self.project.name.split('/')[-1],
+            canonical_hostname=self.project.canonical_hostname,
+            canonical_name=self.project.canonical_name,
+            src_dir=os.path.join('src', self.project.canonical_name),
+        )
+        return d
+
 
 class Branch(Ref):
     """An existing branch state for a Project."""
     def __init__(self, project):
         super(Branch, self).__init__(project)
         self.branch = None
+
+    def toDict(self):
+        # Render to a dict to use in passing json to the executor
+        d = super(Branch, self).toDict()
+        d['branch'] = self.branch
+        return d
 
 
 class Tag(Ref):
@@ -2038,6 +2054,14 @@ class Change(Branch):
         return Attributes(project=self.project,
                           number=self.number,
                           patchset=self.patchset)
+
+    def toDict(self):
+        # Render to a dict to use in passing json to the executor
+        d = super(Change, self).toDict()
+        d['change'] = str(self.number)
+        d['change_url'] = self.url
+        d['patchset'] = str(self.patchset)
+        return d
 
 
 class TriggerEvent(object):

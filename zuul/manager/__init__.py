@@ -358,10 +358,10 @@ class PipelineManager(object):
             try:
                 nodeset = item.current_build_set.getJobNodeSet(job.name)
                 self.sched.nodepool.useNodeSet(nodeset)
-                build = self.sched.executor.execute(job, item,
-                                                    self.pipeline,
-                                                    build_set.dependent_items,
-                                                    build_set.merger_items)
+                build = self.sched.executor.execute(
+                    job, item, self.pipeline,
+                    build_set.dependent_changes,
+                    build_set.merger_items)
                 self.log.debug("Adding build %s of job %s to item %s" %
                                (build, job, item))
                 item.addBuild(build)
