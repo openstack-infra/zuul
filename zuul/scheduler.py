@@ -922,16 +922,19 @@ class Scheduler(threading.Thread):
             autohold_key = (build.pipeline.layout.tenant.name,
                             build.build_set.item.change.project.canonical_name,
                             build.job.name)
-
-            try:
-                self.nodepool.holdNodeSet(nodeset, autohold_key)
-            except Exception:
-                self.log.exception("Unable to process autohold for %s:",
-                                   autohold_key)
-                if autohold_key in self.autohold_requests:
-                    self.log.debug("Removing autohold %s due to exception",
-                                   autohold_key)
-                    del self.autohold_requests[autohold_key]
+            if (build.result == "FAILURE" and
+                autohold_key in self.autohold_requests):
+                # We explicitly only want to hold nodes for jobs if they have
+                # failed and have an autohold request.
+                try:
+                    self.nodepool.holdNodeSet(nodeset, autohold_key)
+                except Exception:
+                    self.log.exception("Unable to process autohold for %s:",
+                                       autohold_key)
+                    if autohold_key in self.autohold_requests:
+                        self.log.debug("Removing autohold %s due to exception",
+                                       autohold_key)
+                        del self.autohold_requests[autohold_key]
 
             self.nodepool.returnNodeSet(nodeset)
         except Exception:

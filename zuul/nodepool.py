@@ -87,9 +87,6 @@ class Nodepool(object):
         :param set autohold_key: A set with the tenant/project/job names
             associated with the given NodeSet.
         '''
-        if autohold_key not in self.sched.autohold_requests:
-            return
-
         (hold_iterations, reason) = self.sched.autohold_requests[autohold_key]
         nodes = nodeset.getNodes()
 

@@ -1465,8 +1465,6 @@ class TestScheduler(ZuulTestCase):
 
     @simple_layout('layouts/autohold.yaml')
     def test_autohold(self):
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
-
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
         self.addCleanup(client.shutdown)
@@ -1474,15 +1472,36 @@ class TestScheduler(ZuulTestCase):
                             "reason text", 1)
         self.assertTrue(r)
 
-        self.executor_server.failJob('project-test2', A)
+        # First check that successful jobs do not autohold
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
 
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
         self.assertEqual(A.reported, 1)
-        self.assertEqual(self.getJobFromHistory('project-test2').result,
-                         'FAILURE')
+        # project-test2
+        self.assertEqual(self.history[0].result, 'SUCCESS')
+
+        # Check nodepool for a held node
+        held_node = None
+        for node in self.fake_nodepool.getNodes():
+            if node['state'] == zuul.model.STATE_HOLD:
+                held_node = node
+                break
+        self.assertIsNone(held_node)
+
+        # Now test that failed jobs are autoheld
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        self.executor_server.failJob('project-test2', B)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+
+        self.waitUntilSettled()
+
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(B.reported, 1)
+        # project-test2
+        self.assertEqual(self.history[1].result, 'FAILURE')
 
         # Check nodepool for a held node
         held_node = None
@@ -1502,20 +1521,63 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(held_node['comment'], "reason text")
 
         # Another failed change should not hold any more nodes
-        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
-        self.executor_server.failJob('project-test2', B)
-        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        self.executor_server.failJob('project-test2', C)
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
-        self.assertEqual(B.data['status'], 'NEW')
-        self.assertEqual(B.reported, 1)
-        self.assertEqual(self.getJobFromHistory('project-test2').result,
-                         'FAILURE')
+        self.assertEqual(C.data['status'], 'NEW')
+        self.assertEqual(C.reported, 1)
+        # project-test2
+        self.assertEqual(self.history[2].result, 'FAILURE')
 
         held_nodes = 0
         for node in self.fake_nodepool.getNodes():
             if node['state'] == zuul.model.STATE_HOLD:
                 held_nodes += 1
         self.assertEqual(held_nodes, 1)
+
+    @simple_layout('layouts/autohold.yaml')
+    def test_autohold_ignores_aborted_jobs(self):
+        client = zuul.rpcclient.RPCClient('127.0.0.1',
+                                          self.gearman_server.port)
+        self.addCleanup(client.shutdown)
+        r = client.autohold('tenant-one', 'org/project', 'project-test2',
+                            "reason text", 1)
+        self.assertTrue(r)
+
+        self.executor_server.hold_jobs_in_build = True
+
+        # Create a change that will have its job aborted
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        # Creating new patchset on change A will abort A,1's job because
+        # a new patchset arrived replacing A,1 with A,2.
+        A.addPatchset()
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(2))
+
+        self.waitUntilSettled()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        # Note only the successful job for A,2 will report as we don't
+        # report aborted builds for old patchsets.
+        self.assertEqual(A.reported, 1)
+        # A,1 project-test2
+        self.assertEqual(self.history[0].result, 'ABORTED')
+        # A,2 project-test2
+        self.assertEqual(self.history[1].result, 'SUCCESS')
+
+        # Check nodepool for a held node
+        held_node = None
+        for node in self.fake_nodepool.getNodes():
+            if node['state'] == zuul.model.STATE_HOLD:
+                held_node = node
+                break
+        self.assertIsNone(held_node)
 
     @simple_layout('layouts/autohold.yaml')
     def test_autohold_list(self):
