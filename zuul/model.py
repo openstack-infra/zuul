@@ -2423,6 +2423,11 @@ class Layout(object):
         self.pipelines[pipeline.name] = pipeline
 
     def addProjectTemplate(self, project_template):
+        if project_template.name in self.project_templates:
+            # TODO(jeblair): issue a warning to the logs on loading
+            # the config, and an error when this hits in a proposed
+            # change.
+            return
         self.project_templates[project_template.name] = project_template
 
     def addProjectConfig(self, project_config):

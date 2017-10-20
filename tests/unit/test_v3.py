@@ -283,6 +283,31 @@ class TestInRepoConfig(ZuulTestCase):
             dict(name='project-test2', result='SUCCESS', changes='1,1'),
             dict(name='project-test2', result='SUCCESS', changes='2,1')])
 
+    def test_dynamic_template(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test1
+
+            - project-template:
+                name: common-config-template
+                check:
+                  jobs:
+                    - project-test1
+
+            - project:
+                name: org/project
+                templates: [common-config-template]
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='template-job', result='SUCCESS', changes='1,1')])
+
     def test_dynamic_config_non_existing_job(self):
         """Test that requesting a non existent job fails"""
         in_repo_conf = textwrap.dedent(
