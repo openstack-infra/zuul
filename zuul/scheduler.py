@@ -29,6 +29,7 @@ from zuul import configloader
 from zuul import model
 from zuul import exceptions
 from zuul import version as zuul_version
+from zuul import rpclistener
 from zuul.lib.config import get_default
 from zuul.lib.statsd import get_statsd
 import zuul.lib.queue
@@ -213,6 +214,7 @@ class Scheduler(threading.Thread):
     """
 
     log = logging.getLogger("zuul.Scheduler")
+    _stats_interval = 10
 
     def __init__(self, config, testonly=False):
         threading.Thread.__init__(self)
@@ -228,6 +230,9 @@ class Scheduler(threading.Thread):
         self.merger = None
         self.connections = None
         self.statsd = get_statsd(config)
+        self.rpc = rpclistener.RPCListener(config, self)
+        self.stats_thread = threading.Thread(target=self.runStats)
+        self.stats_stop = threading.Event()
         # TODO(jeblair): fix this
         # Despite triggers being part of the pipeline, there is one trigger set
         # per scheduler. The pipeline handles the trigger filters but since
@@ -251,10 +256,19 @@ class Scheduler(threading.Thread):
         self.tenant_last_reconfigured = {}
         self.autohold_requests = {}
 
+    def start(self):
+        super(Scheduler, self).start()
+        self.rpc.start()
+        self.stats_thread.start()
+
     def stop(self):
         self._stopped = True
+        self.stats_stop.set()
         self.stopConnections()
         self.wake_event.set()
+        self.stats_thread.join()
+        self.rpc.stop()
+        self.rpc.join()
 
     def registerConnections(self, connections, webapp, load=True):
         # load: whether or not to trigger the onLoad for the connection. This
@@ -277,6 +291,44 @@ class Scheduler(threading.Thread):
 
     def setZooKeeper(self, zk):
         self.zk = zk
+
+    def runStats(self):
+        while not self.stats_stop.wait(self._stats_interval):
+            try:
+                self._runStats()
+            except Exception:
+                self.log.exception("Error in periodic stats:")
+
+    def _runStats(self):
+        if not self.statsd:
+            return
+        functions = self.rpc.getFunctions()
+        executors_accepting = 0
+        executors_online = 0
+        execute_queue = 0
+        execute_running = 0
+        mergers_online = 0
+        merge_queue = 0
+        merge_running = 0
+        for (name, (queued, running, registered)) in functions.items():
+            if name == 'executor:execute':
+                executors_accepting = registered
+                execute_queue = queued - running
+                execute_running = running
+            if name.startswith('executor:stop'):
+                executors_online += registered
+            if name == 'merger:merge':
+                mergers_online = registered
+            if name.startswith('merger:'):
+                merge_queue += queued - running
+                merge_running += running
+        self.statsd.gauge('zuul.mergers.online', mergers_online)
+        self.statsd.gauge('zuul.mergers.jobs_running', merge_running)
+        self.statsd.gauge('zuul.mergers.jobs_queued', merge_queue)
+        self.statsd.gauge('zuul.executors.online', executors_online)
+        self.statsd.gauge('zuul.executors.accepting', executors_accepting)
+        self.statsd.gauge('zuul.executors.jobs_running', execute_running)
+        self.statsd.gauge('zuul.executors.jobs_queued', execute_queue)
 
     def addEvent(self, event):
         self.trigger_event_queue.put(event)

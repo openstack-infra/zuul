@@ -47,7 +47,6 @@ class TestSchedulerSSL(SSLZuulTestCase):
 
     def test_jobs_executed(self):
         "Test that jobs are executed and a change is merged"
-
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('Code-Review', 2)
         self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
@@ -127,6 +126,9 @@ class TestScheduler(ZuulTestCase):
         self.assertReportedStat('zuul.nodepool.requested.size.1', value='1|c')
         self.assertReportedStat('zuul.nodepool.fulfilled.size.1', value='1|c')
         self.assertReportedStat('zuul.nodepool.current_requests', value='1|g')
+        self.assertReportedStat('zuul.executors.online', value='1|g')
+        self.assertReportedStat('zuul.executors.accepting', value='1|g')
+        self.assertReportedStat('zuul.mergers.online', value='1|g')
 
         for build in self.history:
             self.assertTrue(build.parameters['zuul']['voting'])
