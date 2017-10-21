@@ -408,5 +408,5 @@ class TestExecutorHostname(ZuulTestCase):
     tenant_config_file = 'config/single-tenant/main.yaml'
 
     def test_executor_hostname(self):
-        self.assertEqual('test-executor-hostname.openstack.org',
+        self.assertEqual('test-executor-hostname.example.com',
                          self.executor_server.hostname)
