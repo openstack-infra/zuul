@@ -135,9 +135,11 @@ class TestScheduler(ZuulTestCase):
 
     def test_initial_pipeline_gauges(self):
         "Test that each pipeline reported its length on start"
-        self.assertReportedStat('zuul.pipeline.gate.current_changes',
+        self.assertReportedStat('zuul.tenant.tenant-one.pipeline.gate.'
+                                'current_changes',
                                 value='0|g')
-        self.assertReportedStat('zuul.pipeline.check.current_changes',
+        self.assertReportedStat('zuul.tenant.tenant-one.pipeline.check.'
+                                'current_changes',
                                 value='0|g')
 
     def test_job_branch(self):
