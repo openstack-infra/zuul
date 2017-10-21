@@ -76,6 +76,15 @@
 - job:
     name: common-config-test
 
+- job:
+    name: template-job
+
+- project-template:
+    name: common-config-template
+    check:
+      jobs:
+        - template-job
+
 - project:
     name: common-config
     check:
