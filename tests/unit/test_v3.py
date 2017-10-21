@@ -1744,14 +1744,13 @@ class TestDataReturn(AnsibleZuulTestCase):
     tenant_config_file = 'config/data-return/main.yaml'
 
     def test_data_return(self):
-        # This exercises a proposed change to a role being checked out
-        # and used.
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
         self.assertHistory([
             dict(name='data-return', result='SUCCESS', changes='1,1'),
             dict(name='data-return-relative', result='SUCCESS', changes='1,1'),
+            dict(name='child', result='SUCCESS', changes='1,1'),
         ], ordered=False)
         self.assertIn('- data-return http://example.com/test/log/url/',
                       A.messages[-1])

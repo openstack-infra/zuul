@@ -21,8 +21,10 @@
 
 - job:
     name: data-return-relative
-    run: playbooks/data-return
     success-url: docs/index.html
+
+- job:
+    name: child
 
 - project:
     name: org/project
@@ -30,3 +32,7 @@
       jobs:
         - data-return
         - data-return-relative
+        - child:
+            dependencies:
+              - data-return
+              - data-return-relative
