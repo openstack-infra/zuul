@@ -58,7 +58,6 @@ import zuul.driver.gerrit.gerritconnection as gerritconnection
 import zuul.driver.github.githubconnection as githubconnection
 import zuul.scheduler
 import zuul.webapp
-import zuul.rpclistener
 import zuul.executor.server
 import zuul.executor.client
 import zuul.lib.connections
@@ -2073,6 +2072,7 @@ class ZuulTestCase(BaseTestCase):
         gerritconnection.GerritEventConnector.delay = 0.0
 
         self.sched = zuul.scheduler.Scheduler(self.config)
+        self.sched._stats_interval = 1
 
         self.webapp = zuul.webapp.WebApp(
             self.sched, port=0, listen_address='127.0.0.1')
@@ -2114,11 +2114,8 @@ class ZuulTestCase(BaseTestCase):
         self.sched.setNodepool(self.nodepool)
         self.sched.setZooKeeper(self.zk)
 
-        self.rpc = zuul.rpclistener.RPCListener(self.config, self.sched)
-
         self.sched.start()
         self.webapp.start()
-        self.rpc.start()
         self.executor_client.gearman.waitForServer()
         # Cleanups are run in reverse order
         self.addCleanup(self.assertCleanShutdown)
@@ -2374,8 +2371,6 @@ class ZuulTestCase(BaseTestCase):
         self.statsd.join()
         self.webapp.stop()
         self.webapp.join()
-        self.rpc.stop()
-        self.rpc.join()
         self.gearman_server.shutdown()
         self.fake_nodepool.stop()
         self.zk.disconnect()

@@ -141,7 +141,6 @@ class Scheduler(zuul.cmd.ZuulApp):
         import zuul.merger.client
         import zuul.nodepool
         import zuul.webapp
-        import zuul.rpclistener
         import zuul.zk
 
         signal.signal(signal.SIGUSR2, zuul.cmd.stack_dump_handler)
@@ -174,7 +173,6 @@ class Scheduler(zuul.cmd.ZuulApp):
         webapp = zuul.webapp.WebApp(
             self.sched, port=port, cache_expiry=cache_expiry,
             listen_address=listen_address)
-        rpc = zuul.rpclistener.RPCListener(self.config, self.sched)
 
         self.configure_connections()
         self.sched.setExecutor(gearman)
@@ -195,8 +193,6 @@ class Scheduler(zuul.cmd.ZuulApp):
             sys.exit(1)
         self.log.info('Starting Webapp')
         webapp.start()
-        self.log.info('Starting RPC')
-        rpc.start()
 
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
         signal.signal(signal.SIGUSR1, self.exit_handler)

@@ -57,6 +57,29 @@ class RPCListener(object):
         self.worker.registerFunction("zuul:get_running_jobs")
         self.worker.registerFunction("zuul:get_job_log_stream_address")
 
+    def getFunctions(self):
+        functions = {}
+        for connection in self.worker.active_connections:
+            try:
+                req = gear.StatusAdminRequest()
+                connection.sendAdminRequest(req, timeout=300)
+            except Exception:
+                self.log.exception("Exception while listing functions")
+                self.worker._lostConnection(connection)
+                continue
+            for line in req.response.decode('utf8').split('\n'):
+                parts = [x.strip() for x in line.split('\t')]
+                if len(parts) < 4:
+                    continue
+                # parts[0] - function name
+                # parts[1] - total jobs queued (including building)
+                # parts[2] - jobs building
+                # parts[3] - workers registered
+                data = functions.setdefault(parts[0], [0, 0, 0])
+                for i in range(3):
+                    data[i] += int(parts[i + 1])
+        return functions
+
     def stop(self):
         self.log.debug("Stopping")
         self._running = False
