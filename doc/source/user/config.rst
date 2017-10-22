@@ -635,7 +635,7 @@ Here is an example of two job definitions:
 
          - job:
              name: run-tests
-             branch: stable/2.0
+             branches: stable/2.0
              nodeset: old-release
 
       In some cases, Zuul uses an implied value for the branch
