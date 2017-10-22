@@ -1743,7 +1743,6 @@ class TestShadow(ZuulTestCase):
 class TestDataReturn(AnsibleZuulTestCase):
     tenant_config_file = 'config/data-return/main.yaml'
 
-    @skip("Temporarily broken")
     def test_data_return(self):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))

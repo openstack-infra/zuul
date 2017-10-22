@@ -1593,6 +1593,7 @@ class QueueItem(object):
             if job not in jobs_not_started:
                 continue
             all_parent_jobs_successful = True
+            parent_builds_with_data = {}
             for parent_job in self.job_graph.getParentJobsRecursively(
                     job.name):
                 if parent_job.name not in successful_job_names:
@@ -1600,8 +1601,19 @@ class QueueItem(object):
                     break
                 parent_build = self.current_build_set.getBuild(parent_job.name)
                 if parent_build.result_data:
-                    job.updateParentData(parent_build.result_data)
+                    parent_builds_with_data[parent_job.name] = parent_build
+
             if all_parent_jobs_successful:
+                # Iterate in reverse order over all jobs of the graph (which is
+                # in sorted config order) and apply parent data of the jobs we
+                # already found.
+                if len(parent_builds_with_data) > 0:
+                    for parent_job in reversed(self.job_graph.getJobs()):
+                        parent_build = parent_builds_with_data.get(
+                            parent_job.name)
+                        if parent_build:
+                            job.updateParentData(parent_build.result_data)
+
                 nodeset = self.current_build_set.getJobNodeSet(job.name)
                 if nodeset is None:
                     # The nodes for this job are not ready, skip
