@@ -679,8 +679,10 @@ class Scheduler(threading.Thread):
             try:
                 for pipeline in tenant.layout.pipelines.values():
                     items = len(pipeline.getAllItems())
-                    # stats.gauges.zuul.pipeline.NAME.current_changes
-                    key = 'zuul.pipeline.%s' % pipeline.name
+                    # stats.gauges.zuul.tenant.<tenant>.pipeline.
+                    #    <pipeline>.current_changes
+                    key = 'zuul.tenant.%s.pipeline.%s' % (
+                        tenant.name, pipeline.name)
                     self.statsd.gauge(key + '.current_changes', items)
             except Exception:
                 self.log.exception("Exception reporting initial "
