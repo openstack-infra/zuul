@@ -224,6 +224,49 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
 
       The number of outstanding nodepool requests from Zuul.
 
+.. stat:: zuul.mergers
+
+   Holds metrics related to Zuul mergers.
+
+   .. stat:: online
+      :type: gauge
+
+      The number of Zuul merger processes online.
+
+   .. stat:: jobs_running
+      :type: gauge
+
+      The number of merge jobs running.
+
+   .. stat:: jobs_queued
+      :type: gauge
+
+      The number of merge jobs queued.
+
+.. stat:: zuul.executors
+
+   Holds metrics related to Zuul executors.
+
+   .. stat:: online
+      :type: gauge
+
+      The number of Zuul executor processes online.
+
+   .. stat:: accepting
+      :type: gauge
+
+      The number of Zuul executor processes accepting new jobs.
+
+   .. stat:: jobs_running
+      :type: gauge
+
+      The number of executor jobs running.
+
+   .. stat:: jobs_queued
+      :type: gauge
+
+      The number of executor jobs queued.
+
 
 As an example, given a job named `myjob` in `mytenant` triggered by a
 change to `myproject` on the `master` branch in the `gate` pipeline
