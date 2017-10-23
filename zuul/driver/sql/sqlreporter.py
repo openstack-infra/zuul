@@ -33,8 +33,8 @@ class SQLReporter(BaseReporter):
             return
 
         with self.connection.engine.begin() as conn:
-            change = getattr(item.change, 'number', '')
-            patchset = getattr(item.change, 'patchset', '')
+            change = getattr(item.change, 'number', None)
+            patchset = getattr(item.change, 'patchset', None)
             ref = getattr(item.change, 'ref', '')
             oldrev = getattr(item.change, 'oldrev', '')
             newrev = getattr(item.change, 'newrev', '')
