@@ -56,7 +56,7 @@ class BaseConnection(object, metaclass=abc.ABCMeta):
                         driver=self.driver.name,
                         connection=self.connection_name,
                         event=event.type))
-        except:
+        except Exception:
             self.log.exception("Exception reporting event stats")
 
     def onLoad(self):

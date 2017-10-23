@@ -179,7 +179,7 @@ class Server(object):
                 if console is not None:
                     try:
                         console.file.close()
-                    except:
+                    except Exception:
                         pass
                 while True:
                     console = self.chunkConsole(conn, log_uuid)

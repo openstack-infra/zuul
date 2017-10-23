@@ -49,7 +49,7 @@ class GearmanCleanup(threading.Thread):
                 return
             try:
                 self.gearman.lookForLostBuilds()
-            except:
+            except Exception:
                 self.log.exception("Exception checking builds:")
 
 
@@ -420,7 +420,7 @@ class ExecutorClient(object):
         if req.response.startswith(b"OK"):
             try:
                 del self.builds[job.unique]
-            except:
+            except Exception:
                 pass
             # Since this isn't otherwise going to get a build complete
             # event, send one to the scheduler so that it can unlock

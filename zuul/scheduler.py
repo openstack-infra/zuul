@@ -501,11 +501,11 @@ class Scheduler(threading.Thread):
     def resume(self):
         try:
             self._load_queue()
-        except:
+        except Exception:
             self.log.exception("Unable to load queue")
         try:
             self._delete_queue()
-        except:
+        except Exception:
             self.log.exception("Unable to delete saved queue")
         self.log.debug("Resuming queue processing")
         self.wake_event.set()

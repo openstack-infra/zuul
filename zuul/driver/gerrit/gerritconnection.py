@@ -175,7 +175,7 @@ class GerritEventConnector(threading.Thread):
                 return
             try:
                 self._handleEvent()
-            except:
+            except Exception:
                 self.log.exception("Exception moving Gerrit event:")
             finally:
                 self.connection.eventDone()
@@ -250,7 +250,7 @@ class GerritWatcher(threading.Thread):
 
             if ret and ret not in [-1, 130]:
                 raise Exception("Gerrit error executing stream-events")
-        except:
+        except Exception:
             self.log.exception("Exception on ssh event stream:")
             time.sleep(5)
         finally:
@@ -597,7 +597,7 @@ class GerritConnection(BaseConnection):
         refs = {}  # type: Dict[str, str]
         try:
             refs = self.getInfoRefs(project)
-        except:
+        except Exception:
             self.log.exception("Exception looking for ref %s" %
                                ref)
         sha = refs.get(ref, '')
@@ -633,7 +633,7 @@ class GerritConnection(BaseConnection):
                 else:
                     # CLOSED, RULE_ERROR
                     return False
-        except:
+        except Exception:
             self.log.exception("Exception determining whether change"
                                "%s can merge:" % change)
             return False
@@ -787,7 +787,7 @@ class GerritConnection(BaseConnection):
         try:
             self.log.debug("SSH command:\n%s" % command)
             stdin, stdout, stderr = self.client.exec_command(command)
-        except:
+        except Exception:
             self._open()
             stdin, stdout, stderr = self.client.exec_command(command)
 
@@ -812,7 +812,7 @@ class GerritConnection(BaseConnection):
     def getInfoRefs(self, project: Project) -> Dict[str, str]:
         try:
             data = self._uploadPack(project)
-        except:
+        except Exception:
             self.log.error("Cannot get references from %s" % project)
             raise  # keeps error information
         ret = {}

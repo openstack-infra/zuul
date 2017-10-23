@@ -156,7 +156,7 @@ class PipelineManager(object):
                 if ret:
                     self.log.error("Reporting item start %s received: %s" %
                                    (item, ret))
-            except:
+            except Exception:
                 self.log.exception("Exception while reporting start:")
 
     def sendReport(self, action_reporters, item, message=None):
@@ -365,7 +365,7 @@ class PipelineManager(object):
                 self.log.debug("Adding build %s of job %s to item %s" %
                                (build, job, item))
                 item.addBuild(build)
-            except:
+            except Exception:
                 self.log.exception("Exception while executing job %s "
                                    "for change %s:" % (job, item.change))
 
@@ -397,7 +397,7 @@ class PipelineManager(object):
             was_running = False
             try:
                 was_running = self.sched.executor.cancel(build)
-            except:
+            except Exception:
                 self.log.exception("Exception while canceling build %s "
                                    "for change %s" % (build, item.change))
             finally:
@@ -820,7 +820,7 @@ class PipelineManager(object):
                 if ret:
                     self.log.error("Reporting item %s received: %s" %
                                    (item, ret))
-            except:
+            except Exception:
                 self.log.exception("Exception while reporting:")
                 item.setReportedResult('ERROR')
         return ret
@@ -862,5 +862,5 @@ class PipelineManager(object):
             if dt:
                 self.sched.statsd.timing(key + '.resident_time', dt)
                 self.sched.statsd.incr(key + '.total_changes')
-        except:
+        except Exception:
             self.log.exception("Exception reporting pipeline stats")

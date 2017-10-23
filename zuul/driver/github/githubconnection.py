@@ -86,7 +86,7 @@ class GithubWebhookListener():
 
         try:
             self.__dispatch_event(request)
-        except:
+        except Exception:
             self.log.exception("Exception handling Github event:")
 
     def __dispatch_event(self, request):
@@ -101,7 +101,7 @@ class GithubWebhookListener():
         try:
             json_body = request.json_body
             self.connection.addEvent(json_body, event)
-        except:
+        except Exception:
             message = 'Exception deserializing JSON body'
             self.log.exception(message)
             raise webob.exc.HTTPBadRequest(message)
@@ -177,7 +177,7 @@ class GithubEventConnector(threading.Thread):
 
         try:
             event = method(json_body)
-        except:
+        except Exception:
             self.log.exception('Exception when handling event:')
             event = None
 
@@ -348,7 +348,7 @@ class GithubEventConnector(threading.Thread):
                 return
             try:
                 self._handleEvent()
-            except:
+            except Exception:
                 self.log.exception("Exception moving GitHub event:")
             finally:
                 self.connection.eventDone()
@@ -1052,7 +1052,7 @@ def log_rate_limit(log, github):
         rate_limit = github.rate_limit()
         remaining = rate_limit['resources']['core']['remaining']
         reset = rate_limit['resources']['core']['reset']
-    except:
+    except Exception:
         return
     if github._zuul_user_id:
         log.debug('GitHub API rate limit (%s, %s) remaining: %s reset: %s',

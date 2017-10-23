@@ -179,7 +179,7 @@ class WebApp(threading.Thread):
                 # Call time.time() again because formatting above may take
                 # longer than the cache timeout.
                 self.cache_time = time.time()
-            except:
+            except Exception:
                 self.log.exception("Exception formatting status:")
                 raise
 

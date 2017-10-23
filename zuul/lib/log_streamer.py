@@ -108,7 +108,7 @@ class RequestHandler(socketserver.BaseRequestHandler):
             if log is not None:
                 try:
                     log.file.close()
-                except:
+                except Exception:
                     pass
             while True:
                 log = self.chunk_log(log_file)
