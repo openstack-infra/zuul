@@ -183,8 +183,7 @@ class ExecutorClient(object):
         if (hasattr(item.change, 'newrev') and item.change.newrev
             and item.change.newrev != '0' * 40):
             zuul_params['newrev'] = item.change.newrev
-        zuul_params['projects'] = []  # Set below
-        zuul_params['_projects'] = {}  # transitional to convert to dict
+        zuul_params['projects'] = {}  # Set below
         zuul_params['items'] = dependent_changes
 
         params = dict()
@@ -257,7 +256,7 @@ class ExecutorClient(object):
                 params['projects'].append(make_project_dict(project))
                 projects.add(project)
         for p in projects:
-            zuul_params['_projects'][p.canonical_name] = (dict(
+            zuul_params['projects'][p.canonical_name] = (dict(
                 name=p.name,
                 short_name=p.name.split('/')[-1],
                 # Duplicate this into the dict too, so that iterating
@@ -269,12 +268,10 @@ class ExecutorClient(object):
             ))
         # We are transitioning "projects" from a list to a dict
         # indexed by canonical name, as it is much easier to access
-        # values in ansible.  Existing callers are converted to
-        # "_projects", then once "projects" is unused we switch it,
-        # then convert callers back.  Finally when "_projects" is
-        # unused it will be removed.
-        for cn, p in zuul_params['_projects'].items():
-            zuul_params['projects'].append(p)
+        # values in ansible.  Existing callers have been converted to
+        # "_projects" and "projects" is swapped; we will convert users
+        # back to "projects" and remove this soon.
+        zuul_params['_projects'] = zuul_params['projects']
 
         build = Build(job, uuid)
         build.parameters = params

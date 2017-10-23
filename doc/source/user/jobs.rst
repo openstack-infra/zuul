@@ -220,14 +220,15 @@ of item.
          `src/git.example.com/org/project`.
 
    .. var:: projects
-      :type: list
+      :type: dict
 
       A list of all projects prepared by Zuul for the item.  It
       includes, at least, the item's own project.  It also includes
       the projects of any items this item depends on, as well as the
       projects that appear in :attr:`job.required-projects`.
 
-      This is a list of dictionaries, with each element consisting of:
+      This is a dictionary of dictionaries.  Each value has a key of
+      the `canonical_name`, then each entry consists of:
 
       .. var:: name
 
@@ -263,6 +264,20 @@ of item.
          The branch or tag that Zuul checked out for this project.
          This may be influenced by the branch or tag associated with
          the item as well as the job configuration.
+
+      For example, to access the source directory of a single known
+      project, you might use::
+
+        {{ zuul.projects['git.example.com/org/project'].src_dir }}
+
+      To iterate over the project list, you might write a task
+      something like::
+
+        - name: Sample project iteration
+          debug:
+            msg: "Project {{ item.name }} is at {{ item.src_dir }}
+          with_items: {{ zuul.projects.values() | list }}
+
 
    .. var:: _projects
       :type: dict
