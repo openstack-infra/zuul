@@ -645,13 +645,11 @@ Here is an example of two job definitions:
         branch specifier is used.  If no branch specifier appears, the
         job applies to all branches.
 
-      * In the case of an :term:`untrusted-project`, no implied branch
-        specifier is applied to the reference definition of a job.
-        That is to say, that if the first appearance of the job
-        definition appears without a branch specifier, then it will
-        apply to all branches.  Note that when collecting its
-        configuration, Zuul reads the ``master`` branch of a given
-        project first, then other branches in alphabetical order.
+      * In the case of an :term:`untrusted-project`, if the project
+        has only one branch, no implied branch specifier is applied to
+        :ref:`job` definitions.  If the project has more than one
+        branch, the branch containing the job definition is used as an
+        implied branch specifier.
 
       * In the case of a job variant defined within a :ref:`project`,
         if the project definition is in a :term:`config-project`, no
@@ -665,16 +663,12 @@ Here is an example of two job definitions:
         implied branch specifier for the :ref:`project` definition which
         uses the project-template will be used.
 
-      * Any further job variants other than the reference definition
-        in an untrusted-project will, if they do not have a branch
-        specifier, have an implied branch specifier for the current
-        branch applied.
-
       This allows for the very simple and expected workflow where if a
       project defines a job on the ``master`` branch with no branch
       specifier, and then creates a new branch based on ``master``,
       any changes to that job definition within the new branch only
-      affect that branch.
+      affect that branch, and likewise, changes to the master branch
+      only affect it.
 
    .. attr:: files
 
