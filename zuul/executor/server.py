@@ -353,6 +353,13 @@ class JobDir(object):
         self.pre_playbooks = []
         self.post_playbooks = []
         self.job_output_file = os.path.join(self.log_root, 'job-output.txt')
+        # We need to create the job-output.txt upfront in order to close the
+        # gap between url reporting and ansible creating the file. Otherwise
+        # there is a period of time where the user can click on the live log
+        # link on the status page but the log streaming fails because the file
+        # is not there yet.
+        with open(self.job_output_file, 'w'):
+            pass
         self.trusted_projects = []
         self.trusted_project_index = {}
 
