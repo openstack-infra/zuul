@@ -178,6 +178,36 @@ class TestBranchVariants(ZuulTestCase):
         self.executor_server.release()
         self.waitUntilSettled()
 
+    def test_branch_variants_reconfigure(self):
+        # Test branch variants of jobs with inheritance
+        self.executor_server.hold_jobs_in_build = True
+        # This creates a new branch with a copy of the config in master
+        self.create_branch('puppet-integration', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'puppet-integration', 'stable'))
+        self.waitUntilSettled()
+
+        with open(os.path.join(FIXTURE_DIR,
+                               'config/branch-variants/git/',
+                               'puppet-integration/.zuul.yaml')) as f:
+            config = f.read()
+
+        # Push a change that triggers a dynamic reconfiguration
+        file_dict = {'.zuul.yaml': config}
+        A = self.fake_gerrit.addFakeChange('puppet-integration', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        ipath = self.builds[0].parameters['zuul']['_inheritance_path']
+        for i in ipath:
+            self.log.debug("inheritance path %s", i)
+        self.assertEqual(len(ipath), 5)
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
 
 class TestInRepoConfig(ZuulTestCase):
     # A temporary class to hold new tests while others are disabled

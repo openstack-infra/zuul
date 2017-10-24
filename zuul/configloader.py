@@ -1635,7 +1635,10 @@ class ConfigLoader(object):
         else:
             # Use the cached branch list; since this is a dynamic
             # reconfiguration there should not be any branch changes.
-            branches = project.unparsed_branch_config.keys()
+            branches = sorted(project.unparsed_branch_config.keys())
+            if 'master' in branches:
+                branches.remove('master')
+                branches = ['master'] + branches
 
         for branch in branches:
             fns1 = []
