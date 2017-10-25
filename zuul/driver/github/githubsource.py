@@ -144,6 +144,9 @@ class GithubSource(BaseSource):
         )
         return [f]
 
+    def getRefForChange(self, change):
+        return "refs/pull/%s/head" % change
+
 
 review = v.Schema({'username': str,
                    'email': str,

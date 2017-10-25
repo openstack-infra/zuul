@@ -51,6 +51,11 @@ class Client(zuul.cmd.ZuulApp):
                                   required=True)
         cmd_autohold.add_argument('--job', help='job name',
                                   required=True)
+        cmd_autohold.add_argument('--change',
+                                  help='specific change to hold nodes for',
+                                  required=False, default='')
+        cmd_autohold.add_argument('--ref', help='git ref to hold nodes for',
+                                  required=False, default='')
         cmd_autohold.add_argument('--reason', help='reason for the hold',
                                   required=True)
         cmd_autohold.add_argument('--count',
@@ -173,9 +178,15 @@ class Client(zuul.cmd.ZuulApp):
     def autohold(self):
         client = zuul.rpcclient.RPCClient(
             self.server, self.port, self.ssl_key, self.ssl_cert, self.ssl_ca)
+        if self.args.change and self.args.ref:
+            print("Change and ref can't be both used for the same request")
+            return False
+
         r = client.autohold(tenant=self.args.tenant,
                             project=self.args.project,
                             job=self.args.job,
+                            change=self.args.change,
+                            ref=self.args.ref,
                             reason=self.args.reason,
                             count=self.args.count)
         return r
@@ -190,14 +201,19 @@ class Client(zuul.cmd.ZuulApp):
             return True
 
         table = prettytable.PrettyTable(
-            field_names=['Tenant', 'Project', 'Job', 'Count', 'Reason'])
+            field_names=[
+                'Tenant', 'Project', 'Job', 'Ref Filter', 'Count', 'Reason'
+            ])
 
         for key, value in autohold_requests.items():
             # The key comes to us as a CSV string because json doesn't like
             # non-str keys.
-            tenant_name, project_name, job_name = key.split(',')
+            tenant_name, project_name, job_name, ref_filter = key.split(',')
             count, reason = value
-            table.add_row([tenant_name, project_name, job_name, count, reason])
+
+            table.add_row([
+                tenant_name, project_name, job_name, ref_filter, count, reason
+            ])
         print(table)
         return True
 

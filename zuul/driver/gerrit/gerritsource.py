@@ -138,6 +138,10 @@ class GerritSource(BaseSource):
         )
         return [f]
 
+    def getRefForChange(self, change):
+        partial = change[-2:]
+        return "refs/changes/%s/%s/.*" % (partial, change)
+
 
 approval = vs.Schema({'username': str,
                       'email': str,

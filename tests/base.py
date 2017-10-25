@@ -1629,6 +1629,10 @@ class FakeNodepool(object):
         nodeid = path.split("/")[-1]
         return nodeid
 
+    def removeNode(self, node):
+        path = self.NODE_ROOT + '/' + node["_oid"]
+        self.client.delete(path, recursive=True)
+
     def addFailRequest(self, request):
         self.fail_requests.add(request['_oid'])
 
