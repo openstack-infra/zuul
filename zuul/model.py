@@ -352,6 +352,9 @@ class Project(object):
     def __repr__(self):
         return '<Project %s>' % (self.name)
 
+    def getSafeAttributes(self):
+        return Attributes(name=self.name)
+
 
 class Node(object):
     """A single node for use by a job.
