@@ -49,6 +49,11 @@ class RequestHandler(socketserver.BaseRequestHandler):
     MAX_REQUEST_LEN = 1024
     REQUEST_TIMEOUT = 10
 
+    # NOTE(Shrews): We only use this to log exceptions since a new process
+    # is used per-request (and having multiple processes write to the same
+    # log file constantly is bad).
+    log = logging.getLogger("zuul.log_streamer.RequestHandler")
+
     def get_command(self):
         poll = select.poll()
         bitmask = (select.POLLIN | select.POLLERR |
@@ -78,7 +83,14 @@ class RequestHandler(socketserver.BaseRequestHandler):
                 pass
 
     def handle(self):
-        build_uuid = self.get_command()
+        try:
+            build_uuid = self.get_command()
+        except Exception:
+            self.log.exception("Failure during get_command:")
+            msg = 'Internal streaming error'
+            self.request.sendall(msg.encode("utf-8"))
+            return
+
         build_uuid = build_uuid.rstrip()
 
         # validate build ID
@@ -100,7 +112,13 @@ class RequestHandler(socketserver.BaseRequestHandler):
             self.request.sendall(msg.encode("utf-8"))
             return
 
-        self.stream_log(log_file)
+        try:
+            self.stream_log(log_file)
+        except Exception:
+            self.log.exception("Streaming failure for build UUID %s:",
+                               build_uuid)
+            msg = 'Internal streaming error'
+            self.request.sendall(msg.encode("utf-8"))
 
     def stream_log(self, log_file):
         log = None
@@ -224,12 +242,20 @@ class LogStreamer(object):
 
         # We start the actual serving within a thread so we can return to
         # the owner.
-        self.thd = threading.Thread(target=self.server.serve_forever)
+        self.thd = threading.Thread(target=self._run)
         self.thd.daemon = True
         self.thd.start()
+
+    def _run(self):
+        try:
+            self.server.serve_forever()
+        except Exception:
+            self.log.exception("Abnormal termination:")
+            raise
 
     def stop(self):
         if self.thd.isAlive():
             self.server.shutdown()
             self.server.server_close()
+            self.thd.join()
             self.log.debug("LogStreamer stopped")
