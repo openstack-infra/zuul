@@ -214,7 +214,7 @@ class Scheduler(threading.Thread):
     """
 
     log = logging.getLogger("zuul.Scheduler")
-    _stats_interval = 10
+    _stats_interval = 30
 
     def __init__(self, config, testonly=False):
         threading.Thread.__init__(self)
