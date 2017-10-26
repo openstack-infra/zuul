@@ -238,7 +238,7 @@ class ZuulMark(object):
 class ZuulSafeLoader(yaml.SafeLoader):
     zuul_node_types = frozenset(('job', 'nodeset', 'secret', 'pipeline',
                                  'project', 'project-template',
-                                 'semaphore'))
+                                 'semaphore', 'pragma'))
 
     def __init__(self, stream, context):
         wrapped_stream = io.StringIO(stream)
@@ -311,6 +311,30 @@ class EncryptedPKCS1_OAEP(yaml.YAMLObject):
         else:
             return encryption.decrypt_pkcs1_oaep(self.ciphertext,
                                                  private_key).decode('utf8')
+
+
+class PragmaParser(object):
+    pragma = {
+        'implied-branch-matchers': bool,
+        '_source_context': model.SourceContext,
+        '_start_mark': ZuulMark,
+    }
+
+    schema = vs.Schema(pragma)
+
+    def __init__(self):
+        self.log = logging.getLogger("zuul.PragmaParser")
+
+    def fromYaml(self, conf):
+        with configuration_exceptions('project-template', conf):
+            self.schema(conf)
+
+        bm = conf.get('implied-branch-matchers')
+        if bm is None:
+            return
+
+        source_context = conf['_source_context']
+        source_context.implied_branch_matchers = bm
 
 
 class NodeSetParser(object):
@@ -457,6 +481,13 @@ class JobParser(object):
         # If this is a project pipeline, don't create implied branch
         # matchers -- that's handled in ProjectParser.
         if project_pipeline:
+            return None
+
+        # If the user has set a pragma directive for this, use the
+        # value (if unset, the value is None).
+        if job.source_context.implied_branch_matchers is True:
+            return [job.source_context.branch]
+        elif job.source_context.implied_branch_matchers is False:
             return None
 
         # If this is a trusted project, don't create implied branch
@@ -1462,6 +1493,12 @@ class TenantParser(object):
     @staticmethod
     def _parseLayoutItems(layout, tenant, data, scheduler, connections,
                           skip_pipelines=False, skip_semaphores=False):
+        # Handle pragma items first since they modify the source context
+        # used by other classes.
+        pragma_parser = PragmaParser()
+        for config_pragma in data.pragmas:
+            pragma_parser.fromYaml(config_pragma)
+
         if not skip_pipelines:
             for config_pipeline in data.pipelines:
                 classes = TenantParser._getLoadClasses(
