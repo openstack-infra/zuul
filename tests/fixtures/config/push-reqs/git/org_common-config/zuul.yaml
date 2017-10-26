@@ -47,7 +47,7 @@
     manager: independent
     require:
       github:
-        status: 'zuul:check:success'
+        status: zuul:check:success
     trigger:
       github:
         - event: push
@@ -82,6 +82,7 @@
 
 - job:
     name: job1
+    run: playbooks/job1.yaml
 
 - project:
     name: org/project1

@@ -12,12 +12,12 @@
         - event: patchset-created
     success:
       github:
-        status: 'success'
+        status: success
       gerrit:
         Verified: 1
     failure:
       github:
-        status: 'failure'
+        status: failure
       gerrit:
         Verified: 1
     start:
@@ -32,9 +32,11 @@
 
 - job:
     name: project-gerrit
+    run: playbooks/project-gerrit.yaml
 
 - job:
     name: project1-github
+    run: playbooks/project1-github.yaml
 
 - project:
     name: org/project

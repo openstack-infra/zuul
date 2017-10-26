@@ -14,6 +14,7 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: project-test2
@@ -21,6 +22,7 @@
       nodes:
         - name: controller
           label: label1
+    run: playbooks/project-test2.yaml
 
 - project:
     name: org/project

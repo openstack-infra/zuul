@@ -14,9 +14,11 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: test2
+    run: playbooks/test2.yaml
 
 - project:
     name: org/project

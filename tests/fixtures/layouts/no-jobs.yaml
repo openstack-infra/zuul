@@ -35,9 +35,11 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: gate-noop
+    run: playbooks/gate-noop.yaml
 
 - project:
     name: org/project

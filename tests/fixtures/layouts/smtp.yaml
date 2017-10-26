@@ -41,10 +41,12 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: project-merge
     hold-following-changes: true
+    run: playbooks/project-merge.yaml
 
 - job:
     name: project-test1
@@ -52,6 +54,7 @@
       nodes:
         - name: controller
           label: label1
+    run: playbooks/project-test1.yaml
 
 - job:
     name: project-test1
@@ -60,9 +63,11 @@
       nodes:
         - name: controller
           label: label2
+    run: playbooks/project-test1.yaml
 
 - job:
     name: project-test2
+    run: playbooks/project-test2.yaml
 
 - project:
     name: org/project

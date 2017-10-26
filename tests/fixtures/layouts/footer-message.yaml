@@ -28,10 +28,11 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: project-test1
-#    success-url: http://logs.exxxample.com/{change.number}/{change.patchset}/{pipeline.name}/{job.name}
+    run: playbooks/project-test1.yaml
 
 - project:
     name: org/project

@@ -35,6 +35,7 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: project-test1
@@ -42,6 +43,7 @@
       nodes:
         - name: controller
           label: label1
+    run: playbooks/project-test1.yaml
 
 - job:
     name: ignore-branch
@@ -50,6 +52,7 @@
       nodes:
         - name: controller
           label: label2
+    run: playbooks/ignore-branch.yaml
 
 - project:
     name: org/project

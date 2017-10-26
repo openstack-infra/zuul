@@ -55,6 +55,7 @@
 
 - job:
     name: project-job
+    run: playbooks/project-job.yaml
 
 - project:
     name: current-project

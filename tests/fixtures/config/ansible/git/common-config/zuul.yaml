@@ -79,10 +79,11 @@
     failure-url: https://failure.example.com/zuul-logs/{build.uuid}/
 
 - job:
-    parent: base-urls
     name: python27
-    pre-run: playbooks/pre
-    post-run: playbooks/post
+    parent: base-urls
+    run: playbooks/python27.yaml
+    pre-run: playbooks/pre.yaml
+    post-run: playbooks/post.yaml
     vars:
       flagpath: '{{zuul._test.test_root}}/{{zuul.build}}.flag'
     roles:
@@ -93,11 +94,13 @@
 - job:
     parent: python27
     name: timeout
+    run: playbooks/timeout.yaml
     timeout: 1
 
 - job:
     parent: python27
     name: check-vars
+    run: playbooks/check-vars.yaml
     nodeset:
       nodes:
         - name: ubuntu-xenial
@@ -113,6 +116,7 @@
 - job:
     parent: python27
     name: check-secret-names
+    run: playbooks/check-secret-names.yaml
     nodeset:
       nodes:
         - name: ubuntu-xenial
@@ -124,9 +128,11 @@
 - job:
     parent: base-urls
     name: hello
+    run: playbooks/hello-post.yaml
     post-run: playbooks/hello-post
 
 - job:
     parent: python27
     name: failpost
+    run: playbooks/post-broken.yaml
     post-run: playbooks/post-broken

@@ -18,13 +18,16 @@
 
 - job:
     name: data-return
+    run: playbooks/data-return.yaml
 
 - job:
     name: data-return-relative
     success-url: docs/index.html
+    run: playbooks/data-return-relative.yaml
 
 - job:
     name: child
+    run: playbooks/child.yaml
 
 - project:
     name: org/project

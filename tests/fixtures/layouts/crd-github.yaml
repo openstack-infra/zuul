@@ -30,24 +30,31 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: project1-test
+    run: playbooks/project1-test.yaml
 
 - job:
     name: project2-test
+    run: playbooks/project2-test.yaml
 
 - job:
     name: project3-test
+    run: playbooks/project3-test.yaml
 
 - job:
     name: project4-test
+    run: playbooks/project4-test.yaml
 
 - job:
     name: project5-test
+    run: playbooks/project5-test.yaml
 
 - job:
     name: project6-test
+    run: playbooks/project6-test.yaml
 
 - project:
     name: org/project1

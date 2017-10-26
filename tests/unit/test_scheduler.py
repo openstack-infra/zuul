@@ -2460,7 +2460,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual([x['path'] for x in p['post_playbooks']],
                          ['py27-post-a', 'py27-post-b', 'base-post'])
         self.assertEqual([x['path'] for x in p['playbooks']],
-                         ['playbooks/python27', 'playbooks/base'])
+                         ['playbooks/python27.yaml'])
 
         p = self.history[1].parameters
         self.assertEqual(p['timeout'], 50)
@@ -2484,7 +2484,7 @@ class TestScheduler(ZuulTestCase):
                          ['py27-essex-post', 'py27-post-a', 'py27-post-b',
                           'base-post'])
         self.assertEqual([x['path'] for x in p['playbooks']],
-                         ['playbooks/python27', 'playbooks/base'])
+                         ['playbooks/python27.yaml'])
 
     def test_queue_names(self):
         "Test shared change queue names"
@@ -5879,6 +5879,7 @@ class TestSemaphoreInRepo(ZuulTestCase):
 
             - job:
                 name: project-test2
+                run: playbooks/project-test2.yaml
                 semaphore: test-semaphore
 
             - project:

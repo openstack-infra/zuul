@@ -14,23 +14,28 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: project-test-irrelevant-starts-empty
+    run: playbooks/project-test-irrelevant-starts-empty.yaml
 
 - job:
     name: project-test-irrelevant-starts-full
     irrelevant-files:
       - ^README$
       - ^ignoreme$
+    run: playbooks/project-test-irrelevant-starts-full.yaml
 
 - job:
     name: project-test-nomatch-starts-empty
+    run: playbooks/project-test-nomatch-starts-empty.yaml
 
 - job:
     name: project-test-nomatch-starts-full
     irrelevant-files:
       - ^README$
+    run: playbooks/project-test-nomatch-starts-full.yaml
 
 - project:
     name: org/project

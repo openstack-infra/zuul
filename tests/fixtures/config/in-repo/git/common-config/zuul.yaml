@@ -62,10 +62,9 @@
         approval:
           - Code-Review: 2
             username: maintainer
-    require:
       github:
         review:
-          - username: '^(herp|derp)$'
+          - username: ^(herp|derp)$
             type: approved
     trigger: {}
 
@@ -75,9 +74,11 @@
 
 - job:
     name: common-config-test
+    run: playbooks/common-config-test.yaml
 
 - job:
     name: template-job
+    run: playbooks/template-job.yaml
 
 - project-template:
     name: common-config-template

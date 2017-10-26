@@ -15,27 +15,35 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: project1-merge
+    run: playbooks/project1-merge.yaml
 
 - job:
     name: project1-test1
+    run: playbooks/project1-test1.yaml
 
 - job:
     name: project1-test2
+    run: playbooks/project1-test2.yaml
 
 - job:
     name: project2-merge
+    run: playbooks/project2-merge.yaml
 
 - job:
     name: project2-test1
+    run: playbooks/project2-test1.yaml
 
 - job:
     name: project2-test2
+    run: playbooks/project2-test2.yaml
 
 - job:
     name: project1-project2-integration
+    run: playbooks/project1-project2-integration.yaml
 
 - project:
     name: org/project1

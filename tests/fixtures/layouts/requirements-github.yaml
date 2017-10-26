@@ -3,12 +3,12 @@
     manager: independent
     require:
       github:
-        status: "zuul:check:success"
+        status: zuul:check:success
     trigger:
       github:
         - event: pull_request
           action: comment
-          comment: 'test me'
+          comment: test me
     success:
       github:
         comment: true
@@ -20,8 +20,8 @@
       github:
         - event: pull_request
           action: comment
-          comment: 'trigger me'
-          require-status: "zuul:check:success"
+          comment: trigger me
+          require-status: zuul:check:success
     success:
       github:
         comment: true
@@ -33,13 +33,13 @@
       github:
         - event: pull_request
           action: status
-          status: 'zuul:check:success'
+          status: zuul:check:success
     success:
       github:
-        status: 'success'
+        status: success
     failure:
       github:
-        status: 'failure'
+        status: failure
 
 - pipeline:
     name: reviewusername
@@ -47,13 +47,13 @@
     require:
       github:
         review:
-          - username: '^(herp|derp)$'
+          - username: ^(herp|derp)$
             type: approved
     trigger:
       github:
         - event: pull_request
           action: comment
-          comment: 'test me'
+          comment: test me
     success:
       github:
         comment: true
@@ -75,7 +75,7 @@
       github:
         - event: pull_request
           action: comment
-          comment: 'test me'
+          comment: test me
     success:
       github:
         comment: true
@@ -86,7 +86,7 @@
     require:
       github:
         review:
-          - username: 'derp'
+          - username: derp
             type: approved
             permission: write
     reject:
@@ -98,7 +98,7 @@
       github:
         - event: pull_request
           action: comment
-          comment: 'test me'
+          comment: test me
     success:
       github:
         comment: true
@@ -116,7 +116,7 @@
       github:
         - event: pull_request
           action: comment
-          comment: 'test me'
+          comment: test me
     success:
       github:
         comment: true
@@ -134,7 +134,7 @@
       github:
         - event: pull_request
           action: comment
-          comment: 'test me'
+          comment: test me
     success:
       github:
         comment: true
@@ -149,7 +149,7 @@
       github:
         - event: pull_request
           action: comment
-          comment: 'test me'
+          comment: test me
     success:
       github:
         comment: true
@@ -178,7 +178,7 @@
       github:
         - event: pull_request
           action: comment
-          comment: 'test me'
+          comment: test me
     success:
       github:
         comment: true
@@ -186,36 +186,47 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: project1-pipeline
+    run: playbooks/project1-pipeline.yaml
 
 - job:
     name: project2-trigger
+    run: playbooks/project2-trigger.yaml
 
 - job:
     name: project3-reviewusername
+    run: playbooks/project3-reviewusername.yaml
 
 - job:
     name: project4-reviewreq
+    run: playbooks/project4-reviewreq.yaml
 
 - job:
     name: project5-reviewuserstate
+    run: playbooks/project5-reviewuserstate.yaml
 
 - job:
     name: project6-newerthan
+    run: playbooks/project6-newerthan.yaml
 
 - job:
     name: project7-olderthan
+    run: playbooks/project7-olderthan.yaml
 
 - job:
     name: project8-requireopen
+    run: playbooks/project8-requireopen.yaml
 
 - job:
     name: project9-requirecurrent
+    run: playbooks/project9-requirecurrent.yaml
 
 - job:
     name: project10-label
+    run: playbooks/project10-label.yaml
 
 - project:
     name: org/project1

@@ -25,24 +25,31 @@
 
 - job:
     name: A
+    run: playbooks/A.yaml
 
 - job:
     name: B
+    run: playbooks/B.yaml
 
 - job:
     name: C
+    run: playbooks/C.yaml
 
 - job:
     name: D
+    run: playbooks/D.yaml
 
 - job:
     name: E
+    run: playbooks/E.yaml
 
 - job:
     name: F
+    run: playbooks/F.yaml
 
 - job:
     name: G
+    run: playbooks/G.yaml
 
 - project:
     name: org/project

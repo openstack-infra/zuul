@@ -22,17 +22,21 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: nonvoting-project-merge
     hold-following-changes: true
+    run: playbooks/nonvoting-project-merge.yaml
 
 - job:
     name: nonvoting-project-test1
+    run: playbooks/nonvoting-project-test1.yaml
 
 - job:
     name: nonvoting-project-test2
     voting: false
+    run: playbooks/nonvoting-project-test2.yaml
 
 - project:
     name: org/nonvoting-project

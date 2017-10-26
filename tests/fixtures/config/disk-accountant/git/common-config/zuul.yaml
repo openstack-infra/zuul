@@ -18,6 +18,7 @@
 
 - job:
     name: dd-big-empty-file
+    run: playbooks/dd-big-empty-file.yaml
 
 - project:
     name: org/project

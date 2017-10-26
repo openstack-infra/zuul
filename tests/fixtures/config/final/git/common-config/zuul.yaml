@@ -20,9 +20,9 @@
     final: true
     vars:
       dont_override_this: dummy
+    run: playbooks/job-final.yaml
 
 - project:
     name: org/project
     check:
       jobs: []
-

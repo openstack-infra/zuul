@@ -1,14 +1,17 @@
 - job:
     name: untrusted-secrets
+    run: playbooks/untrusted-secrets.yaml
     secrets:
       - untrusted-secret
 
 - job:
     name: trusted-secrets-untrusted-child
+    run: playbooks/trusted-secrets-untrusted-child.yaml
     parent: trusted-secrets
 
 - job:
     name: untrusted-secrets-untrusted-child
+    run: playbooks/untrusted-secrets-untrusted-child.yaml
     parent: untrusted-secrets
 
 - project:

@@ -2,12 +2,12 @@
     name: merge
     description: Pipeline for merging the pull request
     manager: independent
-    merge-failure-message: 'Merge failed'
+    merge-failure-message: Merge failed
     trigger:
       github:
         - event: pull_request
           action: comment
-          comment: 'merge me'
+          comment: merge me
     success:
       github:
         merge: true
@@ -16,6 +16,7 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - project:
     name: org/project

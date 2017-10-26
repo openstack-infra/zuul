@@ -1,5 +1,6 @@
 - job:
     name: project-test1
+    run: playbooks/project-test1.yaml
 
 - project:
     name: org/project

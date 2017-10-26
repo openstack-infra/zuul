@@ -14,6 +14,7 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: parentjob
@@ -24,6 +25,7 @@
       override: 0
       child1override: 0
       parent: 0
+    run: playbooks/parentjob.yaml
 
 - job:
     name: child1
@@ -34,6 +36,7 @@
       override: 1
       child1override: 1
       child1: 1
+    run: playbooks/child1.yaml
 
 - job:
     name: child2
@@ -43,10 +46,12 @@
     vars:
       override: 2
       child2: 2
+    run: playbooks/child2.yaml
 
 - job:
     name: child3
     parent: parentjob
+    run: playbooks/child3.yaml
 
 - project:
     name: org/project

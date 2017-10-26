@@ -13,14 +13,17 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: project-bitrot-stable-old
     success-url: http://logs.example.com/{job.name}/{build.number}
+    run: playbooks/project-bitrot-stable-old.yaml
 
 - job:
     name: project-bitrot-stable-older
     success-url: http://logs.example.com/{job.name}/{build.number}
+    run: playbooks/project-bitrot-stable-older.yaml
 
 - project:
     name: org/project

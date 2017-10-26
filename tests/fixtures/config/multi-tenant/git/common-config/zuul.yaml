@@ -21,3 +21,4 @@
       nodes:
         - name: controller
           label: ubuntu-trusty
+    run: playbooks/python27.yaml
