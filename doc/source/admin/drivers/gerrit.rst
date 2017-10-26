@@ -61,6 +61,17 @@ The supported options in ``zuul.conf`` connections are:
 
       Path to Gerrit web interface.
 
+   .. attr:: gitweb_url_template
+      :default: {baseurl}/gitweb?p={project.name}.git;a=commitdiff;h={sha}
+
+      Url template for links to specific git shas. By default this will
+      point at Gerrit's built in gitweb but you can customize this value
+      to point elsewhere (like cgit or github).
+
+      The three values available for string interpolation are baseurl
+      which points back to Gerrit, project and all of its safe attributes,
+      and sha which is the git sha1.
+
    .. attr:: user
       :default: zuul
 

@@ -299,6 +299,12 @@ class GerritConnection(BaseConnection):
 
         self.baseurl = self.connection_config.get('baseurl',
                                                   'https://%s' % self.server)
+        default_gitweb_url_template = '{baseurl}/gitweb?' \
+                                      'p={project.name}.git;' \
+                                      'a=commitdiff;h={sha}'
+        url_template = self.connection_config.get('gitweb_url_template',
+                                                  default_gitweb_url_template)
+        self.gitweb_url_template = url_template
 
         self._change_cache = {}
         self.projects = {}
@@ -338,7 +344,7 @@ class GerritConnection(BaseConnection):
             change.ref = event.ref
             change.oldrev = event.oldrev
             change.newrev = event.newrev
-            change.url = self._getGitwebUrl(project, sha=event.newrev)
+            change.url = self._getWebUrl(project, sha=event.newrev)
         elif event.ref and not event.ref.startswith('refs/'):
             # Pre 2.13 Gerrit ref-updated events don't have branch prefixes.
             project = self.source.getProject(event.project_name)
@@ -347,7 +353,7 @@ class GerritConnection(BaseConnection):
             change.ref = 'refs/heads/' + event.ref
             change.oldrev = event.oldrev
             change.newrev = event.newrev
-            change.url = self._getGitwebUrl(project, sha=event.newrev)
+            change.url = self._getWebUrl(project, sha=event.newrev)
         elif event.ref and event.ref.startswith('refs/heads/'):
             # From the timer trigger or Post 2.13 Gerrit
             project = self.source.getProject(event.project_name)
@@ -356,7 +362,7 @@ class GerritConnection(BaseConnection):
             change.branch = event.ref[len('refs/heads/'):]
             change.oldrev = event.oldrev
             change.newrev = event.newrev
-            change.url = self._getGitwebUrl(project, sha=event.newrev)
+            change.url = self._getWebUrl(project, sha=event.newrev)
         elif event.ref:
             # catch-all ref (ie, not a branch or head)
             project = self.source.getProject(event.project_name)
@@ -364,7 +370,7 @@ class GerritConnection(BaseConnection):
             change.ref = event.ref
             change.oldrev = event.oldrev
             change.newrev = event.newrev
-            change.url = self._getGitwebUrl(project, sha=event.newrev)
+            change.url = self._getWebUrl(project, sha=event.newrev)
         else:
             self.log.warning("Unable to get change for %s" % (event,))
             change = None
@@ -848,11 +854,11 @@ class GerritConnection(BaseConnection):
                                      project.name)
         return url
 
-    def _getGitwebUrl(self, project: Project, sha: str=None) -> str:
-        url = '%s/gitweb?p=%s.git' % (self.baseurl, project.name)
-        if sha:
-            url += ';a=commitdiff;h=' + sha
-        return url
+    def _getWebUrl(self, project: Project, sha: str=None) -> str:
+        return self.gitweb_url_template.format(
+            baseurl=self.baseurl,
+            project=project.getSafeAttributes(),
+            sha=sha)
 
     def onLoad(self):
         self.log.debug("Starting Gerrit Connection/Watchers")
