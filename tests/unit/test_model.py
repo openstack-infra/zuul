@@ -194,7 +194,8 @@ class TestJob(BaseTestCase):
             'name': 'project',
             'gate': {
                 'jobs': [
-                    {'python27': {'timeout': 70}}
+                    {'python27': {'timeout': 70,
+                                  'run': 'playbooks/python27.yaml'}}
                 ]
             }
         }])

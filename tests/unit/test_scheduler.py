@@ -2486,6 +2486,15 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual([x['path'] for x in p['playbooks']],
                          ['playbooks/python27.yaml'])
 
+    @simple_layout("layouts/no-run.yaml")
+    def test_job_without_run(self):
+        "Test that a job without a run playbook errors"
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertIn('Job base does not specify a run playbook',
+                      A.messages[-1])
+
     def test_queue_names(self):
         "Test shared change queue names"
         tenant = self.sched.abide.tenants.get('tenant-one')
