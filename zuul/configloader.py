@@ -612,12 +612,6 @@ class JobParser(object):
             run = model.PlaybookContext(job.source_context, conf['run'],
                                         job.roles, secrets)
             job.run = (run,)
-        else:
-            if not project_pipeline:
-                run_name = os.path.join('playbooks', job.name)
-                run = model.PlaybookContext(job.source_context, run_name,
-                                            job.roles, secrets)
-                job.implied_run = (run,)
 
         for k in JobParser.simple_attributes:
             a = k.replace('-', '_')

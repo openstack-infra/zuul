@@ -781,42 +781,55 @@ Here is an example of two job definitions:
 
    .. attr:: pre-run
 
-      The name of a playbook or list of playbooks without file
-      extension to run before the main body of a job.  The full path
-      to the playbook in the repo where the job is defined is
-      expected.
+      The name of a playbook or list of playbooks to run before the
+      main body of a job.  The full path to the playbook in the repo
+      where the job is defined is expected.
 
       When a job inherits from a parent, the child's pre-run playbooks
       are run after the parent's.  See :ref:`job` for more
       information.
 
+      .. warning::
+
+         If the path as specified does not exist, Zuul will try
+         appending the extensions ``.yaml`` and ``.yml``.  This
+         behavior is deprecated and will be removed in the future all
+         playbook paths should include the file extension.
+
    .. attr:: post-run
 
-      The name of a playbook or list of playbooks without file
-      extension to run after the main body of a job.  The full path to
-      the playbook in the repo where the job is defined is expected.
+      The name of a playbook or list of playbooks to run after the
+      main body of a job.  The full path to the playbook in the repo
+      where the job is defined is expected.
 
       When a job inherits from a parent, the child's post-run
       playbooks are run before the parent's.  See :ref:`job` for more
       information.
 
+      .. warning::
+
+         If the path as specified does not exist, Zuul will try
+         appending the extensions ``.yaml`` and ``.yml``.  This
+         behavior is deprecated and will be removed in the future all
+         playbook paths should include the file extension.
+
    .. attr:: run
 
-      The name of the main playbook for this job.  This parameter is
-      not normally necessary, as it defaults to a playbook with the
-      same name as the job inside of the ``playbooks/`` directory
-      (e.g., the ``foo`` job would default to ``playbooks/foo``.
-      However, if a playbook with a different name is needed, it can
-      be specified here.  The file extension is not required, but the
-      full path within the repo is.  When a child inherits from a
-      parent, a playbook with the name of the child job is implicitly
-      searched first, before falling back on the playbook used by the
-      parent job (unless the child job specifies a ``run`` attribute,
-      in which case that value is used).  Example:
+      The name of the main playbook for this job.  If it is not
+      supplied, the parent's playbook will be used (and likewise up
+      the inheritance chain).  The full path within the repo is
+      required.  Example:
 
       .. code-block:: yaml
 
-         run: playbooks/<name of the job>
+         run: playbooks/job-playbook.yaml
+
+      .. warning::
+
+         If the path as specified does not exist, Zuul will try
+         appending the extensions ``.yaml`` and ``.yml``.  This
+         behavior is deprecated and will be removed in the future all
+         playbook paths should include the file extension.
 
    .. attr:: roles
 
