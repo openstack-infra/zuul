@@ -1947,6 +1947,122 @@ class TestBaseJobs(ZuulTestCase):
         self.assertHistory([])
 
 
+class TestSecretInheritance(ZuulTestCase):
+    tenant_config_file = 'config/secret-inheritance/main.yaml'
+
+    def _getSecrets(self, job, pbtype):
+        secrets = []
+        build = self.getJobFromHistory(job)
+        for pb in build.parameters[pbtype]:
+            secrets.append(pb['secrets'])
+        return secrets
+
+    def _checkTrustedSecrets(self):
+        secret = {'longpassword': 'test-passwordtest-password',
+                  'password': 'test-password',
+                  'username': 'test-username'}
+        self.assertEqual(
+            self._getSecrets('trusted-secrets', 'playbooks'),
+            [{'trusted-secret': secret}, {}])
+        self.assertEqual(
+            self._getSecrets('trusted-secrets', 'pre_playbooks'), [])
+        self.assertEqual(
+            self._getSecrets('trusted-secrets', 'post_playbooks'), [])
+
+        self.assertEqual(
+            self._getSecrets('trusted-secrets-trusted-child',
+                             'playbooks'),
+            [{}, {'trusted-secret': secret}, {}])
+        self.assertEqual(
+            self._getSecrets('trusted-secrets-trusted-child',
+                             'pre_playbooks'), [])
+        self.assertEqual(
+            self._getSecrets('trusted-secrets-trusted-child',
+                             'post_playbooks'), [])
+
+        self.assertEqual(
+            self._getSecrets('trusted-secrets-untrusted-child',
+                             'playbooks'),
+            [{}, {'trusted-secret': secret}, {}])
+        self.assertEqual(
+            self._getSecrets('trusted-secrets-untrusted-child',
+                             'pre_playbooks'), [])
+        self.assertEqual(
+            self._getSecrets('trusted-secrets-untrusted-child',
+                             'post_playbooks'), [])
+
+    def _checkUntrustedSecrets(self):
+        secret = {'longpassword': 'test-passwordtest-password',
+                  'password': 'test-password',
+                  'username': 'test-username'}
+        self.assertEqual(
+            self._getSecrets('untrusted-secrets', 'playbooks'),
+            [{'untrusted-secret': secret}, {}])
+        self.assertEqual(
+            self._getSecrets('untrusted-secrets', 'pre_playbooks'), [])
+        self.assertEqual(
+            self._getSecrets('untrusted-secrets', 'post_playbooks'), [])
+
+        self.assertEqual(
+            self._getSecrets('untrusted-secrets-trusted-child',
+                             'playbooks'),
+            [{}, {'untrusted-secret': secret}, {}])
+        self.assertEqual(
+            self._getSecrets('untrusted-secrets-trusted-child',
+                             'pre_playbooks'), [])
+        self.assertEqual(
+            self._getSecrets('untrusted-secrets-trusted-child',
+                             'post_playbooks'), [])
+
+        self.assertEqual(
+            self._getSecrets('untrusted-secrets-untrusted-child',
+                             'playbooks'),
+            [{}, {'untrusted-secret': secret}, {}])
+        self.assertEqual(
+            self._getSecrets('untrusted-secrets-untrusted-child',
+                             'pre_playbooks'), [])
+        self.assertEqual(
+            self._getSecrets('untrusted-secrets-untrusted-child',
+                             'post_playbooks'), [])
+
+    def test_trusted_secret_inheritance_check(self):
+        A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='trusted-secrets', result='SUCCESS', changes='1,1'),
+            dict(name='trusted-secrets-trusted-child',
+                 result='SUCCESS', changes='1,1'),
+            dict(name='trusted-secrets-untrusted-child',
+                 result='SUCCESS', changes='1,1'),
+        ], ordered=False)
+
+        self._checkTrustedSecrets()
+
+    def test_untrusted_secret_inheritance_gate(self):
+        A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A')
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='untrusted-secrets', result='SUCCESS', changes='1,1'),
+            dict(name='untrusted-secrets-trusted-child',
+                 result='SUCCESS', changes='1,1'),
+            dict(name='untrusted-secrets-untrusted-child',
+                 result='SUCCESS', changes='1,1'),
+        ], ordered=False)
+
+        self._checkUntrustedSecrets()
+
+    def test_untrusted_secret_inheritance_check(self):
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        # This configuration tries to run untrusted secrets in an
+        # non-post-review pipeline and should therefore run no jobs.
+        self.assertHistory([])
+
+
 class TestSecretLeaks(AnsibleZuulTestCase):
     tenant_config_file = 'config/secret-leaks/main.yaml'
 
