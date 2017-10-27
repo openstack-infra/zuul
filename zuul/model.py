@@ -1097,7 +1097,8 @@ class JobList(object):
                 if not job.branch_matcher and implied_branch:
                     job = job.copy()
                     job.setBranchMatcher([implied_branch])
-                joblist.append(job)
+                if job not in joblist:
+                    joblist.append(job)
 
 
 class JobGraph(object):
@@ -2212,8 +2213,11 @@ class TenantProjectConfig(object):
 
 class ProjectConfig(object):
     # Represents a project cofiguration
-    def __init__(self, name):
+    def __init__(self, name, source_context=None):
         self.name = name
+        # If this is a template, it will have a source_context, but
+        # not if it is a project definition.
+        self.source_context = source_context
         self.merge_mode = None
         # The default branch for the project (usually master).
         self.default_branch = None
@@ -2482,12 +2486,18 @@ class Layout(object):
         self.pipelines[pipeline.name] = pipeline
 
     def addProjectTemplate(self, project_template):
-        if project_template.name in self.project_templates:
-            # TODO(jeblair): issue a warning to the logs on loading
-            # the config, and an error when this hits in a proposed
-            # change.
-            return
-        self.project_templates[project_template.name] = project_template
+        template = self.project_templates.get(project_template.name)
+        if template:
+            if (project_template.source_context.project !=
+                template.source_context.project):
+                raise Exception("Project template %s is already defined" %
+                                (project_template.name,))
+            for pipeline in project_template.pipelines:
+                template.pipelines[pipeline].job_list.\
+                    inheritFrom(project_template.pipelines[pipeline].job_list,
+                                None)
+        else:
+            self.project_templates[project_template.name] = project_template
 
     def addProjectConfig(self, project_config):
         self.project_configs[project_config.name] = project_config
