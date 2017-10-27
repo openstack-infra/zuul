@@ -67,6 +67,7 @@ import zuul.merger.server
 import zuul.model
 import zuul.nodepool
 import zuul.zk
+import zuul.configloader
 from zuul.exceptions import MergeFailure
 
 FIXTURE_DIR = os.path.join(os.path.dirname(__file__),
@@ -2231,6 +2232,14 @@ class ZuulTestCase(BaseTestCase):
             if 'job' in item:
                 jobname = item['job']['name']
                 files['playbooks/%s.yaml' % jobname] = ''
+                if 'run' in item['job']:
+                    files['%s.yaml' % item['job']['run']] = ''
+                for fn in zuul.configloader.as_list(
+                        item['job'].get('pre-run', [])):
+                    files['%s.yaml' % fn] = ''
+                for fn in zuul.configloader.as_list(
+                        item['job'].get('post-run', [])):
+                    files['%s.yaml' % fn] = ''
 
         root = os.path.join(self.test_root, "config")
         if not os.path.exists(root):
