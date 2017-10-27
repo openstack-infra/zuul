@@ -2187,7 +2187,7 @@ class TenantProjectConfig(object):
         self.project = project
         self.load_classes = set()
         self.shadow_projects = set()
-
+        self.branches = []
         # The tenant's default setting of exclude_unprotected_branches will
         # be overridden by this one if not None.
         self.exclude_unprotected_branches = None
@@ -2708,6 +2708,18 @@ class Tenant(object):
         # This should never happen:
         raise Exception("Project %s is neither trusted nor untrusted" %
                         (project,))
+
+    def getProjectBranches(self, project):
+        """Return a project's branches (filtered by this tenant config)
+
+        :arg Project project: The project object.
+
+        :returns: A list of branch names.
+        :rtype: [str]
+
+        """
+        tpc = self.project_configs[project.canonical_name]
+        return tpc.branches
 
     def addConfigProject(self, tpc):
         self.config_projects.append(tpc.project)

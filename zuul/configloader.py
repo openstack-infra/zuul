@@ -453,29 +453,24 @@ class JobParser(object):
     ]
 
     @staticmethod
-    def _getImpliedBranches(reference, job, project_pipeline):
-        # If the current job definition is not in the same branch as
-        # the reference definition of this job, and this is a project
-        # repo, add an implicit branch matcher for this branch
-        # (assuming there are no explicit branch matchers).  But only
-        # for top-level job definitions and variants.  Never for
-        # project-templates.  They, and in-project project-pipeline
-        # job variants, should more closely attach to their branch if
-        # they appear in a project-repo.  That's handled in the
-        # ProjectParser.
-        if (reference and
-            reference.source_context and
-            reference.source_context.branch != job.source_context.branch):
-            same_branch = False
-        else:
-            same_branch = True
+    def _getImpliedBranches(tenant, job, project_pipeline):
+        # If this is a project pipeline, don't create implied branch
+        # matchers -- that's handled in ProjectParser.
+        if project_pipeline:
+            return None
 
-        if (job.source_context and
-            (not job.source_context.trusted) and
-            (not project_pipeline) and
-            (not same_branch)):
-            return [job.source_context.branch]
-        return None
+        # If this is a trusted project, don't create implied branch
+        # matchers.
+        if job.source_context.trusted:
+            return None
+
+        # If this project only has one branch, don't create implied
+        # branch matchers.  This way central job repos can work.
+        branches = tenant.getProjectBranches(job.source_context.project)
+        if len(branches) == 1:
+            return None
+
+        return [job.source_context.branch]
 
     @staticmethod
     def fromYaml(tenant, layout, conf, project_pipeline=False,
@@ -491,8 +486,6 @@ class JobParser(object):
         # that we always assign values directly rather than modifying
         # them (e.g., "job.run = ..." rather than
         # "job.run.append(...)").
-
-        reference = layout.jobs.get(name, [None])[0]
 
         job = model.Job(name)
         job.source_context = conf.get('_source_context')
@@ -666,18 +659,10 @@ class JobParser(object):
                 allowed.append(project.name)
             job.allowed_projects = frozenset(allowed)
 
-        # If the current job definition is not in the same branch as
-        # the reference definition of this job, and this is a project
-        # repo, add an implicit branch matcher for this branch
-        # (assuming there are no explicit branch matchers).  But only
-        # for top-level job definitions and variants.
-        # Project-pipeline job variants should more closely attach to
-        # their branch if they appear in a project-repo.
-
         branches = None
-        if (project_pipeline or 'branches' not in conf):
+        if ('branches' not in conf):
             branches = JobParser._getImpliedBranches(
-                reference, job, project_pipeline)
+                tenant, job, project_pipeline)
         if (not branches) and ('branches' in conf):
             branches = as_list(conf['branches'])
         if branches:
@@ -1144,13 +1129,14 @@ class TenantParser(object):
         # tpcs is TenantProjectConfigs
         config_tpcs, untrusted_tpcs = \
             TenantParser._loadTenantProjects(
-                project_key_dir, connections, conf)
+                tenant, project_key_dir, connections, conf)
         for tpc in config_tpcs:
             tenant.addConfigProject(tpc)
         for tpc in untrusted_tpcs:
             tenant.addUntrustedProject(tpc)
 
         for tpc in config_tpcs + untrusted_tpcs:
+            TenantParser._getProjectBranches(tenant, tpc)
             TenantParser._resolveShadowProjects(tenant, tpc)
 
         tenant.config_projects_config, tenant.untrusted_projects_config = \
@@ -1172,6 +1158,15 @@ class TenantParser(object):
         for sp in tpc.shadow_projects:
             shadow_projects.append(tenant.getProject(sp)[1])
         tpc.shadow_projects = frozenset(shadow_projects)
+
+    @staticmethod
+    def _getProjectBranches(tenant, tpc):
+        branches = sorted(tpc.project.source.getProjectBranches(
+            tpc.project, tenant))
+        if 'master' in branches:
+            branches.remove('master')
+            branches = ['master'] + branches
+        tpc.branches = branches
 
     @staticmethod
     def _loadProjectKeys(project_key_dir, connection_name, project):
@@ -1223,7 +1218,7 @@ class TenantParser(object):
                 encryption.deserialize_rsa_keypair(f.read())
 
     @staticmethod
-    def _getProject(source, conf, current_include):
+    def _getProject(tenant, source, conf, current_include):
         if isinstance(conf, str):
             # Return a project object whether conf is a dict or a str
             project = source.getProject(conf)
@@ -1255,13 +1250,13 @@ class TenantParser(object):
         return tenant_project_config
 
     @staticmethod
-    def _getProjects(source, conf, current_include):
+    def _getProjects(tenant, source, conf, current_include):
         # Return a project object whether conf is a dict or a str
         projects = []
         if isinstance(conf, str):
             # A simple project name string
             projects.append(TenantParser._getProject(
-                source, conf, current_include))
+                tenant, source, conf, current_include))
         elif len(conf.keys()) > 1 and 'projects' in conf:
             # This is a project group
             if 'include' in conf:
@@ -1272,19 +1267,19 @@ class TenantParser(object):
                 exclude = set(as_list(conf['exclude']))
                 current_include = current_include - exclude
             for project in conf['projects']:
-                sub_projects = TenantParser._getProjects(source, project,
-                                                         current_include)
+                sub_projects = TenantParser._getProjects(
+                    tenant, source, project, current_include)
                 projects.extend(sub_projects)
         elif len(conf.keys()) == 1:
             # A project with overrides
             projects.append(TenantParser._getProject(
-                source, conf, current_include))
+                tenant, source, conf, current_include))
         else:
             raise Exception("Unable to parse project %s", conf)
         return projects
 
     @staticmethod
-    def _loadTenantProjects(project_key_dir, connections, conf_tenant):
+    def _loadTenantProjects(tenant, project_key_dir, connections, conf_tenant):
         config_projects = []
         untrusted_projects = []
 
@@ -1297,7 +1292,7 @@ class TenantParser(object):
             current_include = default_include
             for conf_repo in conf_source.get('config-projects', []):
                 # tpcs = TenantProjectConfigs
-                tpcs = TenantParser._getProjects(source, conf_repo,
+                tpcs = TenantParser._getProjects(tenant, source, conf_repo,
                                                  current_include)
                 for tpc in tpcs:
                     TenantParser._loadProjectKeys(
@@ -1306,7 +1301,7 @@ class TenantParser(object):
 
             current_include = frozenset(default_include - set(['pipeline']))
             for conf_repo in conf_source.get('untrusted-projects', []):
-                tpcs = TenantParser._getProjects(source, conf_repo,
+                tpcs = TenantParser._getProjects(tenant, source, conf_repo,
                                                  current_include)
                 for tpc in tpcs:
                     TenantParser._loadProjectKeys(
@@ -1374,11 +1369,7 @@ class TenantParser(object):
             # branch.  Remember the branch and then implicitly add a
             # branch selector to each job there.  This makes the
             # in-repo configuration apply only to that branch.
-            branches = sorted(project.source.getProjectBranches(
-                project, tenant))
-            if 'master' in branches:
-                branches.remove('master')
-                branches = ['master'] + branches
+            branches = tenant.getProjectBranches(project)
             for branch in branches:
                 new_project_unparsed_branch_config[project][branch] = \
                     model.UnparsedTenantConfig()
