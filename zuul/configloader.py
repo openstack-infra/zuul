@@ -477,12 +477,7 @@ class JobParser(object):
     ]
 
     @staticmethod
-    def _getImpliedBranches(tenant, job, project_pipeline):
-        # If this is a project pipeline, don't create implied branch
-        # matchers -- that's handled in ProjectParser.
-        if project_pipeline:
-            return None
-
+    def _getImpliedBranches(tenant, job):
         # If the user has set a pragma directive for this, use the
         # value (if unset, the value is None).
         if job.source_context.implied_branch_matchers is True:
@@ -673,8 +668,7 @@ class JobParser(object):
 
         branches = None
         if ('branches' not in conf):
-            branches = JobParser._getImpliedBranches(
-                tenant, job, project_pipeline)
+            branches = JobParser._getImpliedBranches(tenant, job)
         if (not branches) and ('branches' in conf):
             branches = as_list(conf['branches'])
         if branches:
@@ -745,8 +739,8 @@ class ProjectTemplateParser(object):
         if validate:
             with configuration_exceptions('project-template', conf):
                 self.schema(conf)
-        project_template = model.ProjectConfig(conf['name'])
         source_context = conf['_source_context']
+        project_template = model.ProjectConfig(conf['name'], source_context)
         start_mark = conf['_start_mark']
         for pipeline in self.layout.pipelines.values():
             conf_pipeline = conf.get(pipeline.name)
@@ -1562,8 +1556,9 @@ class TenantParser(object):
             classes = TenantParser._getLoadClasses(tenant, config_template)
             if 'project-template' not in classes:
                 continue
-            layout.addProjectTemplate(project_template_parser.fromYaml(
-                config_template))
+            with configuration_exceptions('project-template', config_template):
+                layout.addProjectTemplate(project_template_parser.fromYaml(
+                    config_template))
 
         project_parser = ProjectParser(tenant, layout, project_template_parser)
         for config_projects in data.projects.values():

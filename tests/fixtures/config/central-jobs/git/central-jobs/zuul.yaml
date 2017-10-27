@@ -1,0 +1,9 @@
+- job:
+    name: central-job
+    run: playbooks/central-job.yaml
+
+- project-template:
+    name: central-jobs
+    check:
+      jobs:
+        - central-job

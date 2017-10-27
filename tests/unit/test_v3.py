@@ -251,6 +251,94 @@ class TestBranchVariants(ZuulTestCase):
         self.waitUntilSettled()
 
 
+class TestCentralJobs(ZuulTestCase):
+    tenant_config_file = 'config/central-jobs/main.yaml'
+
+    def setUp(self):
+        super(TestCentralJobs, self).setUp()
+        self.create_branch('org/project', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project', 'stable'))
+        self.waitUntilSettled()
+
+    def _updateConfig(self, config, branch):
+        file_dict = {'.zuul.yaml': config}
+        C = self.fake_gerrit.addFakeChange('org/project', branch, 'C',
+                                           files=file_dict)
+        C.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(C.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.fake_gerrit.addEvent(C.getChangeMergedEvent())
+        self.waitUntilSettled()
+
+    def _test_central_job_on_branch(self, branch, other_branch):
+        # Test that a job defined on a branchless repo only runs on
+        # the branch applied
+        config = textwrap.dedent(
+            """
+            - project:
+                name: org/project
+                check:
+                  jobs:
+                    - central-job
+            """)
+        self._updateConfig(config, branch)
+
+        A = self.fake_gerrit.addFakeChange('org/project', branch, 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='central-job', result='SUCCESS', changes='2,1')])
+
+        # No jobs should run for this change.
+        B = self.fake_gerrit.addFakeChange('org/project', other_branch, 'B')
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='central-job', result='SUCCESS', changes='2,1')])
+
+    def test_central_job_on_stable(self):
+        self._test_central_job_on_branch('master', 'stable')
+
+    def test_central_job_on_master(self):
+        self._test_central_job_on_branch('stable', 'master')
+
+    def _test_central_template_on_branch(self, branch, other_branch):
+        # Test that a project-template defined on a branchless repo
+        # only runs on the branch applied
+        config = textwrap.dedent(
+            """
+            - project:
+                name: org/project
+                templates: ['central-jobs']
+            """)
+        self._updateConfig(config, branch)
+
+        A = self.fake_gerrit.addFakeChange('org/project', branch, 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='central-job', result='SUCCESS', changes='2,1')])
+
+        # No jobs should run for this change.
+        B = self.fake_gerrit.addFakeChange('org/project', other_branch, 'B')
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='central-job', result='SUCCESS', changes='2,1')])
+
+    def test_central_template_on_stable(self):
+        self._test_central_template_on_branch('master', 'stable')
+
+    def test_central_template_on_master(self):
+        self._test_central_template_on_branch('stable', 'master')
+
+
 class TestInRepoConfig(ZuulTestCase):
     # A temporary class to hold new tests while others are disabled
 
@@ -357,6 +445,8 @@ class TestInRepoConfig(ZuulTestCase):
             dict(name='project-test2', result='SUCCESS', changes='2,1')])
 
     def test_dynamic_template(self):
+        # Tests that a project can't update a template in another
+        # project.
         in_repo_conf = textwrap.dedent(
             """
             - job:
@@ -378,8 +468,12 @@ class TestInRepoConfig(ZuulTestCase):
                                            files=file_dict)
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
-        self.assertHistory([
-            dict(name='template-job', result='SUCCESS', changes='1,1')])
+
+        self.assertEqual(A.patchsets[0]['approvals'][0]['value'], "-1")
+        self.assertIn('Project template common-config-template '
+                      'is already defined',
+                      A.messages[0],
+                      "A should have failed the check pipeline")
 
     def test_dynamic_config_non_existing_job(self):
         """Test that requesting a non existent job fails"""
