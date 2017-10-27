@@ -935,7 +935,7 @@ class AnsibleJob(object):
                     "Ansible plugin dir %s found adjacent to playbook %s in "
                     "non-trusted repo." % (entry, path))
 
-    def findPlaybook(self, path, required=False, trusted=False):
+    def findPlaybook(self, path, trusted=False):
         for ext in ['', '.yaml', '.yml']:
             fn = path + ext
             if os.path.exists(fn):
@@ -943,35 +943,30 @@ class AnsibleJob(object):
                     playbook_dir = os.path.dirname(os.path.abspath(fn))
                     self._blockPluginDirs(playbook_dir)
                 return fn
-        if required:
-            raise ExecutorError("Unable to find playbook %s" % path)
-        return None
+        raise ExecutorError("Unable to find playbook %s" % path)
 
     def preparePlaybooks(self, args):
         self.writeAnsibleConfig(self.jobdir.setup_playbook)
 
         for playbook in args['pre_playbooks']:
             jobdir_playbook = self.jobdir.addPrePlaybook()
-            self.preparePlaybook(jobdir_playbook, playbook,
-                                 args, required=True)
+            self.preparePlaybook(jobdir_playbook, playbook, args)
 
         for playbook in args['playbooks']:
             jobdir_playbook = self.jobdir.addPlaybook()
-            self.preparePlaybook(jobdir_playbook, playbook,
-                                 args, required=False)
+            self.preparePlaybook(jobdir_playbook, playbook, args)
             if jobdir_playbook.path is not None:
                 self.jobdir.playbook = jobdir_playbook
                 break
 
         if self.jobdir.playbook is None:
-            raise ExecutorError("No valid playbook found")
+            raise ExecutorError("No playbook specified")
 
         for playbook in args['post_playbooks']:
             jobdir_playbook = self.jobdir.addPostPlaybook()
-            self.preparePlaybook(jobdir_playbook, playbook,
-                                 args, required=True)
+            self.preparePlaybook(jobdir_playbook, playbook, args)
 
-    def preparePlaybook(self, jobdir_playbook, playbook, args, required):
+    def preparePlaybook(self, jobdir_playbook, playbook, args):
         self.log.debug("Prepare playbook repo for %s" %
                        (playbook['project'],))
         # Check out the playbook repo if needed and set the path to
@@ -1006,7 +1001,6 @@ class AnsibleJob(object):
 
         jobdir_playbook.path = self.findPlaybook(
             path,
-            required=required,
             trusted=playbook['trusted'])
 
         # If this playbook doesn't exist, don't bother preparing

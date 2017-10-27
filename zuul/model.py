@@ -2413,6 +2413,7 @@ class Layout(object):
         # inherit from the reference definition.
         noop = Job('noop')
         noop.parent = noop.BASE_JOB_MARKER
+        noop.run = 'noop.yaml'
         self.jobs = {'noop': [noop]}
         self.nodesets = {}
         self.secrets = {}
@@ -2561,6 +2562,9 @@ class Layout(object):
                 raise Exception("Pre-review pipeline %s does not allow "
                                 "post-review job %s" % (
                                     pipeline.name, frozen_job.name))
+            if not frozen_job.run:
+                raise Exception("Job %s does not specify a run playbook" % (
+                    frozen_job.name,))
             job_graph.addJob(frozen_job)
 
     def createJobGraph(self, item):
