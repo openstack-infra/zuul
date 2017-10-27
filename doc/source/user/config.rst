@@ -668,6 +668,9 @@ Here is an example of two job definitions:
       affect that branch, and likewise, changes to the master branch
       only affect it.
 
+      See :attr:`pragma.implied-branch-matchers` for how to override
+      this behavior on a per-file basis.
+
    .. attr:: files
 
       This attribute indicates that the job should only run on changes
@@ -1275,3 +1278,41 @@ where it is updated is merged.  An example follows:
       :default: 1
 
       The maximum number of running jobs which can use this semaphore.
+
+.. _pragma:
+
+Pragma
+~~~~~~
+
+The `pragma` item does not behave like the others.  It can not be
+included or excluded from configuration loading by the administrator,
+and does not form part of the final configuration itself.  It is used
+to alter how the configuration is processed while loading.
+
+A pragma item only affects the current file.  The same file in another
+branch of the same project will not be affected, nor any other files
+or any other projects.  The effect is global within that file --
+pragma directives may not be set and then unset within the same file.
+
+.. code-block:: yaml
+
+   - pragma:
+       implied-branch-matchers: False
+
+.. attr:: pragma
+
+   The pragma item currently only supports one attribute:
+
+   .. attr:: implied-branch-matchers
+
+      This is a boolean, which, if set, may be used to enable
+      (``True``) or disable (``False``) the addition of implied branch
+      matchers to job definitions.  Normally Zuul decides whether to
+      add these based on heuristics described in :attr:`job.branches`.
+      This attribute overrides that behavior.
+
+      This can be useful if a project has multiple branches, yet the
+      jobs defined in the master branch should apply to all branches.
+
+      Note that if a job contains an explicit branch matcher, it will
+      be used regardless of the value supplied here.

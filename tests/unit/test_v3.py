@@ -1907,6 +1907,57 @@ class TestMaxTimeout(AnsibleZuulTestCase):
                          "B should not fail because of timeout limit")
 
 
+class TestPragma(ZuulTestCase):
+    tenant_config_file = 'config/pragma/main.yaml'
+
+    def test_no_pragma(self):
+        self.create_branch('org/project', 'stable')
+        with open(os.path.join(FIXTURE_DIR,
+                               'config/pragma/git/',
+                               'org_project/nopragma.yaml')) as f:
+            config = f.read()
+        file_dict = {'.zuul.yaml': config}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+        self.waitUntilSettled()
+
+        # This is an untrusted repo with 2 branches, so it should have
+        # an implied branch matcher for the job.
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        jobs = tenant.layout.getJobs('test-job')
+        self.assertEqual(len(jobs), 1)
+        for job in tenant.layout.getJobs('test-job'):
+            self.assertIsNotNone(job.branch_matcher)
+
+    def test_pragma(self):
+        self.create_branch('org/project', 'stable')
+        with open(os.path.join(FIXTURE_DIR,
+                               'config/pragma/git/',
+                               'org_project/pragma.yaml')) as f:
+            config = f.read()
+        file_dict = {'.zuul.yaml': config}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+        self.waitUntilSettled()
+
+        # This is an untrusted repo with 2 branches, so it would
+        # normally have an implied branch matcher, but our pragma
+        # overrides it.
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        jobs = tenant.layout.getJobs('test-job')
+        self.assertEqual(len(jobs), 1)
+        for job in tenant.layout.getJobs('test-job'):
+            self.assertIsNone(job.branch_matcher)
+
+
 class TestBaseJobs(ZuulTestCase):
     tenant_config_file = 'config/base-jobs/main.yaml'
 

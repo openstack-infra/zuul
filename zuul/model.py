@@ -638,6 +638,7 @@ class SourceContext(object):
         self.branch = branch
         self.path = path
         self.trusted = trusted
+        self.implied_branch_matchers = None
 
     def __str__(self):
         return '%s/%s@%s' % (self.project, self.path, self.branch)
@@ -2341,6 +2342,7 @@ class UnparsedTenantConfig(object):
     """A collection of yaml lists that has not yet been parsed into objects."""
 
     def __init__(self):
+        self.pragmas = []
         self.pipelines = []
         self.jobs = []
         self.project_templates = []
@@ -2351,6 +2353,7 @@ class UnparsedTenantConfig(object):
 
     def copy(self):
         r = UnparsedTenantConfig()
+        r.pragmas = copy.deepcopy(self.pragmas)
         r.pipelines = copy.deepcopy(self.pipelines)
         r.jobs = copy.deepcopy(self.jobs)
         r.project_templates = copy.deepcopy(self.project_templates)
@@ -2362,6 +2365,7 @@ class UnparsedTenantConfig(object):
 
     def extend(self, conf):
         if isinstance(conf, UnparsedTenantConfig):
+            self.pragmas.extend(conf.pragmas)
             self.pipelines.extend(conf.pipelines)
             self.jobs.extend(conf.jobs)
             self.project_templates.extend(conf.project_templates)
@@ -2396,6 +2400,8 @@ class UnparsedTenantConfig(object):
                 self.secrets.append(value)
             elif key == 'semaphore':
                 self.semaphores.append(value)
+            elif key == 'pragma':
+                self.pragmas.append(value)
             else:
                 raise ConfigItemUnknownError()
 
