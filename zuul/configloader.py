@@ -491,28 +491,18 @@ class JobParser(object):
         job.source_context = conf.get('_source_context')
         job.source_line = conf.get('_start_mark').line + 1
 
-        is_variant = layout.hasJob(name)
-        if not is_variant:
-            if 'parent' in conf:
-                if conf['parent'] is not None:
-                    # Parent job is explicitly specified, so inherit from it.
-                    parent = layout.getJob(conf['parent'])
-                    job.inheritFrom(parent)
-                else:
-                    # Parent is explicitly set as None, so user intends
-                    # this to be a base job.  That's only okay if we're in
-                    # a config project.
-                    if not conf['_source_context'].trusted:
-                        raise Exception(
-                            "Base jobs must be defined in config projects")
+        if 'parent' in conf:
+            if conf['parent'] is not None:
+                # Parent job is explicitly specified, so inherit from it.
+                job.parent = conf['parent']
             else:
-                parent = layout.getJob(tenant.default_base_job)
-                job.inheritFrom(parent)
-        else:
-            if 'parent' in conf:
-                # TODO(jeblair): warn the user that we're ignoring the
-                # parent setting on this variant job definition.
-                pass
+                # Parent is explicitly set as None, so user intends
+                # this to be a base job.  That's only okay if we're in
+                # a config project.
+                if not conf['_source_context'].trusted:
+                    raise Exception(
+                        "Base jobs must be defined in config projects")
+                job.parent = job.BASE_JOB_MARKER
 
         # Secrets are part of the playbook context so we must establish
         # them earlier than playbooks.
@@ -596,7 +586,7 @@ class JobParser(object):
                 run_name = os.path.join('playbooks', job.name)
                 run = model.PlaybookContext(job.source_context, run_name,
                                             job.roles, secrets)
-                job.implied_run = (run,) + job.implied_run
+                job.implied_run = (run,)
 
         for k in JobParser.simple_attributes:
             a = k.replace('-', '_')
@@ -632,14 +622,11 @@ class JobParser(object):
                 job_project = model.JobProject(project_name,
                                                project_override_branch)
                 new_projects[project_name] = job_project
-            job.updateProjects(new_projects)
+            job.required_projects = new_projects
 
         tags = conf.get('tags')
         if tags:
-            # Tags are merged via a union rather than a
-            # destructive copy because they are intended to
-            # accumulate onto any previously applied tags.
-            job.tags = job.tags.union(set(tags))
+            job.tags = set(tags)
 
         job.dependencies = frozenset(as_list(conf.get('dependencies')))
 
@@ -647,7 +634,7 @@ class JobParser(object):
         if variables:
             if 'zuul' in variables:
                 raise Exception("Variables named 'zuul' are not allowed.")
-            job.updateVariables(variables)
+            job.variables = variables
 
         allowed_projects = conf.get('allowed-projects', None)
         if allowed_projects:
@@ -1510,6 +1497,16 @@ class TenantParser(object):
                     TenantParser.log.debug(
                         "Skipped adding job %s which shadows an existing job" %
                         (job,))
+
+        # Now that all the jobs are loaded, verify their parents exist
+        for config_job in data.jobs:
+            classes = TenantParser._getLoadClasses(tenant, config_job)
+            if 'job' not in classes:
+                continue
+            with configuration_exceptions('job', config_job):
+                parent = config_job.get('parent')
+                if parent:
+                    layout.getJob(parent)
 
         if not skip_semaphores:
             for config_semaphore in data.semaphores:

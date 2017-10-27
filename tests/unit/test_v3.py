@@ -153,13 +153,12 @@ class TestFinal(ZuulTestCase):
         # Thus it should fail.
         self.assertEqual(A.reported, 1)
         self.assertEqual(A.patchsets[-1]['approvals'][0]['value'], '-1')
-        self.assertIn('Unable to inherit from final job', A.messages[0])
+        self.assertIn('Unable to modify final job', A.messages[0])
 
 
 class TestBranchVariants(ZuulTestCase):
     tenant_config_file = 'config/branch-variants/main.yaml'
 
-    @skip("This is broken until the next change")
     def test_branch_variants(self):
         # Test branch variants of jobs with inheritance
         self.executor_server.hold_jobs_in_build = True
@@ -205,6 +204,47 @@ class TestBranchVariants(ZuulTestCase):
         for i in ipath:
             self.log.debug("inheritance path %s", i)
         self.assertEqual(len(ipath), 5)
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+    def test_branch_variants_divergent(self):
+        # Test branches can diverge and become independent
+        self.executor_server.hold_jobs_in_build = True
+        # This creates a new branch with a copy of the config in master
+        self.create_branch('puppet-integration', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'puppet-integration', 'stable'))
+        self.waitUntilSettled()
+
+        with open(os.path.join(FIXTURE_DIR,
+                               'config/branch-variants/git/',
+                               'puppet-integration/stable.zuul.yaml')) as f:
+            config = f.read()
+
+        file_dict = {'.zuul.yaml': config}
+        C = self.fake_gerrit.addFakeChange('puppet-integration', 'stable', 'C',
+                                           files=file_dict)
+        C.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(C.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.fake_gerrit.addEvent(C.getChangeMergedEvent())
+        self.waitUntilSettled()
+
+        A = self.fake_gerrit.addFakeChange('puppet-integration', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        B = self.fake_gerrit.addFakeChange('puppet-integration', 'stable', 'B')
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(self.builds[0].parameters['zuul']['jobtags'],
+                         ['master'])
+
+        self.assertEqual(self.builds[1].parameters['zuul']['jobtags'],
+                         ['stable'])
+
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
         self.waitUntilSettled()
