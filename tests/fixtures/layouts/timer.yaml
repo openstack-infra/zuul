@@ -21,12 +21,15 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: project-test1
+    run: playbooks/project-test1.yaml
 
 - job:
     name: project-test2
+    run: playbooks/project-test2.yaml
 
 - job:
     name: project-bitrot
@@ -34,6 +37,7 @@
       nodes:
         - name: static
           label: ubuntu-xenial
+    run: playbooks/project-bitrot.yaml
 
 - project:
     name: org/project

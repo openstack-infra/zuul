@@ -25,22 +25,27 @@
 
 - job:
     name: project-test1
+    run: playbooks/project-test1.yaml
 
 - job:
     name: semaphore-one-test1
     semaphore: test-semaphore
+    run: playbooks/semaphore-one-test1.yaml
 
 - job:
     name: semaphore-one-test2
     semaphore: test-semaphore
+    run: playbooks/semaphore-one-test2.yaml
 
 - job:
     name: semaphore-two-test1
     semaphore: test-semaphore-two
+    run: playbooks/semaphore-two-test1.yaml
 
 - job:
     name: semaphore-two-test2
     semaphore: test-semaphore-two
+    run: playbooks/semaphore-two-test2.yaml
 
 - project:
     name: org/project

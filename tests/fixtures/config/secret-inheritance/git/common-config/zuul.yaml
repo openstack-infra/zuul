@@ -38,15 +38,18 @@
 
 - job:
     name: trusted-secrets
+    run: playbooks/trusted-secrets.yaml
     secrets:
       - trusted-secret
 
 - job:
     name: trusted-secrets-trusted-child
+    run: playbooks/trusted-secrets-trusted-child.yaml
     parent: trusted-secrets
 
 - job:
     name: untrusted-secrets-trusted-child
+    run: playbooks/untrusted-secrets-trusted-child.yaml
     parent: untrusted-secrets
     
 - project:

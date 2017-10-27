@@ -38,6 +38,7 @@
 
 - job:
     name: common-config-test
+    run: playbooks/common-config-test.yaml
 
 - project:
     name: org/project

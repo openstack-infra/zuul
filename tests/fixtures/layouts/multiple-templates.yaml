@@ -14,9 +14,11 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: py27
+    run: playbooks/py27.yaml
 
 - project-template:
     name: python-jobs

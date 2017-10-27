@@ -49,9 +49,11 @@
 
 - job:
     name: project-test1
+    run: playbooks/project-test1.yaml
 
 - job:
     name: project-test2
+    run: playbooks/project-test2.yaml
 
 - project:
     name: review.example.com/org/project1
@@ -64,7 +66,6 @@
     another_check:
       jobs:
         - project-test2
-
 
 - project:
     name: review.example.com/org/project2

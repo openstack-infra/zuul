@@ -14,11 +14,13 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: merge
     tags:
       - merge
+    run: playbooks/merge.yaml
 
 - project:
     name: org/project1

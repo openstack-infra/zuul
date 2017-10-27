@@ -7,12 +7,12 @@
     success:
       gerrit:
         Verified: 1
-      resultsdb:
+      resultsdb: null
     failure:
       gerrit:
         Verified: -1
-      resultsdb:
-      resultsdb_failures:
+      resultsdb: null
+      resultsdb_failures: null
 
 - job:
     name: base
@@ -20,15 +20,19 @@
 
 - job:
     name: project-merge
+    run: playbooks/project-merge.yaml
 
 - job:
     name: project-test1
+    run: playbooks/project-test1.yaml
 
 - job:
     name: project-test2
+    run: playbooks/project-test2.yaml
 
 - job:
     name: project-test3
+    run: playbooks/project-test3.yaml
 
 - project:
     name: org/project

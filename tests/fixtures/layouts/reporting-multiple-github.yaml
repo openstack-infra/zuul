@@ -11,26 +11,29 @@
           action: opened
     start:
       github:
-        status: 'pending'
+        status: pending
         comment: false
       github_ent:
-        status: 'pending'
+        status: pending
         comment: false
     success:
       github:
-        status: 'success'
+        status: success
       github_ent:
-        status: 'success'
+        status: success
 
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: project1-test1
+    run: playbooks/project1-test1.yaml
 
 - job:
     name: project2-test2
+    run: playbooks/project2-test2.yaml
 
 - project:
     name: org/project1

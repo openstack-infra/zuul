@@ -43,18 +43,23 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: project-merge
+    run: playbooks/project-merge.yaml
 
 - job:
     name: project-test1
+    run: playbooks/project-test1.yaml
 
 - job:
     name: project-test2
+    run: playbooks/project-test2.yaml
 
 - job:
     name: project-post
+    run: playbooks/project-post.yaml
 
 - project:
     name: org/new-project

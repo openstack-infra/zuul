@@ -14,18 +14,22 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: parent-job
     files: foo.txt
+    run: playbooks/parent-job.yaml
 
 - job:
     name: parent-job
     files: bar.txt
-    
+    run: playbooks/parent-job.yaml
+
 - job:
     name: child-job
     parent: parent-job
+    run: playbooks/child-job.yaml
 
 - project:
     name: org/project

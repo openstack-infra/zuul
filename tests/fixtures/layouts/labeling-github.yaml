@@ -7,24 +7,26 @@
         - event: pull_request
           action: labeled
           label:
-            - 'test'
+            - test
         - event: pull_request
           action: unlabeled
           label:
-            - 'do not test'
+            - do not test
     success:
       github:
         label:
-          - 'tests passed'
+          - tests passed
         unlabel:
-          - 'test'
+          - test
 
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: project-labels
+    run: playbooks/project-labels.yaml
 
 - project:
     name: org/project

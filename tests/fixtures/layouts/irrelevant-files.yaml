@@ -14,9 +14,11 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: project-test-irrelevant-files
+    run: playbooks/project-test-irrelevant-files.yaml
 
 - project:
     name: org/project

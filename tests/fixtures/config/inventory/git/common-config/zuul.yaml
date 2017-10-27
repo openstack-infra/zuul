@@ -41,7 +41,9 @@
       nodes:
         - name: ubuntu-xenial
           label: ubuntu-xenial
+    run: playbooks/single-inventory.yaml
 
 - job:
     name: group-inventory
     nodeset: nodeset1
+    run: playbooks/group-inventory.yaml

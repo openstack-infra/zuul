@@ -38,13 +38,16 @@
 
 - job:
     name: project-test1
+    run: playbooks/project-test1.yaml
 
 - job:
     name: project-test2
+    run: playbooks/project-test2.yaml
 
 - job:
     name: project-merge
     hold-following-changes: true
+    run: playbooks/project-merge.yaml
 
 - project:
     name: org/project-merge

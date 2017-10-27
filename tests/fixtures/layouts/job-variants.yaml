@@ -20,6 +20,7 @@
       nodes:
         - name: controller
           label: base
+    run: playbooks/base.yaml
 
 - job:
     name: python27
@@ -33,6 +34,7 @@
       nodes:
         - name: controller
           label: new
+    run: playbooks/python27.yaml
 
 - job:
     name: python27
@@ -53,6 +55,7 @@
       - stable/essex
     pre-run: py27-essex-pre
     post-run: py27-essex-post
+    run: playbooks/python27.yaml
 
 - project:
     name: org/project

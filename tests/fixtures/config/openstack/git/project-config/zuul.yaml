@@ -41,10 +41,12 @@
       nodes:
         - name: controller
           label: ubuntu-xenial
+    run: playbooks/base.yaml
 
 - job:
     name: python27
     parent: base
+    run: playbooks/python27.yaml
 
 - job:
     name: python27
@@ -54,10 +56,12 @@
       nodes:
         - name: controller
           label: ubuntu-trusty
+    run: playbooks/python27.yaml
 
 - job:
     name: python35
     parent: base
+    run: playbooks/python35.yaml
 
 - project-template:
     name: python-jobs
@@ -72,6 +76,7 @@
     required-projects:
       - openstack/keystone
       - openstack/nova
+    run: playbooks/dsvm.yaml
 
 - project:
     name: openstack/nova

@@ -42,9 +42,11 @@
 
 - job:
     name: project1-job
+    run: playbooks/project1-job.yaml
 
 - job:
     name: project2-job
+    run: playbooks/project2-job.yaml
 
 - project:
     name: org/project1

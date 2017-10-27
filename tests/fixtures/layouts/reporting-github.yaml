@@ -8,11 +8,11 @@
           action: opened
     start:
       github:
-        status: 'pending'
+        status: pending
         comment: false
     success:
       github:
-        status: 'success'
+        status: success
 
 - pipeline:
     name: reporting
@@ -22,13 +22,13 @@
       github:
         - event: pull_request
           action: comment
-          comment: 'reporting check'
+          comment: reporting check
     start:
       github: {}
     success:
       github:
         comment: false
-        status: 'success'
+        status: success
         status-url: http://logs.example.com/{tenant.name}/{pipeline.name}/{change.project}/{change.number}/{buildset.uuid}/
     failure:
       github:
@@ -42,14 +42,14 @@
       github:
         - event: pull_request
           action: comment
-          comment: 'long pipeline'
+          comment: long pipeline
     start:
       github:
-        status: 'pending'
+        status: pending
     success:
       github:
         comment: false
-        status: 'success'
+        status: success
         status-url: http://logs.example.com/{tenant.name}/{pipeline.name}/{change.project}/{change.number}/{buildset.uuid}/
     failure:
       github:
@@ -67,23 +67,25 @@
     start:
       github:
         comment: true
-        status: 'pending'
+        status: pending
     success:
       github:
         comment: true
-        status: 'success'
+        status: success
         merge: true
     failure:
       github:
         comment: true
-        status: 'failure'
+        status: failure
 
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: project-test1
+    run: playbooks/project-test1.yaml
 
 - project:
     name: org/project

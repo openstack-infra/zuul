@@ -55,12 +55,14 @@
 - job:
     parent: base
     name: secret-file
+    run: playbooks/secret-file.yaml
     secrets:
       - test_secret
 
 - job:
     parent: base
     name: secret-file-fail
+    run: playbooks/secret-file-fail.yaml
     secrets:
       - test_secret
 

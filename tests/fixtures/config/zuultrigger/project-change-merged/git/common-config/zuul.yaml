@@ -49,9 +49,11 @@
 
 - job:
     name: project-check
+    run: playbooks/project-check.yaml
 
 - job:
     name: project-gate
+    run: playbooks/project-gate.yaml
 
 - project:
     name: org/project

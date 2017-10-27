@@ -19,6 +19,7 @@
 - job:
     parent: base
     name: job-output
+    run: playbooks/job-output.yaml
 
 - job:
     name: job-output-failure

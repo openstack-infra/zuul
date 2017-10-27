@@ -20,3 +20,4 @@
     name: python27
     pre-run: playbooks/pre
     post-run: playbooks/post
+    run: playbooks/python27.yaml

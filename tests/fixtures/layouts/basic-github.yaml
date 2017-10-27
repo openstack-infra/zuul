@@ -8,10 +8,10 @@
             - opened
             - changed
             - reopened
-          branch: '^master$'
+          branch: ^master$
         - event: pull_request
           action: comment
-          comment: 'test me'
+          comment: test me
     success:
       github: {}
     failure:
@@ -20,12 +20,15 @@
 - job:
     name: base
     parent: null
+    run: playbooks/base.yaml
 
 - job:
     name: project-test1
+    run: playbooks/project-test1.yaml
 
 - job:
     name: project-test2
+    run: playbooks/project-test2.yaml
 
 - project:
     name: org/project
