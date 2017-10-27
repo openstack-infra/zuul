@@ -856,7 +856,6 @@ class Job(object):
             source_line=None,
             inheritance_path=(),
             parent_data=None,
-            implied_run=(),
         )
 
         self.inheritable_attributes = {}
@@ -913,10 +912,6 @@ class Job(object):
 
     def setBase(self):
         self.inheritance_path = self.inheritance_path + (repr(self),)
-
-    def setRun(self):
-        if not self.run:
-            self.run = self.implied_run
 
     def addRoles(self, roles):
         newroles = []
@@ -1036,11 +1031,6 @@ class Job(object):
         if other._get('roles') is not None:
             self.addRoles(other.roles)
 
-        # We only want to update implied run for inheritance, not
-        # variance.
-        if self.name != other.name:
-            other_implied_run = self.freezePlaybooks(other.implied_run)
-            self.implied_run = other_implied_run + self.implied_run
         if other._get('run') is not None:
             other_run = self.freezePlaybooks(other.run)
             self.run = other_run
@@ -2551,11 +2541,7 @@ class Layout(object):
                 else:
                     frozen_job.applyVariant(variant)
                     frozen_job.name = variant.name
-            # Set the implied run based on the last top-level job
-            # definition, before we start applying project-pipeline
-            # variants.
             frozen_job.name = jobname
-            frozen_job.setRun()
             # Whether the change matches any of the project pipeline
             # variants
             matched = False
