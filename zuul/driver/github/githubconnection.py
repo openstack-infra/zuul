@@ -135,7 +135,7 @@ class GithubEventConnector(threading.Thread):
     """Move events from GitHub into the scheduler"""
 
     log = logging.getLogger("zuul.GithubEventConnector")
-    delay = 3.0
+    delay = 10.0
 
     def __init__(self, connection):
         super(GithubEventConnector, self).__init__()
