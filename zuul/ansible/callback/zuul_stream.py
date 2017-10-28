@@ -128,22 +128,29 @@ class CallbackModule(default.CallbackModule):
                 continue
             msg = "%s\n" % log_id
             s.send(msg.encode("utf-8"))
-            buff = s.recv(4096).decode("utf-8")
+            buff = s.recv(4096)
             buffering = True
             while buffering:
-                if "\n" in buff:
-                    (line, buff) = buff.split("\n", 1)
-                    done = self._log_streamline(host, line)
+                if b'\n' in buff:
+                    (line, buff) = buff.split(b'\n', 1)
+                    # We can potentially get binary data here. In order to
+                    # being able to handle that use the backslashreplace
+                    # error handling method. This decodes unknown utf-8
+                    # code points to escape sequences which exactly represent
+                    # the correct data without throwing a decoding exception.
+                    done = self._log_streamline(
+                        host, line.decode("utf-8", "backslashreplace"))
                     if done:
                         return
                 else:
-                    more = s.recv(4096).decode("utf-8")
+                    more = s.recv(4096)
                     if not more:
                         buffering = False
                     else:
                         buff += more
             if buff:
-                self._log_streamline(host, line)
+                self._log_streamline(
+                    host, line.decode("utf-8", "backslashreplace"))
 
     def _log_streamline(self, host, line):
         if "[Zuul] Task exit code" in line:

@@ -46,3 +46,6 @@
       args:
         chdir: /itemloop/somewhere/that/does/not/exist
       failed_when: false
+
+    - name: Print binary data
+      command: echo -e '\x80abc'

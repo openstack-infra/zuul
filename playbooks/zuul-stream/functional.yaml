@@ -58,3 +58,8 @@
       shell: |
         egrep "^.+\| node1 \| OSError.+\/failure-itemloop\/" job-output.txt
         egrep "^.+\| node2 \| OSError.+\/failure-itemloop\/" job-output.txt
+
+    - name: Validate output - binary data
+      shell: |
+        egrep "^.*\| node1 \| \\\\x80abc" job-output.txt
+        egrep "^.*\| node2 \| \\\\x80abc" job-output.txt
