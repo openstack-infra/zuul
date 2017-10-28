@@ -28,19 +28,6 @@
       - zuul/ansible/callback/.*
       - playbooks/zuul-stream/.*
 
-- job:
-    name: zuul-migrate
-    parent: unittests
-    run: playbooks/zuul-migrate/run.yaml
-    post-run: playbooks/zuul-migrate/post.yaml
-    # We're adding zuul to the required-projects so that we can also trigger
-    # this from project-config changes
-    required-projects:
-      - openstack-infra/openstack-zuul-jobs
-      - openstack-infra/project-config
-      - name: openstack-infra/zuul
-        override-branch: feature/zuulv3
-
 - project:
     name: openstack-infra/zuul
     check:
@@ -60,10 +47,6 @@
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
         - zuul-stream-functional
-        - zuul-migrate:
-            files:
-              - zuul/cmd/migrate.py
-              - playbooks/zuul-migrate/.*
     gate:
       jobs:
         - build-openstack-sphinx-docs:
