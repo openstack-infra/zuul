@@ -17,22 +17,22 @@
     name: zuul-stream-functional
     parent: multinode
     nodeset: zuul-functional
-    pre-run: playbooks/zuul-stream/pre
-    run: playbooks/zuul-stream/functional
+    pre-run: playbooks/zuul-stream/pre.yaml
+    run: playbooks/zuul-stream/functional.yaml
     post-run:
-      - playbooks/zuul-stream/post
-      - playbooks/zuul-stream/post-ara
+      - playbooks/zuul-stream/post.yaml
+      - playbooks/zuul-stream/post-ara.yaml
     required-projects:
       - openstack/ara
     files:
-      - "zuul/ansible/callback/.*"
-      - "playbooks/zuul-stream/.*"
+      - zuul/ansible/callback/.*
+      - playbooks/zuul-stream/.*
 
 - job:
     name: zuul-migrate
     parent: unittests
-    run: playbooks/zuul-migrate/run
-    post-run: playbooks/zuul-migrate/post
+    run: playbooks/zuul-migrate/run.yaml
+    post-run: playbooks/zuul-migrate/post.yaml
     # We're adding zuul to the required-projects so that we can also trigger
     # this from project-config changes
     required-projects:
