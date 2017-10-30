@@ -1118,7 +1118,7 @@ class TenantParser(object):
 
     @staticmethod
     def fromYaml(base, project_key_dir, connections, scheduler, merger, conf,
-                 cached):
+                 old_tenant):
         TenantParser.getSchema(connections)(conf)
         tenant = model.Tenant(conf['name'])
         if conf.get('max-nodes-per-job') is not None:
@@ -1135,16 +1135,20 @@ class TenantParser(object):
         # tpcs is TenantProjectConfigs
         config_tpcs, untrusted_tpcs = \
             TenantParser._loadTenantProjects(
-                tenant, project_key_dir, connections, conf)
+                project_key_dir, connections, conf)
         for tpc in config_tpcs:
             tenant.addConfigProject(tpc)
         for tpc in untrusted_tpcs:
             tenant.addUntrustedProject(tpc)
 
         for tpc in config_tpcs + untrusted_tpcs:
-            TenantParser._getProjectBranches(tenant, tpc)
+            TenantParser._getProjectBranches(tenant, tpc, old_tenant)
             TenantParser._resolveShadowProjects(tenant, tpc)
 
+        if old_tenant:
+            cached = True
+        else:
+            cached = False
         tenant.config_projects_config, tenant.untrusted_projects_config = \
             TenantParser._loadTenantInRepoLayouts(merger, connections,
                                                   tenant.config_projects,
@@ -1166,9 +1170,16 @@ class TenantParser(object):
         tpc.shadow_projects = frozenset(shadow_projects)
 
     @staticmethod
-    def _getProjectBranches(tenant, tpc):
-        branches = sorted(tpc.project.source.getProjectBranches(
-            tpc.project, tenant))
+    def _getProjectBranches(tenant, tpc, old_tenant):
+        # If we're performing a tenant reconfiguration, we will have
+        # an old_tenant object, however, we may be doing so because of
+        # a branch creation event, so if we don't have any cached
+        # data, query the branches again as well.
+        if old_tenant and tpc.project.unparsed_config:
+            branches = old_tenant.getProjectBranches(tpc.project)[:]
+        else:
+            branches = sorted(tpc.project.source.getProjectBranches(
+                tpc.project, tenant))
         if 'master' in branches:
             branches.remove('master')
             branches = ['master'] + branches
@@ -1224,7 +1235,7 @@ class TenantParser(object):
                 encryption.deserialize_rsa_keypair(f.read())
 
     @staticmethod
-    def _getProject(tenant, source, conf, current_include):
+    def _getProject(source, conf, current_include):
         if isinstance(conf, str):
             # Return a project object whether conf is a dict or a str
             project = source.getProject(conf)
@@ -1256,13 +1267,13 @@ class TenantParser(object):
         return tenant_project_config
 
     @staticmethod
-    def _getProjects(tenant, source, conf, current_include):
+    def _getProjects(source, conf, current_include):
         # Return a project object whether conf is a dict or a str
         projects = []
         if isinstance(conf, str):
             # A simple project name string
             projects.append(TenantParser._getProject(
-                tenant, source, conf, current_include))
+                source, conf, current_include))
         elif len(conf.keys()) > 1 and 'projects' in conf:
             # This is a project group
             if 'include' in conf:
@@ -1274,18 +1285,18 @@ class TenantParser(object):
                 current_include = current_include - exclude
             for project in conf['projects']:
                 sub_projects = TenantParser._getProjects(
-                    tenant, source, project, current_include)
+                    source, project, current_include)
                 projects.extend(sub_projects)
         elif len(conf.keys()) == 1:
             # A project with overrides
             projects.append(TenantParser._getProject(
-                tenant, source, conf, current_include))
+                source, conf, current_include))
         else:
             raise Exception("Unable to parse project %s", conf)
         return projects
 
     @staticmethod
-    def _loadTenantProjects(tenant, project_key_dir, connections, conf_tenant):
+    def _loadTenantProjects(project_key_dir, connections, conf_tenant):
         config_projects = []
         untrusted_projects = []
 
@@ -1298,7 +1309,7 @@ class TenantParser(object):
             current_include = default_include
             for conf_repo in conf_source.get('config-projects', []):
                 # tpcs = TenantProjectConfigs
-                tpcs = TenantParser._getProjects(tenant, source, conf_repo,
+                tpcs = TenantParser._getProjects(source, conf_repo,
                                                  current_include)
                 for tpc in tpcs:
                     TenantParser._loadProjectKeys(
@@ -1307,7 +1318,7 @@ class TenantParser(object):
 
             current_include = frozenset(default_include - set(['pipeline']))
             for conf_repo in conf_source.get('untrusted-projects', []):
-                tpcs = TenantParser._getProjects(tenant, source, conf_repo,
+                tpcs = TenantParser._getProjects(source, conf_repo,
                                                  current_include)
                 for tpc in tpcs:
                     TenantParser._loadProjectKeys(
@@ -1624,7 +1635,7 @@ class ConfigLoader(object):
             # When performing a full reload, do not use cached data.
             tenant = TenantParser.fromYaml(
                 base, project_key_dir, connections, scheduler, merger,
-                conf_tenant, cached=False)
+                conf_tenant, old_tenant=None)
             abide.tenants[tenant.name] = tenant
         return abide
 
@@ -1639,7 +1650,7 @@ class ConfigLoader(object):
         # When reloading a tenant only, use cached data if available.
         new_tenant = TenantParser.fromYaml(
             base, project_key_dir, connections, scheduler, merger,
-            tenant.unparsed_config, cached=True)
+            tenant.unparsed_config, old_tenant=tenant)
         new_abide.tenants[tenant.name] = new_tenant
         return new_abide
 
