@@ -1690,7 +1690,7 @@ class ExecutorServer(object):
 
     def unregister_work(self):
         self.accepting_work = False
-        self.executor_worker.unregisterFunction("executor:execute")
+        self.executor_worker.unRegisterFunction("executor:execute")
 
     def stop(self):
         self.log.debug("Stopping")
