@@ -176,6 +176,8 @@ class Repo(object):
         return branch in origin.refs
 
     def getBranches(self):
+        # TODO(jeblair): deprecate with override-branch; replaced by
+        # getRefs().
         repo = self.createRepoObject()
         return [x.name for x in repo.heads]
 
@@ -386,7 +388,7 @@ class Merger(object):
         self.log.info("Checking out %s/%s branch %s",
                       connection_name, project_name, branch)
         repo = self.getRepo(connection_name, project_name)
-        repo.checkoutLocalBranch(branch)
+        repo.checkout(branch)
 
     def _saveRepoState(self, connection_name, project_name, repo,
                        repo_state, recent):

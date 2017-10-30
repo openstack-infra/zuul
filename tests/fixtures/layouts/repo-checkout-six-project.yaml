@@ -44,7 +44,7 @@
       - org/project2
       - org/project3
       - name: org/project4
-        override-branch: master
+        override-checkout: master
       - org/project5
       - org/project6
     run: playbooks/integration.yaml

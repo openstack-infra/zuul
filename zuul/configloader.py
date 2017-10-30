@@ -417,7 +417,8 @@ class JobParser(object):
     role = vs.Any(zuul_role, galaxy_role)
 
     job_project = {vs.Required('name'): str,
-                   'override-branch': str}
+                   'override-branch': str,
+                   'override-checkout': str}
 
     secret = {vs.Required('name'): str,
               vs.Required('secret'): str}
@@ -452,6 +453,7 @@ class JobParser(object):
                       'dependencies': to_list(str),
                       'allowed-projects': to_list(str),
                       'override-branch': str,
+                      'override-checkout': str,
                       'description': str,
                       'post-review': bool}
 
@@ -474,6 +476,7 @@ class JobParser(object):
         'failure-url',
         'success-url',
         'override-branch',
+        'override-checkout',
     ]
 
     @staticmethod
@@ -633,14 +636,18 @@ class JobParser(object):
                 if isinstance(project, dict):
                     project_name = project['name']
                     project_override_branch = project.get('override-branch')
+                    project_override_checkout = project.get(
+                        'override-checkout')
                 else:
                     project_name = project
                     project_override_branch = None
+                    project_override_checkout = None
                 (trusted, project) = tenant.getProject(project_name)
                 if project is None:
                     raise Exception("Unknown project %s" % (project_name,))
                 job_project = model.JobProject(project_name,
-                                               project_override_branch)
+                                               project_override_branch,
+                                               project_override_checkout)
                 new_projects[project_name] = job_project
             job.required_projects = new_projects
 

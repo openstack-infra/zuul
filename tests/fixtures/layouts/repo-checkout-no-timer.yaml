@@ -14,7 +14,7 @@
 
 - job:
     name: integration
-    override-branch: stable/havana
+    override-checkout: stable/havana
     required-projects:
       - org/project1
     run: playbooks/integration.yaml

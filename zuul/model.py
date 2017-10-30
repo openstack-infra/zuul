@@ -845,6 +845,7 @@ class Job(object):
             required_projects={},
             allowed_projects=None,
             override_branch=None,
+            override_checkout=None,
             post_review=None,
         )
 
@@ -1073,9 +1074,11 @@ class Job(object):
 class JobProject(object):
     """ A reference to a project from a job. """
 
-    def __init__(self, project_name, override_branch=None):
+    def __init__(self, project_name, override_branch=None,
+                 override_checkout=None):
         self.project_name = project_name
         self.override_branch = override_branch
+        self.override_checkout = override_checkout
 
 
 class JobList(object):
