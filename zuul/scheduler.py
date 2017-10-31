@@ -374,9 +374,10 @@ class Scheduler(threading.Thread):
                 self.statsd.incr(key)
                 # zuul.tenant.<tenant>.pipeline.<pipeline>.project.
                 #  <host>.<project>.<branch>.job.<job>.wait_time
-                key = '%s.wait_time' % jobkey
-                dt = int((build.start_time - build.execute_time) * 1000)
-                self.statsd.timing(key, dt)
+                if build.start_time:
+                    key = '%s.wait_time' % jobkey
+                    dt = int((build.start_time - build.execute_time) * 1000)
+                    self.statsd.timing(key, dt)
         except Exception:
             self.log.exception("Exception reporting runtime stats")
         event = BuildCompletedEvent(build)
