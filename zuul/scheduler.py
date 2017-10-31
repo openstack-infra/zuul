@@ -614,13 +614,22 @@ class Scheduler(threading.Thread):
                     item.queue = None
                     item.change.project = self._reenqueueGetProject(
                         tenant, item)
+                    # If the old item ahead made it in, re-enqueue
+                    # this one behind it.
+                    if item.item_ahead in items_to_remove:
+                        old_item_ahead = None
+                        item_ahead_valid = False
+                    else:
+                        old_item_ahead = item.item_ahead
+                        item_ahead_valid = True
                     item.item_ahead = None
                     item.items_behind = []
                     reenqueued = False
                     if item.change.project:
                         try:
                             reenqueued = new_pipeline.manager.reEnqueueItem(
-                                item, last_head)
+                                item, last_head, old_item_ahead,
+                                item_ahead_valid=item_ahead_valid)
                         except Exception:
                             self.log.exception(
                                 "Exception while re-enqueing item %s",

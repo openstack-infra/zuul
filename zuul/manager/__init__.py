@@ -223,13 +223,19 @@ class PipelineManager(object):
             if item.change.equals(change):
                 self.removeItem(item)
 
-    def reEnqueueItem(self, item, last_head):
+    def reEnqueueItem(self, item, last_head, old_item_ahead, item_ahead_valid):
         with self.getChangeQueue(item.change, last_head.queue) as change_queue:
             if change_queue:
                 self.log.debug("Re-enqueing change %s in queue %s" %
                                (item.change, change_queue))
                 change_queue.enqueueItem(item)
 
+                # If the old item ahead was re-enqued, this value will
+                # be true, so we should attempt to move the item back
+                # to where it was in case an item ahead is already
+                # failing.
+                if item_ahead_valid:
+                    change_queue.moveItem(item, old_item_ahead)
                 # Get an updated copy of the layout and update the job
                 # graph if necessary.  This resumes the buildset merge
                 # state machine.  If we have an up-to-date layout, it
