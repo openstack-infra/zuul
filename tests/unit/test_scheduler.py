@@ -3034,6 +3034,70 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(tenant.layout.pipelines['check'].queues), 0)
         self.assertIn('Build succeeded', A.messages[0])
 
+    @simple_layout("layouts/reconfigure-failed-head.yaml")
+    def test_live_reconfiguration_failed_change_at_head(self):
+        # Test that if we reconfigure with a failed change at head,
+        # that the change behind it isn't reparented onto it.
+
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('Code-Review', 2)
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        B.addApproval('Code-Review', 2)
+
+        self.executor_server.failJob('job1', A)
+
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
+
+        self.waitUntilSettled()
+
+        self.assertBuilds([
+            dict(name='job1', changes='1,1'),
+            dict(name='job2', changes='1,1'),
+            dict(name='job1', changes='1,1 2,1'),
+            dict(name='job2', changes='1,1 2,1'),
+        ])
+
+        self.release(self.builds[0])
+        self.waitUntilSettled()
+
+        self.assertBuilds([
+            dict(name='job2', changes='1,1'),
+            dict(name='job1', changes='2,1'),
+            dict(name='job2', changes='2,1'),
+        ])
+
+        # Unordered history comparison because the aborts can finish
+        # in any order.
+        self.assertHistory([
+            dict(name='job1', result='FAILURE', changes='1,1'),
+            dict(name='job1', result='ABORTED', changes='1,1 2,1'),
+            dict(name='job2', result='ABORTED', changes='1,1 2,1'),
+        ], ordered=False)
+
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        self.assertBuilds([])
+
+        self.assertHistory([
+            dict(name='job1', result='FAILURE', changes='1,1'),
+            dict(name='job1', result='ABORTED', changes='1,1 2,1'),
+            dict(name='job2', result='ABORTED', changes='1,1 2,1'),
+            dict(name='job2', result='SUCCESS', changes='1,1'),
+            dict(name='job1', result='SUCCESS', changes='2,1'),
+            dict(name='job2', result='SUCCESS', changes='2,1'),
+        ], ordered=False)
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+
     def test_delayed_repo_init(self):
         self.init_repo("org/new-project")
         files = {'README': ''}
