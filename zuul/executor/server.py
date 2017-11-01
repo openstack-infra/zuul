@@ -681,7 +681,9 @@ class AnsibleJob(object):
                                 ref,
                                 args['branch'],
                                 args['override_branch'],
+                                args['override_checkout'],
                                 project['override_branch'],
+                                project['override_checkout'],
                                 project['default_branch'])
 
         # Delete the origin remote from each repo we set up since
@@ -757,22 +759,32 @@ class AnsibleJob(object):
         return True
 
     def checkoutBranch(self, repo, project_name, ref, zuul_branch,
-                       job_branch, project_override_branch,
+                       job_override_branch, job_override_checkout,
+                       project_override_branch, project_override_checkout,
                        project_default_branch):
         branches = repo.getBranches()
+        refs = [r.name for r in repo.getRefs()]
         if project_override_branch in branches:
             self.log.info("Checking out %s project override branch %s",
                           project_name, project_override_branch)
-            repo.checkoutLocalBranch(project_override_branch)
-        elif job_branch in branches:
-            self.log.info("Checking out %s job branch %s",
-                          project_name, job_branch)
-            repo.checkoutLocalBranch(job_branch)
+            repo.checkout(project_override_branch)
+        if project_override_checkout in refs:
+            self.log.info("Checking out %s project override ref %s",
+                          project_name, project_override_checkout)
+            repo.checkout(project_override_checkout)
+        elif job_override_branch in branches:
+            self.log.info("Checking out %s job override branch %s",
+                          project_name, job_override_branch)
+            repo.checkout(job_override_branch)
+        elif job_override_checkout in refs:
+            self.log.info("Checking out %s job override ref %s",
+                          project_name, job_override_checkout)
+            repo.checkout(job_override_checkout)
         elif ref and ref.startswith('refs/heads/'):
             b = ref[len('refs/heads/'):]
             self.log.info("Checking out %s branch ref %s",
                           project_name, b)
-            repo.checkoutLocalBranch(b)
+            repo.checkout(b)
         elif ref and ref.startswith('refs/tags/'):
             t = ref[len('refs/tags/'):]
             self.log.info("Checking out %s tag ref %s",
@@ -781,11 +793,11 @@ class AnsibleJob(object):
         elif zuul_branch and zuul_branch in branches:
             self.log.info("Checking out %s zuul branch %s",
                           project_name, zuul_branch)
-            repo.checkoutLocalBranch(zuul_branch)
+            repo.checkout(zuul_branch)
         elif project_default_branch in branches:
             self.log.info("Checking out %s project default branch %s",
                           project_name, project_default_branch)
-            repo.checkoutLocalBranch(project_default_branch)
+            repo.checkout(project_default_branch)
         else:
             raise ExecutorError("Project %s does not have the "
                                 "default branch %s" %

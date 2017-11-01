@@ -196,6 +196,7 @@ class ExecutorClient(object):
         else:
             params['branch'] = None
         params['override_branch'] = job.override_branch
+        params['override_checkout'] = job.override_checkout
         params['repo_state'] = item.current_build_set.repo_state
 
         if job.name != 'noop':
@@ -216,7 +217,8 @@ class ExecutorClient(object):
         projects = set()
         required_projects = set()
 
-        def make_project_dict(project, override_branch=None):
+        def make_project_dict(project, override_branch=None,
+                              override_checkout=None):
             project_config = item.layout.project_configs.get(
                 project.canonical_name, None)
             if project_config:
@@ -228,6 +230,7 @@ class ExecutorClient(object):
                         name=project.name,
                         canonical_name=project.canonical_name,
                         override_branch=override_branch,
+                        override_checkout=override_checkout,
                         default_branch=project_default_branch)
 
         if job.required_projects:
@@ -239,7 +242,8 @@ class ExecutorClient(object):
                                     (job_project.project_name,))
                 params['projects'].append(
                     make_project_dict(project,
-                                      job_project.override_branch))
+                                      job_project.override_branch,
+                                      job_project.override_checkout))
                 projects.add(project)
                 required_projects.add(project)
         for change in dependent_changes:

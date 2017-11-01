@@ -744,7 +744,7 @@ Here is an example of two job definitions:
       If a job has an empty or no nodeset definition, it will still
       run and may be able to perform actions on the Zuul executor.
 
-   .. attr:: override-branch
+   .. attr:: override-checkout
 
       When Zuul runs jobs for a proposed change, it normally checks
       out the branch associated with that change on every project
@@ -752,13 +752,13 @@ Here is an example of two job definitions:
       branch tip or tag), then that ref is normally checked out.  This
       attribute is used to override that behavior and indicate that
       this job should, regardless of the branch for the queue item,
-      use the indicated branch instead.  This can be used, for
-      example, to run a previous version of the software (from a
-      stable maintenance branch) under test even if the change being
-      tested applies to a different branch (this is only likely to be
-      useful if there is some cross-branch interaction with some
+      use the indicated ref (i.e., branch or tag) instead.  This can
+      be used, for example, to run a previous version of the software
+      (from a stable maintenance branch) under test even if the change
+      being tested applies to a different branch (this is only likely
+      to be useful if there is some cross-branch interaction with some
       component of the system being tested).  See also the
-      project-specific :attr:`job.required-projects.override-branch`
+      project-specific :attr:`job.required-projects.override-checkout`
       attribute to apply this behavior to a subset of a job's
       projects.
 
@@ -915,7 +915,7 @@ Here is an example of two job definitions:
 
          The name of the required project.
 
-      .. attr:: override-branch
+      .. attr:: override-checkout
 
          When Zuul runs jobs for a proposed change, it normally checks
          out the branch associated with that change on every project
@@ -923,9 +923,10 @@ Here is an example of two job definitions:
          branch tip or tag), then that ref is normally checked out.
          This attribute is used to override that behavior and indicate
          that this job should, regardless of the branch for the queue
-         item, use the indicated branch instead, for only this
-         project.  See also the :attr:`job.override-branch` attribute
-         to apply the same behavior to all projects in a job.
+         item, use the indicated ref (i.e., branch or tag) instead,
+         for only this project.  See also the
+         :attr:`job.override-checkout` attribute to apply the same
+         behavior to all projects in a job.
 
    .. attr:: vars
 

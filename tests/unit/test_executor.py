@@ -378,6 +378,32 @@ class TestExecutorRepos(ZuulTestCase):
 
         self.assertBuildStates(states, projects)
 
+    @simple_layout('layouts/repo-checkout-tag.yaml')
+    def test_tag_checkout(self):
+        self.executor_server.hold_jobs_in_build = True
+        p1 = "review.example.com/org/project1"
+        p2 = "review.example.com/org/project2"
+        projects = [p1, p2]
+        upstream = self.getUpstreamRepos(projects)
+
+        self.create_branch('org/project2', 'stable/havana')
+        files = {'README': 'tagged readme'}
+        self.addCommitToRepo('org/project2', 'tagged commit',
+                             files, branch='stable/havana', tag='test-tag')
+
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        states = [
+            {p1: dict(present=[A], branch='master'),
+             p2: dict(commit=str(upstream[p2].commit('test-tag')),
+                      absent=[A]),
+             },
+        ]
+
+        self.assertBuildStates(states, projects)
+
 
 class TestAnsibleJob(ZuulTestCase):
     tenant_config_file = 'config/ansible/main.yaml'
