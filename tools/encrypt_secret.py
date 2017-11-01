@@ -86,7 +86,12 @@ def main():
         if p.returncode != 0:
             raise Exception("Return code %s from openssl" % p.returncode)
         output = stdout.decode('utf-8')
-        m = re.match(r'^Public-Key: \((\d+) bit\)$', output, re.MULTILINE)
+        openssl_version = subprocess.check_output(
+            ['openssl', 'version']).split()[1]
+        if openssl_version.startswith(b'0.'):
+            m = re.match(r'^Modulus \((\d+) bit\):$', output, re.MULTILINE)
+        else:
+            m = re.match(r'^Public-Key: \((\d+) bit\)$', output, re.MULTILINE)
         nbits = int(m.group(1))
         nbytes = int(nbits / 8)
         max_bytes = nbytes - 42  # PKCS1-OAEP overhead
