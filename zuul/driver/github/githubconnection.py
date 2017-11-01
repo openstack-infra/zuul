@@ -40,6 +40,8 @@ from zuul.driver.github.githubmodel import PullRequest, GithubTriggerEvent
 
 ACCESS_TOKEN_URL = 'https://api.github.com/installations/%s/access_tokens'
 PREVIEW_JSON_ACCEPT = 'application/vnd.github.machine-man-preview+json'
+INSTALLATIONS_URL = 'https://api.github.com/app/installations'
+REPOS_URL = 'https://api.github.com/installation/repositories'
 
 
 def _sign_request(body, secret):
@@ -444,6 +446,7 @@ class GithubConnection(BaseConnection):
         self.registerHttpHandler(self.payload_path,
                                  webhook_listener.handle_request)
         self._authenticateGithubAPI()
+        self._prime_installation_map()
         self._start_event_connector()
 
     def onStop(self):
@@ -513,8 +516,24 @@ class GithubConnection(BaseConnection):
         if app_key:
             self.app_key = app_key
 
-    def _get_installation_key(self, project, user_id=None):
-        installation_id = self.installation_map.get(project)
+    def _get_app_auth_headers(self):
+        now = datetime.datetime.now(utc)
+        expiry = now + datetime.timedelta(minutes=5)
+
+        data = {'iat': now, 'exp': expiry, 'iss': self.app_id}
+        app_token = jwt.encode(data,
+                               self.app_key,
+                               algorithm='RS256').decode('utf-8')
+
+        headers = {'Accept': PREVIEW_JSON_ACCEPT,
+                   'Authorization': 'Bearer %s' % app_token}
+
+        return headers
+
+    def _get_installation_key(self, project, user_id=None, inst_id=None):
+        installation_id = inst_id
+        if project is not None:
+            installation_id = self.installation_map.get(project)
 
         if not installation_id:
             self.log.error("No installation ID available for project %s",
@@ -526,16 +545,8 @@ class GithubConnection(BaseConnection):
                                                           (None, None))
 
         if ((not expiry) or (not token) or (now >= expiry)):
-            expiry = now + datetime.timedelta(minutes=5)
-
-            data = {'iat': now, 'exp': expiry, 'iss': self.app_id}
-            app_token = jwt.encode(data,
-                                   self.app_key,
-                                   algorithm='RS256').decode('utf-8')
-
+            headers = self._get_app_auth_headers()
             url = ACCESS_TOKEN_URL % installation_id
-            headers = {'Accept': PREVIEW_JSON_ACCEPT,
-                       'Authorization': 'Bearer %s' % app_token}
             json_data = {'user_id': user_id} if user_id else None
 
             response = requests.post(url, headers=headers, json=json_data)
@@ -550,6 +561,35 @@ class GithubConnection(BaseConnection):
             self.installation_token_cache[installation_id] = (token, expiry)
 
         return token
+
+    def _prime_installation_map(self):
+        """Walks each app install for the repos to prime install IDs"""
+
+        if not self.app_id:
+            return
+
+        url = INSTALLATIONS_URL
+        headers = self._get_app_auth_headers()
+        self.log.debug("Fetching installations for GitHub app")
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+
+        data = response.json()
+
+        for install in data:
+            inst_id = install.get('id')
+            token = self._get_installation_key(project=None, inst_id=inst_id)
+            headers = {'Accept': PREVIEW_JSON_ACCEPT,
+                       'Authorization': 'token %s' % token}
+            url = REPOS_URL
+            self.log.debug("Fetching repos for install %s" % inst_id)
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            repos = response.json()
+
+            for repo in repos.get('repositories'):
+                project_name = repo.get('full_name')
+                self.installation_map[project_name] = inst_id
 
     def addEvent(self, data, event=None):
         return self.event_queue.put((time.time(), data, event))
