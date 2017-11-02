@@ -125,7 +125,9 @@ class GerritEventConnector(threading.Thread):
         # This checks whether the event created or deleted a branch so
         # that Zuul may know to perform a reconfiguration on the
         # project.
-        if event.type == 'ref-updated' and not event.ref.startswith('refs/'):
+        if (event.type == 'ref-updated' and
+            ((not event.ref.startswith('refs/')) or
+             event.ref.startswith('refs/heads'))):
             if event.oldrev == '0' * 40:
                 event.branch_created = True
                 event.branch = event.ref
