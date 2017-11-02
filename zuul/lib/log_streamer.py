@@ -182,7 +182,7 @@ class RequestHandler(socketserver.BaseRequestHandler):
                     return False
 
 
-class CustomForkingTCPServer(socketserver.ForkingTCPServer):
+class CustomThreadingTCPServer(socketserver.ThreadingTCPServer):
     '''
     Custom version that allows us to drop privileges after port binding.
     '''
@@ -193,7 +193,7 @@ class CustomForkingTCPServer(socketserver.ForkingTCPServer):
         self.jobdir_root = kwargs.pop('jobdir_root')
         # For some reason, setting custom attributes does not work if we
         # call the base class __init__ first. Wha??
-        socketserver.ForkingTCPServer.__init__(self, *args, **kwargs)
+        socketserver.ThreadingTCPServer.__init__(self, *args, **kwargs)
 
     def change_privs(self):
         '''
@@ -209,7 +209,7 @@ class CustomForkingTCPServer(socketserver.ForkingTCPServer):
 
     def server_bind(self):
         self.allow_reuse_address = True
-        socketserver.ForkingTCPServer.server_bind(self)
+        socketserver.ThreadingTCPServer.server_bind(self)
         if self.user:
             self.change_privs()
 
@@ -226,6 +226,16 @@ class CustomForkingTCPServer(socketserver.ForkingTCPServer):
                 return
             raise
 
+    def process_request(self, request, client_address):
+        '''
+        Overridden from the base class to name the thread.
+        '''
+        t = threading.Thread(target=self.process_request_thread,
+                             name='FingerStreamer',
+                             args=(request, client_address))
+        t.daemon = self.daemon_threads
+        t.start()
+
 
 class LogStreamer(object):
     '''
@@ -235,10 +245,10 @@ class LogStreamer(object):
     def __init__(self, user, host, port, jobdir_root):
         self.log = logging.getLogger('zuul.lib.LogStreamer')
         self.log.debug("LogStreamer starting on port %s", port)
-        self.server = CustomForkingTCPServer((host, port),
-                                             RequestHandler,
-                                             user=user,
-                                             jobdir_root=jobdir_root)
+        self.server = CustomThreadingTCPServer((host, port),
+                                               RequestHandler,
+                                               user=user,
+                                               jobdir_root=jobdir_root)
 
         # We start the actual serving within a thread so we can return to
         # the owner.

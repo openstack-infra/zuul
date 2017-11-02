@@ -2390,6 +2390,7 @@ class ZuulTestCase(BaseTestCase):
                      'pydevd.CommandThread',
                      'pydevd.Reader',
                      'pydevd.Writer',
+                     'FingerStreamer',
                      ]
         threads = [t for t in threading.enumerate()
                    if t.name not in whitelist]
