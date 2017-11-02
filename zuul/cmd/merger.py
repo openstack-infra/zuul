@@ -14,19 +14,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import argparse
-import daemon
-import extras
-
-# as of python-daemon 1.6 it doesn't bundle pidlockfile anymore
-# instead it depends on lockfile-0.9.1 which uses pidfile.
-pid_file_module = extras.try_imports(['daemon.pidlockfile', 'daemon.pidfile'])
-
-import sys
 import signal
 
 import zuul.cmd
-from zuul.lib.config import get_default
 
 # No zuul imports here because they pull in paramiko which must not be
 # imported until after the daemonization.
@@ -34,27 +24,20 @@ from zuul.lib.config import get_default
 # Similar situation with gear and statsd.
 
 
-class Merger(zuul.cmd.ZuulApp):
-
-    def parse_arguments(self):
-        parser = argparse.ArgumentParser(description='Zuul merge worker.')
-        parser.add_argument('-c', dest='config',
-                            help='specify the config file')
-        parser.add_argument('-d', dest='nodaemon', action='store_true',
-                            help='do not run as a daemon')
-        parser.add_argument('--version', dest='version', action='version',
-                            version=self._get_version(),
-                            help='show zuul version')
-        self.args = parser.parse_args()
+class Merger(zuul.cmd.ZuulDaemonApp):
+    app_name = 'merger'
+    app_description = 'A standalone Zuul merger.'
 
     def exit_handler(self, signum, frame):
         signal.signal(signal.SIGUSR1, signal.SIG_IGN)
         self.merger.stop()
         self.merger.join()
 
-    def main(self):
+    def run(self):
         # See comment at top of file about zuul imports
         import zuul.merger.server
+
+        self.configure_connections(source_only=True)
 
         self.setup_logging('merger', 'log_config')
 
@@ -73,24 +56,8 @@ class Merger(zuul.cmd.ZuulApp):
 
 
 def main():
-    server = Merger()
-    server.parse_arguments()
-
-    server.read_config()
-    server.configure_connections(source_only=True)
-
-    pid_fn = get_default(server.config, 'merger', 'pidfile',
-                         '/var/run/zuul-merger/zuul-merger.pid',
-                         expand_user=True)
-    pid = pid_file_module.TimeoutPIDLockFile(pid_fn, 10)
-
-    if server.args.nodaemon:
-        server.main()
-    else:
-        with daemon.DaemonContext(pidfile=pid):
-            server.main()
+    Merger().main()
 
 
 if __name__ == "__main__":
-    sys.path.insert(0, '.')
     main()

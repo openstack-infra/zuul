@@ -30,18 +30,14 @@ from zuul.lib.config import get_default
 
 
 class Client(zuul.cmd.ZuulApp):
+    app_name = 'zuul'
+    app_description = 'Zuul RPC client.'
     log = logging.getLogger("zuul.Client")
 
-    def parse_arguments(self):
-        parser = argparse.ArgumentParser(
-            description='Zuul Project Gating System Client.')
-        parser.add_argument('-c', dest='config',
-                            help='specify the config file')
+    def createParser(self):
+        parser = super(Client, self).createParser()
         parser.add_argument('-v', dest='verbose', action='store_true',
                             help='verbose output')
-        parser.add_argument('--version', dest='version', action='version',
-                            version=self._get_version(),
-                            help='show zuul version')
 
         subparsers = parser.add_subparsers(title='commands',
                                            description='valid commands',
@@ -133,7 +129,10 @@ class Client(zuul.cmd.ZuulApp):
         # TODO: add filters such as queue, project, changeid etc
         show_running_jobs.set_defaults(func=self.show_running_jobs)
 
-        self.args = parser.parse_args()
+        return parser
+
+    def parseArguments(self, args=None):
+        parser = super(Client, self).parseArguments()
         if not getattr(self.args, 'func', None):
             parser.print_help()
             sys.exit(1)
@@ -156,8 +155,8 @@ class Client(zuul.cmd.ZuulApp):
             logging.basicConfig(level=logging.DEBUG)
 
     def main(self):
-        self.parse_arguments()
-        self.read_config()
+        self.parseArguments()
+        self.readConfig()
         self.setup_logging()
 
         self.server = self.config.get('gearman', 'server')
@@ -363,10 +362,8 @@ class Client(zuul.cmd.ZuulApp):
 
 
 def main():
-    client = Client()
-    client.main()
+    Client().main()
 
 
 if __name__ == "__main__":
-    sys.path.insert(0, '.')
     main()

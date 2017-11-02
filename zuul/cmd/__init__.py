@@ -14,7 +14,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import argparse
 import configparser
+import daemon
 import extras
 import io
 import logging
@@ -28,8 +30,13 @@ import threading
 yappi = extras.try_import('yappi')
 objgraph = extras.try_import('objgraph')
 
+# as of python-daemon 1.6 it doesn't bundle pidlockfile anymore
+# instead it depends on lockfile-0.9.1 which uses pidfile.
+pid_file_module = extras.try_imports(['daemon.pidlockfile', 'daemon.pidfile'])
+
 from zuul.ansible import logconfig
 import zuul.lib.connections
+from zuul.lib.config import get_default
 
 # Do not import modules that will pull in paramiko which must not be
 # imported until after the daemonization.
@@ -87,6 +94,8 @@ def stack_dump_handler(signum, frame):
 
 
 class ZuulApp(object):
+    app_name = None  # type: str
+    app_description = None  # type: str
 
     def __init__(self):
         self.args = None
@@ -97,7 +106,21 @@ class ZuulApp(object):
         from zuul.version import version_info as zuul_version_info
         return "Zuul version: %s" % zuul_version_info.release_string()
 
-    def read_config(self):
+    def createParser(self):
+        parser = argparse.ArgumentParser(description=self.app_description)
+        parser.add_argument('-c', dest='config',
+                            help='specify the config file')
+        parser.add_argument('--version', dest='version', action='version',
+                            version=self._get_version(),
+                            help='show zuul version')
+        return parser
+
+    def parseArguments(self, args=None):
+        parser = self.createParser()
+        self.args = parser.parse_args(args)
+        return parser
+
+    def readConfig(self):
         self.config = configparser.ConfigParser()
         if self.args.config:
             locations = [self.args.config]
@@ -130,3 +153,34 @@ class ZuulApp(object):
     def configure_connections(self, source_only=False):
         self.connections = zuul.lib.connections.ConnectionRegistry()
         self.connections.configure(self.config, source_only)
+
+
+class ZuulDaemonApp(ZuulApp):
+    def createParser(self):
+        parser = super(ZuulDaemonApp, self).createParser()
+        parser.add_argument('-d', dest='nodaemon', action='store_true',
+                            help='do not run as a daemon')
+        return parser
+
+    def getPidFile(self):
+        pid_fn = get_default(self.config, self.app_name, 'pidfile',
+                             '/var/run/zuul/%s.pid' % self.app_name,
+                             expand_user=True)
+        return pid_fn
+
+    def main(self):
+        self.parseArguments()
+        self.readConfig()
+
+        pid_fn = self.getPidFile()
+        pid = pid_file_module.TimeoutPIDLockFile(pid_fn, 10)
+
+        if self.args.nodaemon:
+            self.run()
+        else:
+            # Exercise the pidfile before we do anything else (including
+            # logging or daemonizing)
+            with daemon.DaemonContext(pidfile=pid):
+                pass
+            with daemon.DaemonContext(pidfile=pid):
+                self.run()

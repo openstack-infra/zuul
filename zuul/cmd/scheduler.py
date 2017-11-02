@@ -14,14 +14,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import argparse
-import daemon
-import extras
-
-# as of python-daemon 1.6 it doesn't bundle pidlockfile anymore
-# instead it depends on lockfile-0.9.1 which uses pidfile.
-pid_file_module = extras.try_imports(['daemon.pidlockfile', 'daemon.pidfile'])
-
 import logging
 import os
 import sys
@@ -37,24 +29,13 @@ from zuul.lib.statsd import get_statsd_config
 # Similar situation with gear and statsd.
 
 
-class Scheduler(zuul.cmd.ZuulApp):
+class Scheduler(zuul.cmd.ZuulDaemonApp):
+    app_name = 'scheduler'
+    app_description = 'The main zuul process.'
+
     def __init__(self):
         super(Scheduler, self).__init__()
         self.gear_server_pid = None
-
-    def parse_arguments(self, args=None):
-        parser = argparse.ArgumentParser(description='Project gating system.')
-        parser.add_argument('-c', dest='config',
-                            help='specify the config file')
-        parser.add_argument('-d', dest='nodaemon', action='store_true',
-                            help='do not run as a daemon')
-        parser.add_argument('-t', dest='validate', action='store_true',
-                            help='validate config file syntax (Does not'
-                            'validate config repo validity)')
-        parser.add_argument('--version', dest='version', action='version',
-                            version=self._get_version(),
-                            help='show zuul version')
-        self.args = parser.parse_args(args)
 
     def reconfigure_handler(self, signum, frame):
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
@@ -76,20 +57,6 @@ class Scheduler(zuul.cmd.ZuulApp):
     def term_handler(self, signum, frame):
         self.stop_gear_server()
         os._exit(0)
-
-    def test_config(self):
-        # See comment at top of file about zuul imports
-        import zuul.scheduler
-        import zuul.executor.client
-
-        logging.basicConfig(level=logging.DEBUG)
-        try:
-            self.sched = zuul.scheduler.Scheduler(self.config,
-                                                  testonly=True)
-        except Exception as e:
-            self.log.error("%s" % e)
-            return -1
-        return 0
 
     def start_gear_server(self):
         pipe_read, pipe_write = os.pipe()
@@ -134,7 +101,7 @@ class Scheduler(zuul.cmd.ZuulApp):
         if self.gear_server_pid:
             os.kill(self.gear_server_pid, signal.SIGKILL)
 
-    def main(self):
+    def run(self):
         # See comment at top of file about zuul imports
         import zuul.scheduler
         import zuul.executor.client
@@ -206,26 +173,8 @@ class Scheduler(zuul.cmd.ZuulApp):
 
 
 def main():
-    scheduler = Scheduler()
-    scheduler.parse_arguments()
-
-    scheduler.read_config()
-
-    if scheduler.args.validate:
-        sys.exit(scheduler.test_config())
-
-    pid_fn = get_default(scheduler.config, 'scheduler', 'pidfile',
-                         '/var/run/zuul-scheduler/zuul-scheduler.pid',
-                         expand_user=True)
-    pid = pid_file_module.TimeoutPIDLockFile(pid_fn, 10)
-
-    if scheduler.args.nodaemon:
-        scheduler.main()
-    else:
-        with daemon.DaemonContext(pidfile=pid):
-            scheduler.main()
+    Scheduler().main()
 
 
 if __name__ == "__main__":
-    sys.path.insert(0, '.')
     main()
