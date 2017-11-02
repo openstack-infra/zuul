@@ -499,7 +499,7 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
             "refUpdate": {
                 "oldRev": oldrev,
                 "newRev": repo.heads[branch].commit.hexsha,
-                "refName": branch,
+                "refName": 'refs/heads/' + branch,
                 "project": project,
             }
         }
