@@ -56,6 +56,13 @@ port=25
 default_from=zuul@example.com
 default_to=you@example.com
 
+[connection mqtt]
+driver=mqtt
+server=localhost
+user=zuul
+password=zuul
+;keepalive=60
+
 [connection mydatabase]
 driver=sql
 dburi=mysql+pymysql://user@localhost/zuul

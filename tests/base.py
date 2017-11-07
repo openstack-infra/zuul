@@ -2318,6 +2318,17 @@ class ZuulTestCase(BaseTestCase):
 
         self.useFixture(fixtures.MonkeyPatch('smtplib.SMTP', FakeSMTPFactory))
 
+        # Set up mqtt related fakes
+        self.mqtt_messages = []
+
+        def fakeMQTTPublish(_, topic, msg, qos):
+            log = logging.getLogger('zuul.FakeMQTTPubish')
+            log.info('Publishing message via mqtt')
+            self.mqtt_messages.append({'topic': topic, 'msg': msg, 'qos': qos})
+        self.useFixture(fixtures.MonkeyPatch(
+            'zuul.driver.mqtt.mqttconnection.MQTTConnection.publish',
+            fakeMQTTPublish))
+
         # Register connections from the config using fakes
         self.connections = zuul.lib.connections.ConnectionRegistry()
         self.connections.configure(self.config, source_only=source_only)

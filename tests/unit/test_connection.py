@@ -12,6 +12,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import textwrap
+
 import sqlalchemy as sa
 
 from tests.base import ZuulTestCase, ZuulDBTestCase
@@ -433,3 +435,59 @@ class TestConnectionsGitweb(ZuulTestCase):
         url_should_be = 'https://review.example.com/' \
                         'gitweb?p=foo/bar.git;a=commitdiff;h=1'
         self.assertEqual(url, url_should_be)
+
+
+class TestMQTTConnection(ZuulTestCase):
+    config_file = 'zuul-mqtt-driver.conf'
+    tenant_config_file = 'config/mqtt-driver/main.yaml'
+
+    def test_mqtt_reporter(self):
+        "Test the MQTT reporter"
+        # Add a success result
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        success_event = self.mqtt_messages.pop()
+        start_event = self.mqtt_messages.pop()
+
+        self.assertEquals(start_event.get('topic'),
+                          'tenant-one/zuul_start/check/org/project/master')
+        mqtt_payload = start_event['msg']
+        self.assertEquals(mqtt_payload['project'], 'org/project')
+        self.assertEquals(mqtt_payload['branch'], 'master')
+        self.assertEquals(mqtt_payload['buildset']['builds'][0]['job_name'],
+                          'test')
+        self.assertNotIn('result', mqtt_payload['buildset']['builds'][0])
+
+        self.assertEquals(success_event.get('topic'),
+                          'tenant-one/zuul_buildset/check/org/project/master')
+        mqtt_payload = success_event['msg']
+        self.assertEquals(mqtt_payload['project'], 'org/project')
+        self.assertEquals(mqtt_payload['branch'], 'master')
+        self.assertEquals(mqtt_payload['buildset']['builds'][0]['job_name'],
+                          'test')
+        self.assertEquals(mqtt_payload['buildset']['builds'][0]['result'],
+                          'SUCCESS')
+
+    def test_mqtt_invalid_topic(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - pipeline:
+                name: test-pipeline
+                manager: independent
+                trigger:
+                  gerrit:
+                    - event: comment-added
+                start:
+                  mqtt:
+                    topic: "{bad}/{topic}"
+            """)
+        file_dict = {'zuul.d/test.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertIn("topic component 'bad' is invalid", A.messages[0],
+                      "A should report a syntax error")
