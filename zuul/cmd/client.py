@@ -21,6 +21,7 @@ import logging
 import prettytable
 import sys
 import time
+import textwrap
 
 
 import zuul.rpcclient
@@ -78,8 +79,15 @@ class Client(zuul.cmd.ZuulApp):
                                  required=True)
         cmd_enqueue.set_defaults(func=self.enqueue)
 
-        cmd_enqueue = subparsers.add_parser('enqueue-ref',
-                                            help='enqueue a ref')
+        cmd_enqueue = subparsers.add_parser(
+            'enqueue-ref', help='enqueue a ref',
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            description=textwrap.dedent('''\
+            Submit a trigger event
+
+            Directly enqueue a trigger event.  This is usually used
+            to manually "replay" a trigger received from an external
+            source such as gerrit.'''))
         cmd_enqueue.add_argument('--tenant', help='tenant name',
                                  required=True)
         cmd_enqueue.add_argument('--trigger', help='trigger name',
