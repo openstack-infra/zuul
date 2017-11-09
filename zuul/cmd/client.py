@@ -99,11 +99,9 @@ class Client(zuul.cmd.ZuulApp):
         cmd_enqueue.add_argument('--ref', help='ref name',
                                  required=True)
         cmd_enqueue.add_argument(
-            '--oldrev', help='old revision',
-            default='0000000000000000000000000000000000000000')
+            '--oldrev', help='old revision', default=None)
         cmd_enqueue.add_argument(
-            '--newrev', help='new revision',
-            default='0000000000000000000000000000000000000000')
+            '--newrev', help='new revision', default=None)
         cmd_enqueue.set_defaults(func=self.enqueue_ref)
 
         cmd_promote = subparsers.add_parser('promote',
@@ -140,8 +138,17 @@ class Client(zuul.cmd.ZuulApp):
             parser.print_help()
             sys.exit(1)
         if self.args.func == self.enqueue_ref:
-            if self.args.oldrev == self.args.newrev:
-                parser.error("The old and new revisions must not be the same.")
+            # if oldrev or newrev is set, ensure they're not the same
+            if (self.args.oldrev is not None) or \
+               (self.args.newrev is not None):
+                if self.args.oldrev == self.args.newrev:
+                    parser.error(
+                        "The old and new revisions must not be the same.")
+            # if they're not set, we pad them out to zero
+            if self.args.oldrev is None:
+                self.args.oldrev = '0000000000000000000000000000000000000000'
+            if self.args.newrev is None:
+                self.args.newrev = '0000000000000000000000000000000000000000'
 
     def setup_logging(self):
         """Client logging does not rely on conf file"""
