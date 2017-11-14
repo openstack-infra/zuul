@@ -1,0 +1,33 @@
+- hosts: all
+  tasks:
+    - name: Register parent.txt file.
+      stat:
+        path: "{{zuul.executor.log_root}}/parent.txt"
+      register: parent_st
+
+    - name: Assert parent.txt does not exist.
+      assert:
+        that:
+          - not parent_st.stat.exists
+
+    - name: Register foo.txt file.
+      stat:
+        path: "{{zuul.executor.log_root}}/foo.txt"
+      register: foo_st
+
+    - name: Assert foo.txt exists.
+      assert:
+        that:
+          - foo_st.stat.exists
+          - foo_st.stat.isreg
+
+    - name: Register bar.txt file.
+      stat:
+        path: "{{zuul.executor.log_root}}/bar.txt"
+      register: bar_st
+
+    - name: Assert bar.txt exists.
+      assert:
+        that:
+          - bar_st.stat.exists
+          - bar_st.stat.isreg

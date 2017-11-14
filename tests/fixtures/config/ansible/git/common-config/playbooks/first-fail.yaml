@@ -1,0 +1,4 @@
+- hosts: foo
+  tasks:
+    - fail:
+        msg: "Always fail"

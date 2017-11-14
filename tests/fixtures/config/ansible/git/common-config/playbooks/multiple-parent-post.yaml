@@ -1,0 +1,11 @@
+- hosts: all
+  tasks:
+    - name: Register parent.txt file.
+      stat:
+        path: "{{zuul.executor.log_root}}/parent.txt"
+      register: parent_st
+
+    - name: Assert parent.txt exist.
+      assert:
+        that:
+          - parent_st.stat.exists

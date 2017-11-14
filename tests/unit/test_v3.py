@@ -2312,6 +2312,20 @@ class TestAnsible(AnsibleZuulTestCase):
         build_add_host = self.getJobFromHistory('add-host')
         with self.jobLog(build_add_host):
             self.assertEqual(build_add_host.result, 'SUCCESS')
+        build_multiple_child = self.getJobFromHistory('multiple-child')
+        with self.jobLog(build_multiple_child):
+            self.assertEqual(build_multiple_child.result, 'SUCCESS')
+        build_multiple_child_no_run = self.getJobFromHistory(
+            'multiple-child-no-run')
+        with self.jobLog(build_multiple_child_no_run):
+            self.assertEqual(build_multiple_child_no_run.result, 'SUCCESS')
+        build_multiple_run = self.getJobFromHistory('multiple-run')
+        with self.jobLog(build_multiple_run):
+            self.assertEqual(build_multiple_run.result, 'SUCCESS')
+        build_multiple_run_failure = self.getJobFromHistory(
+            'multiple-run-failure')
+        with self.jobLog(build_multiple_run_failure):
+            self.assertEqual(build_multiple_run_failure.result, 'FAILURE')
         build_python27 = self.getJobFromHistory('python27')
         with self.jobLog(build_python27):
             self.assertEqual(build_python27.result, 'SUCCESS')
