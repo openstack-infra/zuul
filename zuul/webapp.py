@@ -108,15 +108,17 @@ class WebApp(threading.Thread):
     def _handle_keys(self, request, path):
         m = re.match('/keys/(.*?)/(.*?).pub', path)
         if not m:
-            raise webob.exc.HTTPNotFound()
+            raise webob.exc.HTTPBadRequest()
         source_name = m.group(1)
         project_name = m.group(2)
         source = self.scheduler.connections.getSource(source_name)
         if not source:
-            raise webob.exc.HTTPNotFound()
+            raise webob.exc.HTTPNotFound(
+                detail="Cannot locate a source named %s" % source_name)
         project = source.getProject(project_name)
-        if not project:
-            raise webob.exc.HTTPNotFound()
+        if not project or not hasattr(project, 'public_key'):
+            raise webob.exc.HTTPNotFound(
+                detail="Cannot locate a project named %s" % project_name)
 
         pem_public_key = encryption.serialize_rsa_public_key(
             project.public_key)
