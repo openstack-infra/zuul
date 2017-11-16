@@ -56,6 +56,7 @@ class RPCListener(object):
         self.worker.registerFunction("zuul:promote")
         self.worker.registerFunction("zuul:get_running_jobs")
         self.worker.registerFunction("zuul:get_job_log_stream_address")
+        self.worker.registerFunction("zuul:tenant_list")
 
     def getFunctions(self):
         functions = {}
@@ -269,3 +270,10 @@ class RPCListener(object):
             job_log_stream_address['server'] = build.worker.hostname
             job_log_stream_address['port'] = build.worker.log_port
         job.sendWorkComplete(json.dumps(job_log_stream_address))
+
+    def handle_tenant_list(self, job):
+        output = []
+        for tenant_name, tenant in self.sched.abide.tenants.items():
+            output.append({'name': tenant_name,
+                           'projects': len(tenant.untrusted_projects)})
+        job.sendWorkComplete(json.dumps(output))
