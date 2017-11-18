@@ -495,7 +495,8 @@ def make_inventory_dict(nodes, groups, all_vars):
 
     hosts = {}
     for node in nodes:
-        hosts[node['name']] = node['host_vars']
+        for name in node['name']:
+            hosts[name] = node['host_vars']
 
     inventory = {
         'all': {

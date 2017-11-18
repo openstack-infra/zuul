@@ -340,7 +340,7 @@ class PragmaParser(object):
 class NodeSetParser(object):
     @staticmethod
     def getSchema(anonymous=False):
-        node = {vs.Required('name'): str,
+        node = {vs.Required('name'): to_list(str),
                 vs.Required('label'): str,
                 }
 
@@ -365,11 +365,13 @@ class NodeSetParser(object):
         node_names = set()
         group_names = set()
         for conf_node in as_list(conf['nodes']):
-            if conf_node['name'] in node_names:
-                raise DuplicateNodeError(conf['name'], conf_node['name'])
-            node = model.Node(conf_node['name'], conf_node['label'])
+            for name in as_list(conf_node['name']):
+                if name in node_names:
+                    raise DuplicateNodeError(name, conf_node['name'])
+            node = model.Node(as_list(conf_node['name']), conf_node['label'])
             ns.addNode(node)
-            node_names.add(conf_node['name'])
+            for name in as_list(conf_node['name']):
+                node_names.add(name)
         for conf_group in as_list(conf.get('groups', [])):
             for node_name in as_list(conf_group['nodes']):
                 if node_name not in node_names:

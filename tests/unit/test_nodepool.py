@@ -67,8 +67,8 @@ class TestNodepool(BaseTestCase):
         # Test a simple node request
 
         nodeset = model.NodeSet()
-        nodeset.addNode(model.Node('controller', 'ubuntu-xenial'))
-        nodeset.addNode(model.Node('compute', 'ubuntu-xenial'))
+        nodeset.addNode(model.Node(['controller', 'foo'], 'ubuntu-xenial'))
+        nodeset.addNode(model.Node(['compute'], 'ubuntu-xenial'))
         job = model.Job('testjob')
         job.nodeset = nodeset
         request = self.nodepool.requestNodes(None, job)
@@ -99,8 +99,8 @@ class TestNodepool(BaseTestCase):
         # Test that node requests are re-submitted after disconnect
 
         nodeset = model.NodeSet()
-        nodeset.addNode(model.Node('controller', 'ubuntu-xenial'))
-        nodeset.addNode(model.Node('compute', 'ubuntu-xenial'))
+        nodeset.addNode(model.Node(['controller'], 'ubuntu-xenial'))
+        nodeset.addNode(model.Node(['compute'], 'ubuntu-xenial'))
         job = model.Job('testjob')
         job.nodeset = nodeset
         self.fake_nodepool.paused = True
@@ -116,8 +116,8 @@ class TestNodepool(BaseTestCase):
         # Test that node requests can be canceled
 
         nodeset = model.NodeSet()
-        nodeset.addNode(model.Node('controller', 'ubuntu-xenial'))
-        nodeset.addNode(model.Node('compute', 'ubuntu-xenial'))
+        nodeset.addNode(model.Node(['controller'], 'ubuntu-xenial'))
+        nodeset.addNode(model.Node(['compute'], 'ubuntu-xenial'))
         job = model.Job('testjob')
         job.nodeset = nodeset
         self.fake_nodepool.paused = True
@@ -131,8 +131,8 @@ class TestNodepool(BaseTestCase):
         # Test that a resubmitted request would not lock nodes
 
         nodeset = model.NodeSet()
-        nodeset.addNode(model.Node('controller', 'ubuntu-xenial'))
-        nodeset.addNode(model.Node('compute', 'ubuntu-xenial'))
+        nodeset.addNode(model.Node(['controller'], 'ubuntu-xenial'))
+        nodeset.addNode(model.Node(['compute'], 'ubuntu-xenial'))
         job = model.Job('testjob')
         job.nodeset = nodeset
         request = self.nodepool.requestNodes(None, job)
@@ -152,8 +152,8 @@ class TestNodepool(BaseTestCase):
         # Test that a lost request would not lock nodes
 
         nodeset = model.NodeSet()
-        nodeset.addNode(model.Node('controller', 'ubuntu-xenial'))
-        nodeset.addNode(model.Node('compute', 'ubuntu-xenial'))
+        nodeset.addNode(model.Node(['controller'], 'ubuntu-xenial'))
+        nodeset.addNode(model.Node(['compute'], 'ubuntu-xenial'))
         job = model.Job('testjob')
         job.nodeset = nodeset
         request = self.nodepool.requestNodes(None, job)

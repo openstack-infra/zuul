@@ -44,6 +44,16 @@
     run: playbooks/single-inventory.yaml
 
 - job:
+    name: single-inventory-list
+    nodeset:
+      nodes:
+        - name:
+            - compute
+            - controller
+          label: ubuntu-xenial
+    run: playbooks/single-inventory.yaml
+
+- job:
     name: group-inventory
     nodeset: nodeset1
     run: playbooks/group-inventory.yaml

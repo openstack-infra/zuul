@@ -1412,7 +1412,7 @@ class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
             host['host_vars']['ansible_connection'] = 'local'
 
         hosts.append(dict(
-            name='localhost',
+            name=['localhost'],
             host_vars=dict(ansible_connection='local'),
             host_keys=[]))
         return hosts

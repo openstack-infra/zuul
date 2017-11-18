@@ -497,9 +497,10 @@ class NodeSet(object):
         return n
 
     def addNode(self, node):
-        if node.name in self.nodes:
-            raise Exception("Duplicate node in %s" % (self,))
-        self.nodes[node.name] = node
+        for name in node.name:
+            if name in self.nodes:
+                raise Exception("Duplicate node in %s" % (self,))
+        self.nodes[tuple(node.name)] = node
 
     def getNodes(self):
         return list(self.nodes.values())
