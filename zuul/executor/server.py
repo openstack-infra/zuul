@@ -676,16 +676,19 @@ class AnsibleJob(object):
                 ref = args['zuul']['ref']
             else:
                 ref = None
-            self.checkoutBranch(repo,
-                                project['name'],
-                                ref,
-                                args['branch'],
-                                args['override_branch'],
-                                args['override_checkout'],
-                                project['override_branch'],
-                                project['override_checkout'],
-                                project['default_branch'])
-
+            selected = self.checkoutBranch(repo,
+                                           project['name'],
+                                           ref,
+                                           args['branch'],
+                                           args['override_branch'],
+                                           args['override_checkout'],
+                                           project['override_branch'],
+                                           project['override_checkout'],
+                                           project['default_branch'])
+            # Update the inventory variables to indicate the ref we
+            # checked out
+            p = args['zuul']['_projects'][project['canonical_name']]
+            p['checkout'] = selected
         # Delete the origin remote from each repo we set up since
         # it will not be valid within the jobs.
         for repo in repos.values():
@@ -764,44 +767,45 @@ class AnsibleJob(object):
                        project_default_branch):
         branches = repo.getBranches()
         refs = [r.name for r in repo.getRefs()]
+        selected_ref = None
         if project_override_branch in branches:
+            selected_ref = project_override_branch
             self.log.info("Checking out %s project override branch %s",
-                          project_name, project_override_branch)
-            repo.checkout(project_override_branch)
+                          project_name, selected_ref)
         if project_override_checkout in refs:
+            selected_ref = project_override_checkout
             self.log.info("Checking out %s project override ref %s",
-                          project_name, project_override_checkout)
-            repo.checkout(project_override_checkout)
+                          project_name, selected_ref)
         elif job_override_branch in branches:
+            selected_ref = job_override_branch
             self.log.info("Checking out %s job override branch %s",
-                          project_name, job_override_branch)
-            repo.checkout(job_override_branch)
+                          project_name, selected_ref)
         elif job_override_checkout in refs:
+            selected_ref = job_override_checkout
             self.log.info("Checking out %s job override ref %s",
-                          project_name, job_override_checkout)
-            repo.checkout(job_override_checkout)
+                          project_name, selected_ref)
         elif ref and ref.startswith('refs/heads/'):
-            b = ref[len('refs/heads/'):]
+            selected_ref = ref[len('refs/heads/'):]
             self.log.info("Checking out %s branch ref %s",
-                          project_name, b)
-            repo.checkout(b)
+                          project_name, selected_ref)
         elif ref and ref.startswith('refs/tags/'):
-            t = ref[len('refs/tags/'):]
+            selected_ref = ref[len('refs/tags/'):]
             self.log.info("Checking out %s tag ref %s",
-                          project_name, t)
-            repo.checkout(t)
+                          project_name, selected_ref)
         elif zuul_branch and zuul_branch in branches:
+            selected_ref = zuul_branch
             self.log.info("Checking out %s zuul branch %s",
-                          project_name, zuul_branch)
-            repo.checkout(zuul_branch)
+                          project_name, selected_ref)
         elif project_default_branch in branches:
+            selected_ref = project_default_branch
             self.log.info("Checking out %s project default branch %s",
-                          project_name, project_default_branch)
-            repo.checkout(project_default_branch)
+                          project_name, selected_ref)
         else:
             raise ExecutorError("Project %s does not have the "
                                 "default branch %s" %
                                 (project_name, project_default_branch))
+        repo.checkout(selected_ref)
+        return selected_ref
 
     def runPlaybooks(self, args):
         result = None

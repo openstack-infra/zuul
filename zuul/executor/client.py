@@ -165,6 +165,7 @@ class ExecutorClient(object):
                            tenant=tenant.name,
                            timeout=job.timeout,
                            jobtags=sorted(job.tags),
+                           override_checkout=job.override_checkout,
                            _inheritance_path=list(job.inheritance_path))
         if hasattr(item.change, 'branch'):
             zuul_params['branch'] = item.change.branch
