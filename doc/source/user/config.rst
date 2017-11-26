@@ -539,6 +539,13 @@ Here is an example of two job definitions:
       specified in a project's pipeline, set this attribute to
       ``true``.
 
+   .. attr:: protected
+      :default: false
+
+      When set to ``true`` only jobs defined in the same project may inherit
+      from this job. Once this is set to ``true`` it cannot be reset to
+      ``false``.
+
    .. attr:: success-message
       :default: SUCCESS
 

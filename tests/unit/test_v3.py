@@ -73,6 +73,110 @@ class TestMultipleTenants(AnsibleZuulTestCase):
                          "not affect tenant one")
 
 
+class TestProtected(ZuulTestCase):
+
+    tenant_config_file = 'config/protected/main.yaml'
+
+    def test_protected_ok(self):
+            # test clean usage of final parent job
+            in_repo_conf = textwrap.dedent(
+                """
+                - job:
+                    name: job-protected
+                    protected: true
+                    run: playbooks/job-protected.yaml
+
+                - project:
+                    name: org/project
+                    check:
+                      jobs:
+                        - job-child-ok
+
+                - job:
+                    name: job-child-ok
+                    parent: job-protected
+
+                - project:
+                    name: org/project
+                    check:
+                      jobs:
+                        - job-child-ok
+
+                """)
+
+            file_dict = {'zuul.yaml': in_repo_conf}
+            A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                               files=file_dict)
+            self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+            self.waitUntilSettled()
+
+            self.assertEqual(A.reported, 1)
+            self.assertEqual(A.patchsets[-1]['approvals'][0]['value'], '1')
+
+    def test_protected_reset(self):
+        # try to reset protected flag
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: job-protected
+                protected: true
+                run: playbooks/job-protected.yaml
+
+            - job:
+                name: job-child-reset-protected
+                parent: job-protected
+                protected: false
+
+            - project:
+                name: org/project
+                check:
+                  jobs:
+                    - job-child-reset-protected
+
+            """)
+
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        # The second patch tried to override some variables.
+        # Thus it should fail.
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(A.patchsets[-1]['approvals'][0]['value'], '-1')
+        self.assertIn('Unable to reset protected attribute', A.messages[0])
+
+    def test_protected_inherit_not_ok(self):
+        # try to inherit from a protected job in different project
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: job-child-notok
+                run: playbooks/job-child-notok.yaml
+                parent: job-protected
+
+            - project:
+                name: org/project1
+                check:
+                  jobs:
+                    - job-child-notok
+
+            """)
+
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(A.patchsets[-1]['approvals'][0]['value'], '-1')
+        self.assertIn(
+            "which is defined in review.example.com/org/project is protected "
+            "and cannot be inherited from other projects.", A.messages[0])
+
+
 class TestFinal(ZuulTestCase):
 
     tenant_config_file = 'config/final/main.yaml'
