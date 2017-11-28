@@ -948,6 +948,28 @@ class Job(object):
             matchers.append(change_matcher.BranchMatcher(branch))
         self.branch_matcher = change_matcher.MatchAny(matchers)
 
+    def getSimpleBranchMatcher(self):
+        # If the job has a simple branch matcher, return it; otherwise None.
+        if not self.branch_matcher:
+            return None
+        m = self.branch_matcher
+        if not isinstance(m, change_matcher.AbstractMatcherCollection):
+            return None
+        if len(m.matchers) != 1:
+            return None
+        m = m.matchers[0]
+        if not isinstance(m, change_matcher.BranchMatcher):
+            return None
+        return m._regex
+
+    def addBranchMatcher(self, branch):
+        # Add a branch matcher that combines as a boolean *and* with
+        # existing branch matchers, if any.
+        matchers = [change_matcher.BranchMatcher(branch)]
+        if self.branch_matcher:
+            matchers.append(self.branch_matcher)
+        self.branch_matcher = change_matcher.MatchAll(matchers)
+
     def updateVariables(self, other_vars):
         v = copy.deepcopy(self.variables)
         Job._deepUpdate(v, other_vars)
@@ -1097,9 +1119,26 @@ class JobList(object):
         for jobname, jobs in other.jobs.items():
             joblist = self.jobs.setdefault(jobname, [])
             for job in jobs:
-                if not job.branch_matcher and implied_branch:
-                    job = job.copy()
-                    job.setBranchMatcher([implied_branch])
+                if implied_branch:
+                    # If setting an implied branch and the current
+                    # branch matcher is a simple match for a different
+                    # branch, then simply do not add this job.  If it
+                    # is absent, set it to the implied branch.
+                    # Otherwise, combine it with the implied branch to
+                    # ensure that it still only affects this branch
+                    # (whatever else it may do).
+                    simple_branch = job.getSimpleBranchMatcher()
+                    if simple_branch and simple_branch != implied_branch:
+                        # Job is for a different branch, don't add it.
+                        continue
+                    if not simple_branch:
+                        # The branch matcher could be complex, or
+                        # missing.  Add our implied matcher.
+                        job = job.copy()
+                        job.addBranchMatcher(implied_branch)
+                    # Otherwise we have a simple branch matcher which
+                    # is the same as our implied branch, the job can
+                    # be added as-is.
                 if job not in joblist:
                     joblist.append(job)
 

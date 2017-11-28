@@ -1,0 +1,4 @@
+- project:
+    name: puppet-tripleo
+    templates:
+      - puppet-unit

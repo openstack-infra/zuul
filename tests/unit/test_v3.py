@@ -157,6 +157,115 @@ class TestFinal(ZuulTestCase):
         self.assertIn('Unable to modify final job', A.messages[0])
 
 
+class TestBranchTemplates(ZuulTestCase):
+    tenant_config_file = 'config/branch-templates/main.yaml'
+
+    def test_template_removal_from_branch(self):
+        # Test that a template can be removed from one branch but not
+        # another.
+        # This creates a new branch with a copy of the config in master
+        self.create_branch('puppet-integration', 'stable/newton')
+        self.create_branch('puppet-integration', 'stable/ocata')
+        self.create_branch('puppet-tripleo', 'stable/newton')
+        self.create_branch('puppet-tripleo', 'stable/ocata')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'puppet-integration', 'stable/newton'))
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'puppet-integration', 'stable/ocata'))
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'puppet-tripleo', 'stable/newton'))
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'puppet-tripleo', 'stable/ocata'))
+        self.waitUntilSettled()
+
+        in_repo_conf = textwrap.dedent(
+            """
+            - project:
+                name: puppet-tripleo
+                check:
+                  jobs:
+                    - puppet-something
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('puppet-tripleo', 'stable/newton',
+                                           'A', files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='puppet-something', result='SUCCESS', changes='1,1')])
+
+    def test_template_change_on_branch(self):
+        # Test that the contents of a template can be changed on one
+        # branch without affecting another.
+
+        # This creates a new branch with a copy of the config in master
+        self.create_branch('puppet-integration', 'stable/newton')
+        self.create_branch('puppet-integration', 'stable/ocata')
+        self.create_branch('puppet-tripleo', 'stable/newton')
+        self.create_branch('puppet-tripleo', 'stable/ocata')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'puppet-integration', 'stable/newton'))
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'puppet-integration', 'stable/ocata'))
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'puppet-tripleo', 'stable/newton'))
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'puppet-tripleo', 'stable/ocata'))
+        self.waitUntilSettled()
+
+        in_repo_conf = textwrap.dedent("""
+            - job:
+                name: puppet-unit-base
+                run: playbooks/run-unit-tests.yaml
+
+            - job:
+                name: puppet-unit-3.8
+                parent: puppet-unit-base
+                branches: ^(stable/(newton|ocata)).*$
+                vars:
+                  puppet_gem_version: 3.8
+
+            - job:
+                name: puppet-something
+                run: playbooks/run-unit-tests.yaml
+
+            - project-template:
+                name: puppet-unit
+                check:
+                  jobs:
+                    - puppet-something
+
+            - project:
+                name: puppet-integration
+                templates:
+                  - puppet-unit
+        """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('puppet-integration',
+                                           'stable/newton',
+                                           'A', files=file_dict)
+        B = self.fake_gerrit.addFakeChange('puppet-tripleo',
+                                           'stable/newton',
+                                           'B')
+        B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            B.subject, A.data['id'])
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='puppet-something', result='SUCCESS',
+                 changes='1,1 2,1')])
+
+
 class TestBranchVariants(ZuulTestCase):
     tenant_config_file = 'config/branch-variants/main.yaml'
 

@@ -658,8 +658,17 @@ Here is an example of two job definitions:
 
       * In the case of a job variant defined within a
         :ref:`project-template`, if no branch specifier appears, the
-        implied branch specifier for the :ref:`project` definition which
-        uses the project-template will be used.
+        implied branch containing the project-template definition is
+        used as an implied branch specifier.  This means that
+        definitions of the same project-template on different branches
+        may run different jobs.
+
+        When that project-template is used by a :ref:`project`
+        definition within a :term:`untrusted-project`, the branch
+        containing that project definition is combined with the branch
+        specifier of the project-template.  This means it is possible
+        for a project to use a template on one branch, but not on
+        another.
 
       This allows for the very simple and expected workflow where if a
       project defines a job on the ``master`` branch with no branch
