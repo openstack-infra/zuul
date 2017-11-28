@@ -1608,10 +1608,13 @@ class ExecutorServer(object):
         self.merger = self._getMerger(self.merge_root)
         self.update_queue = DeduplicateQueue()
 
+        command_socket = get_default(
+            self.config, 'executor', 'command_socket',
+            '/var/lib/zuul/executor.socket')
+        self.command_socket = commandsocket.CommandSocket(command_socket)
+
         state_dir = get_default(self.config, 'executor', 'state_dir',
                                 '/var/lib/zuul', expand_user=True)
-        path = os.path.join(state_dir, 'executor.socket')
-        self.command_socket = commandsocket.CommandSocket(path)
         ansible_dir = os.path.join(state_dir, 'ansible')
         self.ansible_dir = ansible_dir
         if os.path.exists(ansible_dir):
