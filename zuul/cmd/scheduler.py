@@ -22,6 +22,7 @@ import signal
 import zuul.cmd
 from zuul.lib.config import get_default
 from zuul.lib.statsd import get_statsd_config
+import zuul.scheduler
 
 # No zuul imports here because they pull in paramiko which must not be
 # imported until after the daemonization.
@@ -37,6 +38,18 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
         super(Scheduler, self).__init__()
         self.gear_server_pid = None
 
+    def createParser(self):
+        parser = super(Scheduler, self).createParser()
+        parser.add_argument('command',
+                            choices=zuul.scheduler.COMMANDS,
+                            nargs='?')
+        return parser
+
+    def parseArguments(self, args=None):
+        super(Scheduler, self).parseArguments()
+        if self.args.command:
+            self.args.nodaemon = True
+
     def reconfigure_handler(self, signum, frame):
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
         self.log.debug("Reconfiguration triggered")
@@ -48,8 +61,7 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
             self.log.exception("Reconfiguration failed:")
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
 
-    def exit_handler(self, signum, frame):
-        signal.signal(signal.SIGUSR1, signal.SIG_IGN)
+    def exit_handler(self):
         self.sched.exit()
         self.sched.join()
         self.stop_gear_server()
@@ -104,6 +116,10 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
     def run(self):
         # See comment at top of file about zuul imports
         import zuul.scheduler
+        if self.args.command in zuul.scheduler.COMMANDS:
+            self.send_command(self.args.command)
+            sys.exit(0)
+        # See comment at top of file about zuul imports
         import zuul.executor.client
         import zuul.merger.client
         import zuul.nodepool
@@ -162,14 +178,17 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
         webapp.start()
 
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
-        signal.signal(signal.SIGUSR1, self.exit_handler)
-        signal.signal(signal.SIGTERM, self.term_handler)
-        while True:
-            try:
-                signal.pause()
-            except KeyboardInterrupt:
-                print("Ctrl + C: asking scheduler to exit nicely...\n")
-                self.exit_handler(signal.SIGINT, None)
+
+        if self.args.nodaemon:
+            while True:
+                try:
+                    signal.pause()
+                except KeyboardInterrupt:
+                    print("Ctrl + C: asking scheduler to exit nicely...\n")
+                    self.exit_handler()
+                    sys.exit(0)
+        else:
+            self.sched.join()
 
 
 def main():

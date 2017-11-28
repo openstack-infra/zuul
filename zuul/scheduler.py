@@ -30,9 +30,12 @@ from zuul import model
 from zuul import exceptions
 from zuul import version as zuul_version
 from zuul import rpclistener
+from zuul.lib import commandsocket
 from zuul.lib.config import get_default
 from zuul.lib.statsd import get_statsd
 import zuul.lib.queue
+
+COMMANDS = ['stop']
 
 
 class ManagementEvent(object):
@@ -215,6 +218,9 @@ class Scheduler(threading.Thread):
         self.wake_event = threading.Event()
         self.layout_lock = threading.Lock()
         self.run_handler_lock = threading.Lock()
+        self.command_map = dict(
+            stop=self.stop,
+        )
         self._pause = False
         self._exit = False
         self._stopped = False
@@ -243,6 +249,11 @@ class Scheduler(threading.Thread):
             time_dir = self._get_time_database_dir()
             self.time_database = model.TimeDataBase(time_dir)
 
+        command_socket = get_default(
+            self.config, 'scheduler', 'command_socket',
+            '/var/lib/zuul/scheduler.socket')
+        self.command_socket = commandsocket.CommandSocket(command_socket)
+
         self.zuul_version = zuul_version.version_info.release_string()
         self.last_reconfigured = None
         self.tenant_last_reconfigured = {}
@@ -250,6 +261,14 @@ class Scheduler(threading.Thread):
 
     def start(self):
         super(Scheduler, self).start()
+        self._command_running = True
+        self.log.debug("Starting command processor")
+        self.command_socket.start()
+        self.command_thread = threading.Thread(target=self.runCommand,
+                                               name='command')
+        self.command_thread.daemon = True
+        self.command_thread.start()
+
         self.rpc.start()
         self.stats_thread.start()
 
@@ -261,6 +280,17 @@ class Scheduler(threading.Thread):
         self.stats_thread.join()
         self.rpc.stop()
         self.rpc.join()
+        self._command_running = False
+        self.command_socket.stop()
+
+    def runCommand(self):
+        while self._command_running:
+            try:
+                command = self.command_socket.get().decode('utf8')
+                if command != '_stop':
+                    self.command_map[command]()
+            except Exception:
+                self.log.exception("Exception while processing command")
 
     def registerConnections(self, connections, webapp, load=True):
         # load: whether or not to trigger the onLoad for the connection. This
