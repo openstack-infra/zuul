@@ -200,11 +200,13 @@ class ZuulWeb(object):
 
     def __init__(self, listen_address, listen_port,
                  gear_server, gear_port,
-                 ssl_key=None, ssl_cert=None, ssl_ca=None):
+                 ssl_key=None, ssl_cert=None, ssl_ca=None,
+                 static_cache_expiry=3600):
         self.listen_address = listen_address
         self.listen_port = listen_port
         self.event_loop = None
         self.term = None
+        self.static_cache_expiry = static_cache_expiry
         # instanciate handlers
         self.rpc = zuul.rpcclient.RPCClient(gear_server, gear_port,
                                             ssl_key, ssl_cert, ssl_ca)
@@ -228,7 +230,11 @@ class ZuulWeb(object):
             fp = os.path.join(STATIC_DIR, "index.html")
         elif request.path.endswith("status.html"):
             fp = os.path.join(STATIC_DIR, "status.html")
-        return web.FileResponse(fp)
+        headers = {}
+        if self.static_cache_expiry:
+            headers['Cache-Control'] = "public, max-age=%d" % \
+                self.static_cache_expiry
+        return web.FileResponse(fp, headers=headers)
 
     def run(self, loop=None):
         """

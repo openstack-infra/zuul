@@ -37,6 +37,7 @@ trusted_rw_paths=/opt/zuul-logs
 [web]
 listen_address=127.0.0.1
 port=9000
+static_cache_expiry=0
 
 [webapp]
 listen_address=0.0.0.0
