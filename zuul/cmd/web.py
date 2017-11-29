@@ -55,6 +55,9 @@ class WebServer(zuul.cmd.ZuulApp):
                                                'web', 'listen_address',
                                                '127.0.0.1')
         params['listen_port'] = get_default(self.config, 'web', 'port', 9000)
+        params['static_cache_expiry'] = get_default(self.config, 'web',
+                                                    'static_cache_expiry',
+                                                    3600)
         params['gear_server'] = get_default(self.config, 'gearman', 'server')
         params['gear_port'] = get_default(self.config, 'gearman', 'port', 4730)
         params['ssl_key'] = get_default(self.config, 'gearman', 'ssl_key')
