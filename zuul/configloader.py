@@ -517,6 +517,7 @@ class JobParser(object):
         # "job.run.append(...)").
 
         job = model.Job(name)
+        job.description = conf.get('description')
         job.source_context = conf.get('_source_context')
         job.source_line = conf.get('_start_mark').line + 1
 

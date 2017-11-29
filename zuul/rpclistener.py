@@ -58,6 +58,7 @@ class RPCListener(object):
         self.worker.registerFunction("zuul:get_job_log_stream_address")
         self.worker.registerFunction("zuul:tenant_list")
         self.worker.registerFunction("zuul:status_get")
+        self.worker.registerFunction("zuul:job_list")
 
     def getFunctions(self):
         functions = {}
@@ -283,3 +284,17 @@ class RPCListener(object):
         args = json.loads(job.arguments)
         output = self.sched.formatStatusJSON(args.get("tenant"))
         job.sendWorkComplete(output)
+
+    def handle_job_list(self, job):
+        args = json.loads(job.arguments)
+        tenant = self.sched.abide.tenants.get(args.get("tenant"))
+        output = []
+        for job_name in sorted(tenant.layout.jobs):
+            desc = None
+            for tenant_job in tenant.layout.jobs[job_name]:
+                if tenant_job.description:
+                    desc = tenant_job.description.split('\n')[0]
+                    break
+            output.append({"name": job_name,
+                           "description": desc})
+        job.sendWorkComplete(json.dumps(output))

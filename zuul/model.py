@@ -858,6 +858,7 @@ class Job(object):
             source_line=None,
             inheritance_path=(),
             parent_data=None,
+            description=None,
         )
 
         self.inheritable_attributes = {}

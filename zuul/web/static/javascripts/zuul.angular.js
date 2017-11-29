@@ -30,3 +30,16 @@ angular.module('zuulTenants', []).controller(
     }
     $scope.tenants_fetch();
 });
+
+angular.module('zuulJobs', []).controller(
+    'mainController', function($scope, $http)
+{
+    $scope.jobs = undefined;
+    $scope.jobs_fetch = function() {
+        $http.get("jobs.json")
+            .then(function success(result) {
+                $scope.jobs = result.data;
+            });
+    }
+    $scope.jobs_fetch();
+});
