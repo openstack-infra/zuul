@@ -768,21 +768,21 @@ class AnsibleJob(object):
         branches = repo.getBranches()
         refs = [r.name for r in repo.getRefs()]
         selected_ref = None
-        if project_override_branch in branches:
-            selected_ref = project_override_branch
-            self.log.info("Checking out %s project override branch %s",
-                          project_name, selected_ref)
         if project_override_checkout in refs:
             selected_ref = project_override_checkout
             self.log.info("Checking out %s project override ref %s",
                           project_name, selected_ref)
-        elif job_override_branch in branches:
-            selected_ref = job_override_branch
-            self.log.info("Checking out %s job override branch %s",
+        elif project_override_branch in branches:
+            selected_ref = project_override_branch
+            self.log.info("Checking out %s project override branch %s",
                           project_name, selected_ref)
         elif job_override_checkout in refs:
             selected_ref = job_override_checkout
             self.log.info("Checking out %s job override ref %s",
+                          project_name, selected_ref)
+        elif job_override_branch in branches:
+            selected_ref = job_override_branch
+            self.log.info("Checking out %s job override branch %s",
                           project_name, selected_ref)
         elif ref and ref.startswith('refs/heads/'):
             selected_ref = ref[len('refs/heads/'):]
