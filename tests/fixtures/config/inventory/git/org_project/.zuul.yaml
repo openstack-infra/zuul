@@ -4,3 +4,4 @@
       jobs:
         - single-inventory
         - group-inventory
+        - hostvars-inventory

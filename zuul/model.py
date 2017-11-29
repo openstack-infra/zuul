@@ -388,6 +388,7 @@ class Node(object):
         self.az = None
         self.provider = None
         self.region = None
+        self.username = None
 
     @property
     def state(self):

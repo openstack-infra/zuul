@@ -80,3 +80,24 @@ class TestInventory(ZuulTestCase):
 
         self.executor_server.release()
         self.waitUntilSettled()
+
+    def test_hostvars_inventory(self):
+
+        inventory = self._get_build_inventory('hostvars-inventory')
+
+        all_nodes = ('default', 'fakeuser')
+        self.assertIn('all', inventory)
+        self.assertIn('hosts', inventory['all'])
+        self.assertIn('vars', inventory['all'])
+        for node_name in all_nodes:
+            self.assertIn(node_name, inventory['all']['hosts'])
+            # check if the nodes use the correct username
+            if node_name == 'fakeuser':
+                username = 'fakeuser'
+            else:
+                username = 'zuul'
+            self.assertEqual(
+                inventory['all']['hosts'][node_name]['ansible_user'], username)
+
+        self.executor_server.release()
+        self.waitUntilSettled()

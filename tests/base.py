@@ -1713,6 +1713,8 @@ class FakeNodepool(object):
                     image_id=None,
                     host_keys=["fake-key1", "fake-key2"],
                     executor='fake-nodepool')
+        if 'fakeuser' in node_type:
+            data['username'] = 'fakeuser'
         data = json.dumps(data).encode('utf8')
         path = self.client.create(path, data,
                                   makepath=True,
