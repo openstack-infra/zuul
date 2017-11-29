@@ -38,6 +38,7 @@ trusted_rw_paths=/opt/zuul-logs
 listen_address=127.0.0.1
 port=9000
 static_cache_expiry=0
+;sql_connection_name=mydatabase
 
 [webapp]
 listen_address=0.0.0.0

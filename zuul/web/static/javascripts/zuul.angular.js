@@ -43,3 +43,57 @@ angular.module('zuulJobs', []).controller(
     }
     $scope.jobs_fetch();
 });
+
+angular.module('zuulBuilds', [], function($locationProvider) {
+    $locationProvider.html5Mode({
+        enabled: true,
+        requireBase: false
+    });
+}).controller('mainController', function($scope, $http, $location)
+{
+    $scope.rowClass = function(build) {
+        if (build.result == "SUCCESS") {
+            return "success";
+        } else {
+            return "warning";
+        }
+    };
+    var query_args = $location.search();
+    var url = $location.url();
+    var tenant_start = url.lastIndexOf(
+        '/', url.lastIndexOf('/builds.html') - 1) + 1;
+    var tenant_length = url.lastIndexOf('/builds.html') - tenant_start;
+    $scope.tenant = url.substr(tenant_start, tenant_length);
+    $scope.builds = undefined;
+    if (query_args["pipeline"]) {$scope.pipeline = query_args["pipeline"];
+    } else {$scope.pipeline = "";}
+    if (query_args["job_name"]) {$scope.job_name = query_args["job_name"];
+    } else {$scope.job_name = "";}
+    if (query_args["project"]) {$scope.project = query_args["project"];
+    } else {$scope.project = "";}
+    $scope.builds_fetch = function() {
+        query_string = "";
+        if ($scope.tenant) {query_string += "&tenant="+$scope.tenant;}
+        if ($scope.pipeline) {query_string += "&pipeline="+$scope.pipeline;}
+        if ($scope.job_name) {query_string += "&job_name="+$scope.job_name;}
+        if ($scope.project) {query_string += "&project="+$scope.project;}
+        if (query_string != "") {query_string = "?" + query_string.substr(1);}
+        $http.get("builds.json" + query_string)
+            .then(function success(result) {
+                for (build_pos = 0;
+                     build_pos < result.data.length;
+                     build_pos += 1) {
+                    build = result.data[build_pos]
+                    if (build.node_name == null) {
+                        build.node_name = 'master'
+                    }
+                    /* Fix incorect url for post_failure job */
+                    if (build.log_url == build.job_name) {
+                        build.log_url = undefined;
+                    }
+                }
+                $scope.builds = result.data;
+            });
+    }
+    $scope.builds_fetch()
+});
