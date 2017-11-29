@@ -184,14 +184,6 @@ class NodesProvisionedEvent(ResultEvent):
         self.request_id = request.id
 
 
-def toList(item):
-    if not item:
-        return []
-    if isinstance(item, list):
-        return item
-    return [item]
-
-
 class Scheduler(threading.Thread):
     """The engine of Zuul.
 
