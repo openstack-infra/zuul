@@ -3879,8 +3879,60 @@ class TestScheduler(ZuulTestCase):
         self.sched.reconfigure(self.config)
         tenant = self.sched.abide.tenants.get('tenant-one')
         queue = tenant.layout.pipelines['gate'].queues[0]
+        # Even though we have configured a smaller window, the value
+        # on the existing shared queue should be used.
+        self.assertEqual(queue.window, 20)
+        self.assertTrue(len(self.builds), 4)
+
+        self.sched.reconfigure(self.config)
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        queue = tenant.layout.pipelines['gate'].queues[0]
+        self.assertEqual(queue.window, 20)
+        self.assertTrue(len(self.builds), 4)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='job1', result='SUCCESS', changes='1,1'),
+            dict(name='job1', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='job2', result='SUCCESS', changes='1,1'),
+            dict(name='job2', result='SUCCESS', changes='1,1 2,1'),
+        ], ordered=False)
+
+    @simple_layout('layouts/reconfigure-window-fixed.yaml')
+    def test_reconfigure_window_fixed(self):
+        # Test the active window shrinking during reconfiguration
+        self.executor_server.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        B.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        queue = tenant.layout.pipelines['gate'].queues[0]
+        self.assertEqual(queue.window, 2)
+        self.assertTrue(len(self.builds), 4)
+
+        self.executor_server.release('job1')
+        self.waitUntilSettled()
+        self.commitConfigUpdate('org/common-config',
+                                'layouts/reconfigure-window-fixed2.yaml')
+        self.sched.reconfigure(self.config)
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        queue = tenant.layout.pipelines['gate'].queues[0]
+        # Because we have configured a static window, it should
+        # be allowed to shrink on reconfiguration.
         self.assertEqual(queue.window, 1)
-        # B is now outside the window, but builds haven't been canceled
+        # B is outside the window, but still marked active until the
+        # next pass through the queue processor, so its builds haven't
+        # been canceled.
         self.assertTrue(len(self.builds), 4)
 
         self.sched.reconfigure(self.config)
@@ -3892,7 +3944,9 @@ class TestScheduler(ZuulTestCase):
 
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
-        # This will run new builds for B
+
+        # B's builds will be restarted and will show up in our history
+        # twice.
         self.waitUntilSettled()
         self.assertHistory([
             dict(name='job1', result='SUCCESS', changes='1,1'),
