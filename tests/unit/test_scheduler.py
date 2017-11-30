@@ -3853,6 +3853,91 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(queue.window_floor, 1)
         self.assertEqual(C.data['status'], 'MERGED')
 
+    @simple_layout('layouts/reconfigure-window.yaml')
+    def test_reconfigure_window_shrink(self):
+        # Test the active window shrinking during reconfiguration
+        self.executor_server.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        B.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        queue = tenant.layout.pipelines['gate'].queues[0]
+        self.assertEqual(queue.window, 20)
+        self.assertTrue(len(self.builds), 4)
+
+        self.executor_server.release('job1')
+        self.waitUntilSettled()
+        self.commitConfigUpdate('org/common-config',
+                                'layouts/reconfigure-window2.yaml')
+        self.sched.reconfigure(self.config)
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        queue = tenant.layout.pipelines['gate'].queues[0]
+        self.assertEqual(queue.window, 1)
+        # B is now outside the window, but builds haven't been canceled
+        self.assertTrue(len(self.builds), 4)
+
+        self.sched.reconfigure(self.config)
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        queue = tenant.layout.pipelines['gate'].queues[0]
+        self.assertEqual(queue.window, 1)
+        # B's builds have been canceled now
+        self.assertTrue(len(self.builds), 2)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        # This will run new builds for B
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='job1', result='SUCCESS', changes='1,1'),
+            dict(name='job1', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='job2', result='SUCCESS', changes='1,1'),
+            dict(name='job2', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='job1', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='job2', result='SUCCESS', changes='1,1 2,1'),
+        ], ordered=False)
+
+    @simple_layout('layouts/reconfigure-remove-add.yaml')
+    def test_reconfigure_remove_add(self):
+        # Test removing, then adding a job while in queue
+        self.executor_server.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.assertTrue(len(self.builds), 2)
+        self.executor_server.release('job2')
+        self.assertTrue(len(self.builds), 1)
+
+        # Remove job2
+        self.commitConfigUpdate('org/common-config',
+                                'layouts/reconfigure-remove-add2.yaml')
+        self.sched.reconfigure(self.config)
+        self.assertTrue(len(self.builds), 1)
+
+        # Add job2 back
+        self.commitConfigUpdate('org/common-config',
+                                'layouts/reconfigure-remove-add.yaml')
+        self.sched.reconfigure(self.config)
+        self.assertTrue(len(self.builds), 2)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        # This will run new builds for B
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='job2', result='SUCCESS', changes='1,1'),
+            dict(name='job1', result='SUCCESS', changes='1,1'),
+            dict(name='job2', result='SUCCESS', changes='1,1'),
+        ], ordered=False)
+
     def test_worker_update_metadata(self):
         "Test if a worker can send back metadata about itself"
         self.executor_server.hold_jobs_in_build = True

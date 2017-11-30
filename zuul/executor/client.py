@@ -137,13 +137,11 @@ class ExecutorClient(object):
                 merger_items=[]):
         tenant = pipeline.layout.tenant
         uuid = str(uuid4().hex)
+        nodeset = item.current_build_set.getJobNodeSet(job.name)
         self.log.info(
             "Execute job %s (uuid: %s) on nodes %s for change %s "
             "with dependent changes %s" % (
-                job, uuid,
-                item.current_build_set.getJobNodeSet(job.name),
-                item.change,
-                dependent_changes))
+                job, uuid, nodeset, item.change, dependent_changes))
 
         # TODOv3(jeblair): This ansible vars data structure will
         # replace the environment variables below.
@@ -205,7 +203,6 @@ class ExecutorClient(object):
             params['pre_playbooks'] = [x.toDict() for x in job.pre_run]
             params['post_playbooks'] = [x.toDict() for x in job.post_run]
 
-        nodeset = item.current_build_set.getJobNodeSet(job.name)
         nodes = []
         for node in nodeset.getNodes():
             n = node.toDict()
@@ -278,6 +275,7 @@ class ExecutorClient(object):
 
         build = Build(job, uuid)
         build.parameters = params
+        build.nodeset = nodeset
 
         if job.name == 'noop':
             self.sched.onBuildStarted(build)

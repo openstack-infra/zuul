@@ -650,6 +650,15 @@ class Scheduler(threading.Thread):
                     self.log.exception(
                         "Exception while canceling build %s "
                         "for change %s" % (build, build.build_set.item.change))
+                # In the unlikely case that a build is removed and
+                # later added back, make sure we clear out the nodeset
+                # so it gets requested again.
+                try:
+                    build.build_set.removeJobNodeSet(build.job.name)
+                except Exception:
+                    self.log.exception(
+                        "Exception while removing nodeset from build %s "
+                        "for change %s" % (build, build.build_set.item.change))
                 finally:
                     tenant.semaphore_handler.release(
                         build.build_set.item, build.job)
@@ -920,7 +929,7 @@ class Scheduler(threading.Thread):
         # to pass this on to the pipeline manager, make sure we return
         # the nodes to nodepool.
         try:
-            nodeset = build.build_set.getJobNodeSet(build.job.name)
+            nodeset = build.nodeset
             autohold_key = (build.pipeline.layout.tenant.name,
                             build.build_set.item.change.project.canonical_name,
                             build.job.name)

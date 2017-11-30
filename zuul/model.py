@@ -1246,6 +1246,7 @@ class Build(object):
         self.worker = Worker()
         self.node_labels = []
         self.node_name = None
+        self.nodeset = None
 
     def __repr__(self):
         return ('<Build %s of %s on %s>' %
