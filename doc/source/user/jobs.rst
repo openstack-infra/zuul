@@ -172,6 +172,12 @@ of item.
       The git ref of the item.  This will be the full path (e.g.,
       `refs/heads/master` or `refs/changes/...`).
 
+   .. var:: override_checkout
+
+      If the job was configured to override the branch or tag checked
+      out, this will contain the specified value.  Otherwise, it will
+      be null.
+
    .. var:: pipeline
 
       The name of the pipeline in which the job is being run.
@@ -251,6 +257,12 @@ of item.
 
          A boolean indicating whether this project appears in the
          :attr:`job.required-projects` list for this job.
+
+      .. var:: checkout
+
+         The branch or tag that Zuul checked out for this project.
+         This may be influenced by the branch or tag associated with
+         the item as well as the job configuration.
 
    .. var:: _projects
       :type: dict
