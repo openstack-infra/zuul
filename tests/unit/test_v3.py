@@ -157,6 +157,27 @@ class TestFinal(ZuulTestCase):
         self.assertIn('Unable to modify final job', A.messages[0])
 
 
+class TestBranchNegative(ZuulTestCase):
+    tenant_config_file = 'config/branch-negative/main.yaml'
+
+    def test_negative_branch_match(self):
+        # Test that a negative branch matcher works with implied branches.
+        self.create_branch('org/project', 'stable/pike')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project', 'stable/pike'))
+        self.waitUntilSettled()
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        B = self.fake_gerrit.addFakeChange('org/project', 'stable/pike', 'A')
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='test-job', result='SUCCESS', changes='1,1')])
+
+
 class TestBranchTemplates(ZuulTestCase):
     tenant_config_file = 'config/branch-templates/main.yaml'
 

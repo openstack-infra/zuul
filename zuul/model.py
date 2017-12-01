@@ -961,7 +961,7 @@ class Job(object):
         m = m.matchers[0]
         if not isinstance(m, change_matcher.BranchMatcher):
             return None
-        return m._regex
+        return m
 
     def addBranchMatcher(self, branch):
         # Add a branch matcher that combines as a boolean *and* with
@@ -1129,9 +1129,10 @@ class JobList(object):
                     # ensure that it still only affects this branch
                     # (whatever else it may do).
                     simple_branch = job.getSimpleBranchMatcher()
-                    if simple_branch and simple_branch != implied_branch:
-                        # Job is for a different branch, don't add it.
-                        continue
+                    if simple_branch:
+                        if not simple_branch.regex.match(implied_branch):
+                            # This branch will never match, don't add it.
+                            continue
                     if not simple_branch:
                         # The branch matcher could be complex, or
                         # missing.  Add our implied matcher.
