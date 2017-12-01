@@ -963,10 +963,10 @@ class Job(object):
             return None
         return m
 
-    def addBranchMatcher(self, branch):
+    def addImpliedBranchMatcher(self, branch):
         # Add a branch matcher that combines as a boolean *and* with
         # existing branch matchers, if any.
-        matchers = [change_matcher.BranchMatcher(branch)]
+        matchers = [change_matcher.ImpliedBranchMatcher(branch)]
         if self.branch_matcher:
             matchers.append(self.branch_matcher)
         self.branch_matcher = change_matcher.MatchAll(matchers)
@@ -1121,26 +1121,8 @@ class JobList(object):
             joblist = self.jobs.setdefault(jobname, [])
             for job in jobs:
                 if implied_branch:
-                    # If setting an implied branch and the current
-                    # branch matcher is a simple match for a different
-                    # branch, then simply do not add this job.  If it
-                    # is absent, set it to the implied branch.
-                    # Otherwise, combine it with the implied branch to
-                    # ensure that it still only affects this branch
-                    # (whatever else it may do).
-                    simple_branch = job.getSimpleBranchMatcher()
-                    if simple_branch:
-                        if not simple_branch.regex.match(implied_branch):
-                            # This branch will never match, don't add it.
-                            continue
-                    if not simple_branch:
-                        # The branch matcher could be complex, or
-                        # missing.  Add our implied matcher.
-                        job = job.copy()
-                        job.addBranchMatcher(implied_branch)
-                    # Otherwise we have a simple branch matcher which
-                    # is the same as our implied branch, the job can
-                    # be added as-is.
+                    job = job.copy()
+                    job.addImpliedBranchMatcher(implied_branch)
                 if job not in joblist:
                     joblist.append(job)
 

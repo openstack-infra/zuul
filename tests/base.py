@@ -486,6 +486,29 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
         self.changes[self.change_number] = c
         return c
 
+    def addFakeTag(self, project, branch, tag):
+        path = os.path.join(self.upstream_root, project)
+        repo = git.Repo(path)
+        commit = repo.heads[branch].commit
+        newrev = commit.hexsha
+        ref = 'refs/tags/' + tag
+
+        git.Tag.create(repo, tag, commit)
+
+        event = {
+            "type": "ref-updated",
+            "submitter": {
+                "name": "User Name",
+            },
+            "refUpdate": {
+                "oldRev": 40 * '0',
+                "newRev": newrev,
+                "refName": ref,
+                "project": project,
+            }
+        }
+        return event
+
     def getFakeBranchCreatedEvent(self, project, branch):
         path = os.path.join(self.upstream_root, project)
         repo = git.Repo(path)

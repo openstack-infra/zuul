@@ -853,20 +853,22 @@ class PipelineManager(object):
             if dt:
                 self.sched.statsd.timing(key + '.resident_time', dt)
                 self.sched.statsd.incr(key + '.total_changes')
-
-            hostname = (item.change.project.canonical_hostname.
-                        replace('.', '_'))
-            projectname = (item.change.project.name.
-                           replace('.', '_').replace('/', '.'))
-            projectname = projectname.replace('.', '_').replace('/', '.')
-            branchname = item.change.branch.replace('.', '_').replace('/', '.')
-            # stats.timers.zuul.tenant.<tenant>.pipeline.<pipeline>.
-            #   project.<host>.<project>.<branch>.resident_time
-            # stats_counts.zuul.tenant.<tenant>.pipeline.<pipeline>.
-            #   project.<host>.<project>.<branch>.total_changes
-            key += '.project.%s.%s.%s' % (hostname, projectname, branchname)
-            if dt:
-                self.sched.statsd.timing(key + '.resident_time', dt)
-                self.sched.statsd.incr(key + '.total_changes')
+            if hasattr(item.change, 'branch'):
+                hostname = (item.change.project.canonical_hostname.
+                            replace('.', '_'))
+                projectname = (item.change.project.name.
+                               replace('.', '_').replace('/', '.'))
+                projectname = projectname.replace('.', '_').replace('/', '.')
+                branchname = item.change.branch.replace('.', '_').replace(
+                    '/', '.')
+                # stats.timers.zuul.tenant.<tenant>.pipeline.<pipeline>.
+                #   project.<host>.<project>.<branch>.resident_time
+                # stats_counts.zuul.tenant.<tenant>.pipeline.<pipeline>.
+                #   project.<host>.<project>.<branch>.total_changes
+                key += '.project.%s.%s.%s' % (hostname, projectname,
+                                              branchname)
+                if dt:
+                    self.sched.statsd.timing(key + '.resident_time', dt)
+                    self.sched.statsd.incr(key + '.total_changes')
         except Exception:
             self.log.exception("Exception reporting pipeline stats")

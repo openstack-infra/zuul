@@ -69,6 +69,20 @@ class BranchMatcher(AbstractChangeMatcher):
         return False
 
 
+class ImpliedBranchMatcher(AbstractChangeMatcher):
+    """
+    A branch matcher that only considers branch refs, and always
+    succeeds on other types (e.g., tags).
+    """
+
+    def matches(self, change):
+        if hasattr(change, 'branch'):
+            if self.regex.match(change.branch):
+                return True
+            return False
+        return True
+
+
 class FileMatcher(AbstractChangeMatcher):
 
     def matches(self, change):
