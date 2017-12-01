@@ -175,8 +175,8 @@ of item.
    .. var:: override_checkout
 
       If the job was configured to override the branch or tag checked
-      out, this will contain the specified value.  Otherwise, it will
-      be null.
+      out, this will contain the specified value.  Otherwise, this
+      variable will be undefined.
 
    .. var:: pipeline
 

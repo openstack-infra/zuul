@@ -143,8 +143,6 @@ class ExecutorClient(object):
             "with dependent changes %s" % (
                 job, uuid, nodeset, item.change, dependent_changes))
 
-        # TODOv3(jeblair): This ansible vars data structure will
-        # replace the environment variables below.
         project = dict(
             name=item.change.project.name,
             short_name=item.change.project.name.split('/')[-1],
@@ -163,8 +161,9 @@ class ExecutorClient(object):
                            tenant=tenant.name,
                            timeout=job.timeout,
                            jobtags=sorted(job.tags),
-                           override_checkout=job.override_checkout,
                            _inheritance_path=list(job.inheritance_path))
+        if job.override_checkout:
+            zuul_params['override_checkout'] = job.override_checkout
         if hasattr(item.change, 'branch'):
             zuul_params['branch'] = item.change.branch
         if hasattr(item.change, 'tag'):
