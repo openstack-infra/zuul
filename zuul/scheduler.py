@@ -595,10 +595,32 @@ class Scheduler(threading.Thread):
                                  "when reconfiguring" % name)
                 continue
             self.log.debug("Re-enqueueing changes for pipeline %s" % name)
+            # TODO(jeblair): This supports an undocument and
+            # unanticipated hack to create a static window.  If we
+            # really want to support this, maybe we should have a
+            # 'static' type?  But it may be in use in the wild, so we
+            # should allow this at least until there's an upgrade
+            # path.
+            if (new_pipeline.window and
+                new_pipeline.window_increase_type == 'exponential' and
+                new_pipeline.window_decrease_type == 'exponential' and
+                new_pipeline.window_increase_factor == 1 and
+                new_pipeline.window_decrease_factor == 1):
+                static_window = True
+            else:
+                static_window = False
+            if old_pipeline.window and (not static_window):
+                new_pipeline.window = max(old_pipeline.window,
+                                          new_pipeline.window_floor)
             items_to_remove = []
             builds_to_cancel = []
             last_head = None
             for shared_queue in old_pipeline.queues:
+                # Attempt to keep window sizes from shrinking where possible
+                new_queue = new_pipeline.getQueue(shared_queue.projects[0])
+                if new_queue and shared_queue.window and (not static_window):
+                    new_queue.window = max(shared_queue.window,
+                                           new_queue.window_floor)
                 for item in shared_queue.queue:
                     if not item.item_ahead:
                         last_head = item
