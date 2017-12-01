@@ -713,7 +713,7 @@ class AnsibleJob(object):
                                            project['default_branch'])
             # Update the inventory variables to indicate the ref we
             # checked out
-            p = args['zuul']['_projects'][project['canonical_name']]
+            p = args['zuul']['projects'][project['canonical_name']]
             p['checkout'] = selected
         # Delete the origin remote from each repo we set up since
         # it will not be valid within the jobs.

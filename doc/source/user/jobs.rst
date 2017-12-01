@@ -281,14 +281,6 @@ of item.
             msg: "Project {{ item.name }} is at {{ item.src_dir }}
           with_items: {{ zuul.projects.values() | list }}
 
-
-   .. var:: _projects
-      :type: dict
-
-      The same as ``projects`` but a dictionary indexed by the
-      ``name`` value of each entry.  ``projects`` will be converted to
-      this.
-
    .. var:: tenant
 
       The name of the current Zuul tenant.
