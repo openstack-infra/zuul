@@ -40,7 +40,7 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
     def reconfigure_handler(self, signum, frame):
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
         self.log.debug("Reconfiguration triggered")
-        self.read_config()
+        self.readConfig()
         self.setup_logging('scheduler', 'log_config')
         try:
             self.sched.reconfigure(self.config)
