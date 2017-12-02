@@ -2833,6 +2833,16 @@ class ZuulTestCase(BaseTestCase):
                         os.path.join(FIXTURE_DIR, f.name))
         self.setupAllProjectKeys()
 
+    def addTagToRepo(self, project, name, sha):
+        path = os.path.join(self.upstream_root, project)
+        repo = git.Repo(path)
+        repo.git.tag(name, sha)
+
+    def delTagFromRepo(self, project, name):
+        path = os.path.join(self.upstream_root, project)
+        repo = git.Repo(path)
+        repo.git.tag('-d', name)
+
     def addCommitToRepo(self, project, message, files,
                         branch='master', tag=None):
         path = os.path.join(self.upstream_root, project)

@@ -314,6 +314,18 @@ class Repo(object):
                             'utf-8')
         return ret
 
+    def getFilesChanges(self, branch, tosha=None):
+        repo = self.createRepoObject()
+        files = set()
+        head = repo.heads[branch].commit
+        files.update(set(head.stats.files.keys()))
+        if tosha:
+            for cmt in head.iter_parents():
+                if cmt.hexsha == tosha:
+                    break
+                files.update(set(cmt.stats.files.keys()))
+        return list(files)
+
     def deleteRemote(self, remote):
         repo = self.createRepoObject()
         repo.delete_remote(repo.remotes[remote])
@@ -581,3 +593,8 @@ class Merger(object):
     def getFiles(self, connection_name, project_name, branch, files, dirs=[]):
         repo = self.getRepo(connection_name, project_name)
         return repo.getFiles(files, dirs, branch=branch)
+
+    def getFilesChanges(self, connection_name, project_name, branch,
+                        tosha=None):
+        repo = self.getRepo(connection_name, project_name)
+        return repo.getFilesChanges(branch, tosha)
