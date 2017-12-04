@@ -958,13 +958,11 @@ class AnsibleJob(object):
                     "non-trusted repo." % (entry, path))
 
     def findPlaybook(self, path, trusted=False):
-        for ext in ['', '.yaml', '.yml']:
-            fn = path + ext
-            if os.path.exists(fn):
-                if not trusted:
-                    playbook_dir = os.path.dirname(os.path.abspath(fn))
-                    self._blockPluginDirs(playbook_dir)
-                return fn
+        if os.path.exists(path):
+            if not trusted:
+                playbook_dir = os.path.dirname(os.path.abspath(path))
+                self._blockPluginDirs(playbook_dir)
+            return path
         raise ExecutorError("Unable to find playbook %s" % path)
 
     def preparePlaybooks(self, args):
