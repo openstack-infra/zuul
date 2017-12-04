@@ -42,17 +42,6 @@ class LogStreamingHandler(object):
     def setEventLoop(self, event_loop):
         self.event_loop = event_loop
 
-    def _getPortLocation(self, job_uuid):
-        """
-        Query Gearman for the executor running the given job.
-
-        :param str job_uuid: The job UUID we want to stream.
-        """
-        # TODO: Fetch the entire list of uuid/file/server/ports once and
-        #       share that, and fetch a new list on cache misses perhaps?
-        ret = self.rpc.get_job_log_stream_address(job_uuid)
-        return ret
-
     async def _fingerClient(self, ws, server, port, job_uuid):
         """
         Create a client to connect to the finger streamer and pull results.
@@ -94,7 +83,10 @@ class LogStreamingHandler(object):
 
         # Schedule the blocking gearman work in an Executor
         gear_task = self.event_loop.run_in_executor(
-            None, self._getPortLocation, request['uuid'])
+            None,
+            self.rpc.get_job_log_stream_address,
+            request['uuid'],
+        )
 
         try:
             port_location = await asyncio.wait_for(gear_task, 10)
