@@ -18,6 +18,6 @@
 
 - job:
     name: python27
-    pre-run: playbooks/pre
-    post-run: playbooks/post
+    pre-run: playbooks/pre.yaml
+    post-run: playbooks/post.yaml
     run: playbooks/python27.yaml

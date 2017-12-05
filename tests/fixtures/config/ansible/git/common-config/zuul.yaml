@@ -129,10 +129,10 @@
     parent: base-urls
     name: hello
     run: playbooks/hello-post.yaml
-    post-run: playbooks/hello-post
+    post-run: playbooks/hello-post.yaml
 
 - job:
     parent: python27
     name: failpost
     run: playbooks/post-broken.yaml
-    post-run: playbooks/post-broken
+    post-run: playbooks/post-broken.yaml

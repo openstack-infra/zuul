@@ -23,8 +23,8 @@
 
 - job:
     name: job-output-failure
-    run: playbooks/job-output
-    post-run: playbooks/job-output-failure-post
+    run: playbooks/job-output.yaml
+    post-run: playbooks/job-output-failure-post.yaml
 
 - project:
     name: org/project

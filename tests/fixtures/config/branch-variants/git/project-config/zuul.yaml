@@ -34,10 +34,10 @@
 - job:
     name: base
     parent: null
-    pre-run: playbooks/base/pre
+    pre-run: playbooks/base/pre.yaml
     post-run:
-      - playbooks/base/post-ssh
-      - playbooks/base/post-logs
+      - playbooks/base/post-ssh.yaml
+      - playbooks/base/post-logs.yaml
 
 - project:
     name: project-config
