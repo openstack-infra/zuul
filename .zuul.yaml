@@ -65,7 +65,5 @@
         - zuul-stream-functional
     post:
       jobs:
-        - publish-openstack-sphinx-docs-infra:
-            vars:
-              sphinx_python: python3
+        - publish-openstack-sphinx-docs-infra-python3
         - publish-openstack-python-branch-tarball
