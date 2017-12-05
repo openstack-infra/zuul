@@ -36,6 +36,8 @@
             irrelevant-files:
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
+            vars:
+              sphinx_python: python3
         - tox-cover:
             irrelevant-files:
               - zuul/cmd/migrate.py
@@ -53,6 +55,8 @@
             irrelevant-files:
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
+            vars:
+              sphinx_python: python3
         - tox-pep8
         - tox-py35:
             irrelevant-files:
@@ -61,5 +65,7 @@
         - zuul-stream-functional
     post:
       jobs:
-        - publish-openstack-sphinx-docs-infra
+        - publish-openstack-sphinx-docs-infra:
+            vars:
+              sphinx_python: python3
         - publish-openstack-python-branch-tarball
