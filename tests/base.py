@@ -2256,13 +2256,13 @@ class ZuulTestCase(BaseTestCase):
                                      branch='master', tag='init')
             if 'job' in item:
                 if 'run' in item['job']:
-                    files['%s.yaml' % item['job']['run']] = ''
+                    files['%s' % item['job']['run']] = ''
                 for fn in zuul.configloader.as_list(
                         item['job'].get('pre-run', [])):
-                    files['%s.yaml' % fn] = ''
+                    files['%s' % fn] = ''
                 for fn in zuul.configloader.as_list(
                         item['job'].get('post-run', [])):
-                    files['%s.yaml' % fn] = ''
+                    files['%s' % fn] = ''
 
         root = os.path.join(self.test_root, "config")
         if not os.path.exists(root):
