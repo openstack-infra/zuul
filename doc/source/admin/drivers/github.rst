@@ -7,17 +7,94 @@ The GitHub driver supports sources, triggers, and reporters.  It can
 interact with the public GitHub service as well as site-local
 installations of GitHub enterprise.
 
-.. TODO: make this section more user friendly
+Configure GitHub
+----------------
 
-Configure GitHub `webhook events
-<https://developer.github.com/webhooks/creating/>`_.
+There are two options currently available. GitHub's project owner can either
+manually setup web-hook or install a GitHub Application. In the first case,
+the project's owner needs to know the zuul endpoint and the webhook secrets.
 
-Set *Payload URL* to
-``http://<zuul-hostname>/connection/<connection-name>/payload``.
 
-Set *Content Type* to ``application/json``.
+Web-Hook
+........
+
+To configure a project's `webhook events <https://developer.github.com/webhooks/creating/>`_:
+
+* Set *Payload URL* to ``http://<zuul-hostname>/connection/<connection-name>/payload``.
+
+* Set *Content Type* to ``application/json``.
 
 Select *Events* you are interested in. See below for the supported events.
+
+You will also need to have a GitHub user created for your zuul:
+
+* Zuul public key needs to be added to the GitHub account
+
+* A api_token needs to be created too, see this `article <See https://help.github.com/articles/creating-an-access-token-for-command-line-use/>`_
+
+Then in the zuul.conf, set webhook_token and api_token.
+
+Application
+...........
+
+To create a `GitHub application <https://developer.github.com/apps/building-integrations/setting-up-and-registering-github-apps/registering-github-apps/>`_:
+
+* Go to your organization settings page to create the application, e.g.: https://github.com/organizations/my-org/settings/apps/new
+
+* Set GitHub App name to "my-org-zuul"
+
+* Set Setup URL to your setup documentation, when user install the application they are redirected to this url
+
+* Set Webhook URL to ``http://<zuul-hostname>/connection/<connection-name>/payload``.
+
+* Create a Webhook secret
+
+* Set permissions:
+
+  * Commit statuses: Read & Write
+
+  * Issues: Read & Write
+
+  * Pull requests: Read & Write
+
+  * Repository contents: Read & Write (write to let zuul merge change)
+
+* Set events subscription:
+
+  * Label
+
+  * Status
+
+  * Issue comment
+
+  * Issues
+
+  * Pull request
+
+  * Pull request review
+
+  * Pull request review comment
+
+  * Commit comment
+
+  * Create
+
+  * Push
+
+  * Release
+
+* Set Where can this GitHub App be installed to "Any account"
+
+* Create the App
+
+* Generate a Private key in the app settings page
+
+Then in the zuul.conf, set webhook_token, app_id and app_key.
+After restarting zuul-scheduler, verify in the 'Advanced' tab that the
+Ping payload works (green tick and 200 response)
+
+Users can now install the application using its public page, e.g.: https://github.com/apps/my-org-zuul
+
 
 Connection Configuration
 ------------------------
