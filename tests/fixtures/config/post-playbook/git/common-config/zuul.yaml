@@ -18,8 +18,8 @@
 
 - job:
     name: python27
-    pre-run: playbooks/pre
-    post-run: playbooks/post
+    pre-run: playbooks/pre.yaml
+    post-run: playbooks/post.yaml
     vars:
       waitpath: '{{zuul._test.test_root}}/{{zuul.build}}/test_wait'
     run: playbooks/python27.yaml

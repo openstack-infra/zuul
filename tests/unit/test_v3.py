@@ -1935,8 +1935,8 @@ class TestRoles(RoleTestCase):
                 name: parent
                 roles:
                   - zuul: bare-role
-                pre-run: playbooks/parent-pre
-                post-run: playbooks/parent-post
+                pre-run: playbooks/parent-pre.yaml
+                post-run: playbooks/parent-post.yaml
 
             - job:
                 name: project-test
