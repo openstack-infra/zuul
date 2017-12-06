@@ -222,7 +222,7 @@ of item.
    .. var:: projects
       :type: dict
 
-      A list of all projects prepared by Zuul for the item.  It
+      A dictionary of all projects prepared by Zuul for the item.  It
       includes, at least, the item's own project.  It also includes
       the projects of any items this item depends on, as well as the
       projects that appear in :attr:`job.required-projects`.
