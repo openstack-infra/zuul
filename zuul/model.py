@@ -2385,14 +2385,25 @@ class UnparsedTenantConfig(object):
         r.semaphores = copy.deepcopy(self.semaphores)
         return r
 
-    def extend(self, conf):
+    def extend(self, conf, tenant=None):
         if isinstance(conf, UnparsedTenantConfig):
             self.pragmas.extend(conf.pragmas)
             self.pipelines.extend(conf.pipelines)
             self.jobs.extend(conf.jobs)
             self.project_templates.extend(conf.project_templates)
             for k, v in conf.projects.items():
-                self.projects.setdefault(k, []).extend(v)
+                name = k
+                # If we have the tenant add the projects to
+                # the according canonical name instead of the given project
+                # name. If it is not found, it's ok to add this to the given
+                # name. We also don't need to throw the
+                # ProjectNotFoundException here as semantic validation occurs
+                # later where it will fail then.
+                if tenant is not None:
+                    trusted, project = tenant.getProject(k)
+                    if project is not None:
+                        name = project.canonical_name
+                self.projects.setdefault(name, []).extend(v)
             self.nodesets.extend(conf.nodesets)
             self.secrets.extend(conf.secrets)
             self.semaphores.extend(conf.semaphores)
