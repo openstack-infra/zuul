@@ -57,6 +57,26 @@ class TestInventory(ZuulTestCase):
         self.executor_server.release()
         self.waitUntilSettled()
 
+    def test_single_inventory_list(self):
+
+        inventory = self._get_build_inventory('single-inventory-list')
+
+        all_nodes = ('compute', 'controller')
+        self.assertIn('all', inventory)
+        self.assertIn('hosts', inventory['all'])
+        self.assertIn('vars', inventory['all'])
+        for node_name in all_nodes:
+            self.assertIn(node_name, inventory['all']['hosts'])
+        self.assertIn('zuul', inventory['all']['vars'])
+        z_vars = inventory['all']['vars']['zuul']
+        self.assertIn('executor', z_vars)
+        self.assertIn('src_root', z_vars['executor'])
+        self.assertIn('job', z_vars)
+        self.assertEqual(z_vars['job'], 'single-inventory-list')
+
+        self.executor_server.release()
+        self.waitUntilSettled()
+
     def test_group_inventory(self):
 
         inventory = self._get_build_inventory('group-inventory')

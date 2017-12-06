@@ -1210,7 +1210,9 @@ configuration may be simplified.
            label: controller-label
          - name: compute1
            label: compute-label
-         - name: compute2
+         - name:
+             - compute2
+             - web
            label: compute-label
        groups:
          - name: ceph-osd
@@ -1221,6 +1223,9 @@ configuration may be simplified.
              - controller
              - compute1
              - compute2
+          - name: ceph-web
+            nodes:
+              - web
 
 .. attr:: nodeset
 
@@ -1241,6 +1246,9 @@ configuration may be simplified.
 
          The name of the node.  This will appear in the Ansible inventory
          for the job.
+
+         This can also be as a list of strings. If so, then the list of hosts in
+         the Ansible inventory will share a common ansible_host address.
 
       .. attr:: label
          :required:
