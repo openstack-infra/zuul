@@ -63,7 +63,7 @@ def main():
         path = os.path.join(os.environ['ZUUL_JOBDIR'], 'work',
                             'results.json')
     set_value(path, p['data'], p['file'])
-    module.exit_json(changed=True, e=os.environ)
+    module.exit_json(changed=True, e=os.environ.copy())
 
 from ansible.module_utils.basic import *  # noqa
 from ansible.module_utils.basic import AnsibleModule

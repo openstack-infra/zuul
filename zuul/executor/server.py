@@ -1187,7 +1187,7 @@ class AnsibleJob(object):
             callback_path = self.executor_server.callback_dir
         with open(jobdir_playbook.ansible_config, 'w') as config:
             config.write('[defaults]\n')
-            config.write('hostfile = %s\n' % self.jobdir.inventory)
+            config.write('inventory = %s\n' % self.jobdir.inventory)
             config.write('local_tmp = %s/local_tmp\n' %
                          self.jobdir.ansible_cache_root)
             config.write('retry_files_enabled = False\n')
