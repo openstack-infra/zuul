@@ -15,12 +15,10 @@
 # under the License.
 
 import signal
-import socket
 import sys
 
 import zuul.cmd
 import zuul.merger.server
-from zuul.lib.config import get_default
 
 # No zuul imports here because they pull in paramiko which must not be
 # imported until after the daemonization.
@@ -43,15 +41,6 @@ class Merger(zuul.cmd.ZuulDaemonApp):
         super(Merger, self).parseArguments()
         if self.args.command:
             self.args.nodaemon = True
-
-    def send_command(self, cmd):
-        command_socket = get_default(
-            self.config, 'merger', 'command_socket',
-            '/var/lib/zuul/merger.socket')
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        s.connect(command_socket)
-        cmd = '%s\n' % cmd
-        s.sendall(cmd.encode('utf8'))
 
     def exit_handler(self):
         self.merger.stop()

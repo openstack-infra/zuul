@@ -18,7 +18,6 @@ import grp
 import logging
 import os
 import pwd
-import socket
 import sys
 import signal
 import tempfile
@@ -51,15 +50,6 @@ class Executor(zuul.cmd.ZuulDaemonApp):
         super(Executor, self).parseArguments()
         if self.args.command:
             self.args.nodaemon = True
-
-    def send_command(self, cmd):
-        command_socket = get_default(
-            self.config, 'executor', 'command_socket',
-            '/var/lib/zuul/executor.socket')
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        s.connect(command_socket)
-        cmd = '%s\n' % cmd
-        s.sendall(cmd.encode('utf8'))
 
     def exit_handler(self):
         self.executor.stop()
