@@ -19,8 +19,12 @@ import traceback
 
 import gear
 
+from zuul.lib import commandsocket
 from zuul.lib.config import get_default
 from zuul.merger import merger
+
+
+COMMANDS = ['stop']
 
 
 class MergeServer(object):
@@ -40,9 +44,16 @@ class MergeServer(object):
         self.merger = merger.Merger(
             merge_root, connections, merge_email, merge_name, speed_limit,
             speed_time)
+        self.command_map = dict(
+            stop=self.stop)
+        command_socket = get_default(
+            self.config, 'merger', 'command_socket',
+            '/var/lib/zuul/merger.socket')
+        self.command_socket = commandsocket.CommandSocket(command_socket)
 
     def start(self):
         self._running = True
+        self._command_running = True
         server = self.config.get('gearman', 'server')
         port = get_default(self.config, 'gearman', 'port', 4730)
         ssl_key = get_default(self.config, 'gearman', 'ssl_key')
@@ -54,6 +65,13 @@ class MergeServer(object):
         self.worker.waitForServer()
         self.log.debug("Registering")
         self.register()
+        self.log.debug("Starting command processor")
+        self.command_socket.start()
+        self.command_thread = threading.Thread(
+            target=self.runCommand, name='command')
+        self.command_thread.daemon = True
+        self.command_thread.start()
+
         self.log.debug("Starting worker")
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
@@ -67,11 +85,22 @@ class MergeServer(object):
     def stop(self):
         self.log.debug("Stopping")
         self._running = False
+        self._command_running = False
+        self.command_socket.stop()
         self.worker.shutdown()
         self.log.debug("Stopped")
 
     def join(self):
         self.thread.join()
+
+    def runCommand(self):
+        while self._command_running:
+            try:
+                command = self.command_socket.get().decode('utf8')
+                if command != '_stop':
+                    self.command_map[command]()
+            except Exception:
+                self.log.exception("Exception while processing command")
 
     def run(self):
         self.log.debug("Starting merge listener")
