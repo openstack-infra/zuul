@@ -53,11 +53,11 @@ class Executor(zuul.cmd.ZuulDaemonApp):
             self.args.nodaemon = True
 
     def send_command(self, cmd):
-        state_dir = get_default(self.config, 'executor', 'state_dir',
-                                '/var/lib/zuul', expand_user=True)
-        path = os.path.join(state_dir, 'executor.socket')
+        command_socket = get_default(
+            self.config, 'executor', 'command_socket',
+            '/var/lib/zuul/executor.socket')
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        s.connect(path)
+        s.connect(command_socket)
         cmd = '%s\n' % cmd
         s.sendall(cmd.encode('utf8'))
 

@@ -2070,6 +2070,9 @@ class ZuulTestCase(BaseTestCase):
         self.config.set('executor', 'git_dir', self.executor_src_root)
         self.config.set('executor', 'private_key_file', self.private_key_file)
         self.config.set('executor', 'state_dir', self.executor_state_root)
+        self.config.set(
+            'executor', 'command_socket',
+            os.path.join(self.test_root, 'executor.socket'))
 
         self.statsd = FakeStatsd()
         if self.config.has_section('statsd'):

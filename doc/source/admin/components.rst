@@ -397,6 +397,11 @@ The following sections of ``zuul.conf`` are used by the executor:
 
 .. attr:: executor
 
+   .. attr:: command_socket
+      :default: /var/lib/zuul/executor.socket
+
+      Path to command socket file for the executor process.
+
    .. attr:: finger_port
       :default: 79
 
