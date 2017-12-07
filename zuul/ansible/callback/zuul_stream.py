@@ -150,7 +150,7 @@ class CallbackModule(default.CallbackModule):
                         buff += more
             if buff:
                 self._log_streamline(
-                    host, line.decode("utf-8", "backslashreplace"))
+                    host, buff.decode("utf-8", "backslashreplace"))
 
     def _log_streamline(self, host, line):
         if "[Zuul] Task exit code" in line:
