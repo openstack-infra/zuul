@@ -798,13 +798,6 @@ Here is an example of two job definitions:
       are run after the parent's.  See :ref:`job` for more
       information.
 
-      .. warning::
-
-         If the path as specified does not exist, Zuul will try
-         appending the extensions ``.yaml`` and ``.yml``.  This
-         behavior is deprecated and will be removed in the future all
-         playbook paths should include the file extension.
-
    .. attr:: post-run
 
       The name of a playbook or list of playbooks to run after the
@@ -814,13 +807,6 @@ Here is an example of two job definitions:
       When a job inherits from a parent, the child's post-run
       playbooks are run before the parent's.  See :ref:`job` for more
       information.
-
-      .. warning::
-
-         If the path as specified does not exist, Zuul will try
-         appending the extensions ``.yaml`` and ``.yml``.  This
-         behavior is deprecated and will be removed in the future all
-         playbook paths should include the file extension.
 
    .. attr:: run
 
@@ -832,13 +818,6 @@ Here is an example of two job definitions:
       .. code-block:: yaml
 
          run: playbooks/job-playbook.yaml
-
-      .. warning::
-
-         If the path as specified does not exist, Zuul will try
-         appending the extensions ``.yaml`` and ``.yml``.  This
-         behavior is deprecated and will be removed in the future all
-         playbook paths should include the file extension.
 
    .. attr:: roles
 
