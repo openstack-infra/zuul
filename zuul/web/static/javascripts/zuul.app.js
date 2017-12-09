@@ -28,8 +28,6 @@
 function zuul_build_dom($, container) {
     // Build a default-looking DOM
     var default_layout = '<div class="container">'
-        + '<h1>Zuul Status</h1>'
-        + '<p>Real-time status monitor of Zuul, the pipeline manager between Gerrit and Workers.</p>'
         + '<div class="zuul-container" id="zuul-container">'
         + '<div style="display: none;" class="alert" id="zuul_msg"></div>'
         + '<button class="btn pull-right zuul-spinner">updating <span class="glyphicon glyphicon-refresh"></span></button>'
