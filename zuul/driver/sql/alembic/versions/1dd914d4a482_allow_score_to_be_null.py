@@ -16,8 +16,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-def upgrade():
-    op.alter_column('zuul_buildset', 'score', nullable=True,
+def upgrade(table_prefix=''):
+    op.alter_column(table_prefix + 'zuul_buildset', 'score', nullable=True,
                     existing_type=sa.Integer)
 
 

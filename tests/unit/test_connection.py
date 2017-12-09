@@ -60,14 +60,19 @@ class TestConnections(ZuulTestCase):
 class TestSQLConnection(ZuulDBTestCase):
     config_file = 'zuul-sql-driver.conf'
     tenant_config_file = 'config/sql-driver/main.yaml'
+    expected_table_prefix = ''
 
-    def test_sql_tables_created(self, metadata_table=None):
+    def test_sql_tables_created(self):
         "Test the tables for storing results are created properly"
-        buildset_table = 'zuul_buildset'
-        build_table = 'zuul_build'
 
-        insp = sa.engine.reflection.Inspector(
-            self.connections.connections['resultsdb'].engine)
+        connection = self.connections.connections['resultsdb']
+        insp = sa.engine.reflection.Inspector(connection.engine)
+
+        table_prefix = connection.table_prefix
+        self.assertEqual(self.expected_table_prefix, table_prefix)
+
+        buildset_table = table_prefix + 'zuul_buildset'
+        build_table = table_prefix + 'zuul_build'
 
         self.assertEqual(13, len(insp.get_columns(buildset_table)))
         self.assertEqual(10, len(insp.get_columns(build_table)))
@@ -214,6 +219,11 @@ class TestSQLConnection(ZuulDBTestCase):
         self.assertEqual('FAILURE', buildsets_resultsdb_failures[0]['result'])
         self.assertEqual(
             'Build failed.', buildsets_resultsdb_failures[0]['message'])
+
+
+class TestSQLConnectionPrefix(TestSQLConnection):
+    config_file = 'zuul-sql-driver-prefix.conf'
+    expected_table_prefix = 'prefix_'
 
 
 class TestConnectionsBadSQL(ZuulDBTestCase):

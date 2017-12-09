@@ -55,6 +55,13 @@ def run_migrations_online():
         prefix='sqlalchemy.',
         poolclass=pool.NullPool)
 
+    # we can get the table prefix via the tag object
+    tag = context.get_tag_argument()
+    if tag and isinstance(tag, dict):
+        table_prefix = tag.get('table_prefix', '')
+    else:
+        table_prefix = ''
+
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
@@ -62,7 +69,7 @@ def run_migrations_online():
         )
 
         with context.begin_transaction():
-            context.run_migrations()
+            context.run_migrations(table_prefix=table_prefix)
 
 
 if context.is_offline_mode():
