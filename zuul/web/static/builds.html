@@ -55,12 +55,9 @@ under the License.
         <th>Project</th>
         <th>Pipeline</th>
         <th>Change</th>
-        <th>Newrev</th>
         <th>Duration</th>
         <th>Log url</th>
-        <th>Node name</th>
         <th>Start time</th>
-        <th>End time</th>
         <th>Result</th>
       </tr>
     </thead>
@@ -71,12 +68,9 @@ under the License.
         <td>{{ build.project }}</td>
         <td>{{ build.pipeline }}</td>
         <td><a href="{{ build.ref_url }}" target="_self">change</a></td>
-        <td>{{ build.newrev }}</td>
         <td>{{ build.duration }} seconds</td>
         <td><a ng-if="build.log_url" href="{{ build.log_url }}" target="_self">logs</a></td>
-        <td>{{ build.node_name }}</td>
         <td>{{ build.start_time }}</td>
-        <td>{{ build.end_time }}</td>
         <td>{{ build.result }}</td>
       </tr>
     </tbody>
