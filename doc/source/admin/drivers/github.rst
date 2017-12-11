@@ -18,9 +18,11 @@ the project's owner needs to know the zuul endpoint and the webhook secrets.
 Web-Hook
 ........
 
-To configure a project's `webhook events <https://developer.github.com/webhooks/creating/>`_:
+To configure a project's `webhook events
+<https://developer.github.com/webhooks/creating/>`_:
 
-* Set *Payload URL* to ``http://<zuul-hostname>/connection/<connection-name>/payload``.
+* Set *Payload URL* to
+  ``http://<zuul-hostname>/connection/<connection-name>/payload``.
 
 * Set *Content Type* to ``application/json``.
 
@@ -30,22 +32,27 @@ You will also need to have a GitHub user created for your zuul:
 
 * Zuul public key needs to be added to the GitHub account
 
-* A api_token needs to be created too, see this `article <See https://help.github.com/articles/creating-an-access-token-for-command-line-use/>`_
+* A api_token needs to be created too, see this `article
+  <https://help.github.com/articles/creating-an-access-token-for-command-line-use/>`_
 
 Then in the zuul.conf, set webhook_token and api_token.
 
 Application
 ...........
 
-To create a `GitHub application <https://developer.github.com/apps/building-integrations/setting-up-and-registering-github-apps/registering-github-apps/>`_:
+To create a `GitHub application
+<https://developer.github.com/apps/building-integrations/setting-up-and-registering-github-apps/registering-github-apps/>`_:
 
-* Go to your organization settings page to create the application, e.g.: https://github.com/organizations/my-org/settings/apps/new
+* Go to your organization settings page to create the application, e.g.:
+  https://github.com/organizations/my-org/settings/apps/new
 
 * Set GitHub App name to "my-org-zuul"
 
-* Set Setup URL to your setup documentation, when user install the application they are redirected to this url
+* Set Setup URL to your setup documentation, when user install the application
+  they are redirected to this url
 
-* Set Webhook URL to ``http://<zuul-hostname>/connection/<connection-name>/payload``.
+* Set Webhook URL to
+  ``http://<zuul-hostname>/connection/<connection-name>/payload``.
 
 * Create a Webhook secret
 
@@ -93,7 +100,8 @@ Then in the zuul.conf, set webhook_token, app_id and app_key.
 After restarting zuul-scheduler, verify in the 'Advanced' tab that the
 Ping payload works (green tick and 200 response)
 
-Users can now install the application using its public page, e.g.: https://github.com/apps/my-org-zuul
+Users can now install the application using its public page, e.g.:
+https://github.com/apps/my-org-zuul
 
 
 Connection Configuration
