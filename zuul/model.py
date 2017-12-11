@@ -2586,6 +2586,8 @@ class Layout(object):
             try:
                 variants = self.collectJobs(jobname, change)
             except NoMatchingParentError:
+                self.log.debug("No matching parents for job %s and change %s",
+                               jobname, change)
                 variants = None
             if not variants:
                 # A change must match at least one defined job variant
@@ -2607,6 +2609,11 @@ class Layout(object):
                 if variant.changeMatches(change):
                     frozen_job.applyVariant(variant)
                     matched = True
+                    self.log.debug("Pipeline variant %s matched %s",
+                                   repr(variant), change)
+            else:
+                self.log.debug("Pipeline variant %s did not match %s",
+                               repr(variant), change)
             if not matched:
                 # A change must match at least one project pipeline
                 # job variant.
