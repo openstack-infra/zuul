@@ -152,6 +152,40 @@ class ProjectNotPermittedError(Exception):
         super(ProjectNotPermittedError, self).__init__(message)
 
 
+class YAMLDuplicateKeyError(ConfigurationSyntaxError):
+    def __init__(self, key, node, context, start_mark):
+        intro = textwrap.fill(textwrap.dedent("""\
+        Zuul encountered a syntax error while parsing its configuration in the
+        repo {repo} on branch {branch}.  The error was:""".format(
+            repo=context.project.name,
+            branch=context.branch,
+        )))
+
+        e = textwrap.fill(textwrap.dedent("""\
+        The key "{key}" appears more than once; duplicate keys are not
+        permitted.
+        """.format(
+            key=key,
+        )))
+
+        m = textwrap.dedent("""\
+        {intro}
+
+        {error}
+
+        The error appears in the following stanza:
+
+        {content}
+
+        {start_mark}""")
+
+        m = m.format(intro=intro,
+                     error=indent(str(e)),
+                     content=indent(start_mark.snippet.rstrip()),
+                     start_mark=str(start_mark))
+        super(YAMLDuplicateKeyError, self).__init__(m)
+
+
 def indent(s):
     return '\n'.join(['  ' + x for x in s.split('\n')])
 
@@ -249,6 +283,14 @@ class ZuulSafeLoader(yaml.SafeLoader):
         self.zuul_stream = stream
 
     def construct_mapping(self, node, deep=False):
+        keys = set()
+        for k, v in node.value:
+            if k.value in keys:
+                mark = ZuulMark(node.start_mark, node.end_mark,
+                                self.zuul_stream)
+                raise YAMLDuplicateKeyError(k.value, node, self.zuul_context,
+                                            mark)
+            keys.add(k.value)
         r = super(ZuulSafeLoader, self).construct_mapping(node, deep)
         keys = frozenset(r.keys())
         if len(keys) == 1 and keys.intersection(self.zuul_node_types):
