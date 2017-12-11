@@ -2443,6 +2443,8 @@ class UnparsedTenantConfig(object):
 class Layout(object):
     """Holds all of the Pipelines."""
 
+    log = logging.getLogger("zuul.layout")
+
     def __init__(self, tenant):
         self.uuid = uuid4().hex
         self.tenant = tenant
@@ -2553,7 +2555,11 @@ class Layout(object):
         matched = False
         for variant in self.getJobs(jobname):
             if not variant.changeMatches(change):
+                self.log.debug("Variant %s did not match %s", repr(variant),
+                               change)
                 continue
+            else:
+                self.log.debug("Variant %s matched %s", repr(variant), change)
             if not variant.isBase():
                 parent = variant.parent
                 if not jobs and parent is None:
@@ -2576,6 +2582,7 @@ class Layout(object):
         for jobname in job_list.jobs:
             # This is the final job we are constructing
             frozen_job = None
+            self.log.debug("Collecting jobs %s for %s", jobname, change)
             try:
                 variants = self.collectJobs(jobname, change)
             except NoMatchingParentError:
