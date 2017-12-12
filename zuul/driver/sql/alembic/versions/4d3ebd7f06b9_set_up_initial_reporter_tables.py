@@ -19,9 +19,9 @@ BUILDSET_TABLE = 'zuul_buildset'
 BUILD_TABLE = 'zuul_build'
 
 
-def upgrade():
+def upgrade(table_prefix=''):
     op.create_table(
-        BUILDSET_TABLE,
+        table_prefix + BUILDSET_TABLE,
         sa.Column('id', sa.Integer, primary_key=True),
         sa.Column('zuul_ref', sa.String(255)),
         sa.Column('pipeline', sa.String(255)),
@@ -34,10 +34,10 @@ def upgrade():
     )
 
     op.create_table(
-        BUILD_TABLE,
+        table_prefix + BUILD_TABLE,
         sa.Column('id', sa.Integer, primary_key=True),
         sa.Column('buildset_id', sa.Integer,
-                  sa.ForeignKey(BUILDSET_TABLE + ".id")),
+                  sa.ForeignKey(table_prefix + BUILDSET_TABLE + ".id")),
         sa.Column('uuid', sa.String(36)),
         sa.Column('job_name', sa.String(255)),
         sa.Column('result', sa.String(255)),

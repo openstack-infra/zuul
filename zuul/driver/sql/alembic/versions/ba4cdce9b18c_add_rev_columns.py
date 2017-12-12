@@ -16,9 +16,11 @@ from alembic import op
 import sqlalchemy as sa
 
 
-def upgrade():
-    op.add_column('zuul_buildset', sa.Column('oldrev', sa.String(255)))
-    op.add_column('zuul_buildset', sa.Column('newrev', sa.String(255)))
+def upgrade(table_prefix=''):
+    op.add_column(
+        table_prefix + 'zuul_buildset', sa.Column('oldrev', sa.String(255)))
+    op.add_column(
+        table_prefix + 'zuul_buildset', sa.Column('newrev', sa.String(255)))
 
 
 def downgrade():

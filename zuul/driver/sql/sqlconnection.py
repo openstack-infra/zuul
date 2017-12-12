@@ -15,6 +15,7 @@
 import logging
 
 import alembic
+import alembic.command
 import alembic.config
 import sqlalchemy as sa
 import sqlalchemy.pool
@@ -39,6 +40,8 @@ class SQLConnection(BaseConnection):
         self.engine = None
         self.connection = None
         self.tables_established = False
+        self.table_prefix = self.connection_config.get('table_prefix', '')
+
         try:
             self.dburi = self.connection_config.get('dburi')
             # Recycle connections if they've been idle for more than 1 second.
@@ -74,14 +77,16 @@ class SQLConnection(BaseConnection):
             config.set_main_option("sqlalchemy.url",
                                    self.connection_config.get('dburi'))
 
-            alembic.command.upgrade(config, 'head')
+            # Alembic lets us add arbitrary data in the tag argument. We can
+            # leverage that to tell the upgrade scripts about the table prefix.
+            tag = {'table_prefix': self.table_prefix}
+            alembic.command.upgrade(config, 'head', tag=tag)
 
-    @staticmethod
-    def _setup_tables():
+    def _setup_tables(self):
         metadata = sa.MetaData()
 
         zuul_buildset_table = sa.Table(
-            BUILDSET_TABLE, metadata,
+            self.table_prefix + BUILDSET_TABLE, metadata,
             sa.Column('id', sa.Integer, primary_key=True),
             sa.Column('zuul_ref', sa.String(255)),
             sa.Column('pipeline', sa.String(255)),
@@ -98,10 +103,11 @@ class SQLConnection(BaseConnection):
         )
 
         zuul_build_table = sa.Table(
-            BUILD_TABLE, metadata,
+            self.table_prefix + BUILD_TABLE, metadata,
             sa.Column('id', sa.Integer, primary_key=True),
             sa.Column('buildset_id', sa.Integer,
-                      sa.ForeignKey(BUILDSET_TABLE + ".id")),
+                      sa.ForeignKey(self.table_prefix +
+                                    BUILDSET_TABLE + ".id")),
             sa.Column('uuid', sa.String(36)),
             sa.Column('job_name', sa.String(255)),
             sa.Column('result', sa.String(255)),

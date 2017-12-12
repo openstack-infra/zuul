@@ -18,8 +18,9 @@ import sqlalchemy as sa
 BUILDSET_TABLE = 'zuul_buildset'
 
 
-def upgrade():
-    op.add_column(BUILDSET_TABLE, sa.Column('result', sa.String(255)))
+def upgrade(table_prefix=''):
+    op.add_column(
+        table_prefix + BUILDSET_TABLE, sa.Column('result', sa.String(255)))
 
     connection = op.get_bind()
     connection.execute(
@@ -29,9 +30,9 @@ def upgrade():
              SELECT CASE score
                 WHEN 1 THEN 'SUCCESS'
                 ELSE 'FAILURE' END)
-        """.format(buildset_table=BUILDSET_TABLE))
+        """.format(buildset_table=table_prefix + BUILDSET_TABLE))
 
-    op.drop_column(BUILDSET_TABLE, 'score')
+    op.drop_column(table_prefix + BUILDSET_TABLE, 'score')
 
 
 def downgrade():

@@ -43,6 +43,14 @@ The connection options for the SQL driver are:
       <http://docs.sqlalchemy.org/en/latest/core/pooling.html#setting-pool-recycle>`_
       for more information.
 
+   .. attr:: table_prefix
+      :default: ''
+
+      The string to prefix the table names. This makes it possible to run
+      several zuul deployments against the same database. This can be useful
+      if you rely on external databases which you don't have under control.
+      The default is to have no prefix.
+
 Reporter Configuration
 ----------------------
 
