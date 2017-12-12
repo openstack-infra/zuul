@@ -49,7 +49,6 @@ class SQLConnection(BaseConnection):
                 poolclass=sqlalchemy.pool.QueuePool,
                 pool_recycle=self.connection_config.get('pool_recycle', 1))
             self._migrate()
-            self._setup_tables()
             self.zuul_buildset_table, self.zuul_build_table \
                 = self._setup_tables()
             self.tables_established = True
