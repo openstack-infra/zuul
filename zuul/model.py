@@ -641,6 +641,7 @@ class SourceContext(object):
         self.path = path
         self.trusted = trusted
         self.implied_branch_matchers = None
+        self.implied_branches = None
 
     def __str__(self):
         return '%s/%s@%s' % (self.project, self.path, self.branch)

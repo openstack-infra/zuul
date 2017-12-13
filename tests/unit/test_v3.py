@@ -2232,6 +2232,115 @@ class TestPragma(ZuulTestCase):
             self.assertIsNone(job.branch_matcher)
 
 
+class TestPragmaMultibranch(ZuulTestCase):
+    tenant_config_file = 'config/pragma-multibranch/main.yaml'
+
+    def test_no_branch_matchers(self):
+        self.create_branch('org/project1', 'stable/pike')
+        self.create_branch('org/project2', 'stable/jewel')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project1', 'stable/pike'))
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project2', 'stable/jewel'))
+        self.waitUntilSettled()
+        # We want the jobs defined on the stable/pike branch of
+        # project1 to apply to the stable/jewel branch of project2.
+
+        # First, without the pragma line, the jobs should not run
+        # because in project1 they have branch matchers for pike, so
+        # they will not match a jewel change.
+        B = self.fake_gerrit.addFakeChange('org/project2', 'stable/jewel', 'B')
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([])
+
+        # Add a pragma line to disable implied branch matchers in
+        # project1, so that the jobs and templates apply to both
+        # branches.
+        with open(os.path.join(FIXTURE_DIR,
+                               'config/pragma-multibranch/git/',
+                               'org_project1/zuul.yaml')) as f:
+            config = f.read()
+        extra_conf = textwrap.dedent(
+            """
+            - pragma:
+                implied-branch-matchers: False
+            """)
+        config = extra_conf + config
+        file_dict = {'zuul.yaml': config}
+        A = self.fake_gerrit.addFakeChange('org/project1', 'stable/pike', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+        self.waitUntilSettled()
+
+        # Now verify that when we propose a change to jewel, we get
+        # the pike/jewel jobs.
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='test-job1', result='SUCCESS', changes='1,1'),
+            dict(name='test-job2', result='SUCCESS', changes='1,1'),
+        ], ordered=False)
+
+    def test_supplied_branch_matchers(self):
+        self.create_branch('org/project1', 'stable/pike')
+        self.create_branch('org/project2', 'stable/jewel')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project1', 'stable/pike'))
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project2', 'stable/jewel'))
+        self.waitUntilSettled()
+        # We want the jobs defined on the stable/pike branch of
+        # project1 to apply to the stable/jewel branch of project2.
+
+        # First, without the pragma line, the jobs should not run
+        # because in project1 they have branch matchers for pike, so
+        # they will not match a jewel change.
+        B = self.fake_gerrit.addFakeChange('org/project2', 'stable/jewel', 'B')
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([])
+
+        # Add a pragma line to disable implied branch matchers in
+        # project1, so that the jobs and templates apply to both
+        # branches.
+        with open(os.path.join(FIXTURE_DIR,
+                               'config/pragma-multibranch/git/',
+                               'org_project1/zuul.yaml')) as f:
+            config = f.read()
+        extra_conf = textwrap.dedent(
+            """
+            - pragma:
+                implied-branches:
+                  - stable/pike
+                  - stable/jewel
+            """)
+        config = extra_conf + config
+        file_dict = {'zuul.yaml': config}
+        A = self.fake_gerrit.addFakeChange('org/project1', 'stable/pike', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+        self.waitUntilSettled()
+        # Now verify that when we propose a change to jewel, we get
+        # the pike/jewel jobs.
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='test-job1', result='SUCCESS', changes='1,1'),
+            dict(name='test-job2', result='SUCCESS', changes='1,1'),
+        ], ordered=False)
+
+
 class TestBaseJobs(ZuulTestCase):
     tenant_config_file = 'config/base-jobs/main.yaml'
 

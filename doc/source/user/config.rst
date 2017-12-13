@@ -1311,7 +1311,7 @@ pragma directives may not be set and then unset within the same file.
 
 .. attr:: pragma
 
-   The pragma item currently only supports one attribute:
+   The pragma item currently supports the following attributes:
 
    .. attr:: implied-branch-matchers
 
@@ -1326,3 +1326,43 @@ pragma directives may not be set and then unset within the same file.
 
       Note that if a job contains an explicit branch matcher, it will
       be used regardless of the value supplied here.
+
+   .. attr:: implied-branches
+
+      This is a list of regular expressions, just as
+      :attr:`job.branches`, which may be used to supply the value of
+      the implied branch matcher for all jobs in a file.
+
+      This may be useful if two projects share jobs but have
+      dissimilar branch names.  If, for example, two projects have
+      stable maintenance branches with dissimilar names, but both
+      should use the same job variants, this directive may be used to
+      indicate that all of the jobs defined in the stable branch of
+      the first project may also be used for the stable branch of teh
+      other.  For example:
+
+      .. code-block:: yaml
+
+         - pragma:
+             implied-branches:
+               - stable/foo
+               - stable/bar
+
+      The above code, when added to the ``stable/foo`` branch of a
+      project would indicate that the job variants described in that
+      file should not only be used for changes to ``stable/foo``, but
+      also on changes to ``stable/bar``, which may be in another
+      project.
+
+      Note that if a job contains an explicit branch matcher, it will
+      be used regardless of the value supplied here.
+
+      Note also that the presence of `implied-branches` does not
+      automatically set `implied-branch-matchers`.  Zuul will still
+      decide if implied branch matchers are warranted at all, using
+      the heuristics described in :attr:`job.branches`, and only use
+      the value supplied here if that is the case.  If you want to
+      declare specific implied branches on, for example, a
+      :term:`config-project` project (which normally would not use
+      implied branches), you must set `implied-branch-matchers` as
+      well.

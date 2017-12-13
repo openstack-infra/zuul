@@ -1,0 +1,13 @@
+- job:
+    name: test-job1
+    run: playbooks/test-job1.yaml
+
+- job:
+    name: test-job2
+    run: playbooks/test-job2.yaml
+
+- project-template:
+    name: test-template
+    check:
+      jobs:
+        - test-job1
