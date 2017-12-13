@@ -105,7 +105,7 @@ configuration.  An example tenant definition is:
       changes in response to proposed changes, and Zuul will read
       configuration files in all of their branches.
 
-      .. attr:: <project>:
+      .. attr:: <project>
 
          The items in the list may either be simple string values of
          the project names, or a dictionary with the project name as
