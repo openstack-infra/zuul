@@ -609,92 +609,6 @@ Here is an example of two job definitions:
       tags from all the jobs and variants used in constructing the
       frozen job, with no duplication.
 
-   .. attr:: branches
-
-      A regular expression (or list of regular expressions) which
-      describe on what branches a job should run (or in the case of
-      variants: to alter the behavior of a job for a certain branch).
-
-      If there is no job definition for a given job which matches the
-      branch of an item, then that job is not run for the item.
-      Otherwise, all of the job variants which match that branch (and
-      any other selection criteria) are used when freezing the job.
-
-      This example illustrates a job called *run-tests* which uses a
-      nodeset based on the current release of an operating system to
-      perform its tests, except when testing changes to the stable/2.0
-      branch, in which case it uses an older release:
-
-      .. code-block:: yaml
-
-         - job:
-             name: run-tests
-             nodeset: current-release
-
-         - job:
-             name: run-tests
-             branches: stable/2.0
-             nodeset: old-release
-
-      In some cases, Zuul uses an implied value for the branch
-      specifier if none is supplied:
-
-      * For a job definition in a :term:`config-project`, no implied
-        branch specifier is used.  If no branch specifier appears, the
-        job applies to all branches.
-
-      * In the case of an :term:`untrusted-project`, if the project
-        has only one branch, no implied branch specifier is applied to
-        :ref:`job` definitions.  If the project has more than one
-        branch, the branch containing the job definition is used as an
-        implied branch specifier.
-
-      * In the case of a job variant defined within a :ref:`project`,
-        if the project definition is in a :term:`config-project`, no
-        implied branch specifier is used.  If it appears in an
-        :term:`untrusted-project`, with no branch specifier, the
-        branch containing the project definition is used as an implied
-        branch specifier.
-
-      * In the case of a job variant defined within a
-        :ref:`project-template`, if no branch specifier appears, the
-        implied branch containing the project-template definition is
-        used as an implied branch specifier.  This means that
-        definitions of the same project-template on different branches
-        may run different jobs.
-
-        When that project-template is used by a :ref:`project`
-        definition within a :term:`untrusted-project`, the branch
-        containing that project definition is combined with the branch
-        specifier of the project-template.  This means it is possible
-        for a project to use a template on one branch, but not on
-        another.
-
-      This allows for the very simple and expected workflow where if a
-      project defines a job on the ``master`` branch with no branch
-      specifier, and then creates a new branch based on ``master``,
-      any changes to that job definition within the new branch only
-      affect that branch, and likewise, changes to the master branch
-      only affect it.
-
-      See :attr:`pragma.implied-branch-matchers` for how to override
-      this behavior on a per-file basis.
-
-   .. attr:: files
-
-      This attribute indicates that the job should only run on changes
-      where the specified files are modified.  This is a regular
-      expression or list of regular expressions.
-
-   .. attr:: irrelevant-files
-
-      This is a negative complement of **files**.  It indicates that
-      the job should run unless *all* of the files changed match this
-      list.  In other words, if the regular expression ``docs/.*`` is
-      supplied, then this job will not run if the only files changed
-      are in the docs directory.  A regular expression or list of
-      regular expressions.
-
    .. attr:: secrets
 
       A list of secrets which may be used by the job.  A
@@ -956,6 +870,99 @@ Here is an example of two job definitions:
       is set to ``true`` anywhere in the inheritance hierarchy for a job,
       it will remain set for all child jobs and variants (it can not be
       set to ``false``).
+
+   .. _matchers:
+
+   The following job attributes are considered "matchers".  They are
+   not inherited in the usual manner, instead, these attributes are
+   used to determine whether a specific variant is used when
+   running a job.
+
+   .. attr:: branches
+
+      A regular expression (or list of regular expressions) which
+      describe on what branches a job should run (or in the case of
+      variants: to alter the behavior of a job for a certain branch).
+
+      If there is no job definition for a given job which matches the
+      branch of an item, then that job is not run for the item.
+      Otherwise, all of the job variants which match that branch (and
+      any other selection criteria) are used when freezing the job.
+
+      This example illustrates a job called *run-tests* which uses a
+      nodeset based on the current release of an operating system to
+      perform its tests, except when testing changes to the stable/2.0
+      branch, in which case it uses an older release:
+
+      .. code-block:: yaml
+
+         - job:
+             name: run-tests
+             nodeset: current-release
+
+         - job:
+             name: run-tests
+             branches: stable/2.0
+             nodeset: old-release
+
+      In some cases, Zuul uses an implied value for the branch
+      specifier if none is supplied:
+
+      * For a job definition in a :term:`config-project`, no implied
+        branch specifier is used.  If no branch specifier appears, the
+        job applies to all branches.
+
+      * In the case of an :term:`untrusted-project`, if the project
+        has only one branch, no implied branch specifier is applied to
+        :ref:`job` definitions.  If the project has more than one
+        branch, the branch containing the job definition is used as an
+        implied branch specifier.
+
+      * In the case of a job variant defined within a :ref:`project`,
+        if the project definition is in a :term:`config-project`, no
+        implied branch specifier is used.  If it appears in an
+        :term:`untrusted-project`, with no branch specifier, the
+        branch containing the project definition is used as an implied
+        branch specifier.
+
+      * In the case of a job variant defined within a
+        :ref:`project-template`, if no branch specifier appears, the
+        implied branch containing the project-template definition is
+        used as an implied branch specifier.  This means that
+        definitions of the same project-template on different branches
+        may run different jobs.
+
+        When that project-template is used by a :ref:`project`
+        definition within a :term:`untrusted-project`, the branch
+        containing that project definition is combined with the branch
+        specifier of the project-template.  This means it is possible
+        for a project to use a template on one branch, but not on
+        another.
+
+      This allows for the very simple and expected workflow where if a
+      project defines a job on the ``master`` branch with no branch
+      specifier, and then creates a new branch based on ``master``,
+      any changes to that job definition within the new branch only
+      affect that branch, and likewise, changes to the master branch
+      only affect it.
+
+      See :attr:`pragma.implied-branch-matchers` for how to override
+      this behavior on a per-file basis.
+
+   .. attr:: files
+
+      This matcher indicates that the job should only run on changes
+      where the specified files are modified.  This is a regular
+      expression or list of regular expressions.
+
+   .. attr:: irrelevant-files
+
+      This matcher is a negative complement of **files**.  It
+      indicates that the job should run unless *all* of the files
+      changed match this list.  In other words, if the regular
+      expression ``docs/.*`` is supplied, then this job will not run
+      if the only files changed are in the docs directory.  A regular
+      expression or list of regular expressions.
 
 .. _project:
 
