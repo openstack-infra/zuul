@@ -303,8 +303,7 @@ class RPCListener(object):
 
     def handle_key_get(self, job):
         args = json.loads(job.arguments)
-        source_name, project_name = args.get("source"), args.get("project")
-        source = self.sched.connections.getSource(source_name)
-        project = source.getProject(project_name)
+        tenant = self.sched.abide.tenants.get(args.get("tenant"))
+        (trusted, project) = tenant.getProject(args.get("project"))
         job.sendWorkComplete(
             encryption.serialize_rsa_public_key(project.public_key))

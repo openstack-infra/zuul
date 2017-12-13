@@ -43,10 +43,7 @@ def main():
     parser.add_argument('url',
                         help="The base URL of the zuul server and tenant.  "
                         "E.g., https://zuul.example.com/tenant-name")
-    # TODO(jeblair,mordred): When projects have canonical names, use that here.
     # TODO(jeblair): Throw a fit if SSL is not used.
-    parser.add_argument('source',
-                        help="The Zuul source of the project.")
     parser.add_argument('project',
                         help="The name of the project.")
     parser.add_argument('--infile',
@@ -61,8 +58,7 @@ def main():
                         "to standard output.")
     args = parser.parse_args()
 
-    req = Request("%s/keys/%s/%s.pub" % (
-        args.url, args.source, args.project))
+    req = Request("%s/%s.pub" % (args.url, args.project))
     pubkey = urlopen(req)
 
     if args.infile:
