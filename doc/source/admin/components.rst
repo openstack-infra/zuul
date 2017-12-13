@@ -287,7 +287,7 @@ The following section of ``zuul.conf`` is used by the merger:
 
 .. attr:: merger
 
-   ,, attr:: command_socket
+   .. attr:: command_socket
       :default: /var/lib/zuul/merger.socket
 
       Path to command socket file for the merger process.
@@ -626,4 +626,66 @@ Operation
 ~~~~~~~~~
 
 To start the web server, run ``zuul-web``.  To stop it, kill the
+PID which was saved in the pidfile specified in the configuration.
+
+Finger Gateway
+--------------
+
+The Zuul finger gateway connects to the standard finger port (79) and listens
+for finger requests specifying a build UUID for which it should stream log
+results. The gateway will determine which executor is currently running that
+build and query that executor for the log stream.
+
+This is intended to be used with the standard finger command line client.
+For example::
+
+    finger UUID@zuul.example.com
+
+The above would stream the logs for the build identified by `UUID`.
+
+Configuration
+~~~~~~~~~~~~~
+
+In addition to the common configuration sections, the following
+sections of ``zuul.conf`` are used by the finger gateway:
+
+.. attr:: fingergw
+
+   .. attr:: command_socket
+      :default: /var/lib/zuul/fingergw.socket
+
+      Path to command socket file for the executor process.
+
+   .. attr:: listen_address
+      :default: all addresses
+
+      IP address or domain name on which to listen.
+
+   .. attr:: log_config
+
+      Path to log config file for the finger gateway process.
+
+   .. attr:: pidfile
+      :default: /var/run/zuul-fingergw/zuul-fingergw.pid
+
+      Path to PID lock file for the finger gateway process.
+
+   .. attr:: port
+      :default: 79
+
+      Port to use for the finger gateway. Note that since command line
+      finger clients cannot usually specify the port, leaving this set to
+      the default value is highly recommended.
+
+   .. attr:: user
+      :default: zuul
+
+      User ID for the zuul-fingergw process. In normal operation as a
+      daemon, the finger gateway should be started as the ``root`` user, but
+      it will drop privileges to this user during startup.
+
+Operation
+~~~~~~~~~
+
+To start the finger gateway, run ``zuul-fingergw``.  To stop it, kill the
 PID which was saved in the pidfile specified in the configuration.
