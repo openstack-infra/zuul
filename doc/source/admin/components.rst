@@ -631,8 +631,8 @@ PID which was saved in the pidfile specified in the configuration.
 Finger Gateway
 --------------
 
-The Zuul finger gateway connects to the standard finger port (79) and listens
-for finger requests specifying a build UUID for which it should stream log
+The Zuul finger gateway listens on the standard finger port (79) for
+finger requests specifying a build UUID for which it should stream log
 results. The gateway will determine which executor is currently running that
 build and query that executor for the log stream.
 
