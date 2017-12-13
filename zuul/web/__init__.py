@@ -182,7 +182,9 @@ class GearmanHandler(object):
     def job_list(self, request):
         tenant = request.match_info["tenant"]
         job = self.rpc.submitJob('zuul:job_list', {'tenant': tenant})
-        return web.json_response(json.loads(job.data[0]))
+        resp = web.json_response(json.loads(job.data[0]))
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp
 
     def key_get(self, request):
         tenant = request.match_info["tenant"]
@@ -282,6 +284,7 @@ class SqlHandler(object):
                     raise ValueError("Unknown parameter %s" % k)
             data = self.get_builds(args)
             resp = web.json_response(data)
+            resp.headers['Access-Control-Allow-Origin'] = '*'
         except Exception as e:
             self.log.exception("Jobs exception:")
             resp = web.json_response({'error_description': 'Internal error'},
