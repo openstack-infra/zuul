@@ -1090,6 +1090,14 @@ pipeline.
          changes which break the others.  This is a free-form string;
          just set the same value for each group of projects.
 
+      .. attr:: debug
+
+         If this is set to `true`, Zuul will include debugging
+         information in reports it makes about items in the pipeline.
+         This should not normally be set, but in situations were it is
+         difficult to determine why Zuul did or did not run a certain
+         job, the additional information this provides may help.
+
 .. _project-template:
 
 Project Template

@@ -1337,6 +1337,7 @@ class BuildSet(object):
         self.unable_to_merge = False
         self.config_error = None  # None or an error message string.
         self.failing_reasons = []
+        self.debug_messages = []
         self.merge_state = self.NEW
         self.nodesets = {}  # job -> nodeset
         self.node_requests = {}  # job -> reqs
@@ -1500,6 +1501,17 @@ class QueueItem(object):
 
     def setReportedResult(self, result):
         self.current_build_set.result = result
+
+    def debug(self, msg, indent=0):
+        ppc = self.layout.getProjectPipelineConfig(self.change.project,
+                                                   self.pipeline)
+        if not ppc.debug:
+            return
+        if indent:
+            indent = '  ' * indent
+        else:
+            indent = ''
+        self.current_build_set.debug_messages.append(indent + msg)
 
     def freezeJobGraph(self):
         """Find or create actual matching jobs for this item's change and
@@ -2220,6 +2232,7 @@ class ProjectPipelineConfig(object):
     def __init__(self):
         self.job_list = JobList()
         self.queue_name = None
+        self.debug = False
         self.merge_mode = None
 
 
@@ -2545,7 +2558,8 @@ class Layout(object):
     def addProjectConfig(self, project_config):
         self.project_configs[project_config.name] = project_config
 
-    def collectJobs(self, jobname, change, path=None, jobs=None, stack=None):
+    def collectJobs(self, item, jobname, change, path=None, jobs=None,
+                    stack=None):
         if stack is None:
             stack = []
         if jobs is None:
@@ -2554,13 +2568,20 @@ class Layout(object):
             path = []
         path.append(jobname)
         matched = False
+        indent = len(path) + 1
+        item.debug("Collecting job variants for {jobname}".format(
+            jobname=jobname), indent=indent)
         for variant in self.getJobs(jobname):
             if not variant.changeMatches(change):
                 self.log.debug("Variant %s did not match %s", repr(variant),
                                change)
+                item.debug("Variant {variant} did not match".format(
+                    variant=repr(variant)), indent=indent)
                 continue
             else:
                 self.log.debug("Variant %s matched %s", repr(variant), change)
+                item.debug("Variant {variant} matched".format(
+                    variant=repr(variant)), indent=indent)
             if not variant.isBase():
                 parent = variant.parent
                 if not jobs and parent is None:
@@ -2570,30 +2591,38 @@ class Layout(object):
             if parent and parent not in path:
                 if parent in stack:
                     raise Exception("Dependency cycle in jobs: %s" % stack)
-                self.collectJobs(parent, change, path, jobs, stack + [jobname])
+                self.collectJobs(item, parent, change, path, jobs,
+                                 stack + [jobname])
             matched = True
             jobs.append(variant)
         if not matched:
+            self.log.debug("No matching parents for job %s and change %s",
+                           jobname, change)
+            item.debug("No matching parent for {jobname}".format(
+                jobname=repr(jobname)), indent=indent)
             raise NoMatchingParentError()
         return jobs
 
     def _createJobGraph(self, item, job_list, job_graph):
         change = item.change
         pipeline = item.pipeline
+        item.debug("Freezing job graph")
         for jobname in job_list.jobs:
             # This is the final job we are constructing
             frozen_job = None
             self.log.debug("Collecting jobs %s for %s", jobname, change)
+            item.debug("Freezing job {jobname}".format(
+                jobname=jobname), indent=1)
             try:
-                variants = self.collectJobs(jobname, change)
+                variants = self.collectJobs(item, jobname, change)
             except NoMatchingParentError:
-                self.log.debug("No matching parents for job %s and change %s",
-                               jobname, change)
                 variants = None
             if not variants:
                 # A change must match at least one defined job variant
                 # (that is to say that it must match more than just
                 # the job that is defined in the tree).
+                item.debug("No matching variants for {jobname}".format(
+                    jobname=jobname), indent=2)
                 continue
             for variant in variants:
                 if frozen_job is None:
@@ -2612,12 +2641,18 @@ class Layout(object):
                     matched = True
                     self.log.debug("Pipeline variant %s matched %s",
                                    repr(variant), change)
+                    item.debug("Pipeline variant {variant} matched".format(
+                        variant=repr(variant)), indent=2)
             else:
                 self.log.debug("Pipeline variant %s did not match %s",
                                repr(variant), change)
+                item.debug("Pipeline variant {variant} did not match".format(
+                    variant=repr(variant)), indent=2)
             if not matched:
                 # A change must match at least one project pipeline
                 # job variant.
+                item.debug("No matching pipeline variants for {jobname}".
+                           format(jobname=jobname), indent=2)
                 continue
             if (frozen_job.allowed_projects and
                 change.project.name not in frozen_job.allowed_projects):

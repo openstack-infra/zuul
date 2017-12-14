@@ -1552,6 +1552,32 @@ class TestInRepoConfig(ZuulTestCase):
                       C.messages[0],
                       "C should have an error reported")
 
+    def test_pipeline_debug(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test1
+                run: playbooks/project-test1.yaml
+            - project:
+                name: org/project
+                check:
+                  debug: True
+                  jobs:
+                    - project-test1
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1,
+                         "A should report success")
+        self.assertIn('Debug information:',
+                      A.messages[0], "A should have debug info")
+
 
 class TestInRepoJoin(ZuulTestCase):
     # In this config, org/project is not a member of any pipelines, so
