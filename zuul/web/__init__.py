@@ -370,7 +370,7 @@ class ZuulWeb(object):
             ('GET', '/{tenant}/status.json', self._handleStatusRequest),
             ('GET', '/{tenant}/jobs.json', self._handleJobsRequest),
             ('GET', '/{tenant}/console-stream', self._handleWebsocket),
-            ('GET', '/{tenant}/{project}.pub', self._handleKeyRequest),
+            ('GET', '/{tenant}/{project:.*}.pub', self._handleKeyRequest),
             ('GET', '/{tenant}/status.html', self._handleStaticRequest),
             ('GET', '/{tenant}/jobs.html', self._handleStaticRequest),
             ('GET', '/{tenant}/stream.html', self._handleStaticRequest),
