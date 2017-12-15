@@ -1,0 +1,7 @@
+- project:
+    name: org/project2
+    templates:
+      - test-template
+    check:
+      jobs:
+        - test-job2

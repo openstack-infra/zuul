@@ -358,6 +358,7 @@ class EncryptedPKCS1_OAEP(yaml.YAMLObject):
 class PragmaParser(object):
     pragma = {
         'implied-branch-matchers': bool,
+        'implied-branches': to_list(str),
         '_source_context': model.SourceContext,
         '_start_mark': ZuulMark,
     }
@@ -372,11 +373,14 @@ class PragmaParser(object):
             self.schema(conf)
 
         bm = conf.get('implied-branch-matchers')
-        if bm is None:
-            return
 
         source_context = conf['_source_context']
-        source_context.implied_branch_matchers = bm
+        if bm is not None:
+            source_context.implied_branch_matchers = bm
+
+        branches = conf.get('implied-branches')
+        if branches is not None:
+            source_context.implied_branches = as_list(branches)
 
 
 class NodeSetParser(object):
@@ -528,6 +532,8 @@ class JobParser(object):
         # If the user has set a pragma directive for this, use the
         # value (if unset, the value is None).
         if job.source_context.implied_branch_matchers is True:
+            if job.source_context.implied_branches is not None:
+                return job.source_context.implied_branches
             return [job.source_context.branch]
         elif job.source_context.implied_branch_matchers is False:
             return None
@@ -543,6 +549,8 @@ class JobParser(object):
         if len(branches) == 1:
             return None
 
+        if job.source_context.implied_branches is not None:
+            return job.source_context.implied_branches
         return [job.source_context.branch]
 
     @staticmethod
