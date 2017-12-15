@@ -709,7 +709,8 @@ class GithubConnection(BaseConnection):
                                                 change.project.name,
                                                 change.number)
         query = '%s type:pr is:open in:body' % pattern
-        github = self.getGithubClient()
+        # FIXME(tobiash): find a way to query this for different installations
+        github = self.getGithubClient(change.project.name)
         for issue in github.search_issues(query=query):
             pr = issue.issue.pull_request().as_dict()
             if not pr.get('url'):
