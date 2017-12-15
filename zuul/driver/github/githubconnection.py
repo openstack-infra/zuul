@@ -34,7 +34,7 @@ import github3
 import github3.exceptions
 
 from zuul.connection import BaseConnection
-from zuul.model import Ref, Branch, Tag
+from zuul.model import Ref, Branch, Tag, Project
 from zuul.exceptions import MergeFailure
 from zuul.driver.github.githubmodel import PullRequest, GithubTriggerEvent
 
@@ -786,17 +786,17 @@ class GithubConnection(BaseConnection):
 
         return change
 
-    def getGitUrl(self, project):
+    def getGitUrl(self, project: Project):
         if self.git_ssh_key:
-            return 'ssh://git@%s/%s.git' % (self.server, project)
+            return 'ssh://git@%s/%s.git' % (self.server, project.name)
 
         if self.app_id:
-            installation_key = self._get_installation_key(project)
+            installation_key = self._get_installation_key(project.name)
             return 'https://x-access-token:%s@%s/%s' % (installation_key,
                                                         self.server,
-                                                        project)
+                                                        project.name)
 
-        return 'https://%s/%s' % (self.server, project)
+        return 'https://%s/%s' % (self.server, project.name)
 
     def getGitwebUrl(self, project, sha=None):
         url = 'https://%s/%s' % (self.server, project)
