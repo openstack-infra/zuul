@@ -790,6 +790,12 @@ class GithubConnection(BaseConnection):
         if self.git_ssh_key:
             return 'ssh://git@%s/%s.git' % (self.server, project.name)
 
+        # if app_id is configured but self.app_id is empty we are not
+        # authenticated yet against github as app
+        if not self.app_id and self.connection_config.get('app_id', None):
+            self._authenticateGithubAPI()
+            self._prime_installation_map()
+
         if self.app_id:
             installation_key = self._get_installation_key(project.name)
             return 'https://x-access-token:%s@%s/%s' % (installation_key,
