@@ -1353,7 +1353,7 @@ pragma directives may not be set and then unset within the same file.
       stable maintenance branches with dissimilar names, but both
       should use the same job variants, this directive may be used to
       indicate that all of the jobs defined in the stable branch of
-      the first project may also be used for the stable branch of teh
+      the first project may also be used for the stable branch of the
       other.  For example:
 
       .. code-block:: yaml
