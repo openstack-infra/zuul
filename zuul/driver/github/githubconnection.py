@@ -349,7 +349,9 @@ class GithubEventConnector(threading.Thread):
     def _get_sender(self, body):
         login = body.get('sender').get('login')
         if login:
-            return self.connection.getUser(login)
+            # TODO(tobiash): it might be better to plumb in the installation id
+            project = body.get('repository', {}).get('full_name')
+            return self.connection.getUser(login, project=project)
 
     def run(self):
         while True:
@@ -972,8 +974,8 @@ class GithubConnection(BaseConnection):
         log_rate_limit(self.log, github)
         return reviews
 
-    def getUser(self, login):
-        return GithubUser(self.getGithubClient(), login)
+    def getUser(self, login, project=None):
+        return GithubUser(self.getGithubClient(project), login)
 
     def getUserUri(self, login):
         return 'https://%s/%s' % (self.server, login)
