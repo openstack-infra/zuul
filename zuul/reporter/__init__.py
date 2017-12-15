@@ -64,6 +64,10 @@ class BaseReporter(object, metaclass=abc.ABCMeta):
         a reporter taking free-form text."""
         ret = self._getFormatter()(item, with_jobs)
 
+        if item.current_build_set.debug_messages:
+            debug = '\n  '.join(item.current_build_set.debug_messages)
+            ret += '\nDebug information:\n  ' + debug + '\n'
+
         if item.pipeline.footer_message:
             ret += '\n' + item.pipeline.footer_message
 

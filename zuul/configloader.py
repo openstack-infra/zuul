@@ -789,7 +789,11 @@ class ProjectTemplateParser(object):
 
         job = {str: vs.Any(str, JobParser.job_attributes)}
         job_list = [vs.Any(str, job)]
-        pipeline_contents = {'queue': str, 'jobs': job_list}
+        pipeline_contents = {
+            'queue': str,
+            'debug': bool,
+            'jobs': job_list,
+        }
 
         for p in self.layout.pipelines.values():
             project_template[p.name] = pipeline_contents
@@ -809,6 +813,7 @@ class ProjectTemplateParser(object):
             project_pipeline = model.ProjectPipelineConfig()
             project_template.pipelines[pipeline.name] = project_pipeline
             project_pipeline.queue_name = conf_pipeline.get('queue')
+            project_pipeline.debug = conf_pipeline.get('debug')
             self.parseJobList(
                 conf_pipeline.get('jobs', []),
                 source_context, start_mark, project_pipeline.job_list)
@@ -859,7 +864,11 @@ class ProjectParser(object):
 
         job = {str: vs.Any(str, JobParser.job_attributes)}
         job_list = [vs.Any(str, job)]
-        pipeline_contents = {'queue': str, 'jobs': job_list}
+        pipeline_contents = {
+            'queue': str,
+            'debug': bool,
+            'jobs': job_list
+        }
 
         for p in self.layout.pipelines.values():
             project[p.name] = pipeline_contents
@@ -920,6 +929,7 @@ class ProjectParser(object):
         for pipeline in self.layout.pipelines.values():
             project_pipeline = model.ProjectPipelineConfig()
             queue_name = None
+            debug = False
             # For every template, iterate over the job tree and replace or
             # create the jobs in the final definition as needed.
             pipeline_defined = False
@@ -932,8 +942,12 @@ class ProjectParser(object):
                         implied_branch)
                     if template_pipeline.queue_name:
                         queue_name = template_pipeline.queue_name
+                    if template_pipeline.debug is not None:
+                        debug = template_pipeline.debug
             if queue_name:
                 project_pipeline.queue_name = queue_name
+            if debug:
+                project_pipeline.debug = True
             if pipeline_defined:
                 project_config.pipelines[pipeline.name] = project_pipeline
         return project_config
