@@ -63,16 +63,6 @@ class GerritTrigger(BaseTrigger):
         return efilters
 
 
-def validate_conf(trigger_conf):
-    """Validates the layout's trigger data."""
-    events_with_ref = ('ref-updated', )
-    for event in trigger_conf:
-        if event['event'] not in events_with_ref and event.get('ref', False):
-            raise v.Invalid(
-                "The event %s does not include ref information, Zuul cannot "
-                "use ref filter 'ref: %s'" % (event['event'], event['ref']))
-
-
 def getSchema():
     variable_dict = v.Schema(dict)
 
