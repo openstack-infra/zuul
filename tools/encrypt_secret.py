@@ -58,7 +58,7 @@ def main():
                         "to standard output.")
     args = parser.parse_args()
 
-    req = Request("%s/%s.pub" % (args.url, args.project))
+    req = Request("%s/%s.pub" % (args.url.rstrip('/'), args.project))
     pubkey = urlopen(req)
 
     if args.infile:
