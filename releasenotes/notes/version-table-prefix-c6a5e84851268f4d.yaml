@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    The alembic version table is fixed to being prefixed too. This is necessary
+    when using :attr:`<sql connection>.table_prefix`. However if you are
+    already using ``table_prefix`` you will need to rename the table
+    ``alembic_version`` to ``<prefix>alembic_version`` before starting Zuul.
+    Otherwise zuul will try to create the tables again and fail. If you're not
+    using ``table_prefix`` you can safely ignore this.
