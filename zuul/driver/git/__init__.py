@@ -15,6 +15,7 @@
 from zuul.driver import Driver, ConnectionInterface, SourceInterface
 from zuul.driver.git import gitconnection
 from zuul.driver.git import gitsource
+from zuul.driver.git import gittrigger
 
 
 class GitDriver(Driver, ConnectionInterface, SourceInterface):
@@ -23,8 +24,14 @@ class GitDriver(Driver, ConnectionInterface, SourceInterface):
     def getConnection(self, name, config):
         return gitconnection.GitConnection(self, name, config)
 
+    def getTrigger(self, connection, config=None):
+        return gittrigger.GitTrigger(self, connection, config)
+
     def getSource(self, connection):
         return gitsource.GitSource(self, connection)
+
+    def getTriggerSchema(self):
+        return gittrigger.getSchema()
 
     def getRequireSchema(self):
         return {}

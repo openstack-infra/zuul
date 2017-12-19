@@ -19,6 +19,10 @@
     name: project-test1
     run: playbooks/project-test1.yaml
 
+- job:
+    name: project-test2
+    run: playbooks/project-test2.yaml
+
 - project:
     name: org/project
     check:

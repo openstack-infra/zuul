@@ -36,7 +36,7 @@ class GitSource(BaseSource):
         raise NotImplemented()
 
     def getChange(self, event, refresh=False):
-        raise NotImplemented()
+        return self.connection.getChange(event, refresh)
 
     def getProject(self, name):
         p = self.connection.getProject(name)

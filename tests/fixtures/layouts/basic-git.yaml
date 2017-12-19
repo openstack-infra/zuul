@@ -1,0 +1,37 @@
+- pipeline:
+    name: post
+    manager: independent
+    trigger:
+      git:
+        - event: ref-updated
+          ref: ^refs/heads/.*$
+
+- pipeline:
+    name: tag
+    manager: independent
+    trigger:
+      git:
+        - event: ref-updated
+          ref: ^refs/tags/.*$
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: post-job
+    run: playbooks/post-job.yaml
+
+- job:
+    name: tag-job
+    run: playbooks/post-job.yaml
+
+- project:
+    name: org/project
+    post:
+      jobs:
+        - post-job
+    tag:
+      jobs:
+        - tag-job

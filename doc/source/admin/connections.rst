@@ -55,6 +55,7 @@ Zuul includes the following drivers:
 
    drivers/gerrit
    drivers/github
+   drivers/git
    drivers/smtp
    drivers/sql
    drivers/timer
