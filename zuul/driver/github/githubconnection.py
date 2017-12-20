@@ -24,6 +24,7 @@ import re
 
 import cachecontrol
 from cachecontrol.cache import DictCache
+from cachecontrol.heuristics import BaseHeuristic
 import iso8601
 import jwt
 import requests
@@ -431,9 +432,26 @@ class GithubConnection(BaseConnection):
         # NOTE(jamielennox): Better here would be to cache to memcache or file
         # or something external - but zuul already sucks at restarting so in
         # memory probably doesn't make this much worse.
+
+        # NOTE(tobiash): Unlike documented cachecontrol doesn't priorize
+        # the etag caching but doesn't even re-request until max-age was
+        # elapsed.
+        #
+        # Thus we need to add a custom caching heuristic which simply drops
+        # the cache-control header containing max-age. This way we force
+        # cachecontrol to only rely on the etag headers.
+        #
+        # http://cachecontrol.readthedocs.io/en/latest/etags.html
+        # http://cachecontrol.readthedocs.io/en/latest/custom_heuristics.html
+        class NoAgeHeuristic(BaseHeuristic):
+            def update_headers(self, response):
+                if 'cache-control' in response.headers:
+                    del response.headers['cache-control']
+
         self.cache_adapter = cachecontrol.CacheControlAdapter(
             DictCache(),
-            cache_etags=True)
+            cache_etags=True,
+            heuristic=NoAgeHeuristic())
 
         # The regex is based on the connection host. We do not yet support
         # cross-connection dependency gathering
