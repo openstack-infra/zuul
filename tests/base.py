@@ -1432,7 +1432,8 @@ class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
         self.log.debug("hostlist")
         hosts = super(RecordingAnsibleJob, self).getHostList(args)
         for host in hosts:
-            host['host_vars']['ansible_connection'] = 'local'
+            if not host['host_vars'].get('ansible_connection'):
+                host['host_vars']['ansible_connection'] = 'local'
 
         hosts.append(dict(
             name=['localhost'],
@@ -1738,6 +1739,9 @@ class FakeNodepool(object):
                     executor='fake-nodepool')
         if 'fakeuser' in node_type:
             data['username'] = 'fakeuser'
+        if 'windows' in node_type:
+            data['connection_type'] = 'winrm'
+
         data = json.dumps(data).encode('utf8')
         path = self.client.create(path, data,
                                   makepath=True,

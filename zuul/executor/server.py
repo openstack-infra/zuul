@@ -931,6 +931,10 @@ class AnsibleJob(object):
             if username:
                 host_vars['ansible_user'] = username
 
+            connection_type = node.get('connection_type')
+            if connection_type:
+                host_vars['ansible_connection'] = connection_type
+
             host_keys = []
             for key in node.get('host_keys'):
                 if port != 22:

@@ -38,6 +38,8 @@
         label: default-label
       - name: fakeuser
         label: fakeuser-label
+      - name: windows
+        label: windows-label
 
 - job:
     name: base
