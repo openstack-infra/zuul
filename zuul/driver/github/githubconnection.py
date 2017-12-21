@@ -138,7 +138,6 @@ class GithubEventConnector(threading.Thread):
     """Move events from GitHub into the scheduler"""
 
     log = logging.getLogger("zuul.GithubEventConnector")
-    delay = 10.0
 
     def __init__(self, connection):
         super(GithubEventConnector, self).__init__()
@@ -154,14 +153,6 @@ class GithubEventConnector(threading.Thread):
         ts, json_body, event_type = self.connection.getEvent()
         if self._stopped:
             return
-        # Github can produce inconsistent data immediately after an
-        # event, So ensure that we do not deliver the event to Zuul
-        # until at least a certain amount of time has passed.  Note
-        # that if we receive several events in succession, we will
-        # only need to delay for the first event.  In essence, Zuul
-        # should always be a constant number of seconds behind Github.
-        now = time.time()
-        time.sleep(max((ts + self.delay) - now, 0.0))
 
         # If there's any installation mapping information in the body then
         # update the project mapping before any requests are made.
