@@ -535,12 +535,21 @@ class GithubConnection(BaseConnection):
 
         return headers
 
-    def _get_installation_key(self, project, user_id=None, inst_id=None):
+    def _get_installation_key(self, project, user_id=None, inst_id=None,
+                              reprime=False):
         installation_id = inst_id
         if project is not None:
             installation_id = self.installation_map.get(project)
 
         if not installation_id:
+            if reprime:
+                # prime installation map and try again without refreshing
+                self._prime_installation_map()
+                return self._get_installation_key(project,
+                                                  user_id=user_id,
+                                                  inst_id=inst_id,
+                                                  reprime=False)
+
             self.log.error("No installation ID available for project %s",
                            project)
             return ''
@@ -809,7 +818,12 @@ class GithubConnection(BaseConnection):
             self._prime_installation_map()
 
         if self.app_id:
-            installation_key = self._get_installation_key(project.name)
+            # We may be in the context of a merger or executor here. The
+            # mergers and executors don't receive webhook events so they miss
+            # new repository installations. In order to cope with this we need
+            # to reprime the installation map if we don't find the repo there.
+            installation_key = self._get_installation_key(project.name,
+                                                          reprime=True)
             return 'https://x-access-token:%s@%s/%s' % (installation_key,
                                                         self.server,
                                                         project.name)
