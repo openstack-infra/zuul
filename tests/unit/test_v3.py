@@ -543,11 +543,23 @@ class TestInRepoConfig(ZuulTestCase):
                 name: project-test2
                 run: playbooks/project-test2.yaml
 
+            - job:
+                name: project-test3
+                run: playbooks/project-test2.yaml
+
+            # add a job by the short project name
             - project:
                 name: org/project
                 tenant-one-gate:
                   jobs:
                     - project-test2
+
+            # add a job by the canonical project name
+            - project:
+                name: review.example.com/org/project
+                tenant-one-gate:
+                  jobs:
+                    - project-test3
             """)
 
         in_repo_playbook = textwrap.dedent(
@@ -569,7 +581,9 @@ class TestInRepoConfig(ZuulTestCase):
         self.assertIn('tenant-one-gate', A.messages[1],
                       "A should transit tenant-one gate")
         self.assertHistory([
-            dict(name='project-test2', result='SUCCESS', changes='1,1')])
+            dict(name='project-test2', result='SUCCESS', changes='1,1'),
+            dict(name='project-test3', result='SUCCESS', changes='1,1'),
+        ], ordered=False)
 
         self.fake_gerrit.addEvent(A.getChangeMergedEvent())
         self.waitUntilSettled()
@@ -584,7 +598,10 @@ class TestInRepoConfig(ZuulTestCase):
                          'SUCCESS')
         self.assertHistory([
             dict(name='project-test2', result='SUCCESS', changes='1,1'),
-            dict(name='project-test2', result='SUCCESS', changes='2,1')])
+            dict(name='project-test3', result='SUCCESS', changes='1,1'),
+            dict(name='project-test2', result='SUCCESS', changes='2,1'),
+            dict(name='project-test3', result='SUCCESS', changes='2,1'),
+        ], ordered=False)
 
     def test_dynamic_template(self):
         # Tests that a project can't update a template in another

@@ -1228,8 +1228,8 @@ class TenantParser(object):
                                                   tenant.config_projects,
                                                   tenant.untrusted_projects,
                                                   cached, tenant)
-        unparsed_config.extend(tenant.config_projects_config, tenant=tenant)
-        unparsed_config.extend(tenant.untrusted_projects_config, tenant=tenant)
+        unparsed_config.extend(tenant.config_projects_config, tenant)
+        unparsed_config.extend(tenant.untrusted_projects_config, tenant)
         tenant.layout = TenantParser._parseLayout(base, tenant,
                                                   unparsed_config,
                                                   scheduler,
@@ -1484,10 +1484,10 @@ class TenantParser(object):
                     (job.project,))
                 if job.config_project:
                     config_projects_config.extend(
-                        job.project.unparsed_config)
+                        job.project.unparsed_config, tenant)
                 else:
                     untrusted_projects_config.extend(
-                        job.project.unparsed_config)
+                        job.project.unparsed_config, tenant)
                 continue
             TenantParser.log.debug("Waiting for cat job %s" % (job,))
             job.wait()
@@ -1518,17 +1518,18 @@ class TenantParser(object):
                     branch = source_context.branch
                     if source_context.trusted:
                         incdata = TenantParser._parseConfigProjectLayout(
-                            job.files[fn], source_context)
-                        config_projects_config.extend(incdata)
+                            job.files[fn], source_context, tenant)
+                        config_projects_config.extend(incdata, tenant)
                     else:
                         incdata = TenantParser._parseUntrustedProjectLayout(
-                            job.files[fn], source_context)
-                        untrusted_projects_config.extend(incdata)
-                    new_project_unparsed_config[project].extend(incdata)
+                            job.files[fn], source_context, tenant)
+                        untrusted_projects_config.extend(incdata, tenant)
+                    new_project_unparsed_config[project].extend(
+                        incdata, tenant)
                     if branch in new_project_unparsed_branch_config.get(
                             project, {}):
                         new_project_unparsed_branch_config[project][branch].\
-                            extend(incdata)
+                            extend(incdata, tenant)
         # Now that we've sucessfully loaded all of the configuration,
         # cache the unparsed data on the project objects.
         for project, data in new_project_unparsed_config.items():
@@ -1540,18 +1541,18 @@ class TenantParser(object):
         return config_projects_config, untrusted_projects_config
 
     @staticmethod
-    def _parseConfigProjectLayout(data, source_context):
+    def _parseConfigProjectLayout(data, source_context, tenant):
         # This is the top-level configuration for a tenant.
         config = model.UnparsedTenantConfig()
         with early_configuration_exceptions(source_context):
-            config.extend(safe_load_yaml(data, source_context))
+            config.extend(safe_load_yaml(data, source_context), tenant)
         return config
 
     @staticmethod
-    def _parseUntrustedProjectLayout(data, source_context):
+    def _parseUntrustedProjectLayout(data, source_context, tenant):
         config = model.UnparsedTenantConfig()
         with early_configuration_exceptions(source_context):
-            config.extend(safe_load_yaml(data, source_context))
+            config.extend(safe_load_yaml(data, source_context), tenant)
         if config.pipelines:
             with configuration_exceptions('pipeline', config.pipelines[0]):
                 raise PipelineNotPermittedError()
@@ -1753,7 +1754,7 @@ class ConfigLoader(object):
                 else:
                     incdata = project.unparsed_branch_config.get(branch)
                 if incdata:
-                    config.extend(incdata)
+                    config.extend(incdata, tenant)
                 continue
             # Otherwise, do not use the cached config (even if the
             # files are empty as that likely means they were deleted).
@@ -1782,12 +1783,12 @@ class ConfigLoader(object):
 
                     if trusted:
                         incdata = TenantParser._parseConfigProjectLayout(
-                            data, source_context)
+                            data, source_context, tenant)
                     else:
                         incdata = TenantParser._parseUntrustedProjectLayout(
-                            data, source_context)
+                            data, source_context, tenant)
 
-                    config.extend(incdata)
+                    config.extend(incdata, tenant)
 
     def createDynamicLayout(self, tenant, files,
                             include_config_projects=False,
