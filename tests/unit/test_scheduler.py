@@ -6070,6 +6070,77 @@ class TestSemaphoreMultiTenant(ZuulTestCase):
         self.assertEqual(B.reported, 1)
 
 
+class TestImplicitProject(ZuulTestCase):
+    tenant_config_file = 'config/implicit-project/main.yaml'
+
+    def test_implicit_project(self):
+        # config project should work with implicit project name
+        A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+
+        # untrusted project should work with implicit project name
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(B.reported, 1)
+        self.assertHistory([
+            dict(name='test-common', result='SUCCESS', changes='1,1'),
+            dict(name='test-common', result='SUCCESS', changes='2,1'),
+            dict(name='test-project', result='SUCCESS', changes='2,1'),
+        ], ordered=False)
+
+        # now test adding a further project in repo
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: test-project
+                run: playbooks/test-project.yaml
+            - job:
+                name: test2-project
+                run: playbooks/test-project.yaml
+
+            - project:
+                check:
+                  jobs:
+                    - test-project
+                gate:
+                  jobs:
+                    - test-project
+
+            - project:
+                check:
+                  jobs:
+                    - test2-project
+                gate:
+                  jobs:
+                    - test2-project
+
+            """)
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        C.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(C.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        # change C must be merged
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(C.reported, 2)
+        self.assertHistory([
+            dict(name='test-common', result='SUCCESS', changes='1,1'),
+            dict(name='test-common', result='SUCCESS', changes='2,1'),
+            dict(name='test-project', result='SUCCESS', changes='2,1'),
+            dict(name='test-common', result='SUCCESS', changes='3,1'),
+            dict(name='test-project', result='SUCCESS', changes='3,1'),
+            dict(name='test2-project', result='SUCCESS', changes='3,1'),
+        ], ordered=False)
+
+
 class TestSemaphoreInRepo(ZuulTestCase):
     config_file = 'zuul-connections-gerrit-and-github.conf'
     tenant_config_file = 'config/in-repo/main.yaml'

@@ -2256,7 +2256,7 @@ class TenantProjectConfig(object):
 
 
 class ProjectConfig(object):
-    # Represents a project cofiguration
+    # Represents a project configuration
     def __init__(self, name, source_context=None):
         self.name = name
         # If this is a template, it will have a source_context, but
@@ -2435,7 +2435,12 @@ class UnparsedTenantConfig(object):
                 raise ConfigItemMultipleKeysError()
             key, value = list(item.items())[0]
             if key == 'project':
-                name = value['name']
+                name = value.get('name')
+                if not name:
+                    # There is no name defined so implicitly add the name
+                    # of the project where it is defined.
+                    name = value['_source_context'].project.canonical_name
+                    value['name'] = name
                 self.projects.setdefault(name, []).append(value)
             elif key == 'job':
                 self.jobs.append(value)

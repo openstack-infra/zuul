@@ -852,7 +852,7 @@ class ProjectParser(object):
 
     def getSchema(self):
         project = {
-            vs.Required('name'): str,
+            'name': str,
             'description': str,
             'templates': [str],
             'merge-mode': vs.Any('merge', 'merge-resolve',
