@@ -1032,11 +1032,12 @@ pipeline.
    The following attributes may appear in a project:
 
    .. attr:: name
-      :required:
 
       The name of the project.  If Zuul is configured with two or more
       unique projects with the same name, the canonical hostname for
       the project should be included (e.g., `git.example.com/foo`).
+      If not given it is implicitly derived from the project where this
+      is defined.
 
    .. attr:: templates
 

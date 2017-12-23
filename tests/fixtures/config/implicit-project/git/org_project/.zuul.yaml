@@ -1,0 +1,11 @@
+- job:
+    name: test-project
+    run: playbooks/test-project.yaml
+
+- project:
+    check:
+      jobs:
+        - test-project
+    gate:
+      jobs:
+        - test-project
