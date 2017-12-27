@@ -823,8 +823,7 @@ class Scheduler(threading.Thread):
         if self.statsd:
             self.log.debug("Statsd enabled")
         else:
-            self.log.debug("Statsd disabled because python statsd "
-                           "package not found")
+            self.log.debug("Statsd not configured")
         while True:
             self.log.debug("Run handler sleeping")
             self.wake_event.wait()
