@@ -1741,6 +1741,8 @@ class FakeNodepool(object):
             data['username'] = 'fakeuser'
         if 'windows' in node_type:
             data['connection_type'] = 'winrm'
+        if 'network' in node_type:
+            data['connection_type'] = 'network_cli'
 
         data = json.dumps(data).encode('utf8')
         path = self.client.create(path, data,

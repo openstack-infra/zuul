@@ -37,6 +37,12 @@ class TestInventory(ZuulTestCase):
         inv_path = os.path.join(build.jobdir.root, 'ansible', 'inventory.yaml')
         return yaml.safe_load(open(inv_path, 'r'))
 
+    def _get_setup_inventory(self, name):
+        build = self.getBuildByName(name)
+        setup_inv_path = os.path.join(build.jobdir.root, 'ansible',
+                                      'setup-inventory.yaml')
+        return yaml.safe_load(open(setup_inv_path, 'r'))
+
     def test_single_inventory(self):
 
         inventory = self._get_build_inventory('single-inventory')
@@ -128,6 +134,26 @@ class TestInventory(ZuulTestCase):
                 self.assertEqual(
                     'local',
                     inventory['all']['hosts'][node_name]['ansible_connection'])
+
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+    def test_setup_inventory(self):
+
+        setup_inventory = self._get_setup_inventory('hostvars-inventory')
+        inventory = self._get_build_inventory('hostvars-inventory')
+
+        self.assertIn('all', inventory)
+        self.assertIn('hosts', inventory['all'])
+
+        self.assertIn('default', setup_inventory['all']['hosts'])
+        self.assertIn('fakeuser', setup_inventory['all']['hosts'])
+        self.assertIn('windows', setup_inventory['all']['hosts'])
+        self.assertNotIn('network', setup_inventory['all']['hosts'])
+        self.assertIn('default', inventory['all']['hosts'])
+        self.assertIn('fakeuser', inventory['all']['hosts'])
+        self.assertIn('windows', inventory['all']['hosts'])
+        self.assertIn('network', inventory['all']['hosts'])
 
         self.executor_server.release()
         self.waitUntilSettled()
