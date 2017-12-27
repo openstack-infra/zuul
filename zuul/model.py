@@ -2647,11 +2647,11 @@ class Layout(object):
                                    repr(variant), change)
                     item.debug("Pipeline variant {variant} matched".format(
                         variant=repr(variant)), indent=2)
-            else:
-                self.log.debug("Pipeline variant %s did not match %s",
-                               repr(variant), change)
-                item.debug("Pipeline variant {variant} did not match".format(
-                    variant=repr(variant)), indent=2)
+                else:
+                    self.log.debug("Pipeline variant %s did not match %s",
+                                   repr(variant), change)
+                    item.debug("Pipeline variant {variant} did not match".
+                               format(variant=repr(variant)), indent=2)
             if not matched:
                 # A change must match at least one project pipeline
                 # job variant.
