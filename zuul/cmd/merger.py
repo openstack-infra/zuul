@@ -62,8 +62,6 @@ class Merger(zuul.cmd.ZuulDaemonApp):
                                                      self.connections)
         self.merger.start()
 
-        signal.signal(signal.SIGUSR2, zuul.cmd.stack_dump_handler)
-
         if self.args.nodaemon:
             signal.signal(signal.SIGTERM, self.exit_handler)
             while True:

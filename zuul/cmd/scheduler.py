@@ -123,7 +123,6 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
         import zuul.webapp
         import zuul.zk
 
-        signal.signal(signal.SIGUSR2, zuul.cmd.stack_dump_handler)
         if (self.config.has_option('gearman_server', 'start') and
             self.config.getboolean('gearman_server', 'start')):
             self.start_gear_server()
