@@ -67,10 +67,6 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
         self.stop_gear_server()
         sys.exit(0)
 
-    def term_handler(self, signum, frame):
-        self.stop_gear_server()
-        os._exit(0)
-
     def start_gear_server(self):
         pipe_read, pipe_write = os.pipe()
         child_pid = os.fork()
