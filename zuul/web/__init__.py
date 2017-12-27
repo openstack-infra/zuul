@@ -305,6 +305,7 @@ class ZuulWeb(object):
         self.listen_port = listen_port
         self.event_loop = None
         self.term = None
+        self.server = None
         self.static_cache_expiry = static_cache_expiry
         # instanciate handlers
         self.rpc = zuul.rpcclient.RPCClient(gear_server, gear_port,
