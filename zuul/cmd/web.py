@@ -89,12 +89,6 @@ class WebServer(zuul.cmd.ZuulDaemonApp):
                                        name='web')
         self.thread.start()
 
-        try:
-            signal.pause()
-        except KeyboardInterrupt:
-            print("Ctrl + C: asking web server to exit nicely...\n")
-            self.exit_handler(signal.SIGINT, None)
-
         self.thread.join()
         loop.stop()
         loop.close()
