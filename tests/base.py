@@ -170,7 +170,7 @@ class FakeGerritChange(object):
             'status': status,
             'subject': subject,
             'submitRecords': [],
-            'url': 'https://hostname/%s' % number}
+            'url': 'https://%s/%s' % (self.gerrit.server, number)}
 
         self.upstream_root = upstream_root
         self.addPatchset(files=files, parent=parent)
@@ -559,14 +559,13 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
             return change.query()
         return {}
 
-    def simpleQuery(self, query):
-        self.log.debug("simpleQuery: %s" % query)
-        self.queries.append(query)
+    def _simpleQuery(self, query):
         if query.startswith('change:'):
             # Query a specific changeid
             changeid = query[len('change:'):]
             l = [change.query() for change in self.changes.values()
-                 if change.data['id'] == changeid]
+                 if (change.data['id'] == changeid or
+                     change.data['number'] == changeid)]
         elif query.startswith('message:'):
             # Query the content of a commit message
             msg = query[len('message:'):].strip()
@@ -576,6 +575,20 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
             # Query all open changes
             l = [change.query() for change in self.changes.values()]
         return l
+
+    def simpleQuery(self, query):
+        self.log.debug("simpleQuery: %s" % query)
+        self.queries.append(query)
+        results = []
+        if query.startswith('(') and 'OR' in query:
+            query = query[1:-2]
+            for q in query.split(' OR '):
+                for r in self._simpleQuery(q):
+                    if r not in results:
+                        results.append(r)
+        else:
+            results = self._simpleQuery(query)
+        return results
 
     def _start_watcher_thread(self, *args, **kw):
         pass

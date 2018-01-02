@@ -95,12 +95,29 @@ class DependentPipelineManager(PipelineManager):
     def enqueueChangesBehind(self, change, quiet, ignore_requirements,
                              change_queue):
         self.log.debug("Checking for changes needing %s:" % change)
-        to_enqueue = []
-        source = change.project.source
         if not hasattr(change, 'needed_by_changes'):
             self.log.debug("  %s does not support dependencies" % type(change))
             return
-        for other_change in change.needed_by_changes:
+
+        # for project in change_queue, project.source get changes, then dedup.
+        sources = set()
+        for project in change_queue.projects:
+            sources.add(project.source)
+
+        seen = set(change.needed_by_changes)
+        needed_by_changes = change.needed_by_changes[:]
+        for source in sources:
+            self.log.debug("  Checking source: %s", source)
+            for c in source.getChangesDependingOn(change,
+                                                  change_queue.projects):
+                if c not in seen:
+                    seen.add(c)
+                    needed_by_changes.append(c)
+
+        self.log.debug("  Following changes: %s", needed_by_changes)
+
+        to_enqueue = []
+        for other_change in needed_by_changes:
             with self.getChangeQueue(other_change) as other_change_queue:
                 if other_change_queue != change_queue:
                     self.log.debug("  Change %s in project %s can not be "
@@ -108,6 +125,7 @@ class DependentPipelineManager(PipelineManager):
                                    (other_change, other_change.project,
                                     change_queue))
                     continue
+            source = other_change.project.source
             if source.canMerge(other_change, self.getSubmitAllowNeeds()):
                 self.log.debug("  Change %s needs %s and is ready to merge" %
                                (other_change, change))
@@ -145,10 +163,13 @@ class DependentPipelineManager(PipelineManager):
         return True
 
     def checkForChangesNeededBy(self, change, change_queue):
-        self.log.debug("Checking for changes needed by %s:" % change)
-        source = change.project.source
         # Return true if okay to proceed enqueing this change,
         # false if the change should not be enqueued.
+        self.log.debug("Checking for changes needed by %s:" % change)
+        source = change.project.source
+        if (hasattr(change, 'commit_needs_changes') and
+            (change.refresh_deps or change.commit_needs_changes is None)):
+            self.updateCommitDependencies(change, change_queue)
         if not hasattr(change, 'needs_changes'):
             self.log.debug("  %s does not support dependencies" % type(change))
             return True

@@ -126,5 +126,5 @@ class TestZuulTriggerProjectChangeMerged(ZuulTestCase):
             "dependencies was unable to be automatically merged with the "
             "current state of its repository. Please rebase the change and "
             "upload a new patchset.")
-        self.assertEqual(self.fake_gerrit.queries[1],
-                         "project:org/project status:open")
+        self.assertIn("project:org/project status:open",
+                      self.fake_gerrit.queries)

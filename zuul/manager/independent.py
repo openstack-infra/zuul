@@ -70,6 +70,9 @@ class IndependentPipelineManager(PipelineManager):
         self.log.debug("Checking for changes needed by %s:" % change)
         # Return true if okay to proceed enqueing this change,
         # false if the change should not be enqueued.
+        if (hasattr(change, 'commit_needs_changes') and
+            (change.refresh_deps or change.commit_needs_changes is None)):
+            self.updateCommitDependencies(change, None)
         if not hasattr(change, 'needs_changes'):
             self.log.debug("  %s does not support dependencies" % type(change))
             return True

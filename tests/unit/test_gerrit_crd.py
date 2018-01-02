@@ -24,9 +24,6 @@ from tests.base import (
 class TestGerritCRD(ZuulTestCase):
     tenant_config_file = 'config/single-tenant/main.yaml'
 
-    def setUp(self):
-        raise self.skipTest("Feature not yet implemented")
-
     def test_crd_gate(self):
         "Test cross-repo dependencies"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -100,18 +97,14 @@ class TestGerritCRD(ZuulTestCase):
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
         C1 = self.fake_gerrit.addFakeChange('org/project2', 'mp', 'C1')
-        C2 = self.fake_gerrit.addFakeChange('org/project2', 'mp', 'C2',
-                                            status='ABANDONED')
-        C1.data['id'] = B.data['id']
-        C2.data['id'] = B.data['id']
 
         A.addApproval('Code-Review', 2)
         B.addApproval('Code-Review', 2)
         C1.addApproval('Code-Review', 2)
 
         # A Depends-On: B+C1
-        A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
-            A.subject, B.data['url'])
+        A.data['commitMessage'] = '%s\n\nDepends-On: %s\nDepends-On: %s\n' % (
+            A.subject, B.data['url'], C1.data['url'])
 
         self.executor_server.hold_jobs_in_build = True
         B.addApproval('Approved', 1)

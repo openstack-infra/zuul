@@ -442,8 +442,19 @@ class GerritConnection(BaseConnection):
         # In case this change is already in the history we have a
         # cyclic dependency and don't need to update ourselves again
         # as this gets done in a previous frame of the call stack.
-        # NOTE(jeblair): I don't think it's possible to hit this case
-        # anymore as all paths hit the change cache first.
+        # NOTE(jeblair): The only case where this can still be hit is
+        # when we get an event for a change with no associated
+        # patchset; for instance, when the gerrit topic is changed.
+        # In that case, we will update change 1234,None, which will be
+        # inserted into the cache as its own entry, but then we will
+        # resolve the patchset before adding it to the history list,
+        # then if there are dependencies, we can walk down and then
+        # back up to the version of this change with a patchset which
+        # will match the history list but will have bypassed the
+        # change cache because the previous object had a patchset of
+        # None.  All paths hit the change cache first.  To be able to
+        # drop history, we need to resolve the patchset on events with
+        # no patchsets before adding the entry to the change cache.
         if (history and change.number and change.patchset and
             (change.number, change.patchset) in history):
             self.log.debug("Change %s is in history" % (change,))
@@ -461,6 +472,11 @@ class GerritConnection(BaseConnection):
         change.project = self.source.getProject(data['project'])
         change.branch = data['branch']
         change.url = data['url']
+        change.uris = [
+            '%s/%s' % (self.server, change.number),
+            '%s/#/c/%s' % (self.server, change.number),
+        ]
+
         max_ps = 0
         files = []
         for ps in data['patchSets']:
@@ -481,6 +497,7 @@ class GerritConnection(BaseConnection):
         change.open = data['open']
         change.status = data['status']
         change.owner = data['owner']
+        change.message = data['commitMessage']
 
         if change.is_merged:
             # This change is merged, so we don't need to look any further
@@ -494,7 +511,8 @@ class GerritConnection(BaseConnection):
             history = history[:]
         history.append((change.number, change.patchset))
 
-        needs_changes = []
+        needs_changes = set()
+        git_needs_changes = []
         if 'dependsOn' in data:
             parts = data['dependsOn'][0]['ref'].split('/')
             dep_num, dep_ps = parts[3], parts[4]
@@ -505,8 +523,11 @@ class GerritConnection(BaseConnection):
             # already merged. So even if it is "ABANDONED", we should not
             # ignore it.
             if (not dep.is_merged) and dep not in needs_changes:
-                needs_changes.append(dep)
+                git_needs_changes.append(dep)
+                needs_changes.add(dep)
+        change.git_needs_changes = git_needs_changes
 
+        compat_needs_changes = []
         for record in self._getDependsOnFromCommit(data['commitMessage'],
                                                    change):
             dep_num = record['number']
@@ -516,10 +537,12 @@ class GerritConnection(BaseConnection):
                            (change, dep_num, dep_ps))
             dep = self._getChange(dep_num, dep_ps, history=history)
             if dep.open and dep not in needs_changes:
-                needs_changes.append(dep)
-        change.needs_changes = needs_changes
+                compat_needs_changes.append(dep)
+                needs_changes.add(dep)
+        change.compat_needs_changes = compat_needs_changes
 
-        needed_by_changes = []
+        needed_by_changes = set()
+        git_needed_by_changes = []
         if 'neededBy' in data:
             for needed in data['neededBy']:
                 parts = needed['ref'].split('/')
@@ -527,9 +550,13 @@ class GerritConnection(BaseConnection):
                 self.log.debug("Updating %s: Getting git-needed change %s,%s" %
                                (change, dep_num, dep_ps))
                 dep = self._getChange(dep_num, dep_ps, history=history)
-                if dep.open and dep.is_current_patchset:
-                    needed_by_changes.append(dep)
+                if (dep.open and dep.is_current_patchset and
+                    dep not in needed_by_changes):
+                    git_needed_by_changes.append(dep)
+                    needed_by_changes.add(dep)
+        change.git_needed_by_changes = git_needed_by_changes
 
+        compat_needed_by_changes = []
         for record in self._getNeededByFromCommit(data['id'], change):
             dep_num = record['number']
             dep_ps = record['currentPatchSet']['number']
@@ -543,9 +570,13 @@ class GerritConnection(BaseConnection):
             refresh = (dep_num, dep_ps) not in history
             dep = self._getChange(
                 dep_num, dep_ps, refresh=refresh, history=history)
-            if dep.open and dep.is_current_patchset:
-                needed_by_changes.append(dep)
-        change.needed_by_changes = needed_by_changes
+            if (dep.open and dep.is_current_patchset
+                and dep not in needed_by_changes):
+                compat_needed_by_changes.append(dep)
+                needed_by_changes.add(dep)
+        change.compat_needed_by_changes = compat_needed_by_changes
+
+        self.sched.onChangeUpdated(change)
 
         return change
 

@@ -12,9 +12,11 @@
 
 import logging
 import textwrap
+import urllib
 
 from zuul import exceptions
 from zuul import model
+from zuul.lib.dependson import find_dependency_headers
 
 
 class DynamicChangeQueueContextManager(object):
@@ -342,6 +344,32 @@ class PipelineManager(object):
         self.cancelJobs(item)
         self.dequeueItem(item)
         self.reportStats(item)
+
+    def updateCommitDependencies(self, change, change_queue):
+        # Search for Depends-On headers and find appropriate changes
+        self.log.debug("  Updating commit dependencies for %s", change)
+        change.refresh_deps = False
+        dependencies = []
+        seen = set()
+        for match in find_dependency_headers(change.message):
+            self.log.debug("  Found Depends-On header: %s", match)
+            if match in seen:
+                continue
+            seen.add(match)
+            try:
+                url = urllib.parse.urlparse(match)
+            except ValueError:
+                continue
+            source = self.sched.connections.getSourceByCanonicalHostname(
+                url.hostname)
+            if not source:
+                continue
+            self.log.debug("  Found source: %s", source)
+            dep = source.getChangeByURL(match)
+            if dep and (not dep.is_merged) and dep not in dependencies:
+                self.log.debug("  Adding dependency: %s", dep)
+                dependencies.append(dep)
+        change.commit_needs_changes = dependencies
 
     def provisionNodes(self, item):
         jobs = item.findJobsToRequest()

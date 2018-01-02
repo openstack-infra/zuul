@@ -658,6 +658,9 @@ class GithubConnection(BaseConnection):
             change = self._getChange(project, event.change_number,
                                      event.patch_number, refresh=refresh)
             change.url = event.change_url
+            change.uris = [
+                '%s/%s/pull/%s' % (self.server, project, change.number),
+            ]
             change.updated_at = self._ghTimestampToDate(event.updated_at)
             change.source_event = event
             change.is_current_patchset = (change.pr.get('head').get('sha') ==
@@ -699,58 +702,72 @@ class GithubConnection(BaseConnection):
             raise
         return change
 
-    def _getDependsOnFromPR(self, body):
-        prs = []
-        seen = set()
+    def getChangesDependingOn(self, change, projects):
+        changes = []
+        if not change.uris:
+            return changes
 
-        for match in self.depends_on_re.findall(body):
-            if match in seen:
-                self.log.debug("Ignoring duplicate Depends-On: %s" % (match,))
-                continue
-            seen.add(match)
-            # Get the github url
-            url = match.rsplit()[-1]
-            # break it into the parts we need
-            _, org, proj, _, num = url.rsplit('/', 4)
-            # Get a pull object so we can get the head sha
-            pull = self.getPull('%s/%s' % (org, proj), int(num))
-            prs.append(pull)
+        # Get a list of projects with unique installation ids
+        installation_ids = set()
+        installation_projects = set()
 
-        return prs
+        if projects:
+            # We only need to find changes in projects in the supplied
+            # ChangeQueue.  Find all of the github installations for
+            # all of those projects, and search using each of them, so
+            # that if we get the right results based on the
+            # permissions granted to each of the installations.  The
+            # common case for this is likely to be just one
+            # installation -- change queues aren't likely to span more
+            # than one installation.
+            for project in projects:
+                installation_id = self.installation_map.get(project)
+                if installation_id not in installation_ids:
+                    installation_ids.add(installation_id)
+                    installation_projects.add(project)
+        else:
+            # We aren't in the context of a change queue and we just
+            # need to query all installations.  This currently only
+            # happens if certain features of the zuul trigger are
+            # used; generally it should be avoided.
+            for project, installation_id in self.installation_map.items():
+                if installation_id not in installation_ids:
+                    installation_ids.add(installation_id)
+                    installation_projects.add(project)
 
-    def _getNeededByFromPR(self, change):
-        prs = []
-        seen = set()
-        # This shouldn't return duplicate issues, but code as if it could
-
-        # This leaves off the protocol, but looks for the specific GitHub
-        # hostname, the org/project, and the pull request number.
-        pattern = 'Depends-On %s/%s/pull/%s' % (self.server,
-                                                change.project.name,
-                                                change.number)
+        keys = set()
+        pattern = ' OR '.join(change.uris)
         query = '%s type:pr is:open in:body' % pattern
-        # FIXME(tobiash): find a way to query this for different installations
-        github = self.getGithubClient(change.project.name)
-        for issue in github.search_issues(query=query):
-            pr = issue.issue.pull_request().as_dict()
-            if not pr.get('url'):
-                continue
-            if issue in seen:
-                continue
-            # the issue provides no good description of the project :\
-            org, proj, _, num = pr.get('url').split('/')[-4:]
-            self.log.debug("Found PR %s/%s/%s needs %s/%s" %
-                           (org, proj, num, change.project.name,
-                            change.number))
-            prs.append(pr)
-            seen.add(issue)
+        # Repeat the search for each installation id (project)
+        for installation_project in installation_projects:
+            github = self.getGithubClient(installation_project)
+            for issue in github.search_issues(query=query):
+                pr = issue.issue.pull_request().as_dict()
+                if not pr.get('url'):
+                    continue
+                # the issue provides no good description of the project :\
+                org, proj, _, num = pr.get('url').split('/')[-4:]
+                proj = pr.get('base').get('repo').get('full_name')
+                sha = pr.get('head').get('sha')
+                key = (proj, num, sha)
+                if key in keys:
+                    continue
+                self.log.debug("Found PR %s/%s needs %s/%s" %
+                               (proj, num, change.project.name,
+                                change.number))
+                keys.add(key)
+            self.log.debug("Ran search issues: %s", query)
+            log_rate_limit(self.log, github)
 
-        self.log.debug("Ran search issues: %s", query)
-        log_rate_limit(self.log, github)
-        return prs
+        for key in keys:
+            (proj, num, sha) = key
+            project = self.source.getProject(proj)
+            change = self._getChange(project, int(num), patchset=sha)
+            changes.append(change)
+
+        return changes
 
     def _updateChange(self, change, history=None):
-
         # If this change is already in the history, we have a cyclic
         # dependency loop and we do not need to update again, since it
         # was done in a previous frame.
@@ -770,10 +787,8 @@ class GithubConnection(BaseConnection):
         change.reviews = self.getPullReviews(change.project,
                                              change.number)
         change.labels = change.pr.get('labels')
-        change.body = change.pr.get('body')
-        # ensure body is at least an empty string
-        if not change.body:
-            change.body = ''
+        # ensure message is at least an empty string
+        change.message = change.pr.get('body') or ''
 
         if history is None:
             history = []
@@ -781,38 +796,7 @@ class GithubConnection(BaseConnection):
             history = history[:]
         history.append((change.project.name, change.number))
 
-        needs_changes = []
-
-        # Get all the PRs this may depend on
-        for pr in self._getDependsOnFromPR(change.body):
-            proj = pr.get('base').get('repo').get('full_name')
-            pull = pr.get('number')
-            self.log.debug("Updating %s: Getting dependent "
-                           "pull request %s/%s" %
-                           (change, proj, pull))
-            project = self.source.getProject(proj)
-            dep = self._getChange(project, pull,
-                                  patchset=pr.get('head').get('sha'),
-                                  history=history)
-            if (not dep.is_merged) and dep not in needs_changes:
-                needs_changes.append(dep)
-
-        change.needs_changes = needs_changes
-
-        needed_by_changes = []
-        for pr in self._getNeededByFromPR(change):
-            proj = pr.get('base').get('repo').get('full_name')
-            pull = pr.get('number')
-            self.log.debug("Updating %s: Getting needed "
-                           "pull request %s/%s" %
-                           (change, proj, pull))
-            project = self.source.getProject(proj)
-            dep = self._getChange(project, pull,
-                                  patchset=pr.get('head').get('sha'),
-                                  history=history)
-            if not dep.is_merged:
-                needed_by_changes.append(dep)
-        change.needed_by_changes = needed_by_changes
+        self.sched.onChangeUpdated(change)
 
         return change
 

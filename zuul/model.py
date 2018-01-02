@@ -2103,11 +2103,28 @@ class Change(Branch):
     def __init__(self, project):
         super(Change, self).__init__(project)
         self.number = None
+        # The gitweb url for browsing the change
         self.url = None
+        # URIs for this change which may appear in depends-on headers.
+        # Note this omits the scheme; i.e., is hostname/path.
+        self.uris = []
         self.patchset = None
 
-        self.needs_changes = []
-        self.needed_by_changes = []
+        # Changes that the source determined are needed due to the
+        # git DAG:
+        self.git_needs_changes = []
+        self.git_needed_by_changes = []
+
+        # Changes that the source determined are needed by backwards
+        # compatible processing of Depends-On headers (Gerrit only):
+        self.compat_needs_changes = []
+        self.compat_needed_by_changes = []
+
+        # Changes that the pipeline manager determined are needed due
+        # to Depends-On headers (all drivers):
+        self.commit_needs_changes = None
+        self.refresh_deps = False
+
         self.is_current_patchset = True
         self.can_merge = False
         self.is_merged = False
@@ -2115,6 +2132,11 @@ class Change(Branch):
         self.open = None
         self.status = None
         self.owner = None
+
+        # This may be the commit message, or it may be a cover message
+        # in the case of a PR.  Either way, it's the place where we
+        # look for depends-on headers.
+        self.message = None
 
         self.source_event = None
 
@@ -2129,8 +2151,18 @@ class Change(Branch):
             return True
         return False
 
+    @property
+    def needs_changes(self):
+        return (self.git_needs_changes + self.compat_needs_changes +
+                self.commit_needs_changes)
+
+    @property
+    def needed_by_changes(self):
+        return (self.git_needed_by_changes + self.compat_needed_by_changes)
+
     def isUpdateOf(self, other):
-        if ((hasattr(other, 'number') and self.number == other.number) and
+        if (self.project == other.project and
+            (hasattr(other, 'number') and self.number == other.number) and
             (hasattr(other, 'patchset') and
              self.patchset is not None and
              other.patchset is not None and

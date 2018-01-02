@@ -119,7 +119,7 @@ class TestSQLConnection(ZuulDBTestCase):
         self.assertEqual('SUCCESS', buildset0['result'])
         self.assertEqual('Build succeeded.', buildset0['message'])
         self.assertEqual('tenant-one', buildset0['tenant'])
-        self.assertEqual('https://hostname/%d' % buildset0['change'],
+        self.assertEqual('https://review.example.com/%d' % buildset0['change'],
                          buildset0['ref_url'])
 
         buildset0_builds = conn.execute(

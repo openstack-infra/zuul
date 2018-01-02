@@ -12,12 +12,15 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import re
+import urllib
 import logging
 import voluptuous as vs
 from zuul.source import BaseSource
 from zuul.model import Project
 from zuul.driver.gerrit.gerritmodel import GerritRefFilter
 from zuul.driver.util import scalar_or_list, to_list
+from zuul.lib.dependson import find_dependency_headers
 
 
 class GerritSource(BaseSource):
@@ -43,6 +46,59 @@ class GerritSource(BaseSource):
 
     def getChange(self, event, refresh=False):
         return self.connection.getChange(event, refresh)
+
+    change_re = re.compile(r"/(\#\/c\/)?(\d+)[\w]*")
+
+    def getChangeByURL(self, url):
+        try:
+            parsed = urllib.parse.urlparse(url)
+        except ValueError:
+            return None
+        m = self.change_re.match(parsed.path)
+        if not m:
+            return None
+        try:
+            change_no = int(m.group(2))
+        except ValueError:
+            return None
+        query = "change:%s" % (change_no,)
+        results = self.connection.simpleQuery(query)
+        if not results:
+            return None
+        change = self.connection._getChange(
+            results[0]['number'], results[0]['currentPatchSet']['number'])
+        return change
+
+    def getChangesDependingOn(self, change, projects):
+        queries = set()
+        for uri in change.uris:
+            queries.add('message:%s' % uri)
+        query = '(' + ' OR '.join(queries) + ')'
+        results = self.connection.simpleQuery(query)
+        seen = set()
+        changes = []
+        for result in results:
+            for match in find_dependency_headers(result['commitMessage']):
+                found = False
+                for uri in change.uris:
+                    if uri in match:
+                        found = True
+                        break
+                if not found:
+                    continue
+                key = (result['number'], result['currentPatchSet']['number'])
+                if key in seen:
+                    continue
+                seen.add(key)
+                change = self.connection._getChange(
+                    result['number'], result['currentPatchSet']['number'])
+                changes.append(change)
+        return changes
+
+    def getCachedChanges(self):
+        for x in self.connection._change_cache.values():
+            for y in x.values():
+                yield y
 
     def getProject(self, name):
         p = self.connection.getProject(name)

@@ -4196,7 +4196,7 @@ For CI problems and help debugging, contact ci@example.org"""
         running_item = running_items[0]
         self.assertEqual([], running_item['failing_reasons'])
         self.assertEqual([], running_item['items_behind'])
-        self.assertEqual('https://hostname/1', running_item['url'])
+        self.assertEqual('https://review.example.com/1', running_item['url'])
         self.assertIsNone(running_item['item_ahead'])
         self.assertEqual('org/project', running_item['project'])
         self.assertIsNone(running_item['remaining_time'])
