@@ -82,7 +82,7 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         s = socket.create_connection((self.host, port))
         self.addCleanup(s.close)
 
-        req = '%s\n' % build_uuid
+        req = '%s\r\n' % build_uuid
         s.sendall(req.encode('utf-8'))
         self.test_streaming_event.set()
 
@@ -196,7 +196,7 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
                 time.sleep(0.1)
 
         with socket.create_connection(gateway_address) as s:
-            msg = "%s\n" % build_uuid
+            msg = "%s\r\n" % build_uuid
             s.sendall(msg.encode('utf-8'))
             event.set()  # notify we are connected and req sent
             while True:

@@ -60,7 +60,8 @@ class BaseFingerRequestHandler(socketserver.BaseRequestHandler):
                 ret = buffer.decode('utf-8')
                 x = ret.find('\n')
                 if x > 0:
-                    return ret[:x]
+                    # rstrip to remove any other unnecessary chars (e.g. \r)
+                    return ret[:x].rstrip()
             except UnicodeDecodeError:
                 pass
 

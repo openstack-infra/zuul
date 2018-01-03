@@ -56,8 +56,6 @@ class RequestHandler(streamer_utils.BaseFingerRequestHandler):
             self.request.sendall(msg.encode("utf-8"))
             return
 
-        build_uuid = build_uuid.rstrip()
-
         # validate build ID
         if not re.match("[0-9A-Fa-f]+$", build_uuid):
             msg = 'Build ID %s is not valid' % build_uuid
