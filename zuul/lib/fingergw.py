@@ -66,6 +66,12 @@ class RequestHandler(streamer_utils.BaseFingerRequestHandler):
         try:
             build_uuid = self.getCommand()
             port_location = self.rpc.get_job_log_stream_address(build_uuid)
+
+            if not port_location:
+                msg = 'Invalid build UUID %s' % build_uuid
+                self.request.sendall(msg.encode('utf-8'))
+                return
+
             self._fingerClient(
                 port_location['server'],
                 port_location['port'],
