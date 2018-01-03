@@ -19,7 +19,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this software.  If not, see <http://www.gnu.org/licenses/>.
 
-ANSIBLE_METADATA = {'metadata_version': '1.0',
+ANSIBLE_METADATA = {'metadata_version': '1.1',
                     'status': ['stableinterface'],
                     'supported_by': 'core'}
 
@@ -79,6 +79,12 @@ options:
     description:
       - if command warnings are on in ansible.cfg, do not warn about this particular line if set to no/false.
     required: false
+  stdin:
+    version_added: "2.4"
+    description:
+      - Set the stdin of the command directly to the specified value.
+    required: false
+    default: null
 notes:
     -  If you want to run a command through the shell (say you are using C(<), C(>), C(|), etc), you actually want the M(shell) module instead.
        The C(command) module is much more secure as it's not affected by the user's environment.
@@ -123,7 +129,6 @@ import traceback
 import threading
 
 from ansible.module_utils.basic import AnsibleModule, heuristic_log_sanitize
-from ansible.module_utils.pycompat24 import get_exception, literal_eval
 from ansible.module_utils.six import (
     PY2,
     PY3,
@@ -134,7 +139,7 @@ from ansible.module_utils.six import (
     string_types,
     text_type,
 )
-from ansible.module_utils.six.moves import map, reduce
+from ansible.module_utils.six.moves import map, reduce, shlex_quote
 from ansible.module_utils._text import to_native, to_bytes, to_text
 
 LOG_STREAM_FILE = '/tmp/console-{log_uuid}.log'
@@ -187,7 +192,8 @@ def follow(fd, log_uuid):
 
 # Taken from ansible/module_utils/basic.py ... forking the method for now
 # so that we can dive in and figure out how to make appropriate hook points
-def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, executable=None, data=None, binary_data=False, path_prefix=None, cwd=None, use_unsafe_shell=False, prompt_regex=None, environ_update=None, umask=None, encoding='utf-8', errors='surrogate_or_strict'):
+def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, executable=None, data=None, binary_data=False, path_prefix=None, cwd=None,
+                     use_unsafe_shell=False, prompt_regex=None, environ_update=None, umask=None, encoding='utf-8', errors='surrogate_or_strict'):
     '''
     Execute a command, returns rc, stdout, and stderr.
 
@@ -232,24 +238,37 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
         strings on python3, use encoding=None to turn decoding to text off.
     '''
 
-    shell = False
-    if isinstance(args, list):
-        if use_unsafe_shell:
-            args = " ".join([pipes.quote(x) for x in args])
-            shell = True
-    elif isinstance(args, (binary_type, text_type)) and use_unsafe_shell:
-        shell = True
-    elif isinstance(args, (binary_type, text_type)):
-        # On python2.6 and below, shlex has problems with text type
-        # On python3, shlex needs a text type.
-        if PY2:
-            args = to_bytes(args, errors='surrogate_or_strict')
-        elif PY3:
-            args = to_text(args, errors='surrogateescape')
-        args = shlex.split(args)
-    else:
+    if not isinstance(args, (list, binary_type, text_type)):
         msg = "Argument 'args' to run_command must be list or string"
         self.fail_json(rc=257, cmd=args, msg=msg)
+
+    shell = False
+    if use_unsafe_shell:
+
+        # stringify args for unsafe/direct shell usage
+        if isinstance(args, list):
+            args = " ".join([shlex_quote(x) for x in args])
+
+        # not set explicitly, check if set by controller
+        if executable:
+            args = [executable, '-c', args]
+        elif self._shell not in (None, '/bin/sh'):
+            args = [self._shell, '-c', args]
+        else:
+            shell = True
+    else:
+        # ensure args are a list
+        if isinstance(args, (binary_type, text_type)):
+            # On python2.6 and below, shlex has problems with text type
+            # On python3, shlex needs a text type.
+            if PY2:
+                args = to_bytes(args, errors='surrogate_or_strict')
+            elif PY3:
+                args = to_text(args, errors='surrogateescape')
+            args = shlex.split(args)
+
+        # expand shellisms
+        args = [os.path.expanduser(os.path.expandvars(x)) for x in args if x is not None]
 
     prompt_re = None
     if prompt_regex:
@@ -262,10 +281,6 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
             prompt_re = re.compile(prompt_regex, re.MULTILINE)
         except re.error:
             self.fail_json(msg="invalid prompt regular expression given to run_command")
-
-    # expand things like $HOME and ~
-    if not shell:
-        args = [os.path.expanduser(os.path.expandvars(x)) for x in args if x is not None]
 
     rc = 0
     msg = None
@@ -315,7 +330,7 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
 
     clean_args = []
     is_passwd = False
-    for arg in to_clean_args:
+    for arg in (to_native(a) for a in to_clean_args):
         if is_passwd:
             is_passwd = False
             clean_args.append('********')
@@ -329,7 +344,7 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
                 is_passwd = True
         arg = heuristic_log_sanitize(arg, self.no_log_values)
         clean_args.append(arg)
-    clean_args = ' '.join(pipes.quote(arg) for arg in clean_args)
+    clean_args = ' '.join(shlex_quote(arg) for arg in clean_args)
 
     if data:
         st_in = subprocess.PIPE
@@ -353,9 +368,9 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
         kwargs['cwd'] = cwd
         try:
             os.chdir(cwd)
-        except (OSError, IOError):
-            e = get_exception()
-            self.fail_json(rc=e.errno, msg="Could not open %s, %s" % (cwd, str(e)))
+        except (OSError, IOError) as e:
+            self.fail_json(rc=e.errno, msg="Could not open %s, %s" % (cwd, to_native(e)),
+                           exception=traceback.format_exc())
 
     old_umask = None
     if umask:
@@ -363,13 +378,13 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
 
     t = None
     fail_json_kwargs = None
-    ret = None
 
     try:
         if self._debug:
             self.log('Executing: ' + clean_args)
 
-        # ZUUL: Replaced the excution loop with the zuul_runner run function
+        # ZUUL: Replaced the execution loop with the zuul_runner run function
+
         cmd = subprocess.Popen(args, **kwargs)
         if self.no_log:
             t = None
@@ -378,7 +393,61 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
             t.daemon = True
             t.start()
 
-        ret = cmd.wait()
+        # ZUUL: Our log thread will catch the output so don't do that here.
+
+        # # the communication logic here is essentially taken from that
+        # # of the _communicate() function in ssh.py
+        #
+        # stdout = b('')
+        # stderr = b('')
+        #
+        # # ZUUL: stderr follows stdout
+        # rpipes = [cmd.stdout]
+        #
+        # if data:
+        #     if not binary_data:
+        #         data += '\n'
+        #     if isinstance(data, text_type):
+        #         data = to_bytes(data)
+        #     cmd.stdin.write(data)
+        #     cmd.stdin.close()
+        #
+        # while True:
+        #     rfds, wfds, efds = select.select(rpipes, [], rpipes, 1)
+        #     stdout += self._read_from_pipes(rpipes, rfds, cmd.stdout)
+        #
+        #     # ZUUL: stderr follows stdout
+        #     # stderr += self._read_from_pipes(rpipes, rfds, cmd.stderr)
+        #
+        #     # if we're checking for prompts, do it now
+        #     if prompt_re:
+        #         if prompt_re.search(stdout) and not data:
+        #             if encoding:
+        #                 stdout = to_native(stdout, encoding=encoding, errors=errors)
+        #             else:
+        #                 stdout = stdout
+        #             return (257, stdout, "A prompt was encountered while running a command, but no input data was specified")
+        #     # only break out if no pipes are left to read or
+        #     # the pipes are completely read and
+        #     # the process is terminated
+        #     if (not rpipes or not rfds) and cmd.poll() is not None:
+        #         break
+        #     # No pipes are left to read but process is not yet terminated
+        #     # Only then it is safe to wait for the process to be finished
+        #     # NOTE: Actually cmd.poll() is always None here if rpipes is empty
+        #     elif not rpipes and cmd.poll() is None:
+        #         cmd.wait()
+        #         # The process is terminated. Since no pipes to read from are
+        #         # left, there is no need to call select() again.
+        #         break
+
+        # ZUUL: If the console log follow thread *is* stuck in readline,
+        # we can't close stdout (attempting to do so raises an
+        # exception) , so this is disabled.
+        # cmd.stdout.close()
+        # cmd.stderr.close()
+
+        rc = cmd.wait()
 
         # Give the thread that is writing the console log up to 10 seconds
         # to catch up and exit.  If it hasn't done so by then, it is very
@@ -390,14 +459,7 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
                 if t.isAlive():
                     console.addLine("[Zuul] standard output/error still open "
                                     "after child exited")
-                console.addLine("[Zuul] Task exit code: %s\n" % ret)
-
-            # ZUUL: If the console log follow thread *is* stuck in readline,
-            # we can't close stdout (attempting to do so raises an
-            # exception) , so this is disabled.
-            # cmd.stdout.close()
-            # cmd.stderr.close()
-
+                console.addLine("[Zuul] Task exit code: %s\n" % rc)
             # ZUUL: stdout and stderr are in the console log file
             # ZUUL: return the saved log lines so we can ship them back
             stdout = b('').join(_log_lines)
@@ -405,28 +467,26 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
             stdout = b('')
         stderr = b('')
 
-        rc = cmd.returncode
-    except (OSError, IOError):
-        e = get_exception()
+    except (OSError, IOError) as e:
         self.log("Error Executing CMD:%s Exception:%s" % (clean_args, to_native(e)))
-        fail_json_kwargs=dict(rc=e.errno, msg=str(e), cmd=clean_args)
-    except Exception:
-        e = get_exception()
+        # ZUUL: store fail_json_kwargs and fail later in finally
+        fail_json_kwargs = dict(rc=e.errno, msg=to_native(e), cmd=clean_args)
+    except Exception as e:
         self.log("Error Executing CMD:%s Exception:%s" % (clean_args, to_native(traceback.format_exc())))
-        fail_json_kwargs = dict(rc=257, msg=str(e), exception=traceback.format_exc(), cmd=clean_args)
+        # ZUUL: store fail_json_kwargs and fail later in finally
+        fail_json_kwargs = dict(rc=257, msg=to_native(e), exception=traceback.format_exc(), cmd=clean_args)
     finally:
         if t:
             with Console(zuul_log_id) as console:
                 if t.isAlive():
                     console.addLine("[Zuul] standard output/error still open "
                                     "after child exited")
-                if ret is None and fail_json_kwargs:
-                    ret = fail_json_kwargs['rc']
-                elif ret is None and not fail_json_kwargs:
-                    ret = -1
-                console.addLine("[Zuul] Task exit code: %s\n" % ret)
-                if ret == -1 and not fail_json_kwargs:
-                    self.fail_json(rc=ret, msg="Something went horribly wrong during task execution")
+                if fail_json_kwargs:
+                    # we hit an exception and need to use the rc from
+                    # fail_json_kwargs
+                    rc = fail_json_kwargs['rc']
+
+                console.addLine("[Zuul] Task exit code: %s\n" % rc)
 
         if fail_json_kwargs:
             self.fail_json(**fail_json_kwargs)
@@ -454,25 +514,23 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
     return (rc, stdout, stderr)
 
 
-def check_command(commandline):
-    arguments = { 'chown': 'owner', 'chmod': 'mode', 'chgrp': 'group',
-                  'ln': 'state=link', 'mkdir': 'state=directory',
-                  'rmdir': 'state=absent', 'rm': 'state=absent', 'touch': 'state=touch' }
-    commands  = { 'hg': 'hg', 'curl': 'get_url or uri', 'wget': 'get_url or uri',
-                  'svn': 'subversion', 'service': 'service',
-                  'mount': 'mount', 'rpm': 'yum, dnf or zypper', 'yum': 'yum', 'apt-get': 'apt',
-                  'tar': 'unarchive', 'unzip': 'unarchive', 'sed': 'template or lineinfile',
-                  'dnf': 'dnf', 'zypper': 'zypper' }
-    become   = [ 'sudo', 'su', 'pbrun', 'pfexec', 'runas' ]
-    warnings = list()
+def check_command(module, commandline):
+    arguments = {'chown': 'owner', 'chmod': 'mode', 'chgrp': 'group',
+                 'ln': 'state=link', 'mkdir': 'state=directory',
+                 'rmdir': 'state=absent', 'rm': 'state=absent', 'touch': 'state=touch'}
+    commands = {'hg': 'hg', 'curl': 'get_url or uri', 'wget': 'get_url or uri',
+                'svn': 'subversion', 'service': 'service',
+                'mount': 'mount', 'rpm': 'yum, dnf or zypper', 'yum': 'yum', 'apt-get': 'apt',
+                'tar': 'unarchive', 'unzip': 'unarchive', 'sed': 'template or lineinfile',
+                'dnf': 'dnf', 'zypper': 'zypper'}
+    become = ['sudo', 'su', 'pbrun', 'pfexec', 'runas', 'pmrun']
     command = os.path.basename(commandline.split()[0])
     if command in arguments:
-        warnings.append("Consider using file module with %s rather than running %s" % (arguments[command], command))
+        module.warn("Consider using file module with %s rather than running %s" % (arguments[command], command))
     if command in commands:
-        warnings.append("Consider using %s module rather than running %s" % (commands[command], command))
+        module.warn("Consider using %s module rather than running %s" % (commands[command], command))
     if command in become:
-        warnings.append("Consider using 'become', 'become_method', and 'become_user' rather than running %s" % (command,))
-    return warnings
+        module.warn("Consider using 'become', 'become_method', and 'become_user' rather than running %s" % (command,))
 
 
 def main():
@@ -481,14 +539,14 @@ def main():
     # hence don't copy this one if you are looking to build others!
     module = AnsibleModule(
         argument_spec=dict(
-            _raw_params = dict(),
-            _uses_shell = dict(type='bool', default=False),
-            chdir = dict(type='path'),
-            executable = dict(),
-            creates = dict(type='path'),
-            removes = dict(type='path'),
-            warn = dict(type='bool', default=True),
-            environ = dict(type='dict', default=None),
+            _raw_params=dict(),
+            _uses_shell=dict(type='bool', default=False),
+            chdir=dict(type='path'),
+            executable=dict(),
+            creates=dict(type='path'),
+            removes=dict(type='path'),
+            warn=dict(type='bool', default=True),
+            stdin=dict(required=False),
             zuul_log_id = dict(type='str'),
         )
     )
@@ -500,8 +558,12 @@ def main():
     creates = module.params['creates']
     removes = module.params['removes']
     warn = module.params['warn']
-    environ = module.params['environ']
+    stdin = module.params['stdin']
     zuul_log_id = module.params['zuul_log_id']
+
+    if not shell and executable:
+        module.warn("As of Ansible 2.4, the parameter 'executable' is no longer supported with the 'command' module. Not using '%s'." % executable)
+        executable = None
 
     if args.strip() == '':
         module.fail_json(rc=256, msg="no command given")
@@ -534,15 +596,14 @@ def main():
                 rc=0
             )
 
-    warnings = list()
     if warn:
-        warnings = check_command(args)
+        check_command(module, args)
 
     if not shell:
         args = shlex.split(args)
     startd = datetime.datetime.now()
 
-    rc, out, err = zuul_run_command(module, args, zuul_log_id, executable=executable, use_unsafe_shell=shell, encoding=None, environ_update=environ)
+    rc, out, err = zuul_run_command(module, args, zuul_log_id, executable=executable, use_unsafe_shell=shell, encoding=None, data=stdin)
 
     endd = datetime.datetime.now()
     delta = endd - startd
@@ -552,18 +613,23 @@ def main():
     if err is None:
         err = b('')
 
-    module.exit_json(
-        cmd      = args,
-        stdout   = out.rstrip(b("\r\n")),
-        stderr   = err.rstrip(b("\r\n")),
-        rc       = rc,
-        start    = str(startd),
-        end      = str(endd),
-        delta    = str(delta),
-        changed  = True,
-        warnings = warnings,
-        zuul_log_id = zuul_log_id
+    result = dict(
+        cmd=args,
+        stdout=out.rstrip(b"\r\n"),
+        stderr=err.rstrip(b"\r\n"),
+        rc=rc,
+        start=str(startd),
+        end=str(endd),
+        delta=str(delta),
+        changed=True,
+        zuul_log_id=zuul_log_id
     )
+
+    if rc != 0:
+        module.fail_json(msg='non-zero return code', **result)
+
+    module.exit_json(**result)
+
 
 if __name__ == '__main__':
     main()
