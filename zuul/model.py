@@ -1386,6 +1386,8 @@ class BuildSet(object):
         build.build_set = self
 
     def removeBuild(self, build):
+        if build.job.name not in self.builds:
+            return
         self.tries[build.job.name] += 1
         del self.builds[build.job.name]
 
