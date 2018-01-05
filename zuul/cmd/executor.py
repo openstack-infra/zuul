@@ -86,7 +86,7 @@ class Executor(zuul.cmd.ZuulDaemonApp):
                     job_dir=self.job_dir))
                 sys.exit(1)
         else:
-            self.job_dir = tempfile.gettempdir()
+            self.job_dir = tempfile.mkdtemp()
 
         self.setup_logging('executor', 'log_config')
         self.log = logging.getLogger("zuul.Executor")
