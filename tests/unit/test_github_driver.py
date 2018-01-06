@@ -50,6 +50,12 @@ class TestGithubDriver(ZuulTestCase):
         self.assertEqual(str(A.head_sha), zuulvars['patchset'])
         self.assertEqual('master', zuulvars['branch'])
         self.assertEqual(1, len(A.comments))
+        self.assertThat(
+            A.comments[0],
+            MatchesRegex('.*\[project-test1 \]\(.*\).*', re.DOTALL))
+        self.assertThat(
+            A.comments[0],
+            MatchesRegex('.*\[project-test2 \]\(.*\).*', re.DOTALL))
         self.assertEqual(2, len(self.history))
 
         # test_pull_unmatched_branch_event(self):

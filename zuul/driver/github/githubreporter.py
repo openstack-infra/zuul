@@ -75,6 +75,14 @@ class GithubReporter(BaseReporter):
                     msg = self._formatItemReportMergeFailure(item)
                     self.addPullComment(item, msg)
 
+    def _formatItemReportJobs(self, item):
+        # Return the list of jobs portion of the report
+        ret = ''
+        jobs_fields = self._getItemReportJobsFields(item)
+        for job_fields in jobs_fields:
+            ret += '- [%s](%s) : %s%s%s%s\n' % job_fields
+        return ret
+
     def addPullComment(self, item, comment=None):
         message = comment or self._formatItemReport(item)
         project = item.change.project.name
