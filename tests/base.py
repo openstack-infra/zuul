@@ -674,7 +674,71 @@ class FakeGithub(object):
                 self._commits[sha] = commit
             return commit
 
-    def __init__(self):
+    class FakeLabel(object):
+        def __init__(self, name):
+            self.name = name
+
+    class FakeIssue(object):
+        def __init__(self, fake_pull_request):
+            self._fake_pull_request = fake_pull_request
+
+        def pull_request(self):
+            return FakeGithub.FakePull(self._fake_pull_request)
+
+        def labels(self):
+            return [FakeGithub.FakeLabel(l)
+                    for l in self._fake_pull_request.labels]
+
+    class FakeFile(object):
+        def __init__(self, filename):
+            self.filename = filename
+
+    class FakePull(object):
+        def __init__(self, fake_pull_request):
+            self._fake_pull_request = fake_pull_request
+
+        def issue(self):
+            return FakeGithub.FakeIssue(self._fake_pull_request)
+
+        def files(self):
+            return [FakeGithub.FakeFile(fn)
+                    for fn in self._fake_pull_request.files]
+
+        def as_dict(self):
+            pr = self._fake_pull_request
+            connection = pr.github
+            data = {
+                'number': pr.number,
+                'title': pr.subject,
+                'url': 'https://%s/%s/pull/%s' % (
+                    connection.server, pr.project, pr.number
+                ),
+                'updated_at': pr.updated_at,
+                'base': {
+                    'repo': {
+                        'full_name': pr.project
+                    },
+                    'ref': pr.branch,
+                },
+                'mergeable': True,
+                'state': pr.state,
+                'head': {
+                    'sha': pr.head_sha,
+                    'repo': {
+                        'full_name': pr.project
+                    }
+                },
+                'merged': pr.is_merged,
+                'body': pr.body
+            }
+            return data
+
+    class FakeIssueSearchResult(object):
+        def __init__(self, issue):
+            self.issue = issue
+
+    def __init__(self, connection):
+        self._fake_github_connection = connection
         self._repos = {}
 
     def user(self, login):
@@ -691,6 +755,38 @@ class FakeGithub(object):
     def addProject(self, project):
         owner, proj = project.name.split('/')
         self._repos[(owner, proj)] = self.FakeRepository()
+
+    def pull_request(self, owner, project, number):
+        fake_pr = self._fake_github_connection.pull_requests[number - 1]
+        return self.FakePull(fake_pr)
+
+    def search_issues(self, query):
+        def tokenize(s):
+            return re.findall(r'[\w]+', s)
+
+        parts = tokenize(query)
+        terms = set()
+        results = []
+        for part in parts:
+            kv = part.split(':', 1)
+            if len(kv) == 2:
+                if kv[0] in set('type', 'is', 'in'):
+                    # We only perform one search now and these aren't
+                    # important; we can honor these terms later if
+                    # necessary.
+                    continue
+            terms.add(part)
+
+        for pr in self._fake_github_connection.pull_requests:
+            if not pr.body:
+                body = set()
+            else:
+                body = set(tokenize(pr.body))
+            if terms.intersection(body):
+                issue = FakeGithub.FakeIssue(pr)
+                results.append(FakeGithub.FakeIssueSearchResult(issue))
+
+        return results
 
 
 class FakeGithubPullRequest(object):
@@ -1029,7 +1125,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         self.merge_failure = False
         self.merge_not_allowed_count = 0
         self.reports = []
-        self.github_client = FakeGithub()
+        self.github_client = FakeGithub(self)
 
     def getGithubClient(self,
                         project=None,
@@ -1088,33 +1184,6 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         # fake github
         super(FakeGithubConnection, self).addProject(project)
         self.getGithubClient(project).addProject(project)
-
-    def getPull(self, project, number):
-        pr = self.pull_requests[number - 1]
-        data = {
-            'number': number,
-            'title': pr.subject,
-            'updated_at': pr.updated_at,
-            'base': {
-                'repo': {
-                    'full_name': pr.project
-                },
-                'ref': pr.branch,
-            },
-            'mergeable': True,
-            'state': pr.state,
-            'head': {
-                'sha': pr.head_sha,
-                'repo': {
-                    'full_name': pr.project
-                }
-            },
-            'files': pr.files,
-            'labels': pr.labels,
-            'merged': pr.is_merged,
-            'body': pr.body
-        }
-        return data
 
     def getPullBySha(self, sha, project):
         prs = list(set([p for p in self.pull_requests if
@@ -1181,23 +1250,6 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         self.reports.append((project, pr_number, 'unlabel', label))
         pull_request = self.pull_requests[pr_number - 1]
         pull_request.removeLabel(label)
-
-    def _getNeededByFromPR(self, change):
-        prs = []
-        pattern = re.compile(r"Depends-On.*https://%s/%s/pull/%s" %
-                             (self.server, change.project.name,
-                              change.number))
-        for pr in self.pull_requests:
-            if not pr.body:
-                body = ''
-            else:
-                body = pr.body
-            if pattern.search(body):
-                # Get our version of a pull so that it's a dict
-                pull = self.getPull(pr.project, pr.number)
-                prs.append(pull)
-
-        return prs
 
 
 class BuildHistory(object):
