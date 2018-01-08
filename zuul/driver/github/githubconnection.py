@@ -39,10 +39,8 @@ from zuul.model import Ref, Branch, Tag, Project
 from zuul.exceptions import MergeFailure
 from zuul.driver.github.githubmodel import PullRequest, GithubTriggerEvent
 
-ACCESS_TOKEN_URL = 'https://api.github.com/installations/%s/access_tokens'
+GITHUB_BASE_URL = 'https://api.github.com'
 PREVIEW_JSON_ACCEPT = 'application/vnd.github.machine-man-preview+json'
-INSTALLATIONS_URL = 'https://api.github.com/app/installations'
-REPOS_URL = 'https://api.github.com/installation/repositories'
 
 
 def _sign_request(body, secret):
@@ -407,6 +405,11 @@ class GithubConnection(BaseConnection):
         self.source = driver.getSource(self)
         self.event_queue = queue.Queue()
 
+        if self.server == 'github.com':
+            self.base_url = GITHUB_BASE_URL
+        else:
+            self.base_url = 'https://%s/api/v3' % self.server
+
         # ssl verification must default to true
         verify_ssl = self.connection_config.get('verify_ssl', 'true')
         self.verify_ssl = True
@@ -555,7 +558,10 @@ class GithubConnection(BaseConnection):
 
         if ((not expiry) or (not token) or (now >= expiry)):
             headers = self._get_app_auth_headers()
-            url = ACCESS_TOKEN_URL % installation_id
+
+            url = "%s/installations/%s/access_tokens" % (self.base_url,
+                                                         installation_id)
+
             json_data = {'user_id': user_id} if user_id else None
 
             response = requests.post(url, headers=headers, json=json_data)
@@ -577,7 +583,8 @@ class GithubConnection(BaseConnection):
         if not self.app_id:
             return
 
-        url = INSTALLATIONS_URL
+        url = '%s/app/installations' % self.base_url
+
         headers = self._get_app_auth_headers()
         self.log.debug("Fetching installations for GitHub app")
         response = requests.get(url, headers=headers)
@@ -590,7 +597,9 @@ class GithubConnection(BaseConnection):
             token = self._get_installation_key(project=None, inst_id=inst_id)
             headers = {'Accept': PREVIEW_JSON_ACCEPT,
                        'Authorization': 'token %s' % token}
-            url = REPOS_URL
+
+            url = '%s/installation/repositories' % self.base_url
+
             self.log.debug("Fetching repos for install %s" % inst_id)
             response = requests.get(url, headers=headers)
             response.raise_for_status()
