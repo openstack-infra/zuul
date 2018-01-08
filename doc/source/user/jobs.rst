@@ -63,12 +63,15 @@ in this format.
 
 Note that these git repositories are located on the executor; in order
 to be useful to most kinds of jobs, they will need to be present on
-the test nodes.  The ``base`` job in the standard library contains a
+the test nodes.  The ``base`` job in the standard library (see
+`zuul-base-jobs documentation`_ for details) contains a
 pre-playbook which copies the repositories to all of the job's nodes.
 It is recommended to always inherit from this base job to ensure that
 behavior.
 
-.. TODO: link to base job documentation and/or document src (and logs?) directory
+.. _zuul-base-jobs documentation: https://docs.openstack.org/infra/zuul-base-jobs/jobs.html#job-base
+
+.. TODO: document src (and logs?) directory
 
 Variables
 ---------
