@@ -18,6 +18,7 @@ import json
 import logging
 import multiprocessing
 import os
+import psutil
 import shutil
 import signal
 import shlex
@@ -1949,6 +1950,7 @@ class ExecutorServer(object):
         ''' Apply some heuristics to decide whether or not we should
             be askign for more jobs '''
         load_avg = os.getloadavg()[0]
+        avail_mem_pct = 100.0 - psutil.virtual_memory().percent
         if self.accepting_work:
             # Don't unregister if we don't have any active jobs.
             if load_avg > self.max_load_avg and self.job_workers:
@@ -1956,10 +1958,19 @@ class ExecutorServer(object):
                     "Unregistering due to high system load {} > {}".format(
                         load_avg, self.max_load_avg))
                 self.unregister_work()
-        elif load_avg <= self.max_load_avg:
+            elif avail_mem_pct < self.min_avail_mem:
+                self.log.info(
+                    "Unregistering due to low memory {:3.1f}% < {}".format(
+                        avail_mem_pct, self.min_avail_mem))
+                self.unregister_work()
+        elif (load_avg <= self.max_load_avg and
+                avail_mem_pct >= self.min_avail_mem):
             self.log.info(
-                "Re-registering as load is within limits {} <= {}".format(
-                    load_avg, self.max_load_avg))
+                "Re-registering as job is within limits "
+                "{} <= {} {:3.1f}% <= {}".format(load_avg,
+                                                 self.max_load_avg,
+                                                 avail_mem_pct,
+                                                 self.min_avail_mem))
             self.register_work()
         if self.statsd:
             base_key = 'zuul.executor.%s' % self.hostname
