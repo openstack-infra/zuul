@@ -40,7 +40,6 @@ import time
 import uuid
 import urllib
 
-
 import git
 import gear
 import fixtures
@@ -53,6 +52,7 @@ import testtools.content_type
 from git.exc import NoSuchPathError
 import yaml
 
+import tests.fakegithub
 import zuul.driver.gerrit.gerritsource as gerritsource
 import zuul.driver.gerrit.gerritconnection as gerritconnection
 import zuul.driver.github.githubconnection as githubconnection
@@ -601,194 +601,6 @@ class GithubChangeReference(git.Reference):
     _points_to_commits_only = True
 
 
-class FakeGithub(object):
-
-    class FakeUser(object):
-        def __init__(self, login):
-            self.login = login
-            self.name = "Github User"
-            self.email = "github.user@example.com"
-
-    class FakeBranch(object):
-        def __init__(self, branch='master'):
-            self.name = branch
-
-    class FakeStatus(object):
-        def __init__(self, state, url, description, context, user):
-            self._state = state
-            self._url = url
-            self._description = description
-            self._context = context
-            self._user = user
-
-        def as_dict(self):
-            return {
-                'state': self._state,
-                'url': self._url,
-                'description': self._description,
-                'context': self._context,
-                'creator': {
-                    'login': self._user
-                }
-            }
-
-    class FakeCommit(object):
-        def __init__(self):
-            self._statuses = []
-
-        def set_status(self, state, url, description, context, user):
-            status = FakeGithub.FakeStatus(
-                state, url, description, context, user)
-            # always insert a status to the front of the list, to represent
-            # the last status provided for a commit.
-            self._statuses.insert(0, status)
-
-        def statuses(self):
-            return self._statuses
-
-    class FakeRepository(object):
-        def __init__(self):
-            self._branches = [FakeGithub.FakeBranch()]
-            self._commits = {}
-
-        def branches(self, protected=False):
-            if protected:
-                # simulate there is no protected branch
-                return []
-            return self._branches
-
-        def create_status(self, sha, state, url, description, context,
-                          user='zuul'):
-            # Since we're bypassing github API, which would require a user, we
-            # default the user as 'zuul' here.
-            commit = self._commits.get(sha, None)
-            if commit is None:
-                commit = FakeGithub.FakeCommit()
-                self._commits[sha] = commit
-            commit.set_status(state, url, description, context, user)
-
-        def commit(self, sha):
-            commit = self._commits.get(sha, None)
-            if commit is None:
-                commit = FakeGithub.FakeCommit()
-                self._commits[sha] = commit
-            return commit
-
-    class FakeLabel(object):
-        def __init__(self, name):
-            self.name = name
-
-    class FakeIssue(object):
-        def __init__(self, fake_pull_request):
-            self._fake_pull_request = fake_pull_request
-
-        def pull_request(self):
-            return FakeGithub.FakePull(self._fake_pull_request)
-
-        def labels(self):
-            return [FakeGithub.FakeLabel(l)
-                    for l in self._fake_pull_request.labels]
-
-    class FakeFile(object):
-        def __init__(self, filename):
-            self.filename = filename
-
-    class FakePull(object):
-        def __init__(self, fake_pull_request):
-            self._fake_pull_request = fake_pull_request
-
-        def issue(self):
-            return FakeGithub.FakeIssue(self._fake_pull_request)
-
-        def files(self):
-            return [FakeGithub.FakeFile(fn)
-                    for fn in self._fake_pull_request.files]
-
-        def as_dict(self):
-            pr = self._fake_pull_request
-            connection = pr.github
-            data = {
-                'number': pr.number,
-                'title': pr.subject,
-                'url': 'https://%s/%s/pull/%s' % (
-                    connection.server, pr.project, pr.number
-                ),
-                'updated_at': pr.updated_at,
-                'base': {
-                    'repo': {
-                        'full_name': pr.project
-                    },
-                    'ref': pr.branch,
-                },
-                'mergeable': True,
-                'state': pr.state,
-                'head': {
-                    'sha': pr.head_sha,
-                    'repo': {
-                        'full_name': pr.project
-                    }
-                },
-                'merged': pr.is_merged,
-                'body': pr.body
-            }
-            return data
-
-    class FakeIssueSearchResult(object):
-        def __init__(self, issue):
-            self.issue = issue
-
-    def __init__(self, connection):
-        self._fake_github_connection = connection
-        self._repos = {}
-
-    def user(self, login):
-        return self.FakeUser(login)
-
-    def repository(self, owner, proj):
-        return self._repos.get((owner, proj), None)
-
-    def repo_from_project(self, project):
-        # This is a convenience method for the tests.
-        owner, proj = project.split('/')
-        return self.repository(owner, proj)
-
-    def addProject(self, project):
-        owner, proj = project.name.split('/')
-        self._repos[(owner, proj)] = self.FakeRepository()
-
-    def pull_request(self, owner, project, number):
-        fake_pr = self._fake_github_connection.pull_requests[number - 1]
-        return self.FakePull(fake_pr)
-
-    def search_issues(self, query):
-        def tokenize(s):
-            return re.findall(r'[\w]+', s)
-
-        parts = tokenize(query)
-        terms = set()
-        results = []
-        for part in parts:
-            kv = part.split(':', 1)
-            if len(kv) == 2:
-                if kv[0] in set('type', 'is', 'in'):
-                    # We only perform one search now and these aren't
-                    # important; we can honor these terms later if
-                    # necessary.
-                    continue
-            terms.add(part)
-
-        for pr in self._fake_github_connection.pull_requests:
-            if not pr.body:
-                body = set()
-            else:
-                body = set(tokenize(pr.body))
-            if terms.intersection(body):
-                issue = FakeGithub.FakeIssue(pr)
-                results.append(FakeGithub.FakeIssueSearchResult(issue))
-
-        return results
-
-
 class FakeGithubPullRequest(object):
 
     def __init__(self, github, number, project, branch,
@@ -1114,18 +926,18 @@ class FakeGithubConnection(githubconnection.GithubConnection):
     log = logging.getLogger("zuul.test.FakeGithubConnection")
 
     def __init__(self, driver, connection_name, connection_config,
-                 upstream_root=None):
+                 changes_db=None, upstream_root=None):
         super(FakeGithubConnection, self).__init__(driver, connection_name,
                                                    connection_config)
         self.connection_name = connection_name
         self.pr_number = 0
-        self.pull_requests = []
+        self.pull_requests = changes_db
         self.statuses = {}
         self.upstream_root = upstream_root
         self.merge_failure = False
         self.merge_not_allowed_count = 0
         self.reports = []
-        self.github_client = FakeGithub(self)
+        self.github_client = tests.fakegithub.FakeGithub(changes_db)
 
     def getGithubClient(self,
                         project=None,
@@ -1138,7 +950,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         pull_request = FakeGithubPullRequest(
             self, self.pr_number, project, branch, subject, self.upstream_root,
             files=files, body=body)
-        self.pull_requests.append(pull_request)
+        self.pull_requests[self.pr_number] = pull_request
         return pull_request
 
     def getPushEvent(self, project, ref, old_rev=None, new_rev=None,
@@ -1186,7 +998,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         self.getGithubClient(project).addProject(project)
 
     def getPullBySha(self, sha, project):
-        prs = list(set([p for p in self.pull_requests if
+        prs = list(set([p for p in self.pull_requests.values() if
                         sha == p.head_sha and project == p.project]))
         if len(prs) > 1:
             raise Exception('Multiple pulls found with head sha: %s' % sha)
@@ -1194,12 +1006,12 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         return self.getPull(pr.project, pr.number)
 
     def _getPullReviews(self, owner, project, number):
-        pr = self.pull_requests[number - 1]
+        pr = self.pull_requests[number]
         return pr.reviews
 
     def getRepoPermission(self, project, login):
         owner, proj = project.split('/')
-        for pr in self.pull_requests:
+        for pr in self.pull_requests.values():
             pr_owner, pr_project = pr.project.split('/')
             if (pr_owner == owner and proj == pr_project):
                 if login in pr.writers:
@@ -1216,13 +1028,13 @@ class FakeGithubConnection(githubconnection.GithubConnection):
     def commentPull(self, project, pr_number, message):
         # record that this got reported
         self.reports.append((project, pr_number, 'comment'))
-        pull_request = self.pull_requests[pr_number - 1]
+        pull_request = self.pull_requests[pr_number]
         pull_request.addComment(message)
 
     def mergePull(self, project, pr_number, commit_message='', sha=None):
         # record that this got reported
         self.reports.append((project, pr_number, 'merge'))
-        pull_request = self.pull_requests[pr_number - 1]
+        pull_request = self.pull_requests[pr_number]
         if self.merge_failure:
             raise Exception('Pull request was not merged')
         if self.merge_not_allowed_count > 0:
@@ -1242,13 +1054,13 @@ class FakeGithubConnection(githubconnection.GithubConnection):
     def labelPull(self, project, pr_number, label):
         # record that this got reported
         self.reports.append((project, pr_number, 'label', label))
-        pull_request = self.pull_requests[pr_number - 1]
+        pull_request = self.pull_requests[pr_number]
         pull_request.addLabel(label)
 
     def unlabelPull(self, project, pr_number, label):
         # record that this got reported
         self.reports.append((project, pr_number, 'unlabel', label))
-        pull_request = self.pull_requests[pr_number - 1]
+        pull_request = self.pull_requests[pr_number]
         pull_request.removeLabel(label)
 
 
@@ -2218,6 +2030,7 @@ class ZuulTestCase(BaseTestCase):
         # Set a changes database so multiple FakeGerrit's can report back to
         # a virtual canonical database given by the configured hostname
         self.gerrit_changes_dbs = {}
+        self.github_changes_dbs = {}
 
         def getGerritConnection(driver, name, config):
             db = self.gerrit_changes_dbs.setdefault(config['server'], {})
@@ -2233,7 +2046,10 @@ class ZuulTestCase(BaseTestCase):
             getGerritConnection))
 
         def getGithubConnection(driver, name, config):
+            server = config.get('server', 'github.com')
+            db = self.github_changes_dbs.setdefault(server, {})
             con = FakeGithubConnection(driver, name, config,
+                                       changes_db=db,
                                        upstream_root=self.upstream_root)
             self.event_queues.append(con.event_queue)
             setattr(self, 'fake_' + name, con)
