@@ -408,7 +408,7 @@ The following sections of ``zuul.conf`` are used by the executor:
       Path to command socket file for the executor process.
 
    .. attr:: finger_port
-      :default: 79
+      :default: 7900
 
       Port to use for finger log streamer.
 
@@ -450,13 +450,6 @@ The following sections of ``zuul.conf`` are used by the executor:
       :default: ~/.ssh/id_rsa
 
       SSH private key file to be used when logging into worker nodes.
-
-   .. attr:: user
-      :default: zuul
-
-      User ID for the zuul-executor process. In normal operation as a
-      daemon, the executor should be started as the ``root`` user, but
-      it will drop privileges to this user during startup.
 
    .. _admin_sitewide_variables:
 
