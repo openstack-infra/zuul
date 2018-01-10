@@ -44,7 +44,7 @@ from zuul.lib import commandsocket
 BUFFER_LINES_FOR_SYNTAX = 200
 COMMANDS = ['stop', 'pause', 'unpause', 'graceful', 'verbose',
             'unverbose', 'keep', 'nokeep']
-DEFAULT_FINGER_PORT = 79
+DEFAULT_FINGER_PORT = 7900
 BLACKLISTED_ANSIBLE_CONNECTION_TYPES = ['network_cli']
 
 

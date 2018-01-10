@@ -41,13 +41,13 @@ class TestLogStreamer(tests.base.BaseTestCase):
     def startStreamer(self, port, root=None):
         if not root:
             root = tempfile.gettempdir()
-        return zuul.lib.log_streamer.LogStreamer(None, self.host, port, root)
+        return zuul.lib.log_streamer.LogStreamer(self.host, port, root)
 
     def test_start_stop(self):
-        port = 7900
-        streamer = self.startStreamer(port)
+        streamer = self.startStreamer(0)
         self.addCleanup(streamer.stop)
 
+        port = streamer.server.socket.getsockname()[1]
         s = socket.create_connection((self.host, port))
         s.close()
 
@@ -77,8 +77,9 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
     def startStreamer(self, port, build_uuid, root=None):
         if not root:
             root = tempfile.gettempdir()
-        self.streamer = zuul.lib.log_streamer.LogStreamer(None, self.host,
+        self.streamer = zuul.lib.log_streamer.LogStreamer(self.host,
                                                           port, root)
+        port = self.streamer.server.socket.getsockname()[1]
         s = socket.create_connection((self.host, port))
         self.addCleanup(s.close)
 
@@ -129,10 +130,9 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
 
         # Create a thread to stream the log. We need this to be happening
         # before we create the flag file to tell the job to complete.
-        port = 7901
         streamer_thread = threading.Thread(
             target=self.startStreamer,
-            args=(port, build.uuid, self.executor_server.jobdir_root,)
+            args=(0, build.uuid, self.executor_server.jobdir_root,)
         )
         streamer_thread.start()
         self.addCleanup(self.stopStreamer)
@@ -209,7 +209,7 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
     def test_websocket_streaming(self):
         # Start the finger streamer daemon
         streamer = zuul.lib.log_streamer.LogStreamer(
-            None, self.host, 0, self.executor_server.jobdir_root)
+            self.host, 0, self.executor_server.jobdir_root)
         self.addCleanup(streamer.stop)
 
         # Need to set the streaming port before submitting the job
@@ -294,7 +294,7 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
     def test_finger_gateway(self):
         # Start the finger streamer daemon
         streamer = zuul.lib.log_streamer.LogStreamer(
-            None, self.host, 0, self.executor_server.jobdir_root)
+            self.host, 0, self.executor_server.jobdir_root)
         self.addCleanup(streamer.stop)
         finger_port = streamer.server.socket.getsockname()[1]
 

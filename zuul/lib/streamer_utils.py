@@ -74,7 +74,7 @@ class CustomThreadingTCPServer(socketserver.ThreadingTCPServer):
     address_family = socket.AF_INET6
 
     def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop('user')
+        self.user = kwargs.pop('user', None)
         self.pid_file = kwargs.pop('pid_file', None)
         socketserver.ThreadingTCPServer.__init__(self, *args, **kwargs)
 

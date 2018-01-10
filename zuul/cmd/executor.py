@@ -14,10 +14,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import grp
 import logging
 import os
-import pwd
 import sys
 import signal
 import tempfile
@@ -64,7 +62,7 @@ class Executor(zuul.cmd.ZuulDaemonApp):
 
             self.log.info("Starting log streamer")
             streamer = zuul.lib.log_streamer.LogStreamer(
-                self.user, '::', self.finger_port, self.job_dir)
+                '::', self.finger_port, self.job_dir)
 
             # Keep running until the parent dies:
             pipe_read = os.fdopen(pipe_read)
@@ -76,30 +74,12 @@ class Executor(zuul.cmd.ZuulDaemonApp):
             os.close(pipe_read)
             self.log_streamer_pid = child_pid
 
-    def change_privs(self):
-        '''
-        Drop our privileges to the zuul user.
-        '''
-        if os.getuid() != 0:
-            return
-        pw = pwd.getpwnam(self.user)
-        # get a list of supplementary groups for the target user, and make sure
-        # we set them when dropping privileges.
-        groups = [g.gr_gid for g in grp.getgrall() if self.user in g.gr_mem]
-        os.setgroups(groups)
-        os.setgid(pw.pw_gid)
-        os.setuid(pw.pw_uid)
-        os.chdir(pw.pw_dir)
-        os.umask(0o022)
-
     def run(self):
         if self.args.command in zuul.executor.server.COMMANDS:
             self.send_command(self.args.command)
             sys.exit(0)
 
         self.configure_connections(source_only=True)
-
-        self.user = get_default(self.config, 'executor', 'user', 'zuul')
 
         if self.config.has_option('executor', 'job_dir'):
             self.job_dir = os.path.expanduser(
@@ -120,7 +100,6 @@ class Executor(zuul.cmd.ZuulDaemonApp):
         )
 
         self.start_log_streamer()
-        self.change_privs()
 
         ExecutorServer = zuul.executor.server.ExecutorServer
         self.executor = ExecutorServer(self.config, self.connections,

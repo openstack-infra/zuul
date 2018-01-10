@@ -157,12 +157,11 @@ class LogStreamer(object):
     Class implementing log streaming over the finger daemon port.
     '''
 
-    def __init__(self, user, host, port, jobdir_root):
+    def __init__(self, host, port, jobdir_root):
         self.log = logging.getLogger('zuul.log_streamer')
         self.log.debug("LogStreamer starting on port %s", port)
         self.server = LogStreamerServer((host, port),
                                         RequestHandler,
-                                        user=user,
                                         jobdir_root=jobdir_root)
 
         # We start the actual serving within a thread so we can return to
