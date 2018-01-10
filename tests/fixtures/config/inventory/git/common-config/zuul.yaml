@@ -40,6 +40,8 @@
         label: fakeuser-label
       - name: windows
         label: windows-label
+      - name: network
+        label: network-label
 
 - job:
     name: base

@@ -45,6 +45,7 @@ BUFFER_LINES_FOR_SYNTAX = 200
 COMMANDS = ['stop', 'pause', 'unpause', 'graceful', 'verbose',
             'unverbose', 'keep', 'nokeep']
 DEFAULT_FINGER_PORT = 79
+BLACKLISTED_ANSIBLE_CONNECTION_TYPES = ['network_cli']
 
 
 class StopException(Exception):
@@ -347,6 +348,8 @@ class JobDir(object):
             pass
         self.known_hosts = os.path.join(ssh_dir, 'known_hosts')
         self.inventory = os.path.join(self.ansible_root, 'inventory.yaml')
+        self.setup_inventory = os.path.join(self.ansible_root,
+                                            'setup-inventory.yaml')
         self.logging_json = os.path.join(self.ansible_root, 'logging.json')
         self.playbooks = []  # The list of candidate playbooks
         self.playbook = None  # A pointer to the candidate we have chosen
@@ -491,6 +494,26 @@ def _copy_ansible_files(python_module, target_dir):
                 shutil.copytree(full_path, os.path.join(target_dir, fn))
             else:
                 shutil.copy(os.path.join(library_path, fn), target_dir)
+
+
+def make_setup_inventory_dict(nodes):
+
+    hosts = {}
+    for node in nodes:
+        if (node['host_vars']['ansible_connection'] in
+            BLACKLISTED_ANSIBLE_CONNECTION_TYPES):
+            continue
+
+        for name in node['name']:
+            hosts[name] = node['host_vars']
+
+    inventory = {
+        'all': {
+            'hosts': hosts,
+        }
+    }
+
+    return inventory
 
 
 def make_inventory_dict(nodes, groups, all_vars):
@@ -1157,7 +1180,12 @@ class AnsibleJob(object):
             result_data_file=self.jobdir.result_data_file)
 
         nodes = self.getHostList(args)
+        setup_inventory = make_setup_inventory_dict(nodes)
         inventory = make_inventory_dict(nodes, args['groups'], all_vars)
+
+        with open(self.jobdir.setup_inventory, 'w') as setup_inventory_yaml:
+            setup_inventory_yaml.write(
+                yaml.safe_dump(setup_inventory, default_flow_style=False))
 
         with open(self.jobdir.inventory, 'w') as inventory_yaml:
             inventory_yaml.write(
@@ -1423,6 +1451,7 @@ class AnsibleJob(object):
             verbose = '-v'
 
         cmd = ['ansible', '*', verbose, '-m', 'setup',
+               '-i', self.jobdir.setup_inventory,
                '-a', 'gather_subset=!all']
 
         result, code = self.runAnsible(
