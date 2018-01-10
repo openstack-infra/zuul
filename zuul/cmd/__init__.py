@@ -181,8 +181,9 @@ class ZuulDaemonApp(ZuulApp):
         else:
             # Exercise the pidfile before we do anything else (including
             # logging or daemonizing)
-            with daemon.DaemonContext(pidfile=pid):
+            with pid:
                 pass
+
             with daemon.DaemonContext(pidfile=pid):
                 self.run()
 
