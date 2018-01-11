@@ -641,6 +641,7 @@ class FakeGithubPullRequest(object):
         self.is_merged = False
         self.merge_message = None
         self.state = 'open'
+        self.url = 'https://%s/%s/pull/%s' % (github.server, project, number)
         self._createPRRef()
         self._addCommitToRepo(files=files)
         self._updateTimeStamp()

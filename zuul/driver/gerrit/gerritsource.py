@@ -70,13 +70,15 @@ class GerritSource(BaseSource):
         return change
 
     def getChangesDependingOn(self, change, projects):
+        changes = []
+        if not change.uris:
+            return changes
         queries = set()
         for uri in change.uris:
             queries.add('message:%s' % uri)
         query = '(' + ' OR '.join(queries) + ')'
         results = self.connection.simpleQuery(query)
         seen = set()
-        changes = []
         for result in results:
             for match in find_dependency_headers(result['commitMessage']):
                 found = False
