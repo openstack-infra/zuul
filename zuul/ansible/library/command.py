@@ -371,9 +371,12 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
 
         # ZUUL: Replaced the excution loop with the zuul_runner run function
         cmd = subprocess.Popen(args, **kwargs)
-        t = threading.Thread(target=follow, args=(cmd.stdout, zuul_log_id))
-        t.daemon = True
-        t.start()
+        if self.no_log:
+            t = None
+        else:
+            t = threading.Thread(target=follow, args=(cmd.stdout, zuul_log_id))
+            t.daemon = True
+            t.start()
 
         ret = cmd.wait()
 
@@ -381,22 +384,25 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
         # to catch up and exit.  If it hasn't done so by then, it is very
         # likely stuck in readline() because it spawed a child that is
         # holding stdout or stderr open.
-        t.join(10)
-        with Console(zuul_log_id) as console:
-            if t.isAlive():
-                console.addLine("[Zuul] standard output/error still open "
-                                "after child exited")
-            console.addLine("[Zuul] Task exit code: %s\n" % ret)
+        if t:
+            t.join(10)
+            with Console(zuul_log_id) as console:
+                if t.isAlive():
+                    console.addLine("[Zuul] standard output/error still open "
+                                    "after child exited")
+                console.addLine("[Zuul] Task exit code: %s\n" % ret)
 
-        # ZUUL: If the console log follow thread *is* stuck in readline,
-        # we can't close stdout (attempting to do so raises an
-        # exception) , so this is disabled.
-        # cmd.stdout.close()
-        # cmd.stderr.close()
+            # ZUUL: If the console log follow thread *is* stuck in readline,
+            # we can't close stdout (attempting to do so raises an
+            # exception) , so this is disabled.
+            # cmd.stdout.close()
+            # cmd.stderr.close()
 
-        # ZUUL: stdout and stderr are in the console log file
-        # ZUUL: return the saved log lines so we can ship them back
-        stdout = b('').join(_log_lines)
+            # ZUUL: stdout and stderr are in the console log file
+            # ZUUL: return the saved log lines so we can ship them back
+            stdout = b('').join(_log_lines)
+        else:
+            stdout = b('')
         stderr = b('')
 
         rc = cmd.returncode
