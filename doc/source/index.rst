@@ -12,6 +12,14 @@ are installing or operating a Zuul system, you will also find the
 :doc:`admin/index` useful.  If you want help make Zuul itself better,
 take a look at the :doc:`developer/index`.
 
+If you are looking for the Edge routing service named Zuul that is
+related to Netflix, it can be found here:
+https://github.com/Netflix/zuul
+
+If you are looking for the Javascript testing tool named Zuul, it
+can be found here:
+https://github.com/defunctzombie/zuul
+
 Contents:
 
 .. toctree::
