@@ -115,7 +115,7 @@ class TestSQLConnection(ZuulDBTestCase):
         self.assertEqual('check', buildset0['pipeline'])
         self.assertEqual('org/project', buildset0['project'])
         self.assertEqual(1, buildset0['change'])
-        self.assertEqual(1, buildset0['patchset'])
+        self.assertEqual('1', buildset0['patchset'])
         self.assertEqual('SUCCESS', buildset0['result'])
         self.assertEqual('Build succeeded.', buildset0['message'])
         self.assertEqual('tenant-one', buildset0['tenant'])
@@ -141,7 +141,7 @@ class TestSQLConnection(ZuulDBTestCase):
         self.assertEqual('check', buildset1['pipeline'])
         self.assertEqual('org/project', buildset1['project'])
         self.assertEqual(2, buildset1['change'])
-        self.assertEqual(1, buildset1['patchset'])
+        self.assertEqual('1', buildset1['patchset'])
         self.assertEqual('FAILURE', buildset1['result'])
         self.assertEqual('Build failed.', buildset1['message'])
 
@@ -194,7 +194,7 @@ class TestSQLConnection(ZuulDBTestCase):
         self.assertEqual('check', buildsets_resultsdb[0]['pipeline'])
         self.assertEqual('org/project', buildsets_resultsdb[0]['project'])
         self.assertEqual(1, buildsets_resultsdb[0]['change'])
-        self.assertEqual(1, buildsets_resultsdb[0]['patchset'])
+        self.assertEqual('1', buildsets_resultsdb[0]['patchset'])
         self.assertEqual('SUCCESS', buildsets_resultsdb[0]['result'])
         self.assertEqual('Build succeeded.', buildsets_resultsdb[0]['message'])
 
@@ -215,7 +215,7 @@ class TestSQLConnection(ZuulDBTestCase):
         self.assertEqual(
             'org/project', buildsets_resultsdb_failures[0]['project'])
         self.assertEqual(2, buildsets_resultsdb_failures[0]['change'])
-        self.assertEqual(1, buildsets_resultsdb_failures[0]['patchset'])
+        self.assertEqual('1', buildsets_resultsdb_failures[0]['patchset'])
         self.assertEqual('FAILURE', buildsets_resultsdb_failures[0]['result'])
         self.assertEqual(
             'Build failed.', buildsets_resultsdb_failures[0]['message'])

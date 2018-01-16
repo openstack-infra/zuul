@@ -92,7 +92,7 @@ class SQLConnection(BaseConnection):
             sa.Column('pipeline', sa.String(255)),
             sa.Column('project', sa.String(255)),
             sa.Column('change', sa.Integer, nullable=True),
-            sa.Column('patchset', sa.Integer, nullable=True),
+            sa.Column('patchset', sa.String(255), nullable=True),
             sa.Column('ref', sa.String(255)),
             sa.Column('oldrev', sa.String(255)),
             sa.Column('newrev', sa.String(255)),
