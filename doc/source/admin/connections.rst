@@ -33,6 +33,15 @@ may appear as:
   driver=gerrit
   server=review.example.com
 
+Zuul needs to use a single connection to look up information about
+changes hosted by a given system.  When it looks up changes, it will
+do so using the first connection it finds that matches the server name
+it's looking for.  It's generally best to use only a single connection
+for a given server, however, if you need more than one (for example,
+to satisfy unique reporting requirements) be sure to list the primary
+connection first as that is what Zuul will use to look up all changes
+for that server.
+
 .. _drivers:
 
 Drivers

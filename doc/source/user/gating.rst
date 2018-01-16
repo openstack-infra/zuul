@@ -246,11 +246,25 @@ Zuul's cross-project dependencies behave like a directed acyclic graph
 between changes in different git repositories.  Change A may depend on
 B, but B may not depend on A.
 
-.. TODO: update for v3 crd syntax
+To use them, include ``Depends-On: <change-url>`` in the footer of a
+commit message.  For example, a change which depends on a GitHub pull
+request (PR #4) might have the following footer::
 
-To use them, include ``Depends-On: <gerrit-change-id>`` in the footer of
-a commit message.  Use the full Change-ID ('I' + 40 characters).
+  Depends-On: https://github.com/example/test/pull/4
 
+And a change which depends on a Gerrit change (change number 3)::
+
+  Depends-On: https://review.example.com/3
+
+Changes may depend on changes in any other project, even projects not
+on the same system (i.e., a Gerrit change may depend on a GitHub pull
+request).
+
+.. note::
+
+   An older syntax of specifying dependencies using Gerrit change-ids
+   is still supported, however it is deprecated and will be removed in
+   a future version.
 
 Dependent Pipeline
 ~~~~~~~~~~~~~~~~~~
@@ -277,7 +291,7 @@ dependent pipeline, B will appear first and A will follow:
     B_status [ class = greendot ]
     B_status -- A_status
 
-    'Change B\nChange-Id: Iabc' <- 'Change A\nDepends-On: Iabc'
+    'Change B\nURL: .../4' <- 'Change A\nDepends-On: .../4'
   }
 
 If tests for B fail, both B and A will be removed from the pipeline, and
@@ -328,7 +342,7 @@ up as red or green (depending on the jobs results):
     B_status [class = "dot", color = grey]
     B_status -- A_status
 
-    "Change B" <- "Change A\nDepends-On: B"
+    "Change B\nURL: .../4" <- "Change A\nDepends-On: .../4"
   }
 
 This is to indicate that the grey changes are only there to establish
@@ -337,56 +351,13 @@ will show up as a grey dot when used as a dependency, but separately and
 additionally will appear as its own red or green dot for its test.
 
 
-.. TODO: relevant for v3?
-
 Multiple Changes
 ~~~~~~~~~~~~~~~~
 
-A Gerrit change ID may refer to multiple changes (on multiple branches
-of the same project, or even multiple projects).  In these cases, Zuul
-will treat all of the changes with that change ID as dependencies.  So
-if you say that change in project A Depends-On a change ID that has
-changes in two branches of project B, then when testing the change to
-project A, both project B changes will be applied, and when deciding
-whether the project A change can merge, both changes must merge ahead
-of it.
-
-.. blockdiag::
-  :align: center
-
-  blockdiag crdmultirepos {
-    orientation = portrait
-    span_width = 30
-    class greendot [
-        label = "",
-        shape = circle,
-        color = green,
-        width = 20, height = 20
-    ]
-
-    B_stable_status [ class = "greendot" ]
-    B_master_status [ class = "greendot" ]
-    A_status [ class = "greendot" ]
-    B_stable_status -- B_master_status -- A_status
-
-    A [ label = "Repo A\nDepends-On: I123" ]
-    group {
-        orientation = portrait
-        label = "Dependencies"
-        color = "lightgray"
-
-        B_stable [ label = "Repo B\nChange-Id: I123\nBranch: stable" ]
-        B_master [ label = "Repo B\nChange-Id: I123\nBranch: master" ]
-    }
-    B_master <- A
-    B_stable <- A
-
-  }
-
-A change may depend on more than one Gerrit change ID as well.  So it
-is possible for a change in project A to depend on a change in project
-B and a change in project C.  Simply add more ``Depends-On:`` lines to
-the commit message footer.
+A change may list more than one dependency by simply adding more
+``Depends-On:`` lines to the commit message footer.  It is possible
+for a change in project A to depend on a change in project B and a
+change in project C.
 
 .. blockdiag::
   :align: center
@@ -406,19 +377,17 @@ the commit message footer.
     A_status [ class = "greendot" ]
     C_status -- B_status -- A_status
 
-    A [ label = "Repo A\nDepends-On: I123\nDepends-On: Iabc" ]
+    A [ label = "Repo A\nDepends-On: .../3\nDepends-On: .../4" ]
     group {
         orientation = portrait
         label = "Dependencies"
         color = "lightgray"
 
-        B [ label = "Repo B\nChange-Id: I123" ]
-        C [ label = "Repo C\nChange-Id: Iabc" ]
+        B [ label = "Repo B\nURL: .../3" ]
+        C [ label = "Repo C\nURL: .../4" ]
     }
     B, C <- A
   }
-
-.. TODO: update for v3
 
 Cycles
 ~~~~~~
