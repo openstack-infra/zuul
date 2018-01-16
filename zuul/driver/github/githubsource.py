@@ -46,6 +46,8 @@ class GithubSource(BaseSource):
         if not change.number:
             # Not a pull request, considering merged.
             return True
+        # We don't need to perform another query because the API call
+        # to perform the merge will ensure this is updated.
         return change.is_merged
 
     def canMerge(self, change, allow_needs):

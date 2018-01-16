@@ -166,7 +166,6 @@ class DependentPipelineManager(PipelineManager):
         # Return true if okay to proceed enqueing this change,
         # false if the change should not be enqueued.
         self.log.debug("Checking for changes needed by %s:" % change)
-        source = change.project.source
         if (hasattr(change, 'commit_needs_changes') and
             (change.refresh_deps or change.commit_needs_changes is None)):
             self.updateCommitDependencies(change, change_queue)
@@ -201,7 +200,8 @@ class DependentPipelineManager(PipelineManager):
                     self.log.debug("  Needed change is already ahead "
                                    "in the queue")
                     continue
-                if source.canMerge(needed_change, self.getSubmitAllowNeeds()):
+                if needed_change.project.source.canMerge(
+                        needed_change, self.getSubmitAllowNeeds()):
                     self.log.debug("  Change %s is needed" % needed_change)
                     if needed_change not in changes_needed:
                         changes_needed.append(needed_change)
