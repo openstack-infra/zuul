@@ -90,6 +90,40 @@ class TestGerritCRD(ZuulTestCase):
             'project-merge', 'org/project1').changes
         self.assertEqual(changes, '2,1 1,1')
 
+    def test_crd_gate_triangle(self):
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
+        A.addApproval('Code-Review', 2)
+        B.addApproval('Code-Review', 2)
+        C.addApproval('Code-Review', 2)
+        A.addApproval('Approved', 1)
+        B.addApproval('Approved', 1)
+
+        # C-->B
+        #  \ /
+        #   v
+        #   A
+
+        # C Depends-On: A
+        C.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            C.subject, A.data['url'])
+        # B Depends-On: A
+        B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            B.subject, A.data['url'])
+        # C git-depends on B
+        C.setDependsOn(B, 1)
+        self.fake_gerrit.addEvent(C.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(B.reported, 2)
+        self.assertEqual(C.reported, 2)
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(B.data['status'], 'MERGED')
+        self.assertEqual(C.data['status'], 'MERGED')
+        self.assertEqual(self.history[-1].changes, '1,1 2,1 3,1')
+
     def test_crd_branch(self):
         "Test cross-repo dependencies in multiple branches"
 
@@ -257,6 +291,7 @@ class TestGerritCRD(ZuulTestCase):
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
         A.addApproval('Code-Review', 2)
         B.addApproval('Code-Review', 2)
+        B.addApproval('Approved', 1)
 
         # A -> B -> A (via commit-depends)
 
@@ -521,6 +556,30 @@ class TestGerritCRD(ZuulTestCase):
         # Each job should have tested exactly one change
         for job in self.history:
             self.assertEqual(len(job.changes.split()), 1)
+
+    def test_crd_check_triangle(self):
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
+
+        # C-->B
+        #  \ /
+        #   v
+        #   A
+
+        # C Depends-On: A
+        C.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            C.subject, A.data['url'])
+        # B Depends-On: A
+        B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            B.subject, A.data['url'])
+        # C git-depends on B
+        C.setDependsOn(B, 1)
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(C.reported, 1)
+        self.assertEqual(self.history[0].changes, '1,1 2,1 3,1')
 
     @simple_layout('layouts/three-projects.yaml')
     def test_crd_check_transitive(self):
