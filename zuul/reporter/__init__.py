@@ -109,12 +109,10 @@ class BaseReporter(object, metaclass=abc.ABCMeta):
         else:
             return self._formatItemReport(item)
 
-    def _formatItemReportJobs(self, item):
-        # Return the list of jobs portion of the report
-        ret = ''
-
+    def _getItemReportJobsFields(self, item):
+        # Extract the report elements from an item
         config = self.connection.sched.config
-
+        jobs_fields = []
         for job in item.getJobs():
             build = item.current_build_set.getBuild(job.name)
             (result, url) = item.formatJobResult(job)
@@ -147,6 +145,13 @@ class BaseReporter(object, metaclass=abc.ABCMeta):
             else:
                 error = ''
             name = job.name + ' '
-            ret += '- %s%s : %s%s%s%s\n' % (name, url, result, error,
-                                            elapsed, voting)
+            jobs_fields.append((name, url, result, error, elapsed, voting))
+        return jobs_fields
+
+    def _formatItemReportJobs(self, item):
+        # Return the list of jobs portion of the report
+        ret = ''
+        jobs_fields = self._getItemReportJobsFields(item)
+        for job_fields in jobs_fields:
+            ret += '- %s%s : %s%s%s%s\n' % job_fields
         return ret
