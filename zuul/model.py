@@ -845,6 +845,7 @@ class Job(object):
             semaphore=None,
             attempts=3,
             final=False,
+            protected=None,
             roles=(),
             required_projects={},
             allowed_projects=None,
@@ -862,6 +863,7 @@ class Job(object):
             inheritance_path=(),
             parent_data=None,
             description=None,
+            protected_origin=None,
         )
 
         self.inheritable_attributes = {}
@@ -1039,12 +1041,21 @@ class Job(object):
 
         for k in self.execution_attributes:
             if (other._get(k) is not None and
-                k not in set(['final'])):
+                    k not in set(['final', 'protected'])):
                 if self.final:
                     raise Exception("Unable to modify final job %s attribute "
                                     "%s=%s with variant %s" % (
                                         repr(self), k, other._get(k),
                                         repr(other)))
+                if self.protected_origin:
+                    # this is a protected job, check origin of job definition
+                    this_origin = self.protected_origin
+                    other_origin = other.source_context.project.canonical_name
+                    if this_origin != other_origin:
+                        raise Exception("Job %s which is defined in %s is "
+                                        "protected and cannot be inherited "
+                                        "from other projects."
+                                        % (repr(self), this_origin))
                 if k not in set(['pre_run', 'run', 'post_run', 'roles',
                                  'variables', 'required_projects']):
                     # TODO(jeblair): determine if deepcopy is required
@@ -1054,6 +1065,17 @@ class Job(object):
         # through assignment.
         if other.final != self.attributes['final']:
             self.final = other.final
+
+        # Protected may only be set to true
+        if other.protected is not None:
+            # don't allow to reset protected flag
+            if not other.protected and self.protected_origin:
+                raise Exception("Unable to reset protected attribute of job"
+                                " %s by job %s" % (
+                                    repr(self), repr(other)))
+            if not self.protected_origin:
+                self.protected_origin = \
+                    other.source_context.project.canonical_name
 
         # We must update roles before any playbook contexts
         if other._get('roles') is not None:
