@@ -61,10 +61,11 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
             self.log.exception("Reconfiguration failed:")
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
 
-    def exit_handler(self):
+    def exit_handler(self, signum, frame):
         self.sched.exit()
         self.sched.join()
         self.stop_gear_server()
+        sys.exit(0)
 
     def term_handler(self, signum, frame):
         self.stop_gear_server()
@@ -180,13 +181,13 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
 
         if self.args.nodaemon:
+            signal.signal(signal.SIGTERM, self.exit_handler)
             while True:
                 try:
                     signal.pause()
                 except KeyboardInterrupt:
                     print("Ctrl + C: asking scheduler to exit nicely...\n")
-                    self.exit_handler()
-                    sys.exit(0)
+                    self.exit_handler(signal.SIGINT, None)
         else:
             self.sched.join()
 
