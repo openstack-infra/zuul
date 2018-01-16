@@ -52,6 +52,29 @@ class BaseSource(object, metaclass=abc.ABCMeta):
         """Get the change representing an event."""
 
     @abc.abstractmethod
+    def getChangeByURL(self, url):
+        """Get the change corresponding to the supplied URL.
+
+        The URL may may not correspond to this source; if it doesn't,
+        or there is no change at that URL, return None.
+
+        """
+
+    @abc.abstractmethod
+    def getChangesDependingOn(self, change, projects):
+        """Return changes which depend on changes at the supplied URIs.
+
+        Search this source for changes which depend on the supplied
+        change.  Generally the Change.uris attribute should be used to
+        perform the search, as it contains a list of URLs without the
+        scheme which represent a single change
+
+        If the projects argument is None, search across all known
+        projects.  If it is supplied, the search may optionally be
+        restricted to only those projects.
+        """
+
+    @abc.abstractmethod
     def getProjectOpenChanges(self, project):
         """Get the open changes for a project."""
 

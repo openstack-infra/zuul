@@ -245,7 +245,7 @@ class ExecutorClient(object):
         for change in dependent_changes:
             # We have to find the project this way because it may not
             # be registered in the tenant (ie, a foreign project).
-            source = self.sched.connections.getSourceByHostname(
+            source = self.sched.connections.getSourceByCanonicalHostname(
                 change['project']['canonical_hostname'])
             project = source.getProject(change['project']['name'])
             if project not in projects:

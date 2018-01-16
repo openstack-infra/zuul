@@ -26,6 +26,12 @@ can simply be used by listing ``zuul`` as the trigger.
          When Zuul merges a change to a project, it generates this
          event for every open change in the project.
 
+         .. warning::
+
+            Triggering on this event can cause poor performance when
+            using the GitHub driver with a large number of
+            installations.
+
       .. value:: parent-change-enqueued
 
          When Zuul enqueues a change into any pipeline, it generates

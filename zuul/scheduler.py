@@ -1088,3 +1088,25 @@ class Scheduler(threading.Thread):
         for pipeline in tenant.layout.pipelines.values():
             pipelines.append(pipeline.formatStatusJSON(websocket_url))
         return json.dumps(data)
+
+    def onChangeUpdated(self, change):
+        """Remove stale dependency references on change update.
+
+        When a change is updated with a new patchset, other changes in
+        the system may still have a reference to the old patchset in
+        their dependencies.  Search for those (across all sources) and
+        mark that their dependencies are out of date.  This will cause
+        them to be refreshed the next time the queue processor
+        examines them.
+        """
+
+        self.log.debug("Change %s has been updated, clearing dependent "
+                       "change caches", change)
+        for source in self.connections.getSources():
+            for other_change in source.getCachedChanges():
+                if other_change.commit_needs_changes is None:
+                    continue
+                for dep in other_change.commit_needs_changes:
+                    if change.isUpdateOf(dep):
+                        other_change.refresh_deps = True
+        change.refresh_deps = True
