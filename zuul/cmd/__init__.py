@@ -14,6 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import abc
 import argparse
 import configparser
 import daemon
@@ -156,7 +157,7 @@ class ZuulApp(object):
         self.connections.configure(self.config, source_only)
 
 
-class ZuulDaemonApp(ZuulApp):
+class ZuulDaemonApp(ZuulApp, metaclass=abc.ABCMeta):
     def createParser(self):
         parser = super(ZuulDaemonApp, self).createParser()
         parser.add_argument('-d', dest='nodaemon', action='store_true',
@@ -168,6 +169,13 @@ class ZuulDaemonApp(ZuulApp):
                              '/var/run/zuul/%s.pid' % self.app_name,
                              expand_user=True)
         return pid_fn
+
+    @abc.abstractmethod
+    def run(self):
+        """
+        This is the main run method of the application.
+        """
+        pass
 
     def main(self):
         self.parseArguments()
