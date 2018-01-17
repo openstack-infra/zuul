@@ -176,6 +176,10 @@ class ZuulDaemonApp(ZuulApp):
         pid_fn = self.getPidFile()
         pid = pid_file_module.TimeoutPIDLockFile(pid_fn, 10)
 
+        # Early register the stack dump handler for all zuul apps. This makes
+        # it possible to also gather stack dumps during startup hangs.
+        signal.signal(signal.SIGUSR2, stack_dump_handler)
+
         if self.args.nodaemon:
             self.run()
         else:

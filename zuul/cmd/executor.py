@@ -109,8 +109,6 @@ class Executor(zuul.cmd.ZuulDaemonApp):
                                        log_streaming_port=self.finger_port)
         self.executor.start()
 
-        signal.signal(signal.SIGUSR2, zuul.cmd.stack_dump_handler)
-
         if self.args.nodaemon:
             signal.signal(signal.SIGTERM, self.exit_handler)
             while True:
