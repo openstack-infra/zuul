@@ -8,7 +8,6 @@ Components
 Zuul is a distributed system consisting of several components, each of
 which is described below.
 
-
 .. graphviz::
    :align: center
 
@@ -31,7 +30,27 @@ which is described below.
       Scheduler -- GitHub;
    }
 
+Each of the Zuul processes may run on the same host, or different
+hosts.  Within Zuul, the components communicate with the scheduler via
+the Gearman protocol, so each Zuul component needs to be able to
+connect to the host running the Gearman server (the scheduler has a
+built-in Gearman server which is recommended) on the Gearman port --
+TCP port 4730 by default.
 
+The Zuul scheduler communicates with Nodepool via the ZooKeeper
+protocol.  Nodepool requires an external ZooKeeper cluster, and the
+Zuul scheduler needs to be able to connect to the hosts in that
+cluster on TCP port 2181.
+
+Both the Nodepool launchers and Zuul executors need to be able to
+communicate with the hosts which nodepool provides.  If these are on
+private networks, the Executors will need to be able to route traffic
+to them.
+
+If statsd is enabled, every service needs to be able to emit data to
+statsd.  Statsd can be configured to run on each host and forward
+data, or services may emit to a centralized statsd collector.  Statsd
+listens on UDP port 8125 by default.
 
 All Zuul processes read the ``/etc/zuul/zuul.conf`` file (an alternate
 location may be supplied on the command line) which uses an INI file
@@ -153,6 +172,23 @@ all times for Zuul to be operational.  It receives events from any
 connections to remote systems which have been configured, enqueues
 items into pipelines, distributes jobs to executors, and reports
 results.
+
+The scheduler includes a Gearman server which is used to communicate
+with other components of Zuul.  It is possible to use an external
+Gearman server, but the built-in server is well-tested and
+recommended.  If the built-in server is used, other Zuul hosts will
+need to be able to connect to the scheduler on the Gearman port, TCP
+port 4730.  It is also strongly recommended to use SSL certs with
+Gearman, as secrets are transferred from the scheduler to executors
+over this link.
+
+The scheduler must be able to connect to the ZooKeeper cluster used by
+Nodepool in order to request nodes.  It does not need to connect
+directly to the nodes themselves, however -- that function is handled
+by the Executors.
+
+It must also be able to connect to any services for which connections
+are configured (Gerrit, GitHub, etc).
 
 Configuration
 ~~~~~~~~~~~~~
@@ -280,6 +316,10 @@ perform them, large numbers may impact their ability to run jobs.
 Therefore, administrators may wish to run standalone mergers in order
 to reduce the load on executors.
 
+Mergers need to be able to connect to the Gearman server (usually the
+scheduler host) as well as any services for which connections are
+configured (Gerrit, GitHub, etc).
+
 Configuration
 ~~~~~~~~~~~~~
 
@@ -357,6 +397,11 @@ prepare the git repositories used by jobs, but is also available to
 perform any tasks normally performed by standalone mergers.  Because
 the executor performs both roles, small Zuul installations may not
 need to run standalone mergers.
+
+Executors need to be able to connect to the Gearman server (usually
+the scheduler host), any services for which connections are configured
+(Gerrit, GitHub, etc), as well as directly to the hosts which Nodepool
+provides.
 
 Trusted and Untrusted Playbooks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -508,7 +553,7 @@ The following sections of ``zuul.conf`` are used by the executor:
       significant protections against malicious users and accidental
       breakage in playbooks. As such,  `nullwrap` is not recommended
       for use in production.
-      
+
       This option, and thus, `nullwrap`, may be removed in the future.
       `bubblewrap` has become integral to securely operating Zuul.  If you
       have a valid use case for it, we encourage you to let us know.
@@ -577,6 +622,12 @@ The Zuul web server currently acts as a websocket interface to live log
 streaming. Eventually, it will serve as the single process handling all
 HTTP interactions with Zuul.
 
+Web servers need to be able to connect to the Gearman server (usually
+the scheduler host).  If the SQL reporter is used, they need to be
+able to connect to the database it reports to in order to support the
+dashboard.  If a GitHub connection is configured, they need to be
+reachable by GitHub so they may receive notifications.
+
 Configuration
 ~~~~~~~~~~~~~
 
@@ -635,6 +686,10 @@ For example::
     finger UUID@zuul.example.com
 
 The above would stream the logs for the build identified by `UUID`.
+
+Finger gateway servers need to be able to connect to the Gearman
+server (usually the scheduler host), as well as the console streaming
+port on the executors (usually 7900).
 
 Configuration
 ~~~~~~~~~~~~~
