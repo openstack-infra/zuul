@@ -171,6 +171,14 @@ class ZuulDaemonApp(ZuulApp, metaclass=abc.ABCMeta):
         return pid_fn
 
     @abc.abstractmethod
+    def exit_handler(self, signum, frame):
+        """
+        This is a signal handler which is called on SIGINT and SIGTERM and must
+        take care of stopping the application.
+        """
+        pass
+
+    @abc.abstractmethod
     def run(self):
         """
         This is the main run method of the application.
@@ -189,6 +197,8 @@ class ZuulDaemonApp(ZuulApp, metaclass=abc.ABCMeta):
         signal.signal(signal.SIGUSR2, stack_dump_handler)
 
         if self.args.nodaemon:
+            signal.signal(signal.SIGTERM, self.exit_handler)
+            signal.signal(signal.SIGINT, self.exit_handler)
             self.run()
         else:
             # Exercise the pidfile before we do anything else (including

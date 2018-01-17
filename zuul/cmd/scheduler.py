@@ -63,9 +63,7 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
 
     def exit_handler(self, signum, frame):
         self.sched.exit()
-        self.sched.join()
         self.stop_gear_server()
-        sys.exit(0)
 
     def start_gear_server(self):
         pipe_read, pipe_write = os.pipe()
@@ -175,16 +173,7 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
 
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
 
-        if self.args.nodaemon:
-            signal.signal(signal.SIGTERM, self.exit_handler)
-            while True:
-                try:
-                    signal.pause()
-                except KeyboardInterrupt:
-                    print("Ctrl + C: asking scheduler to exit nicely...\n")
-                    self.exit_handler(signal.SIGINT, None)
-        else:
-            self.sched.join()
+        self.sched.join()
 
 
 def main():
