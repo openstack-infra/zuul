@@ -260,6 +260,7 @@ class TestGerritLegacyCRD(ZuulTestCase):
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
         A.addApproval('Code-Review', 2)
         B.addApproval('Code-Review', 2)
+        B.addApproval('Approved', 1)
 
         # A -> B -> A (via commit-depends)
 

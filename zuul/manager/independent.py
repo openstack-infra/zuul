@@ -34,13 +34,13 @@ class IndependentPipelineManager(PipelineManager):
 
     def enqueueChangesAhead(self, change, quiet, ignore_requirements,
                             change_queue, history=None):
-        if history and change.number in history:
+        if history and change in history:
             # detected dependency cycle
             self.log.warn("Dependency cycle detected")
             return False
         if hasattr(change, 'number'):
             history = history or []
-            history.append(change.number)
+            history = history + [change]
         else:
             # Don't enqueue dependencies ahead of a non-change ref.
             return True
