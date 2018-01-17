@@ -476,8 +476,9 @@ class NodeSet(object):
     or they may appears anonymously in in-line job definitions.
     """
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, source_context=None):
         self.name = name or ''
+        self.source_context = source_context
         self.nodes = OrderedDict()
         self.groups = OrderedDict()
 
@@ -2586,8 +2587,23 @@ class Layout(object):
         return True
 
     def addNodeSet(self, nodeset):
-        if nodeset.name in self.nodesets:
-            raise Exception("NodeSet %s already defined" % (nodeset.name,))
+        # It's ok to have a duplicate nodeset definition, but only if
+        # they are in different branches of the same repo, and have
+        # the same values.
+        other = self.nodesets.get(nodeset.name)
+        if other is not None:
+            if not nodeset.source_context.isSameProject(other.source_context):
+                raise Exception("Nodeset %s already defined in project %s" %
+                                (nodeset.name, other.source_context.project))
+            if nodeset.source_context.branch == other.source_context.branch:
+                raise Exception("Nodeset %s already defined" % (nodeset.name,))
+            if nodeset != other:
+                raise Exception("Nodeset %s does not match existing definition"
+                                " in branch %s" %
+                                (nodeset.name, other.source_context.branch))
+            # Identical data in a different branch of the same project;
+            # ignore the duplicate definition
+            return
         self.nodesets[nodeset.name] = nodeset
 
     def addSecret(self, secret):
@@ -2595,7 +2611,7 @@ class Layout(object):
         # they are in different branches of the same repo, and have
         # the same values.
         other = self.secrets.get(secret.name)
-        if other:
+        if other is not None:
             if not secret.source_context.isSameProject(other.source_context):
                 raise Exception("Secret %s already defined in project %s" %
                                 (secret.name, other.source_context.project))

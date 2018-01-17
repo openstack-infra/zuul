@@ -1,0 +1,11 @@
+- job:
+    parent: base
+    name: project2-test
+
+- project:
+    check:
+      jobs:
+        - project2-test
+    gate:
+      jobs:
+        - noop

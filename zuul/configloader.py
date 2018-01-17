@@ -407,7 +407,7 @@ class NodeSetParser(object):
     @staticmethod
     def fromYaml(conf, anonymous=False):
         NodeSetParser.getSchema(anonymous)(conf)
-        ns = model.NodeSet(conf.get('name'))
+        ns = model.NodeSet(conf.get('name'), conf.get('_source_context'))
         node_names = set()
         group_names = set()
         for conf_node in as_list(conf['nodes']):
