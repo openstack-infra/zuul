@@ -612,6 +612,9 @@ class Secret(object):
                 self.source_context == other.source_context and
                 self.secret_data == other.secret_data)
 
+    def areDataEqual(self, other):
+        return (self.secret_data == other.secret_data)
+
     def __repr__(self):
         return '<Secret %s>' % (self.name,)
 
@@ -662,7 +665,6 @@ class SourceContext(object):
         if not isinstance(other, SourceContext):
             return False
         return (self.project == other.project and
-                self.branch == other.branch and
                 self.trusted == other.trusted)
 
     def __ne__(self, other):
@@ -2589,8 +2591,23 @@ class Layout(object):
         self.nodesets[nodeset.name] = nodeset
 
     def addSecret(self, secret):
-        if secret.name in self.secrets:
-            raise Exception("Secret %s already defined" % (secret.name,))
+        # It's ok to have a duplicate secret definition, but only if
+        # they are in different branches of the same repo, and have
+        # the same values.
+        other = self.secrets.get(secret.name)
+        if other:
+            if not secret.source_context.isSameProject(other.source_context):
+                raise Exception("Secret %s already defined in project %s" %
+                                (secret.name, other.source_context.project))
+            if secret.source_context.branch == other.source_context.branch:
+                raise Exception("Secret %s already defined" % (secret.name,))
+            if not secret.areDataEqual(other):
+                raise Exception("Secret %s does not match existing definition"
+                                " in branch %s" %
+                                (secret.name, other.source_context.branch))
+            # Identical data in a different branch of the same project;
+            # ignore the duplicate definition
+            return
         self.secrets[secret.name] = secret
 
     def addSemaphore(self, semaphore):

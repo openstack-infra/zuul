@@ -2528,6 +2528,157 @@ class TestBaseJobs(ZuulTestCase):
         self.assertHistory([])
 
 
+class TestSecrets(ZuulTestCase):
+    tenant_config_file = 'config/secrets/main.yaml'
+    secret = {'password': 'test-password',
+              'username': 'test-username'}
+
+    def _getSecrets(self, job, pbtype):
+        secrets = []
+        build = self.getJobFromHistory(job)
+        for pb in build.parameters[pbtype]:
+            secrets.append(pb['secrets'])
+        return secrets
+
+    def test_secret_branch(self):
+        # Test that we can use a secret defined in another branch of
+        # the same project.
+        self.create_branch('org/project2', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project2', 'stable'))
+        self.waitUntilSettled()
+
+        with open(os.path.join(FIXTURE_DIR,
+                               'config/secrets/git/',
+                               'org_project2/zuul-secret.yaml')) as f:
+            config = f.read()
+
+        file_dict = {'zuul.yaml': config}
+        A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+        self.waitUntilSettled()
+
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                parent: base
+                name: project2-secret
+                run: playbooks/secret.yaml
+                secrets: [project2_secret]
+
+            - project:
+                check:
+                  jobs:
+                    - project2-secret
+                gate:
+                  jobs:
+                    - noop
+            """)
+        file_dict = {'zuul.yaml': in_repo_conf}
+        B = self.fake_gerrit.addFakeChange('org/project2', 'stable', 'B',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(B.reported, 1, "B should report success")
+        self.assertHistory([
+            dict(name='project2-secret', result='SUCCESS', changes='2,1'),
+        ])
+        self.assertEqual(
+            self._getSecrets('project2-secret', 'playbooks'),
+            [{'project2_secret': self.secret}])
+
+    def test_secret_branch_duplicate(self):
+        # Test that we can create a duplicate secret on a different
+        # branch of the same project -- i.e., that when we branch
+        # master to stable on a project with a secret, nothing
+        # changes.
+        self.create_branch('org/project1', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project1', 'stable'))
+        self.waitUntilSettled()
+
+        A = self.fake_gerrit.addFakeChange('org/project1', 'stable', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(A.reported, 1,
+                         "A should report success")
+        self.assertHistory([
+            dict(name='project1-secret', result='SUCCESS', changes='1,1'),
+        ])
+        self.assertEqual(
+            self._getSecrets('project1-secret', 'playbooks'),
+            [{'project1_secret': self.secret}])
+
+    def test_secret_branch_error_same_branch(self):
+        # Test that we are unable to define a secret twice on the same
+        # project-branch.
+        in_repo_conf = textwrap.dedent(
+            """
+            - secret:
+                name: project1_secret
+                data: {}
+            - secret:
+                name: project1_secret
+                data: {}
+            """)
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertIn('already defined', A.messages[0])
+
+    def test_secret_branch_error_same_project(self):
+        # Test that we are unable to create a secret which differs
+        # from another with the same name -- i.e., that if we have a
+        # duplicate secret on multiple branches of the same project,
+        # they must be identical.
+        self.create_branch('org/project1', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project1', 'stable'))
+        self.waitUntilSettled()
+
+        in_repo_conf = textwrap.dedent(
+            """
+            - secret:
+                name: project1_secret
+                data: {}
+            """)
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project1', 'stable', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertIn('does not match existing definition in branch master',
+                      A.messages[0])
+
+    def test_secret_branch_error_other_project(self):
+        # Test that we are unable to create a secret with the same
+        # name as another.  We're never allowed to have a secret with
+        # the same name outside of a project.
+        in_repo_conf = textwrap.dedent(
+            """
+            - secret:
+                name: project1_secret
+                data: {}
+            """)
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertIn('already defined in project org/project1',
+                      A.messages[0])
+
+
 class TestSecretInheritance(ZuulTestCase):
     tenant_config_file = 'config/secret-inheritance/main.yaml'
 

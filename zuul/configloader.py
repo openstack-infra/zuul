@@ -1597,7 +1597,8 @@ class TenantParser(object):
             classes = TenantParser._getLoadClasses(tenant, config_secret)
             if 'secret' not in classes:
                 continue
-            layout.addSecret(SecretParser.fromYaml(layout, config_secret))
+            with configuration_exceptions('secret', config_secret):
+                layout.addSecret(SecretParser.fromYaml(layout, config_secret))
 
         for config_job in data.jobs:
             classes = TenantParser._getLoadClasses(tenant, config_job)
