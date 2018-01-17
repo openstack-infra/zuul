@@ -38,6 +38,8 @@ class GitWatcher(threading.Thread):
         self.poll_delay = poll_delay
         self._stopped = False
         self.projects_refs = self.git_connection.projects_refs
+        # This is used by the test framework
+        self._event_count = 0
 
     def compareRefs(self, project, refs):
         partial_events = []
@@ -112,6 +114,7 @@ class GitWatcher(threading.Thread):
                     self.git_connection.logEvent(event)
                     # Pass the event to the scheduler
                     self.git_connection.sched.addEvent(event)
+                    self._event_count += 1
         except Exception as e:
             self.log.debug("Unexpected issue in _run loop: %s" % str(e))
 

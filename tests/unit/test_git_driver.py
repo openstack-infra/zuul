@@ -24,6 +24,11 @@ class TestGitDriver(ZuulTestCase):
     config_file = 'zuul-git-driver.conf'
     tenant_config_file = 'config/git-driver/main.yaml'
 
+    def setUp(self):
+        super(TestGitDriver, self).setUp()
+        self.git_connection = self.sched.connections.getSource('git').\
+            connection
+
     def setup_config(self):
         super(TestGitDriver, self).setup_config()
         self.config.set('connection git', 'baseurl', self.upstream_root)
@@ -70,8 +75,8 @@ class TestGitDriver(ZuulTestCase):
         self.addCommitToRepo(
             'common-config', 'Change zuul.yaml configuration', files)
 
-        # Let some time for the tenant reconfiguration to happen
-        time.sleep(2)
+        # Wait for the tenant reconfiguration to happen
+        count = self.waitForEvent()
         self.waitUntilSettled()
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -109,8 +114,8 @@ class TestGitDriver(ZuulTestCase):
         # Restart the git watcher
         self.sched.connections.getSource('git').connection.w_pause = False
 
-        # Let some time for the tenant reconfiguration to happen
-        time.sleep(2)
+        # Wait for the tenant reconfiguration to happen
+        self.waitForEvent(count)
         self.waitUntilSettled()
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
@@ -123,23 +128,33 @@ class TestGitDriver(ZuulTestCase):
 
     def ensure_watcher_has_context(self):
         # Make sure watcher have read initial refs shas
-        cnx = self.sched.connections.getSource('git').connection
         delay = 0.1
         max_delay = 1
-        while not cnx.projects_refs:
+        while not self.git_connection.projects_refs:
             time.sleep(delay)
             max_delay -= delay
             if max_delay <= 0:
                 raise Exception("Timeout waiting for initial read")
+        return self.git_connection.watcher_thread._event_count
+
+    def waitForEvent(self, initial_count=0):
+        delay = 0.1
+        max_delay = 1
+        while self.git_connection.watcher_thread._event_count <= initial_count:
+            time.sleep(delay)
+            max_delay -= delay
+            if max_delay <= 0:
+                raise Exception("Timeout waiting for event")
+        return self.git_connection.watcher_thread._event_count
 
     @simple_layout('layouts/basic-git.yaml', driver='git')
     def test_ref_updated_event(self):
-        self.ensure_watcher_has_context()
+        count = self.ensure_watcher_has_context()
         # Add a commit to trigger a ref-updated event
         self.addCommitToRepo(
             'org/project', 'A change for ref-updated', {'f1': 'Content'})
-        # Let some time for the git watcher to detect the ref-update event
-        time.sleep(0.2)
+        # Wait for the git watcher to detect the ref-update event
+        self.waitForEvent(count)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
         self.assertEqual('SUCCESS',
@@ -147,12 +162,12 @@ class TestGitDriver(ZuulTestCase):
 
     @simple_layout('layouts/basic-git.yaml', driver='git')
     def test_ref_created(self):
-        self.ensure_watcher_has_context()
+        count = self.ensure_watcher_has_context()
         # Tag HEAD to trigger a ref-updated event
         self.addTagToRepo(
             'org/project', 'atag', 'HEAD')
-        # Let some time for the git watcher to detect the ref-update event
-        time.sleep(0.2)
+        # Wait for the git watcher to detect the ref-update event
+        self.waitForEvent(count)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
         self.assertEqual('SUCCESS',
@@ -160,12 +175,12 @@ class TestGitDriver(ZuulTestCase):
 
     @simple_layout('layouts/basic-git.yaml', driver='git')
     def test_ref_deleted(self):
-        self.ensure_watcher_has_context()
+        count = self.ensure_watcher_has_context()
         # Delete default tag init to trigger a ref-updated event
         self.delTagFromRepo(
             'org/project', 'init')
-        # Let some time for the git watcher to detect the ref-update event
-        time.sleep(0.2)
+        # Wait for the git watcher to detect the ref-update event
+        self.waitForEvent(count)
         self.waitUntilSettled()
         # Make sure no job as run as ignore-delete is True by default
         self.assertEqual(len(self.history), 0)
