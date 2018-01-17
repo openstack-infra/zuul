@@ -46,6 +46,8 @@ def main():
     # TODO(jeblair): Throw a fit if SSL is not used.
     parser.add_argument('project',
                         help="The name of the project.")
+    parser.add_argument('--strip', action='store_true', default=False,
+                        help="Strip whitespace from beginning/end of input.")
     parser.add_argument('--infile',
                         default=None,
                         help="A filename whose contents will be encrypted.  "
@@ -68,6 +70,8 @@ def main():
         plaintext = sys.stdin.read()
 
     plaintext = plaintext.encode("utf-8")
+    if args.strip:
+        plaintext = plaintext.strip()
 
     pubkey_file = tempfile.NamedTemporaryFile(delete=False)
     try:
