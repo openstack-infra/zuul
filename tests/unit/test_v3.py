@@ -3012,6 +3012,141 @@ class TestNodesets(ZuulTestCase):
                       A.messages[0])
 
 
+class TestSemaphoreBranches(ZuulTestCase):
+    tenant_config_file = 'config/semaphore-branches/main.yaml'
+
+    def test_semaphore_branch(self):
+        # Test that we can use a semaphore defined in another branch of
+        # the same project.
+        self.create_branch('org/project2', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project2', 'stable'))
+        self.waitUntilSettled()
+
+        with open(os.path.join(FIXTURE_DIR,
+                               'config/semaphore-branches/git/',
+                               'org_project2/zuul-semaphore.yaml')) as f:
+            config = f.read()
+
+        file_dict = {'zuul.yaml': config}
+        A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+        self.waitUntilSettled()
+
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                parent: base
+                name: project2-test
+                semaphore: project2-semaphore
+
+            - project:
+                check:
+                  jobs:
+                    - project2-test
+                gate:
+                  jobs:
+                    - noop
+            """)
+        file_dict = {'zuul.yaml': in_repo_conf}
+        B = self.fake_gerrit.addFakeChange('org/project2', 'stable', 'B',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(B.reported, 1, "B should report success")
+        self.assertHistory([
+            dict(name='project2-test', result='SUCCESS', changes='2,1')
+        ])
+
+    def test_semaphore_branch_duplicate(self):
+        # Test that we can create a duplicate semaphore on a different
+        # branch of the same project -- i.e., that when we branch
+        # master to stable on a project with a semaphore, nothing
+        # changes.
+        self.create_branch('org/project1', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project1', 'stable'))
+        self.waitUntilSettled()
+
+        A = self.fake_gerrit.addFakeChange('org/project1', 'stable', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(A.reported, 1,
+                         "A should report success")
+        self.assertHistory([
+            dict(name='project1-test', result='SUCCESS', changes='1,1')
+        ])
+
+    def test_semaphore_branch_error_same_branch(self):
+        # Test that we are unable to define a semaphore twice on the same
+        # project-branch.
+        in_repo_conf = textwrap.dedent(
+            """
+            - semaphore:
+                name: project1-semaphore
+                max: 2
+            - semaphore:
+                name: project1-semaphore
+                max: 2
+            """)
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertIn('already defined', A.messages[0])
+
+    def test_semaphore_branch_error_same_project(self):
+        # Test that we are unable to create a semaphore which differs
+        # from another with the same name -- i.e., that if we have a
+        # duplicate semaphore on multiple branches of the same project,
+        # they must be identical.
+        self.create_branch('org/project1', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project1', 'stable'))
+        self.waitUntilSettled()
+
+        in_repo_conf = textwrap.dedent(
+            """
+            - semaphore:
+                name: project1-semaphore
+                max: 4
+            """)
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project1', 'stable', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertIn('does not match existing definition in branch master',
+                      A.messages[0])
+
+    def test_semaphore_branch_error_other_project(self):
+        # Test that we are unable to create a semaphore with the same
+        # name as another.  We're never allowed to have a semaphore with
+        # the same name outside of a project.
+        in_repo_conf = textwrap.dedent(
+            """
+            - semaphore:
+                name: project1-semaphore
+                max: 2
+            """)
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertIn('already defined in project org/project1',
+                      A.messages[0])
+
+
 class TestJobOutput(AnsibleZuulTestCase):
     tenant_config_file = 'config/job-output/main.yaml'
 

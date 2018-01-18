@@ -1,0 +1,13 @@
+- semaphore:
+    name: project1-semaphore
+    max: 2
+
+- job:
+    parent: base
+    name: project1-test
+    semaphore: project1-semaphore
+
+- project:
+    check:
+      jobs:
+        - project1-test

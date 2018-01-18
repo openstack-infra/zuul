@@ -1301,9 +1301,19 @@ access shared or limited resources.  A semaphore has a value which
 represents the maximum number of jobs which use that semaphore at the
 same time.
 
+Semaphores, like most configuration items, are globally unique, though
+a semaphore may be defined on multiple branches of the same project as
+long as the value is the same.  This is to aid in branch maintenance,
+so that creating a new branch based on an existing branch will not
+immediately produce a configuration error.
+
 Semaphores are never subject to dynamic reconfiguration.  If the value
 of a semaphore is changed, it will take effect only when the change
-where it is updated is merged.  An example follows:
+where it is updated is merged.  However, Zuul will attempt to validate
+the configuration of semaphores in proposed updates, even if they
+aren't used.
+
+An example usage of semaphores follows:
 
 .. code-block:: yaml
 

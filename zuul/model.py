@@ -2627,8 +2627,25 @@ class Layout(object):
         self.secrets[secret.name] = secret
 
     def addSemaphore(self, semaphore):
-        if semaphore.name in self.semaphores:
-            raise Exception("Semaphore %s already defined" % (semaphore.name,))
+        # It's ok to have a duplicate semaphore definition, but only if
+        # they are in different branches of the same repo, and have
+        # the same values.
+        other = self.semaphores.get(semaphore.name)
+        if other is not None:
+            if not semaphore.source_context.isSameProject(
+                    other.source_context):
+                raise Exception("Semaphore %s already defined in project %s" %
+                                (semaphore.name, other.source_context.project))
+            if semaphore.source_context.branch == other.source_context.branch:
+                raise Exception("Semaphore %s already defined" %
+                                (semaphore.name,))
+            if semaphore != other:
+                raise Exception("Semaphore %s does not match existing"
+                                " definition in branch %s" %
+                                (semaphore.name, other.source_context.branch))
+            # Identical data in a different branch of the same project;
+            # ignore the duplicate definition
+            return
         self.semaphores[semaphore.name] = semaphore
 
     def addPipeline(self, pipeline):
@@ -2782,6 +2799,15 @@ class Semaphore(object):
     def __init__(self, name, max=1):
         self.name = name
         self.max = int(max)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        if not isinstance(other, Semaphore):
+            return False
+        return (self.name == other.name and
+                self.max == other.max)
 
 
 class SemaphoreHandler(object):
