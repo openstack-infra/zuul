@@ -8,7 +8,7 @@ preparation for the third major version of Zuul.  We call this effort
 `Zuul v3`_ and it is described in more detail below.
 
 The latest documentation for Zuul v3 is published at:
-https://docs.openstack.org/infra/zuul/feature/zuulv3/
+https://docs.openstack.org/infra/zuul/
 
 If you are looking for the Edge routing service named Zuul that is
 related to Netflix, it can be found here:
@@ -23,8 +23,7 @@ Contributing
 
 We are currently engaged in a significant development effort in
 preparation for the third major version of Zuul.  We call this effort
-`Zuul v3`_ and it is described in this file in the `feature/zuulv3`
-branch of this repo.
+`Zuul v3`_.
 
 To browse the latest code, see: https://git.openstack.org/cgit/openstack-infra/zuul/tree/
 To clone the latest code, use `git clone git://git.openstack.org/openstack-infra/zuul`
@@ -69,7 +68,7 @@ way to get started with this effort:
    Some of the information in the specs may be effectively superceded
    by changes here, which are still undergoing review.
 
-4) Read developer documentation on the internal data model and testing: http://docs.openstack.org/infra/zuul/feature/zuulv3/developer.html
+4) Read developer documentation on the internal data model and testing: http://docs.openstack.org/infra/zuul/developer.html
 
    The general philosophy for Zuul tests is to perform functional
    testing of either the individual component or the entire end-to-end
@@ -78,7 +77,7 @@ way to get started with this effort:
    whether they add value to this system or are merely duplicative of
    functional tests.
 
-5) Review open changes: https://review.openstack.org/#/q/status:open+branch:feature/zuulv3
+5) Review open changes: https://review.openstack.org/#/q/status:open
 
    We find that the most valuable code reviews are ones that spot
    problems with the proposed change, or raise questions about how
