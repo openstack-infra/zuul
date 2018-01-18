@@ -1,0 +1,49 @@
+- pipeline:
+    name: gate
+    manager: dependent
+    success-message: Build succeeded (gate).
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - Approved: 1
+    success:
+      gerrit:
+        Verified: 2
+        submit: true
+    failure:
+      gerrit:
+        Verified: -2
+    start:
+      gerrit:
+        Verified: 0
+    precedence: high
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: nonvoting-project-merge
+    hold-following-changes: true
+    run: playbooks/nonvoting-project-merge.yaml
+
+- job:
+    name: nonvoting-project-test1
+    run: playbooks/nonvoting-project-test1.yaml
+
+- job:
+    name: nonvoting-project-test2
+    voting: false
+    run: playbooks/nonvoting-project-test2.yaml
+
+- project:
+    name: org/nonvoting-project
+    gate:
+      jobs:
+        - nonvoting-project-merge
+        - nonvoting-project-test1:
+            dependencies: nonvoting-project-merge
+        - nonvoting-project-test2:
+            dependencies: nonvoting-project-merge

@@ -1,0 +1,41 @@
+- pipeline:
+    name: check
+    manager: independent
+    post-review: true
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: data-return
+    run: playbooks/data-return.yaml
+
+- job:
+    name: data-return-relative
+    success-url: docs/index.html
+    run: playbooks/data-return-relative.yaml
+
+- job:
+    name: child
+    run: playbooks/child.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - data-return
+        - data-return-relative
+        - child:
+            dependencies:
+              - data-return
+              - data-return-relative

@@ -1,0 +1,51 @@
+- name: Run some commands to show that logging works
+  hosts: node
+  tasks:
+
+    - name: Run setup
+      setup:
+      register: setupvar
+
+    - name: Output debug for a var
+      debug:
+        var: setupvar
+
+    - name: Output a debug sentence
+      debug:
+        msg: This is a debug message
+
+    - name: Run a shell task
+      command: ip addr show
+
+    - name: Loop with items
+      command: "echo {{ item }}"
+      with_items:
+        - item1
+        - item2
+        - item3
+
+    - name: Loop with complex items
+      command: "echo {{ item.name }}"
+      with_items:
+        - name: complex1
+        - name: complex2
+        - name: complex3
+
+    - name: Run a shell task with an ansible python exception
+      command: echo foo
+      args:
+        chdir: /shelltask/somewhere/that/does/not/exist
+      failed_when: false
+
+    - name: Loop with items on an ansible python exception
+      command: "echo {{ item }}"
+      with_items:
+        - item1
+        - item2
+        - item3
+      args:
+        chdir: /itemloop/somewhere/that/does/not/exist
+      failed_when: false
+
+    - name: Print binary data
+      command: echo -e '\x80abc'

@@ -1,0 +1,46 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: py27
+    run: playbooks/py27.yaml
+
+- project-template:
+    name: python-jobs
+    check:
+      jobs:
+        - py27
+
+- project-template:
+    name: python-trusty-jobs
+    check:
+      jobs:
+        - py27:
+            tags:
+              - trusty
+
+- project:
+    name: org/project1
+    templates:
+      - python-jobs
+      - python-trusty-jobs
+
+- project:
+    name: org/project2
+    templates:
+      - python-jobs

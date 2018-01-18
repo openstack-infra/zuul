@@ -1,0 +1,51 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request
+          action:
+            - opened
+            - changed
+            - reopened
+      gerrit:
+        - event: patchset-created
+    success:
+      github:
+        status: success
+      gerrit:
+        Verified: 1
+    failure:
+      github:
+        status: failure
+      gerrit:
+        Verified: 1
+    start:
+      github:
+        comment: true
+      gerrit:
+        Verified: 0
+
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: project-gerrit
+    run: playbooks/project-gerrit.yaml
+
+- job:
+    name: project1-github
+    run: playbooks/project1-github.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-gerrit
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - project1-github

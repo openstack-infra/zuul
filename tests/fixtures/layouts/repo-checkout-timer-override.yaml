@@ -1,0 +1,25 @@
+- pipeline:
+    name: periodic
+    manager: independent
+    trigger:
+      timer:
+        - time: '* * * * * */1'
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: integration
+    branches: master
+    override-checkout: stable/havana
+    required-projects:
+      - org/project1
+    run: playbooks/integration.yaml
+
+- project:
+    name: org/project1
+    periodic:
+      jobs:
+        - integration

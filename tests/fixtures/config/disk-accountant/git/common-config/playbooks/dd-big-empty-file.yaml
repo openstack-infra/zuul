@@ -1,0 +1,6 @@
+- hosts: localhost
+  tasks:
+    - command: dd if=/dev/zero of=toobig bs=1M count=2
+    - wait_for:
+        delay: 10
+        path: /

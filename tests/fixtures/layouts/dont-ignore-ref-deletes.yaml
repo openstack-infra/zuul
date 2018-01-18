@@ -1,0 +1,27 @@
+- pipeline:
+    name: post
+    manager: independent
+    trigger:
+      gerrit:
+        - event: ref-updated
+          ref: ^(?!refs/).*$
+          ignore-deletes: false
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: project-post
+    nodeset:
+      nodes:
+        - name: static
+          label: ubuntu-xenial
+    run: playbooks/project-post.yaml
+
+- project:
+    name: org/project
+    post:
+      jobs:
+        - project-post

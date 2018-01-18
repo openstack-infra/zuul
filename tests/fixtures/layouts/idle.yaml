@@ -1,0 +1,25 @@
+- pipeline:
+    name: periodic
+    manager: independent
+    trigger:
+      timer:
+        - time: '* * * * * */1'
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: project-bitrot
+    nodeset:
+      nodes:
+        - name: static
+          label: ubuntu-xenial
+    run: playbooks/project-bitrot.yaml
+
+- project:
+    name: org/project
+    periodic:
+      jobs:
+        - project-bitrot

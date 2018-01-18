@@ -1,0 +1,4 @@
+- hosts: all
+  tasks:
+    - name: Pause for 60 seconds, so zuul aborts our job.
+      shell: sleep 60

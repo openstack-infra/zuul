@@ -12,11 +12,6 @@ Since 2.0.0:
   the Zuul server in smaller deployments.  Several configuration
   options have moved from the ``zuul`` section to ``merger``.
 
-* Gerrit label names must now be listed in your layout.yaml exactly as
-  they appear in Gerrit. This means case and special characters must
-  match. This change was made to accomodate Gerrit 2.13 which needs the
-  strings to match for changes to be successfully submitted.
-
 Since 1.3.0:
 
 * The Jenkins launcher is replaced with Gearman launcher.  An internal

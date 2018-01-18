@@ -14,12 +14,10 @@
 
 import abc
 import logging
+from zuul.lib.config import get_default
 
-import six
 
-
-@six.add_metaclass(abc.ABCMeta)
-class BaseReporter(object):
+class BaseReporter(object, metaclass=abc.ABCMeta):
     """Base class for reporters.
 
     Defines the exact public methods that must be supplied.
@@ -27,20 +25,17 @@ class BaseReporter(object):
 
     log = logging.getLogger("zuul.reporter.BaseReporter")
 
-    def __init__(self, reporter_config={}, sched=None, connection=None):
-        self.reporter_config = reporter_config
-        self.sched = sched
+    def __init__(self, driver, connection, config=None):
+        self.driver = driver
         self.connection = connection
+        self.config = config or {}
         self._action = None
 
     def setAction(self, action):
         self._action = action
 
-    def stop(self):
-        """Stop the reporter."""
-
     @abc.abstractmethod
-    def report(self, source, pipeline, item):
+    def report(self, item):
         """Send the compiled report message."""
 
     def getSubmitAllowNeeds(self):
@@ -64,70 +59,71 @@ class BaseReporter(object):
         }
         return format_methods[self._action]
 
-    def _formatItemReport(self, pipeline, item, with_jobs=True):
+    def _formatItemReport(self, item, with_jobs=True):
         """Format a report from the given items. Usually to provide results to
         a reporter taking free-form text."""
-        ret = self._getFormatter()(pipeline, item, with_jobs)
+        ret = self._getFormatter()(item, with_jobs)
 
-        if pipeline.footer_message:
-            ret += '\n' + pipeline.footer_message
+        if item.current_build_set.debug_messages:
+            debug = '\n  '.join(item.current_build_set.debug_messages)
+            ret += '\nDebug information:\n  ' + debug + '\n'
+
+        if item.pipeline.footer_message:
+            ret += '\n' + item.pipeline.footer_message
 
         return ret
 
-    def _formatItemReportStart(self, pipeline, item, with_jobs=True):
-        msg = "Starting %s jobs." % pipeline.name
-        if self.sched.config.has_option('zuul', 'status_url'):
-            msg += "\n" + self.sched.config.get('zuul', 'status_url')
-        return msg
+    def _formatItemReportStart(self, item, with_jobs=True):
+        status_url = get_default(self.connection.sched.config,
+                                 'webapp', 'status_url', '')
+        return item.pipeline.start_message.format(pipeline=item.pipeline,
+                                                  status_url=status_url)
 
-    def _formatItemReportSuccess(self, pipeline, item, with_jobs=True):
-        msg = pipeline.success_message
+    def _formatItemReportSuccess(self, item, with_jobs=True):
+        msg = item.pipeline.success_message
         if with_jobs:
-            msg += '\n\n' + self._formatItemReportJobs(pipeline, item)
+            msg += '\n\n' + self._formatItemReportJobs(item)
         return msg
 
-    def _formatItemReportFailure(self, pipeline, item, with_jobs=True):
+    def _formatItemReportFailure(self, item, with_jobs=True):
         if item.dequeued_needing_change:
             msg = 'This change depends on a change that failed to merge.\n'
-        elif not pipeline.didMergerSucceed(item):
-            msg = pipeline.merge_failure_message
+        elif item.didMergerFail():
+            msg = item.pipeline.merge_failure_message
+        elif item.getConfigError():
+            msg = item.getConfigError()
         else:
-            msg = pipeline.failure_message
+            msg = item.pipeline.failure_message
             if with_jobs:
-                msg += '\n\n' + self._formatItemReportJobs(pipeline, item)
+                msg += '\n\n' + self._formatItemReportJobs(item)
         return msg
 
-    def _formatItemReportMergeFailure(self, pipeline, item, with_jobs=True):
-        return pipeline.merge_failure_message
+    def _formatItemReportMergeFailure(self, item, with_jobs=True):
+        return item.pipeline.merge_failure_message
 
-    def _formatItemReportDisabled(self, pipeline, item, with_jobs=True):
+    def _formatItemReportDisabled(self, item, with_jobs=True):
         if item.current_build_set.result == 'SUCCESS':
-            return self._formatItemReportSuccess(pipeline, item)
+            return self._formatItemReportSuccess(item)
         elif item.current_build_set.result == 'FAILURE':
-            return self._formatItemReportFailure(pipeline, item)
+            return self._formatItemReportFailure(item)
         else:
-            return self._formatItemReport(pipeline, item)
+            return self._formatItemReport(item)
 
-    def _formatItemReportJobs(self, pipeline, item):
-        # Return the list of jobs portion of the report
-        ret = ''
-
-        if self.sched.config.has_option('zuul', 'url_pattern'):
-            url_pattern = self.sched.config.get('zuul', 'url_pattern')
-        else:
-            url_pattern = None
-
-        for job in pipeline.getJobs(item):
+    def _getItemReportJobsFields(self, item):
+        # Extract the report elements from an item
+        config = self.connection.sched.config
+        jobs_fields = []
+        for job in item.getJobs():
             build = item.current_build_set.getBuild(job.name)
-            (result, url) = item.formatJobResult(job, url_pattern)
+            (result, url) = item.formatJobResult(job)
             if not job.voting:
                 voting = ' (non-voting)'
             else:
                 voting = ''
 
-            if self.sched.config and self.sched.config.has_option(
+            if config and config.has_option(
                 'zuul', 'report_times'):
-                report_times = self.sched.config.getboolean(
+                report_times = config.getboolean(
                     'zuul', 'report_times')
             else:
                 report_times = True
@@ -144,11 +140,18 @@ class BaseReporter(object):
                     elapsed = ' in %ds' % (s)
             else:
                 elapsed = ''
-            name = ''
-            if self.sched.config.has_option('zuul', 'job_name_in_report'):
-                if self.sched.config.getboolean('zuul',
-                                                'job_name_in_report'):
-                    name = job.name + ' '
-            ret += '- %s%s : %s%s%s\n' % (name, url, result, elapsed,
-                                          voting)
+            if build.error_detail:
+                error = ' ' + build.error_detail
+            else:
+                error = ''
+            name = job.name + ' '
+            jobs_fields.append((name, url, result, error, elapsed, voting))
+        return jobs_fields
+
+    def _formatItemReportJobs(self, item):
+        # Return the list of jobs portion of the report
+        ret = ''
+        jobs_fields = self._getItemReportJobsFields(item)
+        for job_fields in jobs_fields:
+            ret += '- %s%s : %s%s%s%s\n' % job_fields
         return ret

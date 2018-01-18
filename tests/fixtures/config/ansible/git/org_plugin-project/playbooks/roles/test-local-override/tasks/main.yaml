@@ -1,0 +1,4 @@
+- name: Attempt to use local version of file.py
+  file:
+    path: some-file.out
+    state: touch

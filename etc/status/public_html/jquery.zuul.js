@@ -1,5 +1,8 @@
 // jquery plugin for Zuul status page
 //
+// @licstart  The following is the entire license notice for the
+// JavaScript code in this page.
+//
 // Copyright 2012 OpenStack Foundation
 // Copyright 2013 Timo Tijhof
 // Copyright 2013 Wikimedia Foundation
@@ -16,6 +19,9 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
+//
+// @licend  The above is the entire license notice
+// for the JavaScript code in this page.
 
 (function ($) {
     'use strict';
@@ -47,11 +53,16 @@
             'msg_id': '#zuul_msg',
             'pipelines_id': '#zuul_pipelines',
             'queue_events_num': '#zuul_queue_events_num',
+            'queue_management_events_num': '#zuul_queue_management_events_num',
             'queue_results_num': '#zuul_queue_results_num',
         }, options);
 
         var collapsed_exceptions = [];
         var current_filter = read_cookie('zuul_filter_string', '');
+        var change_set_in_url = window.location.href.split('#')[1];
+        if (change_set_in_url) {
+           current_filter = change_set_in_url;
+        }
         var $jq;
 
         var xhr,
@@ -86,7 +97,15 @@
             job: function(job) {
                 var $job_line = $('<span />');
 
-                if (job.url !== null) {
+                if (job.result !== null) {
+                    $job_line.append(
+                        $('<a />')
+                            .addClass('zuul-job-name')
+                            .attr('href', job.report_url)
+                            .text(job.name)
+                    );
+                }
+                else if (job.url !== null) {
                     $job_line.append(
                         $('<a />')
                             .addClass('zuul-job-name')
@@ -263,29 +282,38 @@
 
             change_header: function(change) {
                 var change_id = change.id || 'NA';
-                if (change_id.length === 40) {
-                    change_id = change_id.substr(0, 7);
-                }
 
                 var $change_link = $('<small />');
                 if (change.url !== null) {
-                    if (/^[0-9a-f]{40}$/.test(change.id)) {
-                        var change_id_short = change.id.slice(0, 7);
+                    var github_id = change_id.match(/^([0-9]+),([0-9a-f]{40})$/);
+                    if (github_id) {
                         $change_link.append(
                             $('<a />').attr('href', change.url).append(
                                 $('<abbr />')
-                                    .attr('title', change.id)
+                                    .attr('title', change_id)
+                                    .text('#' + github_id[1])
+                            )
+                        );
+                    } else if (/^[0-9a-f]{40}$/.test(change_id)) {
+                        var change_id_short = change_id.slice(0, 7);
+                        $change_link.append(
+                            $('<a />').attr('href', change.url).append(
+                                $('<abbr />')
+                                    .attr('title', change_id)
                                     .text(change_id_short)
                             )
                         );
                     }
                     else {
                         $change_link.append(
-                            $('<a />').attr('href', change.url).text(change.id)
+                            $('<a />').attr('href', change.url).text(change_id)
                         );
                     }
                 }
                 else {
+                    if (change_id.length === 40) {
+                        change_id = change_id.substr(0, 7);
+                    }
                     $change_link.text(change_id);
                 }
 
@@ -685,6 +713,10 @@
                         $(options.queue_events_num).text(
                             data.trigger_event_queue ?
                                 data.trigger_event_queue.length : '0'
+                        );
+                        $(options.queue_management_events_num).text(
+                            data.management_event_queue ?
+                                data.management_event_queue.length : '0'
                         );
                         $(options.queue_results_num).text(
                             data.result_event_queue ?

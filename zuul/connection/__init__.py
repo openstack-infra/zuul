@@ -14,11 +14,8 @@
 
 import abc
 
-import six
 
-
-@six.add_metaclass(abc.ABCMeta)
-class BaseConnection(object):
+class BaseConnection(object, metaclass=abc.ABCMeta):
     """Base class for connections.
 
     A connection is a shared object that sources, triggers and reporters can
@@ -34,22 +31,33 @@ class BaseConnection(object):
     into. For example, a trigger will likely require some kind of query method
     while a reporter may need a review method."""
 
-    def __init__(self, connection_name, connection_config):
+    def __init__(self, driver, connection_name, connection_config):
         # connection_name is the name given to this connection in zuul.ini
         # connection_config is a dictionary of config_section from zuul.ini for
         # this connection.
         # __init__ shouldn't make the actual connection in case this connection
         # isn't used in the layout.
+        self.driver = driver
         self.connection_name = connection_name
         self.connection_config = connection_config
 
-        # Keep track of the sources, triggers and reporters using this
-        # connection
-        self.attached_to = {
-            'source': [],
-            'trigger': [],
-            'reporter': [],
-        }
+    def logEvent(self, event):
+        self.log.debug(
+            'Scheduling event from {connection}: {event}'.format(
+                connection=self.connection_name,
+                event=event))
+        try:
+            if self.sched.statsd:
+                self.sched.statsd.incr(
+                    'zuul.event.{driver}.{event}'.format(
+                        driver=self.driver.name, event=event.type))
+                self.sched.statsd.incr(
+                    'zuul.event.{driver}.{connection}.{event}'.format(
+                        driver=self.driver.name,
+                        connection=self.connection_name,
+                        event=event.type))
+        except Exception:
+            self.log.exception("Exception reporting event stats")
 
     def onLoad(self):
         pass
@@ -60,12 +68,27 @@ class BaseConnection(object):
     def registerScheduler(self, sched):
         self.sched = sched
 
-    def registerUse(self, what, instance):
-        self.attached_to[what].append(instance)
-
     def maintainCache(self, relevant):
         """Make cache contain relevant changes.
 
         This lets the user supply a list of change objects that are
         still in use.  Anything in our cache that isn't in the supplied
         list should be safe to remove from the cache."""
+
+    def registerWebapp(self, webapp):
+        self.webapp = webapp
+
+    def registerHttpHandler(self, path, handler):
+        """Add connection handler for HTTP URI.
+
+        Connection can use builtin HTTP server for listening on incoming event
+        requests. The resulting path will be /connection/connection_name/path.
+        """
+        self.webapp.register_path(self._connectionPath(path), handler)
+
+    def unregisterHttpHandler(self, path):
+        """Remove the connection handler for HTTP URI."""
+        self.webapp.unregister_path(self._connectionPath(path))
+
+    def _connectionPath(self, path):
+        return '/connection/%s/%s' % (self.connection_name, path)

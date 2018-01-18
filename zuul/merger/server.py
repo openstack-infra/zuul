@@ -19,7 +19,12 @@ import traceback
 
 import gear
 
+from zuul.lib import commandsocket
+from zuul.lib.config import get_default
 from zuul.merger import merger
+
+
+COMMANDS = ['stop']
 
 
 class MergeServer(object):
@@ -27,39 +32,46 @@ class MergeServer(object):
 
     def __init__(self, config, connections={}):
         self.config = config
-        self.zuul_url = config.get('merger', 'zuul_url')
 
-        if self.config.has_option('merger', 'git_dir'):
-            merge_root = self.config.get('merger', 'git_dir')
-        else:
-            merge_root = '/var/lib/zuul/git'
-
-        if self.config.has_option('merger', 'git_user_email'):
-            merge_email = self.config.get('merger', 'git_user_email')
-        else:
-            merge_email = None
-
-        if self.config.has_option('merger', 'git_user_name'):
-            merge_name = self.config.get('merger', 'git_user_name')
-        else:
-            merge_name = None
-
-        self.merger = merger.Merger(merge_root, connections, merge_email,
-                                    merge_name)
+        merge_root = get_default(self.config, 'merger', 'git_dir',
+                                 '/var/lib/zuul/merger-git')
+        merge_email = get_default(self.config, 'merger', 'git_user_email')
+        merge_name = get_default(self.config, 'merger', 'git_user_name')
+        speed_limit = get_default(
+            config, 'merger', 'git_http_low_speed_limit', '1000')
+        speed_time = get_default(
+            config, 'merger', 'git_http_low_speed_time', '30')
+        self.merger = merger.Merger(
+            merge_root, connections, merge_email, merge_name, speed_limit,
+            speed_time)
+        self.command_map = dict(
+            stop=self.stop)
+        command_socket = get_default(
+            self.config, 'merger', 'command_socket',
+            '/var/lib/zuul/merger.socket')
+        self.command_socket = commandsocket.CommandSocket(command_socket)
 
     def start(self):
         self._running = True
+        self._command_running = True
         server = self.config.get('gearman', 'server')
-        if self.config.has_option('gearman', 'port'):
-            port = self.config.get('gearman', 'port')
-        else:
-            port = 4730
-        self.worker = gear.Worker('Zuul Merger')
-        self.worker.addServer(server, port)
+        port = get_default(self.config, 'gearman', 'port', 4730)
+        ssl_key = get_default(self.config, 'gearman', 'ssl_key')
+        ssl_cert = get_default(self.config, 'gearman', 'ssl_cert')
+        ssl_ca = get_default(self.config, 'gearman', 'ssl_ca')
+        self.worker = gear.TextWorker('Zuul Merger')
+        self.worker.addServer(server, port, ssl_key, ssl_cert, ssl_ca)
         self.log.debug("Waiting for server")
         self.worker.waitForServer()
         self.log.debug("Registering")
         self.register()
+        self.log.debug("Starting command processor")
+        self.command_socket.start()
+        self.command_thread = threading.Thread(
+            target=self.runCommand, name='command')
+        self.command_thread.daemon = True
+        self.command_thread.start()
+
         self.log.debug("Starting worker")
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
@@ -67,16 +79,29 @@ class MergeServer(object):
 
     def register(self):
         self.worker.registerFunction("merger:merge")
-        self.worker.registerFunction("merger:update")
+        self.worker.registerFunction("merger:cat")
+        self.worker.registerFunction("merger:refstate")
+        self.worker.registerFunction("merger:fileschanges")
 
     def stop(self):
         self.log.debug("Stopping")
         self._running = False
+        self._command_running = False
+        self.command_socket.stop()
         self.worker.shutdown()
         self.log.debug("Stopped")
 
     def join(self):
         self.thread.join()
+
+    def runCommand(self):
+        while self._command_running:
+            try:
+                command = self.command_socket.get().decode('utf8')
+                if command != '_stop':
+                    self.command_map[command]()
+            except Exception:
+                self.log.exception("Exception while processing command")
 
     def run(self):
         self.log.debug("Starting merge listener")
@@ -87,31 +112,62 @@ class MergeServer(object):
                     if job.name == 'merger:merge':
                         self.log.debug("Got merge job: %s" % job.unique)
                         self.merge(job)
-                    elif job.name == 'merger:update':
-                        self.log.debug("Got update job: %s" % job.unique)
-                        self.update(job)
+                    elif job.name == 'merger:cat':
+                        self.log.debug("Got cat job: %s" % job.unique)
+                        self.cat(job)
+                    elif job.name == 'merger:refstate':
+                        self.log.debug("Got refstate job: %s" % job.unique)
+                        self.refstate(job)
+                    elif job.name == 'merger:fileschanges':
+                        self.log.debug("Got fileschanges job: %s" % job.unique)
+                        self.fileschanges(job)
                     else:
                         self.log.error("Unable to handle job %s" % job.name)
                         job.sendWorkFail()
                 except Exception:
                     self.log.exception("Exception while running job")
                     job.sendWorkException(traceback.format_exc())
+            except gear.InterruptedError:
+                return
             except Exception:
                 self.log.exception("Exception while getting job")
 
     def merge(self, job):
         args = json.loads(job.arguments)
-        commit = self.merger.mergeChanges(args['items'])
-        result = dict(merged=(commit is not None),
-                      commit=commit,
-                      zuul_url=self.zuul_url)
+        ret = self.merger.mergeChanges(
+            args['items'], args.get('files'),
+            args.get('dirs'), args.get('repo_state'))
+        result = dict(merged=(ret is not None))
+        if ret is None:
+            result['commit'] = result['files'] = result['repo_state'] = None
+        else:
+            (result['commit'], result['files'], result['repo_state'],
+             recent) = ret
         job.sendWorkComplete(json.dumps(result))
 
-    def update(self, job):
+    def refstate(self, job):
         args = json.loads(job.arguments)
-        self.merger.updateRepo(args['project'],
-                               args['connection_name'],
-                               args['url'])
+
+        success, repo_state = self.merger.getRepoState(args['items'])
+        result = dict(updated=success,
+                      repo_state=repo_state)
+        job.sendWorkComplete(json.dumps(result))
+
+    def cat(self, job):
+        args = json.loads(job.arguments)
+        self.merger.updateRepo(args['connection'], args['project'])
+        files = self.merger.getFiles(args['connection'], args['project'],
+                                     args['branch'], args['files'],
+                                     args.get('dirs'))
         result = dict(updated=True,
-                      zuul_url=self.zuul_url)
+                      files=files)
+        job.sendWorkComplete(json.dumps(result))
+
+    def fileschanges(self, job):
+        args = json.loads(job.arguments)
+        self.merger.updateRepo(args['connection'], args['project'])
+        files = self.merger.getFilesChanges(
+            args['connection'], args['project'], args['branch'], args['tosha'])
+        result = dict(updated=True,
+                      files=files)
         job.sendWorkComplete(json.dumps(result))

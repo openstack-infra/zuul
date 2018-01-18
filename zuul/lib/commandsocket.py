@@ -18,7 +18,7 @@ import logging
 import os
 import socket
 import threading
-import Queue
+import queue
 
 
 class CommandSocket(object):
@@ -27,7 +27,7 @@ class CommandSocket(object):
     def __init__(self, path):
         self.running = False
         self.path = path
-        self.queue = Queue.Queue()
+        self.queue = queue.Queue()
 
     def start(self):
         self.running = True
@@ -44,16 +44,16 @@ class CommandSocket(object):
         # First, wake up our listener thread with a connection and
         # tell it to stop running.
         self.running = False
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        s.connect(self.path)
-        s.sendall('_stop\n')
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+            s.connect(self.path)
+            s.sendall(b'_stop\n')
         # The command '_stop' will be ignored by our listener, so
         # directly inject it into the queue so that consumers of this
         # class which are waiting in .get() are awakened.  They can
         # either handle '_stop' or just ignore the unknown command and
         # then check to see if they should continue to run before
         # re-entering their loop.
-        self.queue.put('_stop')
+        self.queue.put(b'_stop')
         self.socket_thread.join()
 
     def _socketListener(self):
@@ -61,10 +61,10 @@ class CommandSocket(object):
             try:
                 s, addr = self.socket.accept()
                 self.log.debug("Accepted socket connection %s" % (s,))
-                buf = ''
+                buf = b''
                 while True:
                     buf += s.recv(1)
-                    if buf[-1] == '\n':
+                    if buf[-1:] == b'\n':
                         break
                 buf = buf.strip()
                 self.log.debug("Received %s from socket" % (buf,))
@@ -72,7 +72,7 @@ class CommandSocket(object):
                 # Because we use '_stop' internally to wake up a
                 # waiting thread, don't allow it to actually be
                 # injected externally.
-                if buf != '_stop':
+                if buf != b'_stop':
                     self.queue.put(buf)
             except Exception:
                 self.log.exception("Exception in socket handler")

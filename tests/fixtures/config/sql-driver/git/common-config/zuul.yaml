@@ -1,0 +1,51 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        Verified: 1
+      resultsdb: null
+    failure:
+      gerrit:
+        Verified: -1
+      resultsdb: null
+      resultsdb_failures: null
+
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: project-merge
+    run: playbooks/project-merge.yaml
+
+- job:
+    name: project-test1
+    run: playbooks/project-test1.yaml
+
+- job:
+    name: project-test2
+    run: playbooks/project-test2.yaml
+
+- job:
+    name: project-test3
+    run: playbooks/project-test3.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
+        # Make sure we have a "SKIPPED" result
+        - project-test3:
+            dependencies: project-test1
+        # The noop job can have timing quirks
+        - noop:
+            dependencies: project-test2

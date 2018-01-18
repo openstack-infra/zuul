@@ -1,0 +1,11 @@
+[defaults]
+inventory = {{ ansible_user_dir }}/inventory.yaml
+gathering = smart
+gather_subset = !all
+lookup_plugins = {{ ansible_user_dir }}/src/git.openstack.org/openstack-infra/zuul/zuul/ansible/lookup
+action_plugins = {{ ansible_user_dir }}/src/git.openstack.org/openstack-infra/zuul/zuul/ansible/action
+callback_plugins = {{ ansible_user_dir }}/src/git.openstack.org/openstack-infra/zuul/zuul/ansible/callback:{{ ansible_user_dir }}/src/git.openstack.org/openstack/ara/ara/plugins/callbacks
+module_utils = {{ ansible_user_dir }}/src/git.openstack.org/openstack-infra/zuul/zuul/ansible/module_utils
+stdout_callback = zuul_stream
+library = {{ ansible_user_dir }}/src/git.openstack.org/openstack-infra/zuul/zuul/ansible/library
+retry_files_enabled = False

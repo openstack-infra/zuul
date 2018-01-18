@@ -1,0 +1,25 @@
+- job:
+    name: puppet-unit-base
+    run: playbooks/run-unit-tests.yaml
+
+- job:
+    name: puppet-unit-3.8
+    parent: puppet-unit-base
+    branches: ^(stable/(newton|ocata)).*$
+    vars:
+      puppet_gem_version: 3.8
+
+- job:
+    name: puppet-something
+    run: playbooks/run-unit-tests.yaml
+
+- project-template:
+    name: puppet-unit
+    check:
+      jobs:
+        - puppet-unit-3.8
+
+- project:
+    name: puppet-integration
+    templates:
+      - puppet-unit

@@ -1,0 +1,21 @@
+- job:
+    parent: python27
+    name: faillocal
+    run: playbooks/faillocal.yaml
+
+- job:
+    parent: hello
+    name: hello-world
+    run: playbooks/hello-world.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - python27
+        - faillocal
+        - check-vars
+        - check-secret-names
+        - timeout
+        - hello-world
+        - failpost

@@ -1,0 +1,51 @@
+<!--
+Copyright 2013 OpenStack Foundation
+Copyright 2013 Timo Tijhof
+Copyright 2013 Wikimedia Foundation
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may
+not use this file except in compliance with the License. You may obtain
+a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+License for the specific language governing permissions and limitations
+under the License.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Zuul Status</title>
+  <link rel="stylesheet" href="../static/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="../static/styles/zuul.css" />
+  <script src="../static/js/jquery.min.js"></script>
+  <script src="../static/js/jquery-visibility.min.js"></script>
+  <script src="../static/js/jquery.graphite.min.js"></script>
+  <script src="../static/javascripts/jquery.zuul.js"></script>
+  <script src="../static/javascripts/zuul.app.js"></script>
+</head>
+<body>
+  <nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="../" target="_self">Zuul Dashboard</a>
+    </div>
+    <ul class="nav navbar-nav">
+      <li class="active"><a href="status.html" target="_self">Status</a></li>
+      <li><a href="jobs.html" target="_self">Jobs</a></li>
+      <li><a href="builds.html" target="_self">Builds</a></li>
+    </ul>
+  </div>
+  </nav>
+  <div id="zuul_container"></div>
+  <script>
+    // @license magnet:?xt=urn:btih:8e4f440f4c65981c5bf93c76d35135ba5064d8b7&dn=apache-2.0.txt Apache 2.0
+    zuul_build_dom(jQuery, '#zuul_container');
+    zuul_start(jQuery);
+    // @license-end
+  </script>
+</body>
+</html>

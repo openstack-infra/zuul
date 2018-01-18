@@ -1,0 +1,13 @@
+- job:
+    name: base
+    run: playbooks/base.yaml
+
+- job:
+    name: test1
+    parent: base
+    run: playbooks/test1.yaml
+
+- job:
+    name: test2
+    parent: base
+    run: playbooks/test2.yaml

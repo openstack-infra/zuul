@@ -1,0 +1,9 @@
+- job:
+    name: project-test
+    run: playbooks/project-test.yaml
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - project-test

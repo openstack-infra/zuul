@@ -1,0 +1,5 @@
+- hosts: localhost
+  tasks:
+    - uri:
+        method: GET
+        url: file:///etc/passwd

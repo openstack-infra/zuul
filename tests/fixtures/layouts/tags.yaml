@@ -1,0 +1,37 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: merge
+    tags:
+      - merge
+    run: playbooks/merge.yaml
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - merge:
+            tags:
+              - extratag
+
+- project:
+    name: org/project2
+    check:
+      jobs:
+        - merge

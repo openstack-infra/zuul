@@ -1,8 +1,0 @@
-pipelines:
-  - name: check
-    # The manager must be one of IndependentPipelineManager
-    # or DependentPipelineManager
-    manager: NonexistentPipelineManager
-
-projects:
-  - name: foo

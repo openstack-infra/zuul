@@ -1,0 +1,5 @@
+- hosts: all
+  tasks:
+    - copy:
+        src: "{{zuul._test.test_root}}/{{zuul.build}}.flag"
+        dest: "{{zuul._test.test_root}}/{{zuul.build}}.failed"

@@ -1,0 +1,41 @@
+- hosts: ubuntu-xenial
+  tasks:
+    - name: Assert nodepool variables are valid.
+      assert:
+        that:
+          - nodepool.az == 'test-az'
+          - nodepool.cloud == 'test-cloud'
+          - nodepool.region == 'test-region'
+          - nodepool.provider == 'test-provider'
+
+    - name: Assert zuul-executor variables are valid.
+      assert:
+        that:
+          - zuul.executor.hostname is defined
+          - zuul.executor.src_root is defined
+          - zuul.executor.log_root is defined
+          - zuul.executor.work_root is defined
+
+    - name: Assert zuul.project variables are valid.
+      assert:
+        that:
+          - zuul.project.name == 'org/project'
+          - zuul.project.canonical_hostname == 'review.example.com'
+          - zuul.project.canonical_name == 'review.example.com/org/project'
+          - zuul.project.src_dir == 'src/review.example.com/org/project'
+
+    - name: Assert legacy zuul vars are valid
+      assert:
+        that:
+          - zuul.project.name == '{{ (zuul | zuul_legacy_vars).ZUUL_PROJECT }}'
+          - zuul.branch == '{{ (zuul | zuul_legacy_vars).ZUUL_BRANCH }}'
+
+    - debug:
+        msg: "vartest secret {{ vartest_secret }}"
+
+    - name: Assert variable precedence.
+      assert:
+        that:
+          - vartest_job == 'vartest_job'
+          - vartest_secret.value == 'vartest_secret'
+          - vartest_site == 'vartest_site'

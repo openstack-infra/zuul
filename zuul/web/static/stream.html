@@ -1,0 +1,114 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+   "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+  <head>
+      <style type="text/css">
+
+        body {
+          font-family: monospace;
+          background-color: black;
+          color: lightgrey;
+        }
+
+        #overlay {
+            position: fixed;
+            top: 5px;
+            right: 5px;
+            background-color: darkgrey;
+            color: black;
+        }
+
+        pre {
+            white-space: pre;
+            margin: 0px 10px;
+        }
+      </style>
+
+    <script type="text/javascript">
+
+      function escapeLog(text) {
+          var pattern = /[<>&"']/g;
+
+          return text.replace(pattern, function(match) {
+              return '&#' + match.charCodeAt(0) + ';';
+          });
+      }
+
+      window.onload = function() {
+
+          pageUpdateInMS = 250;
+          var receiveBuffer = "";
+          var websocket_url = null
+
+          setInterval(function() {
+              console.log("autoScroll");
+              if (receiveBuffer != "") {
+                  document.getElementById('pagecontent').innerHTML += receiveBuffer;
+                  receiveBuffer = "";
+                  if (document.getElementById('autoscroll').checked) {
+                      window.scrollTo(0, document.body.scrollHeight);
+                  }
+              }
+          }, pageUpdateInMS);
+
+          var url = new URL(window.location);
+
+          var params = {
+              uuid: url.searchParams.get('uuid')
+          }
+          document.getElementById('pagetitle').innerHTML = params['uuid'];
+          if (url.searchParams.has('logfile')) {
+              params['logfile'] = url.searchParams.get('logfile');
+              var logfile_suffix = "(" + params['logfile'] + ")";
+              document.getElementById('pagetitle').innerHTML += logfile_suffix;
+          }
+          if (url.searchParams.has('websocket_url')) {
+              params['websocket_url'] = url.searchParams.get('websocket_url');
+          } else {
+              // Websocket doesn't accept relative urls so construct an
+              // absolute one.
+              var protocol = '';
+              if (url['protocol'] == 'https:') {
+                  protocol = 'wss://';
+              } else {
+                  protocol = 'ws://';
+              }
+              path = url['pathname'].replace(/stream.html.*$/g, '') + 'console-stream';
+              params['websocket_url'] = protocol + url['host'] + path;
+          }
+          var ws = new WebSocket(params['websocket_url']);
+
+          ws.onmessage = function(event) {
+              console.log("onmessage");
+              receiveBuffer = receiveBuffer + escapeLog(event.data);
+          };
+
+          ws.onopen = function(event) {
+              console.log("onopen");
+              ws.send(JSON.stringify(params));
+          };
+
+          ws.onclose = function(event) {
+              console.log("onclose");
+              receiveBuffer = receiveBuffer + "\n--- END OF STREAM ---\n";
+          };
+
+      };
+
+    </script>
+
+    <title id="pagetitle"></title>
+  </head>
+
+  <body>
+
+    <div id="overlay">
+      <form>
+        <input type="checkbox" id="autoscroll" checked> autoscroll
+      </form>
+    </div>
+
+    <pre id="pagecontent"></pre>
+
+  </body>
+</html>

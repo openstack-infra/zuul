@@ -1,0 +1,16 @@
+- hosts: all
+  tasks:
+    - name: Register hello-world.txt file.
+      stat:
+        path: "{{zuul.executor.log_root}}/hello-world.txt"
+      register: st
+
+    - name: Assert hello-world.txt file.
+      assert:
+        that:
+          - st.stat.exists
+          - st.stat.isreg
+
+    - name: Simple shell task.
+      shell: |+
+        echo "Hello world"

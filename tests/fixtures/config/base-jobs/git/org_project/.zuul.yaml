@@ -1,0 +1,15 @@
+- job:
+    name: my-job
+    run: playbooks/my-job.yaml
+
+- job:
+    name: other-job
+    parent: other-base
+    run: playbooks/other-job.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - my-job
+        - other-job

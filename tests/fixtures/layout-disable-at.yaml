@@ -6,10 +6,10 @@ pipelines:
         - event: patchset-created
     success:
       gerrit:
-        verified: 1
+        Verified: 1
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
     disabled:
       smtp:
         to: you@example.com

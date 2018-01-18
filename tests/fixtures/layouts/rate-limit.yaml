@@ -1,0 +1,54 @@
+- pipeline:
+    name: gate
+    manager: dependent
+    failure-message: Build failed.  For information on how to proceed, see http://wiki.example.org/Test_Failures
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - Approved: 1
+    start:
+      gerrit:
+        Verified: 0
+    success:
+      gerrit:
+        Verified: 2
+        submit: true
+    failure:
+      gerrit:
+        Verified: -2
+    window: 2
+    window-floor: 1
+    window-increase-type: linear
+    window-increase-factor: 1
+    window-decrease-type: exponential
+    window-decrease-factor: 2
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: project-merge
+    run: playbooks/project-merge.yaml
+
+- job:
+    name: project-test1
+    run: playbooks/project-test1.yaml
+
+- job:
+    name: project-test2
+    run: playbooks/project-test2.yaml
+
+- project:
+    name: org/project
+    gate:
+      jobs:
+        - project-merge
+        - project-test1:
+            dependencies:
+              - project-merge
+        - project-test2:
+            dependencies:
+              - project-merge

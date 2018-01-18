@@ -1,0 +1,9 @@
+- tenant:
+    name: tenant-one
+    default-parent: my-base
+    source:
+      gerrit:
+        config-projects:
+          - common-config
+        untrusted-projects:
+          - org/project

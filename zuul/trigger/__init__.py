@@ -14,29 +14,23 @@
 
 import abc
 
-import six
 
-
-@six.add_metaclass(abc.ABCMeta)
-class BaseTrigger(object):
+class BaseTrigger(object, metaclass=abc.ABCMeta):
     """Base class for triggers.
 
     Defines the exact public methods that must be supplied."""
 
-    def __init__(self, trigger_config={}, sched=None, connection=None):
-        self.trigger_config = trigger_config
-        self.sched = sched
+    def __init__(self, driver, connection, config=None):
+        self.driver = driver
         self.connection = connection
-
-    def stop(self):
-        """Stop the trigger."""
+        self.config = config or {}
 
     @abc.abstractmethod
     def getEventFilters(self, trigger_conf):
         """Return a list of EventFilter's for the scheduler to match against.
         """
 
-    def postConfig(self):
+    def postConfig(self, pipeline):
         """Called after config is loaded."""
 
     def onChangeMerged(self, change, source):

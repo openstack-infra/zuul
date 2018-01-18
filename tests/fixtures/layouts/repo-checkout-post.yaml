@@ -1,0 +1,31 @@
+- pipeline:
+    name: post
+    manager: independent
+    trigger:
+      gerrit:
+        - event: ref-updated
+          ref: ^(?!refs/).*$
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: integration
+    required-projects:
+      - org/project1
+      - org/project2
+    run: playbooks/integration.yaml
+
+- project:
+    name: org/project1
+    post:
+      jobs:
+        - integration
+
+- project:
+    name: org/project2
+    post:
+      jobs:
+        - integration

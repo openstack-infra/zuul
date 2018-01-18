@@ -1,0 +1,38 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request
+          action:
+            - opened
+            - changed
+            - reopened
+          branch: ^master$
+        - event: pull_request
+          action: comment
+          comment: test me
+    success:
+      github: {}
+    failure:
+      github: {}
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: project-test1
+    run: playbooks/project-test1.yaml
+
+- job:
+    name: project-test2
+    run: playbooks/project-test2.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-test1
+        - project-test2

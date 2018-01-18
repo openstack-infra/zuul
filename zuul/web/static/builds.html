@@ -1,0 +1,76 @@
+<!--
+Copyright 2017 Red Hat
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may
+not use this file except in compliance with the License. You may obtain
+a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+License for the specific language governing permissions and limitations
+under the License.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Zuul Builds</title>
+    <link rel="stylesheet" href="../static/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../static/styles/zuul.css" />
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/angular.min.js"></script>
+    <script src="../static/javascripts/zuul.angular.js"></script>
+</head>
+<body ng-app="zuulBuilds" ng-controller="mainController"><div class="container-fluid">
+  <nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="../" target="_self">Zuul Dashboard</a>
+    </div>
+    <ul class="nav navbar-nav">
+      <li><a href="status.html" target="_self">Status</a></li>
+      <li><a href="jobs.html" target="_self">Jobs</a></li>
+      <li class="active"><a href="builds.html" target="_self">Builds</a></li>
+    </ul>
+  <span style="float: right; margin-top: 7px;">
+    <form ng-submit="builds_fetch()">
+      <label>Pipeline:</label>
+      <input name="pipeline" ng-model="pipeline" />
+      <label>Job:</label>
+      <input name="job_name" ng-model="job_name" />
+      <label>Project:</label>
+      <input name="project" ng-model="project" />
+      <input type="submit" value="Refresh" />
+    </form>
+  </span>
+  </div>
+  </nav>
+  <table class="table table-hover table-condensed">
+    <thead>
+      <tr>
+        <th>Job</th>
+        <th>Project</th>
+        <th>Pipeline</th>
+        <th>Change</th>
+        <th>Duration</th>
+        <th>Log url</th>
+        <th>Start time</th>
+        <th>Result</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr ng-repeat="build in builds" ng-class="rowClass(build)">
+        <td>{{ build.job_name }}</td>
+        <td>{{ build.project }}</td>
+        <td>{{ build.pipeline }}</td>
+        <td><a href="{{ build.ref_url }}" target="_self">change</a></td>
+        <td>{{ build.duration }} seconds</td>
+        <td><a ng-if="build.log_url" href="{{ build.log_url }}" target="_self">logs</a></td>
+        <td>{{ build.start_time }}</td>
+        <td>{{ build.result }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div></body></html>

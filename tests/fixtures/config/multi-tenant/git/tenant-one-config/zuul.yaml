@@ -1,0 +1,41 @@
+- pipeline:
+    name: tenant-one-gate
+    manager: dependent
+    success-message: Build succeeded (tenant-one-gate).
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - Approved: 1
+    success:
+      gerrit:
+        Verified: 2
+        submit: true
+    failure:
+      gerrit:
+        Verified: -2
+    start:
+      gerrit:
+        Verified: 0
+    precedence: high
+
+- nodeset:
+    name: nodeset1
+    nodes:
+      - name: controller
+        label: controller-label
+
+- job:
+    name: project1-test1
+    run: playbooks/project1-test1.yaml
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - python27
+        - project1-test1
+    tenant-one-gate:
+      jobs:
+        - python27
+        - project1-test1

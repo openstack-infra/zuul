@@ -17,13 +17,11 @@ import git
 import logging
 import os
 import re
-import yaml
-
-import six
 
 from git import GitCommandError
 from zuul import exceptions
 from zuul.lib.clonemapper import CloneMapper
+from zuul.lib import yamlutil as yaml
 from zuul.merger.merger import Repo
 
 
@@ -63,7 +61,7 @@ class Cloner(object):
             raise Exception("Unable to read clone map file at %s." %
                             clone_map_file)
         clone_map_file = open(clone_map_file)
-        self.clone_map = yaml.load(clone_map_file).get('clonemap')
+        self.clone_map = yaml.safe_load(clone_map_file).get('clonemap')
         self.log.info("Loaded map containing %s rules", len(self.clone_map))
         return self.clone_map
 
@@ -72,7 +70,7 @@ class Cloner(object):
         dests = mapper.expand(workspace=self.workspace)
 
         self.log.info("Preparing %s repositories", len(dests))
-        for project, dest in six.iteritems(dests):
+        for project, dest in dests.items():
             self.prepareRepo(project, dest)
         self.log.info("Prepared all repositories")
 
@@ -102,7 +100,8 @@ class Cloner(object):
             new_repo = git.Repo.clone_from(git_cache, dest)
             self.log.info("Updating origin remote in repo %s to %s",
                           project, git_upstream)
-            new_repo.remotes.origin.config_writer.set('url', git_upstream)
+            new_repo.remotes.origin.config_writer.set('url',
+                                                      git_upstream).release()
         else:
             self.log.info("Creating repo %s from upstream %s",
                           project, git_upstream)

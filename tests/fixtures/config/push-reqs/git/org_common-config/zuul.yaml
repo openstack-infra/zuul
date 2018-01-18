@@ -1,0 +1,124 @@
+- pipeline:
+    name: current
+    manager: independent
+    require:
+      github:
+        current-patchset: true
+      gerrit:
+        current-patchset: true
+    trigger:
+      github:
+        - event: push
+      gerrit:
+        - event: ref-updated
+
+- pipeline:
+    name: open
+    manager: independent
+    require:
+      github:
+        open: true
+      gerrit:
+        open: true
+    trigger:
+      github:
+        - event: push
+      gerrit:
+        - event: ref-updated
+
+- pipeline:
+    name: review
+    manager: independent
+    require:
+      github:
+        review:
+          - type: approval
+      gerrit:
+        approval:
+          - email: herp@derp.invalid
+    trigger:
+      github:
+        - event: push
+      gerrit:
+        - event: ref-updated
+
+- pipeline:
+    name: status
+    manager: independent
+    require:
+      github:
+        status: zuul:check:success
+    trigger:
+      github:
+        - event: push
+
+- pipeline:
+    name: pushhub
+    manager: independent
+    require:
+      gerrit:
+        open: true
+    trigger:
+      github:
+        - event: push
+      gerrit:
+        - event: ref-updated
+
+- pipeline:
+    name: pushgerrit
+    manager: independent
+    require:
+      github:
+        open: true
+    trigger:
+      github:
+        - event: push
+      gerrit:
+        - event: ref-updated
+
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: job1
+    run: playbooks/job1.yaml
+
+- project:
+    name: org/project1
+    current:
+      jobs:
+        - job1
+    open:
+      jobs:
+        - job1
+    review:
+      jobs:
+        - job1
+    status:
+      jobs:
+        - job1
+    pushhub:
+      jobs:
+        - job1
+    pushgerrit:
+      jobs:
+        - job1
+
+- project:
+    name: org/project2
+    current:
+      jobs:
+        - job1
+    open:
+      jobs:
+        - job1
+    review:
+      jobs:
+        - job1
+    pushhub:
+      jobs:
+        - job1
+    pushgerrit:
+      jobs:
+        - job1

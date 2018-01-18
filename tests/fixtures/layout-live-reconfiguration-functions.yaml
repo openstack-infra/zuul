@@ -26,12 +26,3 @@ jobs:
   - name: ^.*-merge$
     failure-message: Unable to merge change
     hold-following-changes: true
-  - name: node-project-test1
-    parameter-function: select_debian_node
-
-projects:
-  - name: org/node-project
-    gate:
-      - node-project-merge:
-        - node-project-test1
-        - node-project-test2

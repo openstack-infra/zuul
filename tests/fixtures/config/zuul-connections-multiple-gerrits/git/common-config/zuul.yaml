@@ -1,0 +1,80 @@
+- pipeline:
+    name: review_check
+    manager: independent
+    trigger:
+      review_gerrit:
+        - event: patchset-created
+    success:
+      review_gerrit:
+        Verified: 1
+    failure:
+      review_gerrit:
+        Verified: -1
+
+- pipeline:
+    name: another_check
+    manager: independent
+    trigger:
+      another_gerrit:
+        - event: patchset-created
+    success:
+      another_gerrit:
+        Verified: 1
+    failure:
+      another_gerrit:
+        Verified: -1
+
+- pipeline:
+    name: common_check
+    manager: independent
+    trigger:
+      another_gerrit:
+        - event: patchset-created
+      review_gerrit:
+        - event: patchset-created
+    success:
+      review_gerrit:
+        Verified: 1
+      another_gerrit:
+        Verified: 1
+    failure:
+      review_gerrit:
+        Verified: -1
+      another_gerrit:
+        Verified: -1
+
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: project-test1
+    run: playbooks/project-test1.yaml
+
+- job:
+    name: project-test2
+    run: playbooks/project-test2.yaml
+
+- project:
+    name: review.example.com/org/project1
+    review_check:
+      jobs:
+        - project-test1
+
+- project:
+    name: another.example.com/org/project1
+    another_check:
+      jobs:
+        - project-test2
+
+- project:
+    name: review.example.com/org/project2
+    common_check:
+      jobs:
+        - project-test1
+
+- project:
+    name: another.example.com/org/project2
+    common_check:
+      jobs:
+        - project-test2

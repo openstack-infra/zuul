@@ -1,0 +1,26 @@
+- job:
+    name: puppet-base
+    pre-run: playbooks/prepare-node-common.yaml
+
+- job:
+    name: puppet-module-base
+    parent: puppet-base
+    pre-run: playbooks/prepare-node-unit.yaml
+
+- job:
+    name: puppet-lint
+    parent: puppet-module-base
+    run: playbooks/run-lint.yaml
+    tags:
+      - master
+
+- project-template:
+    name: puppet-check-jobs
+    check:
+      jobs:
+        - puppet-lint
+    
+- project:
+    name: puppet-integration
+    templates:
+      - puppet-check-jobs

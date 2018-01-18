@@ -1,0 +1,99 @@
+- pipeline:
+    name: check
+    manager: independent
+    success-message: Build succeeded (check).
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+- pipeline:
+    name: gate
+    manager: dependent
+    success-message: Build succeeded (gate).
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - Approved: 1
+    success:
+      gerrit:
+        Verified: 2
+        submit: true
+    failure:
+      gerrit:
+        Verified: -2
+    start:
+      gerrit:
+        Verified: 0
+    precedence: high
+
+- job:
+    name: base
+    parent: null
+    timeout: 30
+    nodeset:
+      nodes:
+        - name: controller
+          label: ubuntu-xenial
+    run: playbooks/base.yaml
+
+- job:
+    name: python27
+    parent: base
+    run: playbooks/python27.yaml
+
+- job:
+    name: python27
+    parent: base
+    branches: stable/mitaka
+    nodeset:
+      nodes:
+        - name: controller
+          label: ubuntu-trusty
+    run: playbooks/python27.yaml
+
+- job:
+    name: python35
+    parent: base
+    run: playbooks/python35.yaml
+
+- project-template:
+    name: python-jobs
+    gate:
+      jobs:
+        - python27
+        - python35
+
+- job:
+    name: dsvm
+    parent: base
+    required-projects:
+      - openstack/keystone
+      - openstack/nova
+    run: playbooks/dsvm.yaml
+
+- project:
+    name: openstack/nova
+    templates:
+      - python-jobs
+    check:
+      jobs:
+        - dsvm
+    gate:
+      queue: integrated
+
+- project:
+    name: openstack/keystone
+    templates:
+      - python-jobs
+    check:
+      jobs:
+        - dsvm
+    gate:
+      queue: integrated

@@ -1,0 +1,48 @@
+- pipeline:
+    name: check
+    description: Standard check
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request
+          action: opened
+      github_ent:
+        - event: pull_request
+          action: opened
+    start:
+      github:
+        status: pending
+        comment: false
+      github_ent:
+        status: pending
+        comment: false
+    success:
+      github:
+        status: success
+      github_ent:
+        status: success
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: project1-test1
+    run: playbooks/project1-test1.yaml
+
+- job:
+    name: project2-test2
+    run: playbooks/project2-test2.yaml
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - project1-test1
+
+- project:
+    name: org/project2
+    check:
+      jobs:
+        - project2-test2

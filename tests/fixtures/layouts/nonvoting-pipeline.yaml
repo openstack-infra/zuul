@@ -1,0 +1,32 @@
+- pipeline:
+    name: experimental
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit: {}
+    failure:
+      gerrit: {}
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: project-merge
+    hold-following-changes: true
+    run: playbooks/project-merge.yaml
+
+- job:
+    name: experimental-project-test
+    run: playbooks/experimental-project-test.yaml
+
+- project:
+    name: org/experimental-project
+    experimental:
+      jobs:
+        - project-merge
+        - experimental-project-test:
+            dependencies: project-merge

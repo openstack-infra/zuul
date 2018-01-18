@@ -1,0 +1,17 @@
+- job:
+    name: implicit-role-ok
+    run: playbooks/implicit-role-ok.yaml
+
+- job:
+    name: explicit-role-ok
+    roles:
+      - zuul: org/role-project
+        name: role-name
+    run: playbooks/explicit-role-ok.yaml
+
+- project:
+    name: org/role-project
+    check:
+      jobs:
+        - implicit-role-ok
+        - explicit-role-ok

@@ -1,0 +1,169 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+- pipeline:
+    name: gate
+    manager: dependent
+    success-message: Build succeeded (gate).
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - Approved: 1
+    success:
+      gerrit:
+        Verified: 2
+        submit: true
+    failure:
+      gerrit:
+        Verified: -2
+    start:
+      gerrit:
+        Verified: 0
+    precedence: high
+
+- pipeline:
+    name: post
+    manager: independent
+    trigger:
+      gerrit:
+        - event: ref-updated
+          ref: ^(?!refs/).*$
+    precedence: low
+
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: project-merge
+    hold-following-changes: true
+    nodeset:
+      nodes:
+        - name: controller
+          label: label1
+    run: playbooks/project-merge.yaml
+
+- job:
+    name: project-test1
+    attempts: 4
+    nodeset:
+      nodes:
+        - name: controller
+          label: label1
+    run: playbooks/project-test1.yaml
+
+- job:
+    name: project-test1
+    branches: stable
+    nodeset:
+      nodes:
+        - name: controller
+          label: label2
+    run: playbooks/project-test1.yaml
+
+- job:
+    name: project-post
+    nodeset:
+      nodes:
+        - name: static
+          label: ubuntu-xenial
+    run: playbooks/project-post.yaml
+
+- job:
+    name: project-test2
+    nodeset:
+      nodes:
+        - name: controller
+          label: label1
+    run: playbooks/project-test2.yaml
+
+- job:
+    name: project1-project2-integration
+    nodeset:
+      nodes:
+        - name: controller
+          label: label1
+    run: playbooks/project1-project2-integration.yaml
+
+- job:
+    name: project-testfile
+    files:
+      - .*-requires
+    run: playbooks/project-testfile.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
+    gate:
+      jobs:
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
+        - project-testfile:
+            dependencies: project-merge
+    post:
+      jobs:
+        - project-post
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
+        - project1-project2-integration:
+            dependencies: project-merge
+    gate:
+      queue: integrated
+      jobs:
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
+        - project1-project2-integration:
+            dependencies: project-merge
+
+- project:
+    name: org/project2
+    check:
+      jobs:
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
+        - project1-project2-integration:
+            dependencies: project-merge
+    gate:
+      queue: integrated
+      jobs:
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
+        - project1-project2-integration:
+            dependencies: project-merge

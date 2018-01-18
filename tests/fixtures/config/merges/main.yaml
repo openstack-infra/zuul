@@ -1,0 +1,12 @@
+- tenant:
+    name: tenant-one
+    source:
+      gerrit:
+        config-projects:
+          - common-config
+        untrusted-projects:
+          - org/project-cherry-pick
+          - org/project-merge
+          - org/project-merge-branches
+          - org/project-merge-resolve
+

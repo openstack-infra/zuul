@@ -3,7 +3,9 @@ includes:
 
 pipelines:
   - name: check
-    manager: IndependentPipelineManager
+    manager: independent
+    source:
+      gerrit
     trigger:
       gerrit:
         - event: patchset-created
@@ -15,15 +17,19 @@ pipelines:
         Verified: -1
 
   - name: post
-    manager: IndependentPipelineManager
+    manager: independent
+    source:
+      gerrit
     trigger:
       gerrit:
         - event: ref-updated
           ref: ^(?!refs/).*$
 
   - name: gate
-    manager: DependentPipelineManager
+    manager: dependent
     failure-message: Build failed.  For information on how to proceed, see http://wiki.example.org/Test_Failures
+    source:
+      gerrit
     trigger:
       gerrit:
         - event: comment-added
@@ -42,8 +48,10 @@ pipelines:
     precedence: high
 
   - name: unused
-    manager: IndependentPipelineManager
+    manager: independent
     dequeue-on-new-patchset: false
+    source:
+      gerrit
     trigger:
       gerrit:
         - event: comment-added
@@ -51,7 +59,9 @@ pipelines:
             - Approved: 1
 
   - name: dup1
-    manager: IndependentPipelineManager
+    manager: independent
+    source:
+      gerrit
     trigger:
       gerrit:
         - event: change-restored
@@ -63,7 +73,9 @@ pipelines:
         Verified: -1
 
   - name: dup2
-    manager: IndependentPipelineManager
+    manager: independent
+    source:
+      gerrit
     trigger:
       gerrit:
         - event: change-restored
@@ -75,8 +87,10 @@ pipelines:
         Verified: -1
 
   - name: conflict
-    manager: DependentPipelineManager
+    manager: dependent
     failure-message: Build failed.  For information on how to proceed, see http://wiki.example.org/Test_Failures
+    source:
+      gerrit
     trigger:
       gerrit:
         - event: comment-added
@@ -94,7 +108,9 @@ pipelines:
         Verified: 0
 
   - name: experimental
-    manager: IndependentPipelineManager
+    manager: independent
+    source:
+      gerrit
     trigger:
       gerrit:
         - event: patchset-created
@@ -113,8 +129,6 @@ jobs:
   - name: project-testfile
     files:
       - '.*-requires'
-  - name: node-project-test1
-    parameter-function: select_debian_node
   - name: project1-project2-integration
     queue-name: integration
   - name: mutex-one
@@ -125,19 +139,6 @@ jobs:
     tags:
       - project1
       - extratag
-
-project-templates:
-  - name: test-one-and-two
-    check:
-     - '{projectname}-test1'
-     - '{projectname}-test2'
-  - name: test-three-and-four
-    check:
-     - '{name}-test3'
-     - '{name}-test4'
-  - name: test-five
-    check:
-     - '{name}-{something}-test5'
 
 projects:
   - name: org/project
@@ -201,14 +202,6 @@ projects:
     post:
       - project3-post
 
-  - name: org/one-job-project
-    check:
-      - one-job-project-merge
-    gate:
-      - one-job-project-merge
-    post:
-      - one-job-project-post
-
   - name: org/nonvoting-project
     check:
       - nonvoting-project-merge:
@@ -220,27 +213,6 @@ projects:
         - nonvoting-project-test2
     post:
       - nonvoting-project-post
-
-  - name: org/templated-project
-    template:
-      - name: test-one-and-two
-        projectname: project
-
-  - name: org/layered-project
-    template:
-      - name: test-one-and-two
-        projectname: project
-      - name: test-three-and-four
-      - name: test-five
-        something: foo
-    check:
-      - project-test6
-
-  - name: org/node-project
-    gate:
-      - node-project-merge:
-        - node-project-test1
-        - node-project-test2
 
   - name: org/conflict-project
     conflict:

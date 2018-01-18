@@ -1,0 +1,80 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: parentjob
+    parent: base
+    required-projects:
+      - org/project0
+    vars:
+      override: 0
+      child1override: 0
+      parent: 0
+    run: playbooks/parentjob.yaml
+
+- job:
+    name: child1
+    parent: parentjob
+    required-projects:
+      - org/project1
+    vars:
+      override: 1
+      child1override: 1
+      child1: 1
+    run: playbooks/child1.yaml
+
+- job:
+    name: child2
+    parent: parentjob
+    required-projects:
+      - org/project2
+    vars:
+      override: 2
+      child2: 2
+    run: playbooks/child2.yaml
+
+- job:
+    name: child3
+    parent: parentjob
+    run: playbooks/child3.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - parentjob
+        - child1
+        - child2
+        - child3:
+            required-projects:
+              - org/project3
+            vars:
+              override: 3
+              child3: 3
+
+- project:
+    name: org/project0
+
+- project:
+    name: org/project1
+
+- project:
+    name: org/project2
+
+- project:
+    name: org/project3

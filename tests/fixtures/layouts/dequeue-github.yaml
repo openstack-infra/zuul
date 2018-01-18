@@ -1,0 +1,24 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request
+          action:
+            - opened
+            - changed
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: one-job-project-merge
+    run: playbooks/one-job-project-merge.yaml
+
+- project:
+    name: org/one-job-project
+    check:
+      jobs:
+        - one-job-project-merge

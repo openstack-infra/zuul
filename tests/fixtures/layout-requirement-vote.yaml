@@ -4,16 +4,16 @@ pipelines:
     require:
       approval:
         - username: jenkins
-          verified: 1
+          Verified: 1
     trigger:
       gerrit:
         - event: comment-added
     success:
       gerrit:
-        verified: 1
+        Verified: 1
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
 
   - name: trigger
     manager: IndependentPipelineManager
@@ -22,13 +22,13 @@ pipelines:
         - event: comment-added
           require-approval:
             - username: jenkins
-              verified: 1
+              Verified: 1
     success:
       gerrit:
-        verified: 1
+        Verified: 1
     failure:
       gerrit:
-        verified: -1
+        Verified: -1
 
 projects:
   - name: org/project1

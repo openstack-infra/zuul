@@ -1,0 +1,41 @@
+- pipeline:
+    name: gate
+    manager: dependent
+    success-message: Build succeeded (gate).
+    failure-message: Build failed.  For information on how to proceed, see http://wiki.example.org/Test_Failures
+    footer-message: For CI problems and help debugging, contact ci@example.org
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - Approved: 1
+    success:
+      smtp:
+        to: you@example.com
+      gerrit:
+        Verified: 2
+        submit: true
+    failure:
+      gerrit:
+        Verified: -2
+      smtp:
+        to: you@example.com
+    start:
+      gerrit:
+        Verified: 0
+    precedence: high
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: project-test1
+    run: playbooks/project-test1.yaml
+
+- project:
+    name: org/project
+    gate:
+      jobs:
+        - project-test1

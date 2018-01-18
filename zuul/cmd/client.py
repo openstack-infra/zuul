@@ -21,31 +21,50 @@ import logging
 import prettytable
 import sys
 import time
+import textwrap
 
 
 import zuul.rpcclient
 import zuul.cmd
+from zuul.lib.config import get_default
 
 
 class Client(zuul.cmd.ZuulApp):
+    app_name = 'zuul'
+    app_description = 'Zuul RPC client.'
     log = logging.getLogger("zuul.Client")
 
-    def parse_arguments(self):
-        parser = argparse.ArgumentParser(
-            description='Zuul Project Gating System Client.')
-        parser.add_argument('-c', dest='config',
-                            help='specify the config file')
+    def createParser(self):
+        parser = super(Client, self).createParser()
         parser.add_argument('-v', dest='verbose', action='store_true',
                             help='verbose output')
-        parser.add_argument('--version', dest='version', action='version',
-                            version=self._get_version(),
-                            help='show zuul version')
 
         subparsers = parser.add_subparsers(title='commands',
                                            description='valid commands',
                                            help='additional help')
 
+        cmd_autohold = subparsers.add_parser(
+            'autohold', help='hold nodes for failed job')
+        cmd_autohold.add_argument('--tenant', help='tenant name',
+                                  required=True)
+        cmd_autohold.add_argument('--project', help='project name',
+                                  required=True)
+        cmd_autohold.add_argument('--job', help='job name',
+                                  required=True)
+        cmd_autohold.add_argument('--reason', help='reason for the hold',
+                                  required=True)
+        cmd_autohold.add_argument('--count',
+                                  help='number of job runs (default: 1)',
+                                  required=False, type=int, default=1)
+        cmd_autohold.set_defaults(func=self.autohold)
+
+        cmd_autohold_list = subparsers.add_parser(
+            'autohold-list', help='list autohold requests')
+        cmd_autohold_list.set_defaults(func=self.autohold_list)
+
         cmd_enqueue = subparsers.add_parser('enqueue', help='enqueue a change')
+        cmd_enqueue.add_argument('--tenant', help='tenant name',
+                                 required=True)
         cmd_enqueue.add_argument('--trigger', help='trigger name',
                                  required=True)
         cmd_enqueue.add_argument('--pipeline', help='pipeline name',
@@ -56,8 +75,17 @@ class Client(zuul.cmd.ZuulApp):
                                  required=True)
         cmd_enqueue.set_defaults(func=self.enqueue)
 
-        cmd_enqueue = subparsers.add_parser('enqueue-ref',
-                                            help='enqueue a ref')
+        cmd_enqueue = subparsers.add_parser(
+            'enqueue-ref', help='enqueue a ref',
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            description=textwrap.dedent('''\
+            Submit a trigger event
+
+            Directly enqueue a trigger event.  This is usually used
+            to manually "replay" a trigger received from an external
+            source such as gerrit.'''))
+        cmd_enqueue.add_argument('--tenant', help='tenant name',
+                                 required=True)
         cmd_enqueue.add_argument('--trigger', help='trigger name',
                                  required=True)
         cmd_enqueue.add_argument('--pipeline', help='pipeline name',
@@ -67,15 +95,15 @@ class Client(zuul.cmd.ZuulApp):
         cmd_enqueue.add_argument('--ref', help='ref name',
                                  required=True)
         cmd_enqueue.add_argument(
-            '--oldrev', help='old revision',
-            default='0000000000000000000000000000000000000000')
+            '--oldrev', help='old revision', default=None)
         cmd_enqueue.add_argument(
-            '--newrev', help='new revision',
-            default='0000000000000000000000000000000000000000')
+            '--newrev', help='new revision', default=None)
         cmd_enqueue.set_defaults(func=self.enqueue_ref)
 
         cmd_promote = subparsers.add_parser('promote',
                                             help='promote one or more changes')
+        cmd_promote.add_argument('--tenant', help='tenant name',
+                                 required=True)
         cmd_promote.add_argument('--pipeline', help='pipeline name',
                                  required=True)
         cmd_promote.add_argument('--changes', help='change ids',
@@ -84,25 +112,42 @@ class Client(zuul.cmd.ZuulApp):
 
         cmd_show = subparsers.add_parser('show',
                                          help='valid show subcommands')
+        cmd_show.set_defaults(func=self.show_running_jobs)
         show_subparsers = cmd_show.add_subparsers(title='show')
         show_running_jobs = show_subparsers.add_parser(
             'running-jobs',
             help='show the running jobs'
         )
+        running_jobs_columns = list(self._show_running_jobs_columns().keys())
         show_running_jobs.add_argument(
             '--columns',
             help="comma separated list of columns to display (or 'ALL')",
-            choices=self._show_running_jobs_columns().keys().append('ALL'),
+            choices=running_jobs_columns.append('ALL'),
             default='name, worker.name, start_time, result'
         )
 
         # TODO: add filters such as queue, project, changeid etc
         show_running_jobs.set_defaults(func=self.show_running_jobs)
 
-        self.args = parser.parse_args()
+        return parser
+
+    def parseArguments(self, args=None):
+        parser = super(Client, self).parseArguments()
+        if not getattr(self.args, 'func', None):
+            parser.print_help()
+            sys.exit(1)
         if self.args.func == self.enqueue_ref:
-            if self.args.oldrev == self.args.newrev:
-                parser.error("The old and new revisions must not be the same.")
+            # if oldrev or newrev is set, ensure they're not the same
+            if (self.args.oldrev is not None) or \
+               (self.args.newrev is not None):
+                if self.args.oldrev == self.args.newrev:
+                    parser.error(
+                        "The old and new revisions must not be the same.")
+            # if they're not set, we pad them out to zero
+            if self.args.oldrev is None:
+                self.args.oldrev = '0000000000000000000000000000000000000000'
+            if self.args.newrev is None:
+                self.args.newrev = '0000000000000000000000000000000000000000'
 
     def setup_logging(self):
         """Client logging does not rely on conf file"""
@@ -110,32 +155,67 @@ class Client(zuul.cmd.ZuulApp):
             logging.basicConfig(level=logging.DEBUG)
 
     def main(self):
-        self.parse_arguments()
-        self.read_config()
+        self.parseArguments()
+        self.readConfig()
         self.setup_logging()
 
         self.server = self.config.get('gearman', 'server')
-        if self.config.has_option('gearman', 'port'):
-            self.port = self.config.get('gearman', 'port')
-        else:
-            self.port = 4730
+        self.port = get_default(self.config, 'gearman', 'port', 4730)
+        self.ssl_key = get_default(self.config, 'gearman', 'ssl_key')
+        self.ssl_cert = get_default(self.config, 'gearman', 'ssl_cert')
+        self.ssl_ca = get_default(self.config, 'gearman', 'ssl_ca')
 
         if self.args.func():
             sys.exit(0)
         else:
             sys.exit(1)
 
+    def autohold(self):
+        client = zuul.rpcclient.RPCClient(
+            self.server, self.port, self.ssl_key, self.ssl_cert, self.ssl_ca)
+        r = client.autohold(tenant=self.args.tenant,
+                            project=self.args.project,
+                            job=self.args.job,
+                            reason=self.args.reason,
+                            count=self.args.count)
+        return r
+
+    def autohold_list(self):
+        client = zuul.rpcclient.RPCClient(
+            self.server, self.port, self.ssl_key, self.ssl_cert, self.ssl_ca)
+        autohold_requests = client.autohold_list()
+
+        if len(autohold_requests.keys()) == 0:
+            print("No autohold requests found")
+            return True
+
+        table = prettytable.PrettyTable(
+            field_names=['Tenant', 'Project', 'Job', 'Count', 'Reason'])
+
+        for key, value in autohold_requests.items():
+            # The key comes to us as a CSV string because json doesn't like
+            # non-str keys.
+            tenant_name, project_name, job_name = key.split(',')
+            count, reason = value
+            table.add_row([tenant_name, project_name, job_name, count, reason])
+        print(table)
+        return True
+
     def enqueue(self):
-        client = zuul.rpcclient.RPCClient(self.server, self.port)
-        r = client.enqueue(pipeline=self.args.pipeline,
+        client = zuul.rpcclient.RPCClient(
+            self.server, self.port, self.ssl_key, self.ssl_cert, self.ssl_ca)
+        r = client.enqueue(tenant=self.args.tenant,
+                           pipeline=self.args.pipeline,
                            project=self.args.project,
                            trigger=self.args.trigger,
                            change=self.args.change)
         return r
 
     def enqueue_ref(self):
-        client = zuul.rpcclient.RPCClient(self.server, self.port)
-        r = client.enqueue_ref(pipeline=self.args.pipeline,
+        client = zuul.rpcclient.RPCClient(
+            self.server, self.port, self.ssl_key, self.ssl_cert, self.ssl_ca)
+        r = client.enqueue_ref(tenant=self.args.tenant,
+                               pipeline=self.args.pipeline,
                                project=self.args.project,
                                trigger=self.args.trigger,
                                ref=self.args.ref,
@@ -144,13 +224,16 @@ class Client(zuul.cmd.ZuulApp):
         return r
 
     def promote(self):
-        client = zuul.rpcclient.RPCClient(self.server, self.port)
-        r = client.promote(pipeline=self.args.pipeline,
+        client = zuul.rpcclient.RPCClient(
+            self.server, self.port, self.ssl_key, self.ssl_cert, self.ssl_ca)
+        r = client.promote(tenant=self.args.tenant,
+                           pipeline=self.args.pipeline,
                            change_ids=self.args.changes)
         return r
 
     def show_running_jobs(self):
-        client = zuul.rpcclient.RPCClient(self.server, self.port)
+        client = zuul.rpcclient.RPCClient(
+            self.server, self.port, self.ssl_key, self.ssl_cert, self.ssl_ca)
         running_items = client.get_running_jobs()
 
         if len(running_items) == 0:
@@ -230,8 +313,8 @@ class Client(zuul.cmd.ZuulApp):
             'uuid': {
                 'title': 'UUID'
             },
-            'launch_time': {
-                'title': 'Launch Time',
+            'execute_time': {
+                'title': 'Execute Time',
                 'transform': self._epoch_to_relative_time,
                 'append': ' ago'
             },
@@ -275,30 +358,12 @@ class Client(zuul.cmd.ZuulApp):
             'worker.hostname': {
                 'title': 'Worker Hostname'
             },
-            'worker.ips': {
-                'title': 'Worker IPs',
-                'transform': self._format_list
-            },
-            'worker.fqdn': {
-                'title': 'Worker Domain'
-            },
-            'worker.program': {
-                'title': 'Worker Program'
-            },
-            'worker.version': {
-                'title': 'Worker Version'
-            },
-            'worker.extra': {
-                'title': 'Worker Extra'
-            },
         }
 
 
 def main():
-    client = Client()
-    client.main()
+    Client().main()
 
 
 if __name__ == "__main__":
-    sys.path.insert(0, '.')
     main()

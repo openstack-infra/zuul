@@ -1,0 +1,26 @@
+- hosts: all
+  tasks:
+
+    - name: Collect openstack-zuul-jobs generated job config
+      synchronize:
+        dest: "{{ zuul.executor.log_root }}/openstack-zuul-jobs"
+        mode: pull
+        src: "src/git.openstack.org/openstack-infra/openstack-zuul-jobs/zuul.d"
+        verify_host: true
+      no_log: true
+
+    - name: Collect project generated job config
+      synchronize:
+        dest: "{{ zuul.executor.log_root }}/openstack-zuul-jobs"
+        mode: pull
+        src: "src/git.openstack.org/openstack-infra/project-config/zuul.d"
+        verify_host: true
+      no_log: true
+
+    - name: Collect generated playbooks
+      synchronize:
+        dest: "{{ zuul.executor.log_root }}/playbooks"
+        mode: pull
+        src: "src/git.openstack.org/openstack-infra/openstack-zuul-jobs/playbooks/legacy"
+        verify_host: true
+      no_log: true

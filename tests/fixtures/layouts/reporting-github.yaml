@@ -1,0 +1,106 @@
+- pipeline:
+    name: check
+    description: Standard check
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request
+          action: opened
+    start:
+      github:
+        status: pending
+        comment: false
+    success:
+      github:
+        status: success
+
+- pipeline:
+    name: reporting
+    description: Uncommon reporting
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: reporting check
+    start:
+      github: {}
+    success:
+      github:
+        comment: false
+        status: success
+        status-url: http://logs.example.com/{tenant.name}/{pipeline.name}/{change.project}/{change.number}/{buildset.uuid}/
+    failure:
+      github:
+        comment: false
+
+- pipeline:
+    name: this_is_a_really_stupid_long_name_for_a_pipeline_that_should_never_be_used_in_production_becuase_it_will_be_too_long_for_the_API_to_make_use_of_without_crashing
+    description: Uncommon reporting
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: long pipeline
+    start:
+      github:
+        status: pending
+    success:
+      github:
+        comment: false
+        status: success
+        status-url: http://logs.example.com/{tenant.name}/{pipeline.name}/{change.project}/{change.number}/{buildset.uuid}/
+    failure:
+      github:
+        comment: false
+
+- pipeline:
+    name: push-reporting
+    description: Uncommon reporting
+    manager: independent
+    trigger:
+      github:
+        - event: push
+        - event: pull_request
+          action: opened
+    start:
+      github:
+        comment: true
+        status: pending
+    success:
+      github:
+        comment: true
+        status: success
+        merge: true
+    failure:
+      github:
+        comment: true
+        status: failure
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: project-test1
+    run: playbooks/project-test1.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-test1
+    reporting:
+      jobs:
+        - project-test1
+    this_is_a_really_stupid_long_name_for_a_pipeline_that_should_never_be_used_in_production_becuase_it_will_be_too_long_for_the_API_to_make_use_of_without_crashing:
+      jobs:
+        - project-test1
+
+- project:
+    name: org/project2
+    push-reporting:
+      jobs:
+        - project-test1

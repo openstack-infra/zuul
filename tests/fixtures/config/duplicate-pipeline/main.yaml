@@ -1,0 +1,8 @@
+- tenant:
+    name: tenant-duplicate
+    source:
+      gerrit:
+        config-projects:
+          - common-config
+        untrusted-projects:
+          - org/project

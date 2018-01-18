@@ -1,34 +1,49 @@
 [gearman]
 server=127.0.0.1
+;port=4730
+;ssl_ca=/path/to/ca.pem
+;ssl_cert=/path/to/client.pem
+;ssl_key=/path/to/client.key
+
+[statsd]
+server=127.0.0.1
+
+[zookeeper]
+hosts=127.0.0.1:2181
 
 [gearman_server]
 start=true
+;ssl_ca=/path/to/ca.pem
+;ssl_cert=/path/to/server.pem
+;ssl_key=/path/to/server.key
+;port=4730
 
-[zuul]
-layout_config=/etc/zuul/layout.yaml
+[scheduler]
+tenant_config=/etc/zuul/main.yaml
 log_config=/etc/zuul/logging.conf
 pidfile=/var/run/zuul/zuul.pid
 state_dir=/var/lib/zuul
-status_url=https://jenkins.example.com/zuul/status
 
 [merger]
 git_dir=/var/lib/zuul/git
 ;git_user_email=zuul@example.com
 ;git_user_name=zuul
-zuul_url=http://zuul.example.com/p
 
-[swift]
-authurl=https://identity.api.example.org/v2.0/
-user=username
-key=password
+[executor]
+default_username=zuul
+trusted_ro_paths=/opt/zuul-scripts:/var/cache
+trusted_rw_paths=/opt/zuul-logs
 
-default_container=logs
-region_name=EXP
-logserver_prefix=http://logs.example.org/server.app/
+[web]
+listen_address=127.0.0.1
+port=9000
+static_cache_expiry=0
+;sql_connection_name=mydatabase
 
 [webapp]
 listen_address=0.0.0.0
 port=8001
+status_url=https://zuul.example.com/status
 
 [connection gerrit]
 driver=gerrit

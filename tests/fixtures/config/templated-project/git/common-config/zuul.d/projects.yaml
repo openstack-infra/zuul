@@ -1,0 +1,14 @@
+- project:
+    name: org/templated-project
+    templates:
+      - test-one-and-two
+
+- project:
+    name: org/layered-project
+    templates:
+      - test-one-and-two
+      - test-three-and-four
+      - test-five
+    check:
+      jobs:
+        - project-test6

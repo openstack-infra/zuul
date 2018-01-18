@@ -1,0 +1,27 @@
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: project-test1
+    run: playbooks/project-test1.yaml
+
+- job:
+    name: project-test2
+    run: playbooks/project-test2.yaml
+
+- job:
+    name: layered-project-test3
+    run: playbooks/layered-project-test3.yaml
+
+- job:
+    name: layered-project-test4
+    run: playbooks/layered-project-test4.yaml
+
+- job:
+    name: layered-project-foo-test5
+    run: playbooks/layered-project-foo-test5.yaml
+
+- job:
+    name: project-test6
+    run: playbooks/project-test6.yaml

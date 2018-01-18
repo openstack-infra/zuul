@@ -1,0 +1,64 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+# TODOv3(jeblair, tobiash): make semaphore definitions required, which
+# will cause these tests to fail until we define test-semaphore
+# here.
+
+- semaphore:
+    name: test-semaphore-two
+    max: 2
+
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: project-test1
+    run: playbooks/project-test1.yaml
+
+- job:
+    name: semaphore-one-test1
+    semaphore: test-semaphore
+    run: playbooks/semaphore-one-test1.yaml
+
+- job:
+    name: semaphore-one-test2
+    semaphore: test-semaphore
+    run: playbooks/semaphore-one-test2.yaml
+
+- job:
+    name: semaphore-two-test1
+    semaphore: test-semaphore-two
+    run: playbooks/semaphore-two-test1.yaml
+
+- job:
+    name: semaphore-two-test2
+    semaphore: test-semaphore-two
+    run: playbooks/semaphore-two-test2.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-test1
+        - semaphore-one-test1
+        - semaphore-one-test2
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - project-test1
+        - semaphore-two-test1
+        - semaphore-two-test2

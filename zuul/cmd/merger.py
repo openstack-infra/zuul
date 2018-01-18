@@ -14,19 +14,10 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import argparse
-import daemon
-import extras
-
-# as of python-daemon 1.6 it doesn't bundle pidlockfile anymore
-# instead it depends on lockfile-0.9.1 which uses pidfile.
-pid_file_module = extras.try_imports(['daemon.pidlockfile', 'daemon.pidfile'])
-
-import os
 import sys
-import signal
 
 import zuul.cmd
+import zuul.merger.server
 
 # No zuul imports here because they pull in paramiko which must not be
 # imported until after the daemonization.
@@ -34,27 +25,33 @@ import zuul.cmd
 # Similar situation with gear and statsd.
 
 
-class Merger(zuul.cmd.ZuulApp):
+class Merger(zuul.cmd.ZuulDaemonApp):
+    app_name = 'merger'
+    app_description = 'A standalone Zuul merger.'
 
-    def parse_arguments(self):
-        parser = argparse.ArgumentParser(description='Zuul merge worker.')
-        parser.add_argument('-c', dest='config',
-                            help='specify the config file')
-        parser.add_argument('-d', dest='nodaemon', action='store_true',
-                            help='do not run as a daemon')
-        parser.add_argument('--version', dest='version', action='version',
-                            version=self._get_version(),
-                            help='show zuul version')
-        self.args = parser.parse_args()
+    def createParser(self):
+        parser = super(Merger, self).createParser()
+        parser.add_argument('command',
+                            choices=zuul.merger.server.COMMANDS,
+                            nargs='?')
+        return parser
+
+    def parseArguments(self, args=None):
+        super(Merger, self).parseArguments()
+        if self.args.command:
+            self.args.nodaemon = True
 
     def exit_handler(self, signum, frame):
-        signal.signal(signal.SIGUSR1, signal.SIG_IGN)
         self.merger.stop()
-        self.merger.join()
 
-    def main(self):
+    def run(self):
         # See comment at top of file about zuul imports
         import zuul.merger.server
+        if self.args.command in zuul.merger.server.COMMANDS:
+            self.send_command(self.args.command)
+            sys.exit(0)
+
+        self.configure_connections(source_only=True)
 
         self.setup_logging('merger', 'log_config')
 
@@ -62,49 +59,12 @@ class Merger(zuul.cmd.ZuulApp):
                                                      self.connections)
         self.merger.start()
 
-        signal.signal(signal.SIGUSR1, self.exit_handler)
-        signal.signal(signal.SIGUSR2, zuul.cmd.stack_dump_handler)
-        while True:
-            try:
-                signal.pause()
-            except KeyboardInterrupt:
-                print("Ctrl + C: asking merger to exit nicely...\n")
-                self.exit_handler(signal.SIGINT, None)
+        self.merger.join()
 
 
 def main():
-    server = Merger()
-    server.parse_arguments()
-
-    server.read_config()
-    server.configure_connections()
-
-    if server.config.has_option('zuul', 'state_dir'):
-        state_dir = os.path.expanduser(server.config.get('zuul', 'state_dir'))
-    else:
-        state_dir = '/var/lib/zuul'
-    test_fn = os.path.join(state_dir, 'test')
-    try:
-        f = open(test_fn, 'w')
-        f.close()
-        os.unlink(test_fn)
-    except Exception:
-        print("\nUnable to write to state directory: %s\n" % state_dir)
-        raise
-
-    if server.config.has_option('merger', 'pidfile'):
-        pid_fn = os.path.expanduser(server.config.get('merger', 'pidfile'))
-    else:
-        pid_fn = '/var/run/zuul-merger/zuul-merger.pid'
-    pid = pid_file_module.TimeoutPIDLockFile(pid_fn, 10)
-
-    if server.args.nodaemon:
-        server.main()
-    else:
-        with daemon.DaemonContext(pidfile=pid):
-            server.main()
+    Merger().main()
 
 
 if __name__ == "__main__":
-    sys.path.insert(0, '.')
     main()

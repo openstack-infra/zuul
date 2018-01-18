@@ -1,0 +1,95 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request
+          action: edited
+    start:
+      github: {}
+    success:
+      github: {}
+    failure:
+      github: {}
+
+- pipeline:
+    name: gate
+    manager: dependent
+    trigger:
+      github:
+        - event: pull_request
+          action: edited
+    start:
+      github: {}
+    success:
+      github:
+        merge: true
+    failure:
+      github: {}
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: project1-test
+    run: playbooks/project1-test.yaml
+
+- job:
+    name: project2-test
+    run: playbooks/project2-test.yaml
+
+- job:
+    name: project3-test
+    run: playbooks/project3-test.yaml
+
+- job:
+    name: project4-test
+    run: playbooks/project4-test.yaml
+
+- job:
+    name: project5-test
+    run: playbooks/project5-test.yaml
+
+- job:
+    name: project6-test
+    run: playbooks/project6-test.yaml
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - project1-test
+
+- project:
+    name: org/project2
+    check:
+      jobs:
+        - project2-test
+
+- project:
+    name: org/project3
+    gate:
+      queue: cogated
+      jobs:
+        - project3-test
+
+- project:
+    name: org/project4
+    gate:
+      queue: cogated
+      jobs:
+        - project4-test
+
+- project:
+    name: org/project5
+    gate:
+      jobs:
+        - project5-test
+
+- project:
+    name: org/project6
+    gate:
+      jobs:
+        - project6-test

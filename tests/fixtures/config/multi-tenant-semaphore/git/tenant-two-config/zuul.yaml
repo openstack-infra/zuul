@@ -1,0 +1,14 @@
+- job:
+    name: project2-test1
+    semaphore: test-semaphore
+    run: playbooks/project2-test1.yaml
+
+- project:
+    name: org/project2
+    check:
+      jobs:
+        - project2-test1
+
+- semaphore:
+    name: test-semaphore
+    max: 2

@@ -1,0 +1,46 @@
+- pipeline:
+    name: dup1
+    manager: independent
+    success-message: Build succeeded (dup1).
+    trigger:
+      gerrit:
+        - event: change-restored
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+- pipeline:
+    name: dup2
+    manager: independent
+    success-message: Build succeeded (dup2).
+    trigger:
+      gerrit:
+        - event: change-restored
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: project-test1
+    run: playbooks/project-test1.yaml
+
+- project:
+    name: org/project
+    dup1:
+      queue: integrated
+      jobs:
+        - project-test1
+    dup2:
+      queue: integrated
+      jobs:
+        - project-test1

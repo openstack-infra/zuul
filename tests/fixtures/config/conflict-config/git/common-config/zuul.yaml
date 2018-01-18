@@ -1,0 +1,6 @@
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: trusted-zuul.yaml-job

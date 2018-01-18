@@ -1,0 +1,2 @@
+- job:
+    name: untrusted-zuul.yaml-job

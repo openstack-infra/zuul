@@ -1,0 +1,65 @@
+- hosts: controller
+  tasks:
+
+    - name: Run ansible that should succeed
+      command: ansible-playbook src/git.openstack.org/openstack-infra/zuul/playbooks/zuul-stream/fixtures/test-stream.yaml
+      environment:
+        ZUUL_JOB_LOG_CONFIG: "{{ ansible_user_dir}}/logging.json"
+        ARA_LOG_CONFIG: "{{ ansible_user_dir}}/logging.json"
+
+    - name: Run ansible playbook that should fail
+      command: ansible-playbook src/git.openstack.org/openstack-infra/zuul/playbooks/zuul-stream/fixtures/test-stream-failure.yaml
+      register: failed_results
+      failed_when: "failed_results.rc != 2"
+      environment:
+        ZUUL_JOB_LOG_CONFIG: "{{ ansible_user_dir}}/logging.json"
+        ARA_LOG_CONFIG: "{{ ansible_user_dir}}/logging.json"
+
+    - name: Validate output - setupvar
+      shell: |
+        egrep "^.*\| node1 \|\s+\"setupvar\": {" job-output.txt
+        egrep "^.*\| node2 \|\s+\"setupvar\": {" job-output.txt
+
+    - name: Validate output - shell task
+      shell: |
+        egrep "^.*\| node1 \|     link/loopback" job-output.txt
+        egrep "^.*\| node2 \|     link/loopback" job-output.txt
+
+    - name: Validate output - loop with items
+      shell: |
+        egrep "^.+\| node1 \| ok: Item: item1" job-output.txt
+        egrep "^.+\| node1 \| ok: Item: item2" job-output.txt
+        egrep "^.+\| node1 \| ok: Item: item3" job-output.txt
+        egrep "^.+\| node2 \| ok: Item: item1" job-output.txt
+        egrep "^.+\| node2 \| ok: Item: item2" job-output.txt
+        egrep "^.+\| node2 \| ok: Item: item3" job-output.txt
+
+    - name: Validate output - loop with complex items
+      shell: |
+        egrep "^.+\| node1 \| ok: Item: Runtime" job-output.txt
+        egrep "^.+\| node2 \| ok: Item: Runtime" job-output.txt
+
+    - name: Validate output - shell task with exception
+      shell: |
+        egrep "^.+\| node1 \| OSError.+\/shelltask\/" job-output.txt
+        egrep "^.+\| node2 \| OSError.+\/shelltask\/" job-output.txt
+
+    - name: Validate output - item loop with exception
+      shell: |
+        egrep "^.+\| node1 \| OSError.+\/itemloop\/" job-output.txt
+        egrep "^.+\| node2 \| OSError.+\/itemloop\/" job-output.txt
+
+    - name: Validate output - failure shell task with exception
+      shell: |
+        egrep "^.+\| node1 \| OSError.+\/failure-shelltask\/" job-output.txt
+        egrep "^.+\| node2 \| OSError.+\/failure-shelltask\/" job-output.txt
+
+    - name: Validate output - failure item loop with exception
+      shell: |
+        egrep "^.+\| node1 \| OSError.+\/failure-itemloop\/" job-output.txt
+        egrep "^.+\| node2 \| OSError.+\/failure-itemloop\/" job-output.txt
+
+    - name: Validate output - binary data
+      shell: |
+        egrep "^.*\| node1 \| \\\\x80abc" job-output.txt
+        egrep "^.*\| node2 \| \\\\x80abc" job-output.txt

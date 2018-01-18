@@ -1,0 +1,45 @@
+- pipeline:
+    name: gate
+    description: Gatekeeping
+    manager: dependent
+    trigger:
+      github:
+        - event: pull_request
+          action: labeled
+          label: merge
+    success:
+      github:
+        merge: true
+        unlabel: merge
+    failure:
+      github:
+        unlabel: merge
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: project-test1
+    run: playbooks/project-test1.yaml
+
+- job:
+    name: project-test2
+    run: playbooks/project-test2.yaml
+
+- job:
+    name: project-merge
+    failure-message: Unable to merge change
+    hold-following-changes: true
+    run: playbooks/project-merge.yaml
+
+- project:
+    name: org/project
+    gate:
+      jobs:
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge

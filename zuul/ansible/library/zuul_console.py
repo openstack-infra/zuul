@@ -15,10 +15,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this software.  If not, see <http://www.gnu.org/licenses/>.
 
+import glob
 import os
 import sys
+import select
 import socket
+import subprocess
 import threading
+import time
+
+LOG_STREAM_FILE = '/tmp/console-{log_uuid}.log'
+LOG_STREAM_PORT = 19885
 
 
 def daemonize():
@@ -52,12 +59,16 @@ def daemonize():
 class Console(object):
     def __init__(self, path):
         self.path = path
-        self.file = open(path)
+        self.file = open(path, 'rb')
         self.stat = os.stat(path)
         self.size = self.stat.st_size
 
 
 class Server(object):
+
+    MAX_REQUEST_LEN = 1024
+    REQUEST_TIMEOUT = 10
+
     def __init__(self, path, port):
         self.path = path
 
@@ -80,9 +91,9 @@ class Server(object):
             t.daemon = True
             t.start()
 
-    def chunkConsole(self, conn):
+    def chunkConsole(self, conn, log_uuid):
         try:
-            console = Console(self.path)
+            console = Console(self.path.format(log_uuid=log_uuid))
         except Exception:
             return
         while True:
@@ -127,7 +138,40 @@ class Server(object):
                 return True
             console.size = st.st_size
 
+    def get_command(self, conn):
+        poll = select.poll()
+        bitmask = (select.POLLIN | select.POLLERR |
+                   select.POLLHUP | select.POLLNVAL)
+        poll.register(conn, bitmask)
+        buffer = b''
+        ret = None
+        start = time.time()
+        while True:
+            elapsed = time.time() - start
+            timeout = max(self.REQUEST_TIMEOUT - elapsed, 0)
+            if not timeout:
+                raise Exception("Timeout while waiting for input")
+            for fd, event in poll.poll(timeout):
+                if event & select.POLLIN:
+                    buffer += conn.recv(self.MAX_REQUEST_LEN)
+                else:
+                    raise Exception("Received error event")
+            if len(buffer) >= self.MAX_REQUEST_LEN:
+                raise Exception("Request too long")
+            try:
+                ret = buffer.decode('utf-8')
+                x = ret.find('\n')
+                if x > 0:
+                    return ret[:x]
+            except UnicodeDecodeError:
+                pass
+
     def handleOneConnection(self, conn):
+        log_uuid = self.get_command(conn)
+        # use path split to make use the input isn't trying to be clever
+        # and construct some path like /tmp/console-/../../something
+        log_uuid = os.path.split(log_uuid.rstrip())[-1]
+
         # FIXME: this won't notice disconnects until it tries to send
         console = None
         try:
@@ -135,12 +179,13 @@ class Server(object):
                 if console is not None:
                     try:
                         console.file.close()
-                    except:
+                    except Exception:
                         pass
                 while True:
-                    console = self.chunkConsole(conn)
+                    console = self.chunkConsole(conn, log_uuid)
                     if console:
                         break
+                    conn.send('[Zuul] Log not found\n')
                     time.sleep(0.5)
                 while True:
                     if self.followConsole(console, conn):
@@ -154,30 +199,113 @@ class Server(object):
                 pass
 
 
+def get_inode(port_number=19885):
+    for netfile in ('/proc/net/tcp6', '/proc/net/tcp'):
+        if not os.path.exists(netfile):
+            continue
+        with open(netfile) as f:
+            # discard header line
+            f.readline()
+            for line in f:
+                # sl local_address rem_address st tx_queue:rx_queue tr:tm->when
+                # retrnsmt   uid  timeout inode
+                fields = line.split()
+                # Format is localaddr:localport in hex
+                port = int(fields[1].split(':')[1], base=16)
+                if port == port_number:
+                    return fields[9]
+
+
+def get_pid_from_inode(inode):
+    my_euid = os.geteuid()
+    exceptions = []
+    for d in os.listdir('/proc'):
+        try:
+            try:
+                int(d)
+            except Exception as e:
+                continue
+            d_abs_path = os.path.join('/proc', d)
+            if os.stat(d_abs_path).st_uid != my_euid:
+                continue
+            fd_dir = os.path.join(d_abs_path, 'fd')
+            if os.path.exists(fd_dir):
+                if os.stat(fd_dir).st_uid != my_euid:
+                    continue
+                for fd in os.listdir(fd_dir):
+                    try:
+                        fd_path = os.path.join(fd_dir, fd)
+                        if os.path.islink(fd_path):
+                            target = os.readlink(fd_path)
+                            if '[' + inode + ']' in target:
+                                return d, exceptions
+                    except Exception as e:
+                        exceptions.append(e)
+        except Exception as e:
+            exceptions.append(e)
+    return None, exceptions
+
+
 def test():
-    s = Server('/tmp/console.html', 19885)
+    s = Server(LOG_STREAM_FILE, LOG_STREAM_PORT)
     s.run()
 
 
 def main():
     module = AnsibleModule(
         argument_spec=dict(
-            path=dict(default='/tmp/console.html'),
-            port=dict(default=19885, type='int'),
+            path=dict(default=LOG_STREAM_FILE),
+            port=dict(default=LOG_STREAM_PORT, type='int'),
+            state=dict(default='present', choices=['absent', 'present']),
         )
     )
 
     p = module.params
     path = p['path']
     port = p['port']
+    state = p['state']
 
-    if daemonize():
+    if state == 'present':
+        if daemonize():
+            module.exit_json()
+
+        s = Server(path, port)
+        s.run()
+    else:
+        pid = None
+        exceptions = []
+        inode = get_inode()
+        if not inode:
+            module.fail_json(
+                "Could not find inode for port",
+                exceptions=[])
+
+        pid, exceptions = get_pid_from_inode(inode)
+        if not pid:
+            except_strings = [str(e) for e in exceptions]
+            module.fail_json(
+                msg="Could not find zuul_console process for inode",
+                exceptions=except_strings)
+
+        try:
+            subprocess.check_output(['kill', pid])
+        except subprocess.CalledProcessError as e:
+            module.fail_json(
+                msg="Could not kill zuul_console pid",
+                exceptions=[str(e)])
+
+        for fn in glob.glob(LOG_STREAM_FILE.format(log_uuid='*')):
+            try:
+                os.unlink(fn)
+            except Exception as e:
+                module.fail_json(
+                    msg="Could not remove logfile {fn}".format(fn=fn),
+                    exceptions=[str(e)])
+
         module.exit_json()
 
-    s = Server(path, port)
-    s.run()
-
 from ansible.module_utils.basic import *  # noqa
+from ansible.module_utils.basic import AnsibleModule
 
 if __name__ == '__main__':
     main()

@@ -17,6 +17,16 @@ More information on pip here: http://www.pip-installer.org/en/latest/
 
   pip install tox
 
+As of zuul v3, a running zookeeper is required to execute tests.
+
+*Install zookeeper*::
+
+  [apt-get | yum] install zookeeperd
+
+*Start zookeeper*::
+
+  service zookeeper start
+
 Run The Tests
 -------------
 
@@ -54,12 +64,12 @@ To run individual tests with tox::
 
 For example, to *run the basic Zuul test*::
 
-  tox -e py27 -- tests.test_scheduler.TestScheduler.test_jobs_launched
+  tox -e py27 -- tests.unit.test_scheduler.TestScheduler.test_jobs_executed
 
 To *run one test in the foreground* (after previously having run tox
 to set up the virtualenv)::
 
-  .tox/py27/bin/python -m testtools.run tests.test_scheduler.TestScheduler.test_jobs_launched
+  .tox/py27/bin/python -m testtools.run tests.unit.test_scheduler.TestScheduler.test_jobs_executed
 
 List Failing Tests
 ------------------

@@ -23,6 +23,8 @@ from paste import httpserver
 import webob
 from webob import dec
 
+from zuul.lib import encryption
+
 """Zuul main web app.
 
 Zuul supports HTTP requests directly against it for determining the
@@ -34,6 +36,7 @@ The supported urls are:
    queue / pipeline structure of the system
  - /status.json (backwards compatibility): same as /status
  - /status/change/X,Y: return status just for gerrit change X,Y
+ - /keys/SOURCE/PROJECT.pub: return the public key for PROJECT
 
 When returning status for a single gerrit change you will get an
 array of changes, they will not include the queue structure.
@@ -42,6 +45,7 @@ array of changes, they will not include the queue structure.
 
 class WebApp(threading.Thread):
     log = logging.getLogger("zuul.WebApp")
+    change_path_regexp = '/status/change/(.*)$'
 
     def __init__(self, scheduler, port=8001, cache_expiry=1,
                  listen_address='0.0.0.0'):
@@ -51,11 +55,17 @@ class WebApp(threading.Thread):
         self.port = port
         self.cache_expiry = cache_expiry
         self.cache_time = 0
-        self.cache = None
+        self.cache = {}
         self.daemon = True
+        self.routes = {}
+        self._init_default_routes()
         self.server = httpserver.serve(
             dec.wsgify(self.app), host=self.listen_address, port=self.port,
             start_loop=False)
+
+    def _init_default_routes(self):
+        self.register_path('/(status\.json|status)$', self.status)
+        self.register_path(self.change_path_regexp, self.change)
 
     def run(self):
         self.server.serve_forever()
@@ -63,7 +73,7 @@ class WebApp(threading.Thread):
     def stop(self):
         self.server.server_close()
 
-    def _changes_by_func(self, func):
+    def _changes_by_func(self, func, tenant_name):
         """Filter changes by a user provided function.
 
         In order to support arbitrary collection of subsets of changes
@@ -72,7 +82,7 @@ class WebApp(threading.Thread):
         is a flattened list of those collected changes.
         """
         status = []
-        jsonstruct = json.loads(self.cache)
+        jsonstruct = json.loads(self.cache[tenant_name])
         for pipeline in jsonstruct['pipelines']:
             for change_queue in pipeline['change_queues']:
                 for head in change_queue['heads']:
@@ -81,47 +91,104 @@ class WebApp(threading.Thread):
                             status.append(copy.deepcopy(change))
         return json.dumps(status)
 
-    def _status_for_change(self, rev):
+    def _status_for_change(self, rev, tenant_name):
         """Return the statuses for a particular change id X,Y."""
         def func(change):
             return change['id'] == rev
-        return self._changes_by_func(func)
+        return self._changes_by_func(func, tenant_name)
 
-    def _normalize_path(self, path):
-        # support legacy status.json as well as new /status
-        if path == '/status.json' or path == '/status':
-            return "status"
-        m = re.match('/status/change/(\d+,\d+)$', path)
-        if m:
-            return m.group(1)
-        return None
+    def register_path(self, path, handler):
+        path_re = re.compile(path)
+        self.routes[path] = (path_re, handler)
+
+    def unregister_path(self, path):
+        if self.routes.get(path):
+            del self.routes[path]
+
+    def _handle_keys(self, request, path):
+        m = re.match('/keys/(.*?)/(.*?).pub', path)
+        if not m:
+            raise webob.exc.HTTPBadRequest()
+        source_name = m.group(1)
+        project_name = m.group(2)
+        source = self.scheduler.connections.getSource(source_name)
+        if not source:
+            raise webob.exc.HTTPNotFound(
+                detail="Cannot locate a source named %s" % source_name)
+        project = source.getProject(project_name)
+        if not project or not hasattr(project, 'public_key'):
+            raise webob.exc.HTTPNotFound(
+                detail="Cannot locate a project named %s" % project_name)
+
+        pem_public_key = encryption.serialize_rsa_public_key(
+            project.public_key)
+
+        response = webob.Response(body=pem_public_key,
+                                  content_type='text/plain')
+        return response.conditional_response_app
 
     def app(self, request):
-        path = self._normalize_path(request.path)
-        if path is None:
+        # Try registered paths without a tenant_name first
+        path = request.path
+        for path_re, handler in self.routes.values():
+            if path_re.match(path):
+                return handler(path, '', request)
+
+        # Now try with a tenant_name stripped
+        x, tenant_name, path = request.path.split('/', 2)
+        path = '/' + path
+        # Handle keys
+        if path.startswith('/keys'):
+            try:
+                return self._handle_keys(request, path)
+            except Exception as e:
+                self.log.exception("Issue with _handle_keys")
+                raise
+        for path_re, handler in self.routes.values():
+            if path_re.match(path):
+                return handler(path, tenant_name, request)
+        else:
             raise webob.exc.HTTPNotFound()
 
-        if (not self.cache or
+    def status(self, path, tenant_name, request):
+        def func():
+            return webob.Response(body=self.cache[tenant_name],
+                                  content_type='application/json',
+                                  charset='utf8')
+        if tenant_name not in self.scheduler.abide.tenants:
+            raise webob.exc.HTTPNotFound()
+        return self._response_with_status_cache(func, tenant_name)
+
+    def change(self, path, tenant_name, request):
+        def func():
+            m = re.match(self.change_path_regexp, path)
+            change_id = m.group(1)
+            status = self._status_for_change(change_id, tenant_name)
+            if status:
+                return webob.Response(body=status,
+                                      content_type='application/json',
+                                      charset='utf8')
+            else:
+                raise webob.exc.HTTPNotFound()
+        return self._response_with_status_cache(func, tenant_name)
+
+    def _refresh_status_cache(self, tenant_name):
+        if (tenant_name not in self.cache or
             (time.time() - self.cache_time) > self.cache_expiry):
             try:
-                self.cache = self.scheduler.formatStatusJSON()
+                self.cache[tenant_name] = self.scheduler.formatStatusJSON(
+                    tenant_name)
                 # Call time.time() again because formatting above may take
                 # longer than the cache timeout.
                 self.cache_time = time.time()
-            except:
+            except Exception:
                 self.log.exception("Exception formatting status:")
                 raise
 
-        if path == 'status':
-            response = webob.Response(body=self.cache,
-                                      content_type='application/json')
-        else:
-            status = self._status_for_change(path)
-            if status:
-                response = webob.Response(body=status,
-                                          content_type='application/json')
-            else:
-                raise webob.exc.HTTPNotFound()
+    def _response_with_status_cache(self, func, tenant_name):
+        self._refresh_status_cache(tenant_name)
+
+        response = func()
 
         response.headers['Access-Control-Allow-Origin'] = '*'
 

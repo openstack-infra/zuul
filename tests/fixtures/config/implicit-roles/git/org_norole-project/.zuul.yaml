@@ -1,0 +1,17 @@
+- job:
+    name: implicit-role-fail
+    run: playbooks/implicit-role-fail.yaml
+
+- job:
+    name: explicit-role-fail
+    attempts: 1
+    roles:
+      - zuul: org/norole-project
+    run: playbooks/explicit-role-fail.yaml
+
+- project:
+    name: org/norole-project
+    check:
+      jobs:
+        - implicit-role-fail
+        - explicit-role-fail

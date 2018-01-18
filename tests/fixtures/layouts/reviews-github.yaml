@@ -1,0 +1,27 @@
+- pipeline:
+    name: reviews
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request_review
+          action: submitted
+          state: approve
+    success:
+      github:
+        label:
+          - tests passed
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: project-reviews
+    run: playbooks/project-reviews.yaml
+
+- project:
+    name: org/project
+    reviews:
+      jobs:
+        - project-reviews

@@ -1,0 +1,15 @@
+- job:
+    name: project-test1
+    run: playbooks/project-test1.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs: []
+    tenant-one-gate:
+      jobs:
+        - project-test1
+
+- semaphore:
+    name: test-semaphore
+    max: 1

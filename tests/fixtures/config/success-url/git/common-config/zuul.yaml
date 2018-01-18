@@ -1,0 +1,38 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    start:
+      smtp:
+        to: alternative_me@example.com
+    success:
+      gerrit:
+        Verified: 1
+      smtp:
+        to: alternative_me@example.com
+    failure:
+      gerrit:
+        Verified: -1
+
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: docs-draft-test
+    success-url: http://docs-draft.example.org/{change.number:.2}/{change.number}/{change.patchset}/{pipeline.name}/{job.name}/{build.uuid:.7}/publish-docs/
+    run: playbooks/docs-draft-test.yaml
+
+- job:
+    name: docs-draft-test2
+    success-url: http://docs-draft.example.org/{NOPE}/{build.parameters[BAD]}/publish-docs/
+    run: playbooks/docs-draft-test2.yaml
+
+- project:
+    name: org/docs
+    check:
+      jobs:
+        - docs-draft-test
+        - docs-draft-test2

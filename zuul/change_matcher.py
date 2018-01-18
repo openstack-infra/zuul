@@ -35,8 +35,14 @@ class AbstractChangeMatcher(object):
     def copy(self):
         return self.__class__(self._regex)
 
+    def __deepcopy__(self, memo):
+        return self.copy()
+
     def __eq__(self, other):
         return str(self) == str(other)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __str__(self):
         return '{%s:%s}' % (self.__class__.__name__, self._regex)
@@ -54,10 +60,27 @@ class ProjectMatcher(AbstractChangeMatcher):
 class BranchMatcher(AbstractChangeMatcher):
 
     def matches(self, change):
-        return (
-            (hasattr(change, 'branch') and self.regex.match(change.branch)) or
-            (hasattr(change, 'ref') and self.regex.match(change.ref))
-        )
+        if hasattr(change, 'branch'):
+            if self.regex.match(change.branch):
+                return True
+            return False
+        if self.regex.match(change.ref):
+            return True
+        return False
+
+
+class ImpliedBranchMatcher(AbstractChangeMatcher):
+    """
+    A branch matcher that only considers branch refs, and always
+    succeeds on other types (e.g., tags).
+    """
+
+    def matches(self, change):
+        if hasattr(change, 'branch'):
+            if self.regex.match(change.branch):
+                return True
+            return False
+        return True
 
 
 class FileMatcher(AbstractChangeMatcher):
@@ -101,7 +124,9 @@ class MatchAllFiles(AbstractMatcherCollection):
         yield self.commit_regex
 
     def matches(self, change):
-        if not (hasattr(change, 'files') and len(change.files) > 1):
+        if not (hasattr(change, 'files') and change.files):
+            return False
+        if len(change.files) == 1 and self.commit_regex.match(change.files[0]):
             return False
         for file_ in change.files:
             matched_file = False

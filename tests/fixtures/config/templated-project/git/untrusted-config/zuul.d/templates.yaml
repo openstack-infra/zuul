@@ -1,0 +1,19 @@
+- project-template:
+    name: test-one-and-two
+    check:
+      jobs:
+        - project-test1
+        - project-test2
+
+- project-template:
+    name: test-three-and-four
+    check:
+      jobs:
+        - layered-project-test3
+        - layered-project-test4
+
+- project-template:
+    name: test-five
+    check:
+      jobs:
+        - layered-project-foo-test5

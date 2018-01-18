@@ -1,19 +1,29 @@
 pbr>=1.1.0
 
+# pull from master until https://github.com/sigmavirus24/github3.py/pull/671
+# is in a release
+git+https://github.com/sigmavirus24/github3.py.git@develop#egg=Github3.py
 PyYAML>=3.1.0
 Paste
 WebOb>=1.2.3
 paramiko>=1.8.0,<2.0.0
-GitPython>=0.3.3,<2.1.2
-ordereddict
+GitPython>=2.1.8
 python-daemon>=2.0.4,<2.1.0
 extras
 statsd>=1.0.0,<3.0
 voluptuous>=0.10.2
-gear>=0.5.7,<1.0.0
+gear>=0.9.0,<1.0.0
 apscheduler>=3.0
 PrettyTable>=0.6,<0.8
 babel>=1.0
-six>=1.6.0
+ansible>=2.3.0.0,<2.4
+netaddr
+kazoo
 sqlalchemy
 alembic
+cryptography>=1.6
+cachecontrol
+pyjwt
+iso8601
+aiohttp
+uvloop;python_version>='3.5'

@@ -1,0 +1,76 @@
+- pipeline:
+    name: check
+    manager: independent
+    post-review: true
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+- nodeset:
+    name: nodeset1
+    nodes:
+      - name: controller
+        label: controller-label
+      - name: compute1
+        label: compute-label
+      - name: compute2
+        label: compute-label
+    groups:
+      - name: ceph-osd
+        nodes:
+          - controller
+      - name: ceph-monitor
+        nodes:
+          - controller
+          - compute1
+          - compute2
+
+- nodeset:
+    name: nodeset2
+    nodes:
+      - name: default
+        label: default-label
+      - name: fakeuser
+        label: fakeuser-label
+      - name: windows
+        label: windows-label
+      - name: network
+        label: network-label
+
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: single-inventory
+    nodeset:
+      nodes:
+        - name: ubuntu-xenial
+          label: ubuntu-xenial
+    run: playbooks/single-inventory.yaml
+
+- job:
+    name: single-inventory-list
+    nodeset:
+      nodes:
+        - name:
+            - compute
+            - controller
+          label: ubuntu-xenial
+    run: playbooks/single-inventory.yaml
+
+- job:
+    name: group-inventory
+    nodeset: nodeset1
+    run: playbooks/group-inventory.yaml
+
+- job:
+    name: hostvars-inventory
+    run: playbooks/hostvars-inventory.yaml
+    nodeset: nodeset2

@@ -1,0 +1,28 @@
+- hosts: controller
+  roles:
+
+    - role: bindep
+      bindep_profile: test
+      bindep_dir: src/git.openstack.org/openstack-infra/zuul
+
+    - role: bindep
+      bindep_dir: src/git.openstack.org/openstack/ara
+
+  post_tasks:
+
+    - name: Install software
+      command: python3 -m pip install src/git.openstack.org/openstack-infra/zuul src/git.openstack.org/openstack/ara
+      become: yes
+
+    - name: Copy inventory
+      copy:
+        src: "{{ zuul.executor.log_root }}/zuul-info/inventory.yaml"
+        dest: "{{ ansible_user_dir }}/inventory.yaml"
+
+    - name: Copy ansible.cfg
+      template:
+        src: templates/ansible.cfg.j2
+        dest: "{{ ansible_user_dir }}/ansible.cfg"
+
+    - name: Generate logging config
+      command: python3 src/git.openstack.org/openstack-infra/zuul/zuul/ansible/logconfig.py

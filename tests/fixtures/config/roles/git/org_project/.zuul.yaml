@@ -1,0 +1,11 @@
+- job:
+    name: project-test
+    roles:
+      - zuul: bare-role
+    run: playbooks/project-test.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-test

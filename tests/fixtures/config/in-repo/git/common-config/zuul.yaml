@@ -1,0 +1,95 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+- pipeline:
+    name: tenant-one-gate
+    manager: dependent
+    success-message: Build succeeded (tenant-one-gate).
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - Approved: 1
+    success:
+      gerrit:
+        Verified: 2
+        submit: true
+    failure:
+      gerrit:
+        Verified: -2
+    start:
+      gerrit:
+        Verified: 0
+    precedence: high
+
+- pipeline:
+    name: gate
+    manager: dependent
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - Code-Review: 2
+    success:
+      gerrit:
+        Verified: 2
+        submit: true
+    failure:
+      gerrit:
+        Verified: -2
+    start:
+      gerrit:
+        Verified: 0
+    precedence: high
+
+# This pipeline is there to ensure that dynamic pipeline copy operations also
+# work with regex approval filters.
+- pipeline:
+    name: pipeline-with-regex
+    manager: independent
+    require:
+      gerrit:
+        approval:
+          - Code-Review: 2
+            username: maintainer
+      github:
+        review:
+          - username: ^(herp|derp)$
+            type: approved
+    trigger: {}
+
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: common-config-test
+    run: playbooks/common-config-test.yaml
+
+- job:
+    name: template-job
+    run: playbooks/template-job.yaml
+
+- project-template:
+    name: common-config-template
+    check:
+      jobs:
+        - template-job
+
+- project:
+    name: common-config
+    check:
+      jobs: []
+    tenant-one-gate:
+      jobs:
+        - common-config-test

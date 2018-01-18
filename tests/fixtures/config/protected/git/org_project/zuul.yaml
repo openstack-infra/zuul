@@ -1,0 +1,9 @@
+- job:
+    name: job-protected
+    protected: true
+    run: playbooks/job-protected.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs: []

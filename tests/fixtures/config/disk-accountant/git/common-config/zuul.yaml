@@ -1,0 +1,27 @@
+- pipeline:
+    name: check
+    manager: independent
+    post-review: true
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        verified: 1
+    failure:
+      gerrit:
+        verified: -1
+
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: dd-big-empty-file
+    run: playbooks/dd-big-empty-file.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - dd-big-empty-file

@@ -1,0 +1,35 @@
+- pipeline:
+    name: labels
+    description: Trigger on labels
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request
+          action: labeled
+          label:
+            - test
+        - event: pull_request
+          action: unlabeled
+          label:
+            - do not test
+    success:
+      github:
+        label:
+          - tests passed
+        unlabel:
+          - test
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: project-labels
+    run: playbooks/project-labels.yaml
+
+- project:
+    name: org/project
+    labels:
+      jobs:
+        - project-labels

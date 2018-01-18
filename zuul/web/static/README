@@ -1,0 +1,61 @@
+External requirements needs to be installed in these locations
+* /static/js/angular.min.js
+* /static/js/jquery.min.js
+* /static/js/jquery-visibility.min.js
+* /static/js/jquery.graphite.min.js
+* /static/bootstrap/css/bootstrap.min.css
+
+
+Use python2-rjsmin or another js minifier:
+```
+DEST_DIR=/var/www/html/static/
+mkdir -p $DEST_DIR/js
+echo "Fetching angular..."
+curl -L --silent https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js > $DEST_DIR/js/angular.min.js
+
+echo "Fetching jquery..."
+curl -L --silent http://code.jquery.com/jquery.min.js > $DEST_DIR/js/jquery.min.js
+
+echo "Fetching jquery-visibility..."
+curl -L --silent https://raw.githubusercontent.com/mathiasbynens/jquery-visibility/master/jquery-visibility.js > $DEST_DIR/js/jquery-visibility.js
+python2 -mrjsmin < $DEST_DIR/js/jquery-visibility.js > $DEST_DIR/js/jquery-visibility.min.js
+
+echo "Fetching bootstrap..."
+curl -L --silent https://github.com/twbs/bootstrap/releases/download/v3.1.1/bootstrap-3.1.1-dist.zip > bootstrap.zip
+unzip -q -o bootstrap.zip -d $DEST_DIR/
+mv $DEST_DIR/bootstrap-3.1.1-dist $DEST_DIR/bootstrap
+rm -f bootstrap.zip
+
+echo "Fetching jquery-graphite..."
+curl -L --silent https://github.com/prestontimmons/graphitejs/archive/master.zip > jquery-graphite.zip
+unzip -q -o jquery-graphite.zip -d $DEST_DIR/
+python2 -mrjsmin < $DEST_DIR/graphitejs-master/jquery.graphite.js > $DEST_DIR/js/jquery.graphite.min.js
+rm -Rf jquery-graphite.zip $DEST_DIR/graphitejs-master
+```
+
+
+Here is an example apache vhost configuration:
+<VirtualHost zuul-web.example.com:80>
+  DocumentRoot /var/www/zuul-web
+
+  LogLevel warn
+
+  Alias "/static" "/var/www/zuul-web"
+  AliasMatch "^/.*/(.*).html" "/var/www/zuul-web/$1.html"
+  AliasMatch "^/.*.html" "/var/www/zuul-web/index.html"
+  <Directory /var/www/zuul-web>
+      Require all granted
+      Order allow,deny
+      Allow from all
+  </Directory>
+
+  # Console-stream needs a special proxy-pass for websocket
+  ProxyPassMatch /(.*)/console-stream ws://localhost:9000/$1/console-stream nocanon retry=0
+
+  # Then only the json calls are sent to the zuul-web endpoints
+  ProxyPassMatch ^/(.*.json)$ http://localhost:9000/$1 nocanon retry=0
+  ProxyPassReverse / http://localhost:9000/
+</VirtualHost>
+
+Then copy the zuul/web/static/ files and external requirements to
+/var/www/zuul-web

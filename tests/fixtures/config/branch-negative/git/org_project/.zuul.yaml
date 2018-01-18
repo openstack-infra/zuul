@@ -1,0 +1,10 @@
+- job:
+    name: test-job
+    run: playbooks/test-job.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - test-job:
+            branches: ^(?!stable)

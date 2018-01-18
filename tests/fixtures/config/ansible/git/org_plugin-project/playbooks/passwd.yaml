@@ -1,0 +1,5 @@
+- hosts: all
+  vars:
+    value: "{{ lookup('file', '/etc/passwd') }}"
+  tasks:
+    - debug: msg="value is {{ value }}"

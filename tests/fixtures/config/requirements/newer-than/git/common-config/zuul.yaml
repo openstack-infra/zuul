@@ -1,0 +1,57 @@
+- pipeline:
+    name: pipeline
+    manager: independent
+    trigger:
+      gerrit:
+        - event: comment-added
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+    require:
+      gerrit:
+        approval:
+          - username: jenkins
+            newer-than: 48h
+
+- pipeline:
+    name: trigger
+    manager: independent
+    trigger:
+      gerrit:
+        - event: comment-added
+          require-approval:
+            - username: jenkins
+              newer-than: 48h
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: project1-job
+    run: playbooks/project1-job.yaml
+
+- job:
+    name: project2-job
+    run: playbooks/project2-job.yaml
+
+- project:
+    name: org/project1
+    pipeline:
+      jobs:
+        - project1-job
+
+- project:
+    name: org/project2
+    trigger:
+      jobs:
+        - project2-job

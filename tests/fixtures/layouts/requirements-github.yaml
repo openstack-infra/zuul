@@ -1,0 +1,292 @@
+- pipeline:
+    name: pipeline
+    manager: independent
+    require:
+      github:
+        status: zuul:check:success
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: test me
+    success:
+      github:
+        comment: true
+
+- pipeline:
+    name: trigger_status
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: trigger me
+          require-status: zuul:check:success
+    success:
+      github:
+        comment: true
+
+- pipeline:
+    name: trigger
+    manager: independent
+    trigger:
+      github:
+        - event: pull_request
+          action: status
+          status: zuul:check:success
+    success:
+      github:
+        status: success
+    failure:
+      github:
+        status: failure
+
+- pipeline:
+    name: reviewusername
+    manager: independent
+    require:
+      github:
+        review:
+          - username: ^(herp|derp)$
+            type: approved
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: test me
+    success:
+      github:
+        comment: true
+
+- pipeline:
+    name: reviewreq
+    manager: independent
+    require:
+      github:
+        review:
+          - type: approved
+            permission: write
+    reject:
+      github:
+        review:
+          - type: changes_requested
+            permission: write
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: test me
+    success:
+      github:
+        comment: true
+
+- pipeline:
+    name: reviewuserstate
+    manager: independent
+    require:
+      github:
+        review:
+          - username: derp
+            type: approved
+            permission: write
+    reject:
+      github:
+        review:
+          - type: changes_requested
+            permission: write
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: test me
+    success:
+      github:
+        comment: true
+
+- pipeline:
+    name: newer_than
+    manager: independent
+    require:
+      github:
+        review:
+          - type: approved
+            permission: write
+            newer-than: 1d
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: test me
+    success:
+      github:
+        comment: true
+
+- pipeline:
+    name: older_than
+    manager: independent
+    require:
+      github:
+        review:
+          - type: approved
+            permission: write
+            older-than: 1d
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: test me
+    success:
+      github:
+        comment: true
+
+- pipeline:
+    name: require_open
+    manager: independent
+    require:
+      github:
+        open: true
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: test me
+    success:
+      github:
+        comment: true
+
+- pipeline:
+    name: require_current
+    manager: independent
+    require:
+      github:
+        current-patchset: true
+    trigger:
+      github:
+        - event: pull_request
+          action: changed
+    success:
+      github:
+        comment: true
+
+- pipeline:
+    name: require_label
+    manager: independent
+    require:
+      github:
+        label: approved
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: test me
+    success:
+      github:
+        comment: true
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: project1-pipeline
+    run: playbooks/project1-pipeline.yaml
+
+- job:
+    name: project2-trigger
+    run: playbooks/project2-trigger.yaml
+
+- job:
+    name: project3-reviewusername
+    run: playbooks/project3-reviewusername.yaml
+
+- job:
+    name: project4-reviewreq
+    run: playbooks/project4-reviewreq.yaml
+
+- job:
+    name: project5-reviewuserstate
+    run: playbooks/project5-reviewuserstate.yaml
+
+- job:
+    name: project6-newerthan
+    run: playbooks/project6-newerthan.yaml
+
+- job:
+    name: project7-olderthan
+    run: playbooks/project7-olderthan.yaml
+
+- job:
+    name: project8-requireopen
+    run: playbooks/project8-requireopen.yaml
+
+- job:
+    name: project9-requirecurrent
+    run: playbooks/project9-requirecurrent.yaml
+
+- job:
+    name: project10-label
+    run: playbooks/project10-label.yaml
+
+- project:
+    name: org/project1
+    pipeline:
+      jobs:
+        - project1-pipeline
+    trigger_status:
+      jobs:
+        - project1-pipeline
+
+- project:
+    name: org/project2
+    trigger:
+      jobs:
+        - project2-trigger
+
+- project:
+    name: org/project3
+    reviewusername:
+      jobs:
+        - project3-reviewusername
+
+- project:
+    name: org/project4
+    reviewreq:
+      jobs:
+        - project4-reviewreq
+
+- project:
+    name: org/project5
+    reviewuserstate:
+      jobs:
+        - project5-reviewuserstate
+
+- project:
+    name: org/project6
+    newer_than:
+      jobs:
+        - project6-newerthan
+
+- project:
+    name: org/project7
+    older_than:
+      jobs:
+        - project7-olderthan
+
+- project:
+    name: org/project8
+    require_open:
+      jobs:
+        - project8-requireopen
+
+- project:
+    name: org/project9
+    require_current:
+      jobs:
+        - project9-requirecurrent
+
+- project:
+    name: org/project10
+    require_label:
+      jobs:
+        - project10-label

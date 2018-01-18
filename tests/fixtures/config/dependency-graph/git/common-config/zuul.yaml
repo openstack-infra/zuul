@@ -1,0 +1,83 @@
+- pipeline:
+    name: gate
+    manager: dependent
+    success-message: Build succeeded (gate).
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - Approved: 1
+    success:
+      gerrit:
+        Verified: 2
+        submit: true
+    failure:
+      gerrit:
+        Verified: -2
+    start:
+      gerrit:
+        Verified: 0
+    precedence: high
+
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: A
+    run: playbooks/A.yaml
+
+- job:
+    name: B
+    run: playbooks/B.yaml
+
+- job:
+    name: C
+    run: playbooks/C.yaml
+
+- job:
+    name: D
+    run: playbooks/D.yaml
+
+- job:
+    name: E
+    run: playbooks/E.yaml
+
+- job:
+    name: F
+    run: playbooks/F.yaml
+
+- job:
+    name: G
+    run: playbooks/G.yaml
+
+- project:
+    name: org/project
+    gate:
+      jobs:
+        # Job dependencies, starting with A
+        #     A
+        #    / \
+        #   B   C
+        #  / \ / \
+        # D   F   E
+        #     |
+        #     G
+        # This is intentionally not listed in the natural order to
+        # ensure that we can reference dependencies before they are
+        # defined.
+        - E:
+            dependencies: C
+        - A
+        - B:
+            dependencies: A
+        - C:
+            dependencies: A
+        - F:
+            dependencies:
+              - B
+              - C
+        - D:
+            dependencies: B
+        - G:
+            dependencies: F
