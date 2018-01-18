@@ -1,0 +1,11 @@
+- tenant:
+    name: tenant-one
+    source:
+      gerrit:
+        config-projects:
+          - common-config
+        untrusted-projects:
+          - include: []
+            projects:
+              - org/project1
+              - org/project2

@@ -1448,6 +1448,11 @@ class TenantParser(object):
             jobs.append(job)
 
         for project in untrusted_projects:
+            tpc = tenant.project_configs[project.canonical_name]
+            # If all config classes are excluded then does not request a
+            # getFiles jobs.
+            if not tpc.load_classes:
+                continue
             # If we have cached data (this is a reconfiguration) use it.
             if cached and project.unparsed_config:
                 jobs.append(CachedDataJob(False, project))
