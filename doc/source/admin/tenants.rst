@@ -25,7 +25,7 @@ Tenant
 ------
 
 A tenant is a collection of projects which share a Zuul
-configuration.  An example tenant definition is:
+configuration. Some examples of tenant definitions are:
 
 .. code-block:: yaml
 
@@ -45,6 +45,27 @@ configuration.  An example tenant definition is:
              - project1
              - project2:
                  exclude-unprotected-branches: true
+
+.. code-block:: yaml
+
+   - tenant:
+       name: my-tenant
+       source:
+         gerrit:
+           config-projects:
+             - common-config
+           untrusted-projects:
+             - exclude:
+                 - job
+                 - semaphore
+                 - project
+                 - project-template
+                 - nodeset
+                 - secret
+               projects:
+                 - project1
+                 - project2:
+                     exclude-unprotected-branches: true
 
 .. attr:: tenant
 
@@ -156,6 +177,24 @@ configuration.  An example tenant definition is:
             Define if unprotected github branches should be
             processed. Defaults to the tenant wide setting of
             exclude-unprotected-branches.
+
+      .. attr:: <project-group>
+
+         The items in the list are dictionaries with the following
+         attributes. A **configuration items** definition is applied
+         to the list of projects.
+
+         .. attr:: include
+
+            A list of **configuration items** that should be loaded.
+
+         .. attr:: exclude
+
+            A list of **configuration items** that should not be loaded.
+
+         .. attr:: projects
+
+            A list of **project** items.
 
    .. attr:: max-nodes-per-job
       :default: 5
