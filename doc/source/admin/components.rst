@@ -333,6 +333,7 @@ The following section of ``zuul.conf`` is used by the merger:
       Path to command socket file for the merger process.
 
    .. attr:: git_dir
+      :default: /var/lib/zuul/merger-git
 
       Directory in which Zuul should clone git repositories.
 
@@ -458,7 +459,7 @@ The following sections of ``zuul.conf`` are used by the executor:
       Port to use for finger log streamer.
 
    .. attr:: git_dir
-      :default: /var/lib/zuul/git
+      :default: /var/lib/zuul/executor-git
 
       Directory that Zuul should clone local git repositories to.  The
       executor keeps a local copy of every git repository it works
