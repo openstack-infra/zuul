@@ -21,6 +21,11 @@ YAML file which, like other Zuul configuration files, is a list of
 configuration objects, though only one type of object is supported:
 ``tenant``.
 
+Alternatively the :attr:`scheduler.tenant_config_script`
+can be the path to an executable that will be executed and its stdout
+used as the tenant configuration. The executable must return a valid
+tenant YAML formated output.
+
 Tenant
 ------
 

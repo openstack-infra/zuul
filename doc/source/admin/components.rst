@@ -251,9 +251,15 @@ The following sections of ``zuul.conf`` are used by the scheduler:
       Path to command socket file for the scheduler process.
 
    .. attr:: tenant_config
-      :required:
 
-      Path to :ref:`tenant-config` file.
+      Path to :ref:`tenant-config` file. This attribute
+      is exclusive with :attr:`scheduler.tenant_config_script`.
+
+   .. attr:: tenant_config_script
+
+      Path to a script to execute and load the tenant
+      config from. This attribute is exclusive with
+      :attr:`scheduler.tenant_config`.
 
    .. attr:: log_config
 

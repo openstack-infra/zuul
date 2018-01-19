@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    A new option for the scheduler "tenant_config_script" can be
+    used to tell Zuul to execute a script and read its yaml output
+    as the tenants configuration. The option is exclusive
+    with the "tenant_config" option.
