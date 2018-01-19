@@ -360,7 +360,7 @@ class PipelineManager(object):
                 url = urllib.parse.urlparse(match)
             except ValueError:
                 continue
-            source = self.sched.connections.getSourceByCanonicalHostname(
+            source = self.sched.connections.getSourceByHostname(
                 url.hostname)
             if not source:
                 continue
