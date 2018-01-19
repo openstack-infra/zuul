@@ -184,7 +184,6 @@ class TestWeb(ZuulTestCase):
             "http://localhost:%s/status/foo" % self.port)
         self.assertRaises(urllib.error.HTTPError, urllib.request.urlopen, req)
 
-    @skip("This is not supported by zuul-web")
     def test_web_find_change(self):
         # can we filter by change id
         req = urllib.request.Request(

@@ -16,6 +16,7 @@
 
 
 import asyncio
+import copy
 import json
 import logging
 import os
@@ -158,41 +159,45 @@ class GearmanHandler(object):
             'key_get': self.key_get,
         }
 
-    async def tenant_list(self, request):
+    async def tenant_list(self, request, result_filter=None):
         job = self.rpc.submitJob('zuul:tenant_list', {})
         return web.json_response(json.loads(job.data[0]))
 
-    async def status_get(self, request):
+    async def status_get(self, request, result_filter=None):
         tenant = request.match_info["tenant"]
         if tenant not in self.cache or \
            (time.time() - self.cache_time[tenant]) > self.cache_expiry:
             job = self.rpc.submitJob('zuul:status_get', {'tenant': tenant})
             self.cache[tenant] = json.loads(job.data[0])
             self.cache_time[tenant] = time.time()
-        resp = web.json_response(self.cache[tenant])
+        payload = self.cache[tenant]
+        if result_filter:
+            payload = result_filter.filterPayload(payload)
+        resp = web.json_response(payload)
         resp.headers['Access-Control-Allow-Origin'] = '*'
         resp.headers["Cache-Control"] = "public, max-age=%d" % \
                                         self.cache_expiry
         resp.last_modified = self.cache_time[tenant]
         return resp
 
-    async def job_list(self, request):
+    async def job_list(self, request, result_filter=None):
         tenant = request.match_info["tenant"]
         job = self.rpc.submitJob('zuul:job_list', {'tenant': tenant})
         resp = web.json_response(json.loads(job.data[0]))
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return resp
 
-    async def key_get(self, request):
+    async def key_get(self, request, result_filter=None):
         tenant = request.match_info["tenant"]
         project = request.match_info["project"]
         job = self.rpc.submitJob('zuul:key_get', {'tenant': tenant,
                                                   'project': project})
         return web.Response(body=job.data[0])
 
-    async def processRequest(self, request, action):
+    async def processRequest(self, request, action, result_filter=None):
+        resp = None
         try:
-            resp = await self.controllers[action](request)
+            resp = await self.controllers[action](request, result_filter)
         except asyncio.CancelledError:
             self.log.debug("request handling cancelled")
         except Exception as e:
@@ -200,6 +205,24 @@ class GearmanHandler(object):
             resp = web.json_response({'error_description': 'Internal error'},
                                      status=500)
         return resp
+
+
+class ChangeFilter(object):
+    def __init__(self, desired):
+        self.desired = desired
+
+    def filterPayload(self, payload):
+        status = []
+        for pipeline in payload['pipelines']:
+            for change_queue in pipeline['change_queues']:
+                for head in change_queue['heads']:
+                    for change in head:
+                        if self.wantChange(change):
+                            status.append(copy.deepcopy(change))
+        return status
+
+    def wantChange(self, change):
+        return change['id'] == self.desired
 
 
 class ZuulWeb(object):
@@ -238,6 +261,11 @@ class ZuulWeb(object):
     async def _handleStatusRequest(self, request):
         return await self.gearman_handler.processRequest(request, 'status_get')
 
+    async def _handleStatusChangeRequest(self, request):
+        change = request.match_info["change"]
+        return await self.gearman_handler.processRequest(
+            request, 'status_get', ChangeFilter(change))
+
     async def _handleJobsRequest(self, request):
         return await self.gearman_handler.processRequest(request, 'job_list')
 
@@ -259,6 +287,8 @@ class ZuulWeb(object):
             ('GET', '/tenants', self._handleTenantsRequest),
             ('GET', '/{tenant}/status', self._handleStatusRequest),
             ('GET', '/{tenant}/jobs', self._handleJobsRequest),
+            ('GET', '/{tenant}/status/change/{change}',
+             self._handleStatusChangeRequest),
             ('GET', '/{tenant}/console-stream', self._handleWebsocket),
             ('GET', '/{tenant}/{project:.*}.pub', self._handleKeyRequest),
         ]
