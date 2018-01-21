@@ -775,7 +775,16 @@ class AnsibleJob(object):
         return data
 
     def doMergeChanges(self, merger, items, repo_state):
-        ret = merger.mergeChanges(items, repo_state=repo_state)
+        try:
+            ret = merger.mergeChanges(items, repo_state=repo_state)
+        except ValueError as e:
+            # Return ABORTED so that we'll try again. At this point all of
+            # the refs we're trying to merge should be valid refs. If we
+            # can't fetch them, it should resolve itself.
+            self.log.exception("Could not fetch refs to merge from remote")
+            result = dict(result='ABORTED')
+            self.job.sendWorkComplete(json.dumps(result))
+            return False
         if not ret:  # merge conflict
             result = dict(result='MERGER_FAILURE')
             self.job.sendWorkComplete(json.dumps(result))
