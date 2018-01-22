@@ -2929,9 +2929,9 @@ class TestNodesets(ZuulTestCase):
         ])
 
     def test_nodeset_branch_duplicate(self):
-        # Test that we can create a duplicate secret on a different
+        # Test that we can create a duplicate nodeset on a different
         # branch of the same project -- i.e., that when we branch
-        # master to stable on a project with a secret, nothing
+        # master to stable on a project with a nodeset, nothing
         # changes.
         self.create_branch('org/project1', 'stable')
         self.fake_gerrit.addEvent(
