@@ -722,8 +722,9 @@ class PipelineManager(object):
         return True
 
     def onBuildCompleted(self, build):
-        self.log.debug("Build %s completed" % build)
         item = build.build_set.item
+
+        self.log.debug("Build %s of %s completed" % (build, item.change))
 
         item.setResult(build)
         item.pipeline.layout.tenant.semaphore_handler.release(item, build.job)
