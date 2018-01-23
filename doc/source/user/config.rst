@@ -1137,8 +1137,12 @@ In order to maintain the security of the data, the values are usually
 encrypted, however, data which are not sensitive may be provided
 unencrypted as well for convenience.
 
-A Secret may only be used by jobs defined within the same project.  To
-use a secret, a :ref:`job` must specify the secret in
+A Secret may only be used by jobs defined within the same project.
+Note that they can be used by any branch of that project, so if a
+project's branches have different access controls, consider whether
+all branches of that project are equally trusted before using secrets.
+
+To use a secret, a :ref:`job` must specify the secret in
 :attr:`job.secrets`.  Secrets are bound to the playbooks associated
 with the specific job definition where they were declared.  Additional
 pre or post playbooks which appear in child jobs will not have access
@@ -1174,6 +1178,12 @@ indicate the job should only run in post-review pipelines.
 If a job with secrets is unsafe to be used by other projects, the
 `allowed-projects` job attribute can be used to restrict the projects
 which can invoke that job.
+
+Secrets, like most configuration items, are globally unique, though a
+secret may be defined on multiple branches of the same project as long
+as the contents are the same.  This is to aid in branch maintenance,
+so that creating a new branch based on an existing branch will not
+immediately produce a configuration error.
 
 .. attr:: secret
 
