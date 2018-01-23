@@ -143,19 +143,30 @@ class Repo(object):
         self.update()
         repo = self.createRepoObject()
         origin = repo.remotes.origin
+        seen = set()
+        head = None
+        stale_refs = origin.stale_refs
+        # Update our local heads to match the remote, and pick one to
+        # reset the repo to.  We don't delete anything at this point
+        # because we want to make sure the repo is in a state stable
+        # enough for git to operate.
         for ref in origin.refs:
             if ref.remote_head == 'HEAD':
                 continue
+            if ref in stale_refs:
+                continue
             repo.create_head(ref.remote_head, ref, force=True)
-
-        # try reset to remote HEAD (usually origin/master)
-        # If it fails, pick the first reference
-        try:
-            repo.head.reference = origin.refs['HEAD']
-        except IndexError:
-            repo.head.reference = origin.refs[0]
+            seen.add(ref.remote_head)
+            if head is None:
+                head = ref.remote_head
+        self.log.debug("Reset to %s", head)
+        repo.head.reference = head
         reset_repo_to_head(repo)
         repo.git.clean('-x', '-f', '-d')
+        for ref in stale_refs:
+            self.log.debug("Delete stale ref %s", ref.remote_head)
+            repo.delete_head(ref.remote_head, force=True)
+            git.refs.RemoteReference.delete(repo, ref, force=True)
 
     def prune(self):
         repo = self.createRepoObject()
@@ -163,7 +174,7 @@ class Repo(object):
         stale_refs = origin.stale_refs
         if stale_refs:
             self.log.debug("Pruning stale refs: %s", stale_refs)
-            git.refs.RemoteReference.delete(repo, *stale_refs)
+            git.refs.RemoteReference.delete(repo, force=True, *stale_refs)
 
     def getBranchHead(self, branch):
         repo = self.createRepoObject()
@@ -193,11 +204,12 @@ class Repo(object):
         return repo.refs
 
     def setRef(self, path, hexsha, repo=None):
+        self.log.debug("Create reference %s at %s in %s",
+                       path, hexsha, self.local_path)
         if repo is None:
             repo = self.createRepoObject()
         binsha = gitdb.util.to_bin_sha(hexsha)
         obj = git.objects.Object.new_from_sha(repo, binsha)
-        self.log.debug("Create reference %s", path)
         git.refs.Reference.create(repo, path, obj, force=True)
 
     def setRefs(self, refs):

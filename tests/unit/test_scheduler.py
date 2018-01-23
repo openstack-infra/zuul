@@ -161,6 +161,44 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.getJobFromHistory('project-test1').node,
                          'label2')
 
+    @simple_layout('layouts/branch-deletion.yaml')
+    def test_branch_deletion(self):
+        "Test the correct variant of a job runs on a branch"
+        self._startMerger()
+        for f in list(self.executor_server.merger_worker.functions.keys()):
+            f = str(f)
+            if f.startswith('merger:'):
+                self.executor_server.merger_worker.unRegisterFunction(f)
+
+        self.create_branch('org/project', 'stable')
+        A = self.fake_gerrit.addFakeChange('org/project', 'stable', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+
+        self.delete_branch('org/project', 'stable')
+        path = os.path.join(self.executor_src_root, 'review.example.com')
+        shutil.rmtree(path)
+
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        build = self.builds[0]
+
+        # Make sure there is no stable branch in the checked out git repo.
+        pname = 'review.example.com/org/project'
+        work = build.getWorkspaceRepos([pname])
+        work = work[pname]
+        heads = set([str(x) for x in work.heads])
+        self.assertEqual(heads, set(['master']))
+        self.executor_server.hold_jobs_in_build = False
+        build.release()
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+
     def test_parallel_changes(self):
         "Test that changes are tested in parallel and merged in series"
 
@@ -4934,7 +4972,7 @@ class TestSchedulerMerges(ZuulTestCase):
         return repo_messages
 
     def _test_merge(self, mode):
-        us_path = os.path.join(
+        us_path = 'file://' + os.path.join(
             self.upstream_root, 'org/project-%s' % mode)
         expected_messages = [
             'initial commit',

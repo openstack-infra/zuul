@@ -606,7 +606,7 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
         return ret
 
     def getGitUrl(self, project):
-        return os.path.join(self.upstream_root, project.name)
+        return 'file://' + os.path.join(self.upstream_root, project.name)
 
 
 class GithubChangeReference(git.Reference):
@@ -1794,18 +1794,6 @@ class BaseTestCase(testtools.TestCase):
         else:
             self._log_stream = sys.stdout
 
-        # NOTE(jeblair): this is temporary extra debugging to try to
-        # track down a possible leak.
-        orig_git_repo_init = git.Repo.__init__
-
-        def git_repo_init(myself, *args, **kw):
-            orig_git_repo_init(myself, *args, **kw)
-            self.log.debug("Created git repo 0x%x %s" %
-                           (id(myself), repr(myself)))
-
-        self.useFixture(fixtures.MonkeyPatch('git.Repo.__init__',
-                                             git_repo_init))
-
         handler = logging.StreamHandler(self._log_stream)
         formatter = logging.Formatter('%(asctime)s %(name)-32s '
                                       '%(levelname)-8s %(message)s')
@@ -1960,6 +1948,9 @@ class ZuulTestCase(BaseTestCase):
         self.config.set(
             'executor', 'command_socket',
             os.path.join(self.test_root, 'executor.socket'))
+        self.config.set(
+            'merger', 'command_socket',
+            os.path.join(self.test_root, 'merger.socket'))
 
         self.statsd = FakeStatsd()
         if self.config.has_section('statsd'):
@@ -2016,6 +2007,7 @@ class ZuulTestCase(BaseTestCase):
             self.config, self.sched)
         self.merge_client = zuul.merger.client.MergeClient(
             self.config, self.sched)
+        self.merge_server = None
         self.nodepool = zuul.nodepool.Nodepool(self.sched)
         self.zk = zuul.zk.ZooKeeper()
         self.zk.connect(self.zk_config)
@@ -2290,6 +2282,8 @@ class ZuulTestCase(BaseTestCase):
         self.executor_server.release()
         self.executor_client.stop()
         self.merge_client.stop()
+        if self.merge_server:
+            self.merge_server.stop()
         self.executor_server.stop()
         self.sched.stop()
         self.sched.join()
@@ -2361,6 +2355,13 @@ class ZuulTestCase(BaseTestCase):
         repo.head.reference = repo.heads['master']
         zuul.merger.merger.reset_repo_to_head(repo)
         repo.git.clean('-x', '-f', '-d')
+
+    def delete_branch(self, project, branch):
+        path = os.path.join(self.upstream_root, project)
+        repo = git.Repo(path)
+        repo.head.reference = repo.heads['master']
+        zuul.merger.merger.reset_repo_to_head(repo)
+        repo.delete_head(repo.heads[branch], force=True)
 
     def create_commit(self, project):
         path = os.path.join(self.upstream_root, project)
