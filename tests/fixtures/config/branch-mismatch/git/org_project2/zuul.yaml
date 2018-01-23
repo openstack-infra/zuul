@@ -1,0 +1,13 @@
+- job:
+    name: project-test2
+    parent: project-test1
+    override-checkout: stable
+
+- project:
+    check:
+      jobs:
+        - project-test1:
+            required-projects:
+              - name: org/project1
+                override-checkout: stable
+        - project-test2
