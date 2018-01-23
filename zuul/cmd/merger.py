@@ -14,6 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import signal
 import sys
 
 import zuul.cmd
@@ -43,6 +44,8 @@ class Merger(zuul.cmd.ZuulDaemonApp):
 
     def exit_handler(self, signum, frame):
         self.merger.stop()
+        self.merger.join()
+        sys.exit(0)
 
     def run(self):
         # See comment at top of file about zuul imports
@@ -59,7 +62,16 @@ class Merger(zuul.cmd.ZuulDaemonApp):
                                                      self.connections)
         self.merger.start()
 
-        self.merger.join()
+        if self.args.nodaemon:
+            signal.signal(signal.SIGTERM, self.exit_handler)
+            while True:
+                try:
+                    signal.pause()
+                except KeyboardInterrupt:
+                    print("Ctrl + C: asking merger to exit nicely...\n")
+                    self.exit_handler(signal.SIGINT, None)
+        else:
+            self.merger.join()
 
 
 def main():
