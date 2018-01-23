@@ -751,7 +751,7 @@ class TestGithubWebhook(ZuulTestCase):
         self.web = zuul.web.ZuulWeb(
             listen_address='127.0.0.1', listen_port=0,
             gear_server='127.0.0.1', gear_port=self.gearman_server.port,
-            github_connections={'github': self.fake_github})
+            connections=[self.fake_github])
         loop = asyncio.new_event_loop()
         loop.set_debug(True)
         ws_thread = threading.Thread(target=self.web.run, args=(loop,))
