@@ -1,0 +1,16 @@
+- semaphore:
+    name: project2-semaphore
+    max: 2
+
+- job:
+    parent: base
+    name: project2-test
+    semaphore: project2-semaphore
+
+- project:
+    check:
+      jobs:
+        - project2-test
+    gate:
+      jobs:
+        - noop

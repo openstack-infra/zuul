@@ -1622,23 +1622,22 @@ class TenantParser(object):
                 if parent:
                     layout.getJob(parent)
 
-        if not skip_semaphores:
-            for config_semaphore in data.semaphores:
-                classes = TenantParser._getLoadClasses(
-                    tenant, config_semaphore)
-                if 'semaphore' not in classes:
-                    continue
+        if skip_semaphores:
+            # We should not actually update the layout with new
+            # semaphores, but so that we can validate that the config
+            # is correct, create a shadow layout here to which we add
+            # new semaphores so validation is complete.
+            semaphore_layout = model.Layout(tenant)
+        else:
+            semaphore_layout = layout
+        for config_semaphore in data.semaphores:
+            classes = TenantParser._getLoadClasses(
+                tenant, config_semaphore)
+            if 'semaphore' not in classes:
+                continue
+            with configuration_exceptions('semaphore', config_semaphore):
                 semaphore = SemaphoreParser.fromYaml(config_semaphore)
-                old_semaphore = layout.semaphores.get(semaphore.name)
-                if (old_semaphore and
-                    (old_semaphore.source_context.project ==
-                     semaphore.source_context.project)):
-                    # If a semaphore shows up twice in the same
-                    # project, it's probably due to showing up in
-                    # two branches.  Ignore subsequent
-                    # definitions.
-                    continue
-                layout.addSemaphore(semaphore)
+                semaphore_layout.addSemaphore(semaphore)
 
         project_template_parser = ProjectTemplateParser(tenant, layout)
         for config_template in data.project_templates:
