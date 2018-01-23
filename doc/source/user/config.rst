@@ -1179,11 +1179,11 @@ If a job with secrets is unsafe to be used by other projects, the
 `allowed-projects` job attribute can be used to restrict the projects
 which can invoke that job.
 
-Secrets, like most configuration items, are globally unique, though a
-secret may be defined on multiple branches of the same project as long
-as the contents are the same.  This is to aid in branch maintenance,
-so that creating a new branch based on an existing branch will not
-immediately produce a configuration error.
+Secrets, like most configuration items, are unique within a tenant,
+though a secret may be defined on multiple branches of the same
+project as long as the contents are the same.  This is to aid in
+branch maintenance, so that creating a new branch based on an existing
+branch will not immediately produce a configuration error.
 
 .. attr:: secret
 
@@ -1213,11 +1213,11 @@ specify what nodes they require individually, however, by defining
 groups of node types once and referring to them by name, job
 configuration may be simplified.
 
-Nodesets, like most configuration items, are globally unique, though a
-nodeset may be defined on multiple branches of the same project as long
-as the contents are the same.  This is to aid in branch maintenance,
-so that creating a new branch based on an existing branch will not
-immediately produce a configuration error.
+Nodesets, like most configuration items, are unique within a tenant,
+though a nodeset may be defined on multiple branches of the same
+project as long as the contents are the same.  This is to aid in
+branch maintenance, so that creating a new branch based on an existing
+branch will not immediately produce a configuration error.
 
 .. code-block:: yaml
 
@@ -1301,11 +1301,11 @@ access shared or limited resources.  A semaphore has a value which
 represents the maximum number of jobs which use that semaphore at the
 same time.
 
-Semaphores, like most configuration items, are globally unique, though
-a semaphore may be defined on multiple branches of the same project as
-long as the value is the same.  This is to aid in branch maintenance,
-so that creating a new branch based on an existing branch will not
-immediately produce a configuration error.
+Semaphores, like most configuration items, are unique within a tenant,
+though a semaphore may be defined on multiple branches of the same
+project as long as the value is the same.  This is to aid in branch
+maintenance, so that creating a new branch based on an existing branch
+will not immediately produce a configuration error.
 
 Semaphores are never subject to dynamic reconfiguration.  If the value
 of a semaphore is changed, it will take effect only when the change
