@@ -118,7 +118,6 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
         import zuul.executor.client
         import zuul.merger.client
         import zuul.nodepool
-        import zuul.webapp
         import zuul.zk
 
         if (self.config.has_option('gearman_server', 'start') and
@@ -142,15 +141,6 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
 
         zookeeper.connect(zookeeper_hosts, timeout=zookeeper_timeout)
 
-        cache_expiry = get_default(self.config, 'webapp', 'status_expiry', 1)
-        listen_address = get_default(self.config, 'webapp', 'listen_address',
-                                     '0.0.0.0')
-        port = get_default(self.config, 'webapp', 'port', 8001)
-
-        webapp = zuul.webapp.WebApp(
-            self.sched, port=port, cache_expiry=cache_expiry,
-            listen_address=listen_address)
-
         self.configure_connections()
         self.sched.setExecutor(gearman)
         self.sched.setMerger(merger)
@@ -168,8 +158,6 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
             # TODO(jeblair): If we had all threads marked as daemon,
             # we might be able to have a nicer way of exiting here.
             sys.exit(1)
-        self.log.info('Starting Webapp')
-        webapp.start()
 
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
 

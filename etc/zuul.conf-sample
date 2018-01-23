@@ -41,10 +41,6 @@ static_cache_expiry=0
 ;sql_connection_name=mydatabase
 status_url=https://zuul.example.com/status
 
-[webapp]
-listen_address=0.0.0.0
-port=8001
-
 [connection gerrit]
 driver=gerrit
 server=review.example.com
