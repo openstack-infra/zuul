@@ -20,6 +20,7 @@ import sys
 import threading
 
 import zuul.cmd
+import zuul.model
 import zuul.web
 
 from zuul.lib.config import get_default
@@ -33,8 +34,11 @@ class WebServer(zuul.cmd.ZuulDaemonApp):
         self.web.stop()
 
     def _run(self):
+        info = zuul.model.WebInfo.fromConfig(self.config)
+
         params = dict()
 
+        params['info'] = info
         params['listen_address'] = get_default(self.config,
                                                'web', 'listen_address',
                                                '127.0.0.1')

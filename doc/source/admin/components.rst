@@ -660,6 +660,16 @@ sections of ``zuul.conf`` are used by the web server:
       Base URL on which the websocket service is exposed, if different
       than the base URL of the web app.
 
+   .. attr:: stats_url
+
+      Base URL from which statistics emitted via statsd can be queried.
+
+   .. attr:: stats_type
+      :default: graphite
+
+      Type of server hosting the statistics information. Currently only
+      'graphite' is supported by the dashboard.
+
    .. attr:: static_cache_expiry
       :default: 3600
 

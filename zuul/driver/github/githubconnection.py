@@ -1141,7 +1141,7 @@ class GithubConnection(BaseConnection):
 
         return statuses
 
-    def getWebHandlers(self, zuul_web):
+    def getWebHandlers(self, zuul_web, info):
         return [GithubWebhookHandler(self, zuul_web, 'POST', 'payload')]
 
     def validateWebConfig(self, config, connections):

@@ -28,11 +28,24 @@ import zuul.web
 from tests.base import ZuulTestCase, FIXTURE_DIR
 
 
-class TestWeb(ZuulTestCase):
+class FakeConfig(object):
+
+    def __init__(self, config):
+        self.config = config or {}
+
+    def has_option(self, section, option):
+        return option in self.config.get(section, {})
+
+    def get(self, section, option):
+        return self.config.get(section, {}).get(option)
+
+
+class BaseTestWeb(ZuulTestCase):
     tenant_config_file = 'config/single-tenant/main.yaml'
+    config_ini_data = {}
 
     def setUp(self):
-        super(TestWeb, self).setUp()
+        super(BaseTestWeb, self).setUp()
         self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('Code-Review', 2)
@@ -42,10 +55,13 @@ class TestWeb(ZuulTestCase):
         self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
         self.waitUntilSettled()
 
+        self.zuul_ini_config = FakeConfig(self.config_ini_data)
         # Start the web server
         self.web = zuul.web.ZuulWeb(
             listen_address='127.0.0.1', listen_port=0,
-            gear_server='127.0.0.1', gear_port=self.gearman_server.port)
+            gear_server='127.0.0.1', gear_port=self.gearman_server.port,
+            info=zuul.model.WebInfo.fromConfig(self.zuul_ini_config)
+        )
         loop = asyncio.new_event_loop()
         loop.set_debug(True)
         ws_thread = threading.Thread(target=self.web.run, args=(loop,))
@@ -72,7 +88,10 @@ class TestWeb(ZuulTestCase):
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
         self.waitUntilSettled()
-        super(TestWeb, self).tearDown()
+        super(BaseTestWeb, self).tearDown()
+
+
+class TestWeb(BaseTestWeb):
 
     def test_web_status(self):
         "Test that we can retrieve JSON status info"
@@ -215,3 +234,78 @@ class TestWeb(ZuulTestCase):
         e = self.assertRaises(
             urllib.error.HTTPError, urllib.request.urlopen, req)
         self.assertEqual(404, e.code)
+
+
+class TestInfo(BaseTestWeb):
+
+    def setUp(self):
+        super(TestInfo, self).setUp()
+        web_config = self.config_ini_data.get('web', {})
+        self.websocket_url = web_config.get('websocket_url')
+        self.stats_url = web_config.get('stats_url')
+        statsd_config = self.config_ini_data.get('statsd', {})
+        self.stats_prefix = statsd_config.get('prefix')
+
+    def test_info(self):
+        req = urllib.request.Request(
+            "http://localhost:%s/info" % self.port)
+        f = urllib.request.urlopen(req)
+        info = json.loads(f.read().decode('utf8'))
+        self.assertEqual(
+            info, {
+                "info": {
+                    "endpoint": "http://localhost:%s" % self.port,
+                    "capabilities": {
+                        "job_history": False
+                    },
+                    "stats": {
+                        "url": self.stats_url,
+                        "prefix": self.stats_prefix,
+                        "type": "graphite",
+                    },
+                    "websocket_url": self.websocket_url,
+                }
+            })
+
+    def test_tenant_info(self):
+        req = urllib.request.Request(
+            "http://localhost:%s/tenant-one/info" % self.port)
+        f = urllib.request.urlopen(req)
+        info = json.loads(f.read().decode('utf8'))
+        self.assertEqual(
+            info, {
+                "info": {
+                    "endpoint": "http://localhost:%s" % self.port,
+                    "tenant": "tenant-one",
+                    "capabilities": {
+                        "job_history": False
+                    },
+                    "stats": {
+                        "url": self.stats_url,
+                        "prefix": self.stats_prefix,
+                        "type": "graphite",
+                    },
+                    "websocket_url": self.websocket_url,
+                }
+            })
+
+
+class TestWebSocketInfo(TestInfo):
+
+    config_ini_data = {
+        'web': {
+            'websocket_url': 'wss://ws.example.com'
+        }
+    }
+
+
+class TestGraphiteUrl(TestInfo):
+
+    config_ini_data = {
+        'statsd': {
+            'prefix': 'example'
+        },
+        'web': {
+            'stats_url': 'https://graphite.example.com',
+        }
+    }

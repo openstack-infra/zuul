@@ -125,7 +125,8 @@ class SQLConnection(BaseConnection):
 
         return zuul_buildset_table, zuul_build_table
 
-    def getWebHandlers(self, zuul_web):
+    def getWebHandlers(self, zuul_web, info):
+        info.capabilities.job_history = True
         return [
             SqlWebHandler(self, zuul_web, 'GET', '/{tenant}/builds'),
             StaticHandler(zuul_web, '/{tenant}/builds.html'),
