@@ -2875,6 +2875,143 @@ class TestSecretLeaks(AnsibleZuulTestCase):
         self._test_secret_file_fail()
 
 
+class TestNodesets(ZuulTestCase):
+    tenant_config_file = 'config/nodesets/main.yaml'
+
+    def test_nodeset_branch(self):
+        # Test that we can use a nodeset defined in another branch of
+        # the same project.
+        self.create_branch('org/project2', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project2', 'stable'))
+        self.waitUntilSettled()
+
+        with open(os.path.join(FIXTURE_DIR,
+                               'config/nodesets/git/',
+                               'org_project2/zuul-nodeset.yaml')) as f:
+            config = f.read()
+
+        file_dict = {'zuul.yaml': config}
+        A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+        self.waitUntilSettled()
+
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                parent: base
+                name: project2-test
+                nodeset: project2-nodeset
+
+            - project:
+                check:
+                  jobs:
+                    - project2-test
+                gate:
+                  jobs:
+                    - noop
+            """)
+        file_dict = {'zuul.yaml': in_repo_conf}
+        B = self.fake_gerrit.addFakeChange('org/project2', 'stable', 'B',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(B.reported, 1, "B should report success")
+        self.assertHistory([
+            dict(name='project2-test', result='SUCCESS', changes='2,1',
+                 node='ubuntu-xenial'),
+        ])
+
+    def test_nodeset_branch_duplicate(self):
+        # Test that we can create a duplicate secret on a different
+        # branch of the same project -- i.e., that when we branch
+        # master to stable on a project with a secret, nothing
+        # changes.
+        self.create_branch('org/project1', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project1', 'stable'))
+        self.waitUntilSettled()
+
+        A = self.fake_gerrit.addFakeChange('org/project1', 'stable', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(A.reported, 1,
+                         "A should report success")
+        self.assertHistory([
+            dict(name='project1-test', result='SUCCESS', changes='1,1',
+                 node='ubuntu-xenial'),
+        ])
+
+    def test_nodeset_branch_error_same_branch(self):
+        # Test that we are unable to define a nodeset twice on the same
+        # project-branch.
+        in_repo_conf = textwrap.dedent(
+            """
+            - nodeset:
+                name: project1-nodeset
+                nodes: []
+            - nodeset:
+                name: project1-nodeset
+                nodes: []
+            """)
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertIn('already defined', A.messages[0])
+
+    def test_nodeset_branch_error_same_project(self):
+        # Test that we are unable to create a nodeset which differs
+        # from another with the same name -- i.e., that if we have a
+        # duplicate nodeset on multiple branches of the same project,
+        # they must be identical.
+        self.create_branch('org/project1', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project1', 'stable'))
+        self.waitUntilSettled()
+
+        in_repo_conf = textwrap.dedent(
+            """
+            - nodeset:
+                name: project1-nodeset
+                nodes: []
+            """)
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project1', 'stable', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertIn('does not match existing definition in branch master',
+                      A.messages[0])
+
+    def test_nodeset_branch_error_other_project(self):
+        # Test that we are unable to create a nodeset with the same
+        # name as another.  We're never allowed to have a nodeset with
+        # the same name outside of a project.
+        in_repo_conf = textwrap.dedent(
+            """
+            - nodeset:
+                name: project1-nodeset
+                nodes: []
+            """)
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertIn('already defined in project org/project1',
+                      A.messages[0])
+
+
 class TestJobOutput(AnsibleZuulTestCase):
     tenant_config_file = 'config/job-output/main.yaml'
 

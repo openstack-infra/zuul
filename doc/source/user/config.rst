@@ -1213,6 +1213,12 @@ specify what nodes they require individually, however, by defining
 groups of node types once and referring to them by name, job
 configuration may be simplified.
 
+Nodesets, like most configuration items, are globally unique, though a
+nodeset may be defined on multiple branches of the same project as long
+as the contents are the same.  This is to aid in branch maintenance,
+so that creating a new branch based on an existing branch will not
+immediately produce a configuration error.
+
 .. code-block:: yaml
 
    - nodeset:

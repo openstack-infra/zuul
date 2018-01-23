@@ -1,0 +1,15 @@
+- nodeset:
+    name: project1-nodeset
+    nodes:
+      - name: controller
+        label: ubuntu-xenial
+
+- job:
+    parent: base
+    name: project1-test
+    nodeset: project1-nodeset
+
+- project:
+    check:
+      jobs:
+        - project1-test
