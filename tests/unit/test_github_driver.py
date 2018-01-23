@@ -210,6 +210,34 @@ class TestGithubDriver(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(1, len(self.history))
 
+    @simple_layout('layouts/basic-github.yaml', driver='github')
+    def test_timer_event(self):
+        self.executor_server.hold_jobs_in_build = True
+        self.commitConfigUpdate('org/common-config',
+                                'layouts/timer-github.yaml')
+        self.sched.reconfigure(self.config)
+        time.sleep(2)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 1)
+        self.executor_server.hold_jobs_in_build = False
+        # Stop queuing timer triggered jobs so that the assertions
+        # below don't race against more jobs being queued.
+        self.commitConfigUpdate('org/common-config',
+                                'layouts/basic-github.yaml')
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+        # If APScheduler is in mid-event when we remove the job, we
+        # can end up with one more event firing, so give it an extra
+        # second to settle.
+        time.sleep(1)
+        self.waitUntilSettled()
+        self.executor_server.release()
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='project-bitrot', result='SUCCESS',
+                 ref='refs/heads/master'),
+        ], ordered=False)
+
     @simple_layout('layouts/dequeue-github.yaml', driver='github')
     def test_dequeue_pull_synchronized(self):
         self.executor_server.hold_jobs_in_build = True
