@@ -61,7 +61,7 @@ class Nodepool(object):
         if nodeset.nodes:
             self.sched.zk.submitNodeRequest(req, self._updateNodeRequest)
             # Logged after submission so that we have the request id
-            self.log.info("Submited node request %s" % (req,))
+            self.log.info("Submitted node request %s" % (req,))
             self.emitStats(req)
         else:
             self.log.info("Fulfilling empty node request %s" % (req,))
@@ -215,14 +215,25 @@ class Nodepool(object):
         # response was added to our queue, and when we actually get around to
         # processing it. Nodepool will automatically reallocate the assigned
         # nodes in that situation.
-        if not self.sched.zk.nodeRequestExists(request):
-            self.log.info("Request %s no longer exists, resubmitting",
-                          request.id)
-            request.id = None
-            request.state = model.STATE_REQUESTED
-            self.requests[request.uid] = request
-            self.sched.zk.submitNodeRequest(request, self._updateNodeRequest)
-            return False
+        try:
+            if not self.sched.zk.nodeRequestExists(request):
+                self.log.info("Request %s no longer exists, resubmitting",
+                              request.id)
+                request.id = None
+                request.state = model.STATE_REQUESTED
+                self.requests[request.uid] = request
+                self.sched.zk.submitNodeRequest(
+                    request, self._updateNodeRequest)
+                return False
+        except Exception:
+            # If we cannot retrieve the node request from ZK we probably lost
+            # the connection and thus the ZK session. Resubmitting the node
+            # request probably doesn't make sense at this point in time as it
+            # is likely to directly fail again. So just log the problem
+            # with zookeeper and fail here.
+            self.log.exception("Error getting node request %s:" % request_id)
+            request.failed = True
+            return True
 
         locked = False
         if request.fulfilled:
