@@ -63,6 +63,8 @@ class ActionModule(normal.ActionModule):
 
         Block any access of files outside the zuul work dir.
         '''
+        if self._task.args.get('get_mime') is not None:
+            raise AnsibleError("get_mime on localhost is forbidden")
         paths._fail_if_unsafe(self._task.args['path'])
 
     def handle_file(self):
