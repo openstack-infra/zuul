@@ -210,6 +210,12 @@ class Nodepool(object):
             # The request was already deleted when it was canceled
             return False
 
+        # If we didn't request nodes and the request is fulfilled then just
+        # return. We don't have to do anything in this case. Further don't even
+        # ask ZK for the request as empty requests are not put into ZK.
+        if not request.nodeset.nodes and request.fulfilled:
+            return True
+
         # Make sure the request still exists. It's possible it could have
         # disappeared if we lost the ZK session between when the fulfillment
         # response was added to our queue, and when we actually get around to
