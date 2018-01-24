@@ -273,6 +273,10 @@ class ExecutorClient(object):
         build.parameters = params
         build.nodeset = nodeset
 
+        self.log.debug("Adding build %s of job %s to item %s" %
+                       (build, job, item))
+        item.addBuild(build)
+
         if job.name == 'noop':
             self.sched.onBuildStarted(build)
             self.sched.onBuildCompleted(build, 'SUCCESS', {})
