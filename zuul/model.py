@@ -1060,7 +1060,8 @@ class Job(object):
                                         "from other projects."
                                         % (repr(self), this_origin))
                 if k not in set(['pre_run', 'run', 'post_run', 'roles',
-                                 'variables', 'required_projects']):
+                                 'variables', 'required_projects',
+                                 'allowed_projects']):
                     # TODO(jeblair): determine if deepcopy is required
                     setattr(self, k, copy.deepcopy(other._get(k)))
 
@@ -1097,6 +1098,12 @@ class Job(object):
             self.updateVariables(other.variables)
         if other._get('required_projects') is not None:
             self.updateProjects(other.required_projects)
+        if (other._get('allowed_projects') is not None and
+            self._get('allowed_projects') is not None):
+            self.allowed_projects = self.allowed_projects.intersection(
+                other.allowed_projects)
+        elif other._get('allowed_projects') is not None:
+            self.allowed_projects = copy.deepcopy(other.allowed_projects)
 
         for k in self.context_attributes:
             if (other._get(k) is not None and
@@ -2828,7 +2835,7 @@ class Layout(object):
                 item.debug("No matching pipeline variants for {jobname}".
                            format(jobname=jobname), indent=2)
                 continue
-            if (frozen_job.allowed_projects and
+            if (frozen_job.allowed_projects is not None and
                 change.project.name not in frozen_job.allowed_projects):
                 raise Exception("Project %s is not allowed to run job %s" %
                                 (change.project.name, frozen_job.name))

@@ -533,6 +533,36 @@ class TestBranchMismatch(ZuulTestCase):
         ], ordered=False)
 
 
+class TestAllowedProjects(ZuulTestCase):
+    tenant_config_file = 'config/allowed-projects/main.yaml'
+
+    def test_allowed_projects(self):
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(A.reported, 1)
+        self.assertIn('Build succeeded', A.messages[0])
+
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(B.reported, 1)
+        self.assertIn('Project org/project2 is not allowed '
+                      'to run job test-project2', B.messages[0])
+
+        C = self.fake_gerrit.addFakeChange('org/project3', 'master', 'C')
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(C.reported, 1)
+        self.assertIn('Project org/project3 is not allowed '
+                      'to run job restricted-job', C.messages[0])
+
+        self.assertHistory([
+            dict(name='test-project1', result='SUCCESS', changes='1,1'),
+            dict(name='restricted-job', result='SUCCESS', changes='1,1'),
+        ], ordered=False)
+
+
 class TestCentralJobs(ZuulTestCase):
     tenant_config_file = 'config/central-jobs/main.yaml'
 

@@ -1,0 +1,10 @@
+- job:
+    name: test-project1
+    parent: restricted-job
+      
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - test-project1
+        - restricted-job
