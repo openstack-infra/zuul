@@ -497,6 +497,42 @@ class TestBranchVariants(ZuulTestCase):
         self.waitUntilSettled()
 
 
+class TestBranchMismatch(ZuulTestCase):
+    tenant_config_file = 'config/branch-mismatch/main.yaml'
+
+    def test_job_override_branch(self):
+        "Test that override-checkout overrides branch matchers as well"
+
+        # Make sure the parent job repo is branched, so it gets
+        # implied branch matchers.
+        self.create_branch('org/project1', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project1', 'stable'))
+
+        # The child job repo should have a branch which does not exist
+        # in the parent job repo.
+        self.create_branch('org/project2', 'devel')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project2', 'devel'))
+
+        # A job in a repo with a weird branch name should use the
+        # parent job from the parent job's master (default) branch.
+        A = self.fake_gerrit.addFakeChange('org/project2', 'devel', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        # project-test2 should run because it inherits from
+        # project-test1 and we will use the fallback branch to find
+        # project-test1 variants, but project-test1 itself, even
+        # though it is in the project-pipeline config, should not run
+        # because it doesn't directly match.
+        self.assertHistory([
+            dict(name='project-test1', result='SUCCESS', changes='1,1'),
+            dict(name='project-test2', result='SUCCESS', changes='1,1'),
+        ], ordered=False)
+
+
 class TestCentralJobs(ZuulTestCase):
     tenant_config_file = 'config/central-jobs/main.yaml'
 

@@ -692,6 +692,11 @@ Here is an example of two job definitions:
       attribute to apply this behavior to a subset of a job's
       projects.
 
+      This value is also used to help select which variants of a job
+      to run.  If ``override-checkout`` is set, then Zuul will use
+      this value instead of the branch of the item being tested when
+      collecting jobs to run.
+
    .. attr:: timeout
 
       The time in seconds that the job should be allowed to run before
@@ -837,6 +842,12 @@ Here is an example of two job definitions:
          :attr:`job.override-checkout` attribute to apply the same
          behavior to all projects in a job.
 
+         This value is also used to help select which variants of a
+         job to run.  If ``override-checkout`` is set, then Zuul will
+         use this value instead of the branch of the item being tested
+         when collecting any jobs to run which are defined in this
+         project.
+
    .. attr:: vars
 
       A dictionary of variables to supply to Ansible.  When inheriting
@@ -895,6 +906,12 @@ Here is an example of two job definitions:
       branch of an item, then that job is not run for the item.
       Otherwise, all of the job variants which match that branch (and
       any other selection criteria) are used when freezing the job.
+      However, if :attr:`job.override-checkout` or
+      :attr:`job.required-projects.override-checkout` are set for a
+      project, Zuul will attempt to use the job variants which match
+      the values supplied in ``override-checkout`` for jobs defined in
+      those projects.  This can be used to run a job defined in one
+      project on another project without a matching branch.
 
       This example illustrates a job called *run-tests* which uses a
       nodeset based on the current release of an operating system to

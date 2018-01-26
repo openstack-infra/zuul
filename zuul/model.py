@@ -1108,8 +1108,18 @@ class Job(object):
 
         self.inheritance_path = self.inheritance_path + (repr(other),)
 
-    def changeMatches(self, change):
-        if self.branch_matcher and not self.branch_matcher.matches(change):
+    def changeMatches(self, change, override_branch=None):
+        if override_branch is None:
+            branch_change = change
+        else:
+            # If an override branch is supplied, create a very basic
+            # change (a Ref) and set its branch to the override
+            # branch.
+            branch_change = Ref(change.project)
+            branch_change.ref = override_branch
+
+        if self.branch_matcher and not self.branch_matcher.matches(
+                branch_change):
             return False
 
         if self.file_matcher and not self.file_matcher.matches(change):
@@ -2071,9 +2081,6 @@ class Ref(object):
     def isUpdateOf(self, other):
         return False
 
-    def filterJobs(self, jobs):
-        return filter(lambda job: job.changeMatches(self), jobs)
-
     def getRelatedChanges(self):
         return set()
 
@@ -2668,21 +2675,33 @@ class Layout(object):
     def addProjectConfig(self, project_config):
         self.project_configs[project_config.name] = project_config
 
-    def collectJobs(self, item, jobname, change, path=None, jobs=None,
-                    stack=None):
-        if stack is None:
-            stack = []
-        if jobs is None:
-            jobs = []
-        if path is None:
-            path = []
-        path.append(jobname)
+    def _updateOverrideCheckouts(self, override_checkouts, job):
+        # Update the values in an override_checkouts dict with those
+        # in a job.  Used in collectJobVariants.
+        if job.override_checkout:
+            override_checkouts[None] = job.override_checkout
+        for req in job.required_projects.values():
+            if req.override_checkout:
+                override_checkouts[req.project_name] = req.override_checkout
+
+    def _collectJobVariants(self, item, jobname, change, path, jobs, stack,
+                            override_checkouts, indent):
         matched = False
-        indent = len(path) + 1
-        item.debug("Collecting job variants for {jobname}".format(
-            jobname=jobname), indent=indent)
+        local_override_checkouts = override_checkouts.copy()
+        override_branch = None
+        project = None
         for variant in self.getJobs(jobname):
-            if not variant.changeMatches(change):
+            if project is None and variant.source_context:
+                project = variant.source_context.project
+                if override_checkouts.get(None) is not None:
+                    override_branch = override_checkouts.get(None)
+                override_branch = override_checkouts.get(
+                    project.canonical_name, override_branch)
+                branches = self.tenant.getProjectBranches(project)
+                if override_branch not in branches:
+                    override_branch = None
+            if not variant.changeMatches(change,
+                                         override_branch=override_branch):
                 self.log.debug("Variant %s did not match %s", repr(variant),
                                change)
                 item.debug("Variant {variant} did not match".format(
@@ -2698,17 +2717,53 @@ class Layout(object):
                     parent = self.tenant.default_base_job
             else:
                 parent = None
+            self._updateOverrideCheckouts(local_override_checkouts, variant)
             if parent and parent not in path:
                 if parent in stack:
                     raise Exception("Dependency cycle in jobs: %s" % stack)
                 self.collectJobs(item, parent, change, path, jobs,
-                                 stack + [jobname])
+                                 stack + [jobname], local_override_checkouts)
             matched = True
-            jobs.append(variant)
+            if variant not in jobs:
+                jobs.append(variant)
+        return matched
+
+    def collectJobs(self, item, jobname, change, path=None, jobs=None,
+                    stack=None, override_checkouts=None):
+        # Stack is the recursion stack of job parent names.  Each time
+        # we go up a level, we add to stack, and it's popped as we
+        # descend.
+        if stack is None:
+            stack = []
+        # Jobs is the list of jobs we've accumulated.
+        if jobs is None:
+            jobs = []
+        # Path is the list of job names we've examined.  It
+        # accumulates and never reduces.  If more than one job has the
+        # same parent, this will prevent us from adding it a second
+        # time.
+        if path is None:
+            path = []
+        # Override_checkouts is a dictionary of canonical project
+        # names -> branch names.  It is not mutated, but instead new
+        # copies are made and updated as we ascend the hierarchy, so
+        # higher levels don't affect lower levels after we descend.
+        # It's used to override the branch matchers for jobs.
+        if override_checkouts is None:
+            override_checkouts = {}
+        path.append(jobname)
+        matched = False
+        indent = len(path) + 1
+        msg = "Collecting job variants for {jobname}".format(jobname=jobname)
+        self.log.debug(msg)
+        item.debug(msg, indent=indent)
+        matched = self._collectJobVariants(
+            item, jobname, change, path, jobs, stack, override_checkouts,
+            indent)
         if not matched:
             self.log.debug("No matching parents for job %s and change %s",
                            jobname, change)
-            item.debug("No matching parent for {jobname}".format(
+            item.debug("No matching parents for {jobname}".format(
                 jobname=repr(jobname)), indent=indent)
             raise NoMatchingParentError()
         return jobs
@@ -2723,8 +2778,17 @@ class Layout(object):
             self.log.debug("Collecting jobs %s for %s", jobname, change)
             item.debug("Freezing job {jobname}".format(
                 jobname=jobname), indent=1)
+            # Create the initial list of override_checkouts, which are
+            # used as we walk up the hierarchy to expand the set of
+            # jobs which match.
+            override_checkouts = {}
+            for variant in job_list.jobs[jobname]:
+                if variant.changeMatches(change):
+                    self._updateOverrideCheckouts(override_checkouts, variant)
             try:
-                variants = self.collectJobs(item, jobname, change)
+                variants = self.collectJobs(
+                    item, jobname, change,
+                    override_checkouts=override_checkouts)
             except NoMatchingParentError:
                 variants = None
             if not variants:
