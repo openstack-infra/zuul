@@ -17,6 +17,7 @@ from contextlib import contextmanager
 import logging
 import os
 import shutil
+import time
 
 import git
 import gitdb
@@ -59,7 +60,8 @@ class ZuulReference(git.Reference):
 
 class Repo(object):
     def __init__(self, remote, local, email, username, speed_limit, speed_time,
-                 sshkey=None, cache_path=None, logger=None, git_timeout=300):
+                 sshkey=None, cache_path=None, logger=None, git_timeout=300,
+                 retry_attempts=3, retry_interval=30):
         if logger is None:
             self.log = logging.getLogger("zuul.Repo")
         else:
@@ -78,6 +80,8 @@ class Repo(object):
         self.username = username
         self.cache_path = cache_path
         self._initialized = False
+        self.retry_attempts = retry_attempts
+        self.retry_interval = retry_interval
         try:
             self._ensure_cloned()
         except Exception:
@@ -123,14 +127,37 @@ class Repo(object):
     def _git_clone(self, url):
         mygit = git.cmd.Git(os.getcwd())
         mygit.update_environment(**self.env)
-        with timeout_handler(self.local_path):
-            mygit.clone(git.cmd.Git.polish_url(url), self.local_path,
-                        kill_after_timeout=self.git_timeout)
+
+        for attempt in range(1, self.retry_attempts + 1):
+            try:
+                with timeout_handler(self.local_path):
+                    mygit.clone(git.cmd.Git.polish_url(url), self.local_path,
+                                kill_after_timeout=self.git_timeout)
+                break
+            except Exception as e:
+                if attempt < self.retry_attempts:
+                    time.sleep(self.retry_interval)
+                    self.log.warning("Retry %s: Clone %s" % (
+                        attempt, self.local_path))
+                else:
+                    raise
 
     def _git_fetch(self, repo, remote, ref=None, **kwargs):
-        with timeout_handler(self.local_path):
-            repo.git.fetch(remote, ref, kill_after_timeout=self.git_timeout,
-                           **kwargs)
+        for attempt in range(1, self.retry_attempts + 1):
+            try:
+                with timeout_handler(self.local_path):
+                    repo.git.fetch(remote, ref,
+                                   kill_after_timeout=self.git_timeout,
+                                   **kwargs)
+                break
+            except Exception as e:
+                if attempt < self.retry_attempts:
+                    time.sleep(self.retry_interval)
+                    self.log.exception("Retry %s: Fetch %s %s %s" % (
+                        attempt, self.local_path, remote, ref))
+                    self._ensure_cloned()
+                else:
+                    raise
 
     def createRepoObject(self):
         self._ensure_cloned()
