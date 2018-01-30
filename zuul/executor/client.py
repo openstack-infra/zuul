@@ -262,12 +262,6 @@ class ExecutorClient(object):
                 src_dir=os.path.join('src', p.canonical_name),
                 required=(p in required_projects),
             ))
-        # We are transitioning "projects" from a list to a dict
-        # indexed by canonical name, as it is much easier to access
-        # values in ansible.  Existing callers have been converted to
-        # "_projects" and "projects" is swapped; we will convert users
-        # back to "projects" and remove this soon.
-        zuul_params['_projects'] = zuul_params['projects']
 
         build = Build(job, uuid)
         build.parameters = params
