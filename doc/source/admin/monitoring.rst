@@ -26,7 +26,7 @@ Metrics
 
 These metrics are emitted by the Zuul :ref:`scheduler`:
 
-.. stat:: zuul.event.<driver>.event.<type>
+.. stat:: zuul.event.<driver>.<type>
    :type: counter
 
    Zuul will report counters for each type of event it receives from
