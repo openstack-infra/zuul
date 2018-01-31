@@ -54,7 +54,10 @@ class GerritSource(BaseSource):
             parsed = urllib.parse.urlparse(url)
         except ValueError:
             return None
-        m = self.change_re.match(parsed.path)
+        path = parsed.path
+        if parsed.fragment:
+            path += '#' + parsed.fragment
+        m = self.change_re.match(path)
         if not m:
             return None
         try:
