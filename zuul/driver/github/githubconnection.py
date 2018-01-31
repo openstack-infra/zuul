@@ -343,7 +343,7 @@ class GithubEventConnector(threading.Thread):
         if login:
             # TODO(tobiash): it might be better to plumb in the installation id
             project = body.get('repository', {}).get('full_name')
-            return self.connection.getUser(login, project=project)
+            return self.connection.getUser(login, project)
 
     def run(self):
         while True:
@@ -360,10 +360,11 @@ class GithubEventConnector(threading.Thread):
 class GithubUser(collections.Mapping):
     log = logging.getLogger('zuul.GithubUser')
 
-    def __init__(self, github, username):
-        self._github = github
+    def __init__(self, username, connection, project):
+        self._connection = connection
         self._username = username
         self._data = None
+        self._project = project
 
     def __getitem__(self, key):
         self._init_data()
@@ -379,9 +380,10 @@ class GithubUser(collections.Mapping):
 
     def _init_data(self):
         if self._data is None:
-            user = self._github.user(self._username)
+            github = self._connection.getGithubClient(self._project)
+            user = github.user(self._username)
             self.log.debug("Initialized data for user %s", self._username)
-            log_rate_limit(self.log, self._github)
+            log_rate_limit(self.log, github)
             self._data = {
                 'username': user.login,
                 'name': user.name,
@@ -972,8 +974,8 @@ class GithubConnection(BaseConnection):
         log_rate_limit(self.log, github)
         return reviews
 
-    def getUser(self, login, project=None):
-        return GithubUser(self.getGithubClient(project), login)
+    def getUser(self, login, project):
+        return GithubUser(login, self, project)
 
     def getUserUri(self, login):
         return 'https://%s/%s' % (self.server, login)
