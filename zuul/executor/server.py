@@ -1261,6 +1261,9 @@ class AnsibleJob(object):
             config.write('internal_poll_interval = 0.01\n')
 
             config.write('[ssh_connection]\n')
+            # NOTE(pabelanger): Try up to 3 times to run a task on a host, this
+            # helps to mitigate UNREACHABLE host errors with SSH.
+            config.write('retries = 3\n')
             # NB: when setting pipelining = True, keep_remote_files
             # must be False (the default).  Otherwise it apparently
             # will override the pipelining option and effectively
