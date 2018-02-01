@@ -1798,6 +1798,7 @@ class ExecutorServer(object):
         if self.statsd:
             base_key = 'zuul.executor.%s' % self.hostname
             self.statsd.gauge(base_key + '.load_average', 0)
+            self.statsd.gauge(base_key + '.pct_available_ram', 0)
             self.statsd.gauge(base_key + '.running_builds', 0)
 
         self.log.debug("Stopped")
@@ -1979,6 +1980,8 @@ class ExecutorServer(object):
             base_key = 'zuul.executor.%s' % self.hostname
             self.statsd.gauge(base_key + '.load_average',
                               int(load_avg * 100))
+            self.statsd.gauge(base_key + '.pct_available_ram',
+                              int(avail_mem_pct * 100))
             self.statsd.gauge(base_key + '.running_builds',
                               len(self.job_workers))
 
