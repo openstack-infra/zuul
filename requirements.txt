@@ -27,3 +27,4 @@ pyjwt
 iso8601
 aiohttp
 uvloop;python_version>='3.5'
+psutil

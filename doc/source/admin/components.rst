@@ -575,6 +575,16 @@ The following sections of ``zuul.conf`` are used by the executor:
       The executor will observe system load and determine whether
       to accept more jobs every 30 seconds.
 
+   .. attr:: min_avail_mem
+      :default: 5.0
+
+      This is the minimum percentage of system RAM available. The
+      executor will stop accepting more than 1 job at a time until
+      more memory is available. The available memory percentage is
+      calculated from the total available memory divided by the
+      total real memory multiplied by 100. Buffers and cache are
+      considered available in the calculation.
+
    .. attr:: hostname
       :default: hostname of the server
 
