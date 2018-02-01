@@ -1632,6 +1632,8 @@ class ExecutorServer(object):
         load_multiplier = float(get_default(self.config, 'executor',
                                             'load_multiplier', '2.5'))
         self.max_load_avg = multiprocessing.cpu_count() * load_multiplier
+        self.min_avail_mem = float(get_default(self.config, 'executor',
+                                               'min_avail_mem', '5.0'))
         self.accepting_work = False
         self.execution_wrapper = connections.drivers[execution_wrapper_name]
 
