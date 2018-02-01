@@ -724,10 +724,10 @@ class GithubConnection(BaseConnection):
             # installation -- change queues aren't likely to span more
             # than one installation.
             for project in projects:
-                installation_id = self.installation_map.get(project)
+                installation_id = self.installation_map.get(project.name)
                 if installation_id not in installation_ids:
                     installation_ids.add(installation_id)
-                    installation_projects.add(project)
+                    installation_projects.add(project.name)
         else:
             # We aren't in the context of a change queue and we just
             # need to query all installations.  This currently only
