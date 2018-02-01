@@ -1,0 +1,27 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+- job:
+    name: base
+    run: playbooks/base.yaml
+    parent: null
+
+- job:
+    name: restricted-job
+    allowed-projects:
+      - org/project1
+    
+- project:
+    name: common-config
+    check:
+      jobs: []

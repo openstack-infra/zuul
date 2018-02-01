@@ -320,50 +320,6 @@ class TestJob(BaseTestCase):
                 "to shadow job base in base_project"):
             layout.addJob(base2)
 
-    def test_job_allowed_projects(self):
-        job = configloader.JobParser.fromYaml(self.tenant, self.layout, {
-            '_source_context': self.context,
-            '_start_mark': self.start_mark,
-            'name': 'job',
-            'parent': None,
-            'allowed-projects': ['project'],
-        })
-        self.layout.addJob(job)
-
-        project2 = model.Project('project2', self.source)
-        tpc2 = model.TenantProjectConfig(project2)
-        self.tenant.addUntrustedProject(tpc2)
-        context2 = model.SourceContext(project2, 'master',
-                                       'test', True)
-
-        project_template_parser = configloader.ProjectTemplateParser(
-            self.tenant, self.layout)
-        project_parser = configloader.ProjectParser(
-            self.tenant, self.layout, project_template_parser)
-        project2_config = project_parser.fromYaml(
-            [{
-                '_source_context': context2,
-                '_start_mark': self.start_mark,
-                'name': 'project2',
-                'gate': {
-                    'jobs': [
-                        'job'
-                    ]
-                }
-            }]
-        )
-        self.layout.addProjectConfig(project2_config)
-
-        change = model.Change(project2)
-        # Test master
-        change.branch = 'master'
-        item = self.queue.enqueueChange(change)
-        item.layout = self.layout
-        with testtools.ExpectedException(
-                Exception,
-                "Project project2 is not allowed to run job job"):
-            item.freezeJobGraph()
-
     def test_job_pipeline_allow_untrusted_secrets(self):
         self.pipeline.post_review = False
         job = configloader.JobParser.fromYaml(self.tenant, self.layout, {
