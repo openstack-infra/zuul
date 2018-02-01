@@ -82,7 +82,7 @@ class TestMergerRepo(ZuulTestCase):
                    os.path.join(FIXTURE_DIR, 'fake_git.sh'))
         work_repo = Repo(parent_path, self.workspace_root,
                          'none@example.org', 'User Name', '0', '0',
-                         git_timeout=0.001)
+                         git_timeout=0.001, retry_attempts=1)
         # TODO: have the merger and repo classes catch fewer
         # exceptions, including this one on initialization.  For the
         # test, we try cloning again.
@@ -93,10 +93,26 @@ class TestMergerRepo(ZuulTestCase):
     def test_fetch_timeout(self):
         parent_path = os.path.join(self.upstream_root, 'org/project1')
         work_repo = Repo(parent_path, self.workspace_root,
-                         'none@example.org', 'User Name', '0', '0')
+                         'none@example.org', 'User Name', '0', '0',
+                         retry_attempts=1)
         work_repo.git_timeout = 0.001
         self.patch(git.Git, 'GIT_PYTHON_GIT_EXECUTABLE',
                    os.path.join(FIXTURE_DIR, 'fake_git.sh'))
         with testtools.ExpectedException(git.exc.GitCommandError,
                                          '.*exit code\(-9\)'):
             work_repo.update()
+
+    def test_fetch_retry(self):
+        parent_path = os.path.join(self.upstream_root, 'org/project1')
+        work_repo = Repo(parent_path, self.workspace_root,
+                         'none@example.org', 'User Name', '0', '0',
+                         retry_interval=1)
+        self.patch(git.Git, 'GIT_PYTHON_GIT_EXECUTABLE',
+                   os.path.join(FIXTURE_DIR, 'git_fetch_error.sh'))
+        work_repo.update()
+        # This is created on the first fetch
+        self.assertTrue(os.path.exists(os.path.join(
+            self.workspace_root, 'stamp1')))
+        # This is created on the second fetch
+        self.assertTrue(os.path.exists(os.path.join(
+            self.workspace_root, 'stamp2')))
