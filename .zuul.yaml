@@ -29,7 +29,6 @@
       - playbooks/zuul-stream/.*
 
 - project:
-    name: openstack-infra/zuul
     check:
       jobs:
         - build-sphinx-docs:
