@@ -32,7 +32,7 @@
     name: openstack-infra/zuul
     check:
       jobs:
-        - build-openstack-sphinx-docs:
+        - build-sphinx-docs:
             irrelevant-files:
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
@@ -46,7 +46,7 @@
         - zuul-stream-functional
     gate:
       jobs:
-        - build-openstack-sphinx-docs:
+        - build-sphinx-docs:
             irrelevant-files:
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
