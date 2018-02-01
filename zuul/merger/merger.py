@@ -52,11 +52,6 @@ def timeout_handler(path):
         raise
 
 
-class ZuulReference(git.Reference):
-    _common_path_default = "refs/zuul"
-    _points_to_commits_only = True
-
-
 class Repo(object):
     def __init__(self, remote, local, email, username, speed_limit, speed_time,
                  sshkey=None, cache_path=None, logger=None, git_timeout=300):
@@ -279,12 +274,6 @@ class Repo(object):
     def fetchFrom(self, repository, ref):
         repo = self.createRepoObject()
         self._git_fetch(repo, repository, ref)
-
-    def createZuulRef(self, ref, commit='HEAD'):
-        repo = self.createRepoObject()
-        self.log.debug("CreateZuulRef %s at %s on %s" % (ref, commit, repo))
-        ref = ZuulReference.create(repo, ref, commit)
-        return ref.commit
 
     def push(self, local, remote):
         repo = self.createRepoObject()
@@ -516,20 +505,6 @@ class Merger(object):
             return None
         # Store this commit as the most recent for this project-branch
         recent[key] = commit
-        # Set the Zuul ref for this item to point to the most recent
-        # commits of each project-branch
-        for key, mrc in recent.items():
-            connection, project, branch = key
-            zuul_ref = None
-            try:
-                repo = self.getRepo(connection, project)
-                zuul_ref = branch + '/' + item['buildset_uuid']
-                if not repo.getCommitFromRef(zuul_ref):
-                    repo.createZuulRef(zuul_ref, mrc)
-            except Exception:
-                self.log.exception("Unable to set zuul ref %s for "
-                                   "item %s" % (zuul_ref, item))
-                return None
         return commit
 
     def mergeChanges(self, items, files=None, dirs=None, repo_state=None):
