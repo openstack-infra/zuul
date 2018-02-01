@@ -15,6 +15,11 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+try:
+    from unittest import mock
+except ImportError:
+    import mock
+
 import logging
 import time
 
@@ -436,3 +441,77 @@ class TestExecutorHostname(ZuulTestCase):
     def test_executor_hostname(self):
         self.assertEqual('test-executor-hostname.example.com',
                          self.executor_server.hostname)
+
+
+class TestGovernor(ZuulTestCase):
+    tenant_config_file = 'config/governor/main.yaml'
+
+    @mock.patch('os.getloadavg')
+    @mock.patch('psutil.virtual_memory')
+    def test_load_governor(self, vm_mock, loadavg_mock):
+        class Dummy(object):
+            pass
+        ram = Dummy()
+        ram.percent = 20.0  # 20% used
+        vm_mock.return_value = ram
+        loadavg_mock.return_value = (0.0, 0.0, 0.0)
+        self.executor_server.manageLoad()
+        self.assertTrue(self.executor_server.accepting_work)
+        ram.percent = 99.0  # 99% used
+        loadavg_mock.return_value = (100.0, 100.0, 100.0)
+        self.executor_server.manageLoad()
+        self.assertFalse(self.executor_server.accepting_work)
+
+    def waitForExecutorBuild(self, jobname):
+        timeout = time.time() + 30
+        build = None
+        while (time.time() < timeout and not build):
+            for b in self.builds:
+                if b.name == jobname:
+                    build = b
+                    break
+            time.sleep(0.1)
+        build_id = build.uuid
+        while (time.time() < timeout and
+               build_id not in self.executor_server.job_workers):
+            time.sleep(0.1)
+        worker = self.executor_server.job_workers[build_id]
+        while (time.time() < timeout and
+               not worker.started):
+            time.sleep(0.1)
+        return build
+
+    def waitForWorkerCompletion(self, build):
+        timeout = time.time() + 30
+        while (time.time() < timeout and
+               build.uuid in self.executor_server.job_workers):
+            time.sleep(0.1)
+
+    def test_slow_start(self):
+        self.executor_server.hold_jobs_in_build = True
+        self.executor_server.max_starting_builds = 1
+        self.executor_server.manageLoad()
+        self.assertTrue(self.executor_server.accepting_work)
+        A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+
+        build1 = self.waitForExecutorBuild('test1')
+        # With one job (test1) being started, we should no longer
+        # be accepting new work
+        self.assertFalse(self.executor_server.accepting_work)
+        self.assertEqual(len(self.executor_server.job_workers), 1)
+        # Allow enough starting builds for the test to complete.
+        self.executor_server.max_starting_builds = 3
+        build1.release()
+        self.waitForWorkerCompletion(build1)
+        self.executor_server.manageLoad()
+
+        self.waitForExecutorBuild('test2')
+        self.waitForExecutorBuild('test3')
+        self.assertFalse(self.executor_server.accepting_work)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+        self.executor_server.manageLoad()
+        self.assertTrue(self.executor_server.accepting_work)
