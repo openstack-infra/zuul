@@ -1890,22 +1890,21 @@ class ExecutorServer(object):
                 self.log.exception("Exception while getting job")
 
     def mergerJobDispatch(self, job):
-        with self.run_lock:
-            if job.name == 'merger:cat':
-                self.log.debug("Got cat job: %s" % job.unique)
-                self.cat(job)
-            elif job.name == 'merger:merge':
-                self.log.debug("Got merge job: %s" % job.unique)
-                self.merge(job)
-            elif job.name == 'merger:refstate':
-                self.log.debug("Got refstate job: %s" % job.unique)
-                self.refstate(job)
-            elif job.name == 'merger:fileschanges':
-                self.log.debug("Got fileschanges job: %s" % job.unique)
-                self.fileschanges(job)
-            else:
-                self.log.error("Unable to handle job %s" % job.name)
-                job.sendWorkFail()
+        if job.name == 'merger:cat':
+            self.log.debug("Got cat job: %s" % job.unique)
+            self.cat(job)
+        elif job.name == 'merger:merge':
+            self.log.debug("Got merge job: %s" % job.unique)
+            self.merge(job)
+        elif job.name == 'merger:refstate':
+            self.log.debug("Got refstate job: %s" % job.unique)
+            self.refstate(job)
+        elif job.name == 'merger:fileschanges':
+            self.log.debug("Got fileschanges job: %s" % job.unique)
+            self.fileschanges(job)
+        else:
+            self.log.error("Unable to handle job %s" % job.name)
+            job.sendWorkFail()
 
     def run_executor(self):
         self.log.debug("Starting executor listener")
