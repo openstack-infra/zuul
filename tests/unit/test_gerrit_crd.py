@@ -54,8 +54,11 @@ class TestGerritCRD(ZuulTestCase):
         A.setDependsOn(AM1, 1)
         AM1.setDependsOn(AM2, 1)
 
+        # So that at least one test uses the /#/c/ form of the url,
+        # use it here.
+        url = 'https://%s/#/c/%s' % (B.gerrit.server, B.number)
         A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
-            A.subject, B.data['url'])
+            A.subject, url)
 
         self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
