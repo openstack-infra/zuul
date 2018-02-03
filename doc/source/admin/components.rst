@@ -71,7 +71,7 @@ An example ``zuul.conf``:
    [zookeeper]
    hosts=zk1.example.com,zk2.example.com,zk3.example.com
 
-   [webapp]
+   [web]
    status_url=https://zuul.example.com/status
 
    [scheduler]
@@ -234,6 +234,15 @@ The following sections of ``zuul.conf`` are used by the scheduler:
 
       An openssl file containing the server private key in PEM format.
 
+.. attr:: web
+
+   .. attr:: status_url
+
+      URL that will be posted in Zuul comments made to changes when
+      starting jobs for a change.
+
+      .. TODO: is this effectively required?
+
 .. attr:: webapp
 
    .. attr:: listen_address
@@ -250,13 +259,6 @@ The following sections of ``zuul.conf`` are used by the scheduler:
       :default: 1
 
       Zuul will cache the status.json file for this many seconds.
-
-   .. attr:: status_url
-
-      URL that will be posted in Zuul comments made to changes when
-      starting jobs for a change.
-
-      .. TODO: is this effectively required?
 
 .. attr:: scheduler
 

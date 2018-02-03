@@ -39,11 +39,11 @@ listen_address=127.0.0.1
 port=9000
 static_cache_expiry=0
 ;sql_connection_name=mydatabase
+status_url=https://zuul.example.com/status
 
 [webapp]
 listen_address=0.0.0.0
 port=8001
-status_url=https://zuul.example.com/status
 
 [connection gerrit]
 driver=gerrit

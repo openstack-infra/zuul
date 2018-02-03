@@ -75,7 +75,7 @@ class BaseReporter(object, metaclass=abc.ABCMeta):
 
     def _formatItemReportStart(self, item, with_jobs=True):
         status_url = get_default(self.connection.sched.config,
-                                 'webapp', 'status_url', '')
+                                 'web', 'status_url', '')
         return item.pipeline.start_message.format(pipeline=item.pipeline,
                                                   status_url=status_url)
 

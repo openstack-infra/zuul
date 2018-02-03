@@ -317,10 +317,10 @@ itself. Status name, description, and context is taken from the pipeline.
       reporter should set as the commit status on github.
 
    .. TODO support role markup in :default: so we can xref
-      :attr:`webapp.status_url` below
+      :attr:`web.status_url` below
 
    .. attr:: status-url
-      :default: webapp.status_url or the empty string
+      :default: web.status_url or the empty string
 
       String value for a link url to set in the github
       status. Defaults to the zuul server status_url, or the empty
