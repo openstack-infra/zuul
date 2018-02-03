@@ -574,6 +574,7 @@ class AnsibleJob(object):
         self.proc = None
         self.proc_lock = threading.Lock()
         self.running = False
+        self.started = False  # Whether playbooks have started running
         self.aborted = False
         self.aborted_reason = None
         self.thread = None
@@ -850,6 +851,7 @@ class AnsibleJob(object):
 
         pre_failed = False
         success = False
+        self.started = True
         for index, playbook in enumerate(self.jobdir.pre_playbooks):
             # TODOv3(pabelanger): Implement pre-run timeout setting.
             pre_status, pre_code = self.runAnsiblePlaybook(
@@ -1601,6 +1603,7 @@ class ExecutorServer(object):
                                     socket.gethostname())
         self.log_streaming_port = log_streaming_port
         self.merger_lock = threading.Lock()
+        self.governor_lock = threading.Lock()
         self.run_lock = threading.Lock()
         self.verbose = False
         self.command_map = dict(
@@ -1632,6 +1635,7 @@ class ExecutorServer(object):
         load_multiplier = float(get_default(self.config, 'executor',
                                             'load_multiplier', '2.5'))
         self.max_load_avg = multiprocessing.cpu_count() * load_multiplier
+        self.max_starting_builds = self.max_load_avg * 2
         self.min_avail_mem = float(get_default(self.config, 'executor',
                                                'min_avail_mem', '5.0'))
         self.accepting_work = False
@@ -1751,6 +1755,10 @@ class ExecutorServer(object):
         if self._running:
             self.accepting_work = True
             self.executor_worker.registerFunction("executor:execute")
+            # TODO(jeblair): Update geard to send a noop after
+            # registering for a job which is in the queue, then remove
+            # this API violation.
+            self.executor_worker._sendGrabJobUniq()
 
     def unregister_work(self):
         self.accepting_work = False
@@ -1943,9 +1951,10 @@ class ExecutorServer(object):
             self.statsd.incr(base_key + '.builds')
         self.job_workers[job.unique] = self._job_class(self, job)
         self.job_workers[job.unique].run()
+        self.manageLoad()
 
     def run_governor(self):
-        while not self.governor_stop_event.wait(30):
+        while not self.governor_stop_event.wait(10):
             try:
                 self.manageLoad()
             except Exception:
@@ -1953,12 +1962,23 @@ class ExecutorServer(object):
 
     def manageLoad(self):
         ''' Apply some heuristics to decide whether or not we should
-            be askign for more jobs '''
+            be asking for more jobs '''
+        with self.governor_lock:
+            return self._manageLoad()
+
+    def _manageLoad(self):
         load_avg = os.getloadavg()[0]
         avail_mem_pct = 100.0 - psutil.virtual_memory().percent
+        starting_builds = 0
+        for worker in self.job_workers.values():
+            if not worker.started:
+                starting_builds += 1
+        max_starting_builds = max(
+            self.max_starting_builds - len(self.job_workers),
+            1)
         if self.accepting_work:
             # Don't unregister if we don't have any active jobs.
-            if load_avg > self.max_load_avg and self.job_workers:
+            if load_avg > self.max_load_avg:
                 self.log.info(
                     "Unregistering due to high system load {} > {}".format(
                         load_avg, self.max_load_avg))
@@ -1968,14 +1988,20 @@ class ExecutorServer(object):
                     "Unregistering due to low memory {:3.1f}% < {}".format(
                         avail_mem_pct, self.min_avail_mem))
                 self.unregister_work()
+            elif starting_builds >= max_starting_builds:
+                self.log.info(
+                    "Unregistering due to too many starting builds {} >= {}"
+                    .format(starting_builds, max_starting_builds))
+                self.unregister_work()
         elif (load_avg <= self.max_load_avg and
-                avail_mem_pct >= self.min_avail_mem):
+              avail_mem_pct >= self.min_avail_mem and
+              starting_builds < max_starting_builds):
             self.log.info(
                 "Re-registering as job is within limits "
-                "{} <= {} {:3.1f}% <= {}".format(load_avg,
-                                                 self.max_load_avg,
-                                                 avail_mem_pct,
-                                                 self.min_avail_mem))
+                "{} <= {} {:3.1f}% <= {} {} < {}".format(
+                    load_avg, self.max_load_avg,
+                    avail_mem_pct, self.min_avail_mem,
+                    starting_builds, max_starting_builds))
             self.register_work()
         if self.statsd:
             base_key = 'zuul.executor.%s' % self.hostname
@@ -1985,6 +2011,8 @@ class ExecutorServer(object):
                               int(avail_mem_pct * 100))
             self.statsd.gauge(base_key + '.running_builds',
                               len(self.job_workers))
+            self.statsd.gauge(base_key + '.starting_builds',
+                              starting_builds)
 
     def finishJob(self, unique):
         del(self.job_workers[unique])
