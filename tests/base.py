@@ -1006,7 +1006,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
 
         if use_zuulweb:
             req = urllib.request.Request(
-                'http://127.0.0.1:%s/driver/github/%s/payload'
+                'http://127.0.0.1:%s/connection/%s/payload'
                 % (self.zuul_web_port, self.connection_name),
                 data=payload, headers=headers)
             return urllib.request.urlopen(req)

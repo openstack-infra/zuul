@@ -22,8 +22,6 @@ import threading
 import zuul.cmd
 import zuul.web
 
-from zuul.driver.sql import sqlconnection
-from zuul.driver.github import githubconnection
 from zuul.lib.config import get_default
 
 
@@ -50,34 +48,15 @@ class WebServer(zuul.cmd.ZuulDaemonApp):
         params['ssl_cert'] = get_default(self.config, 'gearman', 'ssl_cert')
         params['ssl_ca'] = get_default(self.config, 'gearman', 'ssl_ca')
 
-        sql_conn_name = get_default(self.config, 'web',
-                                    'sql_connection_name')
-        sql_conn = None
-        if sql_conn_name:
-            # we want a specific sql connection
-            sql_conn = self.connections.connections.get(sql_conn_name)
-            if not sql_conn:
-                self.log.error("Couldn't find sql connection '%s'" %
-                               sql_conn_name)
-                sys.exit(1)
-        else:
-            # look for any sql connection
-            connections = [c for c in self.connections.connections.values()
-                           if isinstance(c, sqlconnection.SQLConnection)]
-            if len(connections) > 1:
-                self.log.error("Multiple sql connection found, "
-                               "set the sql_connection_name option "
-                               "in zuul.conf [web] section")
-                sys.exit(1)
-            if connections:
-                # use this sql connection by default
-                sql_conn = connections[0]
-        params['sql_connection'] = sql_conn
-
-        params['github_connections'] = {}
+        params['connections'] = []
+        # Validate config here before we spin up the ZuulWeb object
         for conn_name, connection in self.connections.connections.items():
-            if isinstance(connection, githubconnection.GithubConnection):
-                params['github_connections'][conn_name] = connection
+            try:
+                if connection.validateWebConfig(self.config, self.connections):
+                    params['connections'].append(connection)
+            except Exception:
+                self.log.exception("Error validating config")
+                sys.exit(1)
 
         try:
             self.web = zuul.web.ZuulWeb(**params)
