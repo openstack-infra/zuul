@@ -243,23 +243,6 @@ The following sections of ``zuul.conf`` are used by the scheduler:
 
       .. TODO: is this effectively required?
 
-.. attr:: webapp
-
-   .. attr:: listen_address
-      :default: all addresses
-
-      IP address or domain name on which to listen.
-
-   .. attr:: port
-      :default: 8001
-
-      Port on which the webapp is listening.
-
-   .. attr:: status_expiry
-      :default: 1
-
-      Zuul will cache the status.json file for this many seconds.
-
 .. attr:: scheduler
 
    .. attr:: command_socket
