@@ -12,14 +12,19 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import asyncio
+import threading
 import os
 import re
 from testtools.matchers import MatchesRegex, StartsWith
 import urllib
+import socket
 import time
 from unittest import skip
 
 import git
+
+import zuul.web
 
 from tests.base import ZuulTestCase, simple_layout, random_sha1
 
@@ -734,3 +739,85 @@ class TestGithubUnprotectedBranches(ZuulTestCase):
 
         # project2 should have no parsed branch
         self.assertEqual(0, len(project2.unparsed_branch_config.keys()))
+
+
+class TestGithubWebhook(ZuulTestCase):
+    config_file = 'zuul-github-driver.conf'
+
+    def setUp(self):
+        super(TestGithubWebhook, self).setUp()
+
+        # Start the web server
+        self.web = zuul.web.ZuulWeb(
+            listen_address='127.0.0.1', listen_port=0,
+            gear_server='127.0.0.1', gear_port=self.gearman_server.port,
+            github_connections={'github': self.fake_github})
+        loop = asyncio.new_event_loop()
+        loop.set_debug(True)
+        ws_thread = threading.Thread(target=self.web.run, args=(loop,))
+        ws_thread.start()
+        self.addCleanup(loop.close)
+        self.addCleanup(ws_thread.join)
+        self.addCleanup(self.web.stop)
+
+        host = '127.0.0.1'
+        # Wait until web server is started
+        while True:
+            time.sleep(0.1)
+            if self.web.server is None:
+                continue
+            port = self.web.server.sockets[0].getsockname()[1]
+            try:
+                with socket.create_connection((host, port)):
+                    break
+            except ConnectionRefusedError:
+                pass
+
+        self.fake_github.setZuulWebPort(port)
+
+    def tearDown(self):
+        super(TestGithubWebhook, self).tearDown()
+
+    @simple_layout('layouts/basic-github.yaml', driver='github')
+    def test_webhook(self):
+        """Test that we can get github events via zuul-web."""
+
+        self.executor_server.hold_jobs_in_build = True
+
+        A = self.fake_github.openFakePullRequest('org/project', 'master', 'A')
+        self.fake_github.emitEvent(A.getPullRequestOpenedEvent(),
+                                   use_zuulweb=True)
+        self.waitUntilSettled()
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        self.assertEqual('SUCCESS',
+                         self.getJobFromHistory('project-test1').result)
+        self.assertEqual('SUCCESS',
+                         self.getJobFromHistory('project-test2').result)
+
+        job = self.getJobFromHistory('project-test2')
+        zuulvars = job.parameters['zuul']
+        self.assertEqual(str(A.number), zuulvars['change'])
+        self.assertEqual(str(A.head_sha), zuulvars['patchset'])
+        self.assertEqual('master', zuulvars['branch'])
+        self.assertEqual(1, len(A.comments))
+        self.assertThat(
+            A.comments[0],
+            MatchesRegex('.*\[project-test1 \]\(.*\).*', re.DOTALL))
+        self.assertThat(
+            A.comments[0],
+            MatchesRegex('.*\[project-test2 \]\(.*\).*', re.DOTALL))
+        self.assertEqual(2, len(self.history))
+
+        # test_pull_unmatched_branch_event(self):
+        self.create_branch('org/project', 'unmatched_branch')
+        B = self.fake_github.openFakePullRequest(
+            'org/project', 'unmatched_branch', 'B')
+        self.fake_github.emitEvent(B.getPullRequestOpenedEvent(),
+                                   use_zuulweb=True)
+        self.waitUntilSettled()
+
+        self.assertEqual(2, len(self.history))

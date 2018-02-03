@@ -66,13 +66,6 @@ class ConnectionRegistry(object):
             if load:
                 connection.onLoad()
 
-    def registerWebapp(self, webapp):
-        for driver_name, driver in self.drivers.items():
-            if hasattr(driver, 'registerWebapp'):
-                driver.registerWebapp(webapp)
-        for connection_name, connection in self.connections.items():
-            connection.registerWebapp(webapp)
-
     def reconfigureDrivers(self, tenant):
         for driver in self.drivers.values():
             if hasattr(driver, 'reconfigure'):

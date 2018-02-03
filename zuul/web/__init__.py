@@ -16,6 +16,8 @@
 
 
 import asyncio
+import hashlib
+import hmac
 import json
 import logging
 import os
@@ -31,6 +33,12 @@ from sqlalchemy.sql import select
 import zuul.rpcclient
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), 'static')
+
+
+def _sign_request(body, secret):
+    signature = 'sha1=' + hmac.new(
+        secret.encode('utf-8'), body, hashlib.sha1).hexdigest()
+    return signature
 
 
 class LogStreamingHandler(object):
@@ -150,8 +158,9 @@ class GearmanHandler(object):
     # Tenant status cache expiry
     cache_expiry = 1
 
-    def __init__(self, rpc):
+    def __init__(self, rpc, github_connections):
         self.rpc = rpc
+        self.github_connections = github_connections
         self.cache = {}
         self.cache_time = {}
         self.controllers = {
@@ -159,13 +168,14 @@ class GearmanHandler(object):
             'status_get': self.status_get,
             'job_list': self.job_list,
             'key_get': self.key_get,
+            'payload_post': self.payload_post,
         }
 
-    def tenant_list(self, request):
+    async def tenant_list(self, request):
         job = self.rpc.submitJob('zuul:tenant_list', {})
         return web.json_response(json.loads(job.data[0]))
 
-    def status_get(self, request):
+    async def status_get(self, request):
         tenant = request.match_info["tenant"]
         if tenant not in self.cache or \
            (time.time() - self.cache_time[tenant]) > self.cache_expiry:
@@ -179,23 +189,82 @@ class GearmanHandler(object):
         resp.last_modified = self.cache_time[tenant]
         return resp
 
-    def job_list(self, request):
+    async def job_list(self, request):
         tenant = request.match_info["tenant"]
         job = self.rpc.submitJob('zuul:job_list', {'tenant': tenant})
         resp = web.json_response(json.loads(job.data[0]))
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return resp
 
-    def key_get(self, request):
+    async def key_get(self, request):
         tenant = request.match_info["tenant"]
         project = request.match_info["project"]
         job = self.rpc.submitJob('zuul:key_get', {'tenant': tenant,
                                                   'project': project})
         return web.Response(body=job.data[0])
 
+    def _validate_signature(self, body, headers, secret):
+        try:
+            request_signature = headers['x-hub-signature']
+        except KeyError:
+            raise web.HTTPUnauthorized(
+                reason='X-Hub-Signature header missing.')
+
+        payload_signature = _sign_request(body, secret)
+
+        self.log.debug("Payload Signature: {0}".format(str(payload_signature)))
+        self.log.debug("Request Signature: {0}".format(str(request_signature)))
+        if not hmac.compare_digest(
+            str(payload_signature), str(request_signature)):
+            raise web.HTTPUnauthorized(
+                reason=('Request signature does not match calculated payload '
+                        'signature. Check that secret is correct.'))
+
+        return True
+
+    async def github_payload(self, post):
+        connection = post.match_info["connection"]
+        github_connection = self.github_connections.get(connection)
+        token = github_connection.connection_config.get('webhook_token')
+
+        # Note(tobiash): We need to normalize the headers. Otherwise we will
+        # have trouble to get them from the dict afterwards.
+        # e.g.
+        # GitHub: sent: X-GitHub-Event received: X-GitHub-Event
+        # urllib: sent: X-GitHub-Event received: X-Github-Event
+        #
+        # We cannot easily solve this mismatch as every http processing lib
+        # modifies the header casing in its own way and by specification http
+        # headers are case insensitive so just lowercase all so we don't have
+        # to take care later.
+        headers = dict()
+        for key, value in post.headers.items():
+            headers[key.lower()] = value
+        body = await post.read()
+        self._validate_signature(body, headers, token)
+        # We cannot send the raw body through gearman, so it's easy to just
+        # encode it as json, after decoding it as utf-8
+        json_body = json.loads(body.decode('utf-8'))
+        job = self.rpc.submitJob('github:%s:payload' % connection,
+                                 {'headers': headers, 'body': json_body})
+        jobdata = json.loads(job.data[0])
+        return web.json_response(jobdata, status=jobdata['return_code'])
+
+    async def payload_post(self, post):
+        # Allow for other drivers to also accept a payload in the future,
+        # instead of hardcoding this to GitHub
+        driver = post.match_info["driver"]
+        try:
+            method = getattr(self, driver + '_payload')
+        except AttributeError as e:
+            self.log.exception("Unknown driver error:")
+            raise web.HTTPNotFound
+
+        return await method(post)
+
     async def processRequest(self, request, action):
         try:
-            resp = self.controllers[action](request)
+            resp = await self.controllers[action](request)
         except asyncio.CancelledError:
             self.log.debug("request handling cancelled")
         except Exception as e:
@@ -300,7 +369,8 @@ class ZuulWeb(object):
                  gear_server, gear_port,
                  ssl_key=None, ssl_cert=None, ssl_ca=None,
                  static_cache_expiry=3600,
-                 sql_connection=None):
+                 sql_connection=None,
+                 github_connections={}):
         self.listen_address = listen_address
         self.listen_port = listen_port
         self.event_loop = None
@@ -311,7 +381,7 @@ class ZuulWeb(object):
         self.rpc = zuul.rpcclient.RPCClient(gear_server, gear_port,
                                             ssl_key, ssl_cert, ssl_ca)
         self.log_streaming_handler = LogStreamingHandler(self.rpc)
-        self.gearman_handler = GearmanHandler(self.rpc)
+        self.gearman_handler = GearmanHandler(self.rpc, github_connections)
         if sql_connection:
             self.sql_handler = SqlHandler(sql_connection)
         else:
@@ -336,6 +406,10 @@ class ZuulWeb(object):
 
     async def _handleKeyRequest(self, request):
         return await self.gearman_handler.processRequest(request, 'key_get')
+
+    async def _handlePayloadPost(self, post):
+        return await self.gearman_handler.processRequest(post,
+                                                         'payload_post')
 
     async def _handleStaticRequest(self, request):
         fp = None
@@ -376,6 +450,8 @@ class ZuulWeb(object):
             ('GET', '/{tenant}/jobs.html', self._handleStaticRequest),
             ('GET', '/{tenant}/stream.html', self._handleStaticRequest),
             ('GET', '/tenants.html', self._handleStaticRequest),
+            ('POST', '/driver/{driver}/{connection}/payload',
+             self._handlePayloadPost),
             ('GET', '/', self._handleStaticRequest),
         ]
 

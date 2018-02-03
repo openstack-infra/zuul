@@ -162,7 +162,7 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
         self.log.info('Starting scheduler')
         try:
             self.sched.start()
-            self.sched.registerConnections(self.connections, webapp)
+            self.sched.registerConnections(self.connections)
             self.sched.reconfigure(self.config)
             self.sched.resume()
         except Exception:

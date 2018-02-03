@@ -292,11 +292,10 @@ class Scheduler(threading.Thread):
             except Exception:
                 self.log.exception("Exception while processing command")
 
-    def registerConnections(self, connections, webapp, load=True):
+    def registerConnections(self, connections, load=True):
         # load: whether or not to trigger the onLoad for the connection. This
         # is useful for not doing a full load during layout validation.
         self.connections = connections
-        self.connections.registerWebapp(webapp)
         self.connections.registerScheduler(self, load)
 
     def stopConnections(self):
