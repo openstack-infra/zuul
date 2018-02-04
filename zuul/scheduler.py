@@ -214,7 +214,7 @@ class Scheduler(threading.Thread):
     def __init__(self, config, testonly=False):
         threading.Thread.__init__(self)
         self.daemon = True
-        self.hostname = socket.gethostname()
+        self.hostname = socket.getfqdn()
         self.wake_event = threading.Event()
         self.layout_lock = threading.Lock()
         self.run_handler_lock = threading.Lock()

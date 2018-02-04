@@ -1600,7 +1600,7 @@ class ExecutorServer(object):
         # TODOv3(mordred): make the executor name more unique --
         # perhaps hostname+pid.
         self.hostname = get_default(self.config, 'executor', 'hostname',
-                                    socket.gethostname())
+                                    socket.getfqdn())
         self.log_streaming_port = log_streaming_port
         self.merger_lock = threading.Lock()
         self.governor_lock = threading.Lock()
