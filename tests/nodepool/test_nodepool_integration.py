@@ -30,6 +30,7 @@ class TestNodepoolIntegration(BaseTestCase):
     def setUp(self):
         super(TestNodepoolIntegration, self).setUp()
 
+        self.statsd = None
         self.zk = zuul.zk.ZooKeeper()
         self.addCleanup(self.zk.disconnect)
         self.zk.connect('localhost:2181')
