@@ -490,6 +490,7 @@ class TestGovernor(ZuulTestCase):
     def test_slow_start(self):
         self.executor_server.hold_jobs_in_build = True
         self.executor_server.max_starting_builds = 1
+        self.executor_server.min_starting_builds = 1
         self.executor_server.manageLoad()
         self.assertTrue(self.executor_server.accepting_work)
         A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A')

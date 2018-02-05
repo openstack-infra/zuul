@@ -1636,6 +1636,7 @@ class ExecutorServer(object):
                                             'load_multiplier', '2.5'))
         self.max_load_avg = multiprocessing.cpu_count() * load_multiplier
         self.max_starting_builds = self.max_load_avg * 2
+        self.min_starting_builds = 4
         self.min_avail_mem = float(get_default(self.config, 'executor',
                                                'min_avail_mem', '5.0'))
         self.accepting_work = False
@@ -1975,7 +1976,7 @@ class ExecutorServer(object):
                 starting_builds += 1
         max_starting_builds = max(
             self.max_starting_builds - len(self.job_workers),
-            1)
+            self.min_starting_builds)
         if self.accepting_work:
             # Don't unregister if we don't have any active jobs.
             if load_avg > self.max_load_avg:
