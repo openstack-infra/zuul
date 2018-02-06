@@ -458,6 +458,7 @@ class GithubConnection(BaseConnection):
         self._github = None
         self.app_id = None
         self.app_key = None
+        self.sched = None
 
         self.installation_map = {}
         self.installation_token_cache = {}
@@ -827,7 +828,8 @@ class GithubConnection(BaseConnection):
         change.updated_at = self._ghTimestampToDate(
             change.pr.get('updated_at'))
 
-        self.sched.onChangeUpdated(change)
+        if self.sched:
+            self.sched.onChangeUpdated(change)
 
         return change
 
