@@ -10,6 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import fixtures
 import os
 import tempfile
 import time
@@ -32,6 +33,10 @@ class FakeExecutor(object):
 
 
 class TestDiskAccountant(BaseTestCase):
+    def setUp(self):
+        super(TestDiskAccountant, self).setUp()
+        self.useFixture(fixtures.NestedTempfile())
+
     def test_disk_accountant(self):
         jobs_dir = tempfile.mkdtemp(
             dir=os.environ.get("ZUUL_TEST_ROOT", None))

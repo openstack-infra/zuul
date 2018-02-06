@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import fixtures
 import os
 import subprocess
 import tempfile
@@ -26,6 +27,10 @@ class TestEncryption(BaseTestCase):
     def setUp(self):
         super(TestEncryption, self).setUp()
         self.private, self.public = encryption.generate_rsa_keypair()
+        # Because we set delete to False when using NamedTemporaryFile below
+        # we need to stick our usage of temporary files in the NestedTempfile
+        # fixture ensuring everything gets cleaned up when it is done.
+        self.useFixture(fixtures.NestedTempfile())
 
     def test_serialization(self):
         "Verify key serialization"
