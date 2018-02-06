@@ -131,6 +131,14 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
    component of the key will be replaced with the hostname of the
    executor.
 
+   .. stat:: merger.<result>
+      :type: counter
+
+      Incremented to represent the status of a Zuul executor's merger
+      operations. ``<result>`` can be either ``SUCCESS`` or ``FAILURE``.
+      A failed merge operation which would be accounted for as a ``FAILURE``
+      is what ends up being returned by Zuul as a ``MERGER_FAILURE``.
+
    .. stat:: builds
       :type: counter
 
@@ -147,6 +155,27 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
 
       The number of builds currently running on this executor.  This
       includes starting builds.
+
+  .. stat:: phase
+
+     Subtree detailing per-phase execution statistics:
+
+     .. stat:: <phase>
+
+        ``<phase>`` represents a phase in the execution of a job.
+        This can be an *internal* phase (such as ``setup`` or ``cleanup``) as
+        well as *job* phases such as ``pre``, ``run`` or ``post``.
+
+        .. stat:: <result>
+           :type: counter
+
+           A counter for each type of result.
+           These results do not, by themselves, determine the status of a build
+           but are indicators of the exit status provided by Ansible for the
+           execution of a particular phase.
+
+           Example of possible counters for each phase are: ``RESULT_NORMAL``,
+           ``RESULT_TIMED_OUT``, ``RESULT_UNREACHABLE``, ``RESULT_ABORTED``.
 
    .. stat:: load_average
       :type: gauge
