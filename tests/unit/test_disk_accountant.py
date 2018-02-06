@@ -47,6 +47,8 @@ class TestDiskAccountant(BaseTestCase):
             testfile = os.path.join(jobdir, 'tfile')
             with open(testfile, 'w') as tf:
                 tf.write(2 * 1024 * 1024 * '.')
+                tf.flush()
+                os.fsync(tf.fileno())
 
             # da should catch over-limit dir within 5 seconds
             for i in range(0, 50):
