@@ -11,6 +11,8 @@ from zuul.model import Change, Project
 # TODO: for real use override the following variables
 server = 'github.com'
 api_token = 'xxxx'
+appid = 2
+appkey = '/opt/project/appkey'
 
 org = 'example'
 repo = 'sandbox'
@@ -42,19 +44,35 @@ def create_connection(server, api_token):
     return conn
 
 
+def create_connection_app(server, appid, appkey):
+    driver = GithubDriver()
+    connection_config = {
+        'server': server,
+        'app_id': appid,
+        'app_key': appkey,
+    }
+    conn = GithubConnection(driver, 'github', connection_config)
+    conn._authenticateGithubAPI()
+    conn._prime_installation_map()
+    return conn
+
+
 def get_change(connection: GithubConnection,
                org: str,
                repo: str,
                pull: int) -> Change:
     p = Project("%s/%s" % (org, repo), connection.source)
-    github = connection.getGithubClient(p)
+    github = connection.getGithubClient(p.name)
     pr = github.pull_request(org, repo, pull)
     sha = pr.head.sha
     return conn._getChange(p, pull, sha, True)
 
 
-# create github connection
+# create github connection with api token
 conn = create_connection(server, api_token)
+
+# create github connection with app key
+# conn = create_connection_app(server, appid, appkey)
 
 
 # Now we can do anything we want with the connection, e.g. check canMerge for
