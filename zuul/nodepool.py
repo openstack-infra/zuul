@@ -165,6 +165,7 @@ class Nodepool(object):
         self.log.debug("Updating node request %s" % (request,))
 
         if request.uid not in self.requests:
+            self.log.debug("Request %s is unknown" % (request.uid,))
             return False
 
         if request.canceled:
@@ -193,14 +194,21 @@ class Nodepool(object):
 
     def acceptNodes(self, request, request_id):
         # Called by the scheduler when it wants to accept and lock
-        # nodes for (potential) use.
+        # nodes for (potential) use.  Return False if there is a
+        # problem with the request (canceled or retrying), True if it
+        # is ready to be acted upon (success or failure).
 
         self.log.info("Accepting node request %s" % (request,))
 
         if request_id != request.id:
             self.log.info("Skipping node accept for %s (resubmitted as %s)",
                           request_id, request.id)
-            return
+            return False
+
+        if request.canceled:
+            self.log.info("Ignoring canceled node request %s" % (request,))
+            # The request was already deleted when it was canceled
+            return False
 
         # Make sure the request still exists. It's possible it could have
         # disappeared if we lost the ZK session between when the fulfillment
@@ -208,13 +216,13 @@ class Nodepool(object):
         # processing it. Nodepool will automatically reallocate the assigned
         # nodes in that situation.
         if not self.sched.zk.nodeRequestExists(request):
-            self.log.info("Request %s no longer exists", request.id)
-            return
-
-        if request.canceled:
-            self.log.info("Ignoring canceled node request %s" % (request,))
-            # The request was already deleted when it was canceled
-            return
+            self.log.info("Request %s no longer exists, resubmitting",
+                          request.id)
+            request.id = None
+            request.state = model.STATE_REQUESTED
+            self.requests[request.uid] = request
+            self.sched.zk.submitNodeRequest(request, self._updateNodeRequest)
+            return False
 
         locked = False
         if request.fulfilled:
@@ -239,3 +247,4 @@ class Nodepool(object):
             # them.
             if locked:
                 self.unlockNodeSet(request.nodeset)
+        return True
