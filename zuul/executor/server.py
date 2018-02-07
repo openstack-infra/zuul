@@ -780,8 +780,17 @@ class AnsibleJob(object):
         ret = merger.mergeChanges(items, repo_state=repo_state)
         if not ret:  # merge conflict
             result = dict(result='MERGER_FAILURE')
+            if self.executor_server.statsd:
+                base_key = ("zuul.executor.%s.merger" %
+                            self.executor_server.hostname)
+                self.executor_server.statsd.incr(base_key + ".FAILURE")
             self.job.sendWorkComplete(json.dumps(result))
             return False
+
+        if self.executor_server.statsd:
+            base_key = ("zuul.executor.%s.merger" %
+                        self.executor_server.hostname)
+            self.executor_server.statsd.incr(base_key + ".SUCCESS")
         recent = ret[3]
         for key, commit in recent.items():
             (connection, project, branch) = key
@@ -1465,6 +1474,11 @@ class AnsibleJob(object):
             wrapped=False)
         self.log.debug("Ansible complete, result %s code %s" % (
             self.RESULT_MAP[result], code))
+        if self.executor_server.statsd:
+            base_key = ("zuul.executor.%s.phase.setup" %
+                        self.executor_server.hostname)
+            self.executor_server.statsd.incr(base_key + ".%s" %
+                                             self.RESULT_MAP[result])
         return result, code
 
     def runAnsibleCleanup(self, playbook):
@@ -1485,6 +1499,11 @@ class AnsibleJob(object):
             wrapped=False)
         self.log.debug("Ansible complete, result %s code %s" % (
             self.RESULT_MAP[result], code))
+        if self.executor_server.statsd:
+            base_key = ("zuul.executor.%s.phase.cleanup" %
+                        self.executor_server.hostname)
+            self.executor_server.statsd.incr(base_key + ".%s" %
+                                             self.RESULT_MAP[result])
         return result, code
 
     def emitPlaybookBanner(self, playbook, step, phase, result=None):
@@ -1554,6 +1573,11 @@ class AnsibleJob(object):
             cmd=cmd, timeout=timeout, playbook=playbook)
         self.log.debug("Ansible complete, result %s code %s" % (
             self.RESULT_MAP[result], code))
+        if self.executor_server.statsd:
+            base_key = ("zuul.executor.%s.phase.%s" %
+                        (self.executor_server.hostname, phase or 'unknown'))
+            self.executor_server.statsd.incr(base_key + ".%s" %
+                                             self.RESULT_MAP[result])
 
         self.emitPlaybookBanner(playbook, 'END', phase, result=result)
         return result, code
