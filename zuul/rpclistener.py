@@ -73,6 +73,7 @@ class RPCListener(object):
         self.worker.registerFunction("zuul:job_list")
         self.worker.registerFunction("zuul:project_get")
         self.worker.registerFunction("zuul:project_list")
+        self.worker.registerFunction("zuul:pipeline_list")
         self.worker.registerFunction("zuul:key_get")
         self.worker.registerFunction("zuul:config_errors_list")
 
@@ -440,6 +441,17 @@ class RPCListener(object):
             output.append(pobj)
         job.sendWorkComplete(json.dumps(
             sorted(output, key=lambda project: project["name"])))
+
+    def handle_pipeline_list(self, job):
+        args = json.loads(job.arguments)
+        tenant = self.sched.abide.tenants.get(args.get("tenant"))
+        if not tenant:
+            job.sendWorkComplete(json.dumps(None))
+            return
+        output = []
+        for pipeline in tenant.layout.pipelines.keys():
+            output.append({"name": pipeline})
+        job.sendWorkComplete(json.dumps(output))
 
     def handle_key_get(self, job):
         args = json.loads(job.arguments)

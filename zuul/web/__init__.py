@@ -331,6 +331,18 @@ class ZuulWebAPI(object):
 
     @cherrypy.expose
     @cherrypy.tools.save_params()
+    @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
+    def pipelines(self, tenant):
+        job = self.rpc.submitJob('zuul:pipeline_list', {'tenant': tenant})
+        ret = json.loads(job.data[0])
+        if ret is None:
+            raise cherrypy.HTTPError(404, 'Tenant %s does not exist.' % tenant)
+        resp = cherrypy.response
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return ret
+
+    @cherrypy.expose
+    @cherrypy.tools.save_params()
     def key(self, tenant, project):
         job = self.rpc.submitJob('zuul:key_get', {'tenant': tenant,
                                                   'project': project,
@@ -559,6 +571,8 @@ class ZuulWeb(object):
                           controller=api, action='projects')
         route_map.connect('api', '/api/tenant/{tenant}/project/{project:.*}',
                           controller=api, action='project')
+        route_map.connect('api', '/api/tenant/{tenant}/pipelines',
+                          controller=api, action='pipelines')
         route_map.connect('api', '/api/tenant/{tenant}/key/{project:.*}.pub',
                           controller=api, action='key')
         route_map.connect('api', '/api/tenant/{tenant}/'
