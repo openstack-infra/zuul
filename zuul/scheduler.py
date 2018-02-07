@@ -1035,8 +1035,8 @@ class Scheduler(threading.Thread):
         request_id = event.request_id
         build_set = request.build_set
 
-        self.nodepool.acceptNodes(request, request_id)
-        if request.canceled:
+        ready = self.nodepool.acceptNodes(request, request_id)
+        if not ready:
             return
 
         if build_set is not build_set.item.current_build_set:
