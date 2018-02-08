@@ -442,6 +442,11 @@ The following sections of ``zuul.conf`` are used by the executor:
 
       Port to use for finger log streamer.
 
+   .. attr:: state_dir
+      :default: /var/lib/zuul
+
+      Path to directory in which Zuul should save its state.
+
    .. attr:: git_dir
       :default: /var/lib/zuul/git
 
