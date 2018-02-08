@@ -367,12 +367,13 @@ class CallbackModule(default.CallbackModule):
                 self._log_message(
                     result, status='MODULE FAILURE',
                     msg=result_dict['module_stderr'])
-        elif (len([key for key in result_dict.keys()
-                   if not key.startswith('_ansible')]) == 1):
+        elif result._task.action == 'debug':
             # this is a debug statement, handle it special
             for key in [k for k in result_dict.keys()
                         if k.startswith('_ansible')]:
                 del result_dict[key]
+            if 'changed' in result_dict.keys():
+                del result_dict['changed']
             keyname = next(iter(result_dict.keys()))
             # If it has msg, that means it was like:
             #
