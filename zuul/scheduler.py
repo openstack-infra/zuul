@@ -1034,6 +1034,24 @@ class Scheduler(threading.Thread):
 
         return autohold_key
 
+    def _processAutohold(self, build):
+
+        # We explicitly only want to hold nodes for jobs if they have
+        # failed and have an autohold request.
+        if build.result != "FAILURE":
+            return
+
+        autohold_key = self._getAutoholdRequestKey(build)
+        try:
+            self.nodepool.holdNodeSet(build.nodeset, autohold_key)
+        except Exception:
+            self.log.exception("Unable to process autohold for %s:",
+                               autohold_key)
+            if autohold_key in self.autohold_requests:
+                self.log.debug("Removing autohold %s due to exception",
+                               autohold_key)
+                del self.autohold_requests[autohold_key]
+
     def _doBuildCompletedEvent(self, event):
         build = event.build
 
@@ -1041,25 +1059,10 @@ class Scheduler(threading.Thread):
         # to pass this on to the pipeline manager, make sure we return
         # the nodes to nodepool.
         try:
-            nodeset = build.nodeset
-            autohold_key = self._getAutoholdRequestKey(build)
-
-            if (build.result == "FAILURE" and autohold_key):
-                # We explicitly only want to hold nodes for jobs if they have
-                # failed and have an autohold request.
-                try:
-                    self.nodepool.holdNodeSet(nodeset, autohold_key)
-                except Exception:
-                    self.log.exception("Unable to process autohold for %s:",
-                                       autohold_key)
-                    if autohold_key in self.autohold_requests:
-                        self.log.debug("Removing autohold %s due to exception",
-                                       autohold_key)
-                        del self.autohold_requests[autohold_key]
-
-            self.nodepool.returnNodeSet(nodeset)
+            self._processAutohold(build)
+            self.nodepool.returnNodeSet(build.nodeset)
         except Exception:
-            self.log.exception("Unable to return nodeset %s" % (nodeset,))
+            self.log.exception("Unable to return nodeset %s" % build.nodeset)
 
         if build.build_set is not build.build_set.item.current_build_set:
             self.log.debug("Build %s is not in the current build set" %
