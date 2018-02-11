@@ -722,7 +722,8 @@ class GithubConnection(BaseConnection):
             change.newrev = event.newrev
             change.url = self.getGitwebUrl(project, sha=event.newrev)
             change.source_event = event
-            change.files = self.getPushedFileNames(event)
+            if hasattr(event, 'commits'):
+                change.files = self.getPushedFileNames(event)
         return change
 
     def _getChange(self, project, number, patchset=None, refresh=False):
