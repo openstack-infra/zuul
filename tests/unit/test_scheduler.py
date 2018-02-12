@@ -1756,6 +1756,38 @@ class TestScheduler(ZuulTestCase):
         self.assertIsNone(held_node)
 
     @simple_layout('layouts/autohold.yaml')
+    def test_autohold_hold_expiration(self):
+        client = zuul.rpcclient.RPCClient('127.0.0.1',
+                                          self.gearman_server.port)
+        self.addCleanup(client.shutdown)
+        r = client.autohold('tenant-one', 'org/project', 'project-test2',
+                            "", "", "reason text", 1, node_hold_expiration=30)
+        self.assertTrue(r)
+
+        # Hold a failed job
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        self.executor_server.failJob('project-test2', B)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+
+        self.waitUntilSettled()
+
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(B.reported, 1)
+        # project-test2
+        self.assertEqual(self.history[0].result, 'FAILURE')
+
+        # Check nodepool for a held node
+        held_node = None
+        for node in self.fake_nodepool.getNodes():
+            if node['state'] == zuul.model.STATE_HOLD:
+                held_node = node
+                break
+        self.assertIsNotNone(held_node)
+
+        # Validate node has hold_expiration property
+        self.assertEqual(int(held_node['hold_expiration']), 30)
+
+    @simple_layout('layouts/autohold.yaml')
     def test_autohold_list(self):
         client = zuul.rpcclient.RPCClient('127.0.0.1',
                                           self.gearman_server.port)
@@ -1779,7 +1811,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(".*", ref_filter)
 
         # Note: the value is converted from set to list by json.
-        self.assertEqual([1, "reason text"], autohold_requests[key])
+        self.assertEqual([1, "reason text", None], autohold_requests[key])
 
     @simple_layout('layouts/three-projects.yaml')
     def test_dependent_behind_dequeue(self):

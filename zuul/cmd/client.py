@@ -61,6 +61,12 @@ class Client(zuul.cmd.ZuulApp):
         cmd_autohold.add_argument('--count',
                                   help='number of job runs (default: 1)',
                                   required=False, type=int, default=1)
+        cmd_autohold.add_argument('--node-hold-expiration',
+                                  help=('how long in seconds should the '
+                                        'node set be in HOLD status '
+                                        '(default: nodepool\'s max-hold-age '
+                                        'if set, or indefinitely)'),
+                                  required=False, default=0)
         cmd_autohold.set_defaults(func=self.autohold)
 
         cmd_autohold_list = subparsers.add_parser(
@@ -182,13 +188,15 @@ class Client(zuul.cmd.ZuulApp):
             print("Change and ref can't be both used for the same request")
             return False
 
+        node_hold_expiration = self.args.node_hold_expiration
         r = client.autohold(tenant=self.args.tenant,
                             project=self.args.project,
                             job=self.args.job,
                             change=self.args.change,
                             ref=self.args.ref,
                             reason=self.args.reason,
-                            count=self.args.count)
+                            count=self.args.count,
+                            node_hold_expiration=node_hold_expiration)
         return r
 
     def autohold_list(self):
@@ -209,7 +217,7 @@ class Client(zuul.cmd.ZuulApp):
             # The key comes to us as a CSV string because json doesn't like
             # non-str keys.
             tenant_name, project_name, job_name, ref_filter = key.split(',')
-            count, reason = value
+            count, reason, node_hold_expiration = value
 
             table.add_row([
                 tenant_name, project_name, job_name, ref_filter, count, reason

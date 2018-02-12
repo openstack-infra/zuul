@@ -88,7 +88,9 @@ class Nodepool(object):
             associated with the given NodeSet.
         '''
         self.log.info("Holding nodeset %s" % (nodeset,))
-        (hold_iterations, reason) = self.sched.autohold_requests[autohold_key]
+        (hold_iterations,
+         reason,
+         node_hold_expiration) = self.sched.autohold_requests[autohold_key]
         nodes = nodeset.getNodes()
 
         for node in nodes:
@@ -97,6 +99,8 @@ class Nodepool(object):
             node.state = model.STATE_HOLD
             node.hold_job = " ".join(autohold_key)
             node.comment = reason
+            if node_hold_expiration:
+                node.hold_expiration = node_hold_expiration
             self.sched.zk.storeNode(node)
 
         # We remove the autohold when the number of nodes in hold
