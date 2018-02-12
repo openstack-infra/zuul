@@ -26,9 +26,11 @@ import textwrap
 try:
     from urllib.request import Request
     from urllib.request import urlopen
+    from urllib.parse import urlparse
 except ImportError:
     from urllib2 import Request
     from urllib2 import urlopen
+    from urlparse import urlparse
 
 DESCRIPTION = """Encrypt a secret for Zuul.
 
@@ -43,7 +45,6 @@ def main():
     parser.add_argument('url',
                         help="The base URL of the zuul server and tenant.  "
                         "E.g., https://zuul.example.com/tenant-name")
-    # TODO(jeblair): Throw a fit if SSL is not used.
     parser.add_argument('project',
                         help="The name of the project.")
     parser.add_argument('--strip', action='store_true', default=False,
@@ -59,6 +60,15 @@ def main():
                         "written.  If not supplied, the value will be written "
                         "to standard output.")
     args = parser.parse_args()
+
+    # We should not use unencrypted connections for retrieving the public key.
+    # Otherwise our secret can be compromised. The schemes file and https are
+    # considered safe.
+    url = urlparse(args.url)
+    if url.scheme not in ('file', 'https'):
+        sys.stderr.write("WARNING: Retrieving encryption key via an "
+                         "unencrypted connection. Your secret may get "
+                         "compromised.\n")
 
     req = Request("%s/%s.pub" % (args.url.rstrip('/'), args.project))
     pubkey = urlopen(req)
