@@ -261,14 +261,6 @@ class Repo(object):
         repo.git.checkout(ref)
         return repo.head.commit
 
-    def checkoutLocalBranch(self, branch):
-        # TODO(jeblair): retire in favor of checkout
-        repo = self.createRepoObject()
-        # Perform a hard reset before checking out so that we clean up
-        # anything that might be left over from a merge.
-        reset_repo_to_head(repo)
-        repo.heads[branch].checkout()
-
     def cherryPick(self, ref):
         repo = self.createRepoObject()
         self.log.debug("Cherry-picking %s" % ref)
