@@ -844,6 +844,13 @@ class AnsibleJob(object):
         repo.checkout(selected_ref)
         return selected_ref
 
+    def getAnsibleTimeout(self, start, timeout):
+        if timeout is not None:
+            now = time.time()
+            elapsed = now - start
+            timeout = timeout - elapsed
+        return timeout
+
     def runPlaybooks(self, args):
         result = None
 
@@ -861,10 +868,15 @@ class AnsibleJob(object):
         pre_failed = False
         success = False
         self.started = True
+        time_started = time.time()
+        # timeout value is total job timeout or put another way
+        # the cummulative time that pre, run, and post can consume.
+        job_timeout = args['timeout']
         for index, playbook in enumerate(self.jobdir.pre_playbooks):
             # TODOv3(pabelanger): Implement pre-run timeout setting.
+            ansible_timeout = self.getAnsibleTimeout(time_started, job_timeout)
             pre_status, pre_code = self.runAnsiblePlaybook(
-                playbook, args['timeout'], phase='pre', index=index)
+                playbook, ansible_timeout, phase='pre', index=index)
             if pre_status != self.RESULT_NORMAL or pre_code != 0:
                 # These should really never fail, so return None and have
                 # zuul try again
@@ -872,8 +884,9 @@ class AnsibleJob(object):
                 break
 
         if not pre_failed:
+            ansible_timeout = self.getAnsibleTimeout(time_started, job_timeout)
             job_status, job_code = self.runAnsiblePlaybook(
-                self.jobdir.playbook, args['timeout'], phase='run')
+                self.jobdir.playbook, ansible_timeout, phase='run')
             if job_status == self.RESULT_ABORTED:
                 return 'ABORTED'
             elif job_status == self.RESULT_TIMED_OUT:
@@ -894,8 +907,9 @@ class AnsibleJob(object):
 
         for index, playbook in enumerate(self.jobdir.post_playbooks):
             # TODOv3(pabelanger): Implement post-run timeout setting.
+            ansible_timeout = self.getAnsibleTimeout(time_started, job_timeout)
             post_status, post_code = self.runAnsiblePlaybook(
-                playbook, args['timeout'], success, phase='post', index=index)
+                playbook, ansible_timeout, success, phase='post', index=index)
             if post_status == self.RESULT_ABORTED:
                 return 'ABORTED'
             if post_status != self.RESULT_NORMAL or post_code != 0:
