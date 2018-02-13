@@ -277,7 +277,7 @@ def main():
         inode = get_inode()
         if not inode:
             module.fail_json(
-                "Could not find inode for port",
+                msg="Could not find inode for port",
                 exceptions=[])
 
         pid, exceptions = get_pid_from_inode(inode)
