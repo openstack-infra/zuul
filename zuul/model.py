@@ -848,6 +848,7 @@ class Job(object):
             semaphore=None,
             attempts=3,
             final=False,
+            abstract=False,
             protected=None,
             roles=(),
             required_projects={},
@@ -1044,7 +1045,7 @@ class Job(object):
 
         for k in self.execution_attributes:
             if (other._get(k) is not None and
-                    k not in set(['final', 'protected'])):
+                k not in set(['final', 'abstract', 'protected'])):
                 if self.final:
                     raise Exception("Unable to modify final job %s attribute "
                                     "%s=%s with variant %s" % (
@@ -1069,6 +1070,13 @@ class Job(object):
         # through assignment.
         if other.final != self.attributes['final']:
             self.final = other.final
+
+        # Abstract may not be reset by a variant, it may only be
+        # cleared by inheriting.
+        if other.name != self.name:
+            self.abstract = other.abstract
+        elif other.abstract:
+            self.abstract = True
 
         # Protected may only be set to true
         if other.protected is not None:
@@ -2836,6 +2844,10 @@ class Layout(object):
                 item.debug("No matching pipeline variants for {jobname}".
                            format(jobname=jobname), indent=2)
                 continue
+            if frozen_job.abstract:
+                raise Exception("Job %s is abstract and may not be "
+                                "directly run" %
+                                (frozen_job.name,))
             if (frozen_job.allowed_projects is not None and
                 change.project.name not in frozen_job.allowed_projects):
                 raise Exception("Project %s is not allowed to run job %s" %

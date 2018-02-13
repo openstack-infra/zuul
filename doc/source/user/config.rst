@@ -546,6 +546,12 @@ Here is an example of two job definitions:
       from this job. Once this is set to ``true`` it cannot be reset to
       ``false``.
 
+   .. attr:: abstract
+      :default: false
+
+      To indicate a job is not intended to be run directly, but
+      instead must be inherited from, set this attribute to ``true``.
+
    .. attr:: success-message
       :default: SUCCESS
 
