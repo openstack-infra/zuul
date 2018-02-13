@@ -231,6 +231,7 @@ class Scheduler(threading.Thread):
         self.statsd = get_statsd(config)
         self.rpc = rpclistener.RPCListener(config, self)
         self.stats_thread = threading.Thread(target=self.runStats)
+        self.stats_thread.daemon = True
         self.stats_stop = threading.Event()
         # TODO(jeblair): fix this
         # Despite triggers being part of the pipeline, there is one trigger set

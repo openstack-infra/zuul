@@ -159,6 +159,7 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
             self.log.exception("Error starting Zuul:")
             # TODO(jeblair): If we had all threads marked as daemon,
             # we might be able to have a nicer way of exiting here.
+            self.sched.stop()
             sys.exit(1)
 
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
