@@ -182,11 +182,11 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
 
       The one-minute load average of this executor, multiplied by 100.
 
-   .. stat:: pct_available_ram
+   .. stat:: pct_used_ram
       :type: gauge
 
-      The available RAM (including buffers and cache) on this
-      executor, as a percentage multiplied by 100.
+      The used RAM (excluding buffers and cache) on this executor, as
+      a percentage multiplied by 100.
 
 .. stat:: zuul.nodepool
 
