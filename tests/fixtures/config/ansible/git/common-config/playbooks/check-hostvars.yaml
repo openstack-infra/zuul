@@ -1,0 +1,26 @@
+- hosts: host1
+  tasks:
+    - name: Assert hostvar is present.
+      assert:
+        that:
+          - allvar == 'all'
+          - hostvar == 'host'
+          - groupvar is not defined
+
+- hosts: host2
+  tasks:
+    - name: Assert groupvar is present.
+      assert:
+        that:
+          - allvar == 'all'
+          - hostvar is not defined
+          - groupvar == 'group'
+
+- hosts: host3
+  tasks:
+    - name: Assert groupvar is present.
+      assert:
+        that:
+          - allvar == 'all'
+          - hostvar is not defined
+          - groupvar == 'group'

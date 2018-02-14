@@ -115,6 +115,32 @@
 
 - job:
     parent: python27
+    name: check-hostvars
+    run: playbooks/check-hostvars.yaml
+    nodeset:
+      nodes:
+        - name: host1
+          label: ubuntu-xenial
+        - name: host2
+          label: ubuntu-xenial
+        - name: host3
+          label: ubuntu-xenial
+      groups:
+        - name: group1
+          nodes:
+            - host2
+            - host3
+    vars:
+      allvar: all
+    host_vars:
+      host1:
+        hostvar: host
+    group_vars:
+      group1:
+        groupvar: group
+
+- job:
+    parent: python27
     name: check-secret-names
     run: playbooks/check-secret-names.yaml
     nodeset:

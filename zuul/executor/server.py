@@ -497,16 +497,22 @@ def _copy_ansible_files(python_module, target_dir):
                 shutil.copy(os.path.join(library_path, fn), target_dir)
 
 
-def make_setup_inventory_dict(nodes):
+def check_varnames(var):
+    # We block these in configloader, but block it here too to make
+    # sure that a job doesn't pass variables named zuul or nodepool.
+    if 'zuul' in var:
+        raise Exception("Defining variables named 'zuul' is not allowed")
+    if 'nodepool' in var:
+        raise Exception("Defining variables named 'nodepool' is not allowed")
 
+
+def make_setup_inventory_dict(nodes):
     hosts = {}
     for node in nodes:
         if (node['host_vars']['ansible_connection'] in
             BLACKLISTED_ANSIBLE_CONNECTION_TYPES):
             continue
-
-        for name in node['name']:
-            hosts[name] = node['host_vars']
+        hosts[node['name']] = node['host_vars']
 
     inventory = {
         'all': {
@@ -517,12 +523,10 @@ def make_setup_inventory_dict(nodes):
     return inventory
 
 
-def make_inventory_dict(nodes, groups, all_vars):
-
+def make_inventory_dict(nodes, args, all_vars):
     hosts = {}
     for node in nodes:
-        for name in node['name']:
-            hosts[name] = node['host_vars']
+        hosts[node['name']] = node['host_vars']
 
     inventory = {
         'all': {
@@ -531,14 +535,16 @@ def make_inventory_dict(nodes, groups, all_vars):
         }
     }
 
-    for group in groups:
+    for group in args['groups']:
         group_hosts = {}
         for node_name in group['nodes']:
-            # children is a dict with None as values because we don't have
-            # and per-group variables. If we did, None would be a dict
-            # with the per-group variables
             group_hosts[node_name] = None
-        inventory[group['name']] = {'hosts': group_hosts}
+        group_vars = args['group_vars'].get(group['name'], {}).copy()
+        check_varnames(group_vars)
+        inventory[group['name']] = {
+            'hosts': group_hosts,
+            'vars': group_vars,
+        }
 
     return inventory
 
@@ -959,42 +965,45 @@ class AnsibleJob(object):
             # set to True in the clouds.yaml for a cloud if this
             # results in the wrong thing being in interface_ip
             # TODO(jeblair): Move this notice to the docs.
-            ip = node.get('interface_ip')
-            port = node.get('connection_port', node.get('ssh_port', 22))
-            host_vars = dict(
-                ansible_host=ip,
-                ansible_user=self.executor_server.default_username,
-                ansible_port=port,
-                nodepool=dict(
-                    label=node.get('label'),
-                    az=node.get('az'),
-                    cloud=node.get('cloud'),
-                    provider=node.get('provider'),
-                    region=node.get('region'),
-                    interface_ip=node.get('interface_ip'),
-                    public_ipv4=node.get('public_ipv4'),
-                    private_ipv4=node.get('private_ipv4'),
-                    public_ipv6=node.get('public_ipv6')))
+            for name in node['name']:
+                ip = node.get('interface_ip')
+                port = node.get('connection_port', node.get('ssh_port', 22))
+                host_vars = args['host_vars'].get(name, {}).copy()
+                check_varnames(host_vars)
+                host_vars.update(dict(
+                    ansible_host=ip,
+                    ansible_user=self.executor_server.default_username,
+                    ansible_port=port,
+                    nodepool=dict(
+                        label=node.get('label'),
+                        az=node.get('az'),
+                        cloud=node.get('cloud'),
+                        provider=node.get('provider'),
+                        region=node.get('region'),
+                        interface_ip=node.get('interface_ip'),
+                        public_ipv4=node.get('public_ipv4'),
+                        private_ipv4=node.get('private_ipv4'),
+                        public_ipv6=node.get('public_ipv6'))))
 
-            username = node.get('username')
-            if username:
-                host_vars['ansible_user'] = username
+                username = node.get('username')
+                if username:
+                    host_vars['ansible_user'] = username
 
-            connection_type = node.get('connection_type')
-            if connection_type:
-                host_vars['ansible_connection'] = connection_type
+                connection_type = node.get('connection_type')
+                if connection_type:
+                    host_vars['ansible_connection'] = connection_type
 
-            host_keys = []
-            for key in node.get('host_keys'):
-                if port != 22:
-                    host_keys.append("[%s]:%s %s" % (ip, port, key))
-                else:
-                    host_keys.append("%s %s" % (ip, key))
+                host_keys = []
+                for key in node.get('host_keys'):
+                    if port != 22:
+                        host_keys.append("[%s]:%s %s" % (ip, port, key))
+                    else:
+                        host_keys.append("%s %s" % (ip, key))
 
-            hosts.append(dict(
-                name=node['name'],
-                host_vars=host_vars,
-                host_keys=host_keys))
+                hosts.append(dict(
+                    name=name,
+                    host_vars=host_vars,
+                    host_keys=host_keys))
         return hosts
 
     def _blockPluginDirs(self, path):
@@ -1087,10 +1096,7 @@ class AnsibleJob(object):
 
         secrets = playbook['secrets']
         if secrets:
-            if 'zuul' in secrets:
-                # We block this in configloader, but block it here too to make
-                # sure that a job doesn't pass secrets named zuul.
-                raise Exception("Defining secrets named 'zuul' is not allowed")
+            check_varnames(secrets)
             jobdir_playbook.secrets_content = yaml.safe_dump(
                 secrets, default_flow_style=False)
 
@@ -1191,12 +1197,9 @@ class AnsibleJob(object):
 
     def prepareAnsibleFiles(self, args):
         all_vars = args['vars'].copy()
+        check_varnames(all_vars)
         # TODO(mordred) Hack to work around running things with python3
         all_vars['ansible_python_interpreter'] = '/usr/bin/python2'
-        if 'zuul' in all_vars:
-            # We block this in configloader, but block it here too to make
-            # sure that a job doesn't pass variables named zuul.
-            raise Exception("Defining vars named 'zuul' is not allowed")
         all_vars['zuul'] = args['zuul'].copy()
         all_vars['zuul']['executor'] = dict(
             hostname=self.executor_server.hostname,
@@ -1207,7 +1210,7 @@ class AnsibleJob(object):
 
         nodes = self.getHostList(args)
         setup_inventory = make_setup_inventory_dict(nodes)
-        inventory = make_inventory_dict(nodes, args['groups'], all_vars)
+        inventory = make_inventory_dict(nodes, args, all_vars)
 
         with open(self.jobdir.setup_inventory, 'w') as setup_inventory_yaml:
             setup_inventory_yaml.write(

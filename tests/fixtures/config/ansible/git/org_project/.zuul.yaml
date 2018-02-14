@@ -15,6 +15,7 @@
         - python27
         - faillocal
         - check-vars
+        - check-hostvars
         - check-secret-names
         - timeout
         - hello-world

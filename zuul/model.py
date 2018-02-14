@@ -840,6 +840,8 @@ class Job(object):
             parent=None,
             timeout=None,
             variables={},
+            host_variables={},
+            group_variables={},
             nodeset=NodeSet(),
             workspace=None,
             pre_run=(),
@@ -980,10 +982,19 @@ class Job(object):
             matchers.append(self.branch_matcher)
         self.branch_matcher = change_matcher.MatchAll(matchers)
 
-    def updateVariables(self, other_vars):
-        v = copy.deepcopy(self.variables)
-        Job._deepUpdate(v, other_vars)
-        self.variables = v
+    def updateVariables(self, other_vars, other_host_vars, other_group_vars):
+        if other_vars is not None:
+            v = copy.deepcopy(self.variables)
+            Job._deepUpdate(v, other_vars)
+            self.variables = v
+        if other_host_vars is not None:
+            v = copy.deepcopy(self.host_variables)
+            Job._deepUpdate(v, other_host_vars)
+            self.host_variables = v
+        if other_group_vars is not None:
+            v = copy.deepcopy(self.group_variables)
+            Job._deepUpdate(v, other_group_vars)
+            self.group_variables = v
 
     def updateParentData(self, other_vars):
         # Update variables, but give the current values priority (used
@@ -1060,7 +1071,8 @@ class Job(object):
                                         "from other projects."
                                         % (repr(self), this_origin))
                 if k not in set(['pre_run', 'run', 'post_run', 'roles',
-                                 'variables', 'required_projects',
+                                 'variables', 'host_variables',
+                                 'group_variables', 'required_projects',
                                  'allowed_projects']):
                     # TODO(jeblair): determine if deepcopy is required
                     setattr(self, k, copy.deepcopy(other._get(k)))
@@ -1094,8 +1106,8 @@ class Job(object):
         if other._get('post_run') is not None:
             other_post_run = self.freezePlaybooks(other.post_run)
             self.post_run = other_post_run + self.post_run
-        if other._get('variables') is not None:
-            self.updateVariables(other.variables)
+        self.updateVariables(other.variables, other.host_variables,
+                             other.group_variables)
         if other._get('required_projects') is not None:
             self.updateProjects(other.required_projects)
         if (other._get('allowed_projects') is not None and
