@@ -1545,8 +1545,7 @@ class TenantParser(object):
             project.unparsed_config = data
         for project, branch_config in \
             new_project_unparsed_branch_config.items():
-            for branch, data in branch_config.items():
-                project.unparsed_branch_config[branch] = data
+            project.unparsed_branch_config = branch_config
         return config_projects_config, untrusted_projects_config
 
     @staticmethod

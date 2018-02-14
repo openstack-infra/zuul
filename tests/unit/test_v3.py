@@ -301,6 +301,106 @@ class TestFinal(ZuulTestCase):
         self.assertIn('Unable to modify final job', A.messages[0])
 
 
+class TestBranchDeletion(ZuulTestCase):
+    tenant_config_file = 'config/branch-deletion/main.yaml'
+
+    def test_branch_delete(self):
+        # This tests a tenant reconfiguration on deleting a branch
+        # *after* an earlier failed tenant reconfiguration.  This
+        # ensures that cached data are appropriately removed, even if
+        # we are recovering from an invalid config.
+        self.create_branch('org/project', 'stable/queens')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project', 'stable/queens'))
+        self.waitUntilSettled()
+
+        in_repo_conf = textwrap.dedent(
+            """
+            - project:
+                check:
+                  jobs:
+                    - nonexistent-job
+            """)
+
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'stable/queens', 'A',
+                                           files=file_dict)
+        A.setMerged()
+        self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+        self.waitUntilSettled()
+
+        self.delete_branch('org/project', 'stable/queens')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchDeletedEvent(
+                'org/project', 'stable/queens'))
+        self.waitUntilSettled()
+
+        in_repo_conf = textwrap.dedent(
+            """
+            - project:
+                check:
+                  jobs:
+                    - base
+            """)
+
+        file_dict = {'zuul.yaml': in_repo_conf}
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(B.reported, 1)
+        self.assertHistory([
+            dict(name='base', result='SUCCESS', changes='2,1')])
+
+    def test_branch_delete_full_reconfiguration(self):
+        # This tests a full configuration after deleting a branch
+        # *after* an earlier failed tenant reconfiguration.  This
+        # ensures that cached data are appropriately removed, even if
+        # we are recovering from an invalid config.
+        self.create_branch('org/project', 'stable/queens')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project', 'stable/queens'))
+        self.waitUntilSettled()
+
+        in_repo_conf = textwrap.dedent(
+            """
+            - project:
+                check:
+                  jobs:
+                    - nonexistent-job
+            """)
+
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'stable/queens', 'A',
+                                           files=file_dict)
+        A.setMerged()
+        self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+        self.waitUntilSettled()
+
+        self.delete_branch('org/project', 'stable/queens')
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        in_repo_conf = textwrap.dedent(
+            """
+            - project:
+                check:
+                  jobs:
+                    - base
+            """)
+
+        file_dict = {'zuul.yaml': in_repo_conf}
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(B.reported, 1)
+        self.assertHistory([
+            dict(name='base', result='SUCCESS', changes='2,1')])
+
+
 class TestBranchTag(ZuulTestCase):
     tenant_config_file = 'config/branch-tag/main.yaml'
 
