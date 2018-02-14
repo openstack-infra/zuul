@@ -59,9 +59,12 @@ def stack_dump_handler(signum, frame):
             thread = threads.get(thread_id)
             if thread:
                 thread_name = thread.name
+                thread_is_daemon = str(thread.daemon)
             else:
                 thread_name = thread.ident
-            log_str += "Thread: %s %s\n" % (thread_id, thread_name)
+                thread_is_daemon = '(Unknown)'
+            log_str += "Thread: %s %s d: %s\n"\
+                       % (thread_id, thread_name, thread_is_daemon)
             log_str += "".join(traceback.format_stack(stack_frame))
         log.debug(log_str)
     except Exception:
