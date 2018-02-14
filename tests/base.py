@@ -1432,6 +1432,7 @@ class FakeGearmanServer(gear.Server):
     def __init__(self, use_ssl=False):
         self.hold_jobs_in_queue = False
         self.hold_merge_jobs_in_queue = False
+        self.jobs_history = []
         if use_ssl:
             ssl_ca = os.path.join(FIXTURE_DIR, 'gearman/root-ca.pem')
             ssl_cert = os.path.join(FIXTURE_DIR, 'gearman/server.pem')
@@ -1448,6 +1449,7 @@ class FakeGearmanServer(gear.Server):
     def getJobForConnection(self, connection, peek=False):
         for job_queue in [self.high_queue, self.normal_queue, self.low_queue]:
             for job in job_queue:
+                self.jobs_history.append(job)
                 if not hasattr(job, 'waiting'):
                     if job.name.startswith(b'executor:execute'):
                         job.waiting = self.hold_jobs_in_queue
