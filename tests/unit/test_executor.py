@@ -41,6 +41,9 @@ class TestExecutorRepos(ZuulTestCase):
                              'Project %s commit for build %s #%s should '
                              'be on the correct branch' % (
                                  project, build, number))
+            # Remote 'origin' needs to be kept intact with a bogus URL
+            self.assertEqual(repo.remotes.origin.url, 'file:///dev/null')
+            self.assertIn(state['branch'], repo.remotes.origin.refs)
         if 'commit' in state:
             self.assertEqual(state['commit'],
                              str(repo.commit('HEAD')),

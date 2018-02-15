@@ -76,6 +76,39 @@ class TestMergerRepo(ZuulTestCase):
             sub_repo.createRepoObject().remotes[0].url,
             message="Sub repository points to upstream project2")
 
+    def test_set_refs(self):
+        parent_path = os.path.join(self.upstream_root, 'org/project1')
+        remote_sha = self.create_commit('org/project1')
+        self.create_branch('org/project1', 'foobar')
+
+        work_repo = Repo(parent_path, self.workspace_root,
+                         'none@example.org', 'User Name', '0', '0')
+        repo = git.Repo(self.workspace_root)
+        new_sha = repo.heads.foobar.commit.hexsha
+
+        work_repo.setRefs({'refs/heads/master': new_sha}, True)
+        self.assertEqual(work_repo.getBranchHead('master').hexsha, new_sha)
+        self.assertIn('master', repo.remotes.origin.refs)
+
+        work_repo.setRefs({'refs/heads/master': remote_sha})
+        self.assertEqual(work_repo.getBranchHead('master').hexsha, remote_sha)
+        self.assertNotIn('master', repo.remotes.origin.refs)
+
+    def test_set_remote_ref(self):
+        parent_path = os.path.join(self.upstream_root, 'org/project1')
+        commit_sha = self.create_commit('org/project1')
+        self.create_commit('org/project1')
+
+        work_repo = Repo(parent_path, self.workspace_root,
+                         'none@example.org', 'User Name', '0', '0')
+        work_repo.setRemoteRef('master', commit_sha)
+        work_repo.setRemoteRef('invalid', commit_sha)
+
+        repo = git.Repo(self.workspace_root)
+        self.assertEqual(repo.remotes.origin.refs.master.commit.hexsha,
+                         commit_sha)
+        self.assertNotIn('invalid', repo.remotes.origin.refs)
+
     def test_clone_timeout(self):
         parent_path = os.path.join(self.upstream_root, 'org/project1')
         self.patch(git.Git, 'GIT_PYTHON_GIT_EXECUTABLE',

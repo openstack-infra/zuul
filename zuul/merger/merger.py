@@ -239,7 +239,7 @@ class Repo(object):
         obj = git.objects.Object.new_from_sha(repo, binsha)
         git.refs.Reference.create(repo, path, obj, force=True)
 
-    def setRefs(self, refs):
+    def setRefs(self, refs, keep_remotes=False):
         repo = self.createRepoObject()
         current_refs = {}
         for ref in repo.refs:
@@ -248,8 +248,21 @@ class Repo(object):
         for path, hexsha in refs.items():
             self.setRef(path, hexsha, repo)
             unseen.discard(path)
+            ref = current_refs.get(path)
+            if keep_remotes and ref:
+                unseen.discard('refs/remotes/origin/{}'.format(ref.name))
         for path in unseen:
             self.deleteRef(path, repo)
+
+    def setRemoteRef(self, branch, rev):
+        repo = self.createRepoObject()
+        try:
+            origin_ref = repo.remotes.origin.refs[branch]
+        except IndexError:
+            self.log.warning("No remote ref found for branch %s", branch)
+            return
+        self.log.debug("Updating remote reference %s to %s", origin_ref, rev)
+        origin_ref.commit = rev
 
     def deleteRef(self, path, repo=None):
         if repo is None:
@@ -365,7 +378,8 @@ class Repo(object):
 
 class Merger(object):
     def __init__(self, working_root, connections, email, username,
-                 speed_limit, speed_time, cache_root=None, logger=None):
+                 speed_limit, speed_time, cache_root=None, logger=None,
+                 execution_context=False):
         self.logger = logger
         if logger is None:
             self.log = logging.getLogger("zuul.Merger")
@@ -381,6 +395,10 @@ class Merger(object):
         self.speed_limit = speed_limit
         self.speed_time = speed_time
         self.cache_root = cache_root
+        # Flag to determine if the merger is used for preparing repositories
+        # for job execution. This flag can be used to enable executor specific
+        # behavior e.g. to keep the 'origin' remote intact.
+        self.execution_context = execution_context
 
     def _addProject(self, hostname, project_name, url, sshkey):
         repo = None
@@ -471,7 +489,7 @@ class Merger(object):
             return
         self.log.debug("Restore repo state for project %s/%s",
                        connection_name, project_name)
-        repo.setRefs(project)
+        repo.setRefs(project, keep_remotes=self.execution_context)
 
     def _mergeChange(self, item, ref):
         repo = self.getRepo(item['connection'], item['project'])
@@ -532,6 +550,13 @@ class Merger(object):
                                 repo_state, recent)
         else:
             self.log.debug("Found base commit %s for %s" % (base, key,))
+
+        if self.execution_context:
+            # Set origin branch to the rev of the current (speculative) base.
+            # This allows tools to determine the commits that are part of a
+            # change by looking at origin/master..master.
+            repo.setRemoteRef(item['branch'], base)
+
         # Merge the change
         commit = self._mergeChange(item, base)
         if not commit:
