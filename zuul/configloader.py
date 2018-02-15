@@ -542,8 +542,12 @@ class JobParser(object):
         'override-checkout',
     ]
 
-    @staticmethod
-    def _getImpliedBranches(tenant, job):
+    def __init__(self, tenant, layout):
+        self.log = logging.getLogger("zuul.JobParser")
+        self.tenant = tenant
+        self.layout = layout
+
+    def _getImpliedBranches(self, job):
         # If the user has set a pragma directive for this, use the
         # value (if unset, the value is None).
         if job.source_context.implied_branch_matchers is True:
@@ -560,7 +564,7 @@ class JobParser(object):
 
         # If this project only has one branch, don't create implied
         # branch matchers.  This way central job repos can work.
-        branches = tenant.getProjectBranches(job.source_context.project)
+        branches = self.tenant.getProjectBranches(job.source_context.project)
         if len(branches) == 1:
             return None
 
@@ -568,12 +572,11 @@ class JobParser(object):
             return job.source_context.implied_branches
         return [job.source_context.branch]
 
-    @staticmethod
-    def fromYaml(tenant, layout, conf, project_pipeline=False,
-                 name=None, validate=True):
+    def fromYaml(self, conf, project_pipeline=False, name=None,
+                 validate=True):
         if validate:
             with configuration_exceptions('job', conf):
-                JobParser.schema(conf)
+                self.schema(conf)
 
         if name is None:
             name = conf['name']
@@ -607,10 +610,10 @@ class JobParser(object):
         for secret_config in as_list(conf.get('secrets', [])):
             if isinstance(secret_config, str):
                 secret_name = secret_config
-                secret = layout.secrets.get(secret_name)
+                secret = self.layout.secrets.get(secret_name)
             else:
                 secret_name = secret_config['name']
-                secret = layout.secrets.get(secret_config['secret'])
+                secret = self.layout.secrets.get(secret_config['secret'])
             if secret is None:
                 raise SecretNotFoundError(secret_name)
             if secret_name == 'zuul' or secret_name == 'nodepool':
@@ -635,13 +638,13 @@ class JobParser(object):
         if secrets and not conf['_source_context'].trusted:
             job.post_review = True
 
-        if conf.get('timeout') and tenant.max_job_timeout != -1 and \
-           int(conf['timeout']) > tenant.max_job_timeout:
-            raise MaxTimeoutError(job, tenant)
+        if conf.get('timeout') and self.tenant.max_job_timeout != -1 and \
+           int(conf['timeout']) > self.tenant.max_job_timeout:
+            raise MaxTimeoutError(job, self.tenant)
 
-        if conf.get('post-timeout') and tenant.max_job_timeout != -1 and \
-           int(conf['post-timeout']) > tenant.max_job_timeout:
-            raise MaxTimeoutError(job, tenant)
+        if conf.get('post-timeout') and self.tenant.max_job_timeout != -1 and \
+           int(conf['post-timeout']) > self.tenant.max_job_timeout:
+            raise MaxTimeoutError(job, self.tenant)
 
         if 'post-review' in conf:
             if conf['post-review']:
@@ -656,13 +659,13 @@ class JobParser(object):
         if 'roles' in conf:
             for role in conf.get('roles', []):
                 if 'zuul' in role:
-                    r = JobParser._makeZuulRole(tenant, job, role)
+                    r = self._makeZuulRole(job, role)
                     if r:
                         roles.append(r)
         # A job's repo should be an implicit role source for that job,
         # but not in a project-pipeline variant.
         if not project_pipeline:
-            r = JobParser._makeImplicitRole(job)
+            r = self._makeImplicitRole(job)
             roles.insert(0, r)
         job.addRoles(roles)
 
@@ -684,23 +687,23 @@ class JobParser(object):
                                         job.roles, secrets)
             job.run = (run,)
 
-        for k in JobParser.simple_attributes:
+        for k in self.simple_attributes:
             a = k.replace('-', '_')
             if k in conf:
                 setattr(job, a, conf[k])
         if 'nodeset' in conf:
-            nodeset_parser = NodeSetParser(tenant, layout)
+            nodeset_parser = NodeSetParser(self.tenant, self.layout)
             conf_nodeset = conf['nodeset']
             if isinstance(conf_nodeset, str):
                 # This references an existing named nodeset in the layout.
-                ns = layout.nodesets.get(conf_nodeset)
+                ns = self.layout.nodesets.get(conf_nodeset)
                 if ns is None:
                     raise NodesetNotFoundError(conf_nodeset)
             else:
                 ns = nodeset_parser.fromYaml(conf_nodeset, anonymous=True)
-            if tenant.max_nodes_per_job != -1 and \
-               len(ns) > tenant.max_nodes_per_job:
-                raise MaxNodeError(job, tenant)
+            if self.tenant.max_nodes_per_job != -1 and \
+               len(ns) > self.tenant.max_nodes_per_job:
+                raise MaxNodeError(job, self.tenant)
             job.nodeset = ns
 
         if 'required-projects' in conf:
@@ -716,7 +719,7 @@ class JobParser(object):
                     project_name = project
                     project_override_branch = None
                     project_override_checkout = None
-                (trusted, project) = tenant.getProject(project_name)
+                (trusted, project) = self.tenant.getProject(project_name)
                 if project is None:
                     raise Exception("Unknown project %s" % (project_name,))
                 job_project = model.JobProject(project.canonical_name,
@@ -756,7 +759,7 @@ class JobParser(object):
         if allowed_projects:
             allowed = []
             for p in as_list(allowed_projects):
-                (trusted, project) = tenant.getProject(p)
+                (trusted, project) = self.tenant.getProject(p)
                 if project is None:
                     raise Exception("Unknown project %s" % (p,))
                 allowed.append(project.name)
@@ -764,7 +767,7 @@ class JobParser(object):
 
         branches = None
         if ('branches' not in conf):
-            branches = JobParser._getImpliedBranches(tenant, job)
+            branches = self._getImpliedBranches(job)
         if (not branches) and ('branches' in conf):
             branches = as_list(conf['branches'])
         if branches:
@@ -782,11 +785,10 @@ class JobParser(object):
                 matchers)
         return job
 
-    @staticmethod
-    def _makeZuulRole(tenant, job, role):
+    def _makeZuulRole(self, job, role):
         name = role['zuul'].split('/')[-1]
 
-        (trusted, project) = tenant.getProject(role['zuul'])
+        (trusted, project) = self.tenant.getProject(role['zuul'])
         if project is None:
             return None
 
@@ -794,8 +796,7 @@ class JobParser(object):
                               project.connection_name,
                               project.name)
 
-    @staticmethod
-    def _makeImplicitRole(job):
+    def _makeImplicitRole(self, job):
         project = job.source_context.project
         name = project.name.split('/')[-1]
         name = JobParser.ANSIBLE_ROLE_RE.sub('', name)
@@ -873,9 +874,9 @@ class ProjectTemplateParser(object):
                                           attrs):
                 self.layout.getJob(jobname)
 
-            job_list.addJob(JobParser.fromYaml(self.tenant, self.layout,
-                                               attrs, project_pipeline=True,
-                                               name=jobname, validate=False))
+            job_parser = JobParser(self.tenant, self.layout)
+            job_list.addJob(job_parser.fromYaml(attrs, project_pipeline=True,
+                                                name=jobname, validate=False))
 
 
 class ProjectParser(object):
@@ -1640,12 +1641,13 @@ class TenantParser(object):
             with configuration_exceptions('secret', config_secret):
                 layout.addSecret(secret_parser.fromYaml(config_secret))
 
+        job_parser = JobParser(tenant, layout)
         for config_job in data.jobs:
             classes = TenantParser._getLoadClasses(tenant, config_job)
             if 'job' not in classes:
                 continue
             with configuration_exceptions('job', config_job):
-                job = JobParser.fromYaml(tenant, layout, config_job)
+                job = job_parser.fromYaml(config_job)
                 added = layout.addJob(job)
                 if not added:
                     TenantParser.log.debug(

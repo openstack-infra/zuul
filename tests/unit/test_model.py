@@ -63,7 +63,8 @@ class TestJob(BaseTestCase):
     def job(self):
         tenant = model.Tenant('tenant')
         layout = model.Layout(tenant)
-        job = configloader.JobParser.fromYaml(tenant, layout, {
+        job_parser = configloader.JobParser(tenant, layout)
+        job = job_parser.fromYaml({
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'job',
@@ -157,7 +158,8 @@ class TestJob(BaseTestCase):
         layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
 
-        base = configloader.JobParser.fromYaml(tenant, layout, {
+        job_parser = configloader.JobParser(tenant, layout)
+        base = job_parser.fromYaml({
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'base',
@@ -165,7 +167,7 @@ class TestJob(BaseTestCase):
             'timeout': 30,
         })
         layout.addJob(base)
-        python27 = configloader.JobParser.fromYaml(tenant, layout, {
+        python27 = job_parser.fromYaml({
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'python27',
@@ -173,7 +175,7 @@ class TestJob(BaseTestCase):
             'timeout': 40,
         })
         layout.addJob(python27)
-        python27diablo = configloader.JobParser.fromYaml(tenant, layout, {
+        python27diablo = job_parser.fromYaml({
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'python27',
@@ -241,7 +243,8 @@ class TestJob(BaseTestCase):
         tpc = model.TenantProjectConfig(project)
         tenant.addUntrustedProject(tpc)
 
-        base = configloader.JobParser.fromYaml(tenant, layout, {
+        job_parser = configloader.JobParser(tenant, layout)
+        base = job_parser.fromYaml({
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'base',
@@ -249,7 +252,7 @@ class TestJob(BaseTestCase):
             'timeout': 30,
         })
         layout.addJob(base)
-        python27 = configloader.JobParser.fromYaml(tenant, layout, {
+        python27 = job_parser.fromYaml({
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'python27',
@@ -296,7 +299,8 @@ class TestJob(BaseTestCase):
         tpc = model.TenantProjectConfig(base_project)
         tenant.addUntrustedProject(tpc)
 
-        base = configloader.JobParser.fromYaml(tenant, layout, {
+        job_parser = configloader.JobParser(tenant, layout)
+        base = job_parser.fromYaml({
             '_source_context': base_context,
             '_start_mark': self.start_mark,
             'parent': None,
@@ -309,7 +313,7 @@ class TestJob(BaseTestCase):
                                             'test', True)
         tpc = model.TenantProjectConfig(other_project)
         tenant.addUntrustedProject(tpc)
-        base2 = configloader.JobParser.fromYaml(tenant, layout, {
+        base2 = job_parser.fromYaml({
             '_source_context': other_context,
             '_start_mark': self.start_mark,
             'name': 'base',
@@ -322,7 +326,8 @@ class TestJob(BaseTestCase):
 
     def test_job_pipeline_allow_untrusted_secrets(self):
         self.pipeline.post_review = False
-        job = configloader.JobParser.fromYaml(self.tenant, self.layout, {
+        job_parser = configloader.JobParser(self.tenant, self.layout)
+        job = job_parser.fromYaml({
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'job',
