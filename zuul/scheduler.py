@@ -547,7 +547,7 @@ class Scheduler(threading.Thread):
         self.layout_lock.acquire()
         self.config = event.config
         try:
-            self.log.debug("Full reconfiguration beginning")
+            self.log.info("Full reconfiguration beginning")
             loader = configloader.ConfigLoader()
             abide = loader.loadConfig(
                 self.config.get('scheduler', 'tenant_config'),
@@ -558,14 +558,14 @@ class Scheduler(threading.Thread):
             self.abide = abide
         finally:
             self.layout_lock.release()
-        self.log.debug("Full reconfiguration complete")
+        self.log.info("Full reconfiguration complete")
 
     def _doTenantReconfigureEvent(self, event):
         # This is called in the scheduler loop after another thread submits
         # a request
         self.layout_lock.acquire()
         try:
-            self.log.debug("Tenant reconfiguration beginning")
+            self.log.info("Tenant reconfiguration beginning")
             # If a change landed to a project, clear out the cached
             # config before reconfiguring.
             for project in event.projects:
@@ -582,7 +582,7 @@ class Scheduler(threading.Thread):
             self.abide = abide
         finally:
             self.layout_lock.release()
-        self.log.debug("Tenant reconfiguration complete")
+        self.log.info("Tenant reconfiguration complete")
 
     def _reenqueueGetProject(self, tenant, item):
         project = item.change.project
