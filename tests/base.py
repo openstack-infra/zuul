@@ -941,7 +941,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
     log = logging.getLogger("zuul.test.FakeGithubConnection")
 
     def __init__(self, driver, connection_name, connection_config, rpcclient,
-                 changes_db=None, upstream_root=None):
+                 changes_db=None, upstream_root=None, git_url_with_auth=False):
         super(FakeGithubConnection, self).__init__(driver, connection_name,
                                                    connection_config)
         self.connection_name = connection_name
@@ -953,6 +953,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         self.merge_not_allowed_count = 0
         self.reports = []
         self.github_client = tests.fakegithub.FakeGithub(changes_db)
+        self.git_url_with_auth = git_url_with_auth
         self.rpcclient = rpcclient
 
     def getGithubClient(self,
@@ -1045,7 +1046,13 @@ class FakeGithubConnection(githubconnection.GithubConnection):
                     return 'read'
 
     def getGitUrl(self, project):
-        return os.path.join(self.upstream_root, str(project))
+        if self.git_url_with_auth:
+            auth_token = ''.join(
+                random.choice(string.ascii_lowercase) for x in range(8))
+            prefix = 'file://x-access-token:%s@' % auth_token
+        else:
+            prefix = ''
+        return prefix + os.path.join(self.upstream_root, str(project))
 
     def real_getGitUrl(self, project):
         return super(FakeGithubConnection, self).getGitUrl(project)
@@ -1907,6 +1914,7 @@ class ZuulTestCase(BaseTestCase):
     run_ansible = False
     create_project_keys = False
     use_ssl = False
+    git_url_with_auth = False
 
     def _startMerger(self):
         self.merge_server = zuul.merger.server.MergeServer(self.config,
@@ -2076,10 +2084,12 @@ class ZuulTestCase(BaseTestCase):
         def getGithubConnection(driver, name, config):
             server = config.get('server', 'github.com')
             db = self.github_changes_dbs.setdefault(server, {})
-            con = FakeGithubConnection(driver, name, config,
-                                       self.rpcclient,
-                                       changes_db=db,
-                                       upstream_root=self.upstream_root)
+            con = FakeGithubConnection(
+                driver, name, config,
+                self.rpcclient,
+                changes_db=db,
+                upstream_root=self.upstream_root,
+                git_url_with_auth=self.git_url_with_auth)
             self.event_queues.append(con.event_queue)
             setattr(self, 'fake_' + name, con)
             return con
