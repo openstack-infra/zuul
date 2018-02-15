@@ -384,8 +384,12 @@ class PragmaParser(object):
 
 
 class NodeSetParser(object):
-    @staticmethod
-    def getSchema(anonymous=False):
+    def __init__(self, tenant, layout):
+        self.log = logging.getLogger("zuul.NodeSetParser")
+        self.tenant = tenant
+        self.layout = layout
+
+    def getSchema(self, anonymous=False):
         node = {vs.Required('name'): to_list(str),
                 vs.Required('label'): str,
                 }
@@ -404,9 +408,8 @@ class NodeSetParser(object):
             nodeset[vs.Required('name')] = str
         return vs.Schema(nodeset)
 
-    @staticmethod
-    def fromYaml(conf, anonymous=False):
-        NodeSetParser.getSchema(anonymous)(conf)
+    def fromYaml(self, conf, anonymous=False):
+        self.getSchema(anonymous)(conf)
         ns = model.NodeSet(conf.get('name'), conf.get('_source_context'))
         node_names = set()
         group_names = set()
@@ -673,6 +676,7 @@ class JobParser(object):
             if k in conf:
                 setattr(job, a, conf[k])
         if 'nodeset' in conf:
+            nodeset_parser = NodeSetParser(tenant, layout)
             conf_nodeset = conf['nodeset']
             if isinstance(conf_nodeset, str):
                 # This references an existing named nodeset in the layout.
@@ -680,7 +684,7 @@ class JobParser(object):
                 if ns is None:
                     raise NodesetNotFoundError(conf_nodeset)
             else:
-                ns = NodeSetParser.fromYaml(conf_nodeset, anonymous=True)
+                ns = nodeset_parser.fromYaml(conf_nodeset, anonymous=True)
             if tenant.max_nodes_per_job != -1 and \
                len(ns) > tenant.max_nodes_per_job:
                 raise MaxNodeError(job, tenant)
@@ -1591,12 +1595,13 @@ class TenantParser(object):
                     layout, connections,
                     scheduler, config_pipeline))
 
+        nodeset_parser = NodeSetParser(tenant, layout)
         for config_nodeset in data.nodesets:
             classes = TenantParser._getLoadClasses(tenant, config_nodeset)
             if 'nodeset' not in classes:
                 continue
             with configuration_exceptions('nodeset', config_nodeset):
-                layout.addNodeSet(NodeSetParser.fromYaml(
+                layout.addNodeSet(nodeset_parser.fromYaml(
                     config_nodeset))
 
         for config_secret in data.secrets:
