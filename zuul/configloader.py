@@ -991,8 +991,6 @@ class ProjectParser(object):
 
 
 class PipelineParser(object):
-    log = logging.getLogger("zuul.PipelineParser")
-
     # A set of reporter configuration keys to action mapping
     reporter_actions = {
         'start': 'start_actions',
@@ -1002,8 +1000,14 @@ class PipelineParser(object):
         'disabled': 'disabled_actions',
     }
 
-    @staticmethod
-    def getDriverSchema(dtype, connections):
+    def __init__(self, tenant, layout, connections, scheduler):
+        self.log = logging.getLogger("zuul.PipelineParser")
+        self.tenant = tenant
+        self.layout = layout
+        self.connections = connections
+        self.scheduler = scheduler
+
+    def getDriverSchema(self, dtype):
         methods = {
             'trigger': 'getTriggerSchema',
             'reporter': 'getReporterSchema',
@@ -1013,15 +1017,15 @@ class PipelineParser(object):
 
         schema = {}
         # Add the configured connections as available layout options
-        for connection_name, connection in connections.connections.items():
+        for connection_name, connection in \
+            self.connections.connections.items():
             method = getattr(connection.driver, methods[dtype], None)
             if method:
                 schema[connection_name] = to_list(method())
 
         return schema
 
-    @staticmethod
-    def getSchema(layout, connections):
+    def getSchema(self):
         manager = vs.Any('independent',
                          'dependent')
 
@@ -1054,23 +1058,18 @@ class PipelineParser(object):
                     '_source_context': model.SourceContext,
                     '_start_mark': ZuulMark,
                     }
-        pipeline['require'] = PipelineParser.getDriverSchema('require',
-                                                             connections)
-        pipeline['reject'] = PipelineParser.getDriverSchema('reject',
-                                                            connections)
-        pipeline['trigger'] = vs.Required(
-            PipelineParser.getDriverSchema('trigger', connections))
+        pipeline['require'] = self.getDriverSchema('require')
+        pipeline['reject'] = self.getDriverSchema('reject')
+        pipeline['trigger'] = vs.Required(self.getDriverSchema('trigger'))
         for action in ['start', 'success', 'failure', 'merge-failure',
                        'disabled']:
-            pipeline[action] = PipelineParser.getDriverSchema('reporter',
-                                                              connections)
+            pipeline[action] = self.getDriverSchema('reporter')
         return vs.Schema(pipeline)
 
-    @staticmethod
-    def fromYaml(layout, connections, scheduler, conf):
+    def fromYaml(self, conf):
         with configuration_exceptions('pipeline', conf):
-            PipelineParser.getSchema(layout, connections)(conf)
-        pipeline = model.Pipeline(conf['name'], layout)
+            self.getSchema()(conf)
+        pipeline = model.Pipeline(conf['name'], self.layout)
         pipeline.description = conf.get('description')
 
         precedence = model.PRECEDENCE_MAP[conf.get('precedence')]
@@ -1095,13 +1094,13 @@ class PipelineParser(object):
         pipeline.post_review = conf.get(
             'post-review', False)
 
-        for conf_key, action in PipelineParser.reporter_actions.items():
+        for conf_key, action in self.reporter_actions.items():
             reporter_set = []
             if conf.get(conf_key):
                 for reporter_name, params \
                     in conf.get(conf_key).items():
-                    reporter = connections.getReporter(reporter_name,
-                                                       params)
+                    reporter = self.connections.getReporter(reporter_name,
+                                                            params)
                     reporter.setAction(conf_key)
                     reporter_set.append(reporter)
             setattr(pipeline, action, reporter_set)
@@ -1127,26 +1126,26 @@ class PipelineParser(object):
         manager_name = conf['manager']
         if manager_name == 'dependent':
             manager = zuul.manager.dependent.DependentPipelineManager(
-                scheduler, pipeline)
+                self.scheduler, pipeline)
         elif manager_name == 'independent':
             manager = zuul.manager.independent.IndependentPipelineManager(
-                scheduler, pipeline)
+                self.scheduler, pipeline)
 
         pipeline.setManager(manager)
-        layout.pipelines[conf['name']] = pipeline
+        self.layout.pipelines[conf['name']] = pipeline
 
         for source_name, require_config in conf.get('require', {}).items():
-            source = connections.getSource(source_name)
+            source = self.connections.getSource(source_name)
             manager.ref_filters.extend(
                 source.getRequireFilters(require_config))
 
         for source_name, reject_config in conf.get('reject', {}).items():
-            source = connections.getSource(source_name)
+            source = self.connections.getSource(source_name)
             manager.ref_filters.extend(
                 source.getRejectFilters(reject_config))
 
         for trigger_name, trigger_config in conf.get('trigger').items():
-            trigger = connections.getTrigger(trigger_name, trigger_config)
+            trigger = self.connections.getTrigger(trigger_name, trigger_config)
             pipeline.triggers.append(trigger)
             manager.event_filters.extend(
                 trigger.getEventFilters(conf['trigger'][trigger_name]))
@@ -1614,15 +1613,15 @@ class TenantParser(object):
         for config_pragma in data.pragmas:
             pragma_parser.fromYaml(config_pragma)
 
+        pipeline_parser = PipelineParser(tenant, layout, connections,
+                                         scheduler)
         if not skip_pipelines:
             for config_pipeline in data.pipelines:
                 classes = TenantParser._getLoadClasses(
                     tenant, config_pipeline)
                 if 'pipeline' not in classes:
                     continue
-                layout.addPipeline(PipelineParser.fromYaml(
-                    layout, connections,
-                    scheduler, config_pipeline))
+                layout.addPipeline(pipeline_parser.fromYaml(config_pipeline))
 
         nodeset_parser = NodeSetParser(tenant, layout)
         for config_nodeset in data.nodesets:
