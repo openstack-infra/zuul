@@ -529,6 +529,24 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
         }
         return event
 
+    def getFakeBranchDeletedEvent(self, project, branch):
+        oldrev = '4abd38457c2da2a72d4d030219ab180ecdb04bf0'
+        newrev = 40 * '0'
+
+        event = {
+            "type": "ref-updated",
+            "submitter": {
+                "name": "User Name",
+            },
+            "refUpdate": {
+                "oldRev": oldrev,
+                "newRev": newrev,
+                "refName": 'refs/heads/' + branch,
+                "project": project,
+            }
+        }
+        return event
+
     def review(self, project, changeid, message, action):
         number, ps = changeid.split(',')
         change = self.changes[int(number)]
