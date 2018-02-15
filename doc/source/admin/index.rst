@@ -12,6 +12,7 @@ provides to in-project configuration.
    :maxdepth: 2
 
    quick-start
+   zuul-from-scratch
    installation
    components
    connections

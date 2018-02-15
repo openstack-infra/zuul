@@ -40,60 +40,43 @@ Then in the zuul.conf, set webhook_token and api_token.
 Application
 ...........
 
+.. NOTE Duplicate content here and in zuul-from-scratch.rst.  Keep them
+   in sync.
+
 To create a `GitHub application
 <https://developer.github.com/apps/building-integrations/setting-up-and-registering-github-apps/registering-github-apps/>`_:
 
 * Go to your organization settings page to create the application, e.g.:
   https://github.com/organizations/my-org/settings/apps/new
-
 * Set GitHub App name to "my-org-zuul"
-
 * Set Setup URL to your setup documentation, when user install the application
   they are redirected to this url
-
 * Set Webhook URL to
   ``http://<zuul-hostname>/connection/<connection-name>/payload``.
-
 * Create a Webhook secret
-
 * Set permissions:
 
   * Commit statuses: Read & Write
-
   * Issues: Read & Write
-
   * Pull requests: Read & Write
-
   * Repository contents: Read & Write (write to let zuul merge change)
+  * Repository administration: Read
 
 * Set events subscription:
-
   * Label
-
   * Status
-
   * Issue comment
-
   * Issues
-
   * Pull request
-
   * Pull request review
-
   * Pull request review comment
-
   * Commit comment
-
   * Create
-
   * Push
-
   * Release
 
 * Set Where can this GitHub App be installed to "Any account"
-
 * Create the App
-
 * Generate a Private key in the app settings page
 
 Then in the zuul.conf, set webhook_token, app_id and app_key.
