@@ -1154,8 +1154,13 @@ class PipelineParser(object):
 
 
 class SemaphoreParser(object):
-    @staticmethod
-    def getSchema():
+    def __init__(self, tenant, layout):
+        self.log = logging.getLogger("zuul.SemaphoreParser")
+        self.tenant = tenant
+        self.layout = layout
+        self.schema = self.getSchema()
+
+    def getSchema(self):
         semaphore = {vs.Required('name'): str,
                      'max': int,
                      '_source_context': model.SourceContext,
@@ -1164,9 +1169,8 @@ class SemaphoreParser(object):
 
         return vs.Schema(semaphore)
 
-    @staticmethod
-    def fromYaml(conf):
-        SemaphoreParser.getSchema()(conf)
+    def fromYaml(self, conf):
+        self.schema(conf)
         semaphore = model.Semaphore(conf['name'], conf.get('max', 1))
         semaphore.source_context = conf.get('_source_context')
         return semaphore
@@ -1671,13 +1675,14 @@ class TenantParser(object):
             semaphore_layout = model.Layout(tenant)
         else:
             semaphore_layout = layout
+        semaphore_parser = SemaphoreParser(tenant, layout)
         for config_semaphore in data.semaphores:
             classes = TenantParser._getLoadClasses(
                 tenant, config_semaphore)
             if 'semaphore' not in classes:
                 continue
             with configuration_exceptions('semaphore', config_semaphore):
-                semaphore = SemaphoreParser.fromYaml(config_semaphore)
+                semaphore = semaphore_parser.fromYaml(config_semaphore)
                 semaphore_layout.addSemaphore(semaphore)
 
         project_template_parser = ProjectTemplateParser(tenant, layout)
