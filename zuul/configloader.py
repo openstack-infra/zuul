@@ -435,8 +435,13 @@ class NodeSetParser(object):
 
 
 class SecretParser(object):
-    @staticmethod
-    def getSchema():
+    def __init__(self, tenant, layout):
+        self.log = logging.getLogger("zuul.SecretParser")
+        self.tenant = tenant
+        self.layout = layout
+        self.schema = self.getSchema()
+
+    def getSchema(self):
         data = {str: vs.Any(str, EncryptedPKCS1_OAEP)}
 
         secret = {vs.Required('name'): str,
@@ -447,10 +452,9 @@ class SecretParser(object):
 
         return vs.Schema(secret)
 
-    @staticmethod
-    def fromYaml(layout, conf):
+    def fromYaml(self, conf):
         with configuration_exceptions('secret', conf):
-            SecretParser.getSchema()(conf)
+            self.schema(conf)
         s = model.Secret(conf['name'], conf['_source_context'])
         s.secret_data = conf['data']
         return s
@@ -1604,12 +1608,13 @@ class TenantParser(object):
                 layout.addNodeSet(nodeset_parser.fromYaml(
                     config_nodeset))
 
+        secret_parser = SecretParser(tenant, layout)
         for config_secret in data.secrets:
             classes = TenantParser._getLoadClasses(tenant, config_secret)
             if 'secret' not in classes:
                 continue
             with configuration_exceptions('secret', config_secret):
-                layout.addSecret(SecretParser.fromYaml(layout, config_secret))
+                layout.addSecret(secret_parser.fromYaml(config_secret))
 
         for config_job in data.jobs:
             classes = TenantParser._getLoadClasses(tenant, config_job)
