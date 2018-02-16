@@ -878,8 +878,10 @@ class AnsibleJob(object):
         success = False
         self.started = True
         time_started = time.time()
-        # timeout value is total job timeout or put another way
-        # the cummulative time that pre, run, and post can consume.
+        # timeout value is "total" job timeout which accounts for
+        # pre-run and run playbooks. post-run is different because
+        # it is used to copy out job logs and we want to do our best
+        # to copy logs even when the job has timed out.
         job_timeout = args['timeout']
         for index, playbook in enumerate(self.jobdir.pre_playbooks):
             # TODOv3(pabelanger): Implement pre-run timeout setting.
@@ -914,11 +916,15 @@ class AnsibleJob(object):
                 # run it again.
                 return None
 
+        post_timeout = args['post_timeout']
         for index, playbook in enumerate(self.jobdir.post_playbooks):
-            # TODOv3(pabelanger): Implement post-run timeout setting.
-            ansible_timeout = self.getAnsibleTimeout(time_started, job_timeout)
+            # Post timeout operates a little differently to the main job
+            # timeout. We give each post playbook the full post timeout to
+            # do its job because post is where you'll often record job logs
+            # which are vital to understanding why timeouts have happened in
+            # the first place.
             post_status, post_code = self.runAnsiblePlaybook(
-                playbook, ansible_timeout, success, phase='post', index=index)
+                playbook, post_timeout, success, phase='post', index=index)
             if post_status == self.RESULT_ABORTED:
                 return 'ABORTED'
             if post_status != self.RESULT_NORMAL or post_code != 0:

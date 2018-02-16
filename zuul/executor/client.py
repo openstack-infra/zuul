@@ -186,6 +186,7 @@ class ExecutorClient(object):
         params = dict()
         params['job'] = job.name
         params['timeout'] = job.timeout
+        params['post_timeout'] = job.post_timeout
         params['items'] = merger_items
         params['projects'] = []
         if hasattr(item.change, 'branch'):

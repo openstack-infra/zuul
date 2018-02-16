@@ -99,6 +99,12 @@
 
 - job:
     parent: python27
+    name: post-timeout
+    post-run: playbooks/timeout.yaml
+    post-timeout: 1
+
+- job:
+    parent: python27
     name: check-vars
     run: playbooks/check-vars.yaml
     nodeset:
