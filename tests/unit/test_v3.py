@@ -2048,6 +2048,12 @@ class TestAnsible(AnsibleZuulTestCase):
         build_timeout = self.getJobFromHistory('timeout')
         with self.jobLog(build_timeout):
             self.assertEqual(build_timeout.result, 'TIMED_OUT')
+            post_flag_path = os.path.join(self.test_root, build_timeout.uuid +
+                                          '.post.flag')
+            self.assertTrue(os.path.exists(post_flag_path))
+        build_post_timeout = self.getJobFromHistory('post-timeout')
+        with self.jobLog(build_post_timeout):
+            self.assertEqual(build_post_timeout.result, 'POST_FAILURE')
         build_faillocal = self.getJobFromHistory('faillocal')
         with self.jobLog(build_faillocal):
             self.assertEqual(build_faillocal.result, 'FAILURE')

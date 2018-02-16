@@ -710,6 +710,21 @@ Here is an example of two job definitions:
       timeout is supplied, the job may run indefinitely.  Supplying a
       timeout is highly recommended.
 
+      This timeout only applies to the pre-run and run playbooks in a
+      job.
+
+   .. attr:: post-timeout
+
+      The time in seconds that each post playbook should be allowed to run
+      before it is automatically aborted and failure is reported.  If no
+      post-timeout is supplied, the job may run indefinitely.  Supplying a
+      post-timeout is highly recommended.
+
+      The post-timeout is handled separately from the above timeout because
+      the post playbooks are typically where you will copy jobs logs.
+      In the event of the pre-run or run playbooks timing out we want to
+      do our best to copy the job logs in the post-run playbooks.
+
    .. attr:: attempts
       :default: 3
 

@@ -491,6 +491,7 @@ class JobParser(object):
                       # validation happens in NodeSetParser
                       'nodeset': vs.Any(dict, str),
                       'timeout': int,
+                      'post-timeout': int,
                       'attempts': int,
                       'pre-run': to_list(str),
                       'post-run': to_list(str),
@@ -518,6 +519,7 @@ class JobParser(object):
         'abstract',
         'protected',
         'timeout',
+        'post-timeout',
         'workspace',
         'voting',
         'hold-following-changes',
@@ -625,6 +627,10 @@ class JobParser(object):
 
         if conf.get('timeout') and tenant.max_job_timeout != -1 and \
            int(conf['timeout']) > tenant.max_job_timeout:
+            raise MaxTimeoutError(job, tenant)
+
+        if conf.get('post-timeout') and tenant.max_job_timeout != -1 and \
+           int(conf['post-timeout']) > tenant.max_job_timeout:
             raise MaxTimeoutError(job, tenant)
 
         if 'post-review' in conf:

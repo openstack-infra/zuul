@@ -17,5 +17,6 @@
         - check-vars
         - check-secret-names
         - timeout
+        - post-timeout
         - hello-world
         - failpost

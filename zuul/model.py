@@ -839,6 +839,7 @@ class Job(object):
         self.execution_attributes = dict(
             parent=None,
             timeout=None,
+            post_timeout=None,
             variables={},
             nodeset=NodeSet(),
             workspace=None,

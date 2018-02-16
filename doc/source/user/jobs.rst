@@ -289,6 +289,10 @@ of item.
 
       The job timeout, in seconds.
 
+   .. var:: post_timeout
+
+      The post-run playbook timeout, in seconds.
+
    .. var:: jobtags
 
       A list of tags associated with the job.  Not to be confused with
