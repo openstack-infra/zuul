@@ -508,6 +508,8 @@ class JobParser(object):
                       'roles': to_list(role),
                       'required-projects': to_list(vs.Any(job_project, str)),
                       'vars': dict,
+                      'host_vars': {str: dict},
+                      'group_vars': {str: dict},
                       'dependencies': to_list(str),
                       'allowed-projects': to_list(str),
                       'override-branch': str,
@@ -611,8 +613,9 @@ class JobParser(object):
                 secret = layout.secrets.get(secret_config['secret'])
             if secret is None:
                 raise SecretNotFoundError(secret_name)
-            if secret_name == 'zuul':
-                raise Exception("Secrets named 'zuul' are not allowed.")
+            if secret_name == 'zuul' or secret_name == 'nodepool':
+                raise Exception("Secrets named 'zuul' or 'nodepool' "
+                                "are not allowed.")
             if not secret.source_context.isSameProject(job.source_context):
                 raise Exception(
                     "Unable to use secret %s.  Secrets must be "
@@ -730,9 +733,24 @@ class JobParser(object):
 
         variables = conf.get('vars', None)
         if variables:
-            if 'zuul' in variables:
-                raise Exception("Variables named 'zuul' are not allowed.")
+            if 'zuul' in variables or 'nodepool' in variables:
+                raise Exception("Variables named 'zuul' or 'nodepool' "
+                                "are not allowed.")
             job.variables = variables
+        host_variables = conf.get('host_vars', None)
+        if host_variables:
+            for host, hvars in host_variables.items():
+                if 'zuul' in hvars or 'nodepool' in hvars:
+                    raise Exception("Variables named 'zuul' or 'nodepool' "
+                                    "are not allowed.")
+            job.host_variables = host_variables
+        group_variables = conf.get('group_vars', None)
+        if group_variables:
+            for group, gvars in group_variables.items():
+                if 'zuul' in group_variables or 'nodepool' in gvars:
+                    raise Exception("Variables named 'zuul' or 'nodepool' "
+                                    "are not allowed.")
+            job.group_variables = group_variables
 
         allowed_projects = conf.get('allowed-projects', None)
         if allowed_projects:

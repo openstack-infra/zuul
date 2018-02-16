@@ -12,7 +12,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import copy
 import gear
 import json
 import logging
@@ -209,7 +208,9 @@ class ExecutorClient(object):
             nodes.append(n)
         params['nodes'] = nodes
         params['groups'] = [group.toDict() for group in nodeset.getGroups()]
-        params['vars'] = copy.deepcopy(job.variables)
+        params['vars'] = job.variables
+        params['host_vars'] = job.host_variables
+        params['group_vars'] = job.group_variables
         params['zuul'] = zuul_params
         projects = set()
         required_projects = set()

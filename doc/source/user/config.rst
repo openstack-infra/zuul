@@ -877,6 +877,48 @@ Here is an example of two job definitions:
       same name will override a previously defined variable, but new
       variable names will be added to the set of defined variables.
 
+   .. attr:: host_vars
+
+      A dictionary of host variables to supply to Ansible.  The keys
+      of this dictionary are node names as defined in a
+      :ref:`nodeset`, and the values are dictionaries of variables,
+      just as in :attr:`job.vars`.
+
+   .. attr:: group_vars
+
+      A dictionary of group variables to supply to Ansible.  The keys
+      of this dictionary are node groups as defined in a
+      :ref:`nodeset`, and the values are dictionaries of variables,
+      just as in :attr:`job.vars`.
+
+   An example of three kinds of variables:
+
+   .. code-block:: yaml
+
+      - job:
+          name: variable-example
+          nodeset:
+            nodes:
+              - name: controller
+                label: fedora-27
+              - name: api1
+                label: centos-7
+              - name: api2
+                label: centos-7
+            groups:
+              - name: api
+                nodes:
+                  - api1
+                  - api2
+         vars:
+           foo: "this variable is visible to all nodes"
+         host_vars:
+           controller:
+             bar: "this variable is visible only on the controller node"
+         group_vars:
+           api:
+             baz: "this variable is visible on api1 and api2"
+
    .. attr:: dependencies
 
       A list of other jobs upon which this job depends.  Zuul will not
