@@ -370,7 +370,7 @@ class PragmaParser(object):
         self.pcontext = pcontext
 
     def fromYaml(self, conf):
-        with configuration_exceptions('project-template', conf):
+        with configuration_exceptions('pragma', conf):
             self.schema(conf)
 
         bm = conf.get('implied-branch-matchers')
