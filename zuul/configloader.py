@@ -365,8 +365,9 @@ class PragmaParser(object):
 
     schema = vs.Schema(pragma)
 
-    def __init__(self):
+    def __init__(self, pcontext):
         self.log = logging.getLogger("zuul.PragmaParser")
+        self.pcontext = pcontext
 
     def fromYaml(self, conf):
         with configuration_exceptions('project-template', conf):
@@ -384,10 +385,9 @@ class PragmaParser(object):
 
 
 class NodeSetParser(object):
-    def __init__(self, tenant, layout):
+    def __init__(self, pcontext):
         self.log = logging.getLogger("zuul.NodeSetParser")
-        self.tenant = tenant
-        self.layout = layout
+        self.pcontext = pcontext
 
     def getSchema(self, anonymous=False):
         node = {vs.Required('name'): to_list(str),
@@ -435,10 +435,9 @@ class NodeSetParser(object):
 
 
 class SecretParser(object):
-    def __init__(self, tenant, layout):
+    def __init__(self, pcontext):
         self.log = logging.getLogger("zuul.SecretParser")
-        self.tenant = tenant
-        self.layout = layout
+        self.pcontext = pcontext
         self.schema = self.getSchema()
 
     def getSchema(self):
@@ -542,10 +541,9 @@ class JobParser(object):
         'override-checkout',
     ]
 
-    def __init__(self, tenant, layout):
+    def __init__(self, pcontext):
         self.log = logging.getLogger("zuul.JobParser")
-        self.tenant = tenant
-        self.layout = layout
+        self.pcontext = pcontext
 
     def _getImpliedBranches(self, job):
         # If the user has set a pragma directive for this, use the
@@ -564,7 +562,8 @@ class JobParser(object):
 
         # If this project only has one branch, don't create implied
         # branch matchers.  This way central job repos can work.
-        branches = self.tenant.getProjectBranches(job.source_context.project)
+        branches = self.pcontext.tenant.getProjectBranches(
+            job.source_context.project)
         if len(branches) == 1:
             return None
 
@@ -610,10 +609,11 @@ class JobParser(object):
         for secret_config in as_list(conf.get('secrets', [])):
             if isinstance(secret_config, str):
                 secret_name = secret_config
-                secret = self.layout.secrets.get(secret_name)
+                secret = self.pcontext.layout.secrets.get(secret_name)
             else:
                 secret_name = secret_config['name']
-                secret = self.layout.secrets.get(secret_config['secret'])
+                secret = self.pcontext.layout.secrets.get(
+                    secret_config['secret'])
             if secret is None:
                 raise SecretNotFoundError(secret_name)
             if secret_name == 'zuul' or secret_name == 'nodepool':
@@ -638,13 +638,15 @@ class JobParser(object):
         if secrets and not conf['_source_context'].trusted:
             job.post_review = True
 
-        if conf.get('timeout') and self.tenant.max_job_timeout != -1 and \
-           int(conf['timeout']) > self.tenant.max_job_timeout:
-            raise MaxTimeoutError(job, self.tenant)
+        if (conf.get('timeout') and
+            self.pcontext.tenant.max_job_timeout != -1 and
+            int(conf['timeout']) > self.pcontext.tenant.max_job_timeout):
+            raise MaxTimeoutError(job, self.pcontext.tenant)
 
-        if conf.get('post-timeout') and self.tenant.max_job_timeout != -1 and \
-           int(conf['post-timeout']) > self.tenant.max_job_timeout:
-            raise MaxTimeoutError(job, self.tenant)
+        if (conf.get('post-timeout') and
+            self.pcontext.tenant.max_job_timeout != -1 and
+            int(conf['post-timeout']) > self.pcontext.tenant.max_job_timeout):
+            raise MaxTimeoutError(job, self.pcontext.tenant)
 
         if 'post-review' in conf:
             if conf['post-review']:
@@ -692,18 +694,18 @@ class JobParser(object):
             if k in conf:
                 setattr(job, a, conf[k])
         if 'nodeset' in conf:
-            nodeset_parser = NodeSetParser(self.tenant, self.layout)
             conf_nodeset = conf['nodeset']
             if isinstance(conf_nodeset, str):
                 # This references an existing named nodeset in the layout.
-                ns = self.layout.nodesets.get(conf_nodeset)
+                ns = self.pcontext.layout.nodesets.get(conf_nodeset)
                 if ns is None:
                     raise NodesetNotFoundError(conf_nodeset)
             else:
-                ns = nodeset_parser.fromYaml(conf_nodeset, anonymous=True)
-            if self.tenant.max_nodes_per_job != -1 and \
-               len(ns) > self.tenant.max_nodes_per_job:
-                raise MaxNodeError(job, self.tenant)
+                ns = self.pcontext.nodeset_parser.fromYaml(
+                    conf_nodeset, anonymous=True)
+            if self.pcontext.tenant.max_nodes_per_job != -1 and \
+               len(ns) > self.pcontext.tenant.max_nodes_per_job:
+                raise MaxNodeError(job, self.pcontext.tenant)
             job.nodeset = ns
 
         if 'required-projects' in conf:
@@ -719,7 +721,8 @@ class JobParser(object):
                     project_name = project
                     project_override_branch = None
                     project_override_checkout = None
-                (trusted, project) = self.tenant.getProject(project_name)
+                (trusted, project) = self.pcontext.tenant.getProject(
+                    project_name)
                 if project is None:
                     raise Exception("Unknown project %s" % (project_name,))
                 job_project = model.JobProject(project.canonical_name,
@@ -759,7 +762,7 @@ class JobParser(object):
         if allowed_projects:
             allowed = []
             for p in as_list(allowed_projects):
-                (trusted, project) = self.tenant.getProject(p)
+                (trusted, project) = self.pcontext.tenant.getProject(p)
                 if project is None:
                     raise Exception("Unknown project %s" % (p,))
                 allowed.append(project.name)
@@ -788,7 +791,7 @@ class JobParser(object):
     def _makeZuulRole(self, job, role):
         name = role['zuul'].split('/')[-1]
 
-        (trusted, project) = self.tenant.getProject(role['zuul'])
+        (trusted, project) = self.pcontext.tenant.getProject(role['zuul'])
         if project is None:
             return None
 
@@ -807,11 +810,9 @@ class JobParser(object):
 
 
 class ProjectTemplateParser(object):
-    def __init__(self, tenant, layout):
+    def __init__(self, pcontext):
         self.log = logging.getLogger("zuul.ProjectTemplateParser")
-        self.tenant = tenant
-        self.layout = layout
-        self.schema = self.getSchema()
+        self.pcontext = pcontext
 
     def getSchema(self):
         project_template = {
@@ -832,18 +833,18 @@ class ProjectTemplateParser(object):
             'jobs': job_list,
         }
 
-        for p in self.layout.pipelines.values():
+        for p in self.pcontext.layout.pipelines.values():
             project_template[p.name] = pipeline_contents
         return vs.Schema(project_template)
 
     def fromYaml(self, conf, validate=True):
         if validate:
             with configuration_exceptions('project-template', conf):
-                self.schema(conf)
+                self.getSchema()(conf)
         source_context = conf['_source_context']
         project_template = model.ProjectConfig(conf['name'], source_context)
         start_mark = conf['_start_mark']
-        for pipeline in self.layout.pipelines.values():
+        for pipeline in self.pcontext.layout.pipelines.values():
             conf_pipeline = conf.get(pipeline.name)
             if not conf_pipeline:
                 continue
@@ -872,20 +873,17 @@ class ProjectTemplateParser(object):
             # validate that the job is existing
             with configuration_exceptions('project or project-template',
                                           attrs):
-                self.layout.getJob(jobname)
+                self.pcontext.layout.getJob(jobname)
 
-            job_parser = JobParser(self.tenant, self.layout)
-            job_list.addJob(job_parser.fromYaml(attrs, project_pipeline=True,
-                                                name=jobname, validate=False))
+            job_list.addJob(self.pcontext.job_parser.fromYaml(
+                attrs, project_pipeline=True,
+                name=jobname, validate=False))
 
 
 class ProjectParser(object):
-    def __init__(self, tenant, layout, project_template_parser):
+    def __init__(self, pcontext):
         self.log = logging.getLogger("zuul.ProjectParser")
-        self.tenant = tenant
-        self.layout = layout
-        self.project_template_parser = project_template_parser
-        self.schema = self.getSchema()
+        self.pcontext = pcontext
 
     def getSchema(self):
         project = {
@@ -907,18 +905,18 @@ class ProjectParser(object):
             'jobs': job_list
         }
 
-        for p in self.layout.pipelines.values():
+        for p in self.pcontext.layout.pipelines.values():
             project[p.name] = pipeline_contents
         return vs.Schema(project)
 
     def fromYaml(self, conf_list):
         for conf in conf_list:
             with configuration_exceptions('project', conf):
-                self.schema(conf)
+                self.getSchema()(conf)
 
         with configuration_exceptions('project', conf_list[0]):
             project_name = conf_list[0]['name']
-            (trusted, project) = self.tenant.getProject(project_name)
+            (trusted, project) = self.pcontext.tenant.getProject(project_name)
             if project is None:
                 raise ProjectNotFoundError(project_name)
             project_config = model.ProjectConfig(project.canonical_name)
@@ -936,16 +934,16 @@ class ProjectParser(object):
                 # parsing the definition as a template, then applying
                 # all of the templates, including the newly parsed
                 # one, in order.
-                project_template = self.project_template_parser.fromYaml(
-                    conf, validate=False)
+                project_template = self.pcontext.project_template_parser.\
+                    fromYaml(conf, validate=False)
                 # If this project definition is in a place where it
                 # should get implied branch matchers, set it.
                 if (not conf['_source_context'].trusted):
                     implied_branch = conf['_source_context'].branch
                 for name in conf_templates:
-                    if name not in self.layout.project_templates:
+                    if name not in self.pcontext.layout.project_templates:
                         raise TemplateNotFoundError(name)
-                configs.extend([(self.layout.project_templates[name],
+                configs.extend([(self.pcontext.layout.project_templates[name],
                                  implied_branch)
                                 for name in conf_templates])
                 configs.append((project_template, implied_branch))
@@ -963,7 +961,7 @@ class ProjectParser(object):
             project_config.merge_mode = model.MERGER_MAP['merge-resolve']
         if project_config.default_branch is None:
             project_config.default_branch = 'master'
-        for pipeline in self.layout.pipelines.values():
+        for pipeline in self.pcontext.layout.pipelines.values():
             project_pipeline = model.ProjectPipelineConfig()
             queue_name = None
             debug = False
@@ -1000,12 +998,9 @@ class PipelineParser(object):
         'disabled': 'disabled_actions',
     }
 
-    def __init__(self, tenant, layout, connections, scheduler):
+    def __init__(self, pcontext):
         self.log = logging.getLogger("zuul.PipelineParser")
-        self.tenant = tenant
-        self.layout = layout
-        self.connections = connections
-        self.scheduler = scheduler
+        self.pcontext = pcontext
 
     def getDriverSchema(self, dtype):
         methods = {
@@ -1018,7 +1013,7 @@ class PipelineParser(object):
         schema = {}
         # Add the configured connections as available layout options
         for connection_name, connection in \
-            self.connections.connections.items():
+            self.pcontext.connections.connections.items():
             method = getattr(connection.driver, methods[dtype], None)
             if method:
                 schema[connection_name] = to_list(method())
@@ -1069,7 +1064,7 @@ class PipelineParser(object):
     def fromYaml(self, conf):
         with configuration_exceptions('pipeline', conf):
             self.getSchema()(conf)
-        pipeline = model.Pipeline(conf['name'], self.layout)
+        pipeline = model.Pipeline(conf['name'], self.pcontext.layout)
         pipeline.description = conf.get('description')
 
         precedence = model.PRECEDENCE_MAP[conf.get('precedence')]
@@ -1099,8 +1094,8 @@ class PipelineParser(object):
             if conf.get(conf_key):
                 for reporter_name, params \
                     in conf.get(conf_key).items():
-                    reporter = self.connections.getReporter(reporter_name,
-                                                            params)
+                    reporter = self.pcontext.connections.getReporter(
+                        reporter_name, params)
                     reporter.setAction(conf_key)
                     reporter_set.append(reporter)
             setattr(pipeline, action, reporter_set)
@@ -1126,26 +1121,27 @@ class PipelineParser(object):
         manager_name = conf['manager']
         if manager_name == 'dependent':
             manager = zuul.manager.dependent.DependentPipelineManager(
-                self.scheduler, pipeline)
+                self.pcontext.scheduler, pipeline)
         elif manager_name == 'independent':
             manager = zuul.manager.independent.IndependentPipelineManager(
-                self.scheduler, pipeline)
+                self.pcontext.scheduler, pipeline)
 
         pipeline.setManager(manager)
-        self.layout.pipelines[conf['name']] = pipeline
+        self.pcontext.layout.pipelines[conf['name']] = pipeline
 
         for source_name, require_config in conf.get('require', {}).items():
-            source = self.connections.getSource(source_name)
+            source = self.pcontext.connections.getSource(source_name)
             manager.ref_filters.extend(
                 source.getRequireFilters(require_config))
 
         for source_name, reject_config in conf.get('reject', {}).items():
-            source = self.connections.getSource(source_name)
+            source = self.pcontext.connections.getSource(source_name)
             manager.ref_filters.extend(
                 source.getRejectFilters(reject_config))
 
         for trigger_name, trigger_config in conf.get('trigger').items():
-            trigger = self.connections.getTrigger(trigger_name, trigger_config)
+            trigger = self.pcontext.connections.getTrigger(
+                trigger_name, trigger_config)
             pipeline.triggers.append(trigger)
             manager.event_filters.extend(
                 trigger.getEventFilters(conf['trigger'][trigger_name]))
@@ -1154,10 +1150,9 @@ class PipelineParser(object):
 
 
 class SemaphoreParser(object):
-    def __init__(self, tenant, layout):
+    def __init__(self, pcontext):
         self.log = logging.getLogger("zuul.SemaphoreParser")
-        self.tenant = tenant
-        self.layout = layout
+        self.pcontext = pcontext
         self.schema = self.getSchema()
 
     def getSchema(self):
@@ -1174,6 +1169,24 @@ class SemaphoreParser(object):
         semaphore = model.Semaphore(conf['name'], conf.get('max', 1))
         semaphore.source_context = conf.get('_source_context')
         return semaphore
+
+
+class ParseContext(object):
+    """Hold information about a particular run of the parser"""
+
+    def __init__(self, connections, scheduler, tenant, layout):
+        self.connections = connections
+        self.scheduler = scheduler
+        self.tenant = tenant
+        self.layout = layout
+        self.pragma_parser = PragmaParser(self)
+        self.pipeline_parser = PipelineParser(self)
+        self.nodeset_parser = NodeSetParser(self)
+        self.secret_parser = SecretParser(self)
+        self.job_parser = JobParser(self)
+        self.semaphore_parser = SemaphoreParser(self)
+        self.project_template_parser = ProjectTemplateParser(self)
+        self.project_parser = ProjectParser(self)
 
 
 class TenantParser(object):
@@ -1592,45 +1605,43 @@ class TenantParser(object):
 
     def _parseLayoutItems(self, layout, tenant, data,
                           skip_pipelines=False, skip_semaphores=False):
+        pcontext = ParseContext(self.connections, self.scheduler,
+                                tenant, layout)
         # Handle pragma items first since they modify the source context
         # used by other classes.
-        pragma_parser = PragmaParser()
         for config_pragma in data.pragmas:
-            pragma_parser.fromYaml(config_pragma)
+            pcontext.pragma_parser.fromYaml(config_pragma)
 
-        pipeline_parser = PipelineParser(tenant, layout, self.connections,
-                                         self.scheduler)
         if not skip_pipelines:
             for config_pipeline in data.pipelines:
                 classes = self._getLoadClasses(tenant, config_pipeline)
                 if 'pipeline' not in classes:
                     continue
-                layout.addPipeline(pipeline_parser.fromYaml(config_pipeline))
+                layout.addPipeline(pcontext.pipeline_parser.fromYaml(
+                    config_pipeline))
 
-        nodeset_parser = NodeSetParser(tenant, layout)
         for config_nodeset in data.nodesets:
             classes = self._getLoadClasses(tenant, config_nodeset)
             if 'nodeset' not in classes:
                 continue
             with configuration_exceptions('nodeset', config_nodeset):
-                layout.addNodeSet(nodeset_parser.fromYaml(
+                layout.addNodeSet(pcontext.nodeset_parser.fromYaml(
                     config_nodeset))
 
-        secret_parser = SecretParser(tenant, layout)
         for config_secret in data.secrets:
             classes = self._getLoadClasses(tenant, config_secret)
             if 'secret' not in classes:
                 continue
             with configuration_exceptions('secret', config_secret):
-                layout.addSecret(secret_parser.fromYaml(config_secret))
+                layout.addSecret(pcontext.secret_parser.fromYaml(
+                    config_secret))
 
-        job_parser = JobParser(tenant, layout)
         for config_job in data.jobs:
             classes = self._getLoadClasses(tenant, config_job)
             if 'job' not in classes:
                 continue
             with configuration_exceptions('job', config_job):
-                job = job_parser.fromYaml(config_job)
+                job = pcontext.job_parser.fromYaml(config_job)
                 added = layout.addJob(job)
                 if not added:
                     self.log.debug(
@@ -1655,27 +1666,26 @@ class TenantParser(object):
             semaphore_layout = model.Layout(tenant)
         else:
             semaphore_layout = layout
-        semaphore_parser = SemaphoreParser(tenant, layout)
         for config_semaphore in data.semaphores:
             classes = self._getLoadClasses(
                 tenant, config_semaphore)
             if 'semaphore' not in classes:
                 continue
             with configuration_exceptions('semaphore', config_semaphore):
-                semaphore = semaphore_parser.fromYaml(config_semaphore)
+                semaphore = pcontext.semaphore_parser.fromYaml(
+                    config_semaphore)
                 semaphore_layout.addSemaphore(semaphore)
 
-        project_template_parser = ProjectTemplateParser(tenant, layout)
         for config_template in data.project_templates:
             classes = self._getLoadClasses(tenant, config_template)
             if 'project-template' not in classes:
                 continue
             with configuration_exceptions('project-template', config_template):
-                layout.addProjectTemplate(project_template_parser.fromYaml(
-                    config_template))
+                layout.addProjectTemplate(
+                    pcontext.project_template_parser.fromYaml(
+                        config_template))
 
         flattened_projects = self._flattenProjects(data.projects, tenant)
-        project_parser = ProjectParser(tenant, layout, project_template_parser)
         for config_projects in flattened_projects.values():
             # Unlike other config classes, we expect multiple project
             # stanzas with the same name, so that a config repo can
@@ -1693,7 +1703,7 @@ class TenantParser(object):
             if not filtered_projects:
                 continue
 
-            layout.addProjectConfig(project_parser.fromYaml(
+            layout.addProjectConfig(pcontext.project_parser.fromYaml(
                 filtered_projects))
 
     def _flattenProjects(self, projects, tenant):

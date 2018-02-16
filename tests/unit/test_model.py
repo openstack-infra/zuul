@@ -47,6 +47,8 @@ class TestJob(BaseTestCase):
         self.pipeline = model.Pipeline('gate', self.layout)
         self.layout.addPipeline(self.pipeline)
         self.queue = model.ChangeQueue(self.pipeline)
+        self.pcontext = configloader.ParseContext(
+            None, None, self.tenant, self.layout)
 
         private_key_file = os.path.join(FIXTURE_DIR, 'private.pem')
         with open(private_key_file, "rb") as f:
@@ -61,10 +63,7 @@ class TestJob(BaseTestCase):
 
     @property
     def job(self):
-        tenant = model.Tenant('tenant')
-        layout = model.Layout(tenant)
-        job_parser = configloader.JobParser(tenant, layout)
-        job = job_parser.fromYaml({
+        job = self.pcontext.job_parser.fromYaml({
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'job',
@@ -148,34 +147,27 @@ class TestJob(BaseTestCase):
             job.applyVariant(bad_final)
 
     def test_job_inheritance_job_tree(self):
-        tenant = model.Tenant('tenant')
-        layout = model.Layout(tenant)
-
-        tpc = model.TenantProjectConfig(self.project)
-        tenant.addUntrustedProject(tpc)
-
-        pipeline = model.Pipeline('gate', layout)
-        layout.addPipeline(pipeline)
+        pipeline = model.Pipeline('gate', self.layout)
+        self.layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
 
-        job_parser = configloader.JobParser(tenant, layout)
-        base = job_parser.fromYaml({
+        base = self.pcontext.job_parser.fromYaml({
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'base',
             'parent': None,
             'timeout': 30,
         })
-        layout.addJob(base)
-        python27 = job_parser.fromYaml({
+        self.layout.addJob(base)
+        python27 = self.pcontext.job_parser.fromYaml({
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'python27',
             'parent': 'base',
             'timeout': 40,
         })
-        layout.addJob(python27)
-        python27diablo = job_parser.fromYaml({
+        self.layout.addJob(python27)
+        python27diablo = self.pcontext.job_parser.fromYaml({
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'python27',
@@ -184,13 +176,9 @@ class TestJob(BaseTestCase):
             ],
             'timeout': 50,
         })
-        layout.addJob(python27diablo)
+        self.layout.addJob(python27diablo)
 
-        project_template_parser = configloader.ProjectTemplateParser(
-            tenant, layout)
-        project_parser = configloader.ProjectParser(
-            tenant, layout, project_template_parser)
-        project_config = project_parser.fromYaml([{
+        project_config = self.pcontext.project_parser.fromYaml([{
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'project',
@@ -201,12 +189,12 @@ class TestJob(BaseTestCase):
                 ]
             }
         }])
-        layout.addProjectConfig(project_config)
+        self.layout.addProjectConfig(project_config)
 
         change = model.Change(self.project)
         change.branch = 'master'
         item = queue.enqueueChange(change)
-        item.layout = layout
+        item.layout = self.layout
 
         self.assertTrue(base.changeMatches(change))
         self.assertTrue(python27.changeMatches(change))
@@ -220,7 +208,7 @@ class TestJob(BaseTestCase):
 
         change.branch = 'stable/diablo'
         item = queue.enqueueChange(change)
-        item.layout = layout
+        item.layout = self.layout
 
         self.assertTrue(base.changeMatches(change))
         self.assertTrue(python27.changeMatches(change))
@@ -233,26 +221,19 @@ class TestJob(BaseTestCase):
         self.assertEqual(job.timeout, 70)
 
     def test_inheritance_keeps_matchers(self):
-        tenant = model.Tenant('tenant')
-        layout = model.Layout(tenant)
-
-        pipeline = model.Pipeline('gate', layout)
-        layout.addPipeline(pipeline)
+        pipeline = model.Pipeline('gate', self.layout)
+        self.layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
-        project = model.Project('project', self.source)
-        tpc = model.TenantProjectConfig(project)
-        tenant.addUntrustedProject(tpc)
 
-        job_parser = configloader.JobParser(tenant, layout)
-        base = job_parser.fromYaml({
+        base = self.pcontext.job_parser.fromYaml({
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'base',
             'parent': None,
             'timeout': 30,
         })
-        layout.addJob(base)
-        python27 = job_parser.fromYaml({
+        self.layout.addJob(base)
+        python27 = self.pcontext.job_parser.fromYaml({
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'python27',
@@ -260,13 +241,9 @@ class TestJob(BaseTestCase):
             'timeout': 40,
             'irrelevant-files': ['^ignored-file$'],
         })
-        layout.addJob(python27)
+        self.layout.addJob(python27)
 
-        project_template_parser = configloader.ProjectTemplateParser(
-            tenant, layout)
-        project_parser = configloader.ProjectParser(
-            tenant, layout, project_template_parser)
-        project_config = project_parser.fromYaml([{
+        project_config = self.pcontext.project_parser.fromYaml([{
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'project',
@@ -276,13 +253,13 @@ class TestJob(BaseTestCase):
                 ]
             }
         }])
-        layout.addProjectConfig(project_config)
+        self.layout.addProjectConfig(project_config)
 
-        change = model.Change(project)
+        change = model.Change(self.project)
         change.branch = 'master'
         change.files = ['/COMMIT_MSG', 'ignored-file']
         item = queue.enqueueChange(change)
-        item.layout = layout
+        item.layout = self.layout
 
         self.assertTrue(base.changeMatches(change))
         self.assertFalse(python27.changeMatches(change))
@@ -291,29 +268,26 @@ class TestJob(BaseTestCase):
         self.assertEqual([], item.getJobs())
 
     def test_job_source_project(self):
-        tenant = self.tenant
-        layout = self.layout
         base_project = model.Project('base_project', self.source)
         base_context = model.SourceContext(base_project, 'master',
                                            'test', True)
         tpc = model.TenantProjectConfig(base_project)
-        tenant.addUntrustedProject(tpc)
+        self.tenant.addUntrustedProject(tpc)
 
-        job_parser = configloader.JobParser(tenant, layout)
-        base = job_parser.fromYaml({
+        base = self.pcontext.job_parser.fromYaml({
             '_source_context': base_context,
             '_start_mark': self.start_mark,
             'parent': None,
             'name': 'base',
         })
-        layout.addJob(base)
+        self.layout.addJob(base)
 
         other_project = model.Project('other_project', self.source)
         other_context = model.SourceContext(other_project, 'master',
                                             'test', True)
         tpc = model.TenantProjectConfig(other_project)
-        tenant.addUntrustedProject(tpc)
-        base2 = job_parser.fromYaml({
+        self.tenant.addUntrustedProject(tpc)
+        base2 = self.pcontext.job_parser.fromYaml({
             '_source_context': other_context,
             '_start_mark': self.start_mark,
             'name': 'base',
@@ -322,12 +296,11 @@ class TestJob(BaseTestCase):
                 Exception,
                 "Job base in other_project is not permitted "
                 "to shadow job base in base_project"):
-            layout.addJob(base2)
+            self.layout.addJob(base2)
 
     def test_job_pipeline_allow_untrusted_secrets(self):
         self.pipeline.post_review = False
-        job_parser = configloader.JobParser(self.tenant, self.layout)
-        job = job_parser.fromYaml({
+        job = self.pcontext.job_parser.fromYaml({
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'job',
@@ -337,11 +310,7 @@ class TestJob(BaseTestCase):
 
         self.layout.addJob(job)
 
-        project_template_parser = configloader.ProjectTemplateParser(
-            self.tenant, self.layout)
-        project_parser = configloader.ProjectParser(
-            self.tenant, self.layout, project_template_parser)
-        project_config = project_parser.fromYaml(
+        project_config = self.pcontext.project_parser.fromYaml(
             [{
                 '_source_context': self.context,
                 '_start_mark': self.start_mark,
