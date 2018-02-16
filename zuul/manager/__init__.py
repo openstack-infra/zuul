@@ -460,7 +460,8 @@ class PipelineManager(object):
         # Load layout
         # Late import to break an import loop
         import zuul.configloader
-        loader = zuul.configloader.ConfigLoader()
+        loader = zuul.configloader.ConfigLoader(
+            self.sched.connections, self.sched, None)
 
         self.log.debug("Loading dynamic layout")
         (trusted_updates, untrusted_updates) = item.includesConfigUpdates()
@@ -476,9 +477,7 @@ class PipelineManager(object):
                 loader.createDynamicLayout(
                     item.pipeline.layout.tenant,
                     build_set.files,
-                    include_config_projects=True,
-                    scheduler=self.sched,
-                    connections=self.sched.connections)
+                    include_config_projects=True)
                 trusted_layout_verified = True
 
             # Then create the config a second time but without changes

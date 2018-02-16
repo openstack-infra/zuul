@@ -548,11 +548,11 @@ class Scheduler(threading.Thread):
         self.config = event.config
         try:
             self.log.info("Full reconfiguration beginning")
-            loader = configloader.ConfigLoader()
+            loader = configloader.ConfigLoader(
+                self.connections, self, self.merger)
             abide = loader.loadConfig(
                 self.config.get('scheduler', 'tenant_config'),
-                self._get_project_key_dir(),
-                self, self.merger, self.connections)
+                self._get_project_key_dir())
             for tenant in abide.tenants.values():
                 self._reconfigureTenant(tenant)
             self.abide = abide
@@ -572,11 +572,11 @@ class Scheduler(threading.Thread):
                 project.unparsed_config = None
                 project.unparsed_branch_config = {}
             old_tenant = self.abide.tenants[event.tenant_name]
-            loader = configloader.ConfigLoader()
+            loader = configloader.ConfigLoader(
+                self.connections, self, self.merger)
             abide = loader.reloadTenant(
                 self.config.get('scheduler', 'tenant_config'),
                 self._get_project_key_dir(),
-                self, self.merger, self.connections,
                 self.abide, old_tenant)
             tenant = abide.tenants[event.tenant_name]
             self._reconfigureTenant(tenant)

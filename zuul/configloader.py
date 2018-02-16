@@ -1547,11 +1547,11 @@ class TenantParser(object):
                     project = source_context.project
                     branch = source_context.branch
                     if source_context.trusted:
-                        incdata = self._parseConfigProjectLayout(
+                        incdata = self.loadConfigProjectLayout(
                             job.files[fn], source_context, tenant)
                         config_projects_config.extend(incdata, tenant)
                     else:
-                        incdata = self._parseUntrustedProjectLayout(
+                        incdata = self.loadUntrustedProjectLayout(
                             job.files[fn], source_context, tenant)
                         untrusted_projects_config.extend(incdata, tenant)
                     new_project_unparsed_config[project].extend(
@@ -1569,14 +1569,14 @@ class TenantParser(object):
             project.unparsed_branch_config = branch_config
         return config_projects_config, untrusted_projects_config
 
-    def _parseConfigProjectLayout(self, data, source_context, tenant):
+    def loadConfigProjectLayout(self, data, source_context, tenant):
         # This is the top-level configuration for a tenant.
         config = model.UnparsedTenantConfig()
         with early_configuration_exceptions(source_context):
             config.extend(safe_load_yaml(data, source_context), tenant)
         return config
 
-    def _parseUntrustedProjectLayout(self, data, source_context, tenant):
+    def loadUntrustedProjectLayout(self, data, source_context, tenant):
         config = model.UnparsedTenantConfig()
         with early_configuration_exceptions(source_context):
             config.extend(safe_load_yaml(data, source_context), tenant)
@@ -1712,6 +1712,12 @@ class TenantParser(object):
 class ConfigLoader(object):
     log = logging.getLogger("zuul.ConfigLoader")
 
+    def __init__(self, connections, scheduler, merger):
+        self.connections = connections
+        self.scheduler = scheduler
+        self.merger = merger
+        self.tenant_parser = TenantParser(connections, scheduler, merger)
+
     def expandConfigPath(self, config_path):
         if config_path:
             config_path = os.path.expanduser(config_path)
@@ -1720,8 +1726,7 @@ class ConfigLoader(object):
                             config_path)
         return config_path
 
-    def loadConfig(self, config_path, project_key_dir, scheduler, merger,
-                   connections):
+    def loadConfig(self, config_path, project_key_dir):
         abide = model.Abide()
 
         config_path = self.expandConfigPath(config_path)
@@ -1732,31 +1737,28 @@ class ConfigLoader(object):
         config.extend(data)
         base = os.path.dirname(os.path.realpath(config_path))
 
-        tenant_parser = TenantParser(connections, scheduler, merger)
         for conf_tenant in config.tenants:
             # When performing a full reload, do not use cached data.
-            tenant = tenant_parser.fromYaml(base, project_key_dir,
-                                            conf_tenant, old_tenant=None)
+            tenant = self.tenant_parser.fromYaml(base, project_key_dir,
+                                                 conf_tenant, old_tenant=None)
             abide.tenants[tenant.name] = tenant
         return abide
 
-    def reloadTenant(self, config_path, project_key_dir, scheduler,
-                     merger, connections, abide, tenant):
+    def reloadTenant(self, config_path, project_key_dir, abide, tenant):
         new_abide = model.Abide()
         new_abide.tenants = abide.tenants.copy()
 
         config_path = self.expandConfigPath(config_path)
         base = os.path.dirname(os.path.realpath(config_path))
-        tenant_parser = TenantParser(connections, scheduler, merger)
 
         # When reloading a tenant only, use cached data if available.
-        new_tenant = tenant_parser.fromYaml(
+        new_tenant = self.tenant_parser.fromYaml(
             base, project_key_dir,
             tenant.unparsed_config, old_tenant=tenant)
         new_abide.tenants[tenant.name] = new_tenant
         return new_abide
 
-    def _loadDynamicProjectData(self, tenant_parser, config, project,
+    def _loadDynamicProjectData(self, config, project,
                                 files, trusted, tenant):
         if trusted:
             branches = ['master']
@@ -1810,29 +1812,30 @@ class ConfigLoader(object):
                     loaded = conf_root
 
                     if trusted:
-                        incdata = tenant_parser._parseConfigProjectLayout(
-                            data, source_context, tenant)
+                        incdata = (self.tenant_parser.
+                                   loadConfigProjectLayout(
+                                       data, source_context, tenant))
                     else:
-                        incdata = tenant_parser._parseUntrustedProjectLayout(
-                            data, source_context, tenant)
+                        incdata = (self.tenant_parser.
+                                   loadUntrustedProjectLayout(
+                                       data, source_context, tenant))
 
                     config.extend(incdata, tenant)
 
     def createDynamicLayout(self, tenant, files,
                             include_config_projects=False,
                             scheduler=None, connections=None):
-        tenant_parser = TenantParser(connections, scheduler, None)
         if include_config_projects:
             config = model.UnparsedTenantConfig()
             for project in tenant.config_projects:
                 self._loadDynamicProjectData(
-                    tenant_parser, config, project, files, True, tenant)
+                    config, project, files, True, tenant)
         else:
             config = tenant.config_projects_config.copy()
 
         for project in tenant.untrusted_projects:
-            self._loadDynamicProjectData(tenant_parser, config,
-                                         project, files, False, tenant)
+            self._loadDynamicProjectData(config, project, files,
+                                         False, tenant)
 
         layout = model.Layout(tenant)
         self.log.debug("Created layout id %s", layout.uuid)
@@ -1856,8 +1859,8 @@ class ConfigLoader(object):
         else:
             skip_pipelines = skip_semaphores = False
 
-        tenant_parser._parseLayoutItems(layout, tenant, config,
-                                        skip_pipelines=skip_pipelines,
-                                        skip_semaphores=skip_semaphores)
+        self.tenant_parser._parseLayoutItems(layout, tenant, config,
+                                             skip_pipelines=skip_pipelines,
+                                             skip_semaphores=skip_semaphores)
 
         return layout
