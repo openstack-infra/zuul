@@ -2478,7 +2478,7 @@ class UnparsedTenantConfig(object):
         self.pipelines = []
         self.jobs = []
         self.project_templates = []
-        self.projects = {}
+        self.projects = []
         self.nodesets = []
         self.secrets = []
         self.semaphores = []
@@ -2495,23 +2495,13 @@ class UnparsedTenantConfig(object):
         r.semaphores = copy.deepcopy(self.semaphores)
         return r
 
-    def extend(self, conf, tenant):
+    def extend(self, conf):
         if isinstance(conf, UnparsedTenantConfig):
             self.pragmas.extend(conf.pragmas)
             self.pipelines.extend(conf.pipelines)
             self.jobs.extend(conf.jobs)
             self.project_templates.extend(conf.project_templates)
-            for k, v in conf.projects.items():
-                name = k
-                # Add the projects to the according canonical name instead of
-                # the given project name. If it is not found, it's ok to add
-                # this to the given name. We also don't need to throw the
-                # ProjectNotFoundException here as semantic validation occurs
-                # later where it will fail then.
-                trusted, project = tenant.getProject(k)
-                if project is not None:
-                    name = project.canonical_name
-                self.projects.setdefault(name, []).extend(v)
+            self.projects.extend(conf.projects)
             self.nodesets.extend(conf.nodesets)
             self.secrets.extend(conf.secrets)
             self.semaphores.extend(conf.semaphores)
@@ -2527,13 +2517,7 @@ class UnparsedTenantConfig(object):
                 raise ConfigItemMultipleKeysError()
             key, value = list(item.items())[0]
             if key == 'project':
-                name = value.get('name')
-                if not name:
-                    # There is no name defined so implicitly add the name
-                    # of the project where it is defined.
-                    name = value['_source_context'].project.canonical_name
-                    value['name'] = name
-                self.projects.setdefault(name, []).append(value)
+                self.projects.append(value)
             elif key == 'job':
                 self.jobs.append(value)
             elif key == 'project-template':
