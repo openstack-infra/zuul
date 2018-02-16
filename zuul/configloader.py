@@ -1294,7 +1294,7 @@ class TenantParser(object):
         # an old_tenant object, however, we may be doing so because of
         # a branch creation event, so if we don't have any cached
         # data, query the branches again as well.
-        if old_tenant and tpc.project.unparsed_config:
+        if old_tenant and tpc.project.unparsed_branch_config:
             branches = old_tenant.getProjectBranches(tpc.project)[:]
         else:
             branches = sorted(tpc.project.source.getProjectBranches(
@@ -1444,10 +1444,6 @@ class TenantParser(object):
                                  cached, tenant):
         config_projects_config = model.UnparsedTenantConfig()
         untrusted_projects_config = model.UnparsedTenantConfig()
-        # project -> config; these will replace
-        # project.unparsed_config if this method succesfully
-        # completes
-        new_project_unparsed_config = {}
         # project -> branch -> config; these will replace
         # project.unparsed_branch_config if this method succesfully
         # completes
@@ -1460,18 +1456,25 @@ class TenantParser(object):
         # data and is inserted in the ordered jobs list for later
         # processing.
         class CachedDataJob(object):
-            def __init__(self, config_project, project):
+            def __init__(self, config_project, project, branch):
                 self.config_project = config_project
                 self.project = project
+                self.branch = branch
 
         for project in config_projects:
             # If we have cached data (this is a reconfiguration) use it.
-            if cached and project.unparsed_config:
-                jobs.append(CachedDataJob(True, project))
+            if cached and project.unparsed_branch_config:
+                # Note: this should only be one branch (master), as
+                # that's all we will initially load below in the
+                # un-cached case.
+                for branch in project.unparsed_branch_config.keys():
+                    jobs.append(CachedDataJob(True, project, branch))
                 continue
             # Otherwise, prepare an empty unparsed config object to
             # hold cached data later.
-            new_project_unparsed_config[project] = model.UnparsedTenantConfig()
+            new_project_unparsed_branch_config[project] = {}
+            new_project_unparsed_branch_config[project]['master'] = \
+                model.UnparsedTenantConfig()
             # Get main config files.  These files are permitted the
             # full range of configuration.
             job = self.merger.getFiles(
@@ -1490,12 +1493,12 @@ class TenantParser(object):
             if not tpc.load_classes:
                 continue
             # If we have cached data (this is a reconfiguration) use it.
-            if cached and project.unparsed_config:
-                jobs.append(CachedDataJob(False, project))
+            if cached and project.unparsed_branch_config:
+                for branch in project.unparsed_branch_config.keys():
+                    jobs.append(CachedDataJob(False, project, branch))
                 continue
             # Otherwise, prepare an empty unparsed config object to
             # hold cached data later.
-            new_project_unparsed_config[project] = model.UnparsedTenantConfig()
             new_project_unparsed_branch_config[project] = {}
             # Get in-project-repo config files which have a restricted
             # set of options.
@@ -1527,10 +1530,10 @@ class TenantParser(object):
                     (job.project,))
                 if job.config_project:
                     config_projects_config.extend(
-                        job.project.unparsed_config)
+                        job.project.unparsed_branch_config[job.branch])
                 else:
                     untrusted_projects_config.extend(
-                        job.project.unparsed_config)
+                        job.project.unparsed_branch_config[job.branch])
                 continue
             self.log.debug("Waiting for cat job %s" % (job,))
             job.wait()
@@ -1567,16 +1570,10 @@ class TenantParser(object):
                         incdata = self.loadUntrustedProjectLayout(
                             job.files[fn], source_context)
                         untrusted_projects_config.extend(incdata)
-                    new_project_unparsed_config[project].extend(
-                        incdata)
-                    if branch in new_project_unparsed_branch_config.get(
-                            project, {}):
-                        new_project_unparsed_branch_config[project][branch].\
-                            extend(incdata)
+                    new_project_unparsed_branch_config[project][branch].\
+                        extend(incdata)
         # Now that we've sucessfully loaded all of the configuration,
         # cache the unparsed data on the project objects.
-        for project, data in new_project_unparsed_config.items():
-            project.unparsed_config = data
         for project, branch_config in \
             new_project_unparsed_branch_config.items():
             project.unparsed_branch_config = branch_config
@@ -1810,10 +1807,7 @@ class ConfigLoader(object):
             # If there is no files entry at all for this
             # project-branch, then use the cached config.
             if files_entry is None:
-                if trusted:
-                    incdata = project.unparsed_config
-                else:
-                    incdata = project.unparsed_branch_config.get(branch)
+                incdata = project.unparsed_branch_config.get(branch)
                 if incdata:
                     config.extend(incdata)
                 continue

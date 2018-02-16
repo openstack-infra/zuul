@@ -569,7 +569,6 @@ class Scheduler(threading.Thread):
             # If a change landed to a project, clear out the cached
             # config before reconfiguring.
             for project in event.projects:
-                project.unparsed_config = None
                 project.unparsed_branch_config = {}
             old_tenant = self.abide.tenants[event.tenant_name]
             loader = configloader.ConfigLoader(
