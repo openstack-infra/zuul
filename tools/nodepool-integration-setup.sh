@@ -6,7 +6,6 @@
 ln -s /tmp/nodepool/log $HOME/logs
 
 cd /tmp/openstack-infra/nodepool
-/usr/local/jenkins/slave_scripts/install-distro-packages.sh
 sudo pip3 install .
 
 bash -xe ./tools/zuul-nodepool-integration/start.sh
