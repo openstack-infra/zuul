@@ -22,9 +22,6 @@ import json
 import urllib
 import time
 import socket
-from unittest import skip
-
-import webob
 
 import zuul.web
 
@@ -212,21 +209,6 @@ class TestWeb(ZuulTestCase):
         f = urllib.request.urlopen(req)
         self.assertEqual(f.read(), public_pem)
 
-    @skip("This may not apply to zuul-web")
-    def test_web_custom_handler(self):
-        def custom_handler(path, tenant_name, request):
-            return webob.Response(body='ok')
-
-        self.webapp.register_path('/custom', custom_handler)
-        req = urllib.request.Request(
-            "http://localhost:%s/custom" % self.port)
-        f = urllib.request.urlopen(req)
-        self.assertEqual(b'ok', f.read())
-
-        self.webapp.unregister_path('/custom')
-        self.assertRaises(urllib.error.HTTPError, urllib.request.urlopen, req)
-
-    @skip("This returns a 500")
     def test_web_404_on_unknown_tenant(self):
         req = urllib.request.Request(
             "http://localhost:{}/non-tenant/status".format(self.port))

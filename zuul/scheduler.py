@@ -246,6 +246,7 @@ class Scheduler(threading.Thread):
         self.result_event_queue = queue.Queue()
         self.management_event_queue = zuul.lib.queue.MergedQueue()
         self.abide = model.Abide()
+        self.unparsed_abide = model.UnparsedAbideConfig()
 
         if not testonly:
             time_dir = self._get_time_database_dir()
@@ -550,8 +551,10 @@ class Scheduler(threading.Thread):
             self.log.info("Full reconfiguration beginning")
             loader = configloader.ConfigLoader(
                 self.connections, self, self.merger)
+            self.unparsed_abide = loader.readConfig(
+                self.config.get('scheduler', 'tenant_config'))
             abide = loader.loadConfig(
-                self.config.get('scheduler', 'tenant_config'),
+                self.unparsed_abide,
                 self._get_project_key_dir())
             for tenant in abide.tenants.values():
                 self._reconfigureTenant(tenant)
@@ -1149,6 +1152,8 @@ class Scheduler(threading.Thread):
         data['pipelines'] = pipelines
         tenant = self.abide.tenants.get(tenant_name)
         if not tenant:
+            if tenant_name not in self.unparsed_abide.known_tenants:
+                return json.dumps({"message": "Unknown tenant"})
             self.log.warning("Tenant %s isn't loaded" % tenant_name)
             return json.dumps(
                 {"message": "Tenant %s isn't ready" % tenant_name})

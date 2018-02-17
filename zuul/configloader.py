@@ -1754,20 +1754,22 @@ class ConfigLoader(object):
                             config_path)
         return config_path
 
-    def loadConfig(self, config_path, project_key_dir):
-        abide = model.Abide()
-
+    def readConfig(self, config_path):
         config_path = self.expandConfigPath(config_path)
         with open(config_path) as config_file:
             self.log.info("Loading configuration from %s" % (config_path,))
             data = yaml.safe_load(config_file)
-        config = model.UnparsedAbideConfig()
-        config.extend(data)
         base = os.path.dirname(os.path.realpath(config_path))
+        unparsed_abide = model.UnparsedAbideConfig(base)
+        unparsed_abide.extend(data)
+        return unparsed_abide
 
-        for conf_tenant in config.tenants:
+    def loadConfig(self, unparsed_abide, project_key_dir):
+        abide = model.Abide()
+        for conf_tenant in unparsed_abide.tenants:
             # When performing a full reload, do not use cached data.
-            tenant = self.tenant_parser.fromYaml(base, project_key_dir,
+            tenant = self.tenant_parser.fromYaml(unparsed_abide.base,
+                                                 project_key_dir,
                                                  conf_tenant, old_tenant=None)
             abide.tenants[tenant.name] = tenant
         return abide
