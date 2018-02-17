@@ -55,7 +55,7 @@ function zuul_start($) {
     var demo = location.search.match(/[?&]demo=([^?&]*)/),
         source_url = location.search.match(/[?&]source_url=([^?&]*)/),
         source = demo ? './status-' + (demo[1] || 'basic') + '.json-sample' :
-            'status.json';
+            'status';
     source = source_url ? source_url[1] : source;
 
     var zuul = $.zuul({

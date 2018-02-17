@@ -23,7 +23,7 @@ angular.module('zuulTenants', []).controller(
 {
     $scope.tenants = undefined;
     $scope.tenants_fetch = function() {
-        $http.get("tenants.json")
+        $http.get("tenants")
             .then(function success(result) {
                 $scope.tenants = result.data;
             });
@@ -36,7 +36,7 @@ angular.module('zuulJobs', []).controller(
 {
     $scope.jobs = undefined;
     $scope.jobs_fetch = function() {
-        $http.get("jobs.json")
+        $http.get("jobs")
             .then(function success(result) {
                 $scope.jobs = result.data;
             });
@@ -78,7 +78,7 @@ angular.module('zuulBuilds', [], function($locationProvider) {
         if ($scope.job_name) {query_string += "&job_name="+$scope.job_name;}
         if ($scope.project) {query_string += "&project="+$scope.project;}
         if (query_string != "") {query_string = "?" + query_string.substr(1);}
-        $http.get("builds.json" + query_string)
+        $http.get("builds" + query_string)
             .then(function success(result) {
                 for (build_pos = 0;
                      build_pos < result.data.length;

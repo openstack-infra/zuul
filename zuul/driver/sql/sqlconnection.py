@@ -127,7 +127,7 @@ class SQLConnection(BaseConnection):
 
     def getWebHandlers(self, zuul_web):
         return [
-            SqlWebHandler(self, zuul_web, 'GET', '/{tenant}/builds.json'),
+            SqlWebHandler(self, zuul_web, 'GET', '/{tenant}/builds'),
             StaticHandler(zuul_web, '/{tenant}/builds.html'),
         ]
 

@@ -49,7 +49,7 @@
         options = $.extend({
             'enabled': true,
             'graphite_url': '',
-            'source': 'status.json',
+            'source': 'status',
             'msg_id': '#zuul_msg',
             'pipelines_id': '#zuul_pipelines',
             'queue_events_num': '#zuul_queue_events_num',

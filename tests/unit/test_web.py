@@ -89,7 +89,7 @@ class TestWeb(ZuulTestCase):
         self.waitUntilSettled()
 
         req = urllib.request.Request(
-            "http://localhost:%s/tenant-one/status.json" % self.port)
+            "http://localhost:%s/tenant-one/status" % self.port)
         f = urllib.request.urlopen(req)
         headers = f.info()
         self.assertIn('Content-Length', headers)
@@ -230,7 +230,7 @@ class TestWeb(ZuulTestCase):
     @skip("This returns a 500")
     def test_web_404_on_unknown_tenant(self):
         req = urllib.request.Request(
-            "http://localhost:{}/non-tenant/status.json".format(self.port))
+            "http://localhost:{}/non-tenant/status".format(self.port))
         e = self.assertRaises(
             urllib.error.HTTPError, urllib.request.urlopen, req)
         self.assertEqual(404, e.code)

@@ -256,9 +256,9 @@ class ZuulWeb(object):
             is run within a separate (non-main) thread.
         """
         routes = [
-            ('GET', '/tenants.json', self._handleTenantsRequest),
-            ('GET', '/{tenant}/status.json', self._handleStatusRequest),
-            ('GET', '/{tenant}/jobs.json', self._handleJobsRequest),
+            ('GET', '/tenants', self._handleTenantsRequest),
+            ('GET', '/{tenant}/status', self._handleStatusRequest),
+            ('GET', '/{tenant}/jobs', self._handleJobsRequest),
             ('GET', '/{tenant}/console-stream', self._handleWebsocket),
             ('GET', '/{tenant}/{project:.*}.pub', self._handleKeyRequest),
         ]

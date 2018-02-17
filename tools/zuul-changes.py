@@ -24,7 +24,7 @@ parser.add_argument('tenant', help='The Zuul tenant')
 parser.add_argument('pipeline', help='The name of the Zuul pipeline')
 options = parser.parse_args()
 
-data = urllib2.urlopen('%s/status.json' % options.url).read()
+data = urllib2.urlopen('%s/status' % options.url).read()
 data = json.loads(data)
 
 for pipeline in data['pipelines']:
