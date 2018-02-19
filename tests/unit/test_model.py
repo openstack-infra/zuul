@@ -23,6 +23,7 @@ from zuul import model
 from zuul import configloader
 from zuul.lib import encryption
 from zuul.lib import yamlutil as yaml
+import zuul.lib.connections
 
 from tests.base import BaseTestCase, FIXTURE_DIR
 
@@ -36,6 +37,8 @@ class Dummy(object):
 class TestJob(BaseTestCase):
     def setUp(self):
         super(TestJob, self).setUp()
+        self.connections = zuul.lib.connections.ConnectionRegistry()
+        self.addCleanup(self.connections.stop)
         self.connection = Dummy(connection_name='dummy_connection')
         self.source = Dummy(canonical_hostname='git.example.com',
                             connection=self.connection)
@@ -48,7 +51,8 @@ class TestJob(BaseTestCase):
         self.layout.addPipeline(self.pipeline)
         self.queue = model.ChangeQueue(self.pipeline)
         self.pcontext = configloader.ParseContext(
-            None, None, self.tenant, self.layout)
+            self.connections, None, self.tenant, self.layout)
+        self.pcontext.setPipelines()
 
         private_key_file = os.path.join(FIXTURE_DIR, 'private.pem')
         with open(private_key_file, "rb") as f:

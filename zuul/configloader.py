@@ -388,6 +388,8 @@ class NodeSetParser(object):
     def __init__(self, pcontext):
         self.log = logging.getLogger("zuul.NodeSetParser")
         self.pcontext = pcontext
+        self.schema = self.getSchema(False)
+        self.anon_schema = self.getSchema(True)
 
     def getSchema(self, anonymous=False):
         node = {vs.Required('name'): to_list(str),
@@ -409,7 +411,10 @@ class NodeSetParser(object):
         return vs.Schema(nodeset)
 
     def fromYaml(self, conf, anonymous=False):
-        self.getSchema(anonymous)(conf)
+        if anonymous:
+            self.anon_schema(conf)
+        else:
+            self.schema(conf)
         ns = model.NodeSet(conf.get('name'), conf.get('_source_context'))
         node_names = set()
         group_names = set()
@@ -813,6 +818,7 @@ class ProjectTemplateParser(object):
     def __init__(self, pcontext):
         self.log = logging.getLogger("zuul.ProjectTemplateParser")
         self.pcontext = pcontext
+        self.schema = self.getSchema()
 
     def getSchema(self):
         project_template = {
@@ -840,7 +846,7 @@ class ProjectTemplateParser(object):
     def fromYaml(self, conf, validate=True):
         if validate:
             with configuration_exceptions('project-template', conf):
-                self.getSchema()(conf)
+                self.schema(conf)
         source_context = conf['_source_context']
         project_template = model.ProjectConfig(conf['name'], source_context)
         start_mark = conf['_start_mark']
@@ -884,6 +890,7 @@ class ProjectParser(object):
     def __init__(self, pcontext):
         self.log = logging.getLogger("zuul.ProjectParser")
         self.pcontext = pcontext
+        self.schema = self.getSchema()
 
     def getSchema(self):
         project = {
@@ -912,7 +919,7 @@ class ProjectParser(object):
     def fromYaml(self, conf_list):
         for conf in conf_list:
             with configuration_exceptions('project', conf):
-                self.getSchema()(conf)
+                self.schema(conf)
 
         with configuration_exceptions('project', conf_list[0]):
             project_name = conf_list[0]['name']
@@ -1001,6 +1008,7 @@ class PipelineParser(object):
     def __init__(self, pcontext):
         self.log = logging.getLogger("zuul.PipelineParser")
         self.pcontext = pcontext
+        self.schema = self.getSchema()
 
     def getDriverSchema(self, dtype):
         methods = {
@@ -1063,7 +1071,7 @@ class PipelineParser(object):
 
     def fromYaml(self, conf):
         with configuration_exceptions('pipeline', conf):
-            self.getSchema()(conf)
+            self.schema(conf)
         pipeline = model.Pipeline(conf['name'], self.pcontext.layout)
         pipeline.description = conf.get('description')
 
@@ -1185,6 +1193,12 @@ class ParseContext(object):
         self.secret_parser = SecretParser(self)
         self.job_parser = JobParser(self)
         self.semaphore_parser = SemaphoreParser(self)
+        self.project_template_parser = None
+        self.project_parser = None
+
+    def setPipelines(self):
+        # Call after pipelines are fixed in the layout to construct
+        # the project parser, which relies on them.
         self.project_template_parser = ProjectTemplateParser(self)
         self.project_parser = ProjectParser(self)
 
@@ -1616,6 +1630,7 @@ class TenantParser(object):
                     continue
                 layout.addPipeline(pcontext.pipeline_parser.fromYaml(
                     config_pipeline))
+        pcontext.setPipelines()
 
         for config_nodeset in data.nodesets:
             classes = self._getLoadClasses(tenant, config_nodeset)
