@@ -2033,6 +2033,8 @@ class TestAnsible(AnsibleZuulTestCase):
     tenant_config_file = 'config/ansible/main.yaml'
 
     def test_playbook(self):
+        # This test runs a bit long and needs extra time.
+        self.wait_timeout = 120
         # Keep the jobdir around so we can inspect contents if an
         # assert fails.
         self.executor_server.keep_jobdir = True
