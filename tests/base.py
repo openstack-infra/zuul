@@ -1857,7 +1857,7 @@ class BaseTestCase(testtools.TestCase):
         # from libraries that zuul depends on such as gear.
         log_defaults_from_env = os.environ.get(
             'OS_LOG_DEFAULTS',
-            'git.cmd=INFO,kazoo.client=WARNING,gear=INFO,paste=INFO')
+            'git.cmd=INFO,kazoo.client=WARNING,gear=INFO')
 
         if log_defaults_from_env:
             for default in log_defaults_from_env.split(','):
