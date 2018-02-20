@@ -44,6 +44,8 @@
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
         - zuul-stream-functional
+        - nodepool-zuul-functional:
+            voting: false
     gate:
       jobs:
         - build-sphinx-docs:
