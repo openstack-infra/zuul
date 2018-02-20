@@ -15,10 +15,25 @@
 # limitations under the License.
 
 ZUUL_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
-ARA_DIR=$(dirname $(python3 -c 'import ara ; print(ara.__file__)'))
-WORK_DIR=$PWD/test-logs-output
+# Initialize tox environment if it's not set up
+if [[ ! -d "${ZUUL_DIR}/.tox/venv" ]]; then
+    pushd $ZUUL_DIR
+        echo "Virtualenv doesn't exist... creating."
+        tox -e venv --notest
+    popd
+fi
+# Source tox environment
+source ${ZUUL_DIR}/.tox/venv/bin/activate
 
-mkdir -p $WORK_DIR
+# Install ARA if it's not installed (not in requirements.txt by default)
+python -c "import ara" &> /dev/null
+if [ $? -eq 1 ]; then
+    echo "ARA isn't installed... Installing it."
+    pip install ara
+fi
+ARA_DIR=$(dirname $(python3 -c 'import ara; print(ara.__file__)'))
+
+WORK_DIR=$(mktemp -d /tmp/zuul_logs_XXXX)
 
 if [ -z $1 ] ; then
     INVENTORY=$WORK_DIR/hosts.yaml
@@ -26,11 +41,11 @@ if [ -z $1 ] ; then
 all:
   hosts:
     controller:
-      ansible_host: localhost
+      ansible_connection: local
     node1:
-      ansible_host: localhost
+      ansible_connection: local
     node2:
-      ansible_host: localhost
+      ansible_connection: local
 node:
   hosts:
     node1: null
@@ -63,4 +78,5 @@ export ARA_LOG_CONFIG=$ZUUL_JOB_LOG_CONFIG
 rm -rf $ARA_DIR
 ansible-playbook $ZUUL_DIR/playbooks/zuul-stream/fixtures/test-stream.yaml
 ansible-playbook $ZUUL_DIR/playbooks/zuul-stream/fixtures/test-stream-failure.yaml
+# ansible-playbook $ZUUL_DIR/playbooks/zuul-stream/functional.yaml
 echo "Logs are in $WORK_DIR"
