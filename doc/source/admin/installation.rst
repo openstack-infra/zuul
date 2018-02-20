@@ -67,3 +67,57 @@ that version of Ansible in its python package metadata, and normally
 the correct version will be installed automatically with Zuul.
 Because of the close integration of Zuul and Ansible, attempting to
 use other versions of Ansible with Zuul is not recommended.
+
+.. _web-deployment-options:
+
+Web Deployment Options
+======================
+
+The ``zuul-web`` service provides an web dashboard, a REST API and a websocket
+log streaming service as a single holistic web application. For production use
+it is recommended to run it behind a reverse proxy, such as Apache or Nginx.
+
+More advanced users may desire to do one or more exciting things such as:
+
+White Label
+  Serve the dashboard of an individual tenant at the root of its own domain.
+  https://zuul.openstack.org is an example of a Zuul dashboard that has been
+  white labeled for the ``openstack`` tenant of its Zuul.
+
+Static Offload
+  Shift the duties of serving static files, such as HTML, Javascript, CSS or
+  images either to the Reverse Proxy server or to a completely separate
+  location such as a Swift Object Store or a CDN-enabled static web server.
+
+Sub-URL
+  Serve a Zuul dashboard from a location below the root URL as part of
+  presenting integration with other application.
+  https://softwarefactory-project.io/zuul3/ is an example of a Zuul dashboard
+  that is being served from a Sub-URL.
+
+None of those make any sense for simple non-production oriented deployments, so
+all discussion will assume that the ``zuul-web`` service is exposed via a
+Reverse Proxy. Where rewrite rule examples are given, they will be given
+with Apache syntax, but any other Reverse Proxy should work just fine.
+
+Basic Reverse Proxy
+-------------------
+
+Using Apache as the Reverse Proxy requires the ``mod_proxy``,
+``mod_proxy_http`` and ``mod_proxy_wstunnel`` modules to be installed and
+enabled. Static Offload and White Label additionally require ``mod_rewrite``.
+
+Static Offload
+--------------
+
+.. TODO: Fill in specifics in the next patch
+
+White Labeled Tenant
+--------------------
+
+.. TODO: Fill in specifics in the next patch
+
+Sub-URL
+-------
+
+.. TODO: Fill in specifics in the next patch

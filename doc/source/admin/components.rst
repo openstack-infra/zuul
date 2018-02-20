@@ -618,9 +618,13 @@ and ``zuul-executor unverbose``.
 Web Server
 ----------
 
-The Zuul web server currently acts as a websocket interface to live log
-streaming. Eventually, it will serve as the single process handling all
-HTTP interactions with Zuul.
+.. TODO: Turn REST API into a link to swagger docs when we grow them
+
+The Zuul web server serves as the single process handling all HTTP
+interactions with Zuul. This includes the websocket interface for live
+log streaming, the REST API and the html/javascript dashboard. All three are
+served as a holistic web application. For information on additional supported
+deployment schemes, see :ref:`web-deployment-options`.
 
 Web servers need to be able to connect to the Gearman server (usually
 the scheduler host).  If the SQL reporter is used, they need to be
@@ -654,6 +658,11 @@ sections of ``zuul.conf`` are used by the web server:
       :default: 9000
 
       Port to use for web server process.
+
+   .. attr:: rest_api_url
+
+      Base URL on which the zuul-web REST service is exposed, if different
+      than the base URL where the web application is hosted.
 
    .. attr:: websocket_url
 

@@ -3214,16 +3214,16 @@ class Capabilities(object):
 class WebInfo(object):
     """Information about the system needed by zuul-web /info."""
 
-    def __init__(self, websocket_url=None, endpoint=None,
+    def __init__(self, websocket_url=None, rest_api_url=None,
                  capabilities=None, stats_url=None,
                  stats_prefix=None, stats_type=None):
         self.capabilities = capabilities or Capabilities()
-        self.websocket_url = websocket_url
-        self.stats_url = stats_url
+        self.rest_api_url = rest_api_url
         self.stats_prefix = stats_prefix
         self.stats_type = stats_type
-        self.endpoint = endpoint
+        self.stats_url = stats_url
         self.tenant = None
+        self.websocket_url = websocket_url
 
     def __repr__(self):
         return '<WebInfo 0x%x capabilities=%s>' % (
@@ -3231,32 +3231,33 @@ class WebInfo(object):
 
     def copy(self):
         return WebInfo(
-            websocket_url=self.websocket_url,
-            endpoint=self.endpoint,
-            stats_url=self.stats_url,
+            capabilities=self.capabilities.copy(),
+            rest_api_url=self.rest_api_url,
             stats_prefix=self.stats_prefix,
             stats_type=self.stats_type,
-            capabilities=self.capabilities.copy())
+            stats_url=self.stats_url,
+            websocket_url=self.websocket_url)
 
     @staticmethod
     def fromConfig(config):
         return WebInfo(
-            websocket_url=get_default(config, 'web', 'websocket_url', None),
-            stats_url=get_default(config, 'web', 'stats_url', None),
+            rest_api_url=get_default(config, 'web', 'rest_api_url', None),
             stats_prefix=get_default(config, 'statsd', 'prefix'),
             stats_type=get_default(config, 'web', 'stats_type', 'graphite'),
+            stats_url=get_default(config, 'web', 'stats_url', None),
+            websocket_url=get_default(config, 'web', 'websocket_url', None),
         )
 
     def toDict(self):
         d = dict()
+        d['capabilities'] = self.capabilities.toDict()
+        d['rest_api_url'] = self.rest_api_url
         d['websocket_url'] = self.websocket_url
         stats = dict()
-        stats['url'] = self.stats_url
         stats['prefix'] = self.stats_prefix
         stats['type'] = self.stats_type
+        stats['url'] = self.stats_url
         d['stats'] = stats
-        d['endpoint'] = self.endpoint
-        d['capabilities'] = self.capabilities.toDict()
         if self.tenant:
             d['tenant'] = self.tenant
         return d
