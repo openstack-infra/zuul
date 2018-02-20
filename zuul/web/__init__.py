@@ -172,8 +172,8 @@ class GearmanHandler(object):
             self.cache[tenant] = json.loads(job.data[0])
             self.cache_time[tenant] = time.time()
         payload = self.cache[tenant]
-        if payload.get('message') == 'Unknown tenant':
-            return web.HTTPNotFound()
+        if payload.get('code') == 404:
+            return web.HTTPNotFound(reason=payload['message'])
         if result_filter:
             payload = result_filter.filterPayload(payload)
         resp = web.json_response(payload)

@@ -1153,10 +1153,15 @@ class Scheduler(threading.Thread):
         tenant = self.abide.tenants.get(tenant_name)
         if not tenant:
             if tenant_name not in self.unparsed_abide.known_tenants:
-                return json.dumps({"message": "Unknown tenant"})
+                return json.dumps({
+                    "message": "Unknown tenant",
+                    "code": 404
+                })
             self.log.warning("Tenant %s isn't loaded" % tenant_name)
-            return json.dumps(
-                {"message": "Tenant %s isn't ready" % tenant_name})
+            return json.dumps({
+                "message": "Tenant %s isn't ready" % tenant_name,
+                "code": 204
+            })
         for pipeline in tenant.layout.pipelines.values():
             pipelines.append(pipeline.formatStatusJSON(websocket_url))
         return json.dumps(data)
