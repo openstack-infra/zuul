@@ -138,10 +138,10 @@
             - host3
     vars:
       allvar: all
-    host_vars:
+    host-vars:
       host1:
         hostvar: host
-    group_vars:
+    group-vars:
       group1:
         groupvar: group
 
