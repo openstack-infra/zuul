@@ -55,7 +55,7 @@ class TestNodepoolIntegration(BaseTestCase):
         # Test a simple node request
 
         nodeset = model.NodeSet()
-        nodeset.addNode(model.Node('controller', 'fake-label'))
+        nodeset.addNode(model.Node(['controller'], 'fake-label'))
         job = model.Job('testjob')
         job.nodeset = nodeset
         request = self.nodepool.requestNodes(None, job)
@@ -64,7 +64,7 @@ class TestNodepoolIntegration(BaseTestCase):
         self.assertEqual(request.state, model.STATE_FULFILLED)
 
         # Accept the nodes
-        self.nodepool.acceptNodes(request)
+        self.nodepool.acceptNodes(request, request.id)
         nodeset = request.nodeset
 
         for node in nodeset.getNodes():
@@ -85,7 +85,7 @@ class TestNodepoolIntegration(BaseTestCase):
     def test_invalid_node_request(self):
         # Test requests with an invalid node type fail
         nodeset = model.NodeSet()
-        nodeset.addNode(model.Node('controller', 'invalid-label'))
+        nodeset.addNode(model.Node(['controller'], 'invalid-label'))
         job = model.Job('testjob')
         job.nodeset = nodeset
         request = self.nodepool.requestNodes(None, job)
@@ -98,8 +98,8 @@ class TestNodepoolIntegration(BaseTestCase):
         # Test that node requests are re-submitted after disconnect
 
         nodeset = model.NodeSet()
-        nodeset.addNode(model.Node('controller', 'ubuntu-xenial'))
-        nodeset.addNode(model.Node('compute', 'ubuntu-xenial'))
+        nodeset.addNode(model.Node(['controller'], 'ubuntu-xenial'))
+        nodeset.addNode(model.Node(['compute'], 'ubuntu-xenial'))
         job = model.Job('testjob')
         job.nodeset = nodeset
         self.fake_nodepool.paused = True
@@ -116,8 +116,8 @@ class TestNodepoolIntegration(BaseTestCase):
         # Test that node requests can be canceled
 
         nodeset = model.NodeSet()
-        nodeset.addNode(model.Node('controller', 'ubuntu-xenial'))
-        nodeset.addNode(model.Node('compute', 'ubuntu-xenial'))
+        nodeset.addNode(model.Node(['controller'], 'ubuntu-xenial'))
+        nodeset.addNode(model.Node(['compute'], 'ubuntu-xenial'))
         job = model.Job('testjob')
         job.nodeset = nodeset
         self.fake_nodepool.paused = True
