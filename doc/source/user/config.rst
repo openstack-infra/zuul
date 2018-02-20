@@ -877,14 +877,14 @@ Here is an example of two job definitions:
       same name will override a previously defined variable, but new
       variable names will be added to the set of defined variables.
 
-   .. attr:: host_vars
+   .. attr:: host-vars
 
       A dictionary of host variables to supply to Ansible.  The keys
       of this dictionary are node names as defined in a
       :ref:`nodeset`, and the values are dictionaries of variables,
       just as in :attr:`job.vars`.
 
-   .. attr:: group_vars
+   .. attr:: group-vars
 
       A dictionary of group variables to supply to Ansible.  The keys
       of this dictionary are node groups as defined in a
@@ -912,10 +912,10 @@ Here is an example of two job definitions:
                   - api2
          vars:
            foo: "this variable is visible to all nodes"
-         host_vars:
+         host-vars:
            controller:
              bar: "this variable is visible only on the controller node"
-         group_vars:
+         group-vars:
            api:
              baz: "this variable is visible on api1 and api2"
 
