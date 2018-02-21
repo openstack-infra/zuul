@@ -74,7 +74,7 @@ class TestSQLConnection(ZuulDBTestCase):
         buildset_table = table_prefix + 'zuul_buildset'
         build_table = table_prefix + 'zuul_build'
 
-        self.assertEqual(13, len(insp.get_columns(buildset_table)))
+        self.assertEqual(14, len(insp.get_columns(buildset_table)))
         self.assertEqual(10, len(insp.get_columns(build_table)))
 
     def test_sql_results(self):
@@ -139,6 +139,7 @@ class TestSQLConnection(ZuulDBTestCase):
                 uuid=buildset0_builds[0]['uuid']),
             buildset0_builds[0]['log_url'])
         self.assertEqual('check', buildset1['pipeline'])
+        self.assertEqual('master', buildset1['branch'])
         self.assertEqual('org/project', buildset1['project'])
         self.assertEqual(2, buildset1['change'])
         self.assertEqual('1', buildset1['patchset'])

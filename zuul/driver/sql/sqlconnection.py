@@ -96,6 +96,7 @@ class SQLConnection(BaseConnection):
             sa.Column('zuul_ref', sa.String(255)),
             sa.Column('pipeline', sa.String(255)),
             sa.Column('project', sa.String(255)),
+            sa.Column('branch', sa.String(255)),
             sa.Column('change', sa.Integer, nullable=True),
             sa.Column('patchset', sa.String(255), nullable=True),
             sa.Column('ref', sa.String(255)),
@@ -156,7 +157,7 @@ class SQLConnection(BaseConnection):
 
 class SqlWebHandler(BaseWebHandler):
     log = logging.getLogger("zuul.web.SqlHandler")
-    filters = ("project", "pipeline", "change", "patchset", "ref",
+    filters = ("project", "pipeline", "change", "branch", "patchset", "ref",
                "result", "uuid", "job_name", "voting", "node_name", "newrev")
 
     def __init__(self, connection, zuul_web, method, path):
@@ -168,6 +169,7 @@ class SqlWebHandler(BaseWebHandler):
         buildset = self.connection.zuul_buildset_table
         query = select([
             buildset.c.project,
+            buildset.c.branch,
             buildset.c.pipeline,
             buildset.c.change,
             buildset.c.patchset,
@@ -222,7 +224,7 @@ class SqlWebHandler(BaseWebHandler):
                 'skip': 0,
             }
             for k, v in urllib.parse.parse_qsl(request.rel_url.query_string):
-                if k in ("tenant", "project", "pipeline", "change",
+                if k in ("tenant", "project", "pipeline", "change", "branch",
                          "patchset", "ref", "newrev"):
                     args['buildset_filters'].setdefault(k, []).append(v)
                 elif k in ("uuid", "job_name", "voting", "node_name",

@@ -52,6 +52,7 @@ class SQLReporter(BaseReporter):
                 message=self._formatItemReport(
                     item, with_jobs=False),
                 tenant=item.pipeline.layout.tenant.name,
+                branch=item.change.branch,
             )
             buildset_ins_result = conn.execute(buildset_ins)
             build_inserts = []
