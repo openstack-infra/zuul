@@ -310,6 +310,7 @@ class JobDir(object):
         #         <project>
         #     logs
         #       job-output.txt
+        #     tmp
         #     results.json
         self.keep = keep
         if root:
@@ -324,6 +325,12 @@ class JobDir(object):
         os.makedirs(self.src_root)
         self.log_root = os.path.join(self.work_root, 'logs')
         os.makedirs(self.log_root)
+        # Create local tmp directory
+        # NOTE(tobiash): This must live within the work root as it can be used
+        # by ansible for temporary files which are path checked in untrusted
+        # jobs.
+        self.local_tmp = os.path.join(self.work_root, 'tmp')
+        os.makedirs(self.local_tmp)
         self.ansible_root = os.path.join(self.root, 'ansible')
         os.makedirs(self.ansible_root)
         self.trusted_root = os.path.join(self.root, 'trusted')
@@ -1261,8 +1268,7 @@ class AnsibleJob(object):
         with open(jobdir_playbook.ansible_config, 'w') as config:
             config.write('[defaults]\n')
             config.write('inventory = %s\n' % self.jobdir.inventory)
-            config.write('local_tmp = %s/local_tmp\n' %
-                         self.jobdir.ansible_cache_root)
+            config.write('local_tmp = %s\n' % self.jobdir.local_tmp)
             config.write('retry_files_enabled = False\n')
             config.write('gathering = smart\n')
             config.write('fact_caching = jsonfile\n')
@@ -1345,6 +1351,7 @@ class AnsibleJob(object):
             env_copy['ARA_LOG_CONFIG'] = self.jobdir.logging_json
         env_copy['ZUUL_JOB_LOG_CONFIG'] = self.jobdir.logging_json
         env_copy['ZUUL_JOBDIR'] = self.jobdir.root
+        env_copy['TMP'] = self.jobdir.local_tmp
         pythonpath = env_copy.get('PYTHONPATH')
         if pythonpath:
             pythonpath = [pythonpath]
