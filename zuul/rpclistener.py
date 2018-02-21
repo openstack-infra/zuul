@@ -235,6 +235,22 @@ class RPCListener(object):
             event.ref = args['ref']
             event.oldrev = args['oldrev']
             event.newrev = args['newrev']
+            try:
+                int(event.oldrev, 16)
+                if len(event.oldrev) != 40:
+                    errors += 'Old rev must be 40 character sha1: ' \
+                              '%s\n' % event.oldrev
+            except Exception:
+                errors += 'Old rev must be base16 hash: ' \
+                          '%s\n' % event.oldrev
+            try:
+                int(event.newrev, 16)
+                if len(event.newrev) != 40:
+                    errors += 'New rev must be 40 character sha1: ' \
+                              '%s\n' % event.newrev
+            except Exception:
+                errors += 'New rev must be base16 hash: ' \
+                          '%s\n' % event.newrev
 
         if errors:
             job.sendWorkException(errors.encode('utf8'))

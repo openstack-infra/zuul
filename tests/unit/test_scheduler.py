@@ -3577,6 +3577,56 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(len(self.history), 0)
         self.assertEqual(len(self.builds), 0)
 
+    def test_client_enqueue_ref_negative(self):
+        "Test that the RPC client returns errors"
+        client = zuul.rpcclient.RPCClient('127.0.0.1',
+                                          self.gearman_server.port)
+        self.addCleanup(client.shutdown)
+        with testtools.ExpectedException(zuul.rpcclient.RPCFailure,
+                                         "New rev must be 40 character sha1"):
+            r = client.enqueue_ref(
+                tenant='tenant-one',
+                pipeline='post',
+                project='org/project',
+                trigger='gerrit',
+                ref='master',
+                oldrev='90f173846e3af9154517b88543ffbd1691f31366',
+                newrev='10054041')
+            self.assertEqual(r, False)
+        with testtools.ExpectedException(zuul.rpcclient.RPCFailure,
+                                         "Old rev must be 40 character sha1"):
+            r = client.enqueue_ref(
+                tenant='tenant-one',
+                pipeline='post',
+                project='org/project',
+                trigger='gerrit',
+                ref='master',
+                oldrev='10054041',
+                newrev='90f173846e3af9154517b88543ffbd1691f31366')
+            self.assertEqual(r, False)
+        with testtools.ExpectedException(zuul.rpcclient.RPCFailure,
+                                         "New rev must be base16 hash"):
+            r = client.enqueue_ref(
+                tenant='tenant-one',
+                pipeline='post',
+                project='org/project',
+                trigger='gerrit',
+                ref='master',
+                oldrev='90f173846e3af9154517b88543ffbd1691f31366',
+                newrev='notbase16')
+            self.assertEqual(r, False)
+        with testtools.ExpectedException(zuul.rpcclient.RPCFailure,
+                                         "Old rev must be base16 hash"):
+            r = client.enqueue_ref(
+                tenant='tenant-one',
+                pipeline='post',
+                project='org/project',
+                trigger='gerrit',
+                ref='master',
+                oldrev='notbase16',
+                newrev='90f173846e3af9154517b88543ffbd1691f31366')
+            self.assertEqual(r, False)
+
     def test_client_promote(self):
         "Test that the RPC client can promote a change"
         self.executor_server.hold_jobs_in_build = True
