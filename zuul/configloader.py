@@ -538,6 +538,7 @@ class JobParser(object):
                       'roles': to_list(role),
                       'required-projects': to_list(vs.Any(job_project, str)),
                       'vars': dict,
+                      'extra-vars': dict,
                       'host-vars': {str: dict},
                       'group-vars': {str: dict},
                       'dependencies': to_list(str),
@@ -730,6 +731,12 @@ class JobParser(object):
                 raise Exception("Variables named 'zuul' or 'nodepool' "
                                 "are not allowed.")
             job.variables = variables
+        extra_variables = conf.get('extra-vars', None)
+        if extra_variables:
+            if 'zuul' in extra_variables or 'nodepool' in extra_variables:
+                raise Exception("Variables named 'zuul' or 'nodepool' "
+                                "are not allowed.")
+            job.extra_variables = extra_variables
         host_variables = conf.get('host-vars', None)
         if host_variables:
             for host, hvars in host_variables.items():

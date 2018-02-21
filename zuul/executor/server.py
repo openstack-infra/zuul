@@ -296,6 +296,7 @@ class JobDir(object):
         #   ansible (mounted in bwrap read-only)
         #     logging.json
         #     inventory.yaml
+        #     extra_vars.yaml
         #   .ansible (mounted in bwrap read-write)
         #     fact-cache/localhost
         #     cp
@@ -367,6 +368,7 @@ class JobDir(object):
             pass
         self.known_hosts = os.path.join(ssh_dir, 'known_hosts')
         self.inventory = os.path.join(self.ansible_root, 'inventory.yaml')
+        self.extra_vars = os.path.join(self.ansible_root, 'extra_vars.yaml')
         self.setup_inventory = os.path.join(self.ansible_root,
                                             'setup-inventory.yaml')
         self.logging_json = os.path.join(self.ansible_root, 'logging.json')
@@ -1386,6 +1388,10 @@ class AnsibleJob(object):
                 for key in node['host_keys']:
                     known_hosts.write('%s\n' % key)
 
+        with open(self.jobdir.extra_vars, 'w') as extra_vars:
+            extra_vars.write(
+                yaml.safe_dump(args['extra_vars'], default_flow_style=False))
+
     def writeLoggingConfig(self):
         self.log.debug("Writing logging config for job %s %s",
                        self.jobdir.job_output_file,
@@ -1741,6 +1747,8 @@ class AnsibleJob(object):
         cmd = ['ansible-playbook', verbose, playbook.path]
         if playbook.secrets_content:
             cmd.extend(['-e', '@' + playbook.secrets])
+
+        cmd.extend(['-e', '@' + self.jobdir.extra_vars])
 
         if success is not None:
             cmd.extend(['-e', 'zuul_success=%s' % str(bool(success))])

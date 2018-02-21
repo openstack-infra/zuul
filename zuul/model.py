@@ -1012,6 +1012,7 @@ class Job(ConfigObject):
             timeout=None,
             post_timeout=None,
             variables={},
+            extra_variables={},
             host_variables={},
             group_variables={},
             nodeset=NodeSet(),
@@ -1194,9 +1195,13 @@ class Job(ConfigObject):
             matchers.append(self.branch_matcher)
         self.branch_matcher = change_matcher.MatchAll(matchers)
 
-    def updateVariables(self, other_vars, other_host_vars, other_group_vars):
+    def updateVariables(self, other_vars, other_extra_vars, other_host_vars,
+                        other_group_vars):
         if other_vars is not None:
             self.variables = Job._deepUpdate(self.variables, other_vars)
+        if other_extra_vars is not None:
+            self.extra_variables = Job._deepUpdate(
+                self.extra_variables, other_extra_vars)
         if other_host_vars is not None:
             self.host_variables = Job._deepUpdate(
                 self.host_variables, other_host_vars)
@@ -1288,9 +1293,9 @@ class Job(ConfigObject):
                                         "from other projects."
                                         % (repr(self), this_origin))
                 if k not in set(['pre_run', 'run', 'post_run', 'roles',
-                                 'variables', 'host_variables',
-                                 'group_variables', 'required_projects',
-                                 'allowed_projects']):
+                                 'variables', 'extra_variables',
+                                 'host_variables', 'group_variables',
+                                 'required_projects', 'allowed_projects']):
                     setattr(self, k, other._get(k))
 
         # Don't set final above so that we don't trip an error halfway
@@ -1332,8 +1337,8 @@ class Job(ConfigObject):
         if other._get('post_run') is not None:
             other_post_run = self.freezePlaybooks(other.post_run, layout)
             self.post_run = other_post_run + self.post_run
-        self.updateVariables(other.variables, other.host_variables,
-                             other.group_variables)
+        self.updateVariables(other.variables, other.extra_variables,
+                             other.host_variables, other.group_variables)
         if other._get('required_projects') is not None:
             self.updateProjects(other.required_projects)
         if (other._get('allowed_projects') is not None and
