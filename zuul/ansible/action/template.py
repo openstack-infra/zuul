@@ -20,12 +20,12 @@ template = paths._import_ansible_action_plugin("template")
 
 class ActionModule(template.ActionModule):
 
+    def _find_needle(self, dirname, needle):
+        return paths._safe_find_needle(
+            super(ActionModule, self), dirname, needle)
+
     def run(self, tmp=None, task_vars=None):
         if not paths._is_official_module(self):
             return paths._fail_module_dict(self._task.action)
 
-        source = self._task.args.get('src', None)
-
-        if not paths._is_safe_path(source):
-            return paths._fail_dict(source)
         return super(ActionModule, self).run(tmp, task_vars)

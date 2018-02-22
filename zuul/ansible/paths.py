@@ -22,8 +22,21 @@ import ansible.plugins.action
 import ansible.plugins.lookup
 
 
+def _safe_find_needle(super, dirname, needle):
+    result = super._find_needle(dirname, needle)
+    if not _is_safe_path(result):
+        fail_dict = _fail_dict(_full_path(result))
+        raise AnsibleError("{msg}. Invalid path: {path}".format(
+            msg=fail_dict['msg'], path=fail_dict['path']))
+    return result
+
+
+def _full_path(path):
+    return os.path.realpath(os.path.abspath(os.path.expanduser(path)))
+
+
 def _is_safe_path(path):
-    full_path = os.path.realpath(os.path.abspath(os.path.expanduser(path)))
+    full_path = _full_path(path)
     if not full_path.startswith(os.path.abspath(os.path.expanduser('~'))):
         return False
     return True
