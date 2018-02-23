@@ -1047,7 +1047,8 @@ class Scheduler(threading.Thread):
 
         autohold_key = self._getAutoholdRequestKey(build)
         try:
-            self.nodepool.holdNodeSet(build.nodeset, autohold_key)
+            if autohold_key is not None:
+                self.nodepool.holdNodeSet(build.nodeset, autohold_key)
         except Exception:
             self.log.exception("Unable to process autohold for %s:",
                                autohold_key)
