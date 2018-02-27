@@ -28,8 +28,12 @@ if type apt-get; then
     sudo DEBIAN_FRONTEND=noninteractive \
         apt-get -q --option "Dpkg::Options::=--force-confold" --assume-yes \
         install nodejs yarn
-else
+elif type yum; then
     sudo curl https://dl.yarnpkg.com/rpm/yarn.repo -o /etc/yum.repos.d/yarn.repo
     sudo $(dirname $0)/install-js-repos-rpm.sh
     sudo yum -y install nodejs yarn
+elif type brew; then
+    brew install nodejs yarn
+else
+    echo "Unsupported platform"
 fi
