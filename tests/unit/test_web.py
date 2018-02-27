@@ -197,6 +197,50 @@ class TestWeb(BaseTestWeb):
         self.assertIn('project-merge', status_jobs[1]['dependencies'])
         self.assertIn('project-merge', status_jobs[2]['dependencies'])
 
+    def test_web_tenants(self):
+        "Test that we can retrieve JSON status info"
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.executor_server.release('project-merge')
+        self.waitUntilSettled()
+
+        req = urllib.request.Request(
+            "http://127.0.0.1:%s/tenants" % self.port)
+        f = urllib.request.urlopen(req)
+        headers = f.info()
+        self.assertIn('Content-Length', headers)
+        self.assertIn('Content-Type', headers)
+        self.assertEqual(
+            'application/json; charset=utf-8', headers['Content-Type'])
+        # self.assertIn('Access-Control-Allow-Origin', headers)
+        # self.assertIn('Cache-Control', headers)
+        # self.assertIn('Last-Modified', headers)
+        data = f.read().decode('utf8')
+        data = json.loads(data)
+
+        self.assertEqual('tenant-one', data[0]['name'])
+        self.assertEqual(3, data[0]['projects'])
+        self.assertEqual(3, data[0]['queue'])
+
+        # release jobs and check if the queue size is 0
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        req = urllib.request.Request(
+            "http://127.0.0.1:%s/tenants" % self.port)
+        f = urllib.request.urlopen(req)
+        data = f.read().decode('utf8')
+        data = json.loads(data)
+
+        self.assertEqual('tenant-one', data[0]['name'])
+        self.assertEqual(3, data[0]['projects'])
+        self.assertEqual(0, data[0]['queue'])
+
     def test_web_bad_url(self):
         # do we 404 correctly
         req = urllib.request.Request(
