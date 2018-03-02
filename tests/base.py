@@ -1679,7 +1679,7 @@ class FakeGearmanServer(gear.Server):
         self.log.debug("releasing queued job %s (%s)" % (regex, qlen))
         for job in self.getQueue():
             match = False
-            if job.name == b'executor:execute':
+            if job.name.startswith(b'executor:execute'):
                 parameters = json.loads(job.arguments.decode('utf8'))
                 if not regex or re.match(regex, parameters.get('job')):
                     match = True
@@ -1748,6 +1748,7 @@ class FakeNodepool(object):
         self.thread.start()
         self.fail_requests = set()
         self.remote_ansible = False
+        self.attributes = None
 
     def stop(self):
         self._running = False
@@ -1820,6 +1821,7 @@ class FakeNodepool(object):
                     provider='test-provider',
                     region='test-region',
                     az='test-az',
+                    attributes=self.attributes,
                     interface_ip=remote_ip,
                     public_ipv4=remote_ip,
                     private_ipv4=None,

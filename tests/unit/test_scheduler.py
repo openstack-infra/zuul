@@ -65,6 +65,48 @@ class TestSchedulerSSL(SSLZuulTestCase):
                          'label1')
 
 
+class TestSchedulerZone(ZuulTestCase):
+    tenant_config_file = 'config/single-tenant/main.yaml'
+
+    def setUp(self):
+        super(TestSchedulerZone, self).setUp()
+        self.fake_nodepool.attributes = {'executor-zone': 'test-provider.vpn'}
+
+    def setup_config(self):
+        super(TestSchedulerZone, self).setup_config()
+        self.config.set('executor', 'zone', 'test-provider.vpn')
+
+    def test_jobs_executed(self):
+        "Test that jobs are executed and a change is merged per zone"
+        self.gearman_server.hold_jobs_in_queue = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        queue = self.gearman_server.getQueue()
+        self.assertEqual(len(self.builds), 0)
+        self.assertEqual(len(queue), 1)
+        self.assertEqual(b'executor:execute:test-provider.vpn', queue[0].name)
+
+        self.gearman_server.hold_jobs_in_queue = False
+        self.gearman_server.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(self.getJobFromHistory('project-test1').node,
+                         'label1')
+        self.assertEqual(self.getJobFromHistory('project-test2').node,
+                         'label1')
+
+
 class TestScheduler(ZuulTestCase):
     tenant_config_file = 'config/single-tenant/main.yaml'
 

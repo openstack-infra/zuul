@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    One or more zuul executors can now be added to a :attr:`executor.zone`.
+    This is helpful if a cloud does not have any public IP addresses for
+    nodepool nodes. Now you'll be able to have a zuul executor on the same
+    private network as your nodepool nodes.

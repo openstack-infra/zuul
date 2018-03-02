@@ -2033,6 +2033,7 @@ class ExecutorServer(object):
                                             'default_username', 'zuul')
         self.disk_limit_per_job = int(get_default(self.config, 'executor',
                                                   'disk_limit_per_job', 250))
+        self.zone = get_default(self.config, 'executor', 'zone')
         self.merge_email = get_default(self.config, 'merger', 'git_user_email')
         self.merge_name = get_default(self.config, 'merger', 'git_user_name')
         self.merge_speed_limit = get_default(
@@ -2177,7 +2178,10 @@ class ExecutorServer(object):
     def register_work(self):
         if self._running:
             self.accepting_work = True
-            self.executor_worker.registerFunction("executor:execute")
+            function_name = 'executor:execute'
+            if self.zone:
+                function_name += ':%s' % self.zone
+            self.executor_worker.registerFunction(function_name)
             # TODO(jeblair): Update geard to send a noop after
             # registering for a job which is in the queue, then remove
             # this API violation.
@@ -2185,7 +2189,10 @@ class ExecutorServer(object):
 
     def unregister_work(self):
         self.accepting_work = False
-        self.executor_worker.unRegisterFunction("executor:execute")
+        function_name = 'executor:execute'
+        if self.zone:
+            function_name += ':%s' % self.zone
+        self.executor_worker.unRegisterFunction(function_name)
 
     def stop(self):
         self.log.debug("Stopping")
@@ -2362,8 +2369,12 @@ class ExecutorServer(object):
             if not self._running:
                 job.sendWorkFail()
                 return
-            if job.name == 'executor:execute':
-                self.log.debug("Got execute job: %s" % job.unique)
+            function_name = 'executor:execute'
+            if self.zone:
+                function_name += ':%s' % self.zone
+            if job.name == (function_name):
+                self.log.debug("Got %s job: %s" %
+                               (function_name, job.unique))
                 self.executeJob(job)
             elif job.name.startswith('executor:resume'):
                 self.log.debug("Got resume job: %s" % job.unique)
