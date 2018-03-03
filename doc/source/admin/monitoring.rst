@@ -188,6 +188,12 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
      The used RAM (excluding buffers and cache) on this executor, as
      a percentage multiplied by 100.
 
+  .. stat:: pct_used_ram_cgroup
+     :type: gauge
+
+     The used RAM (excluding buffers and cache) on this executor allowed by
+     the cgroup, as percentage multiplied by 100.
+
 .. stat:: zuul.nodepool.requests
 
    Holds metrics related to Zuul requests and responses from Nodepool.
