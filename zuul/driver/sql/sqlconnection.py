@@ -153,6 +153,10 @@ class SQLConnection(BaseConnection):
                                 "in zuul.conf [web] section")
             return True
 
+    def onStop(self):
+        self.log.debug("Stopping SQL connection %s" % self.connection_name)
+        self.engine.dispose()
+
 
 class SqlWebHandler(BaseTenantWebHandler):
     log = logging.getLogger("zuul.web.SqlHandler")
