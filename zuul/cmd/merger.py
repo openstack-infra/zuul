@@ -20,11 +20,6 @@ import sys
 import zuul.cmd
 import zuul.merger.server
 
-# No zuul imports here because they pull in paramiko which must not be
-# imported until after the daemonization.
-# https://github.com/paramiko/paramiko/issues/59
-# Similar situation with gear and statsd.
-
 
 class Merger(zuul.cmd.ZuulDaemonApp):
     app_name = 'merger'
@@ -48,8 +43,6 @@ class Merger(zuul.cmd.ZuulDaemonApp):
         sys.exit(0)
 
     def run(self):
-        # See comment at top of file about zuul imports
-        import zuul.merger.server
         if self.args.command in zuul.merger.server.COMMANDS:
             self.send_command(self.args.command)
             sys.exit(0)
