@@ -1,6 +1,10 @@
 - job:
     name: project2-job
 
+- job:
+    name: project2-job
+    branches: stable
+
 - project:
     name: org/project2
     check:
