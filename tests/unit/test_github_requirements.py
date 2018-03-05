@@ -253,6 +253,33 @@ class TestGithubRequirements(ZuulTestCase):
         self.assertEqual(self.history[0].name, 'project5-reviewuserstate')
 
     @simple_layout('layouts/requirements-github.yaml', driver='github')
+    def test_pipeline_require_review_write_perms(self):
+        "Test pipeline requirement: review from user with write"
+
+        A = self.fake_github.openFakePullRequest('org/project4', 'master', 'A')
+        # Add herp to admins
+        A.admins.append('herp')
+        # A comment event that we will keep submitting to trigger
+        comment = A.getCommentAddedEvent('test me')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        # No positive review from derp so should not be enqueued
+        self.assertEqual(len(self.history), 0)
+
+        # The first review is from a reader, and thus should not be enqueued
+        A.addReview('derp', 'APPROVED')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 0)
+
+        # A positive review from herp should cause it to be enqueued
+        A.addReview('herp', 'APPROVED')
+        self.fake_github.emitEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+        self.assertEqual(self.history[0].name, 'project4-reviewreq')
+
+    @simple_layout('layouts/requirements-github.yaml', driver='github')
     def test_pipeline_require_review_comment_masked(self):
         "Test pipeline requirement: review comments on top of votes"
 
