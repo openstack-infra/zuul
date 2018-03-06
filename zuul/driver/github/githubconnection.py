@@ -650,16 +650,19 @@ class GithubConnection(BaseConnection):
             headers = {'Accept': PREVIEW_JSON_ACCEPT,
                        'Authorization': 'token %s' % token}
 
-            url = '%s/installation/repositories' % self.base_url
+            url = '%s/installation/repositories?per_page=100' % self.base_url
+            while url:
+                self.log.debug("Fetching repos for install %s" % inst_id)
+                response = requests.get(url, headers=headers)
+                response.raise_for_status()
+                repos = response.json()
 
-            self.log.debug("Fetching repos for install %s" % inst_id)
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
-            repos = response.json()
+                for repo in repos.get('repositories'):
+                    project_name = repo.get('full_name')
+                    self.installation_map[project_name] = inst_id
 
-            for repo in repos.get('repositories'):
-                project_name = repo.get('full_name')
-                self.installation_map[project_name] = inst_id
+                # check if we need to do further paged calls
+                url = response.links.get('next', {}).get('url')
 
     def addEvent(self, data, event=None):
         return self.event_queue.put((time.time(), data, event))
