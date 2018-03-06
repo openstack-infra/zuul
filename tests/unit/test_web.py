@@ -254,7 +254,7 @@ class TestInfo(BaseTestWeb):
         self.assertEqual(
             info, {
                 "info": {
-                    "endpoint": "http://localhost:%s" % self.port,
+                    "rest_api_url": None,
                     "capabilities": {
                         "job_history": False
                     },
@@ -275,7 +275,7 @@ class TestInfo(BaseTestWeb):
         self.assertEqual(
             info, {
                 "info": {
-                    "endpoint": "http://localhost:%s" % self.port,
+                    "rest_api_url": None,
                     "tenant": "tenant-one",
                     "capabilities": {
                         "job_history": False

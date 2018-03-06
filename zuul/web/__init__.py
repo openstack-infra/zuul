@@ -261,19 +261,12 @@ class ZuulWeb(object):
         return await self.log_streaming_handler.processRequest(
             request)
 
-    async def _handleRootInfo(self, request):
-        info = self.info.copy()
-        info.endpoint = str(request.url.parent)
-        return self._handleInfo(info)
+    def _handleRootInfo(self, request):
+        return self._handleInfo(self.info)
 
     def _handleTenantInfo(self, request):
         info = self.info.copy()
         info.tenant = request.match_info["tenant"]
-        # yarl.URL.parent on a root url returns the root url, so this is
-        # both safe and accurate for white-labeled tenants like OpenStack,
-        # zuul-web running on / and zuul-web running on a sub-url like
-        # softwarefactory-project.io
-        info.endpoint = str(request.url.parent.parent.parent)
         return self._handleInfo(info)
 
     def _handleInfo(self, info):
