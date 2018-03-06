@@ -114,6 +114,6 @@
       jobs:
         - publish-openstack-sphinx-docs-infra-python3
         - publish-openstack-python-branch-tarball
-        - publish-openstack-javascript-content:
+        - publish-openstack-javascript-tarball:
             vars:
                 node_version: 8
