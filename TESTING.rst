@@ -11,6 +11,7 @@ Detailed information on testing can be found here: https://wiki.openstack.org/wi
 *Install pip*::
 
   [apt-get | yum] install python-pip
+
 More information on pip here: http://www.pip-installer.org/en/latest/
 
 *Use pip to install tox*::
@@ -26,6 +27,22 @@ As of zuul v3, a running zookeeper is required to execute tests.
 *Start zookeeper*::
 
   service zookeeper start
+
+.. note:: Installing and bulding javascript is not required, but tests that
+          depend on the javascript assets having been built will be skipped
+          if you don't.
+
+*Install javascript tools*::
+
+  tools/install-js-tools.sh
+
+*Install javascript dependencies*::
+
+  yarn install
+
+*Build javascript assets*::
+
+  npm run build:dev
 
 Run The Tests
 -------------

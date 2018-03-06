@@ -1,0 +1,60 @@
+{
+  "name": "zuul-web",
+  "version": "1.0.0",
+  "description": "Web Client for Zuul",
+  "main": "index.js",
+  "repository": "https://git.openstack.org/openstack-infra/zuul",
+  "author": "OpenStack Infra",
+  "license": "Apache-2.0",
+  "babel": {
+    "presets": [
+      "env"
+    ]
+  },
+  "dependencies": {
+    "angular": "^1.5.8",
+    "bootstrap": "^3.3.7",
+    "graphitejs": "https://github.com/prestontimmons/graphitejs/archive/master.tar.gz",
+    "jquery": "^1.11.1",
+    "jquery-visibility": "https://github.com/mathiasbynens/jquery-visibility/archive/master.tar.gz"
+  },
+  "scripts": {
+    "build": "npm run build:dist",
+    "build:dev": "webpack --env=dev",
+    "build:dist": "webpack --env=prod",
+    "build:docker": "docker run -it --rm -v $(pwd):/usr/src/app -w /usr/src/app node:alpine npm run build:dist-with-depends",
+    "build:dist-with-depends": "yarn install && npm run build:dist",
+    "format": "eslint --fix web/*.js",
+    "lint": "webpack --env=lint",
+    "start": "webpack-dev-server --env=dev --define ZUUL_API_URL=\"'https://zuul.openstack.org'\" --open-page='status.html'",
+    "start:basic": "webpack-dev-server --env=dev --open-page='status.html?demo=basic'",
+    "start:openstack": "webpack-dev-server --env=dev --open-page='status.html?demo=openstack'",
+    "start:tree": "webpack-dev-server --env=dev --open-page='status.html?demo=tree'"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-eslint": "^8.0.3",
+    "babel-loader": "^7.1.2",
+    "babel-plugin-angularjs-annotate": "^0.8.2",
+    "babel-preset-env": "^1.6.1",
+    "clean-webpack-plugin": "^0.1.16",
+    "css-loader": "^0.28.4",
+    "eslint": ">=3.19.0",
+    "eslint-config-standard": "^11.0.0-beta.0",
+    "eslint-loader": "^1.9.0",
+    "eslint-plugin-import": "^2.8.0",
+    "eslint-plugin-node": "^6.0.0",
+    "eslint-plugin-promise": "^3.6.0",
+    "eslint-plugin-standard": "^3.0.1",
+    "file-loader": "^0.11.2",
+    "html-webpack-plugin": "^2.29.0",
+    "resolve-url-loader": "^2.1.0",
+    "style-loader": "^0.18.2",
+    "url-loader": "^0.5.9",
+    "webpack": "^3.3.0",
+    "webpack-archive-plugin": "^3.0.0",
+    "webpack-bundle-analyzer": "^2.9.1",
+    "webpack-dev-server": "^2.6.1",
+    "webpack-merge": "^4.1.0"
+  }
+}

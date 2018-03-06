@@ -237,7 +237,8 @@ class ZuulWeb(object):
                  ssl_key=None, ssl_cert=None, ssl_ca=None,
                  static_cache_expiry=3600,
                  connections=None,
-                 info=None):
+                 info=None,
+                 static_path=None):
         self.start_time = time.time()
         self.listen_address = listen_address
         self.listen_port = listen_port
@@ -246,6 +247,7 @@ class ZuulWeb(object):
         self.server = None
         self.static_cache_expiry = static_cache_expiry
         self.info = info
+        self.static_path = static_path or STATIC_DIR
         # instanciate handlers
         self.rpc = zuul.rpcclient.RPCClient(gear_server, gear_port,
                                             ssl_key, ssl_cert, ssl_ca)
@@ -320,12 +322,21 @@ class ZuulWeb(object):
         ]
 
         static_routes = [
-            StaticHandler(self, '/{tenant}/status.html'),
-            StaticHandler(self, '/{tenant}/jobs.html'),
-            StaticHandler(self, '/{tenant}/stream.html'),
-            StaticHandler(self, '/tenants.html', 'index.html'),
-            StaticHandler(self, '/', 'index.html'),
+            StaticHandler(self, '/{tenant}/', 'status.html'),
+            StaticHandler(self, '/', 'tenants.html'),
         ]
+
+        for static_file in os.listdir(self.static_path):
+            static_routes.append(
+                StaticHandler(
+                    self, '/{{tenant}}/{static_file}'.format(
+                        static_file=static_file),
+                    static_file))
+            static_routes.append(
+                StaticHandler(
+                    self, '/{static_file}'.format(
+                        static_file=static_file),
+                    static_file))
 
         for route in static_routes + self._plugin_routes:
             routes.append((route.method, route.path, route.handleRequest))
@@ -343,7 +354,7 @@ class ZuulWeb(object):
         app = web.Application()
         for method, path, handler in routes:
             app.router.add_route(method, path, handler)
-        app.router.add_static('/static', STATIC_DIR)
+        app.router.add_static('/static', self.static_path)
         handler = app.make_handler(loop=self.event_loop)
 
         # create the server

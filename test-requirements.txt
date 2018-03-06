@@ -13,3 +13,4 @@ mock
 PyMySQL
 mypy
 zuul-sphinx
+beautifulsoup4

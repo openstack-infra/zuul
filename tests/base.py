@@ -15,6 +15,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import asyncio
 import configparser
 from contextlib import contextmanager
 import datetime
@@ -39,6 +40,8 @@ import traceback
 import time
 import uuid
 import urllib
+import socketserver
+import http.server
 
 import git
 import gear
@@ -1753,6 +1756,74 @@ class ChrootedKazooFixture(fixtures.Fixture):
         _tmp_client.delete(self.zookeeper_chroot, recursive=True)
         _tmp_client.stop()
         _tmp_client.close()
+
+
+class WebProxyFixture(fixtures.Fixture):
+    def __init__(self, rules):
+        super(WebProxyFixture, self).__init__()
+        self.rules = rules
+
+    def _setUp(self):
+        rules = self.rules
+
+        class Proxy(http.server.SimpleHTTPRequestHandler):
+            def do_GET(self):
+                path = self.path
+                for (pattern, replace) in rules:
+                    path = re.sub(pattern, replace, path)
+                try:
+                    remote = urllib.request.urlopen(path)
+                except urllib.error.HTTPError as e:
+                    self.send_response(e.code)
+                    self.end_headers()
+                    return
+                self.send_response(int(remote.getcode()))
+                for header in remote.info():
+                    self.send_header(header, remote.info()[header])
+                self.end_headers()
+                self.wfile.write(remote.read())
+
+        self.httpd = socketserver.ThreadingTCPServer(('', 0), Proxy)
+        self.port = self.httpd.socket.getsockname()[1]
+        self.thread = threading.Thread(target=self.httpd.serve_forever)
+        self.thread.start()
+        self.addCleanup(self._cleanup)
+
+    def _cleanup(self):
+        self.httpd.shutdown()
+        self.thread.join()
+
+
+class ZuulWebFixture(fixtures.Fixture):
+    def __init__(self, gearman_server_port):
+        super(ZuulWebFixture, self).__init__()
+        self.gearman_server_port = gearman_server_port
+
+    def _setUp(self):
+        # Start the web server
+        self.web = zuul.web.ZuulWeb(
+            listen_address='127.0.0.1', listen_port=0,
+            gear_server='127.0.0.1', gear_port=self.gearman_server_port)
+        loop = asyncio.new_event_loop()
+        loop.set_debug(True)
+        ws_thread = threading.Thread(target=self.web.run, args=(loop,))
+        ws_thread.start()
+        self.addCleanup(loop.close)
+        self.addCleanup(ws_thread.join)
+        self.addCleanup(self.web.stop)
+
+        self.host = 'localhost'
+        # Wait until web server is started
+        while True:
+            time.sleep(0.1)
+            if self.web.server is None:
+                continue
+            self.port = self.web.server.sockets[0].getsockname()[1]
+            try:
+                with socket.create_connection((self.host, self.port)):
+                    break
+            except ConnectionRefusedError:
+                pass
 
 
 class MySQLSchemaFixture(fixtures.Fixture):

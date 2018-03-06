@@ -249,7 +249,8 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         # Start the web server
         web_server = zuul.web.ZuulWeb(
             listen_address='::', listen_port=9000,
-            gear_server='127.0.0.1', gear_port=self.gearman_server.port)
+            gear_server='127.0.0.1', gear_port=self.gearman_server.port,
+            static_path=tempfile.gettempdir())
         loop = asyncio.new_event_loop()
         loop.set_debug(True)
         ws_thread = threading.Thread(target=web_server.run, args=(loop,))
