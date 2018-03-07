@@ -17,8 +17,6 @@ import os
 
 from aiohttp import web
 
-STATIC_DIR = os.path.join(os.path.dirname(__file__), 'static')
-
 
 class BaseWebHandler(object, metaclass=abc.ABCMeta):
 
@@ -49,12 +47,13 @@ class StaticHandler(BaseWebHandler):
 
     def __init__(self, zuul_web, path, file_path=None):
         super(StaticHandler, self).__init__(None, zuul_web, 'GET', path)
+        self.static_path = zuul_web.static_path
         self.file_path = file_path or path.split('/')[-1]
 
     async def handleRequest(self, request):
         """Process a web request."""
         headers = {}
-        fp = os.path.join(STATIC_DIR, self.file_path)
+        fp = os.path.join(self.static_path, self.file_path)
         if self.zuul_web.static_cache_expiry:
             headers['Cache-Control'] = "public, max-age=%d" % \
                 self.zuul_web.static_cache_expiry
