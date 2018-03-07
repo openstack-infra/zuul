@@ -15,7 +15,7 @@
     "angular": "^1.5.8",
     "bootstrap": "^3.3.7",
     "graphitejs": "https://github.com/prestontimmons/graphitejs/archive/master.tar.gz",
-    "jquery": "^1.11.1",
+    "jquery": "^3.3.1",
     "jquery-visibility": "https://github.com/mathiasbynens/jquery-visibility/archive/master.tar.gz"
   },
   "scripts": {
