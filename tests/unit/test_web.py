@@ -371,6 +371,144 @@ class TestWeb(BaseTestWeb):
                 'voting': True
             }], data)
 
+    def test_web_project_list(self):
+        # can we fetch the list of projects
+        data = self.get_url('api/tenant/tenant-one/projects').json()
+
+        expected_list = [
+            {'name': 'common-config', 'type': 'config'},
+            {'name': 'org/project', 'type': 'untrusted'},
+            {'name': 'org/project1', 'type': 'untrusted'},
+            {'name': 'org/project2', 'type': 'untrusted'}
+        ]
+        for p in expected_list:
+            p["canonical_name"] = "review.example.com/%s" % p["name"]
+            p["connection_name"] = "gerrit"
+        self.assertEqual(expected_list, data)
+
+    def test_web_project_get(self):
+        # can we fetch project details
+        data = self.get_url(
+            'api/tenant/tenant-one/project/org/project1').json()
+
+        jobs = [[{'abstract': False,
+                  'attempts': 3,
+                  'branches': [],
+                  'dependencies': [],
+                  'description': None,
+                  'files': [],
+                  'final': False,
+                  'implied_branch': None,
+                  'irrelevant_files': [],
+                  'name': 'project-merge',
+                  'parent': 'base',
+                  'post_review': None,
+                  'protected': None,
+                  'required_projects': [],
+                  'roles': [],
+                  'semaphore': None,
+                  'source_context': {
+                      'branch': 'master',
+                      'path': 'zuul.yaml',
+                      'project': 'common-config'},
+                  'timeout': None,
+                  'variables': {},
+                  'variant_description': '',
+                  'voting': True}],
+                [{'abstract': False,
+                  'attempts': 3,
+                  'branches': [],
+                  'dependencies': ['project-merge'],
+                  'description': None,
+                  'files': [],
+                  'final': False,
+                  'implied_branch': None,
+                  'irrelevant_files': [],
+                  'name': 'project-test1',
+                  'parent': 'base',
+                  'post_review': None,
+                  'protected': None,
+                  'required_projects': [],
+                  'roles': [],
+                  'semaphore': None,
+                  'source_context': {
+                      'branch': 'master',
+                      'path': 'zuul.yaml',
+                      'project': 'common-config'},
+                  'timeout': None,
+                  'variables': {},
+                  'variant_description': '',
+                  'voting': True}],
+                [{'abstract': False,
+                  'attempts': 3,
+                  'branches': [],
+                  'dependencies': ['project-merge'],
+                  'description': None,
+                  'files': [],
+                  'final': False,
+                  'implied_branch': None,
+                  'irrelevant_files': [],
+                  'name': 'project-test2',
+                  'parent': 'base',
+                  'post_review': None,
+                  'protected': None,
+                  'required_projects': [],
+                  'roles': [],
+                  'semaphore': None,
+                  'source_context': {
+                      'branch': 'master',
+                      'path': 'zuul.yaml',
+                      'project': 'common-config'},
+                  'timeout': None,
+                  'variables': {},
+                  'variant_description': '',
+                  'voting': True}],
+                [{'abstract': False,
+                  'attempts': 3,
+                  'branches': [],
+                  'dependencies': ['project-merge'],
+                  'description': None,
+                  'files': [],
+                  'final': False,
+                  'implied_branch': None,
+                  'irrelevant_files': [],
+                  'name': 'project1-project2-integration',
+                  'parent': 'base',
+                  'post_review': None,
+                  'protected': None,
+                  'required_projects': [],
+                  'roles': [],
+                  'semaphore': None,
+                  'source_context': {
+                      'branch': 'master',
+                      'path': 'zuul.yaml',
+                      'project': 'common-config'},
+                  'timeout': None,
+                  'variables': {},
+                  'variant_description': '',
+                  'voting': True}]]
+
+        self.assertEqual(
+            {
+                'canonical_name': 'review.example.com/org/project1',
+                'connection_name': 'gerrit',
+                'name': 'org/project1',
+                'configs': [{
+                    'templates': [],
+                    'default_branch': 'master',
+                    'merge_mode': 'merge-resolve',
+                    'pipelines': [{
+                        'name': 'check',
+                        'queue_name': None,
+                        'jobs': jobs,
+                    }, {
+                        'name': 'gate',
+                        'queue_name': 'integrated',
+                        'jobs': jobs,
+                    }]
+                }]
+            }, data)
+
     def test_web_keys(self):
         with open(os.path.join(FIXTURE_DIR, 'public.pem'), 'rb') as f:
             public_pem = f.read()
