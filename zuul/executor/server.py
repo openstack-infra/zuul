@@ -796,15 +796,13 @@ class AnsibleJob(object):
         if not ret:  # merge conflict
             result = dict(result='MERGER_FAILURE')
             if self.executor_server.statsd:
-                base_key = ("zuul.executor.%s.merger" %
-                            self.executor_server.hostname)
+                base_key = "zuul.executor.{hostname}.merger"
                 self.executor_server.statsd.incr(base_key + ".FAILURE")
             self.job.sendWorkComplete(json.dumps(result))
             return False
 
         if self.executor_server.statsd:
-            base_key = ("zuul.executor.%s.merger" %
-                        self.executor_server.hostname)
+            base_key = "zuul.executor.{hostname}.merger"
             self.executor_server.statsd.incr(base_key + ".SUCCESS")
         recent = ret[3]
         for key, commit in recent.items():
@@ -1507,8 +1505,7 @@ class AnsibleJob(object):
         self.log.debug("Ansible complete, result %s code %s" % (
             self.RESULT_MAP[result], code))
         if self.executor_server.statsd:
-            base_key = ("zuul.executor.%s.phase.setup" %
-                        self.executor_server.hostname)
+            base_key = "zuul.executor.{hostname}.phase.setup"
             self.executor_server.statsd.incr(base_key + ".%s" %
                                              self.RESULT_MAP[result])
         return result, code
@@ -1532,8 +1529,7 @@ class AnsibleJob(object):
         self.log.debug("Ansible complete, result %s code %s" % (
             self.RESULT_MAP[result], code))
         if self.executor_server.statsd:
-            base_key = ("zuul.executor.%s.phase.cleanup" %
-                        self.executor_server.hostname)
+            base_key = "zuul.executor.{hostname}.phase.cleanup"
             self.executor_server.statsd.incr(base_key + ".%s" %
                                              self.RESULT_MAP[result])
         return result, code
@@ -1606,10 +1602,11 @@ class AnsibleJob(object):
         self.log.debug("Ansible complete, result %s code %s" % (
             self.RESULT_MAP[result], code))
         if self.executor_server.statsd:
-            base_key = ("zuul.executor.%s.phase.%s" %
-                        (self.executor_server.hostname, phase or 'unknown'))
-            self.executor_server.statsd.incr(base_key + ".%s" %
-                                             self.RESULT_MAP[result])
+            base_key = "zuul.executor.{hostname}.phase.{phase}"
+            self.executor_server.statsd.incr(
+                base_key + ".{result}",
+                result=self.RESULT_MAP[result],
+                phase=phase or 'unknown')
 
         self.emitPlaybookBanner(playbook, 'END', phase, result=result)
         return result, code
@@ -1673,7 +1670,8 @@ class ExecutorServer(object):
             nokeep=self.nokeep,
         )
 
-        self.statsd = get_statsd(config)
+        statsd_extra_keys = {'hostname': self.hostname}
+        self.statsd = get_statsd(config, statsd_extra_keys)
         self.merge_root = get_default(self.config, 'executor', 'git_dir',
                                       '/var/lib/zuul/executor-git')
         self.default_username = get_default(self.config, 'executor',
@@ -1863,7 +1861,7 @@ class ExecutorServer(object):
         self.executor_worker.shutdown()
 
         if self.statsd:
-            base_key = 'zuul.executor.%s' % self.hostname
+            base_key = 'zuul.executor.{hostname}'
             self.statsd.gauge(base_key + '.load_average', 0)
             self.statsd.gauge(base_key + '.pct_used_ram', 0)
             self.statsd.gauge(base_key + '.running_builds', 0)
@@ -2004,7 +2002,7 @@ class ExecutorServer(object):
 
     def executeJob(self, job):
         if self.statsd:
-            base_key = 'zuul.executor.%s' % self.hostname
+            base_key = 'zuul.executor.{hostname}'
             self.statsd.incr(base_key + '.builds')
         self.job_workers[job.unique] = self._job_class(self, job)
         self.job_workers[job.unique].run()
@@ -2061,7 +2059,7 @@ class ExecutorServer(object):
                     starting_builds, max_starting_builds))
             self.register_work()
         if self.statsd:
-            base_key = 'zuul.executor.%s' % self.hostname
+            base_key = 'zuul.executor.{hostname}'
             self.statsd.gauge(base_key + '.load_average',
                               int(load_avg * 100))
             self.statsd.gauge(base_key + '.pct_used_ram',

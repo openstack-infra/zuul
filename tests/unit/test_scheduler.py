@@ -2437,6 +2437,16 @@ class TestScheduler(ZuulTestCase):
         self.assertReportedStat('test-timing', '3|ms')
         self.assertReportedStat('test-gauge', '12|g')
 
+        # test key normalization
+        statsd.extra_keys = {'hostname': '1_2_3_4'}
+
+        statsd.incr('test-incr.{hostname}.{fake}', fake='1:2')
+        statsd.timing('test-timing.{hostname}.{fake}', 3, fake='1:2')
+        statsd.gauge('test-gauge.{hostname}.{fake}', 12, fake='1:2')
+        self.assertReportedStat('test-incr.1_2_3_4.1_2', '1|c')
+        self.assertReportedStat('test-timing.1_2_3_4.1_2', '3|ms')
+        self.assertReportedStat('test-gauge.1_2_3_4.1_2', '12|g')
+
     def test_stuck_job_cleanup(self):
         "Test that pending jobs are cleaned up if removed from layout"
 
