@@ -29,7 +29,6 @@ from zuul.lib import yamlutil as yaml
 import zuul.manager.dependent
 import zuul.manager.independent
 import zuul.manager.supercedent
-from zuul import change_matcher
 from zuul.lib import encryption
 
 
@@ -768,16 +767,9 @@ class JobParser(object):
         if branches:
             job.setBranchMatcher(branches)
         if 'files' in conf:
-            matchers = []
-            for fn in as_list(conf['files']):
-                matchers.append(change_matcher.FileMatcher(fn))
-            job.file_matcher = change_matcher.MatchAny(matchers)
+            job.setFileMatcher(as_list(conf['files']))
         if 'irrelevant-files' in conf:
-            matchers = []
-            for fn in as_list(conf['irrelevant-files']):
-                matchers.append(change_matcher.FileMatcher(fn))
-            job.irrelevant_file_matcher = change_matcher.MatchAllFiles(
-                matchers)
+            job.setIrrelevantFileMatcher(as_list(conf['irrelevant-files']))
         job.freeze()
         return job
 

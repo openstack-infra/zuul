@@ -17,12 +17,20 @@ import json
 import logging
 import threading
 import traceback
+import types
 
 import gear
 
 from zuul import model
 from zuul.lib import encryption
 from zuul.lib.config import get_default
+
+
+class MappingProxyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, types.MappingProxyType):
+            return dict(obj)
+        return json.JSONEncoder.default(self, obj)
 
 
 class RPCListener(object):
@@ -61,6 +69,7 @@ class RPCListener(object):
         self.worker.registerFunction("zuul:tenant_list")
         self.worker.registerFunction("zuul:tenant_sql_connection")
         self.worker.registerFunction("zuul:status_get")
+        self.worker.registerFunction("zuul:job_get")
         self.worker.registerFunction("zuul:job_list")
         self.worker.registerFunction("zuul:key_get")
         self.worker.registerFunction("zuul:config_errors_list")
@@ -352,6 +361,18 @@ class RPCListener(object):
         args = json.loads(job.arguments)
         output = self.sched.formatStatusJSON(args.get("tenant"))
         job.sendWorkComplete(output)
+
+    def handle_job_get(self, gear_job):
+        args = json.loads(gear_job.arguments)
+        tenant = self.sched.abide.tenants.get(args.get("tenant"))
+        if not tenant:
+            gear_job.sendWorkComplete(json.dumps(None))
+            return
+        jobs = tenant.layout.jobs.get(args.get("job"), [])
+        output = []
+        for job in jobs:
+            output.append(job.toDict(tenant))
+        gear_job.sendWorkComplete(json.dumps(output, cls=MappingProxyEncoder))
 
     def handle_job_list(self, job):
         args = json.loads(job.arguments)

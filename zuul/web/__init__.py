@@ -290,6 +290,19 @@ class ZuulWebAPI(object):
 
     @cherrypy.expose
     @cherrypy.tools.save_params()
+    @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
+    def job(self, tenant, job_name):
+        job = self.rpc.submitJob(
+            'zuul:job_get', {'tenant': tenant, 'job': job_name})
+        ret = json.loads(job.data[0])
+        if not ret:
+            raise cherrypy.HTTPError(404, 'Job %s does not exist.' % job_name)
+        resp = cherrypy.response
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return ret
+
+    @cherrypy.expose
+    @cherrypy.tools.save_params()
     def key(self, tenant, project):
         job = self.rpc.submitJob('zuul:key_get', {'tenant': tenant,
                                                   'project': project})
@@ -471,6 +484,8 @@ class ZuulWeb(object):
                           controller=api, action='status_change')
         route_map.connect('api', '/api/tenant/{tenant}/jobs',
                           controller=api, action='jobs')
+        route_map.connect('api', '/api/tenant/{tenant}/job/{job_name}',
+                          controller=api, action='job')
         route_map.connect('api', '/api/tenant/{tenant}/key/{project:.*}.pub',
                           controller=api, action='key')
         route_map.connect('api', '/api/tenant/{tenant}/console-stream',
