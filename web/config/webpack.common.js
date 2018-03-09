@@ -90,7 +90,7 @@ module.exports = {
       // The majority of the rules below are all about getting bootstrap copied
       // appropriately.
       {
-        test: /\.woff(\?v=\d+\.\d+\.\d+)?$/,
+        test: /\.woff(2)?(\?v=\d+\.\d+\.\d+)?$/,
         use: {
           loader: "url-loader",
           options: {
@@ -127,10 +127,6 @@ module.exports = {
         test: /\.html$/,
         use: ['raw-loader'],
         exclude: /node_modules/
-      },
-      {
-        test: /\.(ttf|eot|svg|woff(2)?)(\?[a-z0-9=&.]+)?$/,
-        use: ['file-loader']
       }
     ]
   }
