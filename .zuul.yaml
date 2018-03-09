@@ -41,6 +41,16 @@
       node_version: 8
       npm_command: build
 
+- job:
+    name: zuul-tox-remote
+    parent: tox
+    vars:
+      tox_envlist: remote
+      tox_environment:
+        ZUUL_SSH_KEY: /home/zuul/.ssh/id_rsa
+        ZUUL_REMOTE_IPV4: "{{ nodepool.interface_ip }}"
+        ZUUL_REMOTE_KEEP: "true"
+
 - project:
     check:
       jobs:
@@ -75,6 +85,7 @@
               - yarn.lock
               - web/.*
         - zuul-stream-functional
+        - zuul-tox-remote
         - nodepool-zuul-functional:
             voting: false
     gate:

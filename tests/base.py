@@ -19,6 +19,7 @@ import asyncio
 import configparser
 from contextlib import contextmanager
 import datetime
+import errno
 import gc
 import hashlib
 from io import StringIO
@@ -54,6 +55,7 @@ import testtools.content
 import testtools.content_type
 from git.exc import NoSuchPathError
 import yaml
+import paramiko
 
 import tests.fakegithub
 import zuul.driver.gerrit.gerritsource as gerritsource
@@ -1352,10 +1354,11 @@ class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
             if not host['host_vars'].get('ansible_connection'):
                 host['host_vars']['ansible_connection'] = 'local'
 
-        hosts.append(dict(
-            name='localhost',
-            host_vars=dict(ansible_connection='local'),
-            host_keys=[]))
+        if not hosts:
+            hosts.append(dict(
+                name='localhost',
+                host_vars=dict(ansible_connection='local'),
+                host_keys=[]))
         return hosts
 
 
@@ -1567,6 +1570,7 @@ class FakeNodepool(object):
     log = logging.getLogger("zuul.test.FakeNodepool")
 
     def __init__(self, host, port, chroot):
+        self.host_keys = None
         self.client = kazoo.client.KazooClient(
             hosts='%s:%s%s' % (host, port, chroot))
         self.client.start()
@@ -1576,6 +1580,7 @@ class FakeNodepool(object):
         self.thread.daemon = True
         self.thread.start()
         self.fail_requests = set()
+        self.remote_ansible = False
 
     def stop(self):
         self._running = False
@@ -1639,13 +1644,17 @@ class FakeNodepool(object):
     def makeNode(self, request_id, node_type):
         now = time.time()
         path = '/nodepool/nodes/'
+        remote_ip = os.environ.get('ZUUL_REMOTE_IPV4', '127.0.0.1')
+        if self.remote_ansible and not self.host_keys:
+            self.host_keys = self.keyscan(remote_ip)
+        host_keys = self.host_keys or ["fake-key1", "fake-key2"]
         data = dict(type=node_type,
                     cloud='test-cloud',
                     provider='test-provider',
                     region='test-region',
                     az='test-az',
-                    interface_ip='127.0.0.1',
-                    public_ipv4='127.0.0.1',
+                    interface_ip=remote_ip,
+                    public_ipv4=remote_ip,
                     private_ipv4=None,
                     public_ipv6=None,
                     allocated_to=request_id,
@@ -1654,8 +1663,10 @@ class FakeNodepool(object):
                     created_time=now,
                     updated_time=now,
                     image_id=None,
-                    host_keys=["fake-key1", "fake-key2"],
+                    host_keys=host_keys,
                     executor='fake-nodepool')
+        if self.remote_ansible:
+            data['connection_type'] = 'ssh'
         if 'fakeuser' in node_type:
             data['username'] = 'fakeuser'
         if 'windows' in node_type:
@@ -1702,6 +1713,55 @@ class FakeNodepool(object):
             self.client.set(path, data)
         except kazoo.exceptions.NoNodeError:
             self.log.debug("Node request %s %s disappeared" % (oid, data))
+
+    def keyscan(self, ip, port=22, timeout=60):
+        '''
+        Scan the IP address for public SSH keys.
+
+        Keys are returned formatted as: "<type> <base64_string>"
+        '''
+        addrinfo = socket.getaddrinfo(ip, port)[0]
+        family = addrinfo[0]
+        sockaddr = addrinfo[4]
+
+        keys = []
+        key = None
+        for count in iterate_timeout(timeout, "ssh access"):
+            sock = None
+            t = None
+            try:
+                sock = socket.socket(family, socket.SOCK_STREAM)
+                sock.settimeout(timeout)
+                sock.connect(sockaddr)
+                t = paramiko.transport.Transport(sock)
+                t.start_client(timeout=timeout)
+                key = t.get_remote_server_key()
+                break
+            except socket.error as e:
+                if e.errno not in [
+                        errno.ECONNREFUSED, errno.EHOSTUNREACH, None]:
+                    self.log.exception(
+                        'Exception with ssh access to %s:' % ip)
+            except Exception as e:
+                self.log.exception("ssh-keyscan failure: %s", e)
+            finally:
+                try:
+                    if t:
+                        t.close()
+                except Exception as e:
+                    self.log.exception('Exception closing paramiko: %s', e)
+                try:
+                    if sock:
+                        sock.close()
+                except Exception as e:
+                    self.log.exception('Exception closing socket: %s', e)
+
+        # Paramiko, at this time, seems to return only the ssh-rsa key, so
+        # only the single key is placed into the list.
+        if key:
+            keys.append("%s %s" % (key.get_name(), key.get_base64()))
+
+        return keys
 
 
 class ChrootedKazooFixture(fixtures.Fixture):
@@ -2042,7 +2102,9 @@ class ZuulTestCase(BaseTestCase):
         self.setup_config()
         self.private_key_file = os.path.join(self.test_root, 'test_id_rsa')
         if not os.path.exists(self.private_key_file):
-            src_private_key_file = os.path.join(FIXTURE_DIR, 'test_id_rsa')
+            src_private_key_file = os.environ.get(
+                'ZUUL_SSH_KEY',
+                os.path.join(FIXTURE_DIR, 'test_id_rsa'))
             shutil.copy(src_private_key_file, self.private_key_file)
             shutil.copy('{}.pub'.format(src_private_key_file),
                         '{}.pub'.format(self.private_key_file))
@@ -3013,6 +3075,10 @@ class AnsibleZuulTestCase(ZuulTestCase):
         except Exception:
             path = os.path.join(self.test_root, build.uuid,
                                 'work', 'logs', 'job-output.txt')
+            with open(path) as f:
+                self.log.debug(f.read())
+            path = os.path.join(self.test_root, build.uuid,
+                                'work', 'logs', 'job-output.json')
             with open(path) as f:
                 self.log.debug(f.read())
             raise
