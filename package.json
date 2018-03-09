@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "angular": "^1.5.8",
-    "bootstrap": "^3.3.7",
+    "bootstrap": "3.1.1",
     "graphitejs": "https://github.com/prestontimmons/graphitejs/archive/master.tar.gz",
     "jquery": "^3.3.1",
     "jquery-visibility": "https://github.com/mathiasbynens/jquery-visibility/archive/master.tar.gz"
