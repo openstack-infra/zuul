@@ -298,6 +298,16 @@ class ZuulWeb(object):
     async def _handleKeyRequest(self, request):
         return await self.gearman_handler.processRequest(request, 'key_get')
 
+    async def _handleStatic(self, request):
+        # http://example.com//status.html comes in as '/status.html'
+        target_path = request.match_info['path'].lstrip('/')
+        fs_path = os.path.abspath(os.path.join(self.static_path, target_path))
+        if not fs_path.startswith(os.path.abspath(self.static_path)):
+            return web.HTTPForbidden()
+        if not os.path.exists(fs_path):
+            return web.HTTPNotFound()
+        return web.FileResponse(fs_path)
+
     def run(self, loop=None):
         """
         Run the websocket daemon.
@@ -326,20 +336,12 @@ class ZuulWeb(object):
             StaticHandler(self, '/', 'tenants.html'),
         ]
 
-        for static_file in os.listdir(self.static_path):
-            static_routes.append(
-                StaticHandler(
-                    self, '/{{tenant}}/{static_file}'.format(
-                        static_file=static_file),
-                    static_file))
-            static_routes.append(
-                StaticHandler(
-                    self, '/{static_file}'.format(
-                        static_file=static_file),
-                    static_file))
-
         for route in static_routes + self._plugin_routes:
             routes.append((route.method, route.path, route.handleRequest))
+
+        # Add fallthrough routes at the end for the static html/js files
+        routes.append(('GET', '/{tenant}/{path:.*}', self._handleStatic))
+        routes.append(('GET', '/{path:.*}', self._handleStatic))
 
         self.log.debug("ZuulWeb starting")
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
@@ -354,7 +356,6 @@ class ZuulWeb(object):
         app = web.Application()
         for method, path, handler in routes:
             app.router.add_route(method, path, handler)
-        app.router.add_static('/static', self.static_path)
         handler = app.make_handler(loop=self.event_loop)
 
         # create the server
