@@ -5,7 +5,7 @@ const CommonConfig = require('./webpack.common.js');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 module.exports = Merge(CommonConfig, {
-
+  mode: 'development',
   module: {
     rules: [
       {
