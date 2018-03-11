@@ -1,8 +1,8 @@
 Zuul Web Javascript
 ===================
 
-zuul-web has an html, css and javascript component that is managed
-using Javascript toolchains. It is intended to be served by zuul-web
+zuul-web has an html, css and javascript component, `zuul-dashboard`, that
+is managed using Javascript toolchains. It is intended to be served by zuul-web
 directly from zuul/web/static in the simple case, or to be published to
 an alternate static web location, such as an Apache server.
 
