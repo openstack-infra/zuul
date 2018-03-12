@@ -8,4 +8,3 @@
     src: "{{src_file}}"
     dest: "{{destdir.path}}/copy"
     remote_src: no
-    regexp: resolv.conf
