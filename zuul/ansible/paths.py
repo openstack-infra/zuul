@@ -24,7 +24,9 @@ import ansible.plugins.lookup
 
 def _safe_find_needle(super, dirname, needle):
     result = super._find_needle(dirname, needle)
-    if not _is_safe_path(result):
+    # find_needle is only used for source files so it is safe to allow the
+    # trusted folder where trusted roles reside
+    if not _is_safe_path(result, allow_trusted=True):
         fail_dict = _fail_dict(_full_path(result))
         raise AnsibleError("{msg}. Invalid path: {path}".format(
             msg=fail_dict['msg'], path=fail_dict['path']))
@@ -35,9 +37,15 @@ def _full_path(path):
     return os.path.realpath(os.path.abspath(os.path.expanduser(path)))
 
 
-def _is_safe_path(path):
+def _is_safe_path(path, allow_trusted=False):
     full_path = _full_path(path)
-    if not full_path.startswith(os.path.abspath(os.path.expanduser('~'))):
+    home_path = os.path.abspath(os.path.expanduser('~'))
+    if not full_path.startswith(home_path):
+        if allow_trusted:
+            trusted_path = os.path.abspath(
+                os.path.join(home_path, '../trusted'))
+            if full_path.startswith(trusted_path):
+                return True
         return False
     return True
 
