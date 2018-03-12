@@ -2,7 +2,7 @@ pbr>=1.1.0
 
 # pull from master until https://github.com/sigmavirus24/github3.py/pull/671
 # is in a release
-git+https://github.com/sigmavirus24/github3.py.git@develop#egg=Github3.py
+git+https://github.com/sigmavirus24/github3.py.git@17d0fb972ee34f19793955aab71a12e8d4b450d9#egg=Github3.py
 PyYAML>=3.1.0
 paramiko>=2.0.1
 GitPython>=2.1.8
