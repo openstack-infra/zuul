@@ -38,15 +38,50 @@ def _full_path(path):
 
 
 def _is_safe_path(path, allow_trusted=False):
-    full_path = _full_path(path)
+
     home_path = os.path.abspath(os.path.expanduser('~'))
-    if not full_path.startswith(home_path):
-        if allow_trusted:
-            trusted_path = os.path.abspath(
-                os.path.join(home_path, '../trusted'))
-            if full_path.startswith(trusted_path):
+    allowed_paths = [home_path]
+    if allow_trusted:
+        allowed_paths.append(
+            os.path.abspath(os.path.join(home_path, '../trusted')))
+
+    def _is_safe(path_to_check):
+        for allowed_path in allowed_paths:
+            if path_to_check.startswith(allowed_path):
                 return True
         return False
+
+    # We need to really check the whole subtree starting from path. So first
+    # start with the root and do an os.walk if path resolves to a directory.
+    full_path = _full_path(path)
+    if not _is_safe(full_path):
+        return False
+
+    # Walk the whole tree and check dirs and files. In order to mitigate
+    # chained symlink attacks we also need to follow symlinks.
+    visited = set()
+    for root, dirs, files in os.walk(full_path, followlinks=True):
+
+        # We recurse with follow links so check root first, then the files.
+        # The dirs will be checked during recursion.
+        full_root = _full_path(root)
+        if not _is_safe(full_root):
+            return False
+
+        # NOTE: os.walk can lead to infinite recursion when following links
+        # so filter out the dirs for further processing if we already checked
+        # this one.
+        if full_root in visited:
+            del dirs[:]
+            # we already checked the files here so we can just continue to the
+            # next iteration
+            continue
+        visited.add(full_root)
+
+        for entry in files:
+            full_path = _full_path(os.path.join(root, entry))
+            if not _is_safe(full_path):
+                return False
     return True
 
 
