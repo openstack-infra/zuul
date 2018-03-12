@@ -1,0 +1,4 @@
+- hosts: all
+  roles:
+    - role: patch-test
+      src_file: patch

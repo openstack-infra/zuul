@@ -2006,6 +2006,11 @@ class BaseTestCase(testtools.TestCase):
                     pass
 
 
+class SymLink(object):
+    def __init__(self, target):
+        self.target = target
+
+
 class ZuulTestCase(BaseTestCase):
     """A test case with a functioning Zuul.
 
@@ -2399,13 +2404,24 @@ class ZuulTestCase(BaseTestCase):
 
         files = {}
         for (dirpath, dirnames, filenames) in os.walk(source_path):
+            # Note: In case a symlink points to an already existing directory
+            # os.walk includes that in the dirnames list. In order to properly
+            # copy these links, just add them to the filenames list.
+            for dirname in dirnames:
+                test_tree_filepath = os.path.join(dirpath, dirname)
+                if os.path.islink(test_tree_filepath):
+                    filenames.append(dirname)
+
             for filename in filenames:
                 test_tree_filepath = os.path.join(dirpath, filename)
                 common_path = os.path.commonprefix([test_tree_filepath,
                                                     source_path])
                 relative_filepath = test_tree_filepath[len(common_path) + 1:]
-                with open(test_tree_filepath, 'r') as f:
-                    content = f.read()
+                if os.path.islink(test_tree_filepath):
+                    content = SymLink(os.readlink(test_tree_filepath))
+                else:
+                    with open(test_tree_filepath, 'rb') as f:
+                        content = f.read()
                 files[relative_filepath] = content
         self.addCommitToRepo(project, 'add content from fixture',
                              files, branch='master', tag='init')
@@ -2925,8 +2941,16 @@ class ZuulTestCase(BaseTestCase):
                 os.makedirs(os.path.dirname(fn))
             except OSError:
                 pass
-            with open(fn, 'w') as f:
-                f.write(content)
+            if isinstance(content, SymLink):
+                os.symlink(content.target, fn)
+            else:
+                mode = 'w'
+                if isinstance(content, bytes):
+                    # the file fixtures are loaded as bytes such that
+                    # we also support binary files
+                    mode = 'wb'
+                with open(fn, mode) as f:
+                    f.write(content)
             repo.index.add([fn])
         commit = repo.index.commit(message)
         before = repo.heads[branch].commit

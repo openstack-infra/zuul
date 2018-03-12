@@ -1,0 +1,9 @@
+- name: Create a destination directory for copied files
+  tempfile:
+    state: directory
+  register: destdir
+
+- name: Copy
+  template:
+    src: "{{src_file}}"
+    dest: "{{destdir.path}}/template"

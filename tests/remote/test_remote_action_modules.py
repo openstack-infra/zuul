@@ -68,6 +68,47 @@ class TestActionModules(AnsibleZuulTestCase):
             build = self.history[-1]
             self.assertEqual(build.result, result)
 
+    def test_assemble_module(self):
+        self._run_job('assemble-good', 'SUCCESS')
+
+        self._run_job('assemble-bad', 'FAILURE')
+        self._run_job('assemble-bad-symlink', 'FAILURE')
+
     def test_copy_module(self):
         self._run_job('copy-good', 'SUCCESS')
+
         self._run_job('copy-bad', 'FAILURE')
+        self._run_job('copy-bad-symlink', 'FAILURE')
+
+    def test_includevars_module(self):
+        self._run_job('includevars-good', 'SUCCESS')
+        self._run_job('includevars-good-dir', 'SUCCESS')
+
+        self._run_job('includevars-bad', 'FAILURE')
+        self._run_job('includevars-bad-symlink', 'FAILURE')
+        self._run_job('includevars-bad-dir', 'FAILURE')
+        self._run_job('includevars-bad-dir-symlink', 'FAILURE')
+
+    def test_patch_module(self):
+        self._run_job('patch-good', 'SUCCESS')
+
+        self._run_job('patch-bad', 'FAILURE')
+        self._run_job('patch-bad-symlink', 'FAILURE')
+
+    def test_script_module(self):
+        self._run_job('script-good', 'SUCCESS')
+
+        self._run_job('script-bad', 'FAILURE')
+        self._run_job('script-bad-symlink', 'FAILURE')
+
+    def test_template_module(self):
+        self._run_job('template-good', 'SUCCESS')
+
+        self._run_job('template-bad', 'FAILURE')
+        self._run_job('template-bad-symlink', 'FAILURE')
+
+    def test_unarchive_module(self):
+        self._run_job('unarchive-good', 'SUCCESS')
+
+        self._run_job('unarchive-bad', 'FAILURE')
+        self._run_job('unarchive-bad-symlink', 'FAILURE')

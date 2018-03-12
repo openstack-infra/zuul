@@ -1,0 +1,4 @@
+- hosts: all
+  roles:
+    - role: script-test
+      src_file: script.sh
