@@ -1,0 +1,4 @@
+- hosts: all
+  roles:
+    - role: includevars-test
+      src_file: symlink.yaml

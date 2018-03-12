@@ -1,0 +1,15 @@
+- name: Create a destination directory for copied files
+  tempfile:
+    state: directory
+  register: destdir
+
+- name: Copy readme
+  copy:
+    src: readme.txt
+    dest: "{{destdir.path}}/readme.txt"
+
+- name: Patch
+  patch:
+    src: "{{src_file}}"
+    basedir: "{{destdir.path}}"
+    strip: 1

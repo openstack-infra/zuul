@@ -1,0 +1,9 @@
+- name: Create a destination directory for copied files
+  tempfile:
+    state: directory
+  register: destdir
+
+- name: Unarchive
+  copy:
+    src: "{{src_file}}"
+    dest: "{{destdir.path}}"
