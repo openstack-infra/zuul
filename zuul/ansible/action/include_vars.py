@@ -20,14 +20,21 @@ include_vars = paths._import_ansible_action_plugin("include_vars")
 
 class ActionModule(include_vars.ActionModule):
 
+    def _find_needle(self, dirname, needle):
+        return paths._safe_find_needle(
+            super(ActionModule, self), dirname, needle)
+
     def run(self, tmp=None, task_vars=None):
         if not paths._is_official_module(self):
             return paths._fail_module_dict(self._task.action)
 
         source_dir = self._task.args.get('dir', None)
-        source_file = self._task.args.get('file', None)
 
-        for fileloc in (source_dir, source_file):
-            if fileloc and not paths._is_safe_path(fileloc):
-                return paths._fail_dict(fileloc)
+        # This is the handling for source_dir. The source_file is handled by
+        # the _find_needle override.
+        if source_dir:
+            self._set_args()
+            self._set_root_dir()
+            if not paths._is_safe_path(self.source_dir):
+                return paths._fail_dict(self.source_dir)
         return super(ActionModule, self).run(tmp, task_vars)
