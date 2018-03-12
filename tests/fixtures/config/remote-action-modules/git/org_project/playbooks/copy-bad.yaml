@@ -1,0 +1,4 @@
+- hosts: all
+  roles:
+    - role: copy-test
+      src_file: /opt/file
