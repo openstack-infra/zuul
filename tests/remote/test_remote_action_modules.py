@@ -46,6 +46,8 @@ class TestActionModules(AnsibleZuulTestCase):
             - job:
                 name: {job_name}
                 run: playbooks/{job_name}.yaml
+                roles:
+                  - zuul: org/common-config
                 nodeset:
                   nodes:
                     - name: controller

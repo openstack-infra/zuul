@@ -1,4 +1,5 @@
 - hosts: all
   roles:
+    - common-copy
     - role: copy-test
       src_file: file
