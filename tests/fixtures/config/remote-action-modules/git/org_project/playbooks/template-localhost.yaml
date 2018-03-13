@@ -1,0 +1,11 @@
+- hosts: localhost
+  roles:
+    - template-test-localhost
+
+- hosts: 127.0.0.1
+  roles:
+    - template-test-localhost
+
+- hosts: "::1"
+  roles:
+    - template-test-localhost

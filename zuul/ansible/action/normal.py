@@ -35,12 +35,7 @@ class ActionModule(normal.ActionModule):
     def run(self, tmp=None, task_vars=None):
         '''Overridden primary method from the base class.'''
 
-        if (self._play_context.connection == 'local'
-                or self._play_context.remote_addr == 'localhost'
-                or self._play_context.remote_addr.startswith('127.')
-                or self._task.delegate_to == 'localhost'
-                or (self._task.delegate_to
-                    and self._task.delegate_to.startswith('127.'))):
+        if paths._is_localhost_task(self):
             if not self.dispatch_handler():
                 raise AnsibleError("Executing local code is prohibited")
         return super(ActionModule, self).run(tmp, task_vars)

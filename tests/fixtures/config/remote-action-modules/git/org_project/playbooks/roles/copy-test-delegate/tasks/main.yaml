@@ -1,0 +1,27 @@
+- include: copy-delegate.yaml
+  with_items:
+    - ::1
+    - 127.0.0.1
+    - localhost
+
+- name: Define target dir
+  set_fact:
+    targetdir: "{{ zuul.executor.work_root }}/copy-target"
+
+- name: Create target dir
+  file:
+    state: directory
+    path: "{{ targetdir }}"
+  delegate_to: localhost
+
+- name: Copy file into safe path
+  copy:
+    src: file
+    dest: "{{ targetdir }}/dest-file"
+  delegate_to: localhost
+
+- name: Copy file into safe directory
+  copy:
+    src: file
+    dest: "{{ targetdir }}/dest-dir/"
+  delegate_to: localhost

@@ -1,0 +1,13 @@
+- name: Assemble
+  assemble:
+    src: dir
+    dest: /opt/assemble-dest
+    remote_src: no
+  ignore_errors: true
+  register: result
+
+- assert:
+    that:
+      - "result.failed == true"
+      - "'Accessing files from outside the working dir' in result.msg"
+    msg: Assemble must fail due to accessing files outside the working dir

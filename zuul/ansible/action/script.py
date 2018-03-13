@@ -14,6 +14,7 @@
 # along with this software.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from ansible.errors import AnsibleError
 from zuul.ansible import paths
 script = paths._import_ansible_action_plugin("script")
 
@@ -28,5 +29,8 @@ class ActionModule(script.ActionModule):
 
         if not paths._is_official_module(self):
             return paths._fail_module_dict(self._task.action)
+
+        if paths._is_localhost_task(self):
+            raise AnsibleError("Executing local code is prohibited")
 
         return super(ActionModule, self).run(tmp, task_vars)

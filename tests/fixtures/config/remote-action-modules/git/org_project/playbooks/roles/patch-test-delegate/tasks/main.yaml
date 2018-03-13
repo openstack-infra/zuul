@@ -1,0 +1,41 @@
+- include: patch-delegate.yaml
+  with_items:
+    - ::1
+    - 127.0.0.1
+    - localhost
+
+- name: Define target dir
+  set_fact:
+    targetdir: "{{ zuul.executor.work_root }}/patch-target"
+
+- name: Create target dir
+  file:
+    state: directory
+    path: "{{ targetdir }}"
+  delegate_to: localhost
+
+- name: Copy readme
+  copy:
+    src: readme.txt
+    dest: "{{ targetdir }}/readme.txt"
+  delegate_to: localhost
+
+- name: Patch in safe path using basedir
+  patch:
+    src: "patch"
+    basedir: "{{ targetdir }}"
+    strip: 1
+  delegate_to: localhost
+
+- name: Copy readme again
+  copy:
+    src: readme.txt
+    dest: "{{ targetdir }}/readme.txt"
+  delegate_to: localhost
+
+- name: Patch in safe path using dest
+  patch:
+    src: "patch"
+    dest: "{{ targetdir }}/readme.txt"
+    strip: 1
+  delegate_to: localhost

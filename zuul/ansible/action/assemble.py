@@ -29,4 +29,7 @@ class ActionModule(assemble.ActionModule):
         if not paths._is_official_module(self):
             return paths._fail_module_dict(self._task.action)
 
+        if paths._is_localhost_task(self):
+            paths._fail_if_unsafe(self._task.args['dest'])
+
         return super(ActionModule, self).run(tmp, task_vars)

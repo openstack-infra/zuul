@@ -1,0 +1,12 @@
+- name: Template
+  copy:
+    src: template
+    dest: /opt/copy-dest
+  register: result
+  ignore_errors: true
+
+- assert:
+    that:
+      - "result.failed == true"
+      - "'Accessing files from outside the working dir' in result.msg"
+    msg: Template must fail due to accessing files outside the working dir

@@ -1,0 +1,21 @@
+- include: template-delegate.yaml
+  with_items:
+    - ::1
+    - 127.0.0.1
+    - localhost
+
+- name: Define target dir
+  set_fact:
+    targetdir: "{{ zuul.executor.work_root }}/template-target"
+
+- name: Create target dir
+  file:
+    state: directory
+    path: "{{ targetdir }}"
+  delegate_to: localhost
+
+- name: Template into safe path
+  template:
+    src: template
+    dest: "{{ targetdir }}/dest-file"
+  delegate_to: localhost
