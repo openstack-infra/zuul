@@ -115,7 +115,8 @@ class TestScheduler(ZuulTestCase):
         self.assertReportedStat(
             'zuul.tenant.tenant-one.pipeline.gate.project.review_example_com.'
             'org_project.master.total_changes', value='1|c')
-        exec_key = 'zuul.executor.%s' % self.executor_server.hostname
+        exec_key = 'zuul.executor.%s' % self.executor_server.hostname.replace(
+            '.', '_')
         self.assertReportedStat(exec_key + '.builds', value='1|c')
         self.assertReportedStat('zuul.nodepool.requested', value='1|c')
         self.assertReportedStat('zuul.nodepool.requested.label.label1',
