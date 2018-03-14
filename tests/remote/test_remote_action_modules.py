@@ -83,12 +83,16 @@ class TestActionModules(AnsibleZuulTestCase):
 
         self._run_job('assemble-bad', 'FAILURE', ERROR_ACCESS_OUTSIDE)
         self._run_job('assemble-bad-symlink', 'FAILURE', ERROR_ACCESS_OUTSIDE)
+        self._run_job('assemble-bad-dir-with-symlink', 'FAILURE',
+                      ERROR_ACCESS_OUTSIDE)
 
     def test_copy_module(self):
         self._run_job('copy-good', 'SUCCESS')
 
         self._run_job('copy-bad', 'FAILURE', ERROR_ACCESS_OUTSIDE)
         self._run_job('copy-bad-symlink', 'FAILURE', ERROR_ACCESS_OUTSIDE)
+        self._run_job('copy-bad-dir-with-symlink', 'FAILURE',
+                      ERROR_ACCESS_OUTSIDE)
 
     def test_includevars_module(self):
         self._run_job('includevars-good', 'SUCCESS')
@@ -99,6 +103,10 @@ class TestActionModules(AnsibleZuulTestCase):
                       ERROR_ACCESS_OUTSIDE)
         self._run_job('includevars-bad-dir', 'FAILURE', ERROR_ACCESS_OUTSIDE)
         self._run_job('includevars-bad-dir-symlink', 'FAILURE',
+                      ERROR_ACCESS_OUTSIDE)
+        self._run_job('includevars-bad-dir-with-symlink', 'FAILURE',
+                      ERROR_ACCESS_OUTSIDE)
+        self._run_job('includevars-bad-dir-with-double-symlink', 'FAILURE',
                       ERROR_ACCESS_OUTSIDE)
 
     def test_patch_module(self):
