@@ -723,6 +723,27 @@ class PlaybookContext(object):
                             self.secrets)
         return r
 
+    def validateReferences(self, layout):
+        # Verify that references to other objects in the layout are
+        # valid.
+        for (secret_name, secret_alias) in self.secrets:
+            secret = layout.secrets.get(secret_name)
+            if secret is None:
+                raise Exception(
+                    'The secret "{name}" was not found.'.format(
+                        name=secret_name))
+            if secret_alias == 'zuul' or secret_alias == 'nodepool':
+                raise Exception('Secrets named "zuul" or "nodepool" '
+                                'are not allowed.')
+            if not secret.source_context.isSameProject(self.source_context):
+                raise Exception(
+                    "Unable to use secret {name}.  Secrets must be "
+                    "defined in the same project in which they "
+                    "are used".format(
+                        name=secret_name))
+            # Decrypt a copy of the secret to verify it can be done
+            secret.decrypt(self.source_context.project.private_key)
+
     def freezeSecrets(self, layout):
         secrets = []
         for (secret_name, secret_alias) in self.secrets:
@@ -874,7 +895,7 @@ class Job(object):
         self.other_attributes = dict(
             name=None,
             source_context=None,
-            source_line=None,
+            start_mark=None,
             inheritance_path=(),
             parent_data=None,
             description=None,
@@ -913,11 +934,14 @@ class Job(object):
         return self.name
 
     def __repr__(self):
+        ln = 0
+        if self.start_mark:
+            ln = self.start_mark.line
         return '<Job %s branches: %s source: %s#%s>' % (
             self.name,
             self.branch_matcher,
             self.source_context,
-            self.source_line)
+            ln)
 
     def __getattr__(self, name):
         v = self.__dict__.get(name)
@@ -942,6 +966,14 @@ class Job(object):
             self.pre_run = self.freezePlaybooks(self.pre_run, layout)
         if self._get('post_run') is not None:
             self.post_run = self.freezePlaybooks(self.post_run, layout)
+
+    def validateReferences(self, layout):
+        # Verify that references to other objects in the layout are
+        # valid.
+        if not self.isBase() and self.parent:
+            layout.getJob(self.parent)
+        for pb in self.pre_run + self.run + self.post_run:
+            pb.validateReferences(layout)
 
     def addRoles(self, roles):
         newroles = []

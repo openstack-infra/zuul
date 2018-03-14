@@ -1543,7 +1543,8 @@ class TestInRepoConfig(ZuulTestCase):
         in_repo_conf = textwrap.dedent(
             """
             - job:
-                name: test
+                name: project-test1
+                run: playbooks/project-test1.yaml
                 secrets: does-not-exist
             """)
 

@@ -117,15 +117,6 @@ class TemplateNotFoundError(Exception):
         super(TemplateNotFoundError, self).__init__(message)
 
 
-class SecretNotFoundError(Exception):
-    def __init__(self, secret):
-        message = textwrap.dedent("""\
-        The secret "{secret}" was not found.
-        """)
-        message = textwrap.fill(message.format(secret=secret))
-        super(SecretNotFoundError, self).__init__(message)
-
-
 class NodesetNotFoundError(Exception):
     def __init__(self, nodeset):
         message = textwrap.dedent("""\
@@ -225,6 +216,39 @@ def configuration_exceptions(stanza, conf):
         conf = copy.deepcopy(conf)
         context = conf.pop('_source_context')
         start_mark = conf.pop('_start_mark')
+        intro = textwrap.fill(textwrap.dedent("""\
+        Zuul encountered a syntax error while parsing its configuration in the
+        repo {repo} on branch {branch}.  The error was:""".format(
+            repo=context.project.name,
+            branch=context.branch,
+        )))
+
+        m = textwrap.dedent("""\
+        {intro}
+
+        {error}
+
+        The error appears in the following {stanza} stanza:
+
+        {content}
+
+        {start_mark}""")
+
+        m = m.format(intro=intro,
+                     error=indent(str(e)),
+                     stanza=stanza,
+                     content=indent(start_mark.snippet.rstrip()),
+                     start_mark=str(start_mark))
+        raise ConfigurationSyntaxError(m)
+
+
+@contextmanager
+def reference_exceptions(stanza, context, start_mark):
+    try:
+        yield
+    except ConfigurationSyntaxError:
+        raise
+    except Exception as e:
         intro = textwrap.fill(textwrap.dedent("""\
         Zuul encountered a syntax error while parsing its configuration in the
         repo {repo} on branch {branch}.  The error was:""".format(
@@ -595,7 +619,7 @@ class JobParser(object):
         job = model.Job(name)
         job.description = conf.get('description')
         job.source_context = conf.get('_source_context')
-        job.source_line = conf.get('_start_mark').line + 1
+        job.start_mark = conf.get('_start_mark')
         job.variant_description = conf.get(
             'variant-description', " ".join(as_list(conf.get('branches'))))
 
@@ -618,24 +642,11 @@ class JobParser(object):
         for secret_config in as_list(conf.get('secrets', [])):
             if isinstance(secret_config, str):
                 secret_name = secret_config
-                secret = self.pcontext.layout.secrets.get(secret_name)
+                secret_alias = secret_config
             else:
-                secret_name = secret_config['name']
-                secret = self.pcontext.layout.secrets.get(
-                    secret_config['secret'])
-            if secret is None:
-                raise SecretNotFoundError(secret_name)
-            if secret_name == 'zuul' or secret_name == 'nodepool':
-                raise Exception("Secrets named 'zuul' or 'nodepool' "
-                                "are not allowed.")
-            if not secret.source_context.isSameProject(job.source_context):
-                raise Exception(
-                    "Unable to use secret %s.  Secrets must be "
-                    "defined in the same project in which they "
-                    "are used" % secret_name)
-            # Decrypt a copy of the secret to verify it can be done
-            secret.decrypt(job.source_context.project.private_key)
-            secrets.append((secret.name, secret_name))
+                secret_name = secret_config['secret']
+                secret_alias = secret_config['name']
+            secrets.append((secret_name, secret_alias))
 
         # A job in an untrusted repo that uses secrets requires
         # special care.  We must note this, and carry this flag
@@ -874,11 +885,6 @@ class ProjectTemplateParser(object):
                 raise Exception("Job must be a string or dictionary")
             attrs['_source_context'] = source_context
             attrs['_start_mark'] = start_mark
-
-            # validate that the job is existing
-            with configuration_exceptions('project or project-template',
-                                          attrs):
-                self.pcontext.layout.getJob(jobname)
 
             job_list.addJob(self.pcontext.job_parser.fromYaml(
                 attrs, project_pipeline=True,
@@ -1662,15 +1668,13 @@ class TenantParser(object):
                         "Skipped adding job %s which shadows an existing job" %
                         (job,))
 
-        # Now that all the jobs are loaded, verify their parents exist
-        for config_job in data.jobs:
-            classes = self._getLoadClasses(tenant, config_job)
-            if 'job' not in classes:
-                continue
-            with configuration_exceptions('job', config_job):
-                parent = config_job.get('parent')
-                if parent:
-                    layout.getJob(parent)
+        # Now that all the jobs are loaded, verify references to other
+        # config objects.
+        for jobs in layout.jobs.values():
+            for job in jobs:
+                with reference_exceptions('job', job.source_context,
+                                          job.start_mark):
+                    job.validateReferences(layout)
 
         if skip_semaphores:
             # We should not actually update the layout with new
@@ -1719,6 +1723,22 @@ class TenantParser(object):
 
             layout.addProjectConfig(pcontext.project_parser.fromYaml(
                 filtered_projects))
+
+        # Now that all the project pipelines are loaded, verify
+        # references to other config objects.
+        for project_config in layout.project_configs.values():
+            for project_pipeline_config in project_config.pipelines.values():
+                for jobs in project_pipeline_config.job_list.jobs.values():
+                    for job in jobs:
+                        with reference_exceptions(
+                                'project or project-template',
+                                job.source_context,
+                                job.start_mark):
+                            # validate that the job exists on its own (an
+                            # additional requirement for project-pipeline
+                            # jobs)
+                            layout.getJob(job.name)
+                            job.validateReferences(layout)
 
     def _flattenProjects(self, projects, tenant):
         # Group together all of the project stanzas for each project.
