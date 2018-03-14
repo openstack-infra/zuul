@@ -20,14 +20,14 @@ import sys
 import signal
 
 import zuul.cmd
+import zuul.executor.client
+import zuul.merger.client
+import zuul.nodepool
+import zuul.scheduler
+import zuul.zk
+
 from zuul.lib.config import get_default
 from zuul.lib.statsd import get_statsd_config
-import zuul.scheduler
-
-# No zuul imports here because they pull in paramiko which must not be
-# imported until after the daemonization.
-# https://github.com/paramiko/paramiko/issues/59
-# Similar situation with gear and statsd.
 
 
 class Scheduler(zuul.cmd.ZuulDaemonApp):
@@ -111,16 +111,9 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
             os.kill(self.gear_server_pid, signal.SIGKILL)
 
     def run(self):
-        # See comment at top of file about zuul imports
-        import zuul.scheduler
         if self.args.command in zuul.scheduler.COMMANDS:
             self.send_command(self.args.command)
             sys.exit(0)
-        # See comment at top of file about zuul imports
-        import zuul.executor.client
-        import zuul.merger.client
-        import zuul.nodepool
-        import zuul.zk
 
         if (self.config.has_option('gearman_server', 'start') and
             self.config.getboolean('gearman_server', 'start')):

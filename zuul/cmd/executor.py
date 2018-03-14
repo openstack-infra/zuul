@@ -22,12 +22,8 @@ import tempfile
 
 import zuul.cmd
 import zuul.executor.server
-from zuul.lib.config import get_default
 
-# No zuul imports that pull in paramiko here; it must not be
-# imported until after the daemonization.
-# https://github.com/paramiko/paramiko/issues/59
-# Similar situation with gear and statsd.
+from zuul.lib.config import get_default
 
 
 class Executor(zuul.cmd.ZuulDaemonApp):

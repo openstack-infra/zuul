@@ -40,11 +40,6 @@ from zuul.ansible import logconfig
 import zuul.lib.connections
 from zuul.lib.config import get_default
 
-# Do not import modules that will pull in paramiko which must not be
-# imported until after the daemonization.
-# https://github.com/paramiko/paramiko/issues/59
-# Similar situation with gear and statsd.
-
 
 def stack_dump_handler(signum, frame):
     signal.signal(signal.SIGUSR2, signal.SIG_IGN)
