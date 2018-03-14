@@ -49,6 +49,8 @@ class RequestHandler(streamer_utils.BaseFingerRequestHandler):
         Both IPv4 and IPv6 are supported.
         '''
         with socket.create_connection((server, port), timeout=10) as s:
+            # timeout only on the connection, let recv() wait forever
+            s.settimeout(None)
             msg = "%s\n" % build_uuid    # Must have a trailing newline!
             s.sendall(msg.encode('utf-8'))
             while True:
