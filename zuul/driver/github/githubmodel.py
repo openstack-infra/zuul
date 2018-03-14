@@ -110,10 +110,15 @@ class GithubCommonFilter(object):
                     return False
             elif k == 'permission':
                 # If permission is read, we've matched. You must have read
-                # to provide a review. Write or admin permission is different.
+                # to provide a review.
                 if v != 'read':
-                    if review['permission'] != v:
-                        return False
+                    # Admins have implicit write.
+                    if v == 'write':
+                        if review['permission'] not in ('write', 'admin'):
+                            return False
+                    elif v == 'admin':
+                        if review['permission'] != 'admin':
+                            return False
         return True
 
     def matchesReviews(self, change):
