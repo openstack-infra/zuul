@@ -34,17 +34,28 @@ import tests.base
 
 class TestLogStreamer(tests.base.BaseTestCase):
 
-    def setUp(self):
-        super(TestLogStreamer, self).setUp()
-        self.host = '::'
-
-    def startStreamer(self, port, root=None):
+    def startStreamer(self, host, port, root=None):
+        self.host = host
         if not root:
             root = tempfile.gettempdir()
         return zuul.lib.log_streamer.LogStreamer(self.host, port, root)
 
-    def test_start_stop(self):
-        streamer = self.startStreamer(0)
+    def test_start_stop_ipv6(self):
+        streamer = self.startStreamer('::1', 0)
+        self.addCleanup(streamer.stop)
+
+        port = streamer.server.socket.getsockname()[1]
+        s = socket.create_connection((self.host, port))
+        s.close()
+
+        streamer.stop()
+
+        with testtools.ExpectedException(ConnectionRefusedError):
+            s = socket.create_connection((self.host, port))
+        s.close()
+
+    def test_start_stop_ipv4(self):
+        streamer = self.startStreamer('127.0.0.1', 0)
         self.addCleanup(streamer.stop)
 
         port = streamer.server.socket.getsockname()[1]
