@@ -17,6 +17,8 @@ import textwrap
 
 from tests.base import AnsibleZuulTestCase, FIXTURE_DIR
 
+ERROR_ACCESS_OUTSIDE = "Accessing files from outside the working dir"
+
 
 class TestActionModules(AnsibleZuulTestCase):
     tenant_config_file = 'config/remote-action-modules/main.yaml'
@@ -33,7 +35,7 @@ class TestActionModules(AnsibleZuulTestCase):
         self.executor_server.execution_wrapper.bwrap_command.extend(
             ['--ro-bind', fixture_dir, '/opt'])
 
-    def _run_job(self, job_name, result):
+    def _run_job(self, job_name, result, expect_error=None):
         # Keep the jobdir around so we can inspect contents if an
         # assert fails. It will be cleaned up anyway as it is contained
         # in a tmp dir which gets cleaned up after the test.
@@ -70,47 +72,55 @@ class TestActionModules(AnsibleZuulTestCase):
             build = self.history[-1]
             self.assertEqual(build.result, result)
 
+            if expect_error:
+                path = os.path.join(self.test_root, build.uuid,
+                                    'work', 'logs', 'job-output.txt')
+                with open(path, 'r') as f:
+                    self.assertIn(expect_error, f.read())
+
     def test_assemble_module(self):
         self._run_job('assemble-good', 'SUCCESS')
 
-        self._run_job('assemble-bad', 'FAILURE')
-        self._run_job('assemble-bad-symlink', 'FAILURE')
+        self._run_job('assemble-bad', 'FAILURE', ERROR_ACCESS_OUTSIDE)
+        self._run_job('assemble-bad-symlink', 'FAILURE', ERROR_ACCESS_OUTSIDE)
 
     def test_copy_module(self):
         self._run_job('copy-good', 'SUCCESS')
 
-        self._run_job('copy-bad', 'FAILURE')
-        self._run_job('copy-bad-symlink', 'FAILURE')
+        self._run_job('copy-bad', 'FAILURE', ERROR_ACCESS_OUTSIDE)
+        self._run_job('copy-bad-symlink', 'FAILURE', ERROR_ACCESS_OUTSIDE)
 
     def test_includevars_module(self):
         self._run_job('includevars-good', 'SUCCESS')
         self._run_job('includevars-good-dir', 'SUCCESS')
 
-        self._run_job('includevars-bad', 'FAILURE')
-        self._run_job('includevars-bad-symlink', 'FAILURE')
-        self._run_job('includevars-bad-dir', 'FAILURE')
-        self._run_job('includevars-bad-dir-symlink', 'FAILURE')
+        self._run_job('includevars-bad', 'FAILURE', ERROR_ACCESS_OUTSIDE)
+        self._run_job('includevars-bad-symlink', 'FAILURE',
+                      ERROR_ACCESS_OUTSIDE)
+        self._run_job('includevars-bad-dir', 'FAILURE', ERROR_ACCESS_OUTSIDE)
+        self._run_job('includevars-bad-dir-symlink', 'FAILURE',
+                      ERROR_ACCESS_OUTSIDE)
 
     def test_patch_module(self):
         self._run_job('patch-good', 'SUCCESS')
 
-        self._run_job('patch-bad', 'FAILURE')
-        self._run_job('patch-bad-symlink', 'FAILURE')
+        self._run_job('patch-bad', 'FAILURE', ERROR_ACCESS_OUTSIDE)
+        self._run_job('patch-bad-symlink', 'FAILURE', ERROR_ACCESS_OUTSIDE)
 
     def test_script_module(self):
         self._run_job('script-good', 'SUCCESS')
 
-        self._run_job('script-bad', 'FAILURE')
-        self._run_job('script-bad-symlink', 'FAILURE')
+        self._run_job('script-bad', 'FAILURE', ERROR_ACCESS_OUTSIDE)
+        self._run_job('script-bad-symlink', 'FAILURE', ERROR_ACCESS_OUTSIDE)
 
     def test_template_module(self):
         self._run_job('template-good', 'SUCCESS')
 
-        self._run_job('template-bad', 'FAILURE')
-        self._run_job('template-bad-symlink', 'FAILURE')
+        self._run_job('template-bad', 'FAILURE', ERROR_ACCESS_OUTSIDE)
+        self._run_job('template-bad-symlink', 'FAILURE', ERROR_ACCESS_OUTSIDE)
 
     def test_unarchive_module(self):
         self._run_job('unarchive-good', 'SUCCESS')
 
-        self._run_job('unarchive-bad', 'FAILURE')
-        self._run_job('unarchive-bad-symlink', 'FAILURE')
+        self._run_job('unarchive-bad', 'FAILURE', ERROR_ACCESS_OUTSIDE)
+        self._run_job('unarchive-bad-symlink', 'FAILURE', ERROR_ACCESS_OUTSIDE)
