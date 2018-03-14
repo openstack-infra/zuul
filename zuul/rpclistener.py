@@ -307,8 +307,16 @@ class RPCListener(object):
     def handle_tenant_list(self, job):
         output = []
         for tenant_name, tenant in self.sched.abide.tenants.items():
+            queue_size = 0
+            for pipeline_name, pipeline in tenant.layout.pipelines.items():
+                for queue in pipeline.queues:
+                    for item in queue.queue:
+                        if item.active:
+                            queue_size += 1
+
             output.append({'name': tenant_name,
-                           'projects': len(tenant.untrusted_projects)})
+                           'projects': len(tenant.untrusted_projects),
+                           'queue': queue_size})
         job.sendWorkComplete(json.dumps(output))
 
     def handle_status_get(self, job):

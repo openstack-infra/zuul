@@ -38,6 +38,7 @@ under the License.
         <th>Jobs</th>
         <th>Builds</th>
         <th>Projects count</th>
+        <th>Queue size</th>
       </tr>
     </thead>
     <tbody>
@@ -47,6 +48,7 @@ under the License.
         <td><a href="{{ tenant.name }}/jobs.html">jobs</a></td>
         <td><a href="{{ tenant.name }}/builds.html">builds</a></td>
         <td>{{ tenant.projects }}</td>
+        <td>{{ tenant.queue }}</td>
       </tr>
     </tbody>
   </table>
