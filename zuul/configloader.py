@@ -1297,7 +1297,10 @@ class TenantParser(object):
     def _resolveShadowProjects(self, tenant, tpc):
         shadow_projects = []
         for sp in tpc.shadow_projects:
-            shadow_projects.append(tenant.getProject(sp)[1])
+            _, project = tenant.getProject(sp)
+            if project is None:
+                raise ProjectNotFoundError(sp)
+            shadow_projects.append(project)
         tpc.shadow_projects = frozenset(shadow_projects)
 
     def _getProjectBranches(self, tenant, tpc, old_tenant):
