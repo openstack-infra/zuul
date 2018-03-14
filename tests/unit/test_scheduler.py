@@ -166,7 +166,7 @@ class TestScheduler(ZuulTestCase):
         "Test the correct variant of a job runs on a branch"
         self._startMerger()
         for f in list(self.executor_server.merger_worker.functions.keys()):
-            f = str(f)
+            f = f.decode('utf8')
             if f.startswith('merger:'):
                 self.executor_server.merger_worker.unRegisterFunction(f)
 
