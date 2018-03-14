@@ -5,3 +5,7 @@
     - debug:
         msg: setec astronomy
       no_log: true
+    - debug:
+        msg: setec astronomy
+      no_log: true
+      with_sequence: start=0 end=2

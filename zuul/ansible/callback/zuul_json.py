@@ -121,6 +121,15 @@ class CallbackModule(CallbackBase):
                          " 'no_log: true' was specified for this result")
         else:
             clean_result = strip_internal_keys(result._result)
+
+            for index, item_result in enumerate(
+                    clean_result.get('results', [])):
+                if not item_result.get('_ansible_no_log', False):
+                    continue
+                clean_result['results'][index] = dict(
+                    censored="the output has been hidden due to the fact that"
+                             " 'no_log: true' was specified for this result")
+
             self.results[-1]['tasks'][-1]['hosts'][host.name] = clean_result
 
     def v2_playbook_on_stats(self, stats):
