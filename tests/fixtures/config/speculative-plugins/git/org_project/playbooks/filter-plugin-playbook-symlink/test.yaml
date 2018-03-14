@@ -1,0 +1,5 @@
+- hosts: all
+  tasks:
+    - name: Test filter plugin
+      debug:
+        msg: "{{ 'ignore me' | my_cool_test }}"

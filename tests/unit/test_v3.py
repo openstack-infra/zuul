@@ -3429,3 +3429,48 @@ class TestJobOutput(AnsibleZuulTestCase):
         log_output = output.getvalue()
         self.assertIn('Final playbook failed', log_output)
         self.assertIn('Failure test', log_output)
+
+
+class TestPlugins(AnsibleZuulTestCase):
+    tenant_config_file = 'config/speculative-plugins/main.yaml'
+
+    def _run_job(self, job_name, project='org/project', roles=''):
+        # Output extra ansible info so we might see errors.
+        self.executor_server.verbose = True
+        conf = textwrap.dedent(
+            """
+            - job:
+                name: {job_name}
+                run: playbooks/{job_name}/test.yaml
+                nodeset:
+                  nodes:
+                    - name: controller
+                      label: whatever
+                {roles}
+            - project:
+                check:
+                  jobs:
+                    - {job_name}
+            """.format(job_name=job_name, roles=roles))
+
+        file_dict = {'zuul.yaml': conf}
+        A = self.fake_gerrit.addFakeChange(project, 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        message = A.messages[0]
+        self.assertIn('ERROR Ansible plugin dir', message)
+        self.assertIn('found adjacent to playbook', message)
+        self.assertIn('in non-trusted repo', message)
+
+    def test_filter_plugin(self):
+        self._run_job('filter-plugin-playbook')
+        self._run_job('filter-plugin-playbook-symlink')
+        self._run_job('filter-plugin-bare-role')
+        self._run_job('filter-plugin-role')
+        self._run_job('filter-plugin-repo-role', project='org/projectrole')
+        self._run_job('filter-plugin-shared-role',
+                      roles="roles: [{zuul: 'org/project2'}]")
+        self._run_job('filter-plugin-shared-bare-role',
+                      roles="roles: [{zuul: 'org/project3', name: 'shared'}]")
