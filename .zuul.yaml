@@ -121,6 +121,7 @@
               - yarn.lock
               - web/.*
         - zuul-stream-functional
+        - zuul-tox-remote
     post:
       jobs:
         - publish-openstack-sphinx-docs-infra-python3
