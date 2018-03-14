@@ -69,15 +69,6 @@ class DuplicateNodeError(Exception):
         super(DuplicateNodeError, self).__init__(message)
 
 
-class MaxNodeError(Exception):
-    def __init__(self, job, tenant):
-        message = textwrap.dedent("""\
-        The job "{job}" exceeds tenant max-nodes-per-job {maxnodes}.""")
-        message = textwrap.fill(message.format(
-            job=job.name, maxnodes=tenant.max_nodes_per_job))
-        super(MaxNodeError, self).__init__(message)
-
-
 class MaxTimeoutError(Exception):
     def __init__(self, job, tenant):
         message = textwrap.dedent("""\
@@ -713,16 +704,12 @@ class JobParser(object):
         if 'nodeset' in conf:
             conf_nodeset = conf['nodeset']
             if isinstance(conf_nodeset, str):
-                # This references an existing named nodeset in the layout.
-                ns = self.pcontext.layout.nodesets.get(conf_nodeset)
-                if ns is None:
-                    raise NodesetNotFoundError(conf_nodeset)
+                # This references an existing named nodeset in the
+                # layout; it will be validated later.
+                ns = conf_nodeset
             else:
                 ns = self.pcontext.nodeset_parser.fromYaml(
                     conf_nodeset, anonymous=True)
-            if self.pcontext.tenant.max_nodes_per_job != -1 and \
-               len(ns) > self.pcontext.tenant.max_nodes_per_job:
-                raise MaxNodeError(job, self.pcontext.tenant)
             job.nodeset = ns
 
         if 'required-projects' in conf:

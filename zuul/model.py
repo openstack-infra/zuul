@@ -967,11 +967,32 @@ class Job(object):
         if self._get('post_run') is not None:
             self.post_run = self.freezePlaybooks(self.post_run, layout)
 
+    def getNodeSet(self, layout):
+        if isinstance(self.nodeset, str):
+            # This references an existing named nodeset in the layout.
+            ns = layout.nodesets.get(self.nodeset)
+            if ns is None:
+                raise Exception(
+                    'The nodeset "{nodeset}" was not found.'.format(
+                        nodeset=self.nodeset))
+            return ns
+        return self.nodeset
+
     def validateReferences(self, layout):
         # Verify that references to other objects in the layout are
         # valid.
         if not self.isBase() and self.parent:
             layout.getJob(self.parent)
+
+        ns = self.getNodeSet(layout)
+        if layout.tenant.max_nodes_per_job != -1 and \
+           len(ns) > layout.tenant.max_nodes_per_job:
+            raise Exception(
+                'The job "{job}" exceeds tenant '
+                'max-nodes-per-job {maxnodes}.'.format(
+                    job=self.name,
+                    maxnodes=layout.tenant.max_nodes_per_job))
+
         for pb in self.pre_run + self.run + self.post_run:
             pb.validateReferences(layout)
 
@@ -1153,6 +1174,9 @@ class Job(object):
         # We must update roles before any playbook contexts
         if other._get('roles') is not None:
             self.addRoles(other.roles)
+
+        # Freeze the nodeset
+        self.nodeset = self.getNodeSet(layout)
 
         if other._get('run') is not None:
             other_run = self.freezePlaybooks(other.run, layout)
