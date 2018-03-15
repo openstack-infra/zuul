@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    The :attr:`project.default-branch` option is now documented.  It has been
+    supported since version 3.0.0, but was omitted from the documentation.
+deprecations:
+  - |
+    The ``merge-mode`` and ``default-branch`` attributes may no longer appear
+    in a :ref:`project-template` stanza.

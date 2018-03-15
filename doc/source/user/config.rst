@@ -1150,12 +1150,34 @@ pipeline.
       jobs specified in project-pipeline definitions on the project
       itself.
 
+   .. attr:: default-branch
+      :default: master
+
+      The name of a branch that Zuul should check out in jobs if no
+      better match is found.  Typically Zuul will check out the branch
+      which matches the change under test, or if a job has specified
+      an :attr:`job.override-checkout`, it will check that out.
+      However, if there is no matching or override branch, then Zuul
+      will checkout the default branch.
+
+      Each project may only have one ``default-branch`` therefore Zuul
+      will use the first value that it encounters for a given project
+      (regardless of in which branch the definition appears).  It may
+      not appear in a :ref:`project-template` definition.
+
    .. attr:: merge-mode
       :default: merge-resolve
 
       The merge mode which is used by Git for this project.  Be sure
       this matches what the remote system which performs merges (i.e.,
-      Gerrit or GitHub).  Must be one of the following values:
+      Gerrit or GitHub).
+
+      Each project may only have one ``merge-mode`` therefore Zuul
+      will use the first value that it encounters for a given project
+      (regardless of in which branch the definition appears).  It may
+      not appear in a :ref:`project-template` definition.
+
+      It must be one of the following values:
 
       .. value:: merge
 
@@ -1199,6 +1221,12 @@ pipeline.
          same shared queue in order to ensure that they don't merge
          changes which break the others.  This is a free-form string;
          just set the same value for each group of projects.
+
+         Each pipeline for a project can only belong to one queue,
+         therefore Zuul will use the first value that it encounters.
+         It need not appear in the first instance of a :attr:`project`
+         stanza; it may appear in secondary instances or even in a
+         :ref:`project-template` definition.
 
       .. attr:: debug
 

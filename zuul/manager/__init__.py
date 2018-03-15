@@ -58,57 +58,7 @@ class PipelineManager(object):
         return "<%s %s>" % (self.__class__.__name__, self.pipeline.name)
 
     def _postConfig(self, layout):
-        self.log.info("Configured Pipeline Manager %s" % self.pipeline.name)
-        self.log.info("  Requirements:")
-        for f in self.ref_filters:
-            self.log.info("    %s" % f)
-        self.log.info("  Events:")
-        for e in self.event_filters:
-            self.log.info("    %s" % e)
-        self.log.info("  Projects:")
-
-        def log_jobs(job_list):
-            for job_name, job_variants in job_list.jobs.items():
-                for variant in job_variants:
-                    # TODOv3(jeblair): represent matchers
-                    efilters = ''
-                    # for b in tree.job._branches:
-                    #     efilters += str(b)
-                    # for f in tree.job._files:
-                    #     efilters += str(f)
-                    # if tree.job.skip_if_matcher:
-                    #     efilters += str(tree.job.skip_if_matcher)
-                    # if efilters:
-                    #     efilters = ' ' + efilters
-                    tags = []
-                    if variant.hold_following_changes:
-                        tags.append('[hold]')
-                    if not variant.voting:
-                        tags.append('[nonvoting]')
-                    if variant.semaphore:
-                        tags.append('[semaphore: %s]' % variant.semaphore)
-                    tags = ' '.join(tags)
-                    self.log.info("      %s%s %s" % (repr(variant),
-                                                     efilters, tags))
-
-        for project_name in layout.project_configs.keys():
-            project_config = layout.project_configs.get(project_name)
-            if project_config:
-                project_pipeline_config = project_config.pipelines.get(
-                    self.pipeline.name)
-                if project_pipeline_config:
-                    self.log.info("    %s" % project_name)
-                    log_jobs(project_pipeline_config.job_list)
-        self.log.info("  On start:")
-        self.log.info("    %s" % self.pipeline.start_actions)
-        self.log.info("  On success:")
-        self.log.info("    %s" % self.pipeline.success_actions)
-        self.log.info("  On failure:")
-        self.log.info("    %s" % self.pipeline.failure_actions)
-        self.log.info("  On merge-failure:")
-        self.log.info("    %s" % self.pipeline.merge_failure_actions)
-        self.log.info("  When disabled:")
-        self.log.info("    %s" % self.pipeline.disabled_actions)
+        pass
 
     def getSubmitAllowNeeds(self):
         # Get a list of code review labels that are allowed to be
@@ -813,8 +763,7 @@ class PipelineManager(object):
         layout = (item.layout or self.pipeline.layout)
 
         project_in_pipeline = True
-        if not layout.getProjectPipelineConfig(item.change.project,
-                                               self.pipeline):
+        if not layout.getProjectPipelineConfig(item):
             self.log.debug("Project %s not in pipeline %s for change %s" % (
                 item.change.project, self.pipeline, item.change))
             project_in_pipeline = False

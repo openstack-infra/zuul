@@ -56,15 +56,15 @@ class TestTenantSimple(TenantParserTestCase):
         project1_config = tenant.layout.project_configs.get(
             'review.example.com/org/project1')
         self.assertTrue('common-config-job' in
-                        project1_config.pipelines['check'].job_list.jobs)
+                        project1_config[0].pipelines['check'].job_list.jobs)
         self.assertTrue('project1-job' in
-                        project1_config.pipelines['check'].job_list.jobs)
+                        project1_config[1].pipelines['check'].job_list.jobs)
         project2_config = tenant.layout.project_configs.get(
             'review.example.com/org/project2')
         self.assertTrue('common-config-job' in
-                        project2_config.pipelines['check'].job_list.jobs)
+                        project2_config[0].pipelines['check'].job_list.jobs)
         self.assertTrue('project2-job' in
-                        project2_config.pipelines['check'].job_list.jobs)
+                        project2_config[1].pipelines['check'].job_list.jobs)
 
     def test_variant_description(self):
         tenant = self.sched.abide.tenants.get('tenant-one')
@@ -98,15 +98,15 @@ class TestTenantOverride(TenantParserTestCase):
         project1_config = tenant.layout.project_configs.get(
             'review.example.com/org/project1')
         self.assertTrue('common-config-job' in
-                        project1_config.pipelines['check'].job_list.jobs)
+                        project1_config[0].pipelines['check'].job_list.jobs)
         self.assertFalse('project1-job' in
-                         project1_config.pipelines['check'].job_list.jobs)
+                         project1_config[0].pipelines['check'].job_list.jobs)
         project2_config = tenant.layout.project_configs.get(
             'review.example.com/org/project2')
         self.assertTrue('common-config-job' in
-                        project2_config.pipelines['check'].job_list.jobs)
+                        project2_config[0].pipelines['check'].job_list.jobs)
         self.assertFalse('project2-job' in
-                         project2_config.pipelines['check'].job_list.jobs)
+                         project2_config[0].pipelines['check'].job_list.jobs)
 
 
 class TestTenantGroups(TenantParserTestCase):
@@ -135,15 +135,15 @@ class TestTenantGroups(TenantParserTestCase):
         project1_config = tenant.layout.project_configs.get(
             'review.example.com/org/project1')
         self.assertTrue('common-config-job' in
-                        project1_config.pipelines['check'].job_list.jobs)
+                        project1_config[0].pipelines['check'].job_list.jobs)
         self.assertFalse('project1-job' in
-                         project1_config.pipelines['check'].job_list.jobs)
+                         project1_config[0].pipelines['check'].job_list.jobs)
         project2_config = tenant.layout.project_configs.get(
             'review.example.com/org/project2')
         self.assertTrue('common-config-job' in
-                        project2_config.pipelines['check'].job_list.jobs)
+                        project2_config[0].pipelines['check'].job_list.jobs)
         self.assertFalse('project2-job' in
-                         project2_config.pipelines['check'].job_list.jobs)
+                         project2_config[0].pipelines['check'].job_list.jobs)
 
 
 class TestTenantGroups2(TenantParserTestCase):
@@ -172,15 +172,15 @@ class TestTenantGroups2(TenantParserTestCase):
         project1_config = tenant.layout.project_configs.get(
             'review.example.com/org/project1')
         self.assertTrue('common-config-job' in
-                        project1_config.pipelines['check'].job_list.jobs)
+                        project1_config[0].pipelines['check'].job_list.jobs)
         self.assertFalse('project1-job' in
-                         project1_config.pipelines['check'].job_list.jobs)
+                         project1_config[0].pipelines['check'].job_list.jobs)
         project2_config = tenant.layout.project_configs.get(
             'review.example.com/org/project2')
         self.assertTrue('common-config-job' in
-                        project2_config.pipelines['check'].job_list.jobs)
+                        project2_config[0].pipelines['check'].job_list.jobs)
         self.assertFalse('project2-job' in
-                         project2_config.pipelines['check'].job_list.jobs)
+                         project2_config[0].pipelines['check'].job_list.jobs)
 
 
 class TestTenantGroups3(TenantParserTestCase):
@@ -208,15 +208,15 @@ class TestTenantGroups3(TenantParserTestCase):
         project1_config = tenant.layout.project_configs.get(
             'review.example.com/org/project1')
         self.assertTrue('common-config-job' in
-                        project1_config.pipelines['check'].job_list.jobs)
+                        project1_config[0].pipelines['check'].job_list.jobs)
         self.assertFalse('project1-job' in
-                         project1_config.pipelines['check'].job_list.jobs)
+                         project1_config[0].pipelines['check'].job_list.jobs)
         project2_config = tenant.layout.project_configs.get(
             'review.example.com/org/project2')
         self.assertTrue('common-config-job' in
-                        project2_config.pipelines['check'].job_list.jobs)
+                        project2_config[0].pipelines['check'].job_list.jobs)
         self.assertTrue('project2-job' in
-                        project2_config.pipelines['check'].job_list.jobs)
+                        project2_config[1].pipelines['check'].job_list.jobs)
 
 
 class TestTenantGroups4(TenantParserTestCase):
@@ -289,11 +289,11 @@ class TestSplitConfig(ZuulTestCase):
         project_config = tenant.layout.project_configs.get(
             'review.example.com/org/project')
         self.assertIn('project-test1',
-                      project_config.pipelines['check'].job_list.jobs)
+                      project_config[0].pipelines['check'].job_list.jobs)
         project1_config = tenant.layout.project_configs.get(
             'review.example.com/org/project1')
         self.assertIn('project1-project2-integration',
-                      project1_config.pipelines['check'].job_list.jobs)
+                      project1_config[0].pipelines['check'].job_list.jobs)
 
     def test_dynamic_split_config(self):
         in_repo_conf = textwrap.dedent(

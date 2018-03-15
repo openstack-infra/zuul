@@ -816,43 +816,43 @@ class ProjectTemplateParser(object):
         self.log = logging.getLogger("zuul.ProjectTemplateParser")
         self.pcontext = pcontext
         self.schema = self.getSchema()
+        self.not_pipelines = ['name', 'description', 'templates',
+                              'merge-mode', 'default-branch',
+                              '_source_context', '_start_mark']
 
     def getSchema(self):
-        project_template = {
-            vs.Required('name'): str,
+        job = {str: vs.Any(str, JobParser.job_attributes)}
+        job_list = [vs.Any(str, job)]
+
+        pipeline_contents = {
+            'queue': str,
+            'debug': bool,
+            'jobs': job_list
+        }
+
+        project = {
+            'name': str,
             'description': str,
-            'merge-mode': vs.Any(
-                'merge', 'merge-resolve',
-                'cherry-pick'),
+            str: pipeline_contents,
             '_source_context': model.SourceContext,
             '_start_mark': ZuulMark,
         }
 
-        job = {str: vs.Any(str, JobParser.job_attributes)}
-        job_list = [vs.Any(str, job)]
-        pipeline_contents = {
-            'queue': str,
-            'debug': bool,
-            'jobs': job_list,
-        }
-
-        for p in self.pcontext.layout.pipelines.values():
-            project_template[p.name] = pipeline_contents
-        return vs.Schema(project_template)
+        return vs.Schema(project)
 
     def fromYaml(self, conf, validate=True):
         if validate:
             with configuration_exceptions('project-template', conf):
                 self.schema(conf)
         source_context = conf['_source_context']
-        project_template = model.ProjectConfig(conf['name'], source_context)
+        project_template = model.ProjectConfig(conf.get('name'),
+                                               source_context)
         start_mark = conf['_start_mark']
-        for pipeline in self.pcontext.layout.pipelines.values():
-            conf_pipeline = conf.get(pipeline.name)
-            if not conf_pipeline:
+        for pipeline_name, conf_pipeline in conf.items():
+            if pipeline_name in self.not_pipelines:
                 continue
             project_pipeline = model.ProjectPipelineConfig()
-            project_template.pipelines[pipeline.name] = project_pipeline
+            project_template.pipelines[pipeline_name] = project_pipeline
             project_pipeline.queue_name = conf_pipeline.get('queue')
             project_pipeline.debug = conf_pipeline.get('debug')
             self.parseJobList(
@@ -885,6 +885,15 @@ class ProjectParser(object):
         self.schema = self.getSchema()
 
     def getSchema(self):
+        job = {str: vs.Any(str, JobParser.job_attributes)}
+        job_list = [vs.Any(str, job)]
+
+        pipeline_contents = {
+            'queue': str,
+            'debug': bool,
+            'jobs': job_list
+        }
+
         project = {
             'name': str,
             'description': str,
@@ -892,98 +901,53 @@ class ProjectParser(object):
             'merge-mode': vs.Any('merge', 'merge-resolve',
                                  'cherry-pick'),
             'default-branch': str,
+            str: pipeline_contents,
             '_source_context': model.SourceContext,
             '_start_mark': ZuulMark,
         }
 
-        job = {str: vs.Any(str, JobParser.job_attributes)}
-        job_list = [vs.Any(str, job)]
-        pipeline_contents = {
-            'queue': str,
-            'debug': bool,
-            'jobs': job_list
-        }
-
-        for p in self.pcontext.layout.pipelines.values():
-            project[p.name] = pipeline_contents
         return vs.Schema(project)
 
-    def fromYaml(self, conf_list):
-        for conf in conf_list:
-            with configuration_exceptions('project', conf):
-                self.schema(conf)
+    def fromYaml(self, conf):
+        self.schema(conf)
 
-        with configuration_exceptions('project', conf_list[0]):
-            project_name = conf_list[0]['name']
-            (trusted, project) = self.pcontext.tenant.getProject(project_name)
-            if project is None:
-                raise ProjectNotFoundError(project_name)
-            project_config = model.ProjectConfig(project.canonical_name)
+        project_name = conf.get('name')
+        if not project_name:
+            # There is no name defined so implicitly add the name
+            # of the project where it is defined.
+            project_name = (conf['_source_context'].project.canonical_name)
+        (trusted, project) = self.pcontext.tenant.getProject(project_name)
+        if project is None:
+            raise ProjectNotFoundError(project_name)
 
-        configs = []
-        for conf in conf_list:
-            implied_branch = None
-            with configuration_exceptions('project', conf):
-                if not conf['_source_context'].trusted:
-                    if project != conf['_source_context'].project:
-                        raise ProjectNotPermittedError()
+        # Parse the project as a template since they're mostly the
+        # same.
+        project_config = self.pcontext.project_template_parser.\
+            fromYaml(conf, validate=False)
+        project_config.name = project.canonical_name
 
-                conf_templates = conf.get('templates', [])
-                # The way we construct a project definition is by
-                # parsing the definition as a template, then applying
-                # all of the templates, including the newly parsed
-                # one, in order.
-                project_template = self.pcontext.project_template_parser.\
-                    fromYaml(conf, validate=False)
-                # If this project definition is in a place where it
-                # should get implied branch matchers, set it.
-                if (not conf['_source_context'].trusted):
-                    implied_branch = conf['_source_context'].branch
-                for name in conf_templates:
-                    if name not in self.pcontext.layout.project_templates:
-                        raise TemplateNotFoundError(name)
-                configs.extend([(self.pcontext.layout.project_templates[name],
-                                 implied_branch)
-                                for name in conf_templates])
-                configs.append((project_template, implied_branch))
-                # Set the following values to the first one that we
-                # find and ignore subsequent settings.
-                mode = conf.get('merge-mode')
-                if mode and project_config.merge_mode is None:
-                    project_config.merge_mode = model.MERGER_MAP[mode]
-                default_branch = conf.get('default-branch')
-                if default_branch and project_config.default_branch is None:
-                    project_config.default_branch = default_branch
-        if project_config.merge_mode is None:
-            # If merge mode was not specified in any project stanza,
-            # set it to the default.
-            project_config.merge_mode = model.MERGER_MAP['merge-resolve']
-        if project_config.default_branch is None:
-            project_config.default_branch = 'master'
-        for pipeline in self.pcontext.layout.pipelines.values():
-            project_pipeline = model.ProjectPipelineConfig()
-            queue_name = None
-            debug = False
-            # For every template, iterate over the job tree and replace or
-            # create the jobs in the final definition as needed.
-            pipeline_defined = False
-            for (template, implied_branch) in configs:
-                if pipeline.name in template.pipelines:
-                    pipeline_defined = True
-                    template_pipeline = template.pipelines[pipeline.name]
-                    project_pipeline.job_list.inheritFrom(
-                        template_pipeline.job_list,
-                        implied_branch)
-                    if template_pipeline.queue_name:
-                        queue_name = template_pipeline.queue_name
-                    if template_pipeline.debug is not None:
-                        debug = template_pipeline.debug
-            if queue_name:
-                project_pipeline.queue_name = queue_name
-            if debug:
-                project_pipeline.debug = True
-            if pipeline_defined:
-                project_config.pipelines[pipeline.name] = project_pipeline
+        if not conf['_source_context'].trusted:
+            if project != conf['_source_context'].project:
+                raise ProjectNotPermittedError()
+
+            # If this project definition is in a place where it
+            # should get implied branch matchers, set it.
+            project_config.addImpliedBranchMatcher(
+                conf['_source_context'].branch)
+
+        # Add templates
+        for name in conf.get('templates', []):
+            if name not in self.pcontext.layout.project_templates:
+                raise TemplateNotFoundError(name)
+            if name not in project_config.templates:
+                project_config.templates.append(name)
+
+        mode = conf.get('merge-mode', 'merge-resolve')
+        project_config.merge_mode = model.MERGER_MAP[mode]
+
+        default_branch = conf.get('default-branch', 'master')
+        project_config.default_branch = default_branch
+
         return project_config
 
 
@@ -1690,62 +1654,40 @@ class TenantParser(object):
                     pcontext.project_template_parser.fromYaml(
                         config_template))
 
-        flattened_projects = self._flattenProjects(data.projects, tenant)
-        for config_projects in flattened_projects.values():
-            # Unlike other config classes, we expect multiple project
-            # stanzas with the same name, so that a config repo can
-            # define a project-pipeline and the project itself can
-            # augment it.  To that end, config_project is a list of
-            # each of the project stanzas.  Each one may be (should
-            # be!) from a different repo, so filter them according to
-            # the include/exclude rules before parsing them.
-            filtered_projects = []
-            for config_project in config_projects:
-                classes = self._getLoadClasses(tenant, config_project)
-                if 'project' in classes:
-                    filtered_projects.append(config_project)
-
-            if not filtered_projects:
+        for config_project in data.projects:
+            classes = self._getLoadClasses(tenant, config_project)
+            if 'project' not in classes:
                 continue
-
-            layout.addProjectConfig(pcontext.project_parser.fromYaml(
-                filtered_projects))
-
-        # Now that all the project pipelines are loaded, verify
-        # references to other config objects.
-        for project_config in layout.project_configs.values():
-            for project_pipeline_config in project_config.pipelines.values():
-                for jobs in project_pipeline_config.job_list.jobs.values():
-                    for job in jobs:
-                        with reference_exceptions(
-                                'project or project-template',
-                                job.source_context,
-                                job.start_mark):
-                            # validate that the job exists on its own (an
-                            # additional requirement for project-pipeline
-                            # jobs)
-                            layout.getJob(job.name)
-                            job.validateReferences(layout)
-
-    def _flattenProjects(self, projects, tenant):
-        # Group together all of the project stanzas for each project.
-        result_projects = {}
-        for config_project in projects:
             with configuration_exceptions('project', config_project):
-                name = config_project.get('name')
-                if not name:
-                    # There is no name defined so implicitly add the name
-                    # of the project where it is defined.
-                    name = (config_project['_source_context'].
-                            project.canonical_name)
-                else:
-                    trusted, project = tenant.getProject(name)
-                    if project is None:
-                        raise ProjectNotFoundError(name)
-                    name = project.canonical_name
-                config_project['name'] = name
-                result_projects.setdefault(name, []).append(config_project)
-        return result_projects
+                layout.addProjectConfig(
+                    pcontext.project_parser.fromYaml(
+                        config_project))
+
+        # Now that all the project pipelines are loaded, fixup and
+        # verify references to other config objects.
+        self._validateProjectPipelineConfigs(layout)
+
+    def _validateProjectPipelineConfigs(self, layout):
+        # Validate references to other config objects
+        ppcs = []
+        for project_name in layout.project_configs.keys():
+            for project_config in layout.project_configs[project_name]:
+                for template_name in project_config.templates:
+                    project_template = layout.getProjectTemplate(template_name)
+                    ppcs.extend(list(project_template.pipelines.values()))
+                ppcs.extend(list(project_config.pipelines.values()))
+        for ppc in ppcs:
+            for jobs in ppc.job_list.jobs.values():
+                for job in jobs:
+                    with reference_exceptions(
+                            'project',
+                            job.source_context,
+                            job.start_mark):
+                        # validate that the job exists on its own (an
+                        # additional requirement for project-pipeline
+                        # jobs)
+                        layout.getJob(job.name)
+                        job.validateReferences(layout)
 
     def _parseLayout(self, base, tenant, data):
         # Don't call this method from dynamic reconfiguration because

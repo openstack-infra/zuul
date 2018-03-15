@@ -1920,6 +1920,7 @@ class TestInRepoJoin(ZuulTestCase):
 
         tenant = self.sched.abide.tenants.get('tenant-one')
         gate_pipeline = tenant.layout.pipelines['gate']
+        self.assertEqual(gate_pipeline.queues, [])
 
         in_repo_conf = textwrap.dedent(
             """

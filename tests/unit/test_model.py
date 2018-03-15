@@ -182,7 +182,7 @@ class TestJob(BaseTestCase):
         })
         self.layout.addJob(python27diablo)
 
-        project_config = self.pcontext.project_parser.fromYaml([{
+        project_config = self.pcontext.project_parser.fromYaml({
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'project',
@@ -192,7 +192,7 @@ class TestJob(BaseTestCase):
                                   'run': 'playbooks/python27.yaml'}}
                 ]
             }
-        }])
+        })
         self.layout.addProjectConfig(project_config)
 
         change = model.Change(self.project)
@@ -247,7 +247,7 @@ class TestJob(BaseTestCase):
         })
         self.layout.addJob(python27)
 
-        project_config = self.pcontext.project_parser.fromYaml([{
+        project_config = self.pcontext.project_parser.fromYaml({
             '_source_context': self.context,
             '_start_mark': self.start_mark,
             'name': 'project',
@@ -256,7 +256,7 @@ class TestJob(BaseTestCase):
                     'python27',
                 ]
             }
-        }])
+        })
         self.layout.addProjectConfig(project_config)
 
         change = model.Change(self.project)
@@ -315,7 +315,7 @@ class TestJob(BaseTestCase):
         self.layout.addJob(job)
 
         project_config = self.pcontext.project_parser.fromYaml(
-            [{
+            {
                 '_source_context': self.context,
                 '_start_mark': self.start_mark,
                 'name': 'project',
@@ -324,7 +324,7 @@ class TestJob(BaseTestCase):
                         'job'
                     ]
                 }
-            }]
+            }
         )
         self.layout.addProjectConfig(project_config)
 
