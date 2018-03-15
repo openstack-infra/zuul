@@ -121,7 +121,7 @@ class TestJob(BaseTestCase):
         # Apply the diablo variant
         diablo = model.Job('py27')
         diablo.timeout = 40
-        job.applyVariant(diablo, self.layout)
+        job.applyVariant(diablo)
 
         self.assertEqual(40, job.timeout)
         self.assertEqual(['py27-pre'],
@@ -140,7 +140,7 @@ class TestJob(BaseTestCase):
 
         good_final = model.Job('py27')
         good_final.voting = False
-        job.applyVariant(good_final, self.layout)
+        job.applyVariant(good_final)
         self.assertFalse(job.voting)
 
         bad_final = model.Job('py27')
@@ -148,7 +148,7 @@ class TestJob(BaseTestCase):
         with testtools.ExpectedException(
                 Exception,
                 "Unable to modify final job"):
-            job.applyVariant(bad_final, self.layout)
+            job.applyVariant(bad_final)
 
     def test_job_inheritance_job_tree(self):
         pipeline = model.Pipeline('gate', self.layout)
