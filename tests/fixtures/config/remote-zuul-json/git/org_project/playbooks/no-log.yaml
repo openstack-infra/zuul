@@ -9,3 +9,31 @@
         msg: setec astronomy
       no_log: true
       with_sequence: start=0 end=2
+    # The next section tests that the results object is still usable
+    # by other tasks even if we're censoring the output in zuul_json.
+    - name: Find files
+      block:
+        - name: Create file
+          copy:
+            content: ""
+            dest: "{{ ansible_user_dir }}/setec_astronomy"
+
+        - name: Find files
+          find:
+            path: "{{ ansible_user_dir }}"
+            file_type: any
+          register: src_files
+
+        - name: Dereference files
+          stat:
+            path: "{{ item.path }}"
+          with_items: "{{ src_files.files }}"
+          register: src_paths
+
+        - name: Print path
+          debug:
+            msg: "{{ item.stat.path }}"
+          when:
+            - item.stat.isreg
+          with_items: "{{ src_paths.results }}"
+      no_log: true

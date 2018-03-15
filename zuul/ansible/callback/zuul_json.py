@@ -22,15 +22,16 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import copy
 import json
 import os
 
 from ansible.plugins.callback import CallbackBase
 try:
-    # It's here in 2.4
+    # It's here in 2.3
     from ansible.vars import strip_internal_keys
 except ImportError:
-    # It's here in 2.3
+    # It's here in 2.4
     from ansible.vars.manager import strip_internal_keys
 
 from zuul.ansible import logconfig
@@ -120,7 +121,11 @@ class CallbackModule(CallbackBase):
                 censored="the output has been hidden due to the fact that"
                          " 'no_log: true' was specified for this result")
         else:
-            clean_result = strip_internal_keys(result._result)
+            # strip_internal_keys makes a deep copy of dict items, but
+            # not lists, so we need to create our own complete deep
+            # copy first so we don't modify the original.
+            myresult = copy.deepcopy(result._result)
+            clean_result = strip_internal_keys(myresult)
 
             for index, item_result in enumerate(
                     clean_result.get('results', [])):
