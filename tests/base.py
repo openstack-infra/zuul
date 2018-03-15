@@ -2407,24 +2407,19 @@ class ZuulTestCase(BaseTestCase):
 
         files = {}
         for (dirpath, dirnames, filenames) in os.walk(source_path):
-            # Note: In case a symlink points to an already existing directory
-            # os.walk includes that in the dirnames list. In order to properly
-            # copy these links, just add them to the filenames list.
-            for dirname in dirnames:
-                test_tree_filepath = os.path.join(dirpath, dirname)
-                if os.path.islink(test_tree_filepath):
-                    filenames.append(dirname)
-
             for filename in filenames:
                 test_tree_filepath = os.path.join(dirpath, filename)
                 common_path = os.path.commonprefix([test_tree_filepath,
                                                     source_path])
                 relative_filepath = test_tree_filepath[len(common_path) + 1:]
-                if os.path.islink(test_tree_filepath):
-                    content = SymLink(os.readlink(test_tree_filepath))
-                else:
-                    with open(test_tree_filepath, 'rb') as f:
-                        content = f.read()
+                with open(test_tree_filepath, 'rb') as f:
+                    content = f.read()
+                    # dynamically create symlinks if the content is of the form
+                    # symlink: <target>
+                    match = re.match(b'symlink: ([^\s]+)', content)
+                    if match:
+                        content = SymLink(match.group(1))
+
                 files[relative_filepath] = content
         self.addCommitToRepo(project, 'add content from fixture',
                              files, branch='master', tag='init')
