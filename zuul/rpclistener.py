@@ -312,7 +312,7 @@ class RPCListener(object):
             for pipeline_name, pipeline in tenant.layout.pipelines.items():
                 for queue in pipeline.queues:
                     for item in queue.queue:
-                        if item.active:
+                        if item.live:
                             queue_size += 1
 
             output.append({'name': tenant_name,
