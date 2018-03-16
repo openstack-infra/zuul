@@ -1028,6 +1028,7 @@ class AnsibleJob(object):
 
         '''
         for entry in os.listdir(path):
+            entry = os.path.join(path, entry)
             if os.path.isdir(entry) and entry.endswith('_plugins'):
                 raise ExecutorError(
                     "Ansible plugin dir %s found adjacent to playbook %s in "
@@ -1036,8 +1037,40 @@ class AnsibleJob(object):
     def findPlaybook(self, path, trusted=False):
         if os.path.exists(path):
             if not trusted:
+                # Plugins can be defined in multiple locations within the
+                # playbook's subtree.
+                #
+                #  1. directly within the playbook:
+                #       block playbook_dir/*_plugins
+                #
+                #  2. within a role defined in playbook_dir/<rolename>:
+                #       block playbook_dir/*/*_plugins
+                #
+                #  3. within a role defined in playbook_dir/roles/<rolename>:
+                #       block playbook_dir/roles/*/*_plugins
+
                 playbook_dir = os.path.dirname(os.path.abspath(path))
-                self._blockPluginDirs(playbook_dir)
+                paths_to_check = []
+
+                def addPathsToCheck(root_dir):
+                    if os.path.isdir(root_dir):
+                        for entry in os.listdir(root_dir):
+                            entry = os.path.join(root_dir, entry)
+                            if os.path.isdir(entry):
+                                paths_to_check.append(entry)
+
+                # handle case 1
+                paths_to_check.append(playbook_dir)
+
+                # handle case 2
+                addPathsToCheck(playbook_dir)
+
+                # handle case 3
+                addPathsToCheck(os.path.join(playbook_dir, 'roles'))
+
+                for path_to_check in paths_to_check:
+                    self._blockPluginDirs(path_to_check)
+
             return path
         raise ExecutorError("Unable to find playbook %s" % path)
 
