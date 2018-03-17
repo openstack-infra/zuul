@@ -30,6 +30,7 @@ import threading
 
 import zuul.model
 import zuul.rpcclient
+import zuul.zk
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), 'static')
 cherrypy.tools.websocket = WebSocketTool()
@@ -194,6 +195,7 @@ class ZuulWebAPI(object):
 
     def __init__(self, zuulweb):
         self.rpc = zuulweb.rpc
+        self.zk = zuulweb.zk
         self.zuulweb = zuulweb
         self.cache = {}
         self.cache_time = {}
@@ -337,6 +339,19 @@ class ZuulWebAPI(object):
         ret = json.loads(job.data[0])
         if ret is None:
             raise cherrypy.HTTPError(404, 'Tenant %s does not exist.' % tenant)
+        resp = cherrypy.response
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return ret
+
+    @cherrypy.expose
+    @cherrypy.tools.save_params()
+    @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
+    def labels(self, tenant):
+        labels = set()
+        for launcher in self.zk.getRegisteredLaunchers():
+            for label in launcher.supported_labels:
+                labels.add(label)
+        ret = [{'name': label} for label in sorted(labels)]
         resp = cherrypy.response
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return ret
@@ -533,7 +548,8 @@ class ZuulWeb(object):
                  static_cache_expiry=3600,
                  connections=None,
                  info=None,
-                 static_path=None):
+                 static_path=None,
+                 zk_hosts=None):
         self.start_time = time.time()
         self.listen_address = listen_address
         self.listen_port = listen_port
@@ -546,6 +562,9 @@ class ZuulWeb(object):
         # instanciate handlers
         self.rpc = zuul.rpcclient.RPCClient(gear_server, gear_port,
                                             ssl_key, ssl_cert, ssl_ca)
+        self.zk = zuul.zk.ZooKeeper()
+        if zk_hosts:
+            self.zk.connect(hosts=zk_hosts, read_only=True)
         self.connections = connections
         self.stream_manager = StreamManager()
 
@@ -573,6 +592,8 @@ class ZuulWeb(object):
                           controller=api, action='project')
         route_map.connect('api', '/api/tenant/{tenant}/pipelines',
                           controller=api, action='pipelines')
+        route_map.connect('api', '/api/tenant/{tenant}/labels',
+                          controller=api, action='labels')
         route_map.connect('api', '/api/tenant/{tenant}/key/{project:.*}.pub',
                           controller=api, action='key')
         route_map.connect('api', '/api/tenant/{tenant}/'
@@ -636,6 +657,7 @@ class ZuulWeb(object):
         cherrypy.server.httpserver = None
         self.wsplugin.unsubscribe()
         self.stream_manager.stop()
+        self.zk.disconnect()
 
 
 if __name__ == "__main__":

@@ -64,6 +64,9 @@ class WebServer(zuul.cmd.ZuulDaemonApp):
                 self.log.exception("Error validating config")
                 sys.exit(1)
 
+        params["zk_hosts"] = get_default(
+            self.config, 'zookeeper', 'hosts', '127.0.0.1:2181')
+
         try:
             self.web = zuul.web.ZuulWeb(**params)
         except Exception as e:

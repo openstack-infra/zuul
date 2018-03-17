@@ -52,7 +52,8 @@ class BaseTestWeb(ZuulTestCase):
             ZuulWebFixture(
                 self.gearman_server.port,
                 self.config,
-                info=zuul.model.WebInfo.fromConfig(self.zuul_ini_config)))
+                info=zuul.model.WebInfo.fromConfig(self.zuul_ini_config),
+                zk_hosts=self.zk_config))
 
         self.executor_server.hold_jobs_in_build = True
 
@@ -370,6 +371,12 @@ class TestWeb(BaseTestWeb):
                 'variant_description': '',
                 'voting': True
             }], data)
+
+    def test_web_labels_list(self):
+        # can we fetch the labels list
+        data = self.get_url('api/tenant/tenant-one/labels').json()
+        expected_list = [{'name': 'label1'}]
+        self.assertEqual(expected_list, data)
 
     def test_web_pipeline_list(self):
         # can we fetch the list of pipelines

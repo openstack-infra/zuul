@@ -1729,6 +1729,7 @@ class FakeSMTP(object):
 class FakeNodepool(object):
     REQUEST_ROOT = '/nodepool/requests'
     NODE_ROOT = '/nodepool/nodes'
+    LAUNCHER_ROOT = '/nodepool/launchers'
 
     log = logging.getLogger("zuul.test.FakeNodepool")
 
@@ -1737,6 +1738,7 @@ class FakeNodepool(object):
         self.client = kazoo.client.KazooClient(
             hosts='%s:%s%s' % (host, port, chroot))
         self.client.start()
+        self.registerLauncher()
         self._running = True
         self.paused = False
         self.thread = threading.Thread(target=self.run)
@@ -1764,6 +1766,12 @@ class FakeNodepool(object):
             return
         for req in self.getNodeRequests():
             self.fulfillRequest(req)
+
+    def registerLauncher(self, labels=["label1"], id="FakeLauncher"):
+        path = os.path.join(self.LAUNCHER_ROOT, id)
+        data = {'id': id, 'supported_labels': labels}
+        self.client.create(
+            path, json.dumps(data).encode('utf8'), makepath=True)
 
     def getNodeRequests(self):
         try:
@@ -2017,7 +2025,7 @@ class WebProxyFixture(fixtures.Fixture):
 
 
 class ZuulWebFixture(fixtures.Fixture):
-    def __init__(self, gearman_server_port, config, info=None):
+    def __init__(self, gearman_server_port, config, info=None, zk_hosts=None):
         super(ZuulWebFixture, self).__init__()
         self.gearman_server_port = gearman_server_port
         self.connections = zuul.lib.connections.ConnectionRegistry()
@@ -2029,6 +2037,7 @@ class ZuulWebFixture(fixtures.Fixture):
             self.info = zuul.model.WebInfo()
         else:
             self.info = info
+        self.zk_hosts = zk_hosts
 
     def _setUp(self):
         # Start the web server
@@ -2036,7 +2045,8 @@ class ZuulWebFixture(fixtures.Fixture):
             listen_address='::', listen_port=0,
             gear_server='127.0.0.1', gear_port=self.gearman_server_port,
             info=self.info,
-            connections=self.connections)
+            connections=self.connections,
+            zk_hosts=self.zk_hosts)
         self.web.start()
         self.addCleanup(self.stop)
 

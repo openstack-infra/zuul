@@ -292,3 +292,69 @@ class ZooKeeper(object):
                     node_data.get('hold_job') == identifier):
                 count += 1
         return count
+
+    # Copy of nodepool/zk.py begins here
+    LAUNCHER_ROOT = "/nodepool/launchers"
+
+    def _bytesToDict(self, data):
+        return json.loads(data.decode('utf8'))
+
+    def _launcherPath(self, launcher):
+        return "%s/%s" % (self.LAUNCHER_ROOT, launcher)
+
+    def getRegisteredLaunchers(self):
+        '''
+        Get a list of all launchers that have registered with ZooKeeper.
+
+        :returns: A list of Launcher objects, or empty list if none are found.
+        '''
+        try:
+            launcher_ids = self.client.get_children(self.LAUNCHER_ROOT)
+        except kze.NoNodeError:
+            return []
+
+        objs = []
+        for launcher in launcher_ids:
+            path = self._launcherPath(launcher)
+            try:
+                data, _ = self.client.get(path)
+            except kze.NoNodeError:
+                # launcher disappeared
+                continue
+
+            objs.append(Launcher.fromDict(self._bytesToDict(data)))
+        return objs
+
+
+class Launcher():
+    '''
+    Class to describe a nodepool launcher.
+    '''
+
+    def __init__(self):
+        self.id = None
+        self._supported_labels = set()
+
+    def __eq__(self, other):
+        if isinstance(other, Launcher):
+            return (self.id == other.id and
+                    self.supported_labels == other.supported_labels)
+        else:
+            return False
+
+    @property
+    def supported_labels(self):
+        return self._supported_labels
+
+    @supported_labels.setter
+    def supported_labels(self, value):
+        if not isinstance(value, set):
+            raise TypeError("'supported_labels' attribute must be a set")
+        self._supported_labels = value
+
+    @staticmethod
+    def fromDict(d):
+        obj = Launcher()
+        obj.id = d.get('id')
+        obj.supported_labels = set(d.get('supported_labels', []))
+        return obj
