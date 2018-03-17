@@ -29,6 +29,7 @@ import os
 import queue
 import random
 import re
+import requests
 import select
 import shutil
 import socket
@@ -40,7 +41,6 @@ import threading
 import traceback
 import time
 import uuid
-import urllib
 import socketserver
 import http.server
 
@@ -1030,11 +1030,10 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         headers = {'x-github-event': name, 'x-hub-signature': signature}
 
         if use_zuulweb:
-            req = urllib.request.Request(
+            return requests.post(
                 'http://127.0.0.1:%s/connection/%s/payload'
                 % (self.zuul_web_port, self.connection_name),
-                data=payload, headers=headers)
-            return urllib.request.urlopen(req)
+                json=data, headers=headers)
         else:
             job = self.rpcclient.submitJob(
                 'github:%s:payload' % self.connection_name,
@@ -1834,17 +1833,15 @@ class WebProxyFixture(fixtures.Fixture):
                 path = self.path
                 for (pattern, replace) in rules:
                     path = re.sub(pattern, replace, path)
-                try:
-                    remote = urllib.request.urlopen(path)
-                except urllib.error.HTTPError as e:
-                    self.send_response(e.code)
+                resp = requests.get(path)
+                self.send_response(resp.status_code)
+                if resp.status_code >= 300:
                     self.end_headers()
                     return
-                self.send_response(int(remote.getcode()))
-                for header in remote.info():
-                    self.send_header(header, remote.info()[header])
+                for key, val in resp.headers.items():
+                    self.send_header(key, val)
                 self.end_headers()
-                self.wfile.write(remote.read())
+                self.wfile.write(resp.content)
 
         self.httpd = socketserver.ThreadingTCPServer(('', 0), Proxy)
         self.port = self.httpd.socket.getsockname()[1]

@@ -740,8 +740,8 @@ class TestGithubDriver(ZuulTestCase):
     def test_ping_event(self):
         # Test valid ping
         pevent = {'repository': {'full_name': 'org/project'}}
-        req = self.fake_github.emitEvent(('ping', pevent))
-        self.assertEqual(req.status, 200, "Ping event didn't succeed")
+        resp = self.fake_github.emitEvent(('ping', pevent))
+        self.assertEqual(resp.status_code, 200, "Ping event didn't succeed")
 
         # Test invalid ping
         pevent = {'repository': {'full_name': 'unknown-project'}}

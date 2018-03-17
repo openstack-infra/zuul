@@ -18,10 +18,11 @@
 import asyncio
 import threading
 import os
-import json
-import urllib
+import urllib.parse
 import time
 import socket
+
+import requests
 
 import zuul.web
 
@@ -86,6 +87,12 @@ class BaseTestWeb(ZuulTestCase):
                     break
             except ConnectionRefusedError:
                 pass
+        self.base_url = "http://{host}:{port}".format(
+            host=self.host, port=self.port)
+
+    def get_url(self, url, *args, **kwargs):
+        return requests.get(
+            urllib.parse.urljoin(self.base_url, url), *args, **kwargs)
 
     def tearDown(self):
         self.executor_server.hold_jobs_in_build = False
@@ -107,24 +114,20 @@ class TestWeb(BaseTestWeb):
         self.executor_server.release('project-merge')
         self.waitUntilSettled()
 
-        req = urllib.request.Request(
-            "http://localhost:%s/tenant-one/status" % self.port)
-        f = urllib.request.urlopen(req)
-        headers = f.info()
-        self.assertIn('Content-Length', headers)
-        self.assertIn('Content-Type', headers)
+        resp = self.get_url("tenant-one/status")
+        self.assertIn('Content-Length', resp.headers)
+        self.assertIn('Content-Type', resp.headers)
         self.assertEqual(
-            'application/json; charset=utf-8', headers['Content-Type'])
-        self.assertIn('Access-Control-Allow-Origin', headers)
-        self.assertIn('Cache-Control', headers)
-        self.assertIn('Last-Modified', headers)
-        data = f.read().decode('utf8')
+            'application/json; charset=utf-8', resp.headers['Content-Type'])
+        self.assertIn('Access-Control-Allow-Origin', resp.headers)
+        self.assertIn('Cache-Control', resp.headers)
+        self.assertIn('Last-Modified', resp.headers)
 
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
         self.waitUntilSettled()
 
-        data = json.loads(data)
+        data = resp.json()
         status_jobs = []
         for p in data['pipelines']:
             for q in p['change_queues']:
@@ -208,19 +211,15 @@ class TestWeb(BaseTestWeb):
         self.executor_server.release('project-merge')
         self.waitUntilSettled()
 
-        req = urllib.request.Request(
-            "http://127.0.0.1:%s/tenants" % self.port)
-        f = urllib.request.urlopen(req)
-        headers = f.info()
-        self.assertIn('Content-Length', headers)
-        self.assertIn('Content-Type', headers)
+        resp = self.get_url("tenants")
+        self.assertIn('Content-Length', resp.headers)
+        self.assertIn('Content-Type', resp.headers)
         self.assertEqual(
-            'application/json; charset=utf-8', headers['Content-Type'])
-        # self.assertIn('Access-Control-Allow-Origin', headers)
-        # self.assertIn('Cache-Control', headers)
-        # self.assertIn('Last-Modified', headers)
-        data = f.read().decode('utf8')
-        data = json.loads(data)
+            'application/json; charset=utf-8', resp.headers['Content-Type'])
+        # self.assertIn('Access-Control-Allow-Origin', resp.headers)
+        # self.assertIn('Cache-Control', resp.headers)
+        # self.assertIn('Last-Modified', resp.headers)
+        data = resp.json()
 
         self.assertEqual('tenant-one', data[0]['name'])
         self.assertEqual(3, data[0]['projects'])
@@ -231,36 +230,24 @@ class TestWeb(BaseTestWeb):
         self.executor_server.release()
         self.waitUntilSettled()
 
-        req = urllib.request.Request(
-            "http://127.0.0.1:%s/tenants" % self.port)
-        f = urllib.request.urlopen(req)
-        data = f.read().decode('utf8')
-        data = json.loads(data)
-
+        data = self.get_url("tenants").json()
         self.assertEqual('tenant-one', data[0]['name'])
         self.assertEqual(3, data[0]['projects'])
         self.assertEqual(0, data[0]['queue'])
 
     def test_web_bad_url(self):
         # do we 404 correctly
-        req = urllib.request.Request(
-            "http://localhost:%s/status/foo" % self.port)
-        self.assertRaises(urllib.error.HTTPError, urllib.request.urlopen, req)
+        resp = self.get_url("status/foo")
+        self.assertEqual(404, resp.status_code)
 
     def test_web_find_change(self):
         # can we filter by change id
-        req = urllib.request.Request(
-            "http://localhost:%s/tenant-one/status/change/1,1" % self.port)
-        f = urllib.request.urlopen(req)
-        data = json.loads(f.read().decode('utf8'))
+        data = self.get_url("tenant-one/status/change/1,1").json()
 
         self.assertEqual(1, len(data), data)
         self.assertEqual("org/project", data[0]['project'])
 
-        req = urllib.request.Request(
-            "http://localhost:%s/tenant-one/status/change/2,1" % self.port)
-        f = urllib.request.urlopen(req)
-        data = json.loads(f.read().decode('utf8'))
+        data = self.get_url("tenant-one/status/change/2,1").json()
 
         self.assertEqual(1, len(data), data)
         self.assertEqual("org/project1", data[0]['project'], data)
@@ -269,18 +256,12 @@ class TestWeb(BaseTestWeb):
         with open(os.path.join(FIXTURE_DIR, 'public.pem'), 'rb') as f:
             public_pem = f.read()
 
-        req = urllib.request.Request(
-            "http://localhost:%s/tenant-one/org/project.pub" %
-            self.port)
-        f = urllib.request.urlopen(req)
-        self.assertEqual(f.read(), public_pem)
+        resp = self.get_url("tenant-one/org/project.pub")
+        self.assertEqual(resp.content, public_pem)
 
     def test_web_404_on_unknown_tenant(self):
-        req = urllib.request.Request(
-            "http://localhost:{}/non-tenant/status".format(self.port))
-        e = self.assertRaises(
-            urllib.error.HTTPError, urllib.request.urlopen, req)
-        self.assertEqual(404, e.code)
+        resp = self.get_url("non-tenant/status")
+        self.assertEqual(404, resp.status_code)
 
 
 class TestInfo(BaseTestWeb):
@@ -294,10 +275,7 @@ class TestInfo(BaseTestWeb):
         self.stats_prefix = statsd_config.get('prefix')
 
     def test_info(self):
-        req = urllib.request.Request(
-            "http://localhost:%s/info" % self.port)
-        f = urllib.request.urlopen(req)
-        info = json.loads(f.read().decode('utf8'))
+        info = self.get_url("info").json()
         self.assertEqual(
             info, {
                 "info": {
@@ -315,10 +293,7 @@ class TestInfo(BaseTestWeb):
             })
 
     def test_tenant_info(self):
-        req = urllib.request.Request(
-            "http://localhost:%s/tenant-one/info" % self.port)
-        f = urllib.request.urlopen(req)
-        info = json.loads(f.read().decode('utf8'))
+        info = self.get_url("tenant-one/info").json()
         self.assertEqual(
             info, {
                 "info": {
