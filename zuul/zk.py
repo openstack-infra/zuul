@@ -294,6 +294,7 @@ class ZooKeeper(object):
         return count
 
     # Copy of nodepool/zk.py begins here
+    NODE_ROOT = "/nodepool/nodes"
     LAUNCHER_ROOT = "/nodepool/launchers"
 
     def _bytesToDict(self, data):
@@ -301,6 +302,9 @@ class ZooKeeper(object):
 
     def _launcherPath(self, launcher):
         return "%s/%s" % (self.LAUNCHER_ROOT, launcher)
+
+    def _nodePath(self, node):
+        return "%s/%s" % (self.NODE_ROOT, node)
 
     def getRegisteredLaunchers(self):
         '''
@@ -324,6 +328,46 @@ class ZooKeeper(object):
 
             objs.append(Launcher.fromDict(self._bytesToDict(data)))
         return objs
+
+    def getNodes(self):
+        '''
+        Get the current list of all nodes.
+
+        :returns: A list of nodes.
+        '''
+        try:
+            return self.client.get_children(self.NODE_ROOT)
+        except kze.NoNodeError:
+            return []
+
+    def getNode(self, node):
+        '''
+        Get the data for a specific node.
+
+        :param str node: The node ID.
+
+        :returns: The node data, or None if the node was not found.
+        '''
+        path = self._nodePath(node)
+        try:
+            data, stat = self.client.get(path)
+        except kze.NoNodeError:
+            return None
+        if not data:
+            return None
+
+        d = self._bytesToDict(data)
+        d['id'] = node
+        return d
+
+    def nodeIterator(self):
+        '''
+        Utility generator method for iterating through all nodes.
+        '''
+        for node_id in self.getNodes():
+            node = self.getNode(node_id)
+            if node:
+                yield node
 
 
 class Launcher():

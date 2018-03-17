@@ -358,6 +358,21 @@ class ZuulWebAPI(object):
 
     @cherrypy.expose
     @cherrypy.tools.save_params()
+    @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
+    def nodes(self, tenant):
+        ret = []
+        for node in self.zk.nodeIterator():
+            node_data = {}
+            for key in ("id", "type", "connection_type", "external_id",
+                        "provider", "state", "state_time", "comment"):
+                node_data[key] = node.get(key)
+            ret.append(node_data)
+        resp = cherrypy.response
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return ret
+
+    @cherrypy.expose
+    @cherrypy.tools.save_params()
     def key(self, tenant, project):
         job = self.rpc.submitJob('zuul:key_get', {'tenant': tenant,
                                                   'project': project,
@@ -594,6 +609,8 @@ class ZuulWeb(object):
                           controller=api, action='pipelines')
         route_map.connect('api', '/api/tenant/{tenant}/labels',
                           controller=api, action='labels')
+        route_map.connect('api', '/api/tenant/{tenant}/nodes',
+                          controller=api, action='nodes')
         route_map.connect('api', '/api/tenant/{tenant}/key/{project:.*}.pub',
                           controller=api, action='key')
         route_map.connect('api', '/api/tenant/{tenant}/'
