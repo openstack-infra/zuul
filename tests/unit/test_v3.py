@@ -3761,8 +3761,8 @@ class TestJobOutput(AnsibleZuulTestCase):
                          j[0]['plays'][0]['tasks'][0]
                          ['hosts']['localhost']['stdout'])
 
-        print(self._get_file(self.history[0],
-                             'work/logs/job-output.txt'))
+        self.log.info(self._get_file(self.history[0],
+                                     'work/logs/job-output.txt'))
         self.assertIn(token,
                       self._get_file(self.history[0],
                                      'work/logs/job-output.txt'))
@@ -3790,8 +3790,8 @@ class TestJobOutput(AnsibleZuulTestCase):
                          j[0]['plays'][0]['tasks'][0]
                          ['hosts']['localhost']['stdout'])
 
-        print(self._get_file(self.history[0],
-                             'work/logs/job-output.json'))
+        self.log.info(self._get_file(self.history[0],
+                                     'work/logs/job-output.json'))
         self.assertIn(token,
                       self._get_file(self.history[0],
                                      'work/logs/job-output.txt'))
