@@ -247,3 +247,10 @@ configuration. Some examples of tenant definitions are:
       The list of connections a tenant can report to. When set, this setting
       can be used to restrict what connections a tenant can use as reporter.
       Without this setting, the tenant can report to any connection.
+
+   .. attr:: allowed-labels
+      :default: []
+
+      The list of labels regexp a tenant can use in job's nodeset. When set,
+      this setting can be used to restrict what labels a tenant can use.
+      Without this setting, the tenant can use any labels.
