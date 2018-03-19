@@ -38,6 +38,10 @@ To clone the latest code, use `git clone https://git.zuul-ci.org/zuul`
 
 Bugs are handled at: https://storyboard.openstack.org/#!/project/openstack-infra/zuul
 
+Suspected security vulnerabilities are most appreciated if first
+reported privately following any of the supported mechanisms
+described at https://zuul-ci.org/docs/zuul/user/vulnerabilities.html
+
 Code reviews are handled by gerrit at https://review.openstack.org
 
 After creating a Gerrit account, use `git review` to submit patches.

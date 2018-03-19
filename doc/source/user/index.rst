@@ -18,3 +18,4 @@ configure it to meet your needs.
    encryption
    badges
    howtos
+   vulnerabilities
