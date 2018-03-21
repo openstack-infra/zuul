@@ -1,0 +1,16 @@
+- hosts: all
+  tasks:
+    - name: Start zuul_console daemon
+      zuul_console:
+    - name: Create first file
+      copy:
+        content: "command test one\n"
+        dest: "{{ ansible_user_dir }}/command_test_file1"
+    - name: Create second file
+      copy:
+        content: "command test two\n"
+        dest: "{{ ansible_user_dir }}/command_test_file2"
+    - name: Show contents of first file
+      command: "cat {{ ansible_user_dir }}/command_test_file1"
+    - name: Show contents of second file
+      command: "cat {{ ansible_user_dir }}/command_test_file2"
