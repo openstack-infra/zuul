@@ -21,3 +21,22 @@
     pre-run: playbooks/pre.yaml
     post-run: playbooks/post.yaml
     run: playbooks/python27.yaml
+
+- job:
+    name: python27-node
+    pre-run: playbooks/pre.yaml
+    post-run: playbooks/post.yaml
+    run: playbooks/python27.yaml
+    nodeset:
+      nodes:
+        name: test
+        label: label1
+
+- job:
+    name: python27-node-post
+    post-run: playbooks/post-fail.yaml
+    run: playbooks/python27.yaml
+    nodeset:
+      nodes:
+        name: test
+        label: label1
