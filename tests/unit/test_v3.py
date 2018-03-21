@@ -2189,6 +2189,67 @@ class TestPrePlaybooks(AnsibleZuulTestCase):
         self.assertTrue(os.path.exists(post_flag_path),
                         "The file %s should exist" % post_flag_path)
 
+    def test_post_playbook_fail_autohold(self):
+        client = zuul.rpcclient.RPCClient('127.0.0.1',
+                                          self.gearman_server.port)
+        self.addCleanup(client.shutdown)
+        r = client.autohold('tenant-one', 'org/project3', 'python27-node-post',
+                            "", "", "reason text", 1)
+        self.assertTrue(r)
+
+        A = self.fake_gerrit.addFakeChange('org/project3', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        build = self.getJobFromHistory('python27-node-post')
+        self.assertEqual(build.result, 'POST_FAILURE')
+
+        # Check nodepool for a held node
+        held_node = None
+        for node in self.fake_nodepool.getNodes():
+            if node['state'] == zuul.model.STATE_HOLD:
+                held_node = node
+                break
+        self.assertIsNotNone(held_node)
+        # Validate node has recorded the failed job
+        self.assertEqual(
+            held_node['hold_job'],
+            " ".join(['tenant-one',
+                      'review.example.com/org/project3',
+                      'python27-node-post', '.*'])
+        )
+        self.assertEqual(held_node['comment'], "reason text")
+
+    def test_pre_playbook_fail_autohold(self):
+        client = zuul.rpcclient.RPCClient('127.0.0.1',
+                                          self.gearman_server.port)
+        self.addCleanup(client.shutdown)
+        r = client.autohold('tenant-one', 'org/project2', 'python27-node',
+                            "", "", "reason text", 1)
+        self.assertTrue(r)
+
+        A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        build = self.getJobFromHistory('python27-node')
+        self.assertIsNone(build.result)
+        self.assertIn('RETRY_LIMIT', A.messages[0])
+
+        # Check nodepool for a held node
+        held_node = None
+        for node in self.fake_nodepool.getNodes():
+            if node['state'] == zuul.model.STATE_HOLD:
+                held_node = node
+                break
+        self.assertIsNotNone(held_node)
+        # Validate node has recorded the failed job
+        self.assertEqual(
+            held_node['hold_job'],
+            " ".join(['tenant-one',
+                      'review.example.com/org/project2',
+                      'python27-node', '.*'])
+        )
+        self.assertEqual(held_node['comment'], "reason text")
+
 
 class TestPostPlaybooks(AnsibleZuulTestCase):
     tenant_config_file = 'config/post-playbook/main.yaml'
