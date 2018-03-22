@@ -124,6 +124,7 @@
         - zuul-tox-remote
     post:
       jobs:
+        - publish-zuul-docs
         - publish-openstack-sphinx-docs-infra-python3
         - publish-openstack-python-branch-tarball
         - publish-openstack-javascript-content:
