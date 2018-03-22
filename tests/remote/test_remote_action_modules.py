@@ -81,6 +81,12 @@ class TestActionModules(AnsibleZuulTestCase):
     def test_assemble_module(self):
         self._run_job('assemble-good', 'SUCCESS')
 
+        # assemble-delegate does multiple tests with various delegates and
+        # safe and non-safe paths. It asserts by itself within ansible so we
+        # expect SUCCESS here.
+        self._run_job('assemble-delegate', 'SUCCESS')
+        self._run_job('assemble-localhost', 'SUCCESS')
+
         self._run_job('assemble-bad', 'FAILURE', ERROR_ACCESS_OUTSIDE)
         self._run_job('assemble-bad-symlink', 'FAILURE', ERROR_ACCESS_OUTSIDE)
         self._run_job('assemble-bad-dir-with-symlink', 'FAILURE',
@@ -88,6 +94,12 @@ class TestActionModules(AnsibleZuulTestCase):
 
     def test_copy_module(self):
         self._run_job('copy-good', 'SUCCESS')
+
+        # copy-delegate does multiple tests with various delegates and
+        # safe and non-safe paths. It asserts by itself within ansible so we
+        # expect SUCCESS here.
+        self._run_job('copy-delegate', 'SUCCESS')
+        self._run_job('copy-localhost', 'SUCCESS')
 
         self._run_job('copy-bad', 'FAILURE', ERROR_ACCESS_OUTSIDE)
         self._run_job('copy-bad-symlink', 'FAILURE', ERROR_ACCESS_OUTSIDE)
@@ -112,11 +124,23 @@ class TestActionModules(AnsibleZuulTestCase):
     def test_patch_module(self):
         self._run_job('patch-good', 'SUCCESS')
 
+        # patch-delegate does multiple tests with various delegates and
+        # safe and non-safe paths. It asserts by itself within ansible so we
+        # expect SUCCESS here.
+        self._run_job('patch-delegate', 'SUCCESS')
+        self._run_job('patch-localhost', 'SUCCESS')
+
         self._run_job('patch-bad', 'FAILURE', ERROR_ACCESS_OUTSIDE)
         self._run_job('patch-bad-symlink', 'FAILURE', ERROR_ACCESS_OUTSIDE)
 
     def test_script_module(self):
         self._run_job('script-good', 'SUCCESS')
+
+        # script-delegate does multiple tests with various delegates. It
+        # asserts by itself within ansible so we
+        # expect SUCCESS here.
+        self._run_job('script-delegate', 'SUCCESS')
+        self._run_job('script-localhost', 'SUCCESS')
 
         self._run_job('script-bad', 'FAILURE', ERROR_ACCESS_OUTSIDE)
         self._run_job('script-bad-symlink', 'FAILURE', ERROR_ACCESS_OUTSIDE)
@@ -124,11 +148,23 @@ class TestActionModules(AnsibleZuulTestCase):
     def test_template_module(self):
         self._run_job('template-good', 'SUCCESS')
 
+        # template-delegate does multiple tests with various delegates and
+        # safe and non-safe paths. It asserts by itself within ansible so we
+        # expect SUCCESS here.
+        self._run_job('template-delegate', 'SUCCESS')
+        self._run_job('template-localhost', 'SUCCESS')
+
         self._run_job('template-bad', 'FAILURE', ERROR_ACCESS_OUTSIDE)
         self._run_job('template-bad-symlink', 'FAILURE', ERROR_ACCESS_OUTSIDE)
 
     def test_unarchive_module(self):
         self._run_job('unarchive-good', 'SUCCESS')
+
+        # template-delegate does multiple tests with various delegates and
+        # safe and non-safe paths. It asserts by itself within ansible so we
+        # expect SUCCESS here.
+        self._run_job('unarchive-delegate', 'SUCCESS')
+        self._run_job('unarchive-localhost', 'SUCCESS')
 
         self._run_job('unarchive-bad', 'FAILURE', ERROR_ACCESS_OUTSIDE)
         self._run_job('unarchive-bad-symlink', 'FAILURE', ERROR_ACCESS_OUTSIDE)

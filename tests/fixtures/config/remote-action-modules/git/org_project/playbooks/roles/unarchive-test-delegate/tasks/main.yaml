@@ -1,0 +1,21 @@
+- include: unarchive-delegate.yaml
+  with_items:
+    - ::1
+    - 127.0.0.1
+    - localhost
+
+- name: Define target dir
+  set_fact:
+    targetdir: "{{ zuul.executor.work_root }}/unarchive-target"
+
+- name: Create target dir
+  file:
+    state: directory
+    path: "{{ targetdir }}"
+  delegate_to: localhost
+
+- name: Unarchive
+  copy:
+    src: archive.tar
+    dest: "{{ targetdir }}"
+  delegate_to: localhost

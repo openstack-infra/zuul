@@ -1,0 +1,11 @@
+- hosts: localhost
+  roles:
+    - copy-test-localhost
+
+- hosts: 127.0.0.1
+  roles:
+    - copy-test-localhost
+
+- hosts: "::1"
+  roles:
+    - copy-test-localhost

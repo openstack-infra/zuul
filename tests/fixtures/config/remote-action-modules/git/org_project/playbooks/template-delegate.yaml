@@ -1,0 +1,3 @@
+- hosts: all
+  roles:
+    - template-test-delegate

@@ -1,0 +1,11 @@
+- name: Script
+  script: script.sh
+  delegate_to: "{{ item }}"
+  register: result
+  ignore_errors: true
+
+- assert:
+    that:
+      - "result.failed == true"
+      - "'Executing local code is prohibited' in result.msg"
+    msg: Script must fail due to local code execution restriction

@@ -1,0 +1,29 @@
+- name: Patch with basedir
+  patch:
+    src: patch
+    basedir: "/opt/patch-dest"
+    strip: 1
+  delegate_to: "{{ item }}"
+  register: result
+  ignore_errors: true
+
+- assert:
+    that:
+      - "result.failed == true"
+      - "'Accessing files from outside the working dir' in result.msg"
+    msg: Patch must fail due to accessing files outside the working dir
+
+- name: Patch with dest
+  patch:
+    src: patch
+    dest: "/opt/patch-dest/readme"
+    strip: 1
+  delegate_to: "{{ item }}"
+  register: result
+  ignore_errors: true
+
+- assert:
+    that:
+      - "result.failed == true"
+      - "'Accessing files from outside the working dir' in result.msg"
+    msg: Patch must fail due to accessing files outside the working dir

@@ -151,3 +151,29 @@ def _fail_if_local_module(module):
     if not _is_official_module(module):
         msg_dict = _fail_module_dict(module._task.action)
         raise AnsibleError(msg_dict['msg'])
+
+
+def _is_localhost_task(task):
+
+    # remote_addr is what's in the value of ansible_host and/or the opposite
+    # side of a mapping. So if you had an inventory with:
+    #
+    # all:
+    #   hosts:
+    #     ubuntu-xenial:
+    #       ansible_connection: ssh
+    #       ansible_host: 23.253.109.74
+    # remote_addr would be 23.253.109.74.
+    #
+    # localhost is special, since it's not in the inventory but instead is
+    # added directly by ansible.
+    #
+    # The only way a user could supply a remote_addr with arbitrary ipv6
+    # values is if they used add_host - which we don't let unprivileged code
+    # do.
+
+    if (task._play_context.connection == 'local'
+        or task._play_context.remote_addr == 'localhost'
+        or task._task.delegate_to == 'localhost'):
+        return True
+    return False

@@ -1,0 +1,12 @@
+- name: Unarchive
+  copy:
+    src: archive.tar
+    dest: /opt/unarchive-dest
+  register: result
+  ignore_errors: true
+
+- assert:
+    that:
+      - "result.failed == true"
+      - "'Accessing files from outside the working dir' in result.msg"
+    msg: Unarchive must fail due to accessing files outside the working dir

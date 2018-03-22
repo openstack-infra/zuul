@@ -1,0 +1,13 @@
+- name: Copy
+  copy:
+    src: file
+    dest: /opt/copy-dest
+  delegate_to: "{{ item }}"
+  register: result
+  ignore_errors: true
+
+- assert:
+    that:
+      - "result.failed == true"
+      - "'Accessing files from outside the working dir' in result.msg"
+    msg: Copy must fail due to accessing files outside the working dir

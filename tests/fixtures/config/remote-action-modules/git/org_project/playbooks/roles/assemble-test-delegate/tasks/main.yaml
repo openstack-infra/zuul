@@ -1,0 +1,22 @@
+- include: assemble-delegate.yaml
+  with_items:
+    - ::1
+    - 127.0.0.1
+    - localhost
+
+- name: Define target dir
+  set_fact:
+    targetdir: "{{ zuul.executor.work_root }}/assemble-target"
+
+- name: Create target dir
+  file:
+    state: directory
+    path: "{{ targetdir }}"
+  delegate_to: localhost
+
+- name: Assemble to safe local path
+  assemble:
+    src: dir
+    dest: "{{ targetdir }}/assemble-dest.conf"
+    remote_src: no
+  delegate_to: localhost

@@ -28,4 +28,9 @@ class ActionModule(unarchive.ActionModule):
         if not paths._is_official_module(self):
             return paths._fail_module_dict(self._task.action)
 
+        # Note: The unarchive module reuses the copy module to copy the archive
+        # to the remote. Thus we don't need to check the dest here if we run
+        # against localhost. We also have tests that would break if this
+        # changes in the future.
+
         return super(ActionModule, self).run(tmp, task_vars)
