@@ -2275,7 +2275,7 @@ class ZuulTestCase(BaseTestCase):
 
     def setup_config(self):
         # This creates the per-test configuration object.  It can be
-        # overriden by subclasses, but should not need to be since it
+        # overridden by subclasses, but should not need to be since it
         # obeys the config_file and tenant_config_file attributes.
         self.config = configparser.ConfigParser()
         self.config.read(os.path.join(FIXTURE_DIR, self.config_file))

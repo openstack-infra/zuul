@@ -834,7 +834,7 @@ class Job(object):
 
         # These attributes affect how the job is actually run and more
         # care must be taken when overriding them.  If a job is
-        # declared "final", these may not be overriden in a
+        # declared "final", these may not be overridden in a
         # project-pipeline.
         self.execution_attributes = dict(
             parent=None,
