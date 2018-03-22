@@ -52,7 +52,7 @@ To create a `GitHub application
 * Set Setup URL to your setup documentation, when user install the application
   they are redirected to this url
 * Set Webhook URL to
-  ``http://<zuul-hostname>/connection/<connection-name>/payload``.
+  ``http://<zuul-hostname>:9000/connection/<connection-name>/payload``.
 * Create a Webhook secret
 * Set permissions:
 
