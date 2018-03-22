@@ -1019,6 +1019,7 @@ class Scheduler(threading.Thread):
         # of requests - the most specific is selected.
         autohold_key = None
         scope = Scope.NONE
+        self.log.debug("Checking build autohold key %s", autohold_key_base)
         for request in self.autohold_requests:
             ref_filter = request[-1]
             if not autohold_key_base_issubset(autohold_key_base, request) \
@@ -1032,6 +1033,8 @@ class Scheduler(threading.Thread):
             else:
                 candidate_scope = Scope.REF
 
+            self.log.debug("Build autohold key %s matched scope %s",
+                           autohold_key_base, candidate_scope)
             if candidate_scope > scope:
                 scope = candidate_scope
                 autohold_key = request
@@ -1039,7 +1042,6 @@ class Scheduler(threading.Thread):
         return autohold_key
 
     def _processAutohold(self, build):
-
         # We explicitly only want to hold nodes for jobs if they have
         # failed / retry_limit / post_failure and have an autohold request.
         hold_list = ["FAILURE", "RETRY_LIMIT", "POST_FAILURE"]
@@ -1047,16 +1049,9 @@ class Scheduler(threading.Thread):
             return
 
         autohold_key = self._getAutoholdRequestKey(build)
-        try:
-            if autohold_key is not None:
-                self.nodepool.holdNodeSet(build.nodeset, autohold_key)
-        except Exception:
-            self.log.exception("Unable to process autohold for %s:",
-                               autohold_key)
-            if autohold_key in self.autohold_requests:
-                self.log.debug("Removing autohold %s due to exception",
-                               autohold_key)
-                del self.autohold_requests[autohold_key]
+        self.log.debug("Got autohold key %s", autohold_key)
+        if autohold_key is not None:
+            self.nodepool.holdNodeSet(build.nodeset, autohold_key)
 
     def _doBuildCompletedEvent(self, event):
         build = event.build
@@ -1066,6 +1061,9 @@ class Scheduler(threading.Thread):
         # the nodes to nodepool.
         try:
             self._processAutohold(build)
+        except Exception:
+            self.log.exception("Unable to process autohold for %s" % build)
+        try:
             self.nodepool.returnNodeSet(build.nodeset)
         except Exception:
             self.log.exception("Unable to return nodeset %s" % build.nodeset)

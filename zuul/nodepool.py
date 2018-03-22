@@ -81,16 +81,19 @@ class Nodepool(object):
 
     def holdNodeSet(self, nodeset, autohold_key):
         '''
-        If requested, perform a hold on the given set of nodes.
+        Perform a hold on the given set of nodes.
 
         :param NodeSet nodeset: The object containing the set of nodes to hold.
         :param set autohold_key: A set with the tenant/project/job names
             associated with the given NodeSet.
         '''
+        self.log.info("Holding nodeset %s" % (nodeset,))
         (hold_iterations, reason) = self.sched.autohold_requests[autohold_key]
         nodes = nodeset.getNodes()
 
         for node in nodes:
+            if node.lock is None:
+                raise Exception("Node %s is not locked" % (node,))
             node.state = model.STATE_HOLD
             node.hold_job = " ".join(autohold_key)
             node.comment = reason
