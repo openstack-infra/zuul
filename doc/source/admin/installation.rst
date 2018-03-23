@@ -107,17 +107,4 @@ Using Apache as the Reverse Proxy requires the ``mod_proxy``,
 ``mod_proxy_http`` and ``mod_proxy_wstunnel`` modules to be installed and
 enabled. Static Offload and White Label additionally require ``mod_rewrite``.
 
-Static Offload
---------------
-
-.. TODO: Fill in specifics in the next patch
-
-White Labeled Tenant
---------------------
-
-.. TODO: Fill in specifics in the next patch
-
-Sub-URL
--------
-
-.. TODO: Fill in specifics in the next patch
+.. TODO(mordred): Fill in specifics for all three methods
