@@ -1,0 +1,18 @@
+- hosts: all
+  roles:
+    - revoke-sudo
+    - set-zuul-log-path-fact
+    # Both sets of quotes are required.
+    # The "" quotes are for the shell to protect the '' quotes.
+    # We need the '' quotes because defines here are essentially
+    # direct string substitutions. Therefore:
+    #   --define "ZUUL_API_URL='https://zuul.openstack.org'"
+    # with the javascript code:
+    #   return ZUUL_API_URL
+    # results in
+    #   return 'https://zuul.openstack.org'
+    # in the compiled javascript.
+    - role: npm
+      npm_command: >-
+        build:dist --
+          --define "ZUUL_API_URL='{{ zuul_api_url }}'"

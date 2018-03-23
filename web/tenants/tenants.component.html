@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <!--
 Copyright 2017 Red Hat
 
@@ -14,22 +13,8 @@ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 License for the specific language governing permissions and limitations
 under the License.
 -->
-<html>
-<head>
-  <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
-  <title id='pagetitle'><%= htmlWebpackPlugin.options.title %></title>
-</head>
-<body ng-app="zuulTenants" ng-controller="mainController"><div class="container-fluid">
-  <nav class="navbar navbar-default">
-  <div class="container-fluid">
-    <div class="navbar-header">
-      <a class="navbar-brand">Zuul Dashboard</a>
-    </div>
-    <ul class="nav navbar-nav">
-      <li class="active"><a href=".">Tenants</a></li>
-    </ul>
-  </div>
-  </nav>
+<div class="container-fluid">
+  <!-- TODO(mordred) Make navigation smarter to handle tenants list -->
   <table class="table table-hover table-condensed">
     <thead>
       <tr>
@@ -42,14 +27,14 @@ under the License.
       </tr>
     </thead>
     <tbody>
-      <tr ng-repeat="tenant in tenants">
+      <tr *ngFor="let tenant of tenants">
         <td>{{ tenant.name }}</td>
-        <td><a href="t/{{ tenant.name }}/status.html">status</a></td>
-        <td><a href="t/{{ tenant.name }}/jobs.html">jobs</a></td>
-        <td><a href="t/{{ tenant.name }}/builds.html">builds</a></td>
+        <td><a [routerLink]="['/t', tenant.name, 'status.html']">status</a></td>
+        <td><a [routerLink]="['/t', tenant.name, 'jobs.html']">jobs</a></td>
+        <td><a [routerLink]="['/t', tenant.name, 'builds.html']">builds</a></td>
         <td>{{ tenant.projects }}</td>
         <td>{{ tenant.queue }}</td>
       </tr>
     </tbody>
   </table>
-</div></body></html>
+</div>
