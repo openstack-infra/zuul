@@ -123,7 +123,7 @@ success, the pipeline reports back to Gerrit with ``Verified`` vote of
          my_gerrit:
            Verified: 1
        failure:
-         my_gerrit
+         my_gerrit:
            Verified: -1
 
 .. TODO: See TODO for more annotated examples of common pipeline configurations.

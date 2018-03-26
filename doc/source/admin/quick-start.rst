@@ -66,7 +66,7 @@ service in Zuul, and a connection to Gerrit.
     [gearman]
     server=127.0.0.1
 
-    [connection gerrit]
+    [connection my_gerrit]
     driver=gerrit
     server=git.example.com
     port=29418
@@ -84,7 +84,7 @@ the *example-project* project:
     - tenant:
         name: example-tenant
         source:
-          gerrit:
+          my_gerrit:
             untrusted-projects:
               - example-project
 
