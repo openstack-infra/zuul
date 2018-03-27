@@ -1232,7 +1232,7 @@ class AnsibleJob(object):
             role_path = self.findRole(link, trusted=jobdir_playbook.trusted)
         except RoleNotFoundError:
             if role['implicit']:
-                self.log.info("Implicit role not found in %s", link)
+                self.log.debug("Implicit role not found in %s", link)
                 return
             raise
         if role_path is None:
