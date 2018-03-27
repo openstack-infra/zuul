@@ -24,6 +24,8 @@
 import angular from 'angular'
 import './styles/stream.css'
 
+import { getSourceUrl } from './util'
+
 function escapeLog (text) {
   const pattern = /[<>&"']/g
 
@@ -32,7 +34,7 @@ function escapeLog (text) {
   })
 }
 
-function zuulStartStream () {
+function zuulStartStream ($location) {
   let pageUpdateInMS = 250
   let receiveBuffer = ''
 
@@ -71,7 +73,7 @@ function zuulStartStream () {
     } else {
       protocol = 'ws://'
     }
-    let path = url['pathname'].replace(/stream.html.*$/g, '') + 'console-stream'
+    let path = getSourceUrl('console-stream', $location)
     params['websocket_url'] = protocol + url['host'] + path
   }
   let ws = new WebSocket(params['websocket_url'])
@@ -93,7 +95,7 @@ function zuulStartStream () {
 }
 
 angular.module('zuulStream', []).controller(
-  'mainController', function ($scope, $http) {
-    window.onload = zuulStartStream()
+  'mainController', function ($scope, $http, $location) {
+    window.onload = zuulStartStream($location)
   }
 )

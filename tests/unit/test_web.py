@@ -114,7 +114,7 @@ class TestWeb(BaseTestWeb):
         self.executor_server.release('project-merge')
         self.waitUntilSettled()
 
-        resp = self.get_url("tenant-one/status")
+        resp = self.get_url("api/tenant/tenant-one/status")
         self.assertIn('Content-Length', resp.headers)
         self.assertIn('Content-Type', resp.headers)
         self.assertEqual(
@@ -211,7 +211,7 @@ class TestWeb(BaseTestWeb):
         self.executor_server.release('project-merge')
         self.waitUntilSettled()
 
-        resp = self.get_url("tenants")
+        resp = self.get_url("api/tenants")
         self.assertIn('Content-Length', resp.headers)
         self.assertIn('Content-Type', resp.headers)
         self.assertEqual(
@@ -230,7 +230,7 @@ class TestWeb(BaseTestWeb):
         self.executor_server.release()
         self.waitUntilSettled()
 
-        data = self.get_url("tenants").json()
+        data = self.get_url("api/tenants").json()
         self.assertEqual('tenant-one', data[0]['name'])
         self.assertEqual(3, data[0]['projects'])
         self.assertEqual(0, data[0]['queue'])
@@ -242,12 +242,12 @@ class TestWeb(BaseTestWeb):
 
     def test_web_find_change(self):
         # can we filter by change id
-        data = self.get_url("tenant-one/status/change/1,1").json()
+        data = self.get_url("api/tenant/tenant-one/status/change/1,1").json()
 
         self.assertEqual(1, len(data), data)
         self.assertEqual("org/project", data[0]['project'])
 
-        data = self.get_url("tenant-one/status/change/2,1").json()
+        data = self.get_url("api/tenant/tenant-one/status/change/2,1").json()
 
         self.assertEqual(1, len(data), data)
         self.assertEqual("org/project1", data[0]['project'], data)
@@ -256,11 +256,11 @@ class TestWeb(BaseTestWeb):
         with open(os.path.join(FIXTURE_DIR, 'public.pem'), 'rb') as f:
             public_pem = f.read()
 
-        resp = self.get_url("tenant-one/org/project.pub")
+        resp = self.get_url("api/tenant/tenant-one/key/org/project.pub")
         self.assertEqual(resp.content, public_pem)
 
     def test_web_404_on_unknown_tenant(self):
-        resp = self.get_url("non-tenant/status")
+        resp = self.get_url("api/tenant/non-tenant/status")
         self.assertEqual(404, resp.status_code)
 
 
@@ -275,7 +275,7 @@ class TestInfo(BaseTestWeb):
         self.stats_prefix = statsd_config.get('prefix')
 
     def test_info(self):
-        info = self.get_url("info").json()
+        info = self.get_url("api/info").json()
         self.assertEqual(
             info, {
                 "info": {
@@ -293,7 +293,7 @@ class TestInfo(BaseTestWeb):
             })
 
     def test_tenant_info(self):
-        info = self.get_url("tenant-one/info").json()
+        info = self.get_url("api/tenant/tenant-one/info").json()
         self.assertEqual(
             info, {
                 "info": {

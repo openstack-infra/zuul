@@ -26,7 +26,7 @@ import voluptuous
 
 from zuul.connection import BaseConnection
 from zuul.lib.config import get_default
-from zuul.web.handler import BaseWebHandler, StaticHandler
+from zuul.web.handler import BaseTenantWebHandler
 
 BUILDSET_TABLE = 'zuul_buildset'
 BUILD_TABLE = 'zuul_build'
@@ -129,8 +129,7 @@ class SQLConnection(BaseConnection):
     def getWebHandlers(self, zuul_web, info):
         info.capabilities.job_history = True
         return [
-            SqlWebHandler(self, zuul_web, 'GET', '/{tenant}/builds'),
-            StaticHandler(zuul_web, '/{tenant}/builds.html'),
+            SqlWebHandler(self, zuul_web, 'GET', 'builds'),
         ]
 
     def validateWebConfig(self, config, connections):
@@ -155,7 +154,7 @@ class SQLConnection(BaseConnection):
             return True
 
 
-class SqlWebHandler(BaseWebHandler):
+class SqlWebHandler(BaseTenantWebHandler):
     log = logging.getLogger("zuul.web.SqlHandler")
     filters = ("project", "pipeline", "change", "branch", "patchset", "ref",
                "result", "uuid", "job_name", "voting", "node_name", "newrev")

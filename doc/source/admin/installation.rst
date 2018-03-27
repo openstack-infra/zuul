@@ -86,8 +86,11 @@ White Label
 
 Static Offload
   Shift the duties of serving static files, such as HTML, Javascript, CSS or
-  images either to the Reverse Proxy server or to a completely separate
-  location such as a Swift Object Store or a CDN-enabled static web server.
+  images to the Reverse Proxy server.
+
+Static External
+  Serve the static files from a completely separate location that does not
+  support programmatic rewrite rules such as a Swift Object Store.
 
 Sub-URL
   Serve a Zuul dashboard from a location below the root URL as part of
@@ -107,4 +110,64 @@ Using Apache as the Reverse Proxy requires the ``mod_proxy``,
 ``mod_proxy_http`` and ``mod_proxy_wstunnel`` modules to be installed and
 enabled. Static Offload and White Label additionally require ``mod_rewrite``.
 
-.. TODO(mordred): Fill in specifics for all three methods
+All of the cases require a rewrite rule for the websocket streaming, so the
+simplest reverse-proxy case is::
+
+  RewriteEngine on
+  RewriteRule ^/api/tenant/(.*)/console-stream ws://localhost:9000/api/tenant/$1/console-stream [P]
+  RewriteRule ^/(.*)$ http://localhost:9000/$1 [P]
+
+
+Static Offload
+--------------
+
+To have the Reverse Proxy serve the static html/javscript assets instead of
+proxying them to the REST layer, register the location where you unpacked
+the web application as the document root and add a simple rewrite rule::
+
+  DocumentRoot /var/lib/html
+  <Directory /var/lib/html>
+    Require all granted
+  </Directory>
+  RewriteEngine on
+  RewriteRule ^/t/.*/(.*)$ /$1 [L]
+  RewriteRule ^/api/tenant/(.*)/console-stream ws://localhost:9000/api/tenant/$1/console-stream [P]
+  RewriteRule ^/api/(.*)$ http://localhost:9000/api/$1 [P]
+
+White Labeled Tenant
+--------------------
+
+Running a white-labeled tenant is similar to the offload case, but adds a
+rule to ensure connection webhooks don't try to get put into the tenant scope.
+
+.. note::
+
+  It's possible to do white-labelling without static offload, but it is more
+  complex with no benefit.
+
+Assuming the zuul tenant name is "example", the rewrite rules are::
+
+  DocumentRoot /var/lib/html
+  <Directory /var/lib/html>
+    Require all granted
+  </Directory>
+  RewriteEngine on
+  RewriteRule ^/api/connection/(.*)$ http://localhost:9000/api/connection/$1 [P]
+  RewriteRule ^/api/console-stream ws://localhost:9000/api/tenant/example/console-stream [P]
+  RewriteRule ^/api/(.*)$ http://localhost:9000/api/tenant/example/$1 [P]
+
+Static External
+---------------
+
+.. note::
+
+  Hosting zuul dashboard on an external static location that does not support
+  dynamic url rewrite rules only works for white-labeled deployments.
+
+In order to serve the zuul dashboard code from an external static location,
+``ZUUL_API_URL`` must be set at javascript build time by passing the
+``--define`` flag to the ``npm build:dist`` command.
+
+.. code-block:: bash
+
+  npm build:dist -- --define "ZUUL_API_URL='http://zuul-web.example.com'"

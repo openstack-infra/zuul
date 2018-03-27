@@ -19,12 +19,33 @@
 // @licend  The above is the entire license notice
 // for the JavaScript code in this page.
 
+// TODO(mordred) This is a temporary hack until we're on @angular/router
+function extractTenant (url) {
+  if (url.includes('/t/')) {
+    // This is a multi-tenant deploy, find the tenant
+    const tenantStart = url.lastIndexOf('/t/') + 3
+    const tenantEnd = url.indexOf('/', tenantStart)
+    return url.slice(tenantStart, tenantEnd)
+  } else {
+    return null
+  }
+}
+
 // TODO(mordred) This should be encapsulated in an Angular Service singleton
 // that fetches the other things from the info endpoint.
 export function getSourceUrl (filename, $location) {
   if (typeof ZUUL_API_URL !== 'undefined') {
-    return ZUUL_API_URL + '/' + filename
+    return `${ZUUL_API_URL}/api/${filename}`
   } else {
-    return filename
+    let tenant = extractTenant($location.url())
+    if (tenant) {
+      // Multi-tenant deploy. This is at t/a-tenant/x.html. api path is at
+      // api/tenant/a-tenant/x, so should be at ../../api/tenant/a-tenant/x
+      return `../../api/tenant/${tenant}/${filename}`
+    } else {
+      // Whilelabel deploy. This is at x.html. api path is at
+      // api/x, so should be at api/x
+      return `api/${filename}`
+    }
   }
 }

@@ -1031,7 +1031,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
 
         if use_zuulweb:
             return requests.post(
-                'http://127.0.0.1:%s/connection/%s/payload'
+                'http://127.0.0.1:%s/api/connection/%s/payload'
                 % (self.zuul_web_port, self.connection_name),
                 json=data, headers=headers)
         else:
@@ -1863,7 +1863,8 @@ class ZuulWebFixture(fixtures.Fixture):
         # Start the web server
         self.web = zuul.web.ZuulWeb(
             listen_address='127.0.0.1', listen_port=0,
-            gear_server='127.0.0.1', gear_port=self.gearman_server_port)
+            gear_server='127.0.0.1', gear_port=self.gearman_server_port,
+            info=zuul.model.WebInfo())
         loop = asyncio.new_event_loop()
         loop.set_debug(True)
         ws_thread = threading.Thread(target=self.web.run, args=(loop,))

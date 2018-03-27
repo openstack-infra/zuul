@@ -320,19 +320,21 @@ class ZuulWeb(object):
             is run within a separate (non-main) thread.
         """
         routes = [
-            ('GET', '/info', self._handleRootInfo),
-            ('GET', '/{tenant}/info', self._handleTenantInfo),
-            ('GET', '/tenants', self._handleTenantsRequest),
-            ('GET', '/{tenant}/status', self._handleStatusRequest),
-            ('GET', '/{tenant}/jobs', self._handleJobsRequest),
-            ('GET', '/{tenant}/status/change/{change}',
+            ('GET', '/api/info', self._handleRootInfo),
+            ('GET', '/api/tenants', self._handleTenantsRequest),
+            ('GET', '/api/tenant/{tenant}/info', self._handleTenantInfo),
+            ('GET', '/api/tenant/{tenant}/status', self._handleStatusRequest),
+            ('GET', '/api/tenant/{tenant}/jobs', self._handleJobsRequest),
+            ('GET', '/api/tenant/{tenant}/status/change/{change}',
              self._handleStatusChangeRequest),
-            ('GET', '/{tenant}/console-stream', self._handleWebsocket),
-            ('GET', '/{tenant}/{project:.*}.pub', self._handleKeyRequest),
+            ('GET', '/api/tenant/{tenant}/console-stream',
+             self._handleWebsocket),
+            ('GET', '/api/tenant/{tenant}/key/{project:.*}.pub',
+             self._handleKeyRequest),
         ]
 
         static_routes = [
-            StaticHandler(self, '/{tenant}/', 'status.html'),
+            StaticHandler(self, '/t/{tenant}/', 'status.html'),
             StaticHandler(self, '/', 'tenants.html'),
         ]
 
@@ -340,7 +342,7 @@ class ZuulWeb(object):
             routes.append((route.method, route.path, route.handleRequest))
 
         # Add fallthrough routes at the end for the static html/js files
-        routes.append(('GET', '/{tenant}/{path:.*}', self._handleStatic))
+        routes.append(('GET', '/t/{tenant}/{path:.*}', self._handleStatic))
         routes.append(('GET', '/{path:.*}', self._handleStatic))
 
         self.log.debug("ZuulWeb starting")

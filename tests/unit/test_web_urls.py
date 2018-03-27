@@ -14,6 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import json
 import urllib
 
 from bs4 import BeautifulSoup
@@ -66,7 +67,7 @@ class TestDirect(TestWebURLs, ZuulTestCase):
         self.port = self.web.port
 
     def test_status_page(self):
-        self._crawl('/tenant-one/status.html')
+        self._crawl('/t/tenant-one/status.html')
 
 
 class TestWhiteLabel(TestWebURLs, ZuulTestCase):
@@ -75,14 +76,31 @@ class TestWhiteLabel(TestWebURLs, ZuulTestCase):
     def setUp(self):
         super(TestWhiteLabel, self).setUp()
         rules = [
-            ('^/(.*)$', 'http://localhost:{}/tenant-one/\\1'.format(
-                self.web.port)),
+            ('^/(.*)$', 'http://localhost:{}/\\1'.format(self.web.port)),
         ]
         self.proxy = self.useFixture(WebProxyFixture(rules))
         self.port = self.proxy.port
 
     def test_status_page(self):
         self._crawl('/status.html')
+
+
+class TestWhiteLabelAPI(TestWebURLs, ZuulTestCase):
+    # Test a zuul-web behind a whitelabel proxy (i.e., what
+    # zuul.openstack.org does).
+    def setUp(self):
+        super(TestWhiteLabelAPI, self).setUp()
+        rules = [
+            ('^/api/(.*)$',
+             'http://localhost:{}/api/tenant/tenant-one/\\1'.format(
+                 self.web.port)),
+        ]
+        self.proxy = self.useFixture(WebProxyFixture(rules))
+        self.port = self.proxy.port
+
+    def test_info(self):
+        info = json.loads(self._get(self.port, '/api/info').decode('utf-8'))
+        self.assertEqual('tenant-one', info['info']['tenant'])
 
 
 class TestSuburl(TestWebURLs, ZuulTestCase):
@@ -98,4 +116,4 @@ class TestSuburl(TestWebURLs, ZuulTestCase):
         self.port = self.proxy.port
 
     def test_status_page(self):
-        self._crawl('/zuul3/tenant-one/status.html')
+        self._crawl('/zuul3/t/tenant-one/status.html')
