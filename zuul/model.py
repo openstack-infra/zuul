@@ -3214,11 +3214,10 @@ class Capabilities(object):
 class WebInfo(object):
     """Information about the system needed by zuul-web /info."""
 
-    def __init__(self, websocket_url=None, rest_api_url=None,
+    def __init__(self, websocket_url=None,
                  capabilities=None, stats_url=None,
                  stats_prefix=None, stats_type=None):
         self.capabilities = capabilities or Capabilities()
-        self.rest_api_url = rest_api_url
         self.stats_prefix = stats_prefix
         self.stats_type = stats_type
         self.stats_url = stats_url
@@ -3232,7 +3231,6 @@ class WebInfo(object):
     def copy(self):
         return WebInfo(
             capabilities=self.capabilities.copy(),
-            rest_api_url=self.rest_api_url,
             stats_prefix=self.stats_prefix,
             stats_type=self.stats_type,
             stats_url=self.stats_url,
@@ -3241,7 +3239,6 @@ class WebInfo(object):
     @staticmethod
     def fromConfig(config):
         return WebInfo(
-            rest_api_url=get_default(config, 'web', 'rest_api_url', None),
             stats_prefix=get_default(config, 'statsd', 'prefix'),
             stats_type=get_default(config, 'web', 'stats_type', 'graphite'),
             stats_url=get_default(config, 'web', 'stats_url', None),
@@ -3251,7 +3248,6 @@ class WebInfo(object):
     def toDict(self):
         d = dict()
         d['capabilities'] = self.capabilities.toDict()
-        d['rest_api_url'] = self.rest_api_url
         d['websocket_url'] = self.websocket_url
         stats = dict()
         stats['prefix'] = self.stats_prefix

@@ -279,7 +279,6 @@ class TestInfo(BaseTestWeb):
         self.assertEqual(
             info, {
                 "info": {
-                    "rest_api_url": None,
                     "capabilities": {
                         "job_history": False
                     },
@@ -297,7 +296,6 @@ class TestInfo(BaseTestWeb):
         self.assertEqual(
             info, {
                 "info": {
-                    "rest_api_url": None,
                     "tenant": "tenant-one",
                     "capabilities": {
                         "job_history": False

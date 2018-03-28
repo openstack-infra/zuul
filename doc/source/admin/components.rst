@@ -647,11 +647,6 @@ sections of ``zuul.conf`` are used by the web server:
 
       Port to use for web server process.
 
-   .. attr:: rest_api_url
-
-      Base URL on which the zuul-web REST service is exposed, if different
-      than the base URL where the web application is hosted.
-
    .. attr:: websocket_url
 
       Base URL on which the websocket service is exposed, if different
