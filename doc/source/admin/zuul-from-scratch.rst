@@ -62,7 +62,6 @@ Install Zuul
    git clone https://git.zuul-ci.org/zuul
    cd zuul/
    sudo dnf install $(bindep -b) -y
-   sudo pip3 install git+https://github.com/sigmavirus24/github3.py.git@develop#egg=Github3.py
    sudo pip3 install .
 
 Setup
