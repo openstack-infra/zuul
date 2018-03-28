@@ -48,7 +48,7 @@ Install Nodepool
 ::
 
    sudo adduser --system nodepool --home-dir /var/lib/nodepool --create-home
-   git clone https://git.openstack.org/openstack-infra/nodepool
+   git clone https://git.zuul-ci.org/nodepool
    cd nodepool/
    sudo dnf -y install $(bindep -b)
    sudo pip3 install .
@@ -59,7 +59,7 @@ Install Zuul
 ::
 
    sudo adduser --system zuul --home-dir /var/lib/zuul --create-home
-   git clone https://git.openstack.org/openstack-infra/zuul
+   git clone https://git.zuul-ci.org/zuul
    cd zuul/
    sudo dnf install $(bindep -b) -y
    sudo pip3 install git+https://github.com/sigmavirus24/github3.py.git@develop#egg=Github3.py
@@ -341,7 +341,7 @@ Add to ``/etc/zuul/zuul.conf``::
 
    [connection zuul-git]
    driver=git
-   baseurl=https://git.openstack.org/
+   baseurl=https://git.zuul-ci.org/
    EOF"
 
 Restart executor and scheduler::

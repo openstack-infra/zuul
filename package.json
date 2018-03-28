@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Web Dashboard for Zuul",
   "main": "index.js",
-  "repository": "https://git.openstack.org/openstack-infra/zuul",
+  "repository": "https://git.zuul-ci.org/zuul",
   "author": "OpenStack Infra",
   "license": "Apache-2.0",
   "babel": {
