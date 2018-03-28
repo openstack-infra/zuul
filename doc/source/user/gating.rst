@@ -238,8 +238,10 @@ Cross-Project Dependencies
 --------------------------
 
 Zuul permits users to specify dependencies across projects.  Using a
-special footer in Git commit messages, users may specify that a change
-depends on another change in any repository known to Zuul.
+special footer, users may specify that a change depends on another
+change in any repository known to Zuul.  In Gerrit based projects
+this footer needs to be added to the git commit message.  In GitHub
+based projects this footer must be added to the pull request description.
 
 Zuul's cross-project dependencies behave like a directed acyclic graph
 (DAG), like git itself, to indicate a one-way dependency relationship
@@ -247,8 +249,8 @@ between changes in different git repositories.  Change A may depend on
 B, but B may not depend on A.
 
 To use them, include ``Depends-On: <change-url>`` in the footer of a
-commit message.  For example, a change which depends on a GitHub pull
-request (PR #4) might have the following footer::
+commit message or pull request.  For example, a change which depends
+on a GitHub pull request (PR #4) might have the following footer::
 
   Depends-On: https://github.com/example/test/pull/4
 
