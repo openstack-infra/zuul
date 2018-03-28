@@ -1,4 +1,4 @@
-/* global ZUUL_API_URL */
+/* global URL, ZUUL_API_URL */
 // @licstart  The following is the entire license notice for the
 // JavaScript code in this page.
 //
@@ -37,15 +37,24 @@ export function getSourceUrl (filename, $location) {
   if (typeof ZUUL_API_URL !== 'undefined') {
     return `${ZUUL_API_URL}/api/${filename}`
   } else {
-    let tenant = extractTenant($location.url())
+    const currentUrl = new URL(window.location)
+    const tenant = extractTenant(currentUrl.href)
+    const baseHref = getBaseHrefFromPath(currentUrl.pathname)
     if (tenant) {
-      // Multi-tenant deploy. This is at t/a-tenant/x.html. api path is at
-      // api/tenant/a-tenant/x, so should be at ../../api/tenant/a-tenant/x
-      return `../../api/tenant/${tenant}/${filename}`
+      // Multi-tenant deploy. This is at t/a-tenant/x.html
+      return `${baseHref}api/tenant/${tenant}/${filename}`
     } else {
-      // Whilelabel deploy. This is at x.html. api path is at
-      // api/x, so should be at api/x
-      return `api/${filename}`
+      // Whitelabel deploy or tenants list, such as /status.html, /tenants.html
+      // or /zuul/status.html or /zuul/tenants.html
+      return `${baseHref}api/${filename}`
     }
+  }
+}
+
+function getBaseHrefFromPath (path) {
+  if (path.includes('/t/')) {
+    return path.slice(0, path.lastIndexOf('/t/') + 1)
+  } else {
+    return path.split('/').slice(0, -1).join('/') + '/'
   }
 }

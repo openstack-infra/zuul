@@ -29,7 +29,7 @@ angular.module('zuulTenants', []).controller(
     'mainController', function ($scope, $http, $location) {
       $scope.tenants = undefined
       $scope.tenants_fetch = function () {
-        $http.get(getSourceUrl('api/tenants', $location))
+        $http.get(getSourceUrl('tenants', $location))
             .then(function success (result) {
               $scope.tenants = result.data
             })
