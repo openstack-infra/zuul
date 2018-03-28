@@ -1717,8 +1717,9 @@ class ExecutorServer(object):
             config, 'merger', 'git_http_low_speed_limit', '1000')
         self.merge_speed_time = get_default(
             config, 'merger', 'git_http_low_speed_time', '30')
-        execution_wrapper_name = get_default(self.config, 'executor',
-                                             'execution_wrapper', 'bubblewrap')
+        # If the execution driver ever becomes configurable again,
+        # this is where it would happen.
+        execution_wrapper_name = 'bubblewrap'
         load_multiplier = float(get_default(self.config, 'executor',
                                             'load_multiplier', '2.5'))
         self.max_load_avg = multiprocessing.cpu_count() * load_multiplier

@@ -399,10 +399,10 @@ playbook is in a config project, the executor runs the playbook in the
 *trusted* execution context, otherwise, it is run in the *untrusted*
 execution context.
 
-Both execution contexts use `bubblewrap`_ [#nullwrap]_ to create a
-namespace to ensure that playbook executions are isolated and are unable
-to access files outside of a restricted environment.  The administrator
-may configure additional local directories on the executor to be made
+Both execution contexts use `bubblewrap`_ [#nullwrap]_ to create a namespace to
+ensure that playbook executions are isolated and are unable to access
+files outside of a restricted environment.  The administrator may
+configure additional local directories on the executor to be made
 available to the restricted environment.
 
 The trusted execution context has access to all Ansible features,
@@ -423,8 +423,14 @@ files outside of the restricted execution context.  These redundant
 protections are made as part of a defense-in-depth strategy.
 
 .. _bubblewrap: https://github.com/projectatomic/bubblewrap
-.. [#nullwrap] Unless one has set execution_wrapper to nullwrap in the
-               executor configuration.
+
+.. _zuul-discuss: http://lists.zuul-ci.org/cgi-bin/mailman/listinfo/zuul-discuss
+
+.. [#nullwrap] `bubblewrap` is integral to securely operating Zuul.
+      If it is difficult for you to use it in your environment, we
+      encourage you to let us know via the `zuul-discuss`_ mailing
+      list.
+
 
 Configuration
 ~~~~~~~~~~~~~
@@ -529,25 +535,6 @@ The following sections of ``zuul.conf`` are used by the executor:
 
       List of paths, separated by ``:`` to read-write bind mount into
       untrusted bubblewrap contexts.
-
-   .. attr:: execution_wrapper
-      :default: bubblewrap
-
-      Name of the execution wrapper to use when executing
-      `ansible-playbook`. The default, `bubblewrap` is recommended for
-      all installations.
-
-      There is also a `nullwrap` driver for situations where one wants
-      to run Zuul without access to bubblewrap or in such a way that
-      bubblewrap may interfere with the jobs themselves. However,
-      `nullwrap` is considered unsafe, as `bubblewrap` provides
-      significant protections against malicious users and accidental
-      breakage in playbooks. As such,  `nullwrap` is not recommended
-      for use in production.
-
-      This option, and thus, `nullwrap`, may be removed in the future.
-      `bubblewrap` has become integral to securely operating Zuul.  If you
-      have a valid use case for it, we encourage you to let us know.
 
    .. attr:: load_multiplier
       :default: 2.5
