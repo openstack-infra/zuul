@@ -70,7 +70,7 @@ def main():
                          "unencrypted connection. Your secret may get "
                          "compromised.\n")
 
-    req = Request("%s/%s.pub" % (args.url.rstrip('/'), args.project))
+    req = Request("%s/key/%s.pub" % (args.url.rstrip('/'), args.project))
     pubkey = urlopen(req)
 
     if args.infile:

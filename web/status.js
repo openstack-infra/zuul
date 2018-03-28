@@ -36,7 +36,7 @@ import { getSourceUrl } from './util'
 /**
  * @return The $.zuul instance
  */
-function zuulStart ($) {
+function zuulStart ($, $location) {
   // Start the zuul app (expects default dom)
 
   let $container, $indicator
@@ -60,7 +60,7 @@ function zuulStart ($) {
       params['source_data'] = DemoStatusTree
     }
   } else {
-    params['source'] = getSourceUrl('status')
+    params['source'] = getSourceUrl('status', $location)
   }
 
   let zuul = $.zuul(params)
@@ -120,7 +120,7 @@ if (module.hot) {
 }
 
 angular.module('zuulStatus', []).controller(
-  'mainController', function ($scope, $http) {
-    zuulStart(jQuery)
+  'mainController', function ($scope, $http, $location) {
+    zuulStart(jQuery, $location)
   }
 )

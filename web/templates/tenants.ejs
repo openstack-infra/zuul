@@ -44,9 +44,9 @@ under the License.
     <tbody>
       <tr ng-repeat="tenant in tenants">
         <td>{{ tenant.name }}</td>
-        <td><a href="{{ tenant.name }}/status.html">status</a></td>
-        <td><a href="{{ tenant.name }}/jobs.html">jobs</a></td>
-        <td><a href="{{ tenant.name }}/builds.html">builds</a></td>
+        <td><a href="t/{{ tenant.name }}/status.html">status</a></td>
+        <td><a href="t/{{ tenant.name }}/jobs.html">jobs</a></td>
+        <td><a href="t/{{ tenant.name }}/builds.html">builds</a></td>
         <td>{{ tenant.projects }}</td>
         <td>{{ tenant.queue }}</td>
       </tr>
