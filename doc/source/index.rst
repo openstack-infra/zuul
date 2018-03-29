@@ -28,6 +28,7 @@ Contents:
    user/index
    admin/index
    developer/index
+   releasenotes
 
 .. toctree::
    :hidden:
