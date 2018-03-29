@@ -22,7 +22,7 @@ To configure a project's `webhook events
 <https://developer.github.com/webhooks/creating/>`_:
 
 * Set *Payload URL* to
-  ``http://<zuul-hostname>/connection/<connection-name>/payload``.
+  ``http://<zuul-hostname>:<port>/api/connection/<connection-name>/payload``.
 
 * Set *Content Type* to ``application/json``.
 
@@ -52,7 +52,7 @@ To create a `GitHub application
 * Set Setup URL to your setup documentation, when user install the application
   they are redirected to this url
 * Set Webhook URL to
-  ``http://<zuul-hostname>:9000/connection/<connection-name>/payload``.
+  ``http://<zuul-hostname>:<port>/api/connection/<connection-name>/payload``.
 * Create a Webhook secret
 * Set permissions:
 
