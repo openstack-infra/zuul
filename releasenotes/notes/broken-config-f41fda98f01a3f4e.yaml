@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Zuul is now ables to start with an invalid configuration.
+    When reading configuration files from project repositories,
+    if an issue is detected, Zuul will store the issue and skip
+    the broken block of configuration. Issues are then reported
+    in the scheduler log at the end of the configuration phase.

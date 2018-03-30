@@ -4,3 +4,6 @@
       gerrit:
         config-projects:
           - common-config
+        untrusted-projects:
+          - org/project
+          - org/project2

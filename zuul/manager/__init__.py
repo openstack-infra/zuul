@@ -429,11 +429,12 @@ class PipelineManager(object):
             # actually run with that config.
             if trusted_updates:
                 self.log.debug("Loading dynamic layout (phase 1)")
-                loader.createDynamicLayout(
+                layout = loader.createDynamicLayout(
                     item.pipeline.layout.tenant,
                     build_set.files,
                     include_config_projects=True)
-                trusted_layout_verified = True
+                if not len(layout.loading_errors):
+                    trusted_layout_verified = True
 
             # Then create the config a second time but without changes
             # to config repos so that we actually use this config.
@@ -447,27 +448,40 @@ class PipelineManager(object):
                 # We're a change to a config repo (with no untrusted
                 # config items ahead), so just use the current pipeline
                 # layout.
-                return item.queue.pipeline.layout
-            self.log.debug("Loading dynamic layout complete")
-        except zuul.configloader.ConfigurationSyntaxError as e:
-            self.log.info("Configuration syntax error in dynamic layout")
-            if trusted_layout_verified:
-                # The config is good if we include config-projects,
-                # but is currently invalid if we omit them.  Instead
-                # of returning the whole error message, just leave a
-                # note that the config will work once the dependent
-                # changes land.
-                msg = "This change depends on a change "\
-                      "to a config project.\n\n"
-                msg += textwrap.fill(textwrap.dedent("""\
-                The syntax of the configuration in this change has
-                been verified to be correct once the config project
-                change upon which it depends is merged, but it can not
-                be used until that occurs."""))
-                item.setConfigError(msg)
+                if not len(layout.loading_errors):
+                    return item.queue.pipeline.layout
+            if len(layout.loading_errors):
+                self.log.info("Configuration syntax error in dynamic layout")
+                if trusted_layout_verified:
+                    # The config is good if we include config-projects,
+                    # but is currently invalid if we omit them.  Instead
+                    # of returning the whole error message, just leave a
+                    # note that the config will work once the dependent
+                    # changes land.
+                    msg = "This change depends on a change "\
+                          "to a config project.\n\n"
+                    msg += textwrap.fill(textwrap.dedent("""\
+                    The syntax of the configuration in this change has
+                    been verified to be correct once the config project
+                    change upon which it depends is merged, but it can not
+                    be used until that occurs."""))
+                    item.setConfigError(msg)
+                    return None
+                else:
+                    # Find a layout loading error that match
+                    # the current item.change and only report
+                    # if one is found.
+                    for err in layout.loading_errors.errors:
+                        context = err[0]
+                        if context.project.name == item.change.project.name:
+                            if context.branch == item.change.branch:
+                                item.setConfigError(str(err[1]))
+                                return None
+                    self.log.info(
+                        "Configuration syntax error not related to "
+                        "change context. Error won't be reported.")
             else:
-                item.setConfigError(str(e))
-            return None
+                self.log.debug("Loading dynamic layout complete")
         except Exception:
             self.log.exception("Error in dynamic layout")
             item.setConfigError("Unknown configuration error")
