@@ -13,12 +13,9 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-import os
 
-try:
-    from unittest import mock
-except ImportError:
-    import mock
+import os
+from unittest import mock
 
 import tests.base
 from tests.base import BaseTestCase

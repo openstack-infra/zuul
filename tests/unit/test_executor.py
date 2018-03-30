@@ -15,13 +15,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-try:
-    from unittest import mock
-except ImportError:
-    import mock
-
 import logging
 import time
+from unittest import mock
 
 import zuul.executor.server
 import zuul.model

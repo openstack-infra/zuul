@@ -10,7 +10,6 @@ testtools>=0.9.32
 sphinxcontrib-programoutput
 sphinx-autodoc-typehints
 reno>=2.5.0 # Apache-2.0
-mock
 PyMySQL
 mypy
 zuul-sphinx
