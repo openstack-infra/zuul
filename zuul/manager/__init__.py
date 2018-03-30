@@ -151,15 +151,12 @@ class PipelineManager(object):
 
     def reportStart(self, item):
         if not self.pipeline._disabled:
-            try:
-                self.log.info("Reporting start, action %s item %s" %
-                              (self.pipeline.start_actions, item))
-                ret = self.sendReport(self.pipeline.start_actions, item)
-                if ret:
-                    self.log.error("Reporting item start %s received: %s" %
-                                   (item, ret))
-            except Exception:
-                self.log.exception("Exception while reporting start:")
+            self.log.info("Reporting start, action %s item %s" %
+                          (self.pipeline.start_actions, item))
+            ret = self.sendReport(self.pipeline.start_actions, item)
+            if ret:
+                self.log.error("Reporting item start %s received: %s" %
+                               (item, ret))
 
     def sendReport(self, action_reporters, item, message=None):
         """Sends the built message off to configured reporters.
@@ -170,11 +167,14 @@ class PipelineManager(object):
         report_errors = []
         if len(action_reporters) > 0:
             for reporter in action_reporters:
-                ret = reporter.report(item)
-                if ret:
-                    report_errors.append(ret)
-            if len(report_errors) == 0:
-                return
+                try:
+                    ret = reporter.report(item)
+                    if ret:
+                        report_errors.append(ret)
+                except Exception as e:
+                    item.setReportedResult('ERROR')
+                    self.log.exception("Exception while reporting")
+                    report_errors.append(str(e))
         return report_errors
 
     def isChangeReadyToBeEnqueued(self, change):
@@ -844,16 +844,12 @@ class PipelineManager(object):
             self.pipeline._consecutive_failures >= self.pipeline.disable_at):
             self.pipeline._disabled = True
         if actions:
-            try:
-                self.log.info("Reporting item %s, actions: %s" %
-                              (item, actions))
-                ret = self.sendReport(actions, item)
-                if ret:
-                    self.log.error("Reporting item %s received: %s" %
-                                   (item, ret))
-            except Exception:
-                self.log.exception("Exception while reporting:")
-                item.setReportedResult('ERROR')
+            self.log.info("Reporting item %s, actions: %s" %
+                          (item, actions))
+            ret = self.sendReport(actions, item)
+            if ret:
+                self.log.error("Reporting item %s received: %s" %
+                               (item, ret))
         return ret
 
     def reportStats(self, item):
