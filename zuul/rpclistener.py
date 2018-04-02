@@ -172,6 +172,7 @@ class RPCListener(object):
             return
 
         params['count'] = args['count']
+        params['node_hold_expiration'] = args['node_hold_expiration']
 
         self.sched.autohold(**params)
         job.sendWorkComplete()

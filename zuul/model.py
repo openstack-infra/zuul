@@ -390,6 +390,7 @@ class Node(object):
         self.provider = None
         self.region = None
         self.username = None
+        self.hold_expiration = None
 
     @property
     def state(self):

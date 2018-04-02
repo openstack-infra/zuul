@@ -439,14 +439,14 @@ class Scheduler(threading.Thread):
         # TODOv3(jeblair): reconfigure time should be per-tenant
 
     def autohold(self, tenant_name, project_name, job_name, ref_filter,
-                 reason, count):
+                 reason, count, node_hold_expiration):
         key = (tenant_name, project_name, job_name, ref_filter)
         if count == 0 and key in self.autohold_requests:
             self.log.debug("Removing autohold for %s", key)
             del self.autohold_requests[key]
         else:
             self.log.debug("Autohold requested for %s", key)
-            self.autohold_requests[key] = (count, reason)
+            self.autohold_requests[key] = (count, reason, node_hold_expiration)
 
     def promote(self, tenant_name, pipeline_name, change_ids):
         event = PromoteEvent(tenant_name, pipeline_name, change_ids)

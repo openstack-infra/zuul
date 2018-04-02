@@ -1666,7 +1666,8 @@ class FakeNodepool(object):
                     updated_time=now,
                     image_id=None,
                     host_keys=host_keys,
-                    executor='fake-nodepool')
+                    executor='fake-nodepool',
+                    hold_expiration=None)
         if self.remote_ansible:
             data['connection_type'] = 'ssh'
         if 'fakeuser' in node_type:
