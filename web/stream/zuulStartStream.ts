@@ -14,6 +14,11 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
+declare var BuiltinConfig: object
+
+import { ActivatedRoute } from '@angular/router'
+
+import ZuulService from '../zuul/zuul.service'
 
 function escapeLog (text) {
   const pattern = /[<>&"']/g
@@ -23,8 +28,8 @@ function escapeLog (text) {
   })
 }
 
-function zuulStartStream (tenant, zuulService) {
-  let pageUpdateInMS = 250
+function zuulStartStream (route: ActivatedRoute, zuulService: ZuulService) {
+  const pageUpdateInMS = 250
   let receiveBuffer = ''
 
   setInterval(function () {
@@ -32,32 +37,31 @@ function zuulStartStream (tenant, zuulService) {
     if (receiveBuffer !== '') {
       document.getElementById('zuulstreamcontent').innerHTML += receiveBuffer
       receiveBuffer = ''
-      if (document.getElementById('autoscroll').checked) {
+      if ((<HTMLInputElement>document.getElementById('autoscroll')).checked) {
         window.scrollTo(0, document.body.scrollHeight)
       }
     }
   }, pageUpdateInMS)
 
-  let url = new URL(window.location)
+  const queryParamMap = route.snapshot.queryParamMap
+  const tenant = route.snapshot.paramMap.get('tenant')
 
-  let params = {
-    uuid: url.searchParams.get('uuid')
+  const params = {
+    uuid: queryParamMap.get('uuid')
   }
-  document.getElementById('pagetitle').innerHTML = params['uuid']
-  if (url.searchParams.has('logfile')) {
-    params['logfile'] = url.searchParams.get('logfile')
-    let logfileSuffix = `(${params['logfile']})`
-    document.getElementById('pagetitle').innerHTML += logfileSuffix
+  if (queryParamMap.has('logfile')) {
+    params['logfile'] = queryParamMap.get('logfile')
+    const logfileSuffix = `(${params['logfile']})`
   }
   if (typeof BuiltinConfig !== 'undefined') {
-    params['websocket_url'] = BuiltinConfig.websocket_url
-  } else if (url.searchParams.has('websocket_url')) {
-    params['websocket_url'] = url.searchParams.get('websocket_url')
+    params['websocket_url'] = BuiltinConfig['websocket_url']
+  } else if (queryParamMap.has('websocket_url')) {
+    params['websocket_url'] = queryParamMap.get('websocket_url')
   } else {
     params['websocket_url'] = zuulService.getWebsocketUrl(
       'console-stream', tenant)
   }
-  let ws = new WebSocket(params['websocket_url'])
+  const ws = new WebSocket(params['websocket_url'])
 
   ws.onmessage = function (event) {
     console.log('onmessage')
