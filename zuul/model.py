@@ -766,15 +766,14 @@ class Role(object, metaclass=abc.ABCMeta):
 class ZuulRole(Role):
     """A reference to an ansible role in a Zuul project."""
 
-    def __init__(self, target_name, connection_name, project_name,
-                 implicit=False):
+    def __init__(self, target_name, project_canonical_name, implicit=False):
         super(ZuulRole, self).__init__(target_name)
-        self.connection_name = connection_name
-        self.project_name = project_name
+        self.project_canonical_name = project_canonical_name
         self.implicit = implicit
 
     def __repr__(self):
-        return '<ZuulRole %s %s>' % (self.project_name, self.target_name)
+        return '<ZuulRole %s %s>' % (self.project_canonical_name,
+                                     self.target_name)
 
     __hash__ = object.__hash__
 
@@ -784,15 +783,13 @@ class ZuulRole(Role):
         # Implicit is not consulted for equality so that we can handle
         # implicit to explicit conversions.
         return (super(ZuulRole, self).__eq__(other) and
-                self.connection_name == other.connection_name and
-                self.project_name == other.project_name)
+                self.project_canonical_name == other.project_canonical_name)
 
     def toDict(self):
         # Render to a dict to use in passing json to the executor
         d = super(ZuulRole, self).toDict()
         d['type'] = 'zuul'
-        d['connection'] = self.connection_name
-        d['project'] = self.project_name
+        d['project_canonical_name'] = self.project_canonical_name
         d['implicit'] = self.implicit
         return d
 

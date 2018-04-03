@@ -44,6 +44,8 @@ def _is_safe_path(path, allow_trusted=False):
     if allow_trusted:
         allowed_paths.append(
             os.path.abspath(os.path.join(home_path, '../trusted')))
+        allowed_paths.append(
+            os.path.abspath(os.path.join(home_path, '../untrusted')))
 
     def _is_safe(path_to_check):
         for allowed_path in allowed_paths:

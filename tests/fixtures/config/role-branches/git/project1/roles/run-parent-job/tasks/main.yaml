@@ -1,0 +1,3 @@
+- name: run parent job
+  debug:
+    msg: run parent job

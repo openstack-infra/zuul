@@ -1,0 +1,15 @@
+---
+fixes:
+  - |
+    Zuul role repository checkouts now honor :attr:`job.override-checkout`.
+
+    Previously, when a Zuul role was specified for a job, Zuul would
+    usually checkout the master branch, unless that repository
+    appeared in the dependency chain for a patch.  It will now follow
+    the usual procedure for determining the branch to check out,
+    including honoring :attr:`job.override-checkout` options.
+
+    This may alter the behavior of currently existing jobs.  Depending
+    on circumstances, you may need to set
+    :attr:`job.override-checkout` or copy roles to other branches of
+    projects.

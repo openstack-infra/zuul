@@ -196,10 +196,29 @@ class ExecutorClient(object):
         params['override_checkout'] = job.override_checkout
         params['repo_state'] = item.current_build_set.repo_state
 
+        def make_playbook(playbook):
+            d = playbook.toDict()
+            for role in d['roles']:
+                if role['type'] != 'zuul':
+                    continue
+                project_config = item.layout.project_configs.get(
+                    role['project_canonical_name'], None)
+                if project_config:
+                    role['project_default_branch'] = \
+                        project_config.default_branch
+                else:
+                    role['project_default_branch'] = 'master'
+                role_trusted, role_project = item.layout.tenant.getProject(
+                    role['project_canonical_name'])
+                role_connection = role_project.source.connection
+                role['connection'] = role_connection.connection_name
+                role['project'] = role_project.name
+            return d
+
         if job.name != 'noop':
-            params['playbooks'] = [x.toDict() for x in job.run]
-            params['pre_playbooks'] = [x.toDict() for x in job.pre_run]
-            params['post_playbooks'] = [x.toDict() for x in job.post_run]
+            params['playbooks'] = [make_playbook(x) for x in job.run]
+            params['pre_playbooks'] = [make_playbook(x) for x in job.pre_run]
+            params['post_playbooks'] = [make_playbook(x) for x in job.post_run]
 
         nodes = []
         for node in nodeset.getNodes():

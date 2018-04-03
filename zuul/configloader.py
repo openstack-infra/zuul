@@ -801,16 +801,14 @@ class JobParser(object):
             return None
 
         return model.ZuulRole(role.get('name', name),
-                              project.connection_name,
-                              project.name)
+                              project.canonical_name)
 
     def _makeImplicitRole(self, job):
         project = job.source_context.project
         name = project.name.split('/')[-1]
         name = JobParser.ANSIBLE_ROLE_RE.sub('', name)
         return model.ZuulRole(name,
-                              project.connection_name,
-                              project.name,
+                              project.canonical_name,
                               implicit=True)
 
 
