@@ -33,7 +33,8 @@ class ActionModule(synchronize.ActionModule):
         if '--safe-links' not in self._task.args['rsync_opts']:
             self._task.args['rsync_opts'].append('--safe-links')
 
-        if mode == 'push' and not paths._is_safe_path(source):
+        if mode == 'push' and not paths._is_safe_path(
+                source, allow_trusted=True):
             return paths._fail_dict(source, prefix='Syncing files from')
         if mode == 'pull' and not paths._is_safe_path(dest):
             return paths._fail_dict(dest, prefix='Syncing files to')

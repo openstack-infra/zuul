@@ -94,8 +94,8 @@ def _fail_dict(path, prefix='Accessing files from'):
             curdir=os.path.abspath(os.path.curdir)))
 
 
-def _fail_if_unsafe(path):
-    if not _is_safe_path(path):
+def _fail_if_unsafe(path, allow_trusted=False):
+    if not _is_safe_path(path, allow_trusted):
         msg_dict = _fail_dict(path)
         raise AnsibleError(msg_dict['msg'])
 

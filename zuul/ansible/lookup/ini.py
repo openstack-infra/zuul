@@ -21,11 +21,11 @@ ini = paths._import_ansible_lookup_plugin("ini")
 class LookupModule(ini.LookupModule):
 
     def read_properties(self, filename, *args, **kwargs):
-        paths._fail_if_unsafe(filename)
+        paths._fail_if_unsafe(filename, allow_trusted=True)
         return super(LookupModule, self).read_properties(
             filename, *args, **kwargs)
 
     def read_ini(self, filename, *args, **kwargs):
-        paths._fail_if_unsafe(filename)
+        paths._fail_if_unsafe(filename, allow_trusted=True)
         return super(LookupModule, self).read_ini(
             filename, *args, **kwargs)

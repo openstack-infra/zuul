@@ -178,7 +178,7 @@ class LookupModule(LookupBase):
             total_search = self._flatten(terms)
 
         for fn in total_search:
-            zuul_paths._fail_if_unsafe(fn)
+            zuul_paths._fail_if_unsafe(fn, allow_trusted=True)
             try:
                 fn = self._templar.template(fn)
             except (AnsibleUndefinedVariable, UndefinedError):
