@@ -35,6 +35,6 @@ class ActionModule(include_vars.ActionModule):
         if source_dir:
             self._set_args()
             self._set_root_dir()
-            if not paths._is_safe_path(self.source_dir):
+            if not paths._is_safe_path(self.source_dir, allow_trusted=True):
                 return paths._fail_dict(self.source_dir)
         return super(ActionModule, self).run(tmp, task_vars)

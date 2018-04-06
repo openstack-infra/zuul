@@ -28,5 +28,5 @@ class LookupModule(filetree.LookupModule):
             dwimmed_path = self._loader.path_dwim_relative(
                 basedir, 'files', os.path.dirname(term))
             path = os.path.join(dwimmed_path, term_file)
-            paths._fail_if_unsafe(path)
+            paths._fail_if_unsafe(path, allow_trusted=True)
         return super(LookupModule, self).run(terms, variables, **kwargs)

@@ -35,7 +35,7 @@ class LookupModule(LookupBase):
             dwimmed_path = self.find_file_in_search_path(
                 variables, 'files', os.path.dirname(term))
             if dwimmed_path:
-                paths._fail_if_unsafe(dwimmed_path)
+                paths._fail_if_unsafe(dwimmed_path, allow_trusted=True)
                 globbed = glob.glob(to_bytes(
                     os.path.join(dwimmed_path, term_file),
                     errors='surrogate_or_strict'))

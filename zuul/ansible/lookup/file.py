@@ -24,5 +24,5 @@ class LookupModule(file_mod.LookupModule):
         for term in terms:
             lookupfile = self.find_file_in_search_path(
                 variables, 'files', term)
-            paths._fail_if_unsafe(lookupfile)
+            paths._fail_if_unsafe(lookupfile, allow_trusted=True)
         return super(LookupModule, self).run(terms, variables, **kwargs)

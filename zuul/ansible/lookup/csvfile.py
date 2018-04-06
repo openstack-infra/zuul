@@ -27,7 +27,7 @@ class LookupModule(csvfile.LookupModule):
     def read_csv(
             self, filename, key, delimiter, encoding='utf-8',
             dflt=None, col=1):
-        paths._fail_if_unsafe(filename)
+        paths._fail_if_unsafe(filename, allow_trusted=True)
 
         # upstream csvfile read_csv does not work with python3 so
         # carry our own version.
