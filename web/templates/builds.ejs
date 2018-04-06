@@ -48,6 +48,7 @@ under the License.
       <tr>
         <th>Job</th>
         <th>Project</th>
+        <th>Branch</th>
         <th>Pipeline</th>
         <th>Change</th>
         <th>Duration</th>
@@ -60,6 +61,7 @@ under the License.
       <tr ng-repeat="build in builds" ng-class="rowClass(build)">
         <td>{{ build.job_name }}</td>
         <td>{{ build.project }}</td>
+        <td>{{ build.branch }}</td>
         <td>{{ build.pipeline }}</td>
         <td><a href="{{ build.ref_url }}" target="_self">change</a></td>
         <td>{{ build.duration }} seconds</td>
