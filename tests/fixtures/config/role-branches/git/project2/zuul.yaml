@@ -1,0 +1,23 @@
+- job:
+    name: child-job
+    parent: parent-job
+    run: playbooks/child-job.yaml
+
+- job:
+    name: child-job-override
+    parent: child-job
+    override-checkout: stable
+
+- job:
+    name: child-job-project-override
+    parent: child-job
+    required-projects:
+      - name: project1
+        override-checkout: stable
+
+- project:
+    check:
+      jobs:
+        - child-job
+        - child-job-override
+        - child-job-project-override

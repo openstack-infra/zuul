@@ -2333,7 +2333,7 @@ class TestProjectKeys(ZuulTestCase):
 
 
 class RoleTestCase(ZuulTestCase):
-    def _assertRolePath(self, build, playbook, content):
+    def _getRolesPaths(self, build, playbook):
         path = os.path.join(self.test_root, build.uuid,
                             'ansible', playbook, 'ansible.cfg')
         roles_paths = []
@@ -2341,7 +2341,10 @@ class RoleTestCase(ZuulTestCase):
             for line in f:
                 if line.startswith('roles_path'):
                     roles_paths.append(line)
-        print(roles_paths)
+        return roles_paths
+
+    def _assertRolePath(self, build, playbook, content):
+        roles_paths = self._getRolesPaths(build, playbook)
         if content:
             self.assertEqual(len(roles_paths), 1,
                              "Should have one roles_path line in %s" %
@@ -2351,6 +2354,121 @@ class RoleTestCase(ZuulTestCase):
             self.assertEqual(len(roles_paths), 0,
                              "Should have no roles_path line in %s" %
                              (playbook,))
+
+    def _assertInRolePath(self, build, playbook, files):
+        roles_paths = self._getRolesPaths(build, playbook)[0]
+        roles_paths = roles_paths.split('=')[-1].strip()
+        roles_paths = roles_paths.split(':')
+
+        files = set(files)
+        matches = set()
+        for rpath in roles_paths:
+            for rolename in os.listdir(rpath):
+                if rolename in files:
+                    matches.add(rolename)
+        self.assertEqual(files, matches)
+
+
+class TestRoleBranches(RoleTestCase):
+    tenant_config_file = 'config/role-branches/main.yaml'
+
+    def _addRole(self, project, branch, role, parent=None):
+        data = textwrap.dedent("""
+            - name: %s
+              debug:
+                msg: %s
+            """ % (role, role))
+        file_dict = {'roles/%s/tasks/main.yaml' % role: data}
+        A = self.fake_gerrit.addFakeChange(project, branch,
+                                           'add %s' % role,
+                                           files=file_dict,
+                                           parent=parent)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+        self.waitUntilSettled()
+        return A.patchsets[-1]['ref']
+
+    def _addPlaybook(self, project, branch, playbook, role, parent=None):
+        data = textwrap.dedent("""
+            - hosts: all
+              roles:
+                - %s
+            """ % role)
+        file_dict = {'playbooks/%s.yaml' % playbook: data}
+        A = self.fake_gerrit.addFakeChange(project, branch,
+                                           'add %s' % playbook,
+                                           files=file_dict,
+                                           parent=parent)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+        self.waitUntilSettled()
+        return A.patchsets[-1]['ref']
+
+    def _assertInFile(self, path, content):
+        with open(path) as f:
+            self.assertIn(content, f.read())
+
+    def test_playbook_role_branches(self):
+        # This tests that the correct branch of a repo which contains
+        # a playbook or a role is checked out.  Most of the action
+        # happens on project1, which holds a parent job, so that we
+        # can test the behavior of a project which is not in the
+        # dependency chain.
+        # First we create some branch-specific content in project1:
+        self.create_branch('project1', 'stable')
+
+        # A pre-playbook with unique stable branch content.
+        p = self._addPlaybook('project1', 'stable',
+                              'parent-job-pre', 'parent-stable-role')
+        # A role that only exists on the stable branch.
+        self._addRole('project1', 'stable', 'stable-role', parent=p)
+
+        # The same for the master branch.
+        p = self._addPlaybook('project1', 'master',
+                              'parent-job-pre', 'parent-master-role')
+        self._addRole('project1', 'master', 'master-role', parent=p)
+
+        self.sched.reconfigure(self.config)
+        # Push a change to project2 which will run 3 jobs which
+        # inherit from project1.
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('project2', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 3)
+
+        # This job should use the master branch since that's the
+        # zuul.branch for this change.
+        build = self.getBuildByName('child-job')
+        self._assertInRolePath(build, 'playbook_0', ['master-role'])
+        self._assertInFile(build.jobdir.pre_playbooks[1].path,
+                           'parent-master-role')
+
+        # The main playbook is on the master branch of project2, but
+        # there is a job-level branch override, so the project1 role
+        # should be from the stable branch.  The job-level override
+        # will cause Zuul to select the project1 pre-playbook from the
+        # stable branch as well, so we should see it using the stable
+        # role.
+        build = self.getBuildByName('child-job-override')
+        self._assertInRolePath(build, 'playbook_0', ['stable-role'])
+        self._assertInFile(build.jobdir.pre_playbooks[1].path,
+                           'parent-stable-role')
+
+        # The same, but using a required-projects override.
+        build = self.getBuildByName('child-job-project-override')
+        self._assertInRolePath(build, 'playbook_0', ['stable-role'])
+        self._assertInFile(build.jobdir.pre_playbooks[1].path,
+                           'parent-stable-role')
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
 
 
 class TestRoles(RoleTestCase):

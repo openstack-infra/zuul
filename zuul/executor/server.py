@@ -257,6 +257,7 @@ class JobDirPlaybook(object):
     def __init__(self, root):
         self.root = root
         self.trusted = None
+        self.project_canonical_name = None
         self.branch = None
         self.canonical_name_and_path = None
         self.path = None
@@ -302,6 +303,10 @@ class JobDir(object):
         #     project_0
         #       <git.example.com>
         #         <project>
+        #   untrusted (mounted in bwrap read-only)
+        #     project_0
+        #       <git.example.com>
+        #         <project>
         #   work (mounted in bwrap read-write)
         #     .ssh
         #       known_hosts
@@ -328,6 +333,8 @@ class JobDir(object):
         os.makedirs(self.ansible_root)
         self.trusted_root = os.path.join(self.root, 'trusted')
         os.makedirs(self.trusted_root)
+        self.untrusted_root = os.path.join(self.root, 'untrusted')
+        os.makedirs(self.untrusted_root)
         ssh_dir = os.path.join(self.work_root, '.ssh')
         os.mkdir(ssh_dir, 0o700)
         # Create ansible cache directory
@@ -368,6 +375,8 @@ class JobDir(object):
             ))
         self.trusted_projects = []
         self.trusted_project_index = {}
+        self.untrusted_projects = []
+        self.untrusted_project_index = {}
 
         # Create a JobDirPlaybook for the Ansible setup run.  This
         # doesn't use an actual playbook, but it lets us use the same
@@ -391,6 +400,23 @@ class JobDir(object):
 
     def getTrustedProject(self, canonical_name, branch):
         return self.trusted_project_index.get((canonical_name, branch))
+
+    def addUntrustedProject(self, canonical_name, branch):
+        # Similar to trusted projects, but these hold checkouts of
+        # projects which are allowed to have speculative changes
+        # applied.  They might, however, be different branches than
+        # what is used in the working dir, so they need their own
+        # location.  Moreover, we might avoid mischief if a job alters
+        # the contents of the working dir.
+        count = len(self.untrusted_projects)
+        root = os.path.join(self.untrusted_root, 'project_%i' % (count,))
+        os.makedirs(root)
+        self.untrusted_projects.append(root)
+        self.untrusted_project_index[(canonical_name, branch)] = root
+        return root
+
+    def getUntrustedProject(self, canonical_name, branch):
+        return self.untrusted_project_index.get((canonical_name, branch))
 
     def addPrePlaybook(self):
         count = len(self.pre_playbooks)
@@ -431,6 +457,9 @@ class UpdateTask(object):
     def __init__(self, connection_name, project_name):
         self.connection_name = connection_name
         self.project_name = project_name
+        self.canonical_name = None
+        self.branches = None
+        self.refs = None
         self.event = threading.Event()
 
     def __eq__(self, other):
@@ -584,6 +613,7 @@ class AnsibleJob(object):
         self.aborted = False
         self.aborted_reason = None
         self.thread = None
+        self.project_info = {}
         self.private_key_file = get_default(self.executor_server.config,
                                             'executor', 'private_key_file',
                                             '~/.ssh/id_rsa')
@@ -675,10 +705,16 @@ class AnsibleJob(object):
 
         for task in tasks:
             task.wait()
+            self.project_info[task.canonical_name] = {
+                'refs': task.refs,
+                'branches': task.branches,
+            }
 
         self.log.debug("Git updates complete")
-        merger = self.executor_server._getMerger(self.jobdir.src_root,
-                                                 self.log)
+        merger = self.executor_server._getMerger(
+            self.jobdir.src_root,
+            self.executor_server.merge_root,
+            self.log)
         repos = {}
         for project in args['projects']:
             self.log.debug("Cloning %s/%s" % (project['connection'],
@@ -710,19 +746,24 @@ class AnsibleJob(object):
                 ref = args['zuul']['ref']
             else:
                 ref = None
-            selected = self.checkoutBranch(repo,
-                                           project['name'],
-                                           ref,
-                                           args['branch'],
-                                           args['override_branch'],
-                                           args['override_checkout'],
-                                           project['override_branch'],
-                                           project['override_checkout'],
-                                           project['default_branch'])
+            selected_ref, selected_desc = self.resolveBranch(
+                project['canonical_name'],
+                ref,
+                args['branch'],
+                args['override_branch'],
+                args['override_checkout'],
+                project['override_branch'],
+                project['override_checkout'],
+                project['default_branch'])
+            self.log.info("Checking out %s %s %s",
+                          project['canonical_name'], selected_desc,
+                          selected_ref)
+            repo.checkout(selected_ref)
+
             # Update the inventory variables to indicate the ref we
             # checked out
             p = args['zuul']['projects'][project['canonical_name']]
-            p['checkout'] = selected
+            p['checkout'] = selected_ref
         # Delete the origin remote from each repo we set up since
         # it will not be valid within the jobs.
         for repo in repos.values():
@@ -811,51 +852,44 @@ class AnsibleJob(object):
             repo.setRef('refs/heads/' + branch, commit)
         return True
 
-    def checkoutBranch(self, repo, project_name, ref, zuul_branch,
-                       job_override_branch, job_override_checkout,
-                       project_override_branch, project_override_checkout,
-                       project_default_branch):
-        branches = repo.getBranches()
-        refs = [r.name for r in repo.getRefs()]
+    def resolveBranch(self, project_canonical_name, ref, zuul_branch,
+                      job_override_branch, job_override_checkout,
+                      project_override_branch, project_override_checkout,
+                      project_default_branch):
+        branches = self.project_info[project_canonical_name]['branches']
+        refs = self.project_info[project_canonical_name]['refs']
         selected_ref = None
+        selected_desc = None
         if project_override_checkout in refs:
             selected_ref = project_override_checkout
-            self.log.info("Checking out %s project override ref %s",
-                          project_name, selected_ref)
+            selected_desc = 'project override ref'
         elif project_override_branch in branches:
             selected_ref = project_override_branch
-            self.log.info("Checking out %s project override branch %s",
-                          project_name, selected_ref)
+            selected_desc = 'project override branch'
         elif job_override_checkout in refs:
             selected_ref = job_override_checkout
-            self.log.info("Checking out %s job override ref %s",
-                          project_name, selected_ref)
+            selected_desc = 'job override ref'
         elif job_override_branch in branches:
             selected_ref = job_override_branch
-            self.log.info("Checking out %s job override branch %s",
-                          project_name, selected_ref)
+            selected_desc = 'job override branch'
         elif ref and ref.startswith('refs/heads/'):
             selected_ref = ref[len('refs/heads/'):]
-            self.log.info("Checking out %s branch ref %s",
-                          project_name, selected_ref)
+            selected_desc = 'branch ref'
         elif ref and ref.startswith('refs/tags/'):
             selected_ref = ref[len('refs/tags/'):]
-            self.log.info("Checking out %s tag ref %s",
-                          project_name, selected_ref)
+            selected_desc = 'tag ref'
         elif zuul_branch and zuul_branch in branches:
             selected_ref = zuul_branch
-            self.log.info("Checking out %s zuul branch %s",
-                          project_name, selected_ref)
+            selected_desc = 'zuul branch'
         elif project_default_branch in branches:
             selected_ref = project_default_branch
-            self.log.info("Checking out %s project default branch %s",
-                          project_name, selected_ref)
+            selected_desc = 'project default branch'
         else:
             raise ExecutorError("Project %s does not have the "
                                 "default branch %s" %
-                                (project_name, project_default_branch))
-        repo.checkout(selected_ref)
-        return selected_ref
+                                (project_canonical_name,
+                                 project_default_branch))
+        return (selected_ref, selected_desc)
 
     def getAnsibleTimeout(self, start, timeout):
         if timeout is not None:
@@ -1096,41 +1130,31 @@ class AnsibleJob(object):
             self.preparePlaybook(jobdir_playbook, playbook, args)
 
     def preparePlaybook(self, jobdir_playbook, playbook, args):
-        self.log.debug("Prepare playbook repo for %s" %
-                       (playbook['project'],))
         # Check out the playbook repo if needed and set the path to
         # the playbook that should be run.
+        self.log.debug("Prepare playbook repo for %s: %s@%s" %
+                       (playbook['trusted'] and 'trusted' or 'untrusted',
+                        playbook['project'], playbook['branch']))
         source = self.executor_server.connections.getSource(
             playbook['connection'])
         project = source.getProject(playbook['project'])
+        branch = playbook['branch']
         jobdir_playbook.trusted = playbook['trusted']
-        jobdir_playbook.branch = playbook['branch']
+        jobdir_playbook.branch = branch
+        jobdir_playbook.project_canonical_name = project.canonical_name
         jobdir_playbook.canonical_name_and_path = os.path.join(
             project.canonical_name, playbook['path'])
         path = None
-        if not playbook['trusted']:
-            # This is a project repo, so it is safe to use the already
-            # checked out version (from speculative merging) of the
-            # playbook
-            for i in args['items']:
-                if (i['connection'] == playbook['connection'] and
-                    i['project'] == playbook['project']):
-                    # We already have this repo prepared
-                    path = os.path.join(self.jobdir.src_root,
-                                        project.canonical_hostname,
-                                        project.name,
-                                        playbook['path'])
-                    break
-        if not path:
-            # The playbook repo is either a config repo, or it isn't in
-            # the stack of changes we are testing, so check out the branch
-            # tip into a dedicated space.
-            path = self.checkoutTrustedProject(project, playbook['branch'])
-            path = os.path.join(path, playbook['path'])
+
+        if not jobdir_playbook.trusted:
+            path = self.checkoutUntrustedProject(project, branch, args)
+        else:
+            path = self.checkoutTrustedProject(project, branch)
+        path = os.path.join(path, playbook['path'])
 
         jobdir_playbook.path = self.findPlaybook(
             path,
-            trusted=playbook['trusted'])
+            trusted=jobdir_playbook.trusted)
 
         # If this playbook doesn't exist, don't bother preparing
         # roles.
@@ -1154,9 +1178,57 @@ class AnsibleJob(object):
         if not root:
             root = self.jobdir.addTrustedProject(project.canonical_name,
                                                  branch)
-            merger = self.executor_server._getMerger(root, self.log)
+            self.log.debug("Cloning %s@%s into new trusted space %s",
+                           project, branch, root)
+            merger = self.executor_server._getMerger(
+                root,
+                self.executor_server.merge_root,
+                self.log)
             merger.checkoutBranch(project.connection_name, project.name,
                                   branch)
+        else:
+            self.log.debug("Using existing repo %s@%s in trusted space %s",
+                           project, branch, root)
+
+        path = os.path.join(root,
+                            project.canonical_hostname,
+                            project.name)
+        return path
+
+    def checkoutUntrustedProject(self, project, branch, args):
+        root = self.jobdir.getUntrustedProject(project.canonical_name,
+                                               branch)
+        if not root:
+            root = self.jobdir.addUntrustedProject(project.canonical_name,
+                                                   branch)
+            # If the project is in the dependency chain, clone from
+            # there so we pick up any speculative changes, otherwise,
+            # clone from the cache.
+            merger = None
+            for p in args['projects']:
+                if (p['connection'] == project.connection_name and
+                    p['name'] == project.name):
+                    # We already have this repo prepared
+                    self.log.debug("Found workdir repo for untrusted project")
+                    merger = self.executor_server._getMerger(
+                        root,
+                        self.jobdir.src_root,
+                        self.log)
+                    break
+
+            if merger is None:
+                merger = self.executor_server._getMerger(
+                    root,
+                    self.executor_server.merge_root,
+                    self.log)
+
+            self.log.debug("Cloning %s@%s into new untrusted space %s",
+                           project, branch, root)
+            merger.checkoutBranch(project.connection_name, project.name,
+                                  branch)
+        else:
+            self.log.debug("Using existing repo %s@%s in trusted space %s",
+                           project, branch, root)
 
         path = os.path.join(root,
                             project.canonical_hostname,
@@ -1198,26 +1270,38 @@ class AnsibleJob(object):
         name = role['target_name']
         path = None
 
-        if not jobdir_playbook.trusted:
-            # This playbook is untrested.  Use the already checked out
-            # version (from speculative merging) of the role if it
-            # exists.
-
-            for i in args['items']:
-                if (i['connection'] == role['connection'] and
-                    i['project'] == role['project']):
-                    # We already have this repo prepared; use it.
-                    path = os.path.join(self.jobdir.src_root,
-                                        project.canonical_hostname,
-                                        project.name)
+        # Find the branch to use for this role.  We should generally
+        # follow the normal fallback procedure, unless this role's
+        # project is the playbook's project, in which case we should
+        # use the playbook branch.
+        if jobdir_playbook.project_canonical_name == project.canonical_name:
+            branch = jobdir_playbook.branch
+            self.log.debug("Role project is playbook project, "
+                           "using playbook branch %s", branch)
+        else:
+            # Find if the project is one of the job-specified projects.
+            # If it is, we can honor the project checkout-override options.
+            args_project = {}
+            for p in args['projects']:
+                if (p['canonical_name'] == project.canonical_name):
+                    args_project = p
                     break
 
-        if not path:
-            # This is a trusted playbook or the role did not appear
-            # in the dependency chain for the change (in which case,
-            # there is no existing untrusted checkout of it).  Check
-            # out the branch tip into a dedicated space.
-            path = self.checkoutTrustedProject(project, 'master')
+            branch, selected_desc = self.resolveBranch(
+                project.canonical_name,
+                None,
+                args['branch'],
+                args['override_branch'],
+                args['override_checkout'],
+                args_project.get('override_branch'),
+                args_project.get('override_checkout'),
+                role['project_default_branch'])
+            self.log.debug("Role using %s %s", selected_desc, branch)
+
+        if not jobdir_playbook.trusted:
+            path = self.checkoutUntrustedProject(project, branch, args)
+        else:
+            path = self.checkoutTrustedProject(project, branch)
 
         # The name of the symlink is the requested name of the role
         # (which may be the repo name or may be something else; this
@@ -1400,6 +1484,7 @@ class AnsibleJob(object):
         ro_paths.append(self.executor_server.ansible_dir)
         ro_paths.append(self.jobdir.ansible_root)
         ro_paths.append(self.jobdir.trusted_root)
+        ro_paths.append(self.jobdir.untrusted_root)
         ro_paths.append(playbook.root)
 
         rw_paths.append(self.jobdir.ansible_cache_root)
@@ -1735,7 +1820,7 @@ class ExecutorServer(object):
         # up-to-date copies of all the repos that are used by jobs, as
         # well as to support the merger:cat functon to supply
         # configuration information to Zuul when it starts.
-        self.merger = self._getMerger(self.merge_root)
+        self.merger = self._getMerger(self.merge_root, None)
         self.update_queue = DeduplicateQueue()
 
         command_socket = get_default(
@@ -1776,11 +1861,7 @@ class ExecutorServer(object):
                                               self.stopJobDiskFull,
                                               self.merge_root)
 
-    def _getMerger(self, root, logger=None):
-        if root != self.merge_root:
-            cache_root = self.merge_root
-        else:
-            cache_root = None
+    def _getMerger(self, root, cache_root, logger=None):
         return zuul.merger.merger.Merger(
             root, self.connections, self.merge_email, self.merge_name,
             self.merge_speed_limit, self.merge_speed_time, cache_root, logger)
@@ -1960,6 +2041,12 @@ class ExecutorServer(object):
             self.log.info("Updating repo %s/%s" % (
                 task.connection_name, task.project_name))
             self.merger.updateRepo(task.connection_name, task.project_name)
+            repo = self.merger.getRepo(task.connection_name, task.project_name)
+            source = self.connections.getSource(task.connection_name)
+            project = source.getProject(task.project_name)
+            task.canonical_name = project.canonical_name
+            task.branches = repo.getBranches()
+            task.refs = [r.name for r in repo.getRefs()]
             self.log.debug("Finished updating repo %s/%s" %
                            (task.connection_name, task.project_name))
         task.setComplete()
