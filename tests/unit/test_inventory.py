@@ -89,14 +89,16 @@ class TestInventory(ZuulTestCase):
 
         all_nodes = ('controller', 'compute1', 'compute2')
         self.assertIn('all', inventory)
+        self.assertIn('children', inventory['all'])
         self.assertIn('hosts', inventory['all'])
         self.assertIn('vars', inventory['all'])
         for group_name in ('ceph-osd', 'ceph-monitor'):
-            self.assertIn(group_name, inventory)
+            self.assertIn(group_name, inventory['all']['children'])
         for node_name in all_nodes:
             self.assertIn(node_name, inventory['all']['hosts'])
             self.assertIn(node_name,
-                          inventory['ceph-monitor']['hosts'])
+                          inventory['all']['children']
+                          ['ceph-monitor']['hosts'])
         self.assertIn('zuul', inventory['all']['vars'])
         z_vars = inventory['all']['vars']['zuul']
         self.assertIn('executor', z_vars)
