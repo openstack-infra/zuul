@@ -7,3 +7,4 @@
         untrusted-projects:
           - org/project
           - org/project1
+          - org/project2

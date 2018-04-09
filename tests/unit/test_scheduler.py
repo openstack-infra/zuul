@@ -22,6 +22,7 @@ import os
 import shutil
 import time
 from unittest import skip
+from kazoo.exceptions import NoNodeError
 
 import git
 import testtools
@@ -5441,6 +5442,35 @@ class TestSemaphore(ZuulTestCase):
 
         self.assertEqual(A.reported, 1)
         self.assertEqual(B.reported, 1)
+
+    def test_semaphore_zk_error(self):
+        "Test semaphore release with zk error"
+        tenant = self.sched.abide.tenants.get('tenant-one')
+
+        A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A')
+        self.assertFalse('test-semaphore' in
+                         tenant.semaphore_handler.semaphores)
+
+        # Simulate a single zk error in useNodeSet
+        orig_useNodeSet = self.nodepool.useNodeSet
+
+        def broken_use_nodeset(nodeset):
+            # restore original useNodeSet
+            self.nodepool.useNodeSet = orig_useNodeSet
+            raise NoNodeError()
+
+        self.nodepool.useNodeSet = broken_use_nodeset
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        # The semaphore should be released
+        self.assertFalse('test-semaphore' in
+                         tenant.semaphore_handler.semaphores)
+
+        # cleanup the queue
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
 
     def test_semaphore_abandon(self):
         "Test abandon with job semaphores"

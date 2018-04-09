@@ -47,6 +47,15 @@
     semaphore: test-semaphore-two
     run: playbooks/semaphore-two-test2.yaml
 
+- job:
+    name: semaphore-one-test3
+    semaphore: test-semaphore
+    run: playbooks/semaphore-two-test1.yaml
+    nodeset:
+      nodes:
+        - name: controller
+          label: label1
+
 - project:
     name: org/project
     check:
@@ -62,3 +71,9 @@
         - project-test1
         - semaphore-two-test1
         - semaphore-two-test2
+
+- project:
+    name: org/project2
+    check:
+      jobs:
+        - semaphore-one-test3
