@@ -264,10 +264,12 @@ class ZuulWeb(object):
         self.log_streaming_handler = LogStreamingHandler(self.rpc)
         self.gearman_handler = GearmanHandler(self.rpc)
         self._plugin_routes = []  # type: List[zuul.web.handler.BaseWebHandler]
+        self._connection_handlers = []
         connections = connections or []
         for connection in connections:
-            self._plugin_routes.extend(
+            self._connection_handlers.extend(
                 connection.getWebHandlers(self, self.info))
+        self._plugin_routes.extend(self._connection_handlers)
 
     async def _handleWebsocket(self, request):
         return await self.log_streaming_handler.processRequest(
@@ -364,6 +366,9 @@ class ZuulWeb(object):
 
         self.event_loop = loop
         self.log_streaming_handler.setEventLoop(loop)
+        for handler in self._connection_handlers:
+            if hasattr(handler, 'setEventLoop'):
+                handler.setEventLoop(loop)
 
         app = web.Application()
         for method, path, handler in routes:
