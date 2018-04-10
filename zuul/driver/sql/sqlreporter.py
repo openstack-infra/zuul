@@ -74,7 +74,7 @@ class SQLReporter(BaseReporter):
                     end = datetime.datetime.fromtimestamp(build.end_time)
 
                 build_inserts.append({
-                    'buildset_id': buildset_ins_result.inserted_primary_key,
+                    'buildset_id': buildset_ins_result.inserted_primary_key[0],
                     'uuid': build.uuid,
                     'job_name': build.job.name,
                     'result': result,
