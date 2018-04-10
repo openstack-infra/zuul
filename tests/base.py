@@ -1899,31 +1899,31 @@ class MySQLSchemaFixture(fixtures.Fixture):
                               for x in range(8))
         self.name = '%s_%s' % (random_bits, os.getpid())
         self.passwd = uuid.uuid4().hex
-        db = pymysql.connect(host="localhost",
+        db = pymysql.connect(host="127.0.0.1",
                              user="openstack_citest",
                              passwd="openstack_citest",
                              db="openstack_citest")
         cur = db.cursor()
         cur.execute("create database %s" % self.name)
         cur.execute(
-            "grant all on %s.* to '%s'@'localhost' identified by '%s'" %
+            "grant all on %s.* to '%s'@'' identified by '%s'" %
             (self.name, self.name, self.passwd))
         cur.execute("flush privileges")
 
-        self.dburi = 'mysql+pymysql://%s:%s@localhost/%s' % (self.name,
+        self.dburi = 'mysql+pymysql://%s:%s@127.0.0.1/%s' % (self.name,
                                                              self.passwd,
                                                              self.name)
         self.addDetail('dburi', testtools.content.text_content(self.dburi))
         self.addCleanup(self.cleanup)
 
     def cleanup(self):
-        db = pymysql.connect(host="localhost",
+        db = pymysql.connect(host="127.0.0.1",
                              user="openstack_citest",
                              passwd="openstack_citest",
                              db="openstack_citest")
         cur = db.cursor()
         cur.execute("drop database %s" % self.name)
-        cur.execute("drop user '%s'@'localhost'" % self.name)
+        cur.execute("drop user '%s'@''" % self.name)
         cur.execute("flush privileges")
 
 
