@@ -240,6 +240,14 @@ class TestTenantGroups4(TenantParserTestCase):
         self.assertEqual(1, len(cat_jobs))
 
 
+class TestTenantFromScript(TestTenantSimple):
+    tenant_config_file = None
+    tenant_config_script_file = 'config/tenant-parser/tenant_config_script.py'
+
+    def test_tenant_simple(self):
+        TestTenantSimple.test_tenant_simple(self)
+
+
 class TestTenantUnprotectedBranches(TenantParserTestCase):
     tenant_config_file = 'config/tenant-parser/unprotected-branches.yaml'
 

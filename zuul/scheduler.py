@@ -542,6 +542,28 @@ class Scheduler(threading.Thread):
             self._save_queue()
             os._exit(0)
 
+    def _checkTenantSourceConf(self, config):
+        tenant_config = None
+        script = False
+        if self.config.has_option(
+            'scheduler', 'tenant_config'):
+            tenant_config = self.config.get(
+                'scheduler', 'tenant_config')
+        if self.config.has_option(
+            'scheduler', 'tenant_config_script'):
+            if tenant_config:
+                raise Exception(
+                    "tenant_config and tenant_config_script options "
+                    "are exclusive.")
+            tenant_config = self.config.get(
+                'scheduler', 'tenant_config_script')
+            script = True
+        if not tenant_config:
+            raise Exception(
+                "tenant_config or tenant_config_script option "
+                "is missing from the configuration.")
+        return tenant_config, script
+
     def _doReconfigureEvent(self, event):
         # This is called in the scheduler loop after another thread submits
         # a request
@@ -551,8 +573,9 @@ class Scheduler(threading.Thread):
             self.log.info("Full reconfiguration beginning")
             loader = configloader.ConfigLoader(
                 self.connections, self, self.merger)
+            tenant_config, script = self._checkTenantSourceConf(self.config)
             self.unparsed_abide = loader.readConfig(
-                self.config.get('scheduler', 'tenant_config'))
+                tenant_config, from_script=script)
             abide = loader.loadConfig(
                 self.unparsed_abide,
                 self._get_project_key_dir())
@@ -576,8 +599,9 @@ class Scheduler(threading.Thread):
             old_tenant = self.abide.tenants[event.tenant_name]
             loader = configloader.ConfigLoader(
                 self.connections, self, self.merger)
+            tenant_config, _ = self._checkTenantSourceConf(self.config)
             abide = loader.reloadTenant(
-                self.config.get('scheduler', 'tenant_config'),
+                tenant_config,
                 self._get_project_key_dir(),
                 self.abide, old_tenant)
             tenant = abide.tenants[event.tenant_name]
