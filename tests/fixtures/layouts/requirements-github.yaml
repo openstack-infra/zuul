@@ -14,6 +14,21 @@
         comment: true
 
 - pipeline:
+    name: reject_status
+    manager: independent
+    reject:
+      github:
+        status: zuul:check:error
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: test me
+    success:
+      github:
+        comment: true
+
+- pipeline:
     name: trigger_status
     manager: independent
     trigger:
@@ -155,9 +170,38 @@
         comment: true
 
 - pipeline:
+    name: reject_open
+    manager: independent
+    reject:
+      github:
+        open: true
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: test me
+    success:
+      github:
+        comment: true
+
+- pipeline:
     name: require_current
     manager: independent
     require:
+      github:
+        current-patchset: true
+    trigger:
+      github:
+        - event: pull_request
+          action: changed
+    success:
+      github:
+        comment: true
+
+- pipeline:
+    name: reject_current
+    manager: independent
+    reject:
       github:
         current-patchset: true
     trigger:
@@ -179,6 +223,27 @@
         - event: pull_request
           action: comment
           comment: test me
+    success:
+      github:
+        comment: true
+
+- pipeline:
+    name: reject_label
+    manager: independent
+    require:
+      github:
+        label: approved
+    reject:
+      github:
+        label: do-not-merge
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: test me
+        - event: pull_request
+          action: unlabeled
+          label: do-not-merge
     success:
       github:
         comment: true
@@ -227,6 +292,22 @@
 - job:
     name: project10-label
     run: playbooks/project10-label.yaml
+
+- job:
+    name: project11-label
+    run: playbooks/project11-label.yaml
+
+- job:
+    name: project12-status
+    run: playbooks/project12-status.yaml
+
+- job:
+    name: project13-open
+    run: playbooks/project13-open.yaml
+
+- job:
+    name: project14-current
+    run: playbooks/project14-current.yaml
 
 - project:
     name: org/project1
@@ -290,3 +371,27 @@
     require_label:
       jobs:
         - project10-label
+
+- project:
+    name: org/project11
+    reject_label:
+      jobs:
+        - project11-label
+
+- project:
+    name: org/project12
+    reject_status:
+      jobs:
+        - project12-status
+
+- project:
+    name: org/project13
+    reject_open:
+      jobs:
+        - project13-open
+
+- project:
+    name: org/project14
+    reject_current:
+      jobs:
+        - project14-current
