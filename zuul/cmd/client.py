@@ -187,6 +187,9 @@ class Client(zuul.cmd.ZuulApp):
         if self.args.change and self.args.ref:
             print("Change and ref can't be both used for the same request")
             return False
+        if "," in self.args.change:
+            print("Error: change argument can not contain any ','")
+            return False
 
         node_hold_expiration = self.args.node_hold_expiration
         r = client.autohold(tenant=self.args.tenant,
