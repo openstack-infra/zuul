@@ -61,7 +61,7 @@
             vars:
               sphinx_python: python3
         - tox-pep8
-        - zuul-tox-py35:
+        - tox-py35:
             irrelevant-files:
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
@@ -97,7 +97,7 @@
             vars:
               sphinx_python: python3
         - tox-pep8
-        - zuul-tox-py35:
+        - tox-py35:
             irrelevant-files:
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
