@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Git repositories will have a ``origin`` remote with refs pointing to the
+    previous change in the speculative state.
+
+    This allows jobs to determine the commits that are part of a change, which
+    was not possible before. The remote URL is set to a bogus value which
+    won't work with git commands that need to talk to the remote repository.

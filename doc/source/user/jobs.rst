@@ -45,8 +45,13 @@ fallback or default branch will be used).  If your job needs to
 operate on multiple branches, simply checkout the appropriate branches
 of these git repos to ensure that the job results reflect the proposed
 future state that Zuul is testing, and all dependencies are present.
-Do not use any git remotes; the local repositories are guaranteed to
-be up to date.
+
+The git repositories will have a remote ``origin`` with refs pointing
+to the previous change in the speculative state. This means that e.g.
+a ``git diff origin/<branch>..<branch>`` will show the changes being
+tested. Note that the ``origin`` URL is set to a bogus value
+(``file:///dev/null``) and can not be used for updating the repository
+state; the local repositories are guaranteed to be up to date.
 
 The repositories will be placed on the filesystem in directories
 corresponding with the canonical hostname of their source connection.

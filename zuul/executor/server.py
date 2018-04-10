@@ -764,10 +764,12 @@ class AnsibleJob(object):
             # checked out
             p = args['zuul']['projects'][project['canonical_name']]
             p['checkout'] = selected_ref
-        # Delete the origin remote from each repo we set up since
-        # it will not be valid within the jobs.
+
+        # Set the URL of the origin remote for each repo to a bogus
+        # value. Keeping the remote allows tools to use it to determine
+        # which commits are part of the current change.
         for repo in repos.values():
-            repo.deleteRemote('origin')
+            repo.setRemoteUrl('file:///dev/null')
 
         # This prepares each playbook and the roles needed for each.
         self.preparePlaybooks(args)
@@ -1864,7 +1866,8 @@ class ExecutorServer(object):
     def _getMerger(self, root, cache_root, logger=None):
         return zuul.merger.merger.Merger(
             root, self.connections, self.merge_email, self.merge_name,
-            self.merge_speed_limit, self.merge_speed_time, cache_root, logger)
+            self.merge_speed_limit, self.merge_speed_time, cache_root, logger,
+            execution_context=True)
 
     def start(self):
         self._running = True
