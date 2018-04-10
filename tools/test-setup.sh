@@ -9,6 +9,7 @@ TOOLSDIR=$(dirname $0)
 
 # Be sure mysql and zookeeper are started.
 sudo service mysql start
+sudo service postgresql start
 sudo service zookeeper start
 
 # The root password for the MySQL database; pass it in via
@@ -36,6 +37,10 @@ mysql -u $DB_USER -p$DB_PW -h 127.0.0.1 -e "
     SET default_storage_engine=MYISAM;
     DROP DATABASE IF EXISTS openstack_citest;
     CREATE DATABASE openstack_citest CHARACTER SET utf8;"
+
+# setup postgres user and database
+sudo -u postgres psql -c "CREATE ROLE $DB_USER WITH LOGIN SUPERUSER UNENCRYPTED PASSWORD '$DB_PW';"
+sudo -u postgres psql -c "CREATE DATABASE openstack_citest OWNER $DB_USER TEMPLATE template0 ENCODING 'UTF8';"
 
 # TODO(pabelanger): Move this into bindep after we figure out how to enable our
 # PPA.

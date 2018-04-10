@@ -3,6 +3,7 @@
 
 mysql-client [test]
 mysql-server [test]
+postgresql [test]
 libjpeg-dev [test]
 openssl [test]
 zookeeperd [platform:dpkg]

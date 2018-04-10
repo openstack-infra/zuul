@@ -7,12 +7,15 @@
     success:
       gerrit:
         Verified: 1
-      resultsdb: null
+      resultsdb_mysql: null
+      resultsdb_postgresql: null
     failure:
       gerrit:
         Verified: -1
-      resultsdb: null
-      resultsdb_failures: null
+      resultsdb_mysql: null
+      resultsdb_mysql_failures: null
+      resultsdb_postgresql: null
+      resultsdb_postgresql_failures: null
 
 - job:
     name: base
