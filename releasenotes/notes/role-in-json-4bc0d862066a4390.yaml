@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Add role name to json log
+    The json log contains now also the role name and the uuid
+    similar to the task entry.
