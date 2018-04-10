@@ -4,7 +4,7 @@ const Merge = require('webpack-merge');
 const CommonConfig = require('./webpack.common.js');
 
 module.exports = Merge(CommonConfig, {
-
+  mode: 'development',
   // Enable Hot Module Replacement for devServer
   devServer: {
     hot: true,
