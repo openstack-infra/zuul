@@ -30,7 +30,7 @@ the web app with:
 
 .. code-block:: bash
 
-  docker run -it --rm -v $(PWD):/usr/src/app:z -w /usr/src/app node:alpine \
+  docker run -it --rm -v ${PWD}:/usr/src/app:z -w /usr/src/app node:alpine \
       npm run build:dist-with-depends
 
 Both do the same thing. Both versions will result in the built files being
