@@ -17,4 +17,5 @@ Zuul, though advanced users may find it interesting.
    docs
    ansible
    javascript
+   specs/index
    releasenotes
