@@ -39,20 +39,22 @@ def upgrade(table_prefix=''):
     # To allow a dashboard to show a per-project view, optionally filtered
     # by pipeline.
     op.create_index(
-        'project_pipeline_idx', prefixed_buildset, ['project', 'pipeline'])
+        table_prefix + 'project_pipeline_idx',
+        prefixed_buildset, ['project', 'pipeline'])
 
     # To allow a dashboard to show a per-project-change view
     op.create_index(
-        'project_change_idx', prefixed_buildset, ['project', 'change'])
+        table_prefix + 'project_change_idx',
+        prefixed_buildset, ['project', 'change'])
 
     # To allow a dashboard to show a per-change view
-    op.create_index('change_idx', prefixed_buildset, ['change'])
+    op.create_index(table_prefix + 'change_idx', prefixed_buildset, ['change'])
 
     # To allow a dashboard to show a job lib view. buildset_id is included
     # so that it's a covering index and can satisfy the join back to buildset
     # without an additional lookup.
     op.create_index(
-        'job_name_buildset_id_idx', prefixed_build,
+        table_prefix + 'job_name_buildset_id_idx', prefixed_build,
         ['job_name', 'buildset_id'])
 
 
