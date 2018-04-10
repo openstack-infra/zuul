@@ -77,6 +77,38 @@ class TestSQLConnection(ZuulDBTestCase):
         self.assertEqual(14, len(insp.get_columns(buildset_table)))
         self.assertEqual(10, len(insp.get_columns(build_table)))
 
+    def test_sql_indexes_created(self):
+        "Test the indexes are created properly"
+
+        connection = self.connections.connections['resultsdb']
+        insp = sa.engine.reflection.Inspector(connection.engine)
+
+        table_prefix = connection.table_prefix
+        self.assertEqual(self.expected_table_prefix, table_prefix)
+
+        buildset_table = table_prefix + 'zuul_buildset'
+        build_table = table_prefix + 'zuul_build'
+
+        indexes_buildset = insp.get_indexes(buildset_table)
+        indexes_build = insp.get_indexes(build_table)
+
+        # Remove implicitly generated indexes by the foreign key.
+        # MySQL creates an implicit index with the name if the column (which
+        # is not a problem as in MySQL the index names are scoped within the
+        # table). This is an implementation detail of the db engine so don't
+        # check this.
+        indexes_build = [x for x in indexes_build
+                         if x['name'] != 'buildset_id']
+
+        self.assertEqual(3, len(indexes_buildset))
+        self.assertEqual(1, len(indexes_build))
+
+        # check if all indexes are prefixed
+        if table_prefix:
+            indexes = indexes_buildset + indexes_build
+            for index in indexes:
+                self.assertTrue(index['name'].startswith(table_prefix))
+
     def test_sql_results(self):
         "Test results are entered into an sql table"
         self.executor_server.hold_jobs_in_build = True
