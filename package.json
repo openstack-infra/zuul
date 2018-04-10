@@ -22,7 +22,6 @@
     "build": "npm run build:dist",
     "build:dev": "webpack --env=dev",
     "build:dist": "webpack --env=prod",
-    "build:docker": "docker run -it --rm -v $(pwd):/usr/src/app:z -w /usr/src/app node:alpine npm run build:dist-with-depends",
     "build:dist-with-depends": "yarn install && npm run build:dist",
     "format": "eslint --fix web/*.js",
     "lint": "webpack --env=lint",

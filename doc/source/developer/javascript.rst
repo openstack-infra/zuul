@@ -15,45 +15,15 @@ For the impatient who don't want deal with javascript toolchains
 tl;dr - You have to build stuff with javascript tools.
 
 The best thing would be to get familiar with the tools, there are a lot of
-good features available. But, if you don't want to know anything about the
-Javascript toolchains a few helpers have been provided.
+good features available. If you're going to hack on the Javascript, you should
+get to know them.
 
-tox
-~~~
+If you don't want to hack on Javascript and just want to run Zuul's tests,
+``tox`` has been set up to handle it for you.
 
 If you do not have `yarn`_ installed, ``tox`` will use `nodeenv`_ to install
 node into the active python virtualenv, and then will install `yarn`_ into
 that virtualenv as well.
-
-npm + docker
-~~~~~~~~~~~~
-
-.. We should remove the build:docker command. If you have npm, you can
-   npm install yarn.
-
-If you have npm and docker installed and don't want to install newer nodejs
-or a bunch of javascript libraries, you can run:
-
-.. code-block:: bash
-
-  npm run build:docker
-
-docker
-~~~~~~
-
-If you have docker but do not have npm or nodejs installed, you can build
-the web app with:
-
-.. code-block:: bash
-
-  docker run -it --rm -v ${PWD}:/usr/src/app:z -w /usr/src/app node:alpine \
-      npm run build:dist-with-depends
-
-Both do the same thing. Both versions will result in the built files being
-put into ``zuul/web/static``.
-
-.. note:: Because the user inside of the Docker container is root, the files
-          that it emits into zuul/web/static will be owned by root.
 
 yarn dependency management
 --------------------------
