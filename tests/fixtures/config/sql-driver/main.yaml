@@ -6,3 +6,4 @@
           - common-config
         untrusted-projects:
           - org/project
+          - org/project1
