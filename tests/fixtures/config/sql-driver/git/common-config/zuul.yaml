@@ -17,6 +17,33 @@
       resultsdb_postgresql: null
       resultsdb_postgresql_failures: null
 
+- pipeline:
+    name: gate
+    manager: dependent
+    success-message: Build succeeded (gate).
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - Approved: 1
+    success:
+      gerrit:
+        Verified: 2
+        submit: true
+      resultsdb_mysql: null
+      resultsdb_postgresql: null
+    failure:
+      gerrit:
+        Verified: -2
+      resultsdb_mysql: null
+      resultsdb_mysql_failures: null
+      resultsdb_postgresql: null
+      resultsdb_postgresql_failures: null
+    start:
+      gerrit:
+        Verified: 0
+    precedence: high
+
 - job:
     name: base
     parent: null
@@ -52,3 +79,28 @@
         # The noop job can have timing quirks
         - noop:
             dependencies: project-test2
+    gate:
+      jobs:
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge
+    gate:
+      queue: integrated
+      jobs:
+        - project-merge
+        - project-test1:
+            dependencies: project-merge
+        - project-test2:
+            dependencies: project-merge

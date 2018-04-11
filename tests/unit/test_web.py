@@ -26,7 +26,7 @@ import requests
 
 import zuul.web
 
-from tests.base import ZuulTestCase, FIXTURE_DIR
+from tests.base import ZuulTestCase, ZuulDBTestCase, FIXTURE_DIR
 
 
 class FakeConfig(object):
@@ -64,7 +64,8 @@ class BaseTestWeb(ZuulTestCase):
         self.web = zuul.web.ZuulWeb(
             listen_address='127.0.0.1', listen_port=0,
             gear_server='127.0.0.1', gear_port=self.gearman_server.port,
-            info=zuul.model.WebInfo.fromConfig(self.zuul_ini_config)
+            info=zuul.model.WebInfo.fromConfig(self.zuul_ini_config),
+            connections=self.connections.connections.values()
         )
         loop = asyncio.new_event_loop()
         loop.set_debug(True)
@@ -329,3 +330,17 @@ class TestGraphiteUrl(TestInfo):
             'stats_url': 'https://graphite.example.com',
         }
     }
+
+
+class TestBuildInfo(ZuulDBTestCase, BaseTestWeb):
+    config_file = 'zuul-sql-driver.conf'
+    tenant_config_file = 'config/sql-driver/main.yaml'
+
+    def test_web_list_builds(self):
+        # Generate some build records in the db.
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        builds = self.get_url("api/tenant/tenant-one/builds").json()
+        self.assertEqual(len(builds), 6)
