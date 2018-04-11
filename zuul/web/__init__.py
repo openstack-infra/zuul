@@ -187,7 +187,6 @@ class GearmanHandler(object):
         if result_filter:
             payload = result_filter.filterPayload(payload)
         resp = web.json_response(payload)
-        resp.headers['Access-Control-Allow-Origin'] = '*'
         resp.headers["Cache-Control"] = "public, max-age=%d" % \
                                         self.cache_expiry
         resp.last_modified = self.cache_time[tenant]
@@ -196,9 +195,7 @@ class GearmanHandler(object):
     async def job_list(self, request, result_filter=None):
         tenant = request.match_info["tenant"]
         job = self.rpc.submitJob('zuul:job_list', {'tenant': tenant})
-        resp = web.json_response(json.loads(job.data[0]))
-        resp.headers['Access-Control-Allow-Origin'] = '*'
-        return resp
+        return web.json_response(json.loads(job.data[0]))
 
     async def key_get(self, request, result_filter=None):
         tenant = request.match_info["tenant"]
@@ -211,6 +208,7 @@ class GearmanHandler(object):
         resp = None
         try:
             resp = await self.controllers[action](request, result_filter)
+            resp.headers['Access-Control-Allow-Origin'] = '*'
         except asyncio.CancelledError:
             self.log.debug("request handling cancelled")
         except Exception as e:
