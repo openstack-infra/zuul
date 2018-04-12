@@ -18,12 +18,28 @@ The best thing would be to get familiar with the tools, there are a lot of
 good features available. But, if you don't want to know anything about the
 Javascript toolchains a few helpers have been provided.
 
+tox
+~~~
+
+If you do not have `yarn`_ installed, ``tox`` will use `nodeenv`_ to install
+node into the active python virtualenv, and then will install `yarn`_ into
+that virtualenv as well.
+
+npm + docker
+~~~~~~~~~~~~
+
+.. We should remove the build:docker command. If you have npm, you can
+   npm install yarn.
+
 If you have npm and docker installed and don't want to install newer nodejs
 or a bunch of javascript libraries, you can run:
 
 .. code-block:: bash
 
   npm run build:docker
+
+docker
+~~~~~~
 
 If you have docker but do not have npm or nodejs installed, you can build
 the web app with:
@@ -221,3 +237,4 @@ our case we use it for both.
 .. _nodejs: https://nodejs.org/
 .. _webpack: https://webpack.js.org/
 .. _devtool: https://webpack.js.org/configuration/devtool/#devtool
+.. _nodeenv: https://pypi.python.org/pypi/nodeenv
