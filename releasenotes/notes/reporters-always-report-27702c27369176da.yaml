@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Story 2001441 is fixed. Failure by one Zuul reporter will not short
+    circuit the reporting of other reporters. This ensures as much
+    information as possible is reported for each change even if some
+    failures occur. Note that the build set status is changed to 'ERROR'
+    after the first failed reporter.

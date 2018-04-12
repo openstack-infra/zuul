@@ -21,6 +21,7 @@ import textwrap
 import os
 import shutil
 import time
+from unittest import mock
 from unittest import skip
 
 import git
@@ -3423,6 +3424,50 @@ class TestScheduler(ZuulTestCase):
                          self.smtp_messages[1]['to_email'])
         self.assertEqual(A.messages[0],
                          self.smtp_messages[1]['body'])
+
+    @simple_layout('layouts/smtp.yaml')
+    @mock.patch('zuul.driver.gerrit.gerritreporter.GerritReporter.report')
+    def test_failed_reporter(self, report_mock):
+        '''Test that one failed reporter doesn't break other reporters'''
+        # Warning hacks. We sort the reports here so that the test is
+        # deterministic. Gerrit reporting will fail, but smtp reporting
+        # should succeed.
+        report_mock.side_effect = Exception('Gerrit failed to report')
+
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        check = tenant.layout.pipelines['check']
+
+        check.success_actions = sorted(check.success_actions,
+                                       key=lambda x: x.name)
+        self.assertEqual(check.success_actions[0].name, 'gerrit')
+        self.assertEqual(check.success_actions[1].name, 'smtp')
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.waitUntilSettled()
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        # We know that if gerrit ran first and failed and smtp ran second
+        # and sends mail then we handle failures in reporters gracefully.
+        self.assertEqual(len(self.smtp_messages), 2)
+
+        # A.messages only holds what FakeGerrit places in it. Thus we
+        # work on the knowledge of what the first message should be as
+        # it is only configured to go to SMTP.
+
+        self.assertEqual('zuul@example.com',
+                         self.smtp_messages[0]['from_email'])
+        self.assertEqual(['you@example.com'],
+                         self.smtp_messages[0]['to_email'])
+        self.assertEqual('Starting check jobs.',
+                         self.smtp_messages[0]['body'])
+
+        self.assertEqual('zuul_from@example.com',
+                         self.smtp_messages[1]['from_email'])
+        self.assertEqual(['alternative_me@example.com'],
+                         self.smtp_messages[1]['to_email'])
+        # This double checks that Gerrit side failed
+        self.assertEqual(A.messages, [])
 
     def test_timer_smtp(self):
         "Test that a periodic job is triggered"
