@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import asyncio
 import logging
 
 from aiohttp import web
@@ -167,6 +168,9 @@ class SqlWebHandler(BaseTenantWebHandler):
         super(SqlWebHandler, self).__init__(
             connection=connection, zuul_web=zuul_web, method=method, path=path)
 
+    def setEventLoop(self, event_loop):
+        self.event_loop = event_loop
+
     def query(self, args):
         build = self.connection.zuul_build_table
         buildset = self.connection.zuul_buildset_table
@@ -202,7 +206,14 @@ class SqlWebHandler(BaseTenantWebHandler):
         builds = []
         with self.connection.engine.begin() as conn:
             query = self.query(args)
-            for row in conn.execute(query):
+            query_task = self.event_loop.run_in_executor(
+                None,
+                conn.execute,
+                query
+            )
+            rows = await asyncio.wait_for(query_task, 30)
+
+            for row in rows:
                 build = dict(row)
                 # Convert date to iso format
                 if row.start_time:
