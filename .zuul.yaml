@@ -30,18 +30,6 @@
       - requirements.txt
 
 - job:
-    name: zuul-tox-py35
-    parent: tox-py35
-    description: |
-      Runs javascript build before running python 35 unit tests.
-    pre-run: playbooks/tox/pre.yaml
-    run: playbooks/tox/run.yaml
-    post-run: playbooks/tox/post.yaml
-    vars:
-      node_version: 8
-      npm_command: build
-
-- job:
     name: zuul-tox-remote
     parent: tox
     vars:
