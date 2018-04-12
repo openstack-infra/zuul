@@ -61,7 +61,7 @@ yarn dependency management
 `yarn`_ manages the javascript dependencies. That means the first step is
 getting `yarn`_ installed.
 
-.. code-block:: bash
+.. code-block:: console
 
   tools/install-js-tools.sh
 
@@ -72,22 +72,28 @@ which repo description file to download, so it calls out to
 
 Once yarn is installed, getting dependencies installed is:
 
-.. code-block:: bash
+.. code-block:: console
 
   yarn install
 
 The ``yarn.lock`` file contains all of the specific versions that were
 installed before. Since this is an application it has been added to the repo.
 
-To add new dependencies:
+To add new runtime dependencies:
 
-.. code-block:: bash
+.. code-block:: console
 
   yarn add awesome-package
 
+To add new build-time dependencies:
+
+.. code-block:: console
+
+  yarn add -D awesome-package
+
 To remove dependencies:
 
-.. code-block:: bash
+.. code-block:: console
 
   yarn remove terrible-package
 
@@ -98,12 +104,28 @@ were installed into ``yarn.lock`` so that other users can simply run
 
 To update a dependency:
 
-.. code-block:: bash
+.. code-block:: console
 
   yarn add awesome-package
 
 Dependencies are installed into the ``node_modules`` directory. Deleting that
 directory and re-running ``yarn install`` should always be safe.
+
+Dealing with yarn.lock merge conflicts
+--------------------------------------
+
+Since ``yarn.lock`` is generated, it can create merge conflicts. Resolving
+them at the ``yarn.lock`` level is too hard, but `yarn`_ itself is
+deterministic. The best procedure for dealing with ``yarn.lock`` merge
+conflicts is to first resolve the conflicts, if any, in ``package.json``. Then:
+
+.. code-block:: console
+
+  yarn install --force
+  git add yarn.lock
+
+Which causes yarn to discard the ``yarn.lock`` file, recalculate the
+dependencies and write new content.
 
 webpack asset management
 ------------------------
@@ -151,12 +173,15 @@ hot-updating of code. The following:
   npm run start
 
 will build the code and launch the dev server on `localhost:8080`. It will
-additionally watch for changes to the files and re-compile/refresh as needed.
+be configured to use the API endpoint from OpenStack's Zuul. The
+``webpack-dev-server`` watches for changes to the files and
+re-compiles/refresh as needed.
+
 Arbitrary command line options will be passed through after a ``--`` such as:
 
 .. code-block:: bash
 
-  npm run start -- --open-file='static/status.html'
+  npm run start -- --open-file='status.html'
 
 That's kind of annoying though, so additional targets exist for common tasks:
 
@@ -164,45 +189,19 @@ Run status against `basic` built-in demo data.
 
 .. code-block:: bash
 
-  npm run start:status:basic
+  npm run start:basic
 
 Run status against `openstack` built-in demo data
 
 .. code-block:: bash
 
-  npm run start:status:openstack
+  npm run start:openstack
 
 Run status against `tree` built-in demo data.
 
 .. code-block:: bash
 
-  npm run start:status:tree
-
-Run status against live data from OpenStack's Zuul.
-
-.. code-block:: bash
-
-  npm run start:status
-
-Run builds against live data from OpenStack's Zuul.
-
-.. code-block:: bash
-
-  npm run start:builds
-
-Run jobs against live data from OpenStack's Zuul.
-
-.. code-block:: bash
-
-  npm run start:jobs
-
-Run console streamer.
-
-.. note:: There is not currently a good way to pass build_id paramter.
-
-.. code-block:: bash
-
-  npm run start:stream
+  npm run start:tree
 
 Additional run commands can be added in `package.json` in the ``scripts``
 section.
@@ -217,6 +216,8 @@ files are in the ``zuul/web/static`` directory. Because the javascript
 build outputs into the ``zuul/web/static`` directory, as long as
 ``npm run build`` has been done before ``pip install .`` or
 ``python setup.py sdist``, all the files will be where they need to be.
+As long as `yarn`_ is installed, the installation of zuul will run
+``npm run build`` appropriately.
 
 Debugging minified code
 -----------------------
