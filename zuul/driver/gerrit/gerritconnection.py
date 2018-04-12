@@ -94,6 +94,8 @@ class GerritEventConnector(threading.Thread):
         if event.project_name is None:
             # ref-replica* events
             event.project_name = data.get('project')
+        if event.type == 'project-created':
+            event.project_name = data.get('projectName')
         # Map the event types to a field name holding a Gerrit
         # account attribute. See Gerrit stream-event documentation
         # in cmd-stream-events.html
@@ -111,6 +113,7 @@ class GerritEventConnector(threading.Thread):
             'ref-replication-done': None,
             'ref-replication-scheduled': None,
             'topic-changed': 'changer',
+            'project-created': None,  # Gerrit 2.14
         }
         event.account = None
         if event.type in accountfield_from_type:
