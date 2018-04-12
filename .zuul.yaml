@@ -130,3 +130,7 @@
         - publish-openstack-javascript-content:
             vars:
                 node_version: 8
+    release:
+      jobs:
+        - publish-zuul-docs
+        - publish-openstack-sphinx-docs-infra-python3
