@@ -24,8 +24,20 @@ parser.add_argument('tenant', help='The Zuul tenant')
 parser.add_argument('pipeline', help='The name of the Zuul pipeline')
 options = parser.parse_args()
 
-data = urllib2.urlopen('%s/status' % options.url).read()
-data = json.loads(data)
+# Check if tenant is white label
+info = json.loads(urllib2.urlopen('%s/api/info' % options.url).read())
+api_tenant = info.get('info', {}).get('tenant')
+if api_tenant:
+    if api_tenant == options.tenant:
+        status_url = '%s/api/status' % options.url
+    else:
+        print("Error: %s doesn't match tenant %s (!= %s)" % (
+            options.url, options.tenant, api_tenant))
+        exit(1)
+else:
+    status_url = '%s/api/tenant/%s/status' % (options.url, options.tenant)
+
+data = json.loads(urllib2.urlopen(status_url).read())
 
 for pipeline in data['pipelines']:
     if pipeline['name'] != options.pipeline:
