@@ -44,6 +44,22 @@
         Verified: 0
     precedence: high
 
+- pipeline:
+    name: tag
+    manager: independent
+    trigger:
+      gerrit:
+        - event: ref-updated
+          ref: ^refs/tags/.*$
+    success:
+      resultsdb_mysql: null
+      resultsdb_postgresql: null
+    failure:
+      resultsdb_mysql: null
+      resultsdb_mysql_failures: null
+      resultsdb_postgresql: null
+      resultsdb_postgresql_failures: null
+
 - job:
     name: base
     parent: null
@@ -63,6 +79,10 @@
 - job:
     name: project-test3
     run: playbooks/project-test3.yaml
+
+- job:
+    name: project-publish
+    run: playbooks/project-publish.yaml
 
 - project:
     name: org/project
@@ -86,6 +106,9 @@
             dependencies: project-merge
         - project-test2:
             dependencies: project-merge
+    tag:
+      jobs:
+        - project-publish
 
 - project:
     name: org/project1

@@ -380,7 +380,8 @@ class Scheduler(threading.Thread):
                             canonical_hostname.replace('.', '_'))
                 projectname = (build.build_set.item.change.project.name.
                                replace('.', '_').replace('/', '_'))
-                branchname = (build.build_set.item.change.branch.
+                branchname = (getattr(build.build_set.item.change,
+                                      'branch', '').
                               replace('.', '_').replace('/', '_'))
                 basekey = 'zuul.tenant.%s' % tenant.name
                 pipekey = '%s.pipeline.%s' % (basekey, build.pipeline.name)

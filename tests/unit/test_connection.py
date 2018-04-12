@@ -132,9 +132,10 @@ class TestSQLConnection(ZuulDBTestCase):
                 sa.sql.select([reporter.connection.zuul_buildset_table]))
 
             buildsets = result.fetchall()
-            self.assertEqual(2, len(buildsets))
+            self.assertEqual(3, len(buildsets))
             buildset0 = buildsets[0]
             buildset1 = buildsets[1]
+            buildset2 = buildsets[2]
 
             self.assertEqual('check', buildset0['pipeline'])
             self.assertEqual('org/project', buildset0['project'])
@@ -187,9 +188,22 @@ class TestSQLConnection(ZuulDBTestCase):
                     uuid=buildset1_builds[1]['uuid']),
                 buildset1_builds[1]['log_url'])
 
+            buildset2_builds = conn.execute(
+                sa.sql.select([reporter.connection.zuul_build_table]).where(
+                    reporter.connection.zuul_build_table.c.buildset_id ==
+                    buildset2['id']
+                )
+            ).fetchall()
+
+            # Check the first result, which should be the project-publish job
+            self.assertEqual('project-publish',
+                             buildset2_builds[0]['job_name'])
+            self.assertEqual("SUCCESS", buildset2_builds[0]['result'])
+
         self.executor_server.hold_jobs_in_build = True
 
         # Add a success result
+        self.log.debug("Adding success FakeChange")
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
@@ -197,10 +211,19 @@ class TestSQLConnection(ZuulDBTestCase):
         self.waitUntilSettled()
 
         # Add a failed result
+        self.log.debug("Adding failed FakeChange")
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
 
         self.executor_server.failJob('project-test1', B)
         self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.orderedRelease()
+        self.waitUntilSettled()
+
+        # Add a tag result
+        self.log.debug("Adding FakeTag event")
+        C = self.fake_gerrit.addFakeTag('org/project', 'master', 'foo')
+        self.fake_gerrit.addEvent(C)
         self.waitUntilSettled()
         self.orderedRelease()
         self.waitUntilSettled()
