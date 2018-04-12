@@ -66,6 +66,12 @@ class TestTenantSimple(TenantParserTestCase):
         self.assertTrue('project2-job' in
                         project2_config.pipelines['check'].job_list.jobs)
 
+    def test_variant_description(self):
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        job = tenant.layout.jobs.get("project2-job")
+        self.assertEqual(job[0].variant_description, "")
+        self.assertEqual(job[1].variant_description, "stable")
+
 
 class TestTenantOverride(TenantParserTestCase):
     tenant_config_file = 'config/tenant-parser/override.yaml'

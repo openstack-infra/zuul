@@ -205,6 +205,12 @@ success, the pipeline reports back to Gerrit with ``Verified`` vote of
       This field may be used to provide a textual description of the
       pipeline.  It may appear in the status page or in documentation.
 
+   .. attr:: variant-description
+      :default: branch name
+
+      This field may be used to provide a textual description of the
+      variant. It may appear in the status page or in documentation.
+
    .. attr:: success-message
       :default: Build successful.
 

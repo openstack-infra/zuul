@@ -520,6 +520,7 @@ class JobParser(object):
                       'override-branch': str,
                       'override-checkout': str,
                       'description': str,
+                      'variant-description': str,
                       'post-review': bool}
 
     job_name = {vs.Required('name'): str}
@@ -595,6 +596,8 @@ class JobParser(object):
         job.description = conf.get('description')
         job.source_context = conf.get('_source_context')
         job.source_line = conf.get('_start_mark').line + 1
+        job.variant_description = conf.get(
+            'variant-description', " ".join(as_list(conf.get('branches'))))
 
         if 'parent' in conf:
             if conf['parent'] is not None:
