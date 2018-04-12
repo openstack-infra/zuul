@@ -266,7 +266,7 @@ The following sections of ``zuul.conf`` are used by the scheduler:
       Path to log config file.
 
    .. attr:: pidfile
-      :default: /var/run/zuul-schedurecr/zuul-scheduler.pid
+      :default: /var/run/zuul/scheduler.pid
 
       Path to PID lock file.
 
@@ -359,7 +359,7 @@ The following section of ``zuul.conf`` is used by the merger:
       Path to log config file for the merger process.
 
    .. attr:: pidfile
-      :default: /var/run/zuul-merger/zuul-merger.pid
+      :default: /var/run/zuul/merger.pid
 
       Path to PID lock file for the merger process.
 
@@ -490,7 +490,7 @@ The following sections of ``zuul.conf`` are used by the executor:
       Path to log config file for the executor process.
 
    .. attr:: pidfile
-      :default: /var/run/zuul-executor/zuul-executor.pid
+      :default: /var/run/zuul/executor.pid
 
       Path to PID lock file for the executor process.
 
@@ -644,7 +644,7 @@ sections of ``zuul.conf`` are used by the web server:
       Path to log config file for the web server process.
 
    .. attr:: pidfile
-      :default: /var/run/zuul-web/zuul-web.pid
+      :default: /var/run/zuul/web.pid
 
       Path to PID lock file for the web server process.
 
@@ -727,7 +727,7 @@ sections of ``zuul.conf`` are used by the finger gateway:
       Path to log config file for the finger gateway process.
 
    .. attr:: pidfile
-      :default: /var/run/zuul-fingergw/zuul-fingergw.pid
+      :default: /var/run/zuul/fingergw.pid
 
       Path to PID lock file for the finger gateway process.
 
