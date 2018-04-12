@@ -35,6 +35,9 @@
 - job:
     name: base
     parent: null
+    pre-run: playbooks/base-pre.yaml
+    secrets:
+      - base-secret
 
 - job:
     name: trusted-secrets
@@ -104,3 +107,8 @@
         naHKZYT7nkrJm8AMCgZU0ZArFLpaufKCeiK5ECSsDxic4FIsY1OkWT42qEUfL0Wd+150
         AKGNZpPJnnP3QYY4W/MWcKH/zdO400+zWN52WevbSqZy90tqKDJrBkMl1ydqbuw1E4ZH
         vIs=
+
+- secret:
+    name: base-secret
+    data:
+      username: base-username

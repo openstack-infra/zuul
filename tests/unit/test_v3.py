@@ -3086,11 +3086,13 @@ class TestSecretInheritance(ZuulTestCase):
         secret = {'longpassword': 'test-passwordtest-password',
                   'password': 'test-password',
                   'username': 'test-username'}
+        base_secret = {'username': 'base-username'}
         self.assertEqual(
             self._getSecrets('trusted-secrets', 'playbooks'),
             [{'trusted-secret': secret}])
         self.assertEqual(
-            self._getSecrets('trusted-secrets', 'pre_playbooks'), [])
+            self._getSecrets('trusted-secrets', 'pre_playbooks'),
+            [{'base-secret': base_secret}])
         self.assertEqual(
             self._getSecrets('trusted-secrets', 'post_playbooks'), [])
 
@@ -3099,7 +3101,8 @@ class TestSecretInheritance(ZuulTestCase):
                              'playbooks'), [{}])
         self.assertEqual(
             self._getSecrets('trusted-secrets-trusted-child',
-                             'pre_playbooks'), [])
+                             'pre_playbooks'),
+            [{'base-secret': base_secret}])
         self.assertEqual(
             self._getSecrets('trusted-secrets-trusted-child',
                              'post_playbooks'), [])
@@ -3109,7 +3112,8 @@ class TestSecretInheritance(ZuulTestCase):
                              'playbooks'), [{}])
         self.assertEqual(
             self._getSecrets('trusted-secrets-untrusted-child',
-                             'pre_playbooks'), [])
+                             'pre_playbooks'),
+            [{'base-secret': base_secret}])
         self.assertEqual(
             self._getSecrets('trusted-secrets-untrusted-child',
                              'post_playbooks'), [])
@@ -3118,11 +3122,13 @@ class TestSecretInheritance(ZuulTestCase):
         secret = {'longpassword': 'test-passwordtest-password',
                   'password': 'test-password',
                   'username': 'test-username'}
+        base_secret = {'username': 'base-username'}
         self.assertEqual(
             self._getSecrets('untrusted-secrets', 'playbooks'),
             [{'untrusted-secret': secret}])
         self.assertEqual(
-            self._getSecrets('untrusted-secrets', 'pre_playbooks'), [])
+            self._getSecrets('untrusted-secrets', 'pre_playbooks'),
+            [{'base-secret': base_secret}])
         self.assertEqual(
             self._getSecrets('untrusted-secrets', 'post_playbooks'), [])
 
@@ -3131,7 +3137,8 @@ class TestSecretInheritance(ZuulTestCase):
                              'playbooks'), [{}])
         self.assertEqual(
             self._getSecrets('untrusted-secrets-trusted-child',
-                             'pre_playbooks'), [])
+                             'pre_playbooks'),
+            [{'base-secret': base_secret}])
         self.assertEqual(
             self._getSecrets('untrusted-secrets-trusted-child',
                              'post_playbooks'), [])
@@ -3141,7 +3148,8 @@ class TestSecretInheritance(ZuulTestCase):
                              'playbooks'), [{}])
         self.assertEqual(
             self._getSecrets('untrusted-secrets-untrusted-child',
-                             'pre_playbooks'), [])
+                             'pre_playbooks'),
+            [{'base-secret': base_secret}])
         self.assertEqual(
             self._getSecrets('untrusted-secrets-untrusted-child',
                              'post_playbooks'), [])
