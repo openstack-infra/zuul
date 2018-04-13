@@ -24,3 +24,4 @@ iso8601
 aiohttp<3.0.0
 uvloop;python_version>='3.5'
 psutil
+fb-re2>=1.0.6

@@ -219,7 +219,8 @@ the following options.
 
       .. value:: status
 
-         Status set on commit.
+         Status set on commit. The syntax is ``user:status:value``.
+         This also can be a regular expression.
 
       A :value:`pipeline.trigger.<github
       source>.event.pull_request_review` event will have associated
@@ -420,7 +421,8 @@ enqueued into the pipeline.
    .. attr:: status
 
       A string value that corresponds with the status of the pull
-      request.  The syntax is ``user:status:value``.
+      request.  The syntax is ``user:status:value``. This can also
+      be a regular expression.
 
    .. attr:: label
 
