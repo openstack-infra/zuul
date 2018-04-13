@@ -1,5 +1,0 @@
-- hosts: all
-  roles:
-    - install-nodejs
-    - install-yarn
-    - install-javascript-packages
