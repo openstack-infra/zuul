@@ -16,6 +16,7 @@
 # under the License.
 
 import asyncio
+import json
 import threading
 import os
 import urllib.parse
@@ -232,6 +233,24 @@ class TestWeb(BaseTestWeb):
         self.assertEqual('tenant-one', data[0]['name'])
         self.assertEqual(3, data[0]['projects'])
         self.assertEqual(0, data[0]['queue'])
+
+        # test that non-live items are not counted
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        B.setDependsOn(A, 1)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        req = urllib.request.Request(
+            "http://127.0.0.1:%s/api/tenants" % self.port)
+        f = urllib.request.urlopen(req)
+        data = f.read().decode('utf8')
+        data = json.loads(data)
+
+        self.assertEqual('tenant-one', data[0]['name'])
+        self.assertEqual(3, data[0]['projects'])
+        self.assertEqual(1, data[0]['queue'])
 
     def test_web_bad_url(self):
         # do we 404 correctly
