@@ -3,7 +3,7 @@
     manager: independent
     require:
       github:
-        status: zuul:check:success
+        status: zuul:tenant-one/check:success
     trigger:
       github:
         - event: pull_request
@@ -18,7 +18,7 @@
     manager: independent
     reject:
       github:
-        status: zuul:check:error
+        status: zuul:tenant-one/check:error
     trigger:
       github:
         - event: pull_request
@@ -36,7 +36,7 @@
         - event: pull_request
           action: comment
           comment: trigger me
-          require-status: zuul:check:success
+          require-status: zuul:tenant-one/check:success
     success:
       github:
         comment: true
@@ -48,7 +48,7 @@
       github:
         - event: pull_request
           action: status
-          status: zuul:check:success
+          status: zuul:tenant-one/check:success
     success:
       github:
         status: success

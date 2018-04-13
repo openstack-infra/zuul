@@ -36,14 +36,14 @@ class TestGithubRequirements(ZuulTestCase):
 
         # An error status should not cause it to be enqueued
         self.fake_github.setCommitStatus(project, A.head_sha, 'error',
-                                         context='check')
+                                         context='tenant-one/check')
         self.fake_github.emitEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # A success status goes in
         self.fake_github.setCommitStatus(project, A.head_sha, 'success',
-                                         context='check')
+                                         context='tenant-one/check')
         self.fake_github.emitEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
@@ -63,14 +63,14 @@ class TestGithubRequirements(ZuulTestCase):
 
         # An error status should not cause it to be enqueued
         self.fake_github.setCommitStatus(project, A.head_sha, 'error',
-                                         context='check')
+                                         context='tenant-one/check')
         self.fake_github.emitEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
 
         # A success status goes in
         self.fake_github.setCommitStatus(project, A.head_sha, 'success',
-                                         context='check')
+                                         context='tenant-one/check')
         self.fake_github.emitEvent(comment)
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
@@ -84,8 +84,8 @@ class TestGithubRequirements(ZuulTestCase):
 
         # An error status should not cause it to be enqueued
         self.fake_github.setCommitStatus(project, A.head_sha, 'error',
-                                         context='check')
-        self.fake_github.emitEvent(A.getCommitStatusEvent('check',
+                                         context='tenant-one/check')
+        self.fake_github.emitEvent(A.getCommitStatusEvent('tenant-one/check',
                                                           state='error'))
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 0)
@@ -93,8 +93,9 @@ class TestGithubRequirements(ZuulTestCase):
         # A success status from unknown user should not cause it to be
         # enqueued
         self.fake_github.setCommitStatus(project, A.head_sha, 'success',
-                                         context='check', user='foo')
-        self.fake_github.emitEvent(A.getCommitStatusEvent('check',
+                                         context='tenant-one/check',
+                                         user='foo')
+        self.fake_github.emitEvent(A.getCommitStatusEvent('tenant-one/check',
                                                           state='success',
                                                           user='foo'))
         self.waitUntilSettled()
@@ -102,8 +103,8 @@ class TestGithubRequirements(ZuulTestCase):
 
         # A success status from zuul goes in
         self.fake_github.setCommitStatus(project, A.head_sha, 'success',
-                                         context='check')
-        self.fake_github.emitEvent(A.getCommitStatusEvent('check'))
+                                         context='tenant-one/check')
+        self.fake_github.emitEvent(A.getCommitStatusEvent('tenant-one/check'))
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, 'project2-trigger')
@@ -111,8 +112,8 @@ class TestGithubRequirements(ZuulTestCase):
         # An error status for a different context should not cause it to be
         # enqueued
         self.fake_github.setCommitStatus(project, A.head_sha, 'error',
-                                         context='gate')
-        self.fake_github.emitEvent(A.getCommitStatusEvent('gate',
+                                         context='tenant-one/gate')
+        self.fake_github.emitEvent(A.getCommitStatusEvent('tenant-one/gate',
                                                           state='error'))
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
@@ -511,7 +512,7 @@ class TestGithubRequirements(ZuulTestCase):
 
         # Set rejected error status
         self.fake_github.setCommitStatus(project, A.head_sha, 'error',
-                                         context='check')
+                                         context='tenant-one/check')
 
         # A comment event that we will keep submitting to trigger
         comment = A.getCommentAddedEvent('test me')
@@ -521,7 +522,7 @@ class TestGithubRequirements(ZuulTestCase):
         self.assertEqual(len(self.history), 0)
 
         self.fake_github.setCommitStatus(project, A.head_sha, 'success',
-                                         context='check')
+                                         context='tenant-one/check')
         # Now that status is not error, it should be enqueued
         self.fake_github.emitEvent(comment)
         self.waitUntilSettled()
