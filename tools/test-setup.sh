@@ -39,7 +39,7 @@ mysql -u $DB_USER -p$DB_PW -h 127.0.0.1 -e "
     CREATE DATABASE openstack_citest CHARACTER SET utf8;"
 
 # setup postgres user and database
-sudo -u postgres psql -c "CREATE ROLE $DB_USER WITH LOGIN SUPERUSER UNENCRYPTED PASSWORD '$DB_PW';"
+sudo -u postgres psql -c "CREATE ROLE $DB_USER WITH LOGIN SUPERUSER PASSWORD '$DB_PW';"
 sudo -u postgres psql -c "CREATE DATABASE openstack_citest OWNER $DB_USER TEMPLATE template0 ENCODING 'UTF8';"
 
 # TODO(pabelanger): Move this into bindep after we figure out how to enable our
