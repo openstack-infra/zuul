@@ -3,7 +3,7 @@ Zuul From Scratch
 
 .. note:: This is a work in progress that attempts to walk through all
           of the steps needed to run Zuul on a all-in-one server, and
-          demonstrate running against a GitHub project.
+          demonstrate running against either a GitHub or Gerrit project.
 
 Environment Setup
 -----------------
@@ -83,4 +83,5 @@ Setup Your Repo
 
 Select your code repository to setup.
 
+  * :doc:`gerrit_setup`
   * :doc:`github_setup`
