@@ -49,6 +49,12 @@ class TestGithubRequirements(ZuulTestCase):
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, 'project1-pipeline')
 
+        # Trigger regex matched status
+        self.fake_github.emitEvent(A.getCommentAddedEvent('test regex'))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 2)
+        self.assertEqual(self.history[1].name, 'project1-pipeline')
+
     @simple_layout('layouts/requirements-github.yaml', driver='github')
     def test_trigger_require_status(self):
         "Test trigger requirement: status"
@@ -75,6 +81,11 @@ class TestGithubRequirements(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, 'project1-pipeline')
+
+        self.fake_github.emitEvent(A.getCommentAddedEvent('trigger regex'))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 2)
+        self.assertEqual(self.history[1].name, 'project1-pipeline')
 
     @simple_layout('layouts/requirements-github.yaml', driver='github')
     def test_trigger_on_status(self):
@@ -117,6 +128,13 @@ class TestGithubRequirements(ZuulTestCase):
                                                           state='error'))
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
+
+        # A success status with a regex match goes in
+        self.fake_github.emitEvent(A.getCommitStatusEvent('cooltest',
+                                                          user='other-ci'))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 2)
+        self.assertEqual(self.history[1].name, 'project2-trigger')
 
     @simple_layout('layouts/requirements-github.yaml', driver='github')
     def test_pipeline_require_review_username(self):
@@ -521,6 +539,12 @@ class TestGithubRequirements(ZuulTestCase):
         # Status should cause it to be rejected
         self.assertEqual(len(self.history), 0)
 
+        # Test that also the regex matched pipeline doesn't trigger
+        self.fake_github.emitEvent(A.getCommentAddedEvent('test regex'))
+        self.waitUntilSettled()
+        # Status should cause it to be rejected
+        self.assertEqual(len(self.history), 0)
+
         self.fake_github.setCommitStatus(project, A.head_sha, 'success',
                                          context='tenant-one/check')
         # Now that status is not error, it should be enqueued
@@ -528,3 +552,9 @@ class TestGithubRequirements(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 1)
         self.assertEqual(self.history[0].name, 'project12-status')
+
+        # Test that also the regex matched pipeline triggers now
+        self.fake_github.emitEvent(A.getCommentAddedEvent('test regex'))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 2)
+        self.assertEqual(self.history[1].name, 'project12-status')

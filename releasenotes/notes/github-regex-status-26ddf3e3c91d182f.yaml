@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    The GitHub trigger status filter
+    :value:`pipeline.trigger.<github source>.action.status` and pipeline
+    requirements :attr:`pipeline.require.<github source>.status` now support
+    regular expression matching.

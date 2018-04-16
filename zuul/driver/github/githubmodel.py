@@ -16,6 +16,7 @@
 
 import copy
 import re
+import re2
 import time
 
 from zuul.model import Change, TriggerEvent, EventFilter, RefFilter
@@ -171,16 +172,20 @@ class GithubCommonFilter(object):
         # statuses and the filter statuses are a null intersection, there
         # are no matches and we return false
         if self.required_statuses:
-            if set(change.status).isdisjoint(set(self.required_statuses)):
-                return False
+            for required_status in self.required_statuses:
+                for status in change.status:
+                    if re2.fullmatch(required_status, status):
+                        return True
+            return False
         return True
 
     def matchesNoRejectStatuses(self, change):
         # statuses are ANDed
         # If any of the rejected statusses are present, we return false
         for rstatus in self.reject_statuses:
-            if rstatus in change.status:
-                return False
+            for status in change.status:
+                if re2.fullmatch(rstatus, status):
+                    return False
         return True
 
 
@@ -299,8 +304,14 @@ class GithubEventFilter(EventFilter, GithubCommonFilter):
             return False
 
         # statuses are ORed
-        if self.statuses and event.status not in self.statuses:
-            return False
+        if self.statuses:
+            status_found = False
+            for status in self.statuses:
+                if re2.fullmatch(status, event.status):
+                    status_found = True
+                    break
+            if not status_found:
+                return False
 
         if not self.matchesStatuses(change):
             return False

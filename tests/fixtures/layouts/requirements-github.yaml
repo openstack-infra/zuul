@@ -14,6 +14,21 @@
         comment: true
 
 - pipeline:
+    name: pipeline_regex
+    manager: independent
+    require:
+      github:
+        status: zuul:.*:success
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: test regex
+    success:
+      github:
+        comment: true
+
+- pipeline:
     name: reject_status
     manager: independent
     reject:
@@ -29,6 +44,21 @@
         comment: true
 
 - pipeline:
+    name: reject_status_regex
+    manager: independent
+    reject:
+      github:
+        status: zuul:.*/check:error
+    trigger:
+      github:
+        - event: pull_request
+          action: comment
+          comment: test regex
+    success:
+      github:
+        comment: true
+
+- pipeline:
     name: trigger_status
     manager: independent
     trigger:
@@ -37,6 +67,10 @@
           action: comment
           comment: trigger me
           require-status: zuul:tenant-one/check:success
+        - event: pull_request
+          action: comment
+          comment: trigger regex
+          require-status: zuul:.*:success
     success:
       github:
         comment: true
@@ -48,7 +82,14 @@
       github:
         - event: pull_request
           action: status
-          status: zuul:tenant-one/check:success
+          status:
+            # first line is to check if a list works here
+            - dummy:tenant-one/check:success
+            - zuul:tenant-one/check:success
+        - event: pull_request
+          action: status
+          status:
+            - other-ci:.+:success
     success:
       github:
         status: success
@@ -314,6 +355,9 @@
     pipeline:
       jobs:
         - project1-pipeline
+    pipeline_regex:
+      jobs:
+        - project1-pipeline
     trigger_status:
       jobs:
         - project1-pipeline
@@ -381,6 +425,9 @@
 - project:
     name: org/project12
     reject_status:
+      jobs:
+        - project12-status
+    reject_status_regex:
       jobs:
         - project12-status
 
