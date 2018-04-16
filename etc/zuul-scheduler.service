@@ -1,0 +1,15 @@
+[Unit]
+Description=Zuul Scheduler Service
+After=syslog.target network.target
+
+[Service]
+Type=forking
+Group=zuul
+User=zuul
+RuntimeDirectory=zuul
+ExecStart=/usr/local/bin/zuul-scheduler
+ExecStop=/usr/local/bin/zuul-scheduler stop
+PIDFile=/var/run/zuul/scheduler.pid
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+[Unit]
+Description=Zuul Web Service
+After=syslog.target network.target
+
+[Service]
+Type=forking
+Group=zuul
+User=zuul
+RuntimeDirectory=zuul
+ExecStart=/usr/local/bin/zuul-web
+ExecStop=/usr/local/bin/zuul-web stop
+PIDFile=/var/run/zuul/web.pid
+
+[Install]
+WantedBy=multi-user.target
