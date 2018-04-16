@@ -575,3 +575,21 @@ precedence than any other type of variable in Zuul, so be sure their
 names are not shared by any job variables.  If more than one parent
 job returns the same variable, the value from the later job in the job
 graph will take precedence.
+
+
+.. _build_status:
+
+Build Status
+------------
+
+A job build may have the following status:
+
+* SUCCESS/FAILURE: nominal job execution.
+* RETRY_LIMIT: the ``pre-run`` playbook failed more than the maximum number of
+  retry ``attempts``.
+* POST_FAILURE: the ``post-run`` playbook failed.
+* SKIPPED: one of the build dependencies failed and this job was not executed.
+* NODE_FAILURE: the test instance provider was unable to fullfill the nodeset
+  request.
+  Note: this can happen if the Nodepool quota is exceeding the provider
+  capacity, resulting in ERROR server creation: "No valid host found".
