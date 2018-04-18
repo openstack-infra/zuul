@@ -68,9 +68,9 @@ Tox will run your entire test suite in the environments specified in the project
 To run the test suite in just one of the environments in envlist execute::
 
   tox -e <env>
-so for example, *run the test suite in py26*::
+so for example, *run the test suite in py35*::
 
-  tox -e py26
+  tox -e py35
 
 Run One Test
 ------------
@@ -81,17 +81,18 @@ To run individual tests with tox::
 
 For example, to *run the basic Zuul test*::
 
-  tox -e py27 -- tests.unit.test_scheduler.TestScheduler.test_jobs_executed
+  tox -e py35 -- tests.unit.test_scheduler.TestScheduler.test_jobs_executed
 
 To *run one test in the foreground* (after previously having run tox
 to set up the virtualenv)::
 
-  .tox/py27/bin/python -m testtools.run tests.unit.test_scheduler.TestScheduler.test_jobs_executed
+  . .tox/py35/bin/activate
+  python -m testtools.run tests.unit.test_scheduler.TestScheduler.test_jobs_executed
 
 List Failing Tests
 ------------------
 
-  .tox/py27/bin/activate
+  .tox/py35/bin/activate
   testr failing --list
 
 Hanging Tests
@@ -100,7 +101,7 @@ Hanging Tests
 The following will run each test in turn and print the name of the
 test as it is run::
 
-  . .tox/py27/bin/activate
+  . .tox/py35/bin/activate
   testr run --subunit | subunit2pyunit
 
 You can compare the output of that to::
