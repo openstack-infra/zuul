@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import asyncio
 import collections
 import datetime
 import logging
@@ -1183,6 +1184,9 @@ class GithubWebhookHandler(BaseDriverWebHandler):
 
         return True
 
+    def setEventLoop(self, event_loop):
+        self.event_loop = event_loop
+
     async def handleRequest(self, request):
         # Note(tobiash): We need to normalize the headers. Otherwise we will
         # have trouble to get them from the dict afterwards.
@@ -1202,9 +1206,19 @@ class GithubWebhookHandler(BaseDriverWebHandler):
         # We cannot send the raw body through gearman, so it's easy to just
         # encode it as json, after decoding it as utf-8
         json_body = json.loads(body.decode('utf-8'))
-        job = self.zuul_web.rpc.submitJob(
+
+        gear_task = self.event_loop.run_in_executor(
+            None, self.zuul_web.rpc.submitJob,
             'github:%s:payload' % self.connection.connection_name,
             {'headers': headers, 'body': json_body})
+
+        try:
+            job = await asyncio.wait_for(gear_task, 300)
+        except asyncio.TimeoutError:
+            self.log.exception("Gearman timeout:")
+            return web.json_response({'error_description': 'Internal error'},
+                                     status=500)
+
         return web.json_response(json.loads(job.data[0]))
 
 
