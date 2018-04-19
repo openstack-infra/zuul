@@ -71,6 +71,8 @@
 
 - job:
     name: base
+    vars:
+      base_var: 'base_var'
     parent: null
 
 - job:

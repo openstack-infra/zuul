@@ -39,3 +39,4 @@
           - vartest_job == 'vartest_job'
           - vartest_secret.value == 'vartest_secret'
           - vartest_site == 'vartest_site'
+          - base_var == 'base_var'

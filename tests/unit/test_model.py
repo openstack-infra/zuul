@@ -13,8 +13,10 @@
 # under the License.
 
 
+import collections
 import os
 import random
+import types
 
 import fixtures
 import testtools
@@ -309,8 +311,8 @@ class TestJob(BaseTestCase):
             '_start_mark': self.start_mark,
             'name': 'job',
             'parent': None,
+            'post-review': True
         })
-        job.post_review = True
 
         self.layout.addJob(job)
 
@@ -611,3 +613,98 @@ class TestTenant(BaseTestCase):
                 Exception,
                 "Project project1 is already in project index"):
             tenant._addProject(source1_project1_tpc)
+
+
+class TestFreezable(BaseTestCase):
+    def test_freezable_object(self):
+
+        o = model.Freezable()
+        o.foo = 1
+        o.list = []
+        o.dict = {}
+        o.odict = collections.OrderedDict()
+        o.odict2 = collections.OrderedDict()
+
+        o1 = model.Freezable()
+        o1.foo = 1
+        l1 = [1]
+        d1 = {'foo': 1}
+        od1 = {'foo': 1}
+        o.list.append(o1)
+        o.list.append(l1)
+        o.list.append(d1)
+        o.list.append(od1)
+
+        o2 = model.Freezable()
+        o2.foo = 1
+        l2 = [1]
+        d2 = {'foo': 1}
+        od2 = {'foo': 1}
+        o.dict['o'] = o2
+        o.dict['l'] = l2
+        o.dict['d'] = d2
+        o.dict['od'] = od2
+
+        o3 = model.Freezable()
+        o3.foo = 1
+        l3 = [1]
+        d3 = {'foo': 1}
+        od3 = {'foo': 1}
+        o.odict['o'] = o3
+        o.odict['l'] = l3
+        o.odict['d'] = d3
+        o.odict['od'] = od3
+
+        seq = list(range(1000))
+        random.shuffle(seq)
+        for x in seq:
+            o.odict2[x] = x
+
+        o.freeze()
+
+        with testtools.ExpectedException(Exception, "Unable to modify frozen"):
+            o.bar = 2
+        with testtools.ExpectedException(AttributeError, "'tuple' object"):
+            o.list.append(2)
+        with testtools.ExpectedException(TypeError, "'mappingproxy' object"):
+            o.dict['bar'] = 2
+        with testtools.ExpectedException(TypeError, "'mappingproxy' object"):
+            o.odict['bar'] = 2
+
+        with testtools.ExpectedException(Exception, "Unable to modify frozen"):
+            o1.bar = 2
+        with testtools.ExpectedException(Exception, "Unable to modify frozen"):
+            o.list[0].bar = 2
+        with testtools.ExpectedException(AttributeError, "'tuple' object"):
+            o.list[1].append(2)
+        with testtools.ExpectedException(TypeError, "'mappingproxy' object"):
+            o.list[2]['bar'] = 2
+        with testtools.ExpectedException(TypeError, "'mappingproxy' object"):
+            o.list[3]['bar'] = 2
+
+        with testtools.ExpectedException(Exception, "Unable to modify frozen"):
+            o2.bar = 2
+        with testtools.ExpectedException(Exception, "Unable to modify frozen"):
+            o.dict['o'].bar = 2
+        with testtools.ExpectedException(AttributeError, "'tuple' object"):
+            o.dict['l'].append(2)
+        with testtools.ExpectedException(TypeError, "'mappingproxy' object"):
+            o.dict['d']['bar'] = 2
+        with testtools.ExpectedException(TypeError, "'mappingproxy' object"):
+            o.dict['od']['bar'] = 2
+
+        with testtools.ExpectedException(Exception, "Unable to modify frozen"):
+            o3.bar = 2
+        with testtools.ExpectedException(Exception, "Unable to modify frozen"):
+            o.odict['o'].bar = 2
+        with testtools.ExpectedException(AttributeError, "'tuple' object"):
+            o.odict['l'].append(2)
+        with testtools.ExpectedException(TypeError, "'mappingproxy' object"):
+            o.odict['d']['bar'] = 2
+        with testtools.ExpectedException(TypeError, "'mappingproxy' object"):
+            o.odict['od']['bar'] = 2
+
+        # Make sure that mapping proxy applied to an ordered dict
+        # still shows the ordered behavior.
+        self.assertTrue(isinstance(o.odict2, types.MappingProxyType))
+        self.assertEqual(list(o.odict2.keys()), seq)
