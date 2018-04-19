@@ -194,7 +194,7 @@ class CallbackModule(default.CallbackModule):
 
         if self._play.strategy != 'free':
             task_name = self._print_task_banner(task)
-        if task.action == 'command':
+        if task.action in ('command', 'shell'):
             log_id = uuid.uuid4().hex
             task.args['zuul_log_id'] = log_id
             play_vars = self._play._variable_manager._hostvars
