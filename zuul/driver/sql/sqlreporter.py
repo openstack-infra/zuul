@@ -69,9 +69,13 @@ class SQLReporter(BaseReporter):
 
                 start = end = None
                 if build.start_time:
-                    start = datetime.datetime.fromtimestamp(build.start_time)
+                    start = datetime.datetime.fromtimestamp(
+                        build.start_time,
+                        tz=datetime.timezone.utc)
                 if build.end_time:
-                    end = datetime.datetime.fromtimestamp(build.end_time)
+                    end = datetime.datetime.fromtimestamp(
+                        build.end_time,
+                        tz=datetime.timezone.utc)
 
                 build_inserts.append({
                     'buildset_id': buildset_ins_result.inserted_primary_key[0],
