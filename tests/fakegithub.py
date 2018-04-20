@@ -181,6 +181,10 @@ class FakeGithub(object):
         owner, proj = project.name.split('/')
         self._repos[(owner, proj)] = FakeRepository()
 
+    def addProjectByName(self, project_name):
+        owner, proj = project_name.split('/')
+        self._repos[(owner, proj)] = FakeRepository()
+
     def pull_request(self, owner, project, number):
         fake_pr = self._pull_requests[number]
         return FakePull(fake_pr)

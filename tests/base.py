@@ -586,6 +586,9 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
         return {}
 
     def _simpleQuery(self, query):
+        # the query can be in parenthesis so strip them if needed
+        if query.startswith('('):
+            query = query[1:-1]
         if query.startswith('change:'):
             # Query a specific changeid
             changeid = query[len('change:'):]
@@ -986,6 +989,21 @@ class FakeGithubConnection(githubconnection.GithubConnection):
                         project=None,
                         user_id=None):
         return self.github_client
+
+    def _prime_installation_map(self):
+        if not self.app_id:
+            return
+
+        # simulate one installation per org
+        orgs = {}
+        latest_inst_id = 0
+        for repo in self.github_client._repos.keys():
+            inst_id = orgs.get(repo[0])
+            if not inst_id:
+                latest_inst_id += 1
+                inst_id = latest_inst_id
+                orgs[repo[0]] = inst_id
+            self.installation_map['/'.join(repo)] = inst_id
 
     def setZuulWebPort(self, port):
         self.zuul_web_port = port
@@ -2289,6 +2307,27 @@ class ZuulTestCase(BaseTestCase):
             'zuul.driver.gerrit.GerritDriver.getConnection',
             getGerritConnection))
 
+        def registerGithubProjects(con):
+            path = self.config.get('scheduler', 'tenant_config')
+            with open(os.path.join(FIXTURE_DIR, path)) as f:
+                tenant_config = yaml.safe_load(f.read())
+            for tenant in tenant_config:
+                sources = tenant['tenant']['source']
+                conf = sources.get(con.source.name)
+                if not conf:
+                    return
+
+                projects = conf.get('config-projects', [])
+                projects.extend(conf.get('untrusted-projects', []))
+
+                for project in projects:
+                    if isinstance(project, dict):
+                        # This can be a dict with the project as the only key
+                        con.github_client.addProjectByName(
+                            list(project.keys())[0])
+                    else:
+                        con.github_client.addProjectByName(project)
+
         def getGithubConnection(driver, name, config):
             server = config.get('server', 'github.com')
             db = self.github_changes_dbs.setdefault(server, {})
@@ -2300,6 +2339,7 @@ class ZuulTestCase(BaseTestCase):
                 git_url_with_auth=self.git_url_with_auth)
             self.event_queues.append(con.event_queue)
             setattr(self, 'fake_' + name, con)
+            registerGithubProjects(con)
             return con
 
         self.useFixture(fixtures.MonkeyPatch(
@@ -3227,3 +3267,20 @@ class ZuulDBTestCase(ZuulTestCase):
                     f = PostgresqlSchemaFixture()
                     self.useFixture(f)
                     self.config.set(section_name, 'dburi', f.dburi)
+
+
+class ZuulGithubAppTestCase(ZuulTestCase):
+    def setup_config(self):
+        super().setup_config()
+        for section_name in self.config.sections():
+            con_match = re.match(r'^connection ([\'\"]?)(.*)(\1)$',
+                                 section_name, re.I)
+            if not con_match:
+                continue
+
+            if self.config.get(section_name, 'driver') == 'github':
+                if (self.config.get(section_name, 'app_key',
+                                    fallback=None) ==
+                    '$APP_KEY_FIXTURE$'):
+                    self.config.set(section_name, 'app_key',
+                                    os.path.join(FIXTURE_DIR, 'app_key'))
