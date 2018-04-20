@@ -208,4 +208,4 @@ our case we use it for both.
 .. _nodejs: https://nodejs.org/
 .. _webpack: https://webpack.js.org/
 .. _devtool: https://webpack.js.org/configuration/devtool/#devtool
-.. _nodeenv: https://pypi.python.org/pypi/nodeenv
+.. _nodeenv: https://pypi.org/project/nodeenv
