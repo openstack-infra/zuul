@@ -15,6 +15,7 @@
 # under the License.
 
 from tests.base import ZuulTestCase
+from zuul.driver.zuul.zuulmodel import ZuulTriggerEvent
 
 
 class TestZuulTriggerParentChangeEnqueued(ZuulTestCase):
@@ -60,6 +61,32 @@ class TestZuulTriggerParentChangeEnqueued(ZuulTestCase):
                 self.assertEqual(job.name, 'project-gate')
             else:
                 raise Exception("Unknown job")
+
+        # Now directly enqueue a change into the check. As no pipeline reacts
+        # on parent-change-enqueued from pipeline check no
+        # parent-change-enqueued event is expected.
+        zuultrigger_event_count = 0
+
+        def counting_put(*args, **kwargs):
+            nonlocal zuultrigger_event_count
+            if isinstance(args[0], ZuulTriggerEvent):
+                zuultrigger_event_count += 1
+            self.sched.trigger_event_queue.put_orig(*args, **kwargs)
+
+        self.sched.trigger_event_queue.put_orig = \
+            self.sched.trigger_event_queue.put
+        self.sched.trigger_event_queue.put = counting_put
+
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        C.addApproval('Verified', -1)
+        D = self.fake_gerrit.addFakeChange('org/project', 'master', 'D')
+        D.addApproval('Verified', -1)
+        D.setDependsOn(C, 1)
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 4)
+        self.assertEqual(zuultrigger_event_count, 0)
 
 
 class TestZuulTriggerProjectChangeMerged(ZuulTestCase):
