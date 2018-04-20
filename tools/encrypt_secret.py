@@ -14,6 +14,7 @@
 
 import argparse
 import base64
+import json
 import math
 import os
 import re
@@ -43,10 +44,14 @@ OpenSSL binary.
 def main():
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument('url',
-                        help="The base URL of the zuul server and tenant.  "
-                        "E.g., https://zuul.example.com/tenant-name")
+                        help="The base URL of the zuul server.  "
+                        "E.g., https://zuul.example.com/")
     parser.add_argument('project',
                         help="The name of the project.")
+    parser.add_argument('--tenant',
+                        default=None,
+                        help="The name of the Zuul tenant.  This may be "
+                        "required in a multi-tenant environment.")
     parser.add_argument('--strip', action='store_true', default=False,
                         help="Strip whitespace from beginning/end of input.")
     parser.add_argument('--infile',
@@ -70,7 +75,21 @@ def main():
                          "unencrypted connection. Your secret may get "
                          "compromised.\n")
 
-    req = Request("%s/key/%s.pub" % (args.url.rstrip('/'), args.project))
+    # Check if tenant is white label
+    req = Request("%s/api/info" % (args.url.rstrip('/'),))
+    info = json.loads(urlopen(req).read().decode('utf8'))
+
+    api_tenant = info.get('info', {}).get('tenant')
+    if not api_tenant and not args.tenant:
+        print("Error: the --tenant argument is required")
+        exit(1)
+
+    if api_tenant:
+        req = Request("%s/api/key/%s.pub" % (
+            args.url.rstrip('/'), args.project))
+    else:
+        req = Request("%s/api/tenant/%s/key/%s.pub" % (
+            args.url.rstrip('/'), args.tenant, args.project))
     pubkey = urlopen(req)
 
     if args.infile:
