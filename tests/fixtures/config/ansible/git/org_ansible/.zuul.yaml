@@ -1,0 +1,8 @@
+- job:
+    name: hello-ansible
+    run: playbooks/hello-ansible.yaml
+
+- project:
+    check:
+      jobs:
+        - hello-ansible

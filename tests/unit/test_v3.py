@@ -2109,6 +2109,17 @@ class TestAnsible(AnsibleZuulTestCase):
             self.assertIn(fail.format("timeout", build_timeout.uuid), msg)
             self.assertIn(fail.format("failpost", build_failpost.uuid), msg)
 
+    def test_repo_ansible(self):
+        A = self.fake_gerrit.addFakeChange('org/ansible', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.reported, 1,
+                         "A should report success")
+        self.assertHistory([
+            dict(name='hello-ansible', result='SUCCESS', changes='1,1'),
+        ])
+
     def _add_job(self, job_name):
         conf = textwrap.dedent(
             """
