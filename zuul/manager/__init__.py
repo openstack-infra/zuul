@@ -399,6 +399,14 @@ class PipelineManager(object):
             except Exception:
                 self.log.exception("Exception while executing job %s "
                                    "for change %s:" % (job, item.change))
+                try:
+                    # If we hit an exception we don't have a build in the
+                    # current item so a potentially aquired semaphore must be
+                    # released as it won't be released on dequeue of the item.
+                    tenant = item.pipeline.layout.tenant
+                    tenant.semaphore_handler.release(item, job)
+                except Exception:
+                    self.log.exception("Exception while releasing semaphore")
 
     def executeJobs(self, item):
         # TODO(jeblair): This should return a value indicating a job
