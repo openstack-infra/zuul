@@ -832,6 +832,11 @@ class GithubConnection(BaseConnection):
         change.message = change.pr.get('body') or ''
         change.updated_at = self._ghTimestampToDate(
             change.pr.get('updated_at'))
+        change.url = change.pr.get('url')
+        change.uris = [
+            '%s/%s/pull/%s' % (self.server, change.project.name,
+                               change.number),
+        ]
 
         if self.sched:
             self.sched.onChangeUpdated(change)

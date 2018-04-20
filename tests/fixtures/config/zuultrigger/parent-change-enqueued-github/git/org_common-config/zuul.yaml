@@ -1,0 +1,72 @@
+- pipeline:
+    name: check
+    manager: independent
+    require:
+      github:
+        label: for-check
+    trigger:
+      github:
+        - event: pull_request
+          action:
+            - opened
+      zuul:
+        - event: parent-change-enqueued
+          pipeline: gate
+    success:
+      github:
+        comment: true
+        status: failure
+    failure:
+      github:
+        comment: true
+        status: failure
+
+- pipeline:
+    name: gate
+    manager: dependent
+    require:
+      github:
+        label: for-gate
+    trigger:
+      github:
+        - event: pull_request_review
+          action: submitted
+          state: approved
+      zuul:
+        - event: parent-change-enqueued
+          pipeline: gate
+    success:
+      github:
+        comment: true
+        status: success
+        merge: true
+    failure:
+      github:
+        comment: true
+        status: failure
+    start:
+      github:
+        comment: true
+        status: pending
+    precedence: high
+
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: project-check
+    run: playbooks/project-check.yaml
+
+- job:
+    name: project-gate
+    run: playbooks/project-gate.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-check
+    gate:
+      jobs:
+        - project-gate
