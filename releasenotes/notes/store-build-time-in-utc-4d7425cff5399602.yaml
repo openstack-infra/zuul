@@ -1,0 +1,5 @@
+upgrades:
+  - |
+    The build start and end times are now stored as UTC in the database. Since
+    there is no localization done on zuul web side, the zuul api also exposes
+    these times as UTC now.
