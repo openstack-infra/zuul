@@ -79,4 +79,4 @@ Modify the Project
   $ git commit -m "First commit"
   $ git push origin HEAD:refs/for/master
 
-You should now be able to see your change in Gerrit as a new review.
+You should now be able to see your change in Gerrit.
