@@ -109,7 +109,8 @@ class DependentPipelineManager(PipelineManager):
         for source in sources:
             self.log.debug("  Checking source: %s", source)
             for c in source.getChangesDependingOn(change,
-                                                  change_queue.projects):
+                                                  change_queue.projects,
+                                                  self.pipeline.layout.tenant):
                 if c not in seen:
                     seen.add(c)
                     needed_by_changes.append(c)

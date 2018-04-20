@@ -72,7 +72,7 @@ class GerritSource(BaseSource):
             results[0]['number'], results[0]['currentPatchSet']['number'])
         return change
 
-    def getChangesDependingOn(self, change, projects):
+    def getChangesDependingOn(self, change, projects, tenant):
         changes = []
         if not change.uris:
             return changes

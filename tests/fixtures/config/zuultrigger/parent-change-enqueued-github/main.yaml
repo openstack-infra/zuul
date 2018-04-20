@@ -6,3 +6,12 @@
           - org/common-config
         untrusted-projects:
           - org/project
+
+- tenant:
+    name: tenant-two
+    source:
+      github:
+        config-projects:
+          - org/common-config
+        untrusted-projects:
+          - org2/project

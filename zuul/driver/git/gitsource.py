@@ -41,7 +41,7 @@ class GitSource(BaseSource):
     def getChangeByURL(self, url):
         return None
 
-    def getChangesDependingOn(self, change, projects):
+    def getChangesDependingOn(self, change, projects, tenant):
         return []
 
     def getCachedChanges(self):

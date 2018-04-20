@@ -115,6 +115,13 @@ class TestZuulTriggerParentChangeEnqueuedGithub(ZuulGithubAppTestCase):
         B1.addLabel('for-check')  # should go to check
         B2.addLabel('for-gate')   # should go to gate
 
+        # In this case we have two installations
+        # 1: org/common-config, org/project (used by tenant-one and tenant-two)
+        # 2: org2/project (only used by tenant-two)
+        # In order to track accesses to the installations enable client
+        # recording in the fake github.
+        self.fake_github.record_clients = True
+
         self.fake_github.emitEvent(A.getReviewAddedEvent('approved'))
         # Jobs are being held in build to make sure that 3,1 has time
         # to enqueue behind 1,1 so that the test is more
@@ -138,6 +145,7 @@ class TestZuulTriggerParentChangeEnqueuedGithub(ZuulGithubAppTestCase):
         # Now directly enqueue a change into the check. As no pipeline reacts
         # on parent-change-enqueued from pipeline check no
         # parent-change-enqueued event is expected.
+        self.waitUntilSettled()
         zuultrigger_event_count = 0
 
         def counting_put(*args, **kwargs):
@@ -162,6 +170,13 @@ class TestZuulTriggerParentChangeEnqueuedGithub(ZuulGithubAppTestCase):
         self.waitUntilSettled()
         self.assertEqual(len(self.history), 4)
         self.assertEqual(zuultrigger_event_count, 0)
+
+        # After starting recording installation containing org2/project
+        # should not be contacted
+        inst_id_to_check = self.fake_github.installation_map['org2/project']
+        inst_clients = [x for x in self.fake_github.recorded_clients
+                        if x._inst_id == inst_id_to_check]
+        self.assertEqual(len(inst_clients), 0)
 
 
 class TestZuulTriggerProjectChangeMerged(ZuulTestCase):

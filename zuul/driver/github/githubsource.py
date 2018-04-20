@@ -91,8 +91,8 @@ class GithubSource(BaseSource):
             patchset=pull.get('head').get('sha'))
         return change
 
-    def getChangesDependingOn(self, change, projects):
-        return self.connection.getChangesDependingOn(change, projects)
+    def getChangesDependingOn(self, change, projects, tenant):
+        return self.connection.getChangesDependingOn(change, projects, tenant)
 
     def getCachedChanges(self):
         return self.connection._change_cache.values()

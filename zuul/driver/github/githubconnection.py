@@ -749,7 +749,7 @@ class GithubConnection(BaseConnection):
             raise
         return change
 
-    def getChangesDependingOn(self, change, projects):
+    def getChangesDependingOn(self, change, projects, tenant):
         changes = []
         if not change.uris:
             return changes
@@ -774,13 +774,17 @@ class GithubConnection(BaseConnection):
                     installation_projects.add(project.name)
         else:
             # We aren't in the context of a change queue and we just
-            # need to query all installations.  This currently only
-            # happens if certain features of the zuul trigger are
+            # need to query all installations of this tenant. This currently
+            # only happens if certain features of the zuul trigger are
             # used; generally it should be avoided.
-            for project, installation_id in self.installation_map.items():
+            for project_name, installation_id in self.installation_map.items():
+                trusted, project = tenant.getProject(project_name)
+                # ignore projects from different tenants
+                if not project:
+                    continue
                 if installation_id not in installation_ids:
                     installation_ids.add(installation_id)
-                    installation_projects.add(project)
+                    installation_projects.add(project_name)
 
         keys = set()
         pattern = ' OR '.join(change.uris)
