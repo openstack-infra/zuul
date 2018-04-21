@@ -981,14 +981,26 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         self.merge_failure = False
         self.merge_not_allowed_count = 0
         self.reports = []
-        self.github_client = tests.fakegithub.FakeGithub(changes_db)
+        self.github_data = tests.fakegithub.FakeGithubData(changes_db)
+        self.recorded_clients = []
         self.git_url_with_auth = git_url_with_auth
         self.rpcclient = rpcclient
+        self.record_clients = False
 
     def getGithubClient(self,
                         project=None,
                         user_id=None):
-        return self.github_client
+
+        if self.app_id:
+            inst_id = self.installation_map.get(project)
+            client = tests.fakegithub.FakeGithubClient(
+                self.github_data, inst_id=inst_id)
+        else:
+            client = tests.fakegithub.FakeGithubClient(self.github_data)
+
+        if self.record_clients:
+            self.recorded_clients.append(client)
+        return client
 
     def _prime_installation_map(self):
         if not self.app_id:
@@ -997,7 +1009,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         # simulate one installation per org
         orgs = {}
         latest_inst_id = 0
-        for repo in self.github_client._repos.keys():
+        for repo in self.github_data.repos.keys():
             inst_id = orgs.get(repo[0])
             if not inst_id:
                 latest_inst_id += 1
@@ -2320,13 +2332,14 @@ class ZuulTestCase(BaseTestCase):
                 projects = conf.get('config-projects', [])
                 projects.extend(conf.get('untrusted-projects', []))
 
+                client = con.getGithubClient(None)
                 for project in projects:
                     if isinstance(project, dict):
                         # This can be a dict with the project as the only key
-                        con.github_client.addProjectByName(
+                        client.addProjectByName(
                             list(project.keys())[0])
                     else:
-                        con.github_client.addProjectByName(project)
+                        client.addProjectByName(project)
 
         def getGithubConnection(driver, name, config):
             server = config.get('server', 'github.com')

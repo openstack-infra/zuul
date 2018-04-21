@@ -161,16 +161,22 @@ class FakeIssueSearchResult(object):
         self.issue = issue
 
 
-class FakeGithub(object):
+class FakeGithubData(object):
     def __init__(self, pull_requests):
-        self._pull_requests = pull_requests
-        self._repos = {}
+        self.pull_requests = pull_requests
+        self.repos = {}
+
+
+class FakeGithubClient(object):
+    def __init__(self, data, inst_id=None):
+        self._data = data
+        self._inst_id = inst_id
 
     def user(self, login):
         return FakeUser(login)
 
     def repository(self, owner, proj):
-        return self._repos.get((owner, proj), None)
+        return self._data.repos.get((owner, proj), None)
 
     def repo_from_project(self, project):
         # This is a convenience method for the tests.
@@ -179,14 +185,14 @@ class FakeGithub(object):
 
     def addProject(self, project):
         owner, proj = project.name.split('/')
-        self._repos[(owner, proj)] = FakeRepository()
+        self._data.repos[(owner, proj)] = FakeRepository()
 
     def addProjectByName(self, project_name):
         owner, proj = project_name.split('/')
-        self._repos[(owner, proj)] = FakeRepository()
+        self._data.repos[(owner, proj)] = FakeRepository()
 
     def pull_request(self, owner, project, number):
-        fake_pr = self._pull_requests[number]
+        fake_pr = self._data.pull_requests[number]
         return FakePull(fake_pr)
 
     def search_issues(self, query):
@@ -206,7 +212,7 @@ class FakeGithub(object):
                     continue
             terms.add(part)
 
-        for pr in self._pull_requests.values():
+        for pr in self._data.pull_requests.values():
             if not pr.body:
                 body = set()
             else:

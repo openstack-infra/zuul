@@ -309,7 +309,7 @@ class TestGithubDriver(ZuulTestCase):
     @simple_layout('layouts/reporting-github.yaml', driver='github')
     def test_reporting(self):
         project = 'org/project'
-        github = self.fake_github.github_client
+        github = self.fake_github.getGithubClient(None)
 
         # pipeline reports pull status both on start and success
         self.executor_server.hold_jobs_in_build = True
@@ -503,7 +503,7 @@ class TestGithubDriver(ZuulTestCase):
     @simple_layout('layouts/reporting-multiple-github.yaml', driver='github')
     def test_reporting_multiple_github(self):
         project = 'org/project1'
-        github = self.fake_github.github_client
+        github = self.fake_github.getGithubClient(None)
 
         # pipeline reports pull status both on start and success
         self.executor_server.hold_jobs_in_build = True
