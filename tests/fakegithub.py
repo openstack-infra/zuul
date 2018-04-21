@@ -50,8 +50,9 @@ class FakeStatus(object):
 
 
 class FakeCommit(object):
-    def __init__(self):
+    def __init__(self, sha):
         self._statuses = []
+        self.sha = sha
 
     def set_status(self, state, url, description, context, user):
         status = FakeStatus(
@@ -65,9 +66,11 @@ class FakeCommit(object):
 
 
 class FakeRepository(object):
-    def __init__(self):
+    def __init__(self, name, data):
         self._branches = [FakeBranch()]
         self._commits = {}
+        self.data = data
+        self.name = name
 
     def branches(self, protected=False):
         if protected:
@@ -81,16 +84,26 @@ class FakeRepository(object):
         # default the user as 'zuul' here.
         commit = self._commits.get(sha, None)
         if commit is None:
-            commit = FakeCommit()
+            commit = FakeCommit(sha)
             self._commits[sha] = commit
         commit.set_status(state, url, description, context, user)
 
     def commit(self, sha):
         commit = self._commits.get(sha, None)
         if commit is None:
-            commit = FakeCommit()
+            commit = FakeCommit(sha)
             self._commits[sha] = commit
         return commit
+
+    def pull_requests(self, state=None):
+        pulls = []
+        for pull in self.data.pull_requests.values():
+            if pull.project != self.name:
+                continue
+            if state and pull.state != state:
+                continue
+            pulls.append(FakePull(pull))
+        return pulls
 
 
 class FakeLabel(object):
@@ -125,6 +138,12 @@ class FakePull(object):
     def files(self):
         return [FakeFile(fn)
                 for fn in self._fake_pull_request.files]
+
+    @property
+    def head(self):
+        client = FakeGithubClient(self._fake_pull_request.github.github_data)
+        repo = client.repo_from_project(self._fake_pull_request.project)
+        return repo.commit(self._fake_pull_request.head_sha)
 
     def as_dict(self):
         pr = self._fake_pull_request
@@ -185,11 +204,13 @@ class FakeGithubClient(object):
 
     def addProject(self, project):
         owner, proj = project.name.split('/')
-        self._data.repos[(owner, proj)] = FakeRepository()
+        self._data.repos[(owner, proj)] = FakeRepository(
+            project.name, self._data)
 
     def addProjectByName(self, project_name):
         owner, proj = project_name.split('/')
-        self._data.repos[(owner, proj)] = FakeRepository()
+        self._data.repos[(owner, proj)] = FakeRepository(
+            project_name, self._data)
 
     def pull_request(self, owner, project, number):
         fake_pr = self._data.pull_requests[number]
