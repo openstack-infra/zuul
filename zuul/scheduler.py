@@ -599,9 +599,7 @@ class Scheduler(threading.Thread):
             old_tenant = self.abide.tenants[event.tenant_name]
             loader = configloader.ConfigLoader(
                 self.connections, self, self.merger)
-            tenant_config, _ = self._checkTenantSourceConf(self.config)
             abide = loader.reloadTenant(
-                tenant_config,
                 self._get_project_key_dir(),
                 self.abide, old_tenant)
             tenant = abide.tenants[event.tenant_name]

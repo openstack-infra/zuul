@@ -2615,10 +2615,9 @@ class UnparsedAbideConfig(object):
     An Abide is a collection of tenants.
     """
 
-    def __init__(self, base=None):
+    def __init__(self):
         self.tenants = []
         self.known_tenants = set()
-        self.base = base
 
     def extend(self, conf):
         if isinstance(conf, UnparsedAbideConfig):
