@@ -152,9 +152,10 @@ class Pipeline(object):
     Reporter
         Communicates success and failure results somewhere
     """
-    def __init__(self, name, layout):
+    def __init__(self, name, tenant_name):
         self.name = name
-        self.layout = layout
+        self.tenant_name = tenant_name
+        self.layout = None
         self.description = None
         self.failure_message = None
         self.merge_failure_message = None
@@ -2498,12 +2499,11 @@ class ProjectPipelineConfig(ConfigObject):
 
 class ProjectConfig(ConfigObject):
     # Represents a project configuration
-    def __init__(self, name, source_context=None):
+    def __init__(self, name):
         super(ProjectConfig, self).__init__()
         self.name = name
-        # If this is a template, it will have a source_context, but
-        # not if it is a project definition.
-        self.source_context = source_context
+        self.source_context = None
+        self.start_mark = None
         self.templates = []
         # Pipeline name -> ProjectPipelineConfig
         self.pipelines = {}
@@ -2843,6 +2843,7 @@ class Layout(object):
 
     def addPipeline(self, pipeline):
         self.pipelines[pipeline.name] = pipeline
+        pipeline.layout = self
 
     def addProjectTemplate(self, project_template):
         template = self.project_templates.get(project_template.name)

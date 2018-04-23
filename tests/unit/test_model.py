@@ -53,8 +53,7 @@ class TestJob(BaseTestCase):
         self.layout.addPipeline(self.pipeline)
         self.queue = model.ChangeQueue(self.pipeline)
         self.pcontext = configloader.ParseContext(
-            self.connections, None, self.tenant, self.layout)
-        self.pcontext.setPipelines()
+            self.connections, None, self.tenant)
 
         private_key_file = os.path.join(FIXTURE_DIR, 'private.pem')
         with open(private_key_file, "rb") as f:

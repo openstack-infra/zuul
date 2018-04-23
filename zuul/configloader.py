@@ -234,12 +234,14 @@ def configuration_exceptions(stanza, conf):
 
 
 @contextmanager
-def reference_exceptions(stanza, context, start_mark):
+def reference_exceptions(stanza, obj):
     try:
         yield
     except ConfigurationSyntaxError:
         raise
     except Exception as e:
+        context = obj.source_context
+        start_mark = obj.start_mark
         intro = textwrap.fill(textwrap.dedent("""\
         Zuul encountered a syntax error while parsing its configuration in the
         repo {repo} on branch {branch}.  The error was:""".format(
@@ -611,8 +613,8 @@ class JobParser(object):
 
         job = model.Job(name)
         job.description = conf.get('description')
-        job.source_context = conf.get('_source_context')
-        job.start_mark = conf.get('_start_mark')
+        job.source_context = conf['_source_context']
+        job.start_mark = conf['_start_mark']
         job.variant_description = conf.get(
             'variant-description', " ".join(as_list(conf.get('branches'))))
 
@@ -854,9 +856,10 @@ class ProjectTemplateParser(object):
             with configuration_exceptions('project-template', conf):
                 self.schema(conf)
         source_context = conf['_source_context']
-        project_template = model.ProjectConfig(conf.get('name'),
-                                               source_context)
         start_mark = conf['_start_mark']
+        project_template = model.ProjectConfig(conf.get('name'))
+        project_template.source_context = conf['_source_context']
+        project_template.start_mark = conf['_start_mark']
         for pipeline_name, conf_pipeline in conf.items():
             if pipeline_name in self.not_pipelines:
                 continue
@@ -949,8 +952,6 @@ class ProjectParser(object):
 
         # Add templates
         for name in conf.get('templates', []):
-            if name not in self.pcontext.layout.project_templates:
-                raise TemplateNotFoundError(name)
             if name not in project_config.templates:
                 project_config.templates.append(name)
 
@@ -1041,7 +1042,7 @@ class PipelineParser(object):
     def fromYaml(self, conf):
         with configuration_exceptions('pipeline', conf):
             self.schema(conf)
-        pipeline = model.Pipeline(conf['name'], self.pcontext.layout)
+        pipeline = model.Pipeline(conf['name'], self.pcontext.tenant.name)
         pipeline.description = conf.get('description')
 
         precedence = model.PRECEDENCE_MAP[conf.get('precedence')]
@@ -1104,7 +1105,6 @@ class PipelineParser(object):
                 self.pcontext.scheduler, pipeline)
 
         pipeline.setManager(manager)
-        self.pcontext.layout.pipelines[conf['name']] = pipeline
 
         for source_name, require_config in conf.get('require', {}).items():
             source = self.pcontext.connections.getSource(source_name)
@@ -1153,23 +1153,16 @@ class SemaphoreParser(object):
 class ParseContext(object):
     """Hold information about a particular run of the parser"""
 
-    def __init__(self, connections, scheduler, tenant, layout):
+    def __init__(self, connections, scheduler, tenant):
         self.connections = connections
         self.scheduler = scheduler
         self.tenant = tenant
-        self.layout = layout
         self.pragma_parser = PragmaParser(self)
         self.pipeline_parser = PipelineParser(self)
         self.nodeset_parser = NodeSetParser(self)
         self.secret_parser = SecretParser(self)
         self.job_parser = JobParser(self)
         self.semaphore_parser = SemaphoreParser(self)
-        self.project_template_parser = None
-        self.project_parser = None
-
-    def setPipelines(self):
-        # Call after pipelines are fixed in the layout to construct
-        # the project parser, which relies on them.
         self.project_template_parser = ProjectTemplateParser(self)
         self.project_parser = ProjectParser(self)
 
@@ -1590,8 +1583,8 @@ class TenantParser(object):
 
     def _parseLayoutItems(self, layout, tenant, data,
                           skip_pipelines=False, skip_semaphores=False):
-        pcontext = ParseContext(self.connections, self.scheduler,
-                                tenant, layout)
+        pcontext = ParseContext(self.connections, self.scheduler, tenant)
+
         # Handle pragma items first since they modify the source context
         # used by other classes.
         for config_pragma in data.pragmas:
@@ -1604,7 +1597,6 @@ class TenantParser(object):
                     continue
                 layout.addPipeline(pcontext.pipeline_parser.fromYaml(
                     config_pipeline))
-        pcontext.setPipelines()
 
         for config_nodeset in data.nodesets:
             classes = self._getLoadClasses(tenant, config_nodeset)
@@ -1638,8 +1630,7 @@ class TenantParser(object):
         # config objects.
         for jobs in layout.jobs.values():
             for job in jobs:
-                with reference_exceptions('job', job.source_context,
-                                          job.start_mark):
+                with reference_exceptions('job', job):
                     job.validateReferences(layout)
 
         if skip_semaphores:
@@ -1688,25 +1679,29 @@ class TenantParser(object):
 
     def _validateProjectPipelineConfigs(self, layout):
         # Validate references to other config objects
-        ppcs = []
-        for project_name in layout.project_configs.keys():
-            for project_config in layout.project_configs[project_name]:
-                for template_name in project_config.templates:
-                    project_template = layout.getProjectTemplate(template_name)
-                    ppcs.extend(list(project_template.pipelines.values()))
-                ppcs.extend(list(project_config.pipelines.values()))
-        for ppc in ppcs:
+        def inner_validate_ppcs(ppc):
             for jobs in ppc.job_list.jobs.values():
                 for job in jobs:
-                    with reference_exceptions(
-                            'project',
-                            job.source_context,
-                            job.start_mark):
-                        # validate that the job exists on its own (an
-                        # additional requirement for project-pipeline
-                        # jobs)
-                        layout.getJob(job.name)
-                        job.validateReferences(layout)
+                    # validate that the job exists on its own (an
+                    # additional requirement for project-pipeline
+                    # jobs)
+                    layout.getJob(job.name)
+                    job.validateReferences(layout)
+
+        for project_name in layout.project_configs.keys():
+            for project_config in layout.project_configs[project_name]:
+                with reference_exceptions('project', project_config):
+                    for template_name in project_config.templates:
+                        if template_name not in layout.project_templates:
+                            raise TemplateNotFoundError(template_name)
+                        project_template = layout.getProjectTemplate(
+                            template_name)
+                        with reference_exceptions('project-template',
+                                                  project_template):
+                            for ppc in project_template.pipelines.values():
+                                inner_validate_ppcs(ppc)
+                    for ppc in project_config.pipelines.values():
+                        inner_validate_ppcs(ppc)
 
     def _parseLayout(self, base, tenant, data):
         # Don't call this method from dynamic reconfiguration because
