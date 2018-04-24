@@ -192,7 +192,14 @@ class Repo(object):
         repo.git.clean('-x', '-f', '-d')
         for ref in stale_refs:
             self.log.debug("Delete stale ref %s", ref.remote_head)
-            repo.delete_head(ref.remote_head, force=True)
+            # A stale ref means the upstream branch (e.g. foobar) was deleted
+            # so we need to delete both our local head (if existing) and the
+            # remote tracking head. Both repo.heads and ref.remote_head
+            # contain the pure branch name so they can be compared easily.
+            for head in repo.heads:
+                if head.name == ref.remote_head:
+                    repo.delete_head(ref.remote_head, force=True)
+                    break
             git.refs.RemoteReference.delete(repo, ref, force=True)
 
     def prune(self):

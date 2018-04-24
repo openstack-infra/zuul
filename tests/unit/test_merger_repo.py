@@ -150,6 +150,24 @@ class TestMergerRepo(ZuulTestCase):
         self.assertTrue(os.path.exists(os.path.join(
             self.workspace_root, 'stamp2')))
 
+    def test_deleted_local_ref(self):
+        parent_path = os.path.join(self.upstream_root, 'org/project1')
+        self.create_branch('org/project1', 'foobar')
+
+        work_repo = Repo(parent_path, self.workspace_root,
+                         'none@example.org', 'User Name', '0', '0')
+
+        # Delete local ref on the cached repo. This leaves us with a remote
+        # ref but no local ref anymore.
+        gitrepo = git.Repo(work_repo.local_path)
+        gitrepo.delete_head('foobar', force=True)
+
+        # Delete the branch upstream.
+        self.delete_branch('org/project1', 'foobar')
+
+        # And now reset the repo again. This should not crash
+        work_repo.reset()
+
 
 class TestMergerWithAuthUrl(ZuulTestCase):
     config_file = 'zuul-github-driver.conf'
