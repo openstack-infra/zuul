@@ -48,7 +48,7 @@ further restrict public access.
    start=true
 
    [executor]
-   private_key_file=/home/zuul/.ssh/nodepool_rsa
+   private_key_file=/var/lib/zuul/.ssh/nodepool_rsa
 
    [web]
    listen_address=0.0.0.0
