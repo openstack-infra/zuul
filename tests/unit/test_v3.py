@@ -2179,6 +2179,7 @@ class TestPrePlaybooks(AnsibleZuulTestCase):
     # A temporary class to hold new tests while others are disabled
 
     tenant_config_file = 'config/pre-playbook/main.yaml'
+    wait_timeout = 60
 
     def test_pre_playbook_fail(self):
         # Test that we run the post playbooks (but not the actual
@@ -2264,6 +2265,7 @@ class TestPrePlaybooks(AnsibleZuulTestCase):
 
 class TestPostPlaybooks(AnsibleZuulTestCase):
     tenant_config_file = 'config/post-playbook/main.yaml'
+    wait_timeout = 60
 
     def test_post_playbook_abort(self):
         # Test that when we abort a job in the post playbook, that we
