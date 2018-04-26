@@ -2710,7 +2710,7 @@ class TestMaxNodesPerJob(AnsibleZuulTestCase):
                          "B should not fail because of nodes limit")
 
 
-class TestMaxTimeout(AnsibleZuulTestCase):
+class TestMaxTimeout(ZuulTestCase):
     tenant_config_file = 'config/multi-tenant/main.yaml'
 
     def test_max_nodes_reached(self):
