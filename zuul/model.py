@@ -137,7 +137,10 @@ class Freezable(object):
 
 
 class ConfigObject(Freezable):
-    pass
+    def __init__(self):
+        super().__init__()
+        self.source_context = None
+        self.start_mark = None
 
 
 class Pipeline(object):
@@ -152,9 +155,10 @@ class Pipeline(object):
     Reporter
         Communicates success and failure results somewhere
     """
-    def __init__(self, name, tenant_name):
+    def __init__(self, name, tenant_name, source_context):
         self.name = name
         self.tenant_name = tenant_name
+        self.source_context = source_context
         self.layout = None
         self.description = None
         self.failure_message = None
@@ -527,10 +531,9 @@ class NodeSet(ConfigObject):
     or they may appears anonymously in in-line job definitions.
     """
 
-    def __init__(self, name=None, source_context=None):
+    def __init__(self, name=None):
         super(NodeSet, self).__init__()
         self.name = name or ''
-        self.source_context = source_context
         self.nodes = OrderedDict()
         self.groups = OrderedDict()
 
@@ -2502,8 +2505,6 @@ class ProjectConfig(ConfigObject):
     def __init__(self, name):
         super(ProjectConfig, self).__init__()
         self.name = name
-        self.source_context = None
-        self.start_mark = None
         self.templates = []
         # Pipeline name -> ProjectPipelineConfig
         self.pipelines = {}

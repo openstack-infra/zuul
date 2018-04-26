@@ -47,9 +47,13 @@ class TestJob(BaseTestCase):
         self.tenant = model.Tenant('tenant')
         self.layout = model.Layout(self.tenant)
         self.project = model.Project('project', self.source)
+        self.context = model.SourceContext(self.project, 'master',
+                                           'test', True)
+        self.untrusted_context = model.SourceContext(self.project, 'master',
+                                                     'test', False)
         self.tpc = model.TenantProjectConfig(self.project)
         self.tenant.addUntrustedProject(self.tpc)
-        self.pipeline = model.Pipeline('gate', self.layout)
+        self.pipeline = model.Pipeline('gate', self.layout, self.context)
         self.layout.addPipeline(self.pipeline)
         self.queue = model.ChangeQueue(self.pipeline)
         self.pcontext = configloader.ParseContext(
@@ -59,10 +63,6 @@ class TestJob(BaseTestCase):
         with open(private_key_file, "rb") as f:
             self.project.private_key, self.project.public_key = \
                 encryption.deserialize_rsa_keypair(f.read())
-        self.context = model.SourceContext(self.project, 'master',
-                                           'test', True)
-        self.untrusted_context = model.SourceContext(self.project, 'master',
-                                                     'test', False)
         m = yaml.Mark('name', 0, 0, 0, '', 0)
         self.start_mark = configloader.ZuulMark(m, m, '')
 
@@ -152,7 +152,7 @@ class TestJob(BaseTestCase):
             job.applyVariant(bad_final, self.layout)
 
     def test_job_inheritance_job_tree(self):
-        pipeline = model.Pipeline('gate', self.layout)
+        pipeline = model.Pipeline('gate', self.layout, self.context)
         self.layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
 
@@ -226,7 +226,7 @@ class TestJob(BaseTestCase):
         self.assertEqual(job.timeout, 70)
 
     def test_inheritance_keeps_matchers(self):
-        pipeline = model.Pipeline('gate', self.layout)
+        pipeline = model.Pipeline('gate', self.layout, self.context)
         self.layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
 

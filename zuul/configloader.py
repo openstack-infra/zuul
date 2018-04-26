@@ -433,7 +433,9 @@ class NodeSetParser(object):
             self.anon_schema(conf)
         else:
             self.schema(conf)
-        ns = model.NodeSet(conf.get('name'), conf.get('_source_context'))
+        ns = model.NodeSet(conf.get('name'))
+        ns.source_context = conf.get('_source_context')
+        ns.start_mark = conf.get('_start_mark')
         node_names = set()
         group_names = set()
         for conf_node in as_list(conf['nodes']):
@@ -479,6 +481,8 @@ class SecretParser(object):
         with configuration_exceptions('secret', conf):
             self.schema(conf)
         s = model.Secret(conf['name'], conf['_source_context'])
+        s.source_context = conf['_source_context']
+        s.start_mark = conf['_start_mark']
         s.secret_data = conf['data']
         s.freeze()
         return s
@@ -1042,7 +1046,8 @@ class PipelineParser(object):
     def fromYaml(self, conf):
         with configuration_exceptions('pipeline', conf):
             self.schema(conf)
-        pipeline = model.Pipeline(conf['name'], self.pcontext.tenant.name)
+        pipeline = model.Pipeline(conf['name'], self.pcontext.tenant.name,
+                                  conf['_source_context'])
         pipeline.description = conf.get('description')
 
         precedence = model.PRECEDENCE_MAP[conf.get('precedence')]
@@ -1146,6 +1151,7 @@ class SemaphoreParser(object):
         self.schema(conf)
         semaphore = model.Semaphore(conf['name'], conf.get('max', 1))
         semaphore.source_context = conf.get('_source_context')
+        semaphore.start_mark = conf.get('_start_mark')
         semaphore.freeze()
         return semaphore
 
