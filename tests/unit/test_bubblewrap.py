@@ -70,9 +70,12 @@ class TestBubblewrap(testtools.TestCase):
         self.assertEqual(0, true_proc.wait())
         cmdline = "sleep\x000x%X\x00" % leak_time
         for x in iterate_timeout(30, "process to exit"):
-            sleep_proc = [pid for pid in os.listdir("/proc") if
-                          os.path.isfile("/proc/%s/cmdline" % pid) and
-                          open("/proc/%s/cmdline" % pid).read() == cmdline]
+            try:
+                sleep_proc = [pid for pid in os.listdir("/proc") if
+                              os.path.isfile("/proc/%s/cmdline" % pid) and
+                              open("/proc/%s/cmdline" % pid).read() == cmdline]
+            except FileNotFoundError:
+                pass
             if not sleep_proc:
                 break
             time.sleep(1)
