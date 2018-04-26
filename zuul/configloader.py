@@ -755,27 +755,21 @@ class JobParser(object):
             if 'zuul' in variables or 'nodepool' in variables:
                 raise Exception("Variables named 'zuul' or 'nodepool' "
                                 "are not allowed.")
-            # TODO(jeblair): remove deepcopy here after we cache
-            # objects instead of yaml
-            job.variables = copy.deepcopy(variables)
+            job.variables = variables
         host_variables = conf.get('host-vars', None)
         if host_variables:
             for host, hvars in host_variables.items():
                 if 'zuul' in hvars or 'nodepool' in hvars:
                     raise Exception("Variables named 'zuul' or 'nodepool' "
                                     "are not allowed.")
-            # TODO(jeblair): remove deepcopy here after we cache
-            # objects instead of yaml
-            job.host_variables = copy.deepcopy(host_variables)
+            job.host_variables = host_variables
         group_variables = conf.get('group-vars', None)
         if group_variables:
             for group, gvars in group_variables.items():
                 if 'zuul' in group_variables or 'nodepool' in gvars:
                     raise Exception("Variables named 'zuul' or 'nodepool' "
                                     "are not allowed.")
-            # TODO(jeblair): remove deepcopy here after we cache
-            # objects instead of yaml
-            job.group_variables = copy.deepcopy(group_variables)
+            job.group_variables = group_variables
 
         allowed_projects = conf.get('allowed-projects', None)
         if allowed_projects:
