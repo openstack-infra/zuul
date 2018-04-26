@@ -2675,15 +2675,12 @@ class UnparsedConfig(object):
                        old_obj['_source_context'].path)
                 new_sc = source_contexts.get(key)
                 if not new_sc:
-                    new_sc = SourceContext(
-                        old_obj['_source_context'].project,
-                        old_obj['_source_context'].branch,
-                        old_obj['_source_context'].path,
-                        old_obj['_source_context'].trusted)
-                    source_contexts[key] = new_sc
+                    new_sc = new_obj['_source_context']
                     if trusted is not None:
                         new_sc.trusted = trusted
-                new_obj['_source_context'] = new_sc
+                    source_contexts[key] = new_sc
+                else:
+                    new_obj['_source_context'] = new_sc
         return r
 
     def extend(self, conf):
