@@ -762,11 +762,14 @@ class TestGithubUnprotectedBranches(ZuulTestCase):
         project1 = tenant.untrusted_projects[0]
         project2 = tenant.untrusted_projects[1]
 
+        tpc1 = tenant.project_configs[project1.canonical_name]
+        tpc2 = tenant.project_configs[project2.canonical_name]
+
         # project1 should have parsed master
-        self.assertIn('master', project1.unparsed_branch_config.keys())
+        self.assertIn('master', tpc1.parsed_branch_config.keys())
 
         # project2 should have no parsed branch
-        self.assertEqual(0, len(project2.unparsed_branch_config.keys()))
+        self.assertEqual(0, len(tpc2.parsed_branch_config.keys()))
 
 
 class TestGithubWebhook(ZuulTestCase):

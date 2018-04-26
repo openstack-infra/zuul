@@ -402,7 +402,6 @@ class Project(object):
         # when deciding whether to enqueue their changes
         # TODOv3 (jeblair): re-add support for foreign projects if needed
         self.foreign = foreign
-        self.unparsed_branch_config = {}  # branch -> UnparsedTenantConfig
 
     def __str__(self):
         return self.name
@@ -2480,6 +2479,7 @@ class TenantProjectConfig(object):
         # The tenant's default setting of exclude_unprotected_branches will
         # be overridden by this one if not None.
         self.exclude_unprotected_branches = None
+        self.parsed_branch_config = {}  # branch -> ParsedConfig
 
 
 class ProjectPipelineConfig(ConfigObject):
@@ -2642,7 +2642,7 @@ class UnparsedAbideConfig(object):
                 raise ConfigItemUnknownError()
 
 
-class UnparsedTenantConfig(object):
+class UnparsedConfig(object):
     """A collection of yaml lists that has not yet been parsed into objects."""
 
     def __init__(self):
@@ -2655,20 +2655,39 @@ class UnparsedTenantConfig(object):
         self.secrets = []
         self.semaphores = []
 
-    def copy(self):
-        r = UnparsedTenantConfig()
-        r.pragmas = copy.deepcopy(self.pragmas)
-        r.pipelines = copy.deepcopy(self.pipelines)
-        r.jobs = copy.deepcopy(self.jobs)
-        r.project_templates = copy.deepcopy(self.project_templates)
-        r.projects = copy.deepcopy(self.projects)
-        r.nodesets = copy.deepcopy(self.nodesets)
-        r.secrets = copy.deepcopy(self.secrets)
-        r.semaphores = copy.deepcopy(self.semaphores)
+    def copy(self, trusted=None):
+        # If trusted is not None, update the source context of each
+        # object in the copy.
+        r = UnparsedConfig()
+        # Keep a cache of all the source contexts indexed by
+        # project-branch-path so that we can share them across objects
+        source_contexts = {}
+        for attr in ['pragmas', 'pipelines', 'jobs', 'project_templates',
+                     'projects', 'nodesets', 'secrets', 'semaphores']:
+            # Make a deep copy of each of our attributes
+            old_objlist = getattr(self, attr)
+            new_objlist = copy.deepcopy(old_objlist)
+            setattr(r, attr, new_objlist)
+            for i, new_obj in enumerate(new_objlist):
+                old_obj = old_objlist[i]
+                key = (old_obj['_source_context'].project,
+                       old_obj['_source_context'].branch,
+                       old_obj['_source_context'].path)
+                new_sc = source_contexts.get(key)
+                if not new_sc:
+                    new_sc = SourceContext(
+                        old_obj['_source_context'].project,
+                        old_obj['_source_context'].branch,
+                        old_obj['_source_context'].path,
+                        old_obj['_source_context'].trusted)
+                    source_contexts[key] = new_sc
+                    if trusted is not None:
+                        new_sc.trusted = trusted
+                new_obj['_source_context'] = new_sc
         return r
 
     def extend(self, conf):
-        if isinstance(conf, UnparsedTenantConfig):
+        if isinstance(conf, UnparsedConfig):
             self.pragmas.extend(conf.pragmas)
             self.pipelines.extend(conf.pipelines)
             self.jobs.extend(conf.jobs)
@@ -2706,6 +2725,46 @@ class UnparsedTenantConfig(object):
                 self.pragmas.append(value)
             else:
                 raise ConfigItemUnknownError()
+
+
+class ParsedConfig(object):
+    """A collection of parsed config objects."""
+
+    def __init__(self):
+        self.pragmas = []
+        self.pipelines = []
+        self.jobs = []
+        self.project_templates = []
+        self.projects = []
+        self.nodesets = []
+        self.secrets = []
+        self.semaphores = []
+
+    def copy(self):
+        r = ParsedConfig()
+        r.pragmas = self.pragmas[:]
+        r.pipelines = self.pipelines[:]
+        r.jobs = self.jobs[:]
+        r.project_templates = self.project_templates[:]
+        r.projects = self.projects[:]
+        r.nodesets = self.nodesets[:]
+        r.secrets = self.secrets[:]
+        r.semaphores = self.semaphores[:]
+        return r
+
+    def extend(self, conf):
+        if isinstance(conf, ParsedConfig):
+            self.pragmas.extend(conf.pragmas)
+            self.pipelines.extend(conf.pipelines)
+            self.jobs.extend(conf.jobs)
+            self.project_templates.extend(conf.project_templates)
+            self.projects.extend(conf.projects)
+            self.nodesets.extend(conf.nodesets)
+            self.secrets.extend(conf.secrets)
+            self.semaphores.extend(conf.semaphores)
+            return
+        else:
+            raise ConfigItemUnknownError()
 
 
 class Layout(object):
@@ -2846,19 +2905,19 @@ class Layout(object):
         pipeline.layout = self
 
     def addProjectTemplate(self, project_template):
-        template = self.project_templates.get(project_template.name)
-        if template:
-            if (project_template.source_context.project !=
-                template.source_context.project):
+        template_list = self.project_templates.get(project_template.name)
+        if template_list is not None:
+            reference = template_list[0]
+            if (reference.source_context.project !=
+                project_template.source_context.project):
                 raise Exception("Project template %s is already defined" %
                                 (project_template.name,))
-            for pipeline in project_template.pipelines:
-                template.pipelines[pipeline].job_list.\
-                    inheritFrom(project_template.pipelines[pipeline].job_list)
         else:
-            self.project_templates[project_template.name] = project_template
+            template_list = self.project_templates.setdefault(
+                project_template.name, [])
+        template_list.append(project_template)
 
-    def getProjectTemplate(self, name):
+    def getProjectTemplates(self, name):
         pt = self.project_templates.get(name, None)
         if pt is None:
             raise Exception("Project template %s not found" % name)
@@ -2901,11 +2960,12 @@ class Layout(object):
             if not pc.changeMatches(item.change):
                 continue
             for template_name in pc.templates:
-                template = self.getProjectTemplate(template_name)
-                template_ppc = template.pipelines.get(item.pipeline.name)
-                if template_ppc:
-                    project_in_pipeline = True
-                    ppc.update(template_ppc)
+                templates = self.getProjectTemplates(template_name)
+                for template in templates:
+                    template_ppc = template.pipelines.get(item.pipeline.name)
+                    if template_ppc:
+                        project_in_pipeline = True
+                        ppc.update(template_ppc)
             project_ppc = pc.pipelines.get(item.pipeline.name)
             if project_ppc:
                 project_in_pipeline = True
@@ -3206,12 +3266,12 @@ class Tenant(object):
         # The list of projects from which we will read full
         # configuration.
         self.config_projects = []
-        # The unparsed config from those projects.
+        # The parsed config from those projects.
         self.config_projects_config = None
         # The list of projects from which we will read untrusted
         # in-repo configuration.
         self.untrusted_projects = []
-        # The unparsed config from those projects.
+        # The parsed config from those projects.
         self.untrusted_projects_config = None
         self.semaphore_handler = SemaphoreHandler()
         # Metadata about projects for this tenant
@@ -3312,6 +3372,20 @@ class Tenant(object):
 class Abide(object):
     def __init__(self):
         self.tenants = OrderedDict()
+        # project -> branch -> UnparsedConfig
+        self.unparsed_project_branch_config = {}
+
+    def cacheUnparsedConfig(self, canonical_project_name, branch, conf):
+        self.unparsed_project_branch_config.setdefault(
+            canonical_project_name, {})[branch] = conf
+
+    def getUnparsedConfig(self, canonical_project_name, branch):
+        return self.unparsed_project_branch_config.get(
+            canonical_project_name, {}).get(branch)
+
+    def clearUnparsedConfigCache(self, canonical_project_name):
+        if canonical_project_name in self.unparsed_project_branch_config:
+            del self.unparsed_project_branch_config[canonical_project_name]
 
 
 class JobTimeData(object):

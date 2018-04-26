@@ -594,8 +594,9 @@ class Scheduler(threading.Thread):
             self.log.info("Tenant reconfiguration beginning")
             # If a change landed to a project, clear out the cached
             # config before reconfiguring.
+            # TODO(jeblair): this could probably clear only the specific branch
             for project in event.projects:
-                project.unparsed_branch_config = {}
+                self.abide.clearUnparsedConfigCache(project.canonical_name)
             old_tenant = self.abide.tenants[event.tenant_name]
             loader = configloader.ConfigLoader(
                 self.connections, self, self.merger)

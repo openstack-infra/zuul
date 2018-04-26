@@ -65,7 +65,8 @@ An abide is a collection of tenants.
 
 .. autoclass:: zuul.model.Tenant
 .. autoclass:: zuul.model.UnparsedAbideConfig
-.. autoclass:: zuul.model.UnparsedTenantConfig
+.. autoclass:: zuul.model.UnparsedConfig
+.. autoclass:: zuul.model.ParsedConfig
 
 Other Global Objects
 ~~~~~~~~~~~~~~~~~~~~
