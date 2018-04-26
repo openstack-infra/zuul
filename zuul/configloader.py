@@ -1040,8 +1040,8 @@ class PipelineParser(object):
     def fromYaml(self, conf):
         with configuration_exceptions('pipeline', conf):
             self.schema(conf)
-        pipeline = model.Pipeline(conf['name'], self.pcontext.tenant.name,
-                                  conf['_source_context'])
+        pipeline = model.Pipeline(conf['name'], self.pcontext.tenant.name)
+        pipeline.source_context = conf['_source_context']
         pipeline.description = conf.get('description')
 
         precedence = model.PRECEDENCE_MAP[conf.get('precedence')]

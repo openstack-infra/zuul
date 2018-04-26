@@ -155,10 +155,10 @@ class Pipeline(object):
     Reporter
         Communicates success and failure results somewhere
     """
-    def __init__(self, name, tenant_name, source_context):
+    def __init__(self, name, tenant_name):
         self.name = name
         self.tenant_name = tenant_name
-        self.source_context = source_context
+        self.source_context = None
         self.layout = None
         self.description = None
         self.failure_message = None
