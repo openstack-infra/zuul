@@ -464,6 +464,7 @@ class TestGovernor(ZuulTestCase):
         self.assertFalse(self.executor_server.accepting_work)
 
     def waitForExecutorBuild(self, jobname):
+        self.log.debug("Waiting for %s to start", jobname)
         timeout = time.time() + 30
         build = None
         while (time.time() < timeout and not build):
@@ -472,21 +473,29 @@ class TestGovernor(ZuulTestCase):
                     build = b
                     break
             time.sleep(0.1)
+        self.log.debug("Found build %s", jobname)
         build_id = build.uuid
         while (time.time() < timeout and
                build_id not in self.executor_server.job_workers):
             time.sleep(0.1)
         worker = self.executor_server.job_workers[build_id]
+        self.log.debug("Found worker %s", jobname)
         while (time.time() < timeout and
                not worker.started):
             time.sleep(0.1)
+        self.log.debug("Worker for %s started: %s", jobname, worker.started)
         return build
 
     def waitForWorkerCompletion(self, build):
+        self.log.debug("Waiting for %s to complete", build)
         timeout = time.time() + 30
         while (time.time() < timeout and
                build.uuid in self.executor_server.job_workers):
             time.sleep(0.1)
+        if build.uuid in self.executor_server.job_workers:
+            self.log.debug("Build %s did not complete", build)
+        else:
+            self.log.debug("Build %s complete", build)
 
     def test_slow_start(self):
         self.executor_server.hold_jobs_in_build = True
