@@ -1052,7 +1052,7 @@ class GithubConnection(BaseConnection):
             return 'none'
 
         # get permissions from the data
-        return perms.json()['permission']
+        return perms.json().get('permission', 'none')
 
     def commentPull(self, project, pr_number, message):
         github = self.getGithubClient(project)
