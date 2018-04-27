@@ -3,13 +3,12 @@ Description=Zuul Executor Service
 After=syslog.target network.target
 
 [Service]
-Type=forking
+Type=simple
 Group=zuul
 User=zuul
 RuntimeDirectory=zuul
 ExecStart=/usr/local/bin/zuul-executor
 ExecStop=/usr/local/bin/zuul-executor stop
-PIDFile=/var/run/zuul/executor.pid
 
 [Install]
 WantedBy=multi-user.target
