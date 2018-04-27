@@ -210,7 +210,7 @@ class Pipeline(object):
 
 
 class ChangeQueue(object):
-    """A ChangeQueue contains Changes to be processed related projects.
+    """A ChangeQueue contains Changes to be processed for related projects.
 
     A Pipeline with a DependentPipelineManager has multiple parallel
     ChangeQueues shared by different projects. For instance, there may a
@@ -218,7 +218,7 @@ class ChangeQueue(object):
     for independent project baz.
 
     A Pipeline with an IndependentPipelineManager puts every Change into its
-    own ChangeQueue
+    own ChangeQueue.
 
     The ChangeQueue Window is inspired by TCP windows and controlls how many
     Changes in a given ChangeQueue will be considered active and ready to
