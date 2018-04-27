@@ -11,6 +11,7 @@ Environment Setup
 Follow the instructions below, depending on your server type.
 
   * :doc:`fedora27_setup`
+  * :doc:`centos7_setup`
 
 Installation
 ------------
@@ -65,17 +66,10 @@ further restrict public access.
 Starting Services
 -----------------
 
-Your system software management should have installed the Zookeeper service
-files for you.
-
-After you have Zuul and Nodepool installed and configured, you can start
-all of the services with::
+After you have Zookeeper, Nodepool, and Zuul installed and configured, you can
+start Nodepool and Zuul  services with::
 
    sudo systemctl daemon-reload
-
-   sudo systemctl start zookeeper.service
-   sudo systemctl status zookeeper.service
-   sudo systemctl enable zookeeper.service
 
    sudo systemctl start nodepool-launcher.service
    sudo systemctl status nodepool-launcher.service

@@ -39,3 +39,6 @@ Install Zookeeper
 
    sudo dnf install zookeeper -y
    sudo cp /etc/zookeeper/zoo_sample.cfg /etc/zookeeper/zoo.cfg
+   sudo systemctl start zookeeper.service
+   sudo systemctl status zookeeper.service
+   sudo systemctl enable zookeeper.service
