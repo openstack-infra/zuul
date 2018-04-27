@@ -257,7 +257,11 @@ class Scheduler(threading.Thread):
             '/var/lib/zuul/scheduler.socket')
         self.command_socket = commandsocket.CommandSocket(command_socket)
 
-        self.zuul_version = zuul_version.version_info.release_string()
+        if zuul_version.is_release is False:
+            self.zuul_version = "%s %s" % (zuul_version.release_string,
+                                           zuul_version.git_version)
+        else:
+            self.zuul_version = zuul_version.release_string
         self.last_reconfigured = None
         self.tenant_last_reconfigured = {}
         self.autohold_requests = {}
