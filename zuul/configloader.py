@@ -633,12 +633,9 @@ class JobParser(object):
                     "Unable to use secret %s.  Secrets must be "
                     "defined in the same project in which they "
                     "are used" % secret_name)
-            # If the secret declares a different name, set it on the decrypted
-            # copy of the secret object
-            decrypted_secret = secret.decrypt(
-                job.source_context.project.private_key)
-            decrypted_secret.name = secret_name
-            secrets.append(decrypted_secret)
+            # Decrypt a copy of the secret to verify it can be done
+            secret.decrypt(job.source_context.project.private_key)
+            secrets.append((secret.name, secret_name))
 
         # A job in an untrusted repo that uses secrets requires
         # special care.  We must note this, and carry this flag

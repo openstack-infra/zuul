@@ -699,6 +699,7 @@ class PlaybookContext(object):
         self.path = path
         self.roles = roles
         self.secrets = secrets
+        self.decrypted_secrets = []
 
     def __repr__(self):
         return '<PlaybookContext %s %s>' % (self.source_context,
@@ -722,12 +723,21 @@ class PlaybookContext(object):
                             self.secrets)
         return r
 
+    def freezeSecrets(self, layout):
+        secrets = []
+        for (secret_name, secret_alias) in self.secrets:
+            secret = layout.secrets.get(secret_name)
+            decrypted_secret = secret.decrypt(
+                self.source_context.project.private_key)
+            decrypted_secret.name = secret_alias
+            secrets.append(decrypted_secret)
+        self.decrypted_secrets = secrets
+
     def toDict(self):
         # Render to a dict to use in passing json to the executor
         secrets = {}
-        for secret in self.secrets:
-            secret_data = copy.deepcopy(secret.secret_data)
-            secrets[secret.name] = secret_data
+        for secret in self.decrypted_secrets:
+            secrets[secret.name] = secret.secret_data
         return dict(
             connection=self.source_context.project.connection_name,
             project=self.source_context.project.name,
@@ -924,8 +934,14 @@ class Job(object):
     def isBase(self):
         return self.parent is self.BASE_JOB_MARKER
 
-    def setBase(self):
+    def setBase(self, layout):
         self.inheritance_path = self.inheritance_path + (repr(self),)
+        if self._get('run') is not None:
+            self.run = self.freezePlaybooks(self.run, layout)
+        if self._get('pre_run') is not None:
+            self.pre_run = self.freezePlaybooks(self.pre_run, layout)
+        if self._get('post_run') is not None:
+            self.post_run = self.freezePlaybooks(self.post_run, layout)
 
     def addRoles(self, roles):
         newroles = []
@@ -1035,7 +1051,7 @@ class Job(object):
                 setattr(job, k, copy.deepcopy(self._get(k)))
         return job
 
-    def freezePlaybooks(self, pblist):
+    def freezePlaybooks(self, pblist, layout):
         """Take a list of playbooks, and return a copy of it updated with this
         job's roles.
 
@@ -1045,10 +1061,11 @@ class Job(object):
         for old_pb in pblist:
             pb = old_pb.copy()
             pb.roles = self.roles
+            pb.freezeSecrets(layout)
             ret.append(pb)
         return tuple(ret)
 
-    def applyVariant(self, other):
+    def applyVariant(self, other, layout):
         """Copy the attributes which have been set on the other job to this
         job."""
         if not isinstance(other, Job):
@@ -1106,13 +1123,13 @@ class Job(object):
             self.addRoles(other.roles)
 
         if other._get('run') is not None:
-            other_run = self.freezePlaybooks(other.run)
+            other_run = self.freezePlaybooks(other.run, layout)
             self.run = other_run
         if other._get('pre_run') is not None:
-            other_pre_run = self.freezePlaybooks(other.pre_run)
+            other_pre_run = self.freezePlaybooks(other.pre_run, layout)
             self.pre_run = self.pre_run + other_pre_run
         if other._get('post_run') is not None:
-            other_post_run = self.freezePlaybooks(other.post_run)
+            other_post_run = self.freezePlaybooks(other.post_run, layout)
             self.post_run = other_post_run + self.post_run
         self.updateVariables(other.variables, other.host_variables,
                              other.group_variables)
@@ -2559,7 +2576,7 @@ class Layout(object):
         noop = Job('noop')
         noop.description = 'A job that will always succeed, no operation.'
         noop.parent = noop.BASE_JOB_MARKER
-        noop.run = 'noop.yaml'
+        noop.run = (PlaybookContext(None, 'noop.yaml', [], []),)
         self.jobs = {'noop': [noop]}
         self.nodesets = {}
         self.secrets = {}
@@ -2817,9 +2834,9 @@ class Layout(object):
             for variant in variants:
                 if frozen_job is None:
                     frozen_job = variant.copy()
-                    frozen_job.setBase()
+                    frozen_job.setBase(item.layout)
                 else:
-                    frozen_job.applyVariant(variant)
+                    frozen_job.applyVariant(variant, item.layout)
                     frozen_job.name = variant.name
             frozen_job.name = jobname
             # Whether the change matches any of the project pipeline
@@ -2827,7 +2844,7 @@ class Layout(object):
             matched = False
             for variant in job_list.jobs[jobname]:
                 if variant.changeMatches(change):
-                    frozen_job.applyVariant(variant)
+                    frozen_job.applyVariant(variant, item.layout)
                     matched = True
                     self.log.debug("Pipeline variant %s matched %s",
                                    repr(variant), change)
