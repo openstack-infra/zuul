@@ -22,6 +22,9 @@
     required-projects:
       - org/project0
     vars:
+      deep:
+        override: 0
+        parent: 0
       override: 0
       child1override: 0
       parent: 0
@@ -33,6 +36,9 @@
     required-projects:
       - org/project1
     vars:
+      deep:
+        override: 1
+        child: 1
       override: 1
       child1override: 1
       child1: 1
@@ -44,6 +50,9 @@
     required-projects:
       - org/project2
     vars:
+      deep:
+        override: 2
+        child2: 2
       override: 2
       child2: 2
     run: playbooks/child2.yaml
@@ -64,6 +73,9 @@
             required-projects:
               - org/project3
             vars:
+              deep:
+                override: 3
+                child3: 3
               override: 3
               child3: 3
 

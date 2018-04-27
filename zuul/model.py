@@ -1147,8 +1147,11 @@ class Job(ConfigObject):
                 ret[k] = av
         for k, bv in b.items():
             av = a.get(k)
-            if isinstance(av, dict) and isinstance(bv, dict):
+            if (isinstance(av, (dict, types.MappingProxyType)) and
+                isinstance(bv, (dict, types.MappingProxyType))):
                 ret[k] = Job._deepUpdate(av, bv)
+            elif isinstance(bv, types.MappingProxyType):
+                ret[k] = dict(bv)
             else:
                 ret[k] = bv
         return ret
