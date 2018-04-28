@@ -22,6 +22,7 @@ from uuid import uuid4
 
 import zuul.model
 from zuul.lib.config import get_default
+from zuul.lib.jsonutil import json_dumps
 from zuul.model import Build
 
 
@@ -297,7 +298,7 @@ class ExecutorClient(object):
             self.sched.onBuildCompleted(build, 'SUCCESS', {})
             return build
 
-        gearman_job = gear.TextJob('executor:execute', json.dumps(params),
+        gearman_job = gear.TextJob('executor:execute', json_dumps(params),
                                    unique=uuid)
         build.__gearman_job = gearman_job
         build.__gearman_worker = None
@@ -454,7 +455,7 @@ class ExecutorClient(object):
         stop_uuid = str(uuid4().hex)
         data = dict(uuid=build.__gearman_job.unique)
         stop_job = gear.TextJob("executor:stop:%s" % build.__gearman_worker,
-                                json.dumps(data), unique=stop_uuid)
+                                json_dumps(data), unique=stop_uuid)
         self.meta_jobs[stop_uuid] = stop_job
         self.log.debug("Submitting stop job: %s", stop_job)
         self.gearman.submitJob(stop_job, precedence=gear.PRECEDENCE_HIGH,

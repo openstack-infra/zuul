@@ -25,6 +25,9 @@
       deep:
         override: 0
         parent: 0
+        more:
+          nesting:
+            for: raisins
       override: 0
       child1override: 0
       parent: 0

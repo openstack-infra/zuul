@@ -1141,6 +1141,7 @@ class Job(ConfigObject):
     def _deepUpdate(a, b):
         # Merge nested dictionaries if possible, otherwise, overwrite
         # the value in 'a' with the value in 'b'.
+
         ret = {}
         for k, av in a.items():
             if k not in b:
@@ -1150,8 +1151,6 @@ class Job(ConfigObject):
             if (isinstance(av, (dict, types.MappingProxyType)) and
                 isinstance(bv, (dict, types.MappingProxyType))):
                 ret[k] = Job._deepUpdate(av, bv)
-            elif isinstance(bv, types.MappingProxyType):
-                ret[k] = dict(bv)
             else:
                 ret[k] = bv
         return ret
