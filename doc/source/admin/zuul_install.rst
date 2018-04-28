@@ -3,36 +3,60 @@
 Install Zuul
 ============
 
-::
-
-   sudo adduser --system zuul --home-dir /var/lib/zuul --create-home
-   git clone https://git.zuul-ci.org/zuul
-   cd zuul/
-   sudo dnf install $(bindep -b) -y
-   sudo pip3 install .
-
 Initial Setup
 -------------
 
-::
+.. code-block:: console
 
-   sudo mkdir /etc/zuul/
-   sudo mkdir /var/log/zuul/
-   sudo chown zuul.zuul /var/log/zuul/
-   sudo mkdir /var/lib/zuul/.ssh
-   sudo chmod 0700 /var/lib/zuul/.ssh
-   sudo mv nodepool_rsa /var/lib/zuul/.ssh
-   sudo chown -R zuul.zuul /var/lib/zuul/.ssh
+   $ sudo adduser --system zuul --home-dir /var/lib/zuul --create-home
+   $ sudo mkdir /etc/zuul/
+   $ sudo mkdir /var/log/zuul/
+   $ sudo chown zuul.zuul /var/log/zuul/
+   $ sudo mkdir /var/lib/zuul/.ssh
+   $ sudo chmod 0700 /var/lib/zuul/.ssh
+   $ sudo mv nodepool_rsa /var/lib/zuul/.ssh
+   $ sudo chown -R zuul.zuul /var/lib/zuul/.ssh
+
+Installation
+------------
+
+.. code-block:: console
+
+   $ git clone https://git.zuul-ci.org/zuul
+   $ cd zuul/
+   $ sudo yum -y install $(bindep -b)
+   $ sudo pip3 install .
 
 Service Files
 -------------
 
-Zuul includes some systemd service files for Zuul in the ``etc`` source
-directory. To use them, do the following steps::
+Zuul includes systemd service files for Zuul services in the ``etc`` source
+directory. To use them, do the following steps.
 
-  $ sudo cp etc/zuul-scheduler.service /etc/systemd/system/zuul-scheduler.service
-  $ sudo cp etc/zuul-executor.service /etc/systemd/system/zuul-executor.service
-  $ sudo cp etc/zuul-web.service /etc/systemd/system/zuul-web.service
-  $ sudo chmod 0644 /etc/systemd/system/zuul-scheduler.service
-  $ sudo chmod 0644 /etc/systemd/system/zuul-executor.service
-  $ sudo chmod 0644 /etc/systemd/system/zuul-web.service
+.. code-block:: console
+
+   $ sudo cp etc/zuul-scheduler.service /etc/systemd/system/zuul-scheduler.service
+   $ sudo cp etc/zuul-executor.service /etc/systemd/system/zuul-executor.service
+   $ sudo cp etc/zuul-web.service /etc/systemd/system/zuul-web.service
+   $ sudo chmod 0644 /etc/systemd/system/zuul-scheduler.service
+   $ sudo chmod 0644 /etc/systemd/system/zuul-executor.service
+   $ sudo chmod 0644 /etc/systemd/system/zuul-web.service
+
+If you are installing Zuul on ``CentOS 7`` and copied the provided service
+files in previous step, please follow the steps below to use corresponding
+systemd drop-in files so Zuul services can be managed by systemd.
+
+.. code-block:: console
+
+   $ sudo mkdir /etc/systemd/system/zuul-scheduler.service.d
+   $ sudo cp etc/zuul-scheduler.service.d/centos.conf \
+       /etc/systemd/system/zuul-scheduler.service.d/centos.conf
+   $ sudo chmod 0644 /etc/systemd/system/zuul-scheduler.service.d/centos.conf
+   $ sudo mkdir /etc/systemd/system/zuul-executor.service.d
+   $ sudo cp etc/zuul-executor.service.d/centos.conf \
+       /etc/systemd/system/zuul-executor.service.d/centos.conf
+   $ sudo chmod 0644 /etc/systemd/system/zuul-executor.service.d/centos.conf
+   $ sudo mkdir /etc/systemd/system/zuul-web.service.d
+   $ sudo cp etc/zuul-web.service.d/centos.conf \
+       /etc/systemd/system/zuul-web.service.d/centos.conf
+   $ sudo chmod 0644 /etc/systemd/system/zuul-web.service.d/centos.conf
