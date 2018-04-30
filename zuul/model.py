@@ -1114,10 +1114,10 @@ class Job(ConfigObject):
             self.variables = Job._deepUpdate(self.variables, other_vars)
         if other_host_vars is not None:
             self.host_variables = Job._deepUpdate(
-                self.variables, other_host_vars)
+                self.host_variables, other_host_vars)
         if other_group_vars is not None:
             self.group_variables = Job._deepUpdate(
-                self.variables, other_group_vars)
+                self.group_variables, other_group_vars)
 
     def updateParentData(self, other_vars):
         # Update variables, but give the current values priority (used
