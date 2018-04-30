@@ -1876,7 +1876,8 @@ class TestInRepoConfig(ZuulTestCase):
 
         self.assertEqual(C.reported, 1,
                          "C should report failure")
-        self.assertIn('depends on a change that failed to merge',
+        self.assertIn('Zuul encountered a syntax error while parsing '
+                      'its configuration',
                       C.messages[0],
                       "C should have an error reported")
 

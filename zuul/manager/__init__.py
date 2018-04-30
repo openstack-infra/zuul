@@ -477,13 +477,24 @@ class PipelineManager(object):
             return None
         return layout
 
+    def _queueUpdatesConfig(self, item):
+        while item:
+            if item.change.updatesConfig():
+                return True
+            item = item.item_ahead
+        return False
+
     def getLayout(self, item):
-        if not item.change.updatesConfig():
-            if item.item_ahead:
-                return item.item_ahead.layout
-            else:
-                return item.queue.pipeline.layout
-        # This item updates the config, ask the merger for the result.
+        if not self._queueUpdatesConfig(item):
+            # No config updates in queue. Use existing pipeline layout
+            return item.queue.pipeline.layout
+        elif (not item.change.updatesConfig() and
+                item.item_ahead and item.item_ahead.live):
+            # Current change does not update layout, use its parent if parent
+            # has a layout.
+            return item.item_ahead.layout
+        # Else this item or a non live parent updates the config,
+        # ask the merger for the result.
         build_set = item.current_build_set
         if build_set.merge_state == build_set.PENDING:
             return None
@@ -531,7 +542,12 @@ class PipelineManager(object):
     def prepareJobs(self, item):
         # This only runs once the item is in the pipeline's action window
         # Returns True if the item is ready, false otherwise
-        if not item.layout:
+        if not item.live:
+            # Short circuit as non live items don't need layouts.
+            # We also don't need to take further ready actions in
+            # _processOneItem() so we return false.
+            return False
+        elif not item.layout:
             item.layout = self.getLayout(item)
         if not item.layout:
             return False
