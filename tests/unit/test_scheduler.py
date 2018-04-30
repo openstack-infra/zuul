@@ -4765,14 +4765,15 @@ For CI problems and help debugging, contact ci@example.org"""
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getRefUpdatedEvent())
+        self.waitUntilSettled()
 
         B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
         self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
 
         C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
         C.addApproval('Code-Review', 2)
         self.fake_gerrit.addEvent(C.addApproval('Approved', 1))
-
         self.waitUntilSettled()
 
         reqs = self.fake_nodepool.getNodeRequests()
