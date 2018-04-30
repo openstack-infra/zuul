@@ -5,3 +5,8 @@ features:
     :value:`pipeline.trigger.<github source>.action.status` and pipeline
     requirements :attr:`pipeline.require.<github source>.status` now support
     regular expression matching.
+upgrade:
+  - |
+    The ``fb-re2`` python library is added as a dependency; this may
+    required the installation of the ``re2`` library and header files
+    in order to build.
