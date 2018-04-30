@@ -2511,6 +2511,15 @@ class ProjectConfig(ConfigObject):
         self.pipelines = {}
         self.branch_matcher = None
 
+    def copy(self):
+        r = self.__class__(self.name)
+        r.source_context = self.source_context
+        r.start_mark = self.start_mark
+        r.templates = self.templates
+        r.pipelines = self.pipelines
+        r.branch_matcher = self.branch_matcher
+        return r
+
     def addImpliedBranchMatcher(self, branch):
         self.branch_matcher = change_matcher.ImpliedBranchMatcher(branch)
 
