@@ -565,15 +565,19 @@ def make_inventory_dict(nodes, args, all_vars):
     }
 
     for group in args['groups']:
+        if 'children' not in inventory['all']:
+            inventory['all']['children'] = dict()
         group_hosts = {}
         for node_name in group['nodes']:
             group_hosts[node_name] = None
         group_vars = args['group_vars'].get(group['name'], {}).copy()
         check_varnames(group_vars)
-        inventory[group['name']] = {
-            'hosts': group_hosts,
-            'vars': group_vars,
-        }
+
+        inventory['all']['children'].update({
+            group['name']: {
+                'hosts': group_hosts,
+                'vars': group_vars,
+            }})
 
     return inventory
 
