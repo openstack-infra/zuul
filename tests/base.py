@@ -2382,6 +2382,8 @@ class ZuulTestCase(BaseTestCase):
         for item in layout:
             if 'project' in item:
                 name = item['project']['name']
+                if name.startswith('^'):
+                    continue
                 untrusted_projects.append(name)
                 self.init_repo(name)
                 self.addCommitToRepo(name, 'initial commit',

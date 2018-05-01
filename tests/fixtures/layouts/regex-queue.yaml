@@ -1,0 +1,22 @@
+- pipeline:
+    name: gate
+    manager: dependent
+    trigger: {}
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- project:
+    name: ^.*$
+    gate:
+      queue: integrated
+      jobs:
+        - base
+
+- project:
+    name: org/project1
+
+- project:
+    name: org/project2

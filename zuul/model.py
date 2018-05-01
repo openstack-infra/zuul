@@ -2512,6 +2512,12 @@ class ProjectConfig(ConfigObject):
         # Pipeline name -> ProjectPipelineConfig
         self.pipelines = {}
         self.branch_matcher = None
+        # These represent the values from the config file, but should
+        # not be used directly; instead, use the ProjectMetadata to
+        # find the computed value from across all project config
+        # stanzas.
+        self.merge_mode = None
+        self.default_branch = None
 
     def copy(self):
         r = self.__class__(self.name)
@@ -2520,6 +2526,8 @@ class ProjectConfig(ConfigObject):
         r.templates = self.templates
         r.pipelines = self.pipelines
         r.branch_matcher = self.branch_matcher
+        r.merge_mode = self.merge_mode
+        r.default_branch = self.default_branch
         return r
 
     def addImpliedBranchMatcher(self, branch):
