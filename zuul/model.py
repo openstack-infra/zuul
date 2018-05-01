@@ -2952,6 +2952,17 @@ class Layout(object):
     def getProjectConfigs(self, name):
         return self.project_configs.get(name, [])
 
+    def getAllProjectConfigs(self, name):
+        # Get all the project configs (project and project-template
+        # stanzas) for a project.
+        ret = []
+        for pc in self.getProjectConfigs(name):
+            ret.append(pc)
+            for template_name in pc.templates:
+                templates = self.getProjectTemplates(template_name)
+                ret.extend(templates)
+        return ret
+
     def getProjectMetadata(self, name):
         if name in self.project_metadata:
             return self.project_metadata[name]

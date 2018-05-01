@@ -2739,6 +2739,17 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(q1.name, 'integrated')
         self.assertEqual(q2.name, 'integrated')
 
+    @simple_layout("layouts/template-queue.yaml")
+    def test_template_queue(self):
+        "Test a shared queue can be constructed from a preject-template"
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        (trusted, project1) = tenant.getProject('org/project1')
+        (trusted, project2) = tenant.getProject('org/project2')
+        q1 = tenant.layout.pipelines['gate'].getQueue(project1)
+        q2 = tenant.layout.pipelines['gate'].getQueue(project2)
+        self.assertEqual(q1.name, 'integrated')
+        self.assertEqual(q2.name, 'integrated')
+
     def test_queue_precedence(self):
         "Test that queue precedence works"
 

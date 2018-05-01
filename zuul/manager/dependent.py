@@ -35,14 +35,15 @@ class DependentPipelineManager(PipelineManager):
     def buildChangeQueues(self):
         self.log.debug("Building shared change queues")
         change_queues = {}
-        layout_project_configs = self.pipeline.layout.project_configs
-        tenant = self.pipeline.layout.tenant
+        layout = self.pipeline.layout
+        layout_project_configs = layout.project_configs
+        tenant = layout.tenant
 
         for project_name, project_configs in layout_project_configs.items():
             (trusted, project) = tenant.getProject(project_name)
             queue_name = None
             project_in_pipeline = False
-            for project_config in project_configs:
+            for project_config in layout.getAllProjectConfigs(project_name):
                 project_pipeline_config = project_config.pipelines.get(
                     self.pipeline.name)
                 if project_pipeline_config is None:
