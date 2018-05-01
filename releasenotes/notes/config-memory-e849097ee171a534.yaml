@@ -1,0 +1,6 @@
+fixes:
+  - |
+    Configuration loading for dynamic configuration changes (i.e.,
+    changes to ``zuul.yaml`` files) is now significantly more CPU and
+    memory efficient, incurring only a slight penalty compared to
+    normal changes.
