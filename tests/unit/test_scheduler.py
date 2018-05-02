@@ -4864,6 +4864,27 @@ For CI problems and help debugging, contact ci@example.org"""
             dict(name='child-job', result='SUCCESS', changes='4,1'),
         ])
 
+    def test_trusted_project_dep_on_non_live_untrusted_project(self):
+        # Test we get a layout for trusted projects when they depend on
+        # non live untrusted projects. This checks against a bug where
+        # trusted project config changes can end up in a infinite loop
+        # trying to find the right layout.
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        files = {'zuul.yaml': ''}
+        B = self.fake_gerrit.addFakeChange('common-config', 'master', 'B',
+                                           files=files)
+        B.setDependsOn(A, 1)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='project-merge', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='project-test1', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='project-test2', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='project1-project2-integration',
+                 result='SUCCESS', changes='1,1 2,1'),
+        ], ordered=False)
+
 
 class TestExecutor(ZuulTestCase):
     tenant_config_file = 'config/single-tenant/main.yaml'
