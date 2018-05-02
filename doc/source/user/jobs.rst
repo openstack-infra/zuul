@@ -74,7 +74,7 @@ pre-playbook which copies the repositories to all of the job's nodes.
 It is recommended to always inherit from this base job to ensure that
 behavior.
 
-.. _zuul-base-jobs documentation: https://docs.openstack.org/infra/zuul-base-jobs/jobs.html#job-base
+.. _zuul-base-jobs documentation: https://zuul-ci.org/docs/zuul-base-jobs/jobs.html#job-base
 
 .. TODO: document src (and logs?) directory
 

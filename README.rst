@@ -4,7 +4,7 @@ Zuul
 Zuul is a project gating system.
 
 The latest documentation for Zuul v3 is published at:
-https://docs.openstack.org/infra/zuul/
+https://zuul-ci.org/docs/zuul/
 
 If you are looking for the Edge routing service named Zuul that is
 related to Netflix, it can be found here:
