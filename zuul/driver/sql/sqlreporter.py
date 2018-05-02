@@ -38,6 +38,7 @@ class SQLReporter(BaseReporter):
             ref = getattr(item.change, 'ref', '')
             oldrev = getattr(item.change, 'oldrev', '')
             newrev = getattr(item.change, 'newrev', '')
+            branch = getattr(item.change, 'branch', '')
             buildset_ins = self.connection.zuul_buildset_table.insert().values(
                 zuul_ref=item.current_build_set.ref,
                 pipeline=item.pipeline.name,
@@ -52,7 +53,7 @@ class SQLReporter(BaseReporter):
                 message=self._formatItemReport(
                     item, with_jobs=False),
                 tenant=item.pipeline.layout.tenant.name,
-                branch=item.change.branch,
+                branch=branch,
             )
             buildset_ins_result = conn.execute(buildset_ins)
             build_inserts = []
