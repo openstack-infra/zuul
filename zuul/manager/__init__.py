@@ -445,12 +445,9 @@ class PipelineManager(object):
                     include_config_projects=False)
             else:
                 # We're a change to a config repo (with no untrusted
-                # items ahead), so just use the most recently
-                # generated layout.
-                if item.item_ahead:
-                    return item.item_ahead.layout
-                else:
-                    return item.queue.pipeline.layout
+                # config items ahead), so just use the current pipeline
+                # layout.
+                return item.queue.pipeline.layout
             self.log.debug("Loading dynamic layout complete")
         except zuul.configloader.ConfigurationSyntaxError as e:
             self.log.info("Configuration syntax error in dynamic layout")
