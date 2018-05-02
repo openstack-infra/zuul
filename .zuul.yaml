@@ -53,6 +53,11 @@
             irrelevant-files:
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
+        - tox-py36:
+            nodeset: ubuntu-bionic
+            irrelevant-files:
+              - zuul/cmd/migrate.py
+              - playbooks/zuul-migrate/.*
         - build-javascript-content:
             success-url: 'npm/html/status.html'
             files:
@@ -86,6 +91,11 @@
               sphinx_python: python3
         - tox-pep8
         - tox-py35:
+            irrelevant-files:
+              - zuul/cmd/migrate.py
+              - playbooks/zuul-migrate/.*
+        - tox-py36:
+            nodeset: ubuntu-bionic
             irrelevant-files:
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
