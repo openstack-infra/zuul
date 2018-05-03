@@ -1943,7 +1943,7 @@ class PostgresqlSchemaFixture(fixtures.Fixture):
                               database="openstack_citest")
         db.autocommit = True
         cur = db.cursor()
-        cur.execute("create role %s with login unencrypted password '%s';" % (
+        cur.execute("create role %s with login password '%s';" % (
             self.name, self.passwd))
         cur.execute("create database %s OWNER %s TEMPLATE template0 "
                     "ENCODING 'UTF8';" % (self.name, self.name))
