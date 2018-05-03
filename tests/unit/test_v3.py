@@ -1582,6 +1582,30 @@ class TestInRepoConfig(ZuulTestCase):
         self.assertIn('nodeset "does-not-exist" was not found', A.messages[0],
                       "A should have a syntax error reported")
 
+    def test_required_project_not_found_error(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test1
+            - job:
+                name: test
+                required-projects:
+                  - does-not-exist
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn('Unknown project does-not-exist', A.messages[0],
+                      "A should have a syntax error reported")
+
     def test_template_not_found_error(self):
         in_repo_conf = textwrap.dedent(
             """

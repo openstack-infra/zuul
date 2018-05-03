@@ -1563,7 +1563,7 @@ class TenantParser(object):
         return data.copy(trusted=False)
 
     def _getLoadClasses(self, tenant, conf_object):
-        project = conf_object.source_context.project
+        project = conf_object.get('_source_context').project
         tpc = tenant.project_configs[project.canonical_name]
         return tpc.load_classes
 
@@ -1577,36 +1577,57 @@ class TenantParser(object):
             pcontext.pragma_parser.fromYaml(config_pragma)
 
         for config_pipeline in unparsed_config.pipelines:
+            classes = self._getLoadClasses(tenant, config_pipeline)
+            if 'pipeline' not in classes:
+                continue
             with configuration_exceptions('pipeline', config_pipeline):
                 parsed_config.pipelines.append(
                     pcontext.pipeline_parser.fromYaml(config_pipeline))
 
         for config_nodeset in unparsed_config.nodesets:
+            classes = self._getLoadClasses(tenant, config_nodeset)
+            if 'nodeset' not in classes:
+                continue
             with configuration_exceptions('nodeset', config_nodeset):
                 parsed_config.nodesets.append(
                     pcontext.nodeset_parser.fromYaml(config_nodeset))
 
         for config_secret in unparsed_config.secrets:
+            classes = self._getLoadClasses(tenant, config_secret)
+            if 'secret' not in classes:
+                continue
             with configuration_exceptions('secret', config_secret):
                 parsed_config.secrets.append(
                     pcontext.secret_parser.fromYaml(config_secret))
 
         for config_job in unparsed_config.jobs:
+            classes = self._getLoadClasses(tenant, config_job)
+            if 'job' not in classes:
+                continue
             with configuration_exceptions('job', config_job):
                 parsed_config.jobs.append(
                     pcontext.job_parser.fromYaml(config_job))
 
         for config_semaphore in unparsed_config.semaphores:
+            classes = self._getLoadClasses(tenant, config_semaphore)
+            if 'semaphore' not in classes:
+                continue
             with configuration_exceptions('semaphore', config_semaphore):
                 parsed_config.semaphores.append(
                     pcontext.semaphore_parser.fromYaml(config_semaphore))
 
         for config_template in unparsed_config.project_templates:
+            classes = self._getLoadClasses(tenant, config_template)
+            if 'project-template' not in classes:
+                continue
             with configuration_exceptions('project-template', config_template):
                 parsed_config.project_templates.append(
                     pcontext.project_template_parser.fromYaml(config_template))
 
         for config_project in unparsed_config.projects:
+            classes = self._getLoadClasses(tenant, config_project)
+            if 'project' not in classes:
+                continue
             with configuration_exceptions('project', config_project):
                 # we need to separate the regex projects as they are processed
                 # differently later
@@ -1665,29 +1686,17 @@ class TenantParser(object):
         # reference_exceptions has it; add tests if needed.
         if not skip_pipelines:
             for pipeline in parsed_config.pipelines:
-                classes = self._getLoadClasses(tenant, pipeline)
-                if 'pipeline' not in classes:
-                    continue
                 layout.addPipeline(pipeline)
 
         for nodeset in parsed_config.nodesets:
-            classes = self._getLoadClasses(tenant, nodeset)
-            if 'nodeset' not in classes:
-                continue
             with reference_exceptions('nodeset', nodeset):
                 layout.addNodeSet(nodeset)
 
         for secret in parsed_config.secrets:
-            classes = self._getLoadClasses(tenant, secret)
-            if 'secret' not in classes:
-                continue
             with reference_exceptions('secret', secret):
                 layout.addSecret(secret)
 
         for job in parsed_config.jobs:
-            classes = self._getLoadClasses(tenant, job)
-            if 'job' not in classes:
-                continue
             with reference_exceptions('job', job):
                 added = layout.addJob(job)
             if not added:
@@ -1711,16 +1720,10 @@ class TenantParser(object):
         else:
             semaphore_layout = layout
         for semaphore in parsed_config.semaphores:
-            classes = self._getLoadClasses(tenant, semaphore)
-            if 'semaphore' not in classes:
-                continue
             with reference_exceptions('semaphore', semaphore):
                 semaphore_layout.addSemaphore(semaphore)
 
         for template in parsed_config.project_templates:
-            classes = self._getLoadClasses(tenant, template)
-            if 'project-template' not in classes:
-                continue
             with reference_exceptions('project-template', template):
                 layout.addProjectTemplate(template)
 
@@ -1741,9 +1744,6 @@ class TenantParser(object):
                     parsed_config.projects.append(conf)
 
         for project in parsed_config.projects:
-            classes = self._getLoadClasses(tenant, project)
-            if 'project' not in classes:
-                continue
             layout.addProjectConfig(project)
 
         # Now that all the project pipelines are loaded, fixup and
