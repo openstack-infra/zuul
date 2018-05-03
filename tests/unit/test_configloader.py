@@ -153,7 +153,7 @@ class TestTenantGroups2(TenantParserTestCase):
         tenant = self.sched.abide.tenants.get('tenant-one')
         self.assertEqual(['common-config'],
                          [x.name for x in tenant.config_projects])
-        self.assertEqual(['org/project1', 'org/project2'],
+        self.assertEqual(['org/project1', 'org/project2', 'org/project3'],
                          [x.name for x in tenant.untrusted_projects])
         project = tenant.config_projects[0]
         tpc = tenant.project_configs[project.canonical_name]

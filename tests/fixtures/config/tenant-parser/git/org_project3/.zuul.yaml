@@ -1,0 +1,10 @@
+- job:
+    name: project3-job
+    required-projects:
+      - doesnot/exist
+
+- project:
+    name: org/project3
+    check:
+      jobs:
+        - project3-job

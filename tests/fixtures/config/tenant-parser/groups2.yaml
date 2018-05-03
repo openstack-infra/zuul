@@ -10,3 +10,5 @@
               - org/project1
               - org/project2:
                   exclude: job
+              - org/project3:
+                  exclude: job
