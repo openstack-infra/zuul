@@ -23,6 +23,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import copy
+import datetime
 import json
 import os
 
@@ -35,6 +36,10 @@ except ImportError:
     from ansible.vars.manager import strip_internal_keys
 
 from zuul.ansible import logconfig
+
+
+def current_time():
+    return '%sZ' % datetime.datetime.utcnow().isoformat()
 
 
 class CallbackModule(CallbackBase):
@@ -89,6 +94,9 @@ class CallbackModule(CallbackBase):
             'play': {
                 'name': play.name,
                 'id': str(play._uuid),
+                'duration': {
+                    'start': current_time()
+                }
             },
             'tasks': []
         }
@@ -97,7 +105,10 @@ class CallbackModule(CallbackBase):
         return {
             'task': {
                 'name': task.name,
-                'id': str(task._uuid)
+                'id': str(task._uuid),
+                'duration': {
+                    'start': current_time()
+                }
             },
             'hosts': {}
         }
@@ -136,6 +147,9 @@ class CallbackModule(CallbackBase):
                              " 'no_log: true' was specified for this result")
 
             self.results[-1]['tasks'][-1]['hosts'][host.name] = clean_result
+        end_time = current_time()
+        self.results[-1]['tasks'][-1]['task']['duration']['end'] = end_time
+        self.results[-1]['play']['duration']['end'] = end_time
 
     def v2_playbook_on_stats(self, stats):
         """Display info about playbook statistics"""
