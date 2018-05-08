@@ -1,0 +1,10 @@
+- hosts: all
+  tasks:
+    - name: Normal shell
+      shell: echo 123
+
+    - name: Shell with executable
+      shell: |
+        echo 123
+      args:
+        executable: /bin/bash
