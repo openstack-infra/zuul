@@ -87,7 +87,16 @@ class Repo(object):
     def _ensure_cloned(self):
         repo_is_cloned = os.path.exists(os.path.join(self.local_path, '.git'))
         if self._initialized and repo_is_cloned:
-            return
+            try:
+                # validate that the repo isn't corrupt
+                git.Repo(self.local_path)
+                return
+            except Exception:
+                # the repo is corrupt, delete the local path
+                shutil.rmtree(self.local_path)
+                repo_is_cloned = False
+                self._initialized = False
+
         # If the repo does not exist, clone the repo.
         rewrite_url = False
         if not repo_is_cloned:

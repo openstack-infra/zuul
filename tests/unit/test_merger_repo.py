@@ -168,6 +168,19 @@ class TestMergerRepo(ZuulTestCase):
         # And now reset the repo again. This should not crash
         work_repo.reset()
 
+    def test_broken_cache(self):
+        parent_path = os.path.join(self.upstream_root, 'org/project1')
+        work_repo = Repo(parent_path, self.workspace_root,
+                         'none@example.org', 'User Name', '0', '0')
+        self.waitUntilSettled()
+
+        # Break the work repo
+        path = work_repo.local_path
+        os.remove(os.path.join(path, '.git/HEAD'))
+
+        # And now reset the repo again. This should not crash
+        work_repo.reset()
+
 
 class TestMergerWithAuthUrl(ZuulTestCase):
     config_file = 'zuul-github-driver.conf'
