@@ -890,7 +890,8 @@ class GithubConnection(BaseConnection):
             self._project_branch_cache[project.name] = [
                 branch.name for branch in repository.branches(
                     protected=exclude_unprotected)]
-            self.log.debug('Got project branches for %s', project.name)
+            self.log.debug('Got project branches for %s: %s', project.name,
+                           self._project_branch_cache[project.name])
             log_rate_limit(self.log, github)
         except github3.exceptions.ForbiddenError as e:
             self.log.error(str(e), exc_info=True)
