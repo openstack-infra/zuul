@@ -75,26 +75,20 @@ class BaseConnection(object, metaclass=abc.ABCMeta):
         still in use.  Anything in our cache that isn't in the supplied
         list should be safe to remove from the cache."""
 
-    def getWebHandlers(self, zuul_web, info):
-        """Return a list of web handlers to register with zuul-web.
+    def getWebController(self, zuul_web, info):
+        """Return a cherrypy web controller to register with zuul-web.
 
         :param zuul.web.ZuulWeb zuul_web:
             Zuul Web instance.
         :param zuul.model.WebInfo info:
             The WebInfo object for the Zuul Web instance. Can be used by
             plugins to toggle API capabilities.
-        :returns: List of `zuul.web.handler.BaseWebHandler` instances.
+        :returns: A `zuul.web.handler.BaseWebController` instance.
         """
-        return []
+        return None
 
     def validateWebConfig(self, config, connections):
-        """Validate config and determine whether to register web handlers.
-
-        By default this method returns False, which means this connection
-        has no web handlers to register.
-
-        If the method returns True, then its `getWebHandlers` method
-        should be called during route registration.
+        """Validate web config.
 
         If there is a fatal error, the method should raise an exception.
 

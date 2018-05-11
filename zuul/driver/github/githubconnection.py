@@ -12,7 +12,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import asyncio
 import collections
 import datetime
 import logging
@@ -25,7 +24,7 @@ import re
 import json
 import traceback
 
-from aiohttp import web
+import cherrypy
 import cachecontrol
 from cachecontrol.cache import DictCache
 from cachecontrol.heuristics import BaseHeuristic
@@ -39,7 +38,7 @@ import github3.exceptions
 import gear
 
 from zuul.connection import BaseConnection
-from zuul.web.handler import BaseDriverWebHandler
+from zuul.web.handler import BaseWebController
 from zuul.lib.config import get_default
 from zuul.model import Ref, Branch, Tag, Project
 from zuul.exceptions import MergeFailure
@@ -1149,8 +1148,8 @@ class GithubConnection(BaseConnection):
 
         return statuses
 
-    def getWebHandlers(self, zuul_web, info):
-        return [GithubWebhookHandler(self, zuul_web, 'POST', 'payload')]
+    def getWebController(self, zuul_web, info):
+        return GithubWebController(zuul_web, self)
 
     def validateWebConfig(self, config, connections):
         if 'webhook_token' not in self.connection_config:
@@ -1160,21 +1159,20 @@ class GithubConnection(BaseConnection):
         return True
 
 
-class GithubWebhookHandler(BaseDriverWebHandler):
+class GithubWebController(BaseWebController):
 
-    log = logging.getLogger("zuul.GithubWebhookHandler")
+    log = logging.getLogger("zuul.GithubWebController")
 
-    def __init__(self, connection, zuul_web, method, path):
-        super(GithubWebhookHandler, self).__init__(
-            connection=connection, zuul_web=zuul_web, method=method, path=path)
+    def __init__(self, zuul_web, connection):
+        self.connection = connection
+        self.zuul_web = zuul_web
         self.token = self.connection.connection_config.get('webhook_token')
 
     def _validate_signature(self, body, headers):
         try:
             request_signature = headers['x-hub-signature']
         except KeyError:
-            raise web.HTTPUnauthorized(
-                reason='X-Hub-Signature header missing.')
+            raise cherrypy.HTTPError(401, 'X-Hub-Signature header missing.')
 
         payload_signature = _sign_request(body, self.token)
 
@@ -1182,16 +1180,16 @@ class GithubWebhookHandler(BaseDriverWebHandler):
         self.log.debug("Request Signature: {0}".format(str(request_signature)))
         if not hmac.compare_digest(
             str(payload_signature), str(request_signature)):
-            raise web.HTTPUnauthorized(
-                reason=('Request signature does not match calculated payload '
-                        'signature. Check that secret is correct.'))
+            raise cherrypy.HTTPError(
+                401,
+                'Request signature does not match calculated payload '
+                'signature. Check that secret is correct.')
 
         return True
 
-    def setEventLoop(self, event_loop):
-        self.event_loop = event_loop
-
-    async def handleRequest(self, request):
+    @cherrypy.expose
+    @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
+    def payload(self):
         # Note(tobiash): We need to normalize the headers. Otherwise we will
         # have trouble to get them from the dict afterwards.
         # e.g.
@@ -1202,28 +1200,22 @@ class GithubWebhookHandler(BaseDriverWebHandler):
         # modifies the header casing in its own way and by specification http
         # headers are case insensitive so just lowercase all so we don't have
         # to take care later.
+        # Note(corvus): Don't use cherrypy's json_in here so that we
+        # can validate the signature.
         headers = dict()
-        for key, value in request.headers.items():
+        for key, value in cherrypy.request.headers.items():
             headers[key.lower()] = value
-        body = await request.read()
+        body = cherrypy.request.body.read()
         self._validate_signature(body, headers)
         # We cannot send the raw body through gearman, so it's easy to just
         # encode it as json, after decoding it as utf-8
         json_body = json.loads(body.decode('utf-8'))
 
-        gear_task = self.event_loop.run_in_executor(
-            None, self.zuul_web.rpc.submitJob,
+        job = self.zuul_web.rpc.submitJob(
             'github:%s:payload' % self.connection.connection_name,
             {'headers': headers, 'body': json_body})
 
-        try:
-            job = await asyncio.wait_for(gear_task, 300)
-        except asyncio.TimeoutError:
-            self.log.exception("Gearman timeout:")
-            return web.json_response({'error_description': 'Internal error'},
-                                     status=500)
-
-        return web.json_response(json.loads(job.data[0]))
+        return json.loads(job.data[0])
 
 
 def _status_as_tuple(status):

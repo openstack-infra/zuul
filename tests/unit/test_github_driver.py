@@ -12,8 +12,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import asyncio
-import threading
 import os
 import re
 from testtools.matchers import MatchesRegex, StartsWith
@@ -789,23 +787,14 @@ class TestGithubWebhook(ZuulTestCase):
         self.web = zuul.web.ZuulWeb(
             listen_address='127.0.0.1', listen_port=0,
             gear_server='127.0.0.1', gear_port=self.gearman_server.port,
-            connections=[self.fake_github],
-            _connections=self.connections)
-        loop = asyncio.new_event_loop()
-        loop.set_debug(True)
-        ws_thread = threading.Thread(target=self.web.run, args=(loop,))
-        ws_thread.start()
-        self.addCleanup(loop.close)
-        self.addCleanup(ws_thread.join)
+            connections=self.connections)
+        self.web.start()
         self.addCleanup(self.web.stop)
 
         host = '127.0.0.1'
         # Wait until web server is started
         while True:
-            time.sleep(0.1)
-            if self.web.server is None:
-                continue
-            port = self.web.server.sockets[0].getsockname()[1]
+            port = self.web.port
             try:
                 with socket.create_connection((host, port)):
                     break

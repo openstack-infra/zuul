@@ -12,7 +12,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import asyncio
 import logging
 
 import alembic
@@ -157,19 +156,11 @@ class SQLConnection(BaseConnection):
         return query.limit(args['limit']).offset(args['skip']).order_by(
             build.c.id.desc())
 
-    async def get_builds(self, args, event_loop):
+    def get_builds(self, args):
         """Return a list of build"""
         builds = []
         with self.engine.begin() as conn:
-            query = self.query(args)
-            query_task = event_loop.run_in_executor(
-                None,
-                conn.execute,
-                query
-            )
-            rows = await asyncio.wait_for(query_task, 30)
-
-            for row in rows:
+            for row in conn.execute(self.query(args)):
                 build = dict(row)
                 # Convert date to iso format
                 if row.start_time:
