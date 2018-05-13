@@ -55,6 +55,7 @@ class WebServer(zuul.cmd.ZuulDaemonApp):
         params['ssl_cert'] = get_default(self.config, 'gearman', 'ssl_cert')
         params['ssl_ca'] = get_default(self.config, 'gearman', 'ssl_ca')
 
+        params['_connections'] = self.connections
         params['connections'] = []
         # Validate config here before we spin up the ZuulWeb object
         for conn_name, connection in self.connections.connections.items():

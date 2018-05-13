@@ -15,19 +15,15 @@
 import asyncio
 import logging
 
-from aiohttp import web
 import alembic
 import alembic.command
 import alembic.config
 import sqlalchemy as sa
 import sqlalchemy.pool
 from sqlalchemy.sql import select
-import urllib.parse
 import voluptuous
 
 from zuul.connection import BaseConnection
-from zuul.lib.config import get_default
-from zuul.web.handler import BaseTenantWebHandler
 
 BUILDSET_TABLE = 'zuul_buildset'
 BUILD_TABLE = 'zuul_build'
@@ -127,53 +123,13 @@ class SQLConnection(BaseConnection):
 
         return zuul_buildset_table, zuul_build_table
 
-    def getWebHandlers(self, zuul_web, info):
-        info.capabilities.job_history = True
-        return [
-            SqlWebHandler(self, zuul_web, 'GET', 'builds'),
-        ]
-
-    def validateWebConfig(self, config, connections):
-        sql_conn_name = get_default(config, 'web', 'sql_connection_name')
-        if sql_conn_name:
-            # The config wants a specific sql connection. Check the whole
-            # list of connections to make sure it can be satisfied.
-            sql_conn = connections.connections.get(sql_conn_name)
-            if not sql_conn:
-                raise Exception(
-                    "Couldn't find sql connection '%s'" % sql_conn_name)
-            if self.connection_name == sql_conn.connection_name:
-                return True
-        else:
-            # Check to see if there is more than one connection
-            conn_objects = [c for c in connections.connections.values()
-                            if isinstance(c, SQLConnection)]
-            if len(conn_objects) > 1:
-                raise Exception("Multiple sql connection found, "
-                                "set the sql_connection_name option "
-                                "in zuul.conf [web] section")
-            return True
-
     def onStop(self):
         self.log.debug("Stopping SQL connection %s" % self.connection_name)
         self.engine.dispose()
 
-
-class SqlWebHandler(BaseTenantWebHandler):
-    log = logging.getLogger("zuul.web.SqlHandler")
-    filters = ("project", "pipeline", "change", "branch", "patchset", "ref",
-               "result", "uuid", "job_name", "voting", "node_name", "newrev")
-
-    def __init__(self, connection, zuul_web, method, path):
-        super(SqlWebHandler, self).__init__(
-            connection=connection, zuul_web=zuul_web, method=method, path=path)
-
-    def setEventLoop(self, event_loop):
-        self.event_loop = event_loop
-
     def query(self, args):
-        build = self.connection.zuul_build_table
-        buildset = self.connection.zuul_buildset_table
+        build = self.zuul_build_table
+        buildset = self.zuul_buildset_table
         query = select([
             buildset.c.project,
             buildset.c.branch,
@@ -201,12 +157,12 @@ class SqlWebHandler(BaseTenantWebHandler):
         return query.limit(args['limit']).offset(args['skip']).order_by(
             build.c.id.desc())
 
-    async def get_builds(self, args):
+    async def get_builds(self, args, event_loop):
         """Return a list of build"""
         builds = []
-        with self.connection.engine.begin() as conn:
+        with self.engine.begin() as conn:
             query = self.query(args)
-            query_task = self.event_loop.run_in_executor(
+            query_task = event_loop.run_in_executor(
                 None,
                 conn.execute,
                 query
@@ -228,34 +184,6 @@ class SqlWebHandler(BaseTenantWebHandler):
                                          row.start_time).total_seconds()
                 builds.append(build)
         return builds
-
-    async def handleRequest(self, request):
-        try:
-            args = {
-                'buildset_filters': {},
-                'build_filters': {},
-                'limit': 50,
-                'skip': 0,
-            }
-            for k, v in urllib.parse.parse_qsl(request.rel_url.query_string):
-                if k in ("tenant", "project", "pipeline", "change", "branch",
-                         "patchset", "ref", "newrev"):
-                    args['buildset_filters'].setdefault(k, []).append(v)
-                elif k in ("uuid", "job_name", "voting", "node_name",
-                           "result"):
-                    args['build_filters'].setdefault(k, []).append(v)
-                elif k in ("limit", "skip"):
-                    args[k] = int(v)
-                else:
-                    raise ValueError("Unknown parameter %s" % k)
-            data = await self.get_builds(args)
-            resp = web.json_response(data)
-            resp.headers['Access-Control-Allow-Origin'] = '*'
-        except Exception as e:
-            self.log.exception("Jobs exception:")
-            resp = web.json_response({'error_description': 'Internal error'},
-                                     status=500)
-        return resp
 
 
 def getSchema():

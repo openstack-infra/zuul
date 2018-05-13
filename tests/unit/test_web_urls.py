@@ -23,13 +23,14 @@ from tests.base import ZuulTestCase, WebProxyFixture
 from tests.base import ZuulWebFixture
 
 
-class TestWebURLs(object):
+class TestWebURLs(ZuulTestCase):
     tenant_config_file = 'config/single-tenant/main.yaml'
 
     def setUp(self):
         super(TestWebURLs, self).setUp()
         self.web = self.useFixture(
-            ZuulWebFixture(self.gearman_server.port))
+            ZuulWebFixture(self.gearman_server.port,
+                           self.connections))
 
     def _get(self, port, uri):
         url = "http://localhost:{}{}".format(port, uri)
@@ -60,7 +61,7 @@ class TestWebURLs(object):
                 self._get(self.port, link)
 
 
-class TestDirect(TestWebURLs, ZuulTestCase):
+class TestDirect(TestWebURLs):
     # Test directly accessing the zuul-web server with no proxy
     def setUp(self):
         super(TestDirect, self).setUp()
@@ -70,7 +71,7 @@ class TestDirect(TestWebURLs, ZuulTestCase):
         self._crawl('/t/tenant-one/status.html')
 
 
-class TestWhiteLabel(TestWebURLs, ZuulTestCase):
+class TestWhiteLabel(TestWebURLs):
     # Test a zuul-web behind a whitelabel proxy (i.e., what
     # zuul.openstack.org does).
     def setUp(self):
@@ -85,7 +86,7 @@ class TestWhiteLabel(TestWebURLs, ZuulTestCase):
         self._crawl('/status.html')
 
 
-class TestWhiteLabelAPI(TestWebURLs, ZuulTestCase):
+class TestWhiteLabelAPI(TestWebURLs):
     # Test a zuul-web behind a whitelabel proxy (i.e., what
     # zuul.openstack.org does).
     def setUp(self):
@@ -103,7 +104,7 @@ class TestWhiteLabelAPI(TestWebURLs, ZuulTestCase):
         self.assertEqual('tenant-one', info['info']['tenant'])
 
 
-class TestSuburl(TestWebURLs, ZuulTestCase):
+class TestSuburl(TestWebURLs):
     # Test a zuul-web mounted on a suburl (i.e., what software factory
     # does).
     def setUp(self):

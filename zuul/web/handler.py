@@ -31,13 +31,6 @@ class BaseWebHandler(object, metaclass=abc.ABCMeta):
         """Process a web request."""
 
 
-class BaseTenantWebHandler(BaseWebHandler):
-
-    def __init__(self, connection, zuul_web, method, path):
-        super(BaseTenantWebHandler, self).__init__(
-            connection, zuul_web, method, '/api/tenant/{tenant}/' + path)
-
-
 class BaseDriverWebHandler(BaseWebHandler):
 
     def __init__(self, connection, zuul_web, method, path):
