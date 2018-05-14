@@ -14,8 +14,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import aiohttp
-import asyncio
 import io
 import logging
 import json
@@ -31,6 +29,8 @@ import zuul.web
 import zuul.lib.log_streamer
 import zuul.lib.fingergw
 import tests.base
+
+from ws4py.client import WebSocketBaseClient
 
 
 class TestLogStreamer(tests.base.BaseTestCase):
@@ -170,29 +170,23 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         self.assertEqual(file_contents, self.streaming_data)
 
     def runWSClient(self, port, build_uuid, event):
-        async def client(loop, build_uuid, event):
-            uri = 'http://[::1]:%s/api/tenant/tenant-one/console-stream' % port
-            try:
-                session = aiohttp.ClientSession(loop=loop)
-                async with session.ws_connect(uri) as ws:
-                    req = {'uuid': build_uuid, 'logfile': None}
-                    ws.send_str(json.dumps(req))
-                    event.set()  # notify we are connected and req sent
-                    async for msg in ws:
-                        if msg.type == aiohttp.WSMsgType.TEXT:
-                            self.ws_client_results += msg.data
-                        elif msg.type == aiohttp.WSMsgType.CLOSED:
-                            break
-                        elif msg.type == aiohttp.WSMsgType.ERROR:
-                            break
-                session.close()
-            except Exception as e:
-                self.log.exception("client exception:")
+        class TestWSClient(WebSocketBaseClient):
+            def __init__(self, *args, **kw):
+                super(TestWSClient, self).__init__(*args, **kw)
+                self.results = ''
 
-        loop = asyncio.new_event_loop()
-        loop.set_debug(True)
-        loop.run_until_complete(client(loop, build_uuid, event))
-        loop.close()
+            def received_message(self, message):
+                if message.is_text:
+                    self.results += message.data.decode('utf-8')
+
+        uri = 'ws://[::1]:%s/api/tenant/tenant-one/console-stream' % port
+        ws = TestWSClient(uri)
+        ws.connect()
+        req = {'uuid': build_uuid, 'logfile': None}
+        ws.send(json.dumps(req))
+        event.set()
+        ws.run()
+        self.ws_client_results += ws.results
 
     def runFingerClient(self, build_uuid, gateway_address, event):
         # Wait until the gateway is started
