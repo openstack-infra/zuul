@@ -120,7 +120,12 @@ class CallbackModule(default.CallbackModule):
                   % (host, log_id, task_name), job=False, executor=True)
         while True:
             try:
-                s = socket.create_connection((ip, LOG_STREAM_PORT))
+                s = socket.create_connection((ip, LOG_STREAM_PORT), 5)
+            except socket.timeout:
+                self._log(
+                    "Timeout exception waiting for the logger. "
+                    "Please check connectivity to [%s:%s]"
+                    % (ip, LOG_STREAM_PORT), executor=True)
             except Exception:
                 self._log("[%s] Waiting on logger" % host,
                           executor=True, debug=True)
