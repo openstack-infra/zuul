@@ -17,6 +17,22 @@
     failure:
       github: {}
 
+- pipeline:
+    name: post
+    manager: independent
+    require:
+      github:
+        merged: true
+    trigger:
+      github:
+        - event: pull_request
+          action:
+            - closed
+    success:
+      github: {}
+    failure:
+      github: {}
+
 - job:
     name: base
     parent: null
@@ -30,9 +46,16 @@
     name: project-test2
     run: playbooks/project-test2.yaml
 
+- job:
+    name: project-post
+    run: playbooks/project-post.yaml
+
 - project:
     name: org/project
     check:
       jobs:
         - project-test1
         - project-test2
+    post:
+      jobs:
+        - project-post

@@ -321,9 +321,10 @@ class GithubEventFilter(EventFilter, GithubCommonFilter):
 
 class GithubRefFilter(RefFilter, GithubCommonFilter):
     def __init__(self, connection_name, statuses=[], required_reviews=[],
-                 reject_reviews=[], open=None, current_patchset=None,
-                 reject_open=None, reject_current_patchset=None,
-                 labels=[], reject_labels=[], reject_statuses=[]):
+                 reject_reviews=[], open=None, merged=None,
+                 current_patchset=None, reject_open=None, reject_merged=None,
+                 reject_current_patchset=None, labels=[], reject_labels=[],
+                 reject_statuses=[]):
         RefFilter.__init__(self, connection_name)
 
         GithubCommonFilter.__init__(self, required_reviews=required_reviews,
@@ -335,6 +336,10 @@ class GithubRefFilter(RefFilter, GithubCommonFilter):
             self.open = not reject_open
         else:
             self.open = open
+        if reject_merged is not None:
+            self.merged = not reject_merged
+        else:
+            self.merged = merged
         if reject_current_patchset is not None:
             self.current_patchset = not reject_current_patchset
         else:
@@ -358,6 +363,8 @@ class GithubRefFilter(RefFilter, GithubCommonFilter):
                     str(self.reject_reviews))
         if self.open:
             ret += ' open: %s' % self.open
+        if self.merged:
+            ret += ' merged: %s' % self.merged
         if self.current_patchset:
             ret += ' current-patchset: %s' % self.current_patchset
         if self.labels:
@@ -378,6 +385,15 @@ class GithubRefFilter(RefFilter, GithubCommonFilter):
             # and cannot possibly pass this test.
             if hasattr(change, 'number'):
                 if self.open != change.open:
+                    return False
+            else:
+                return False
+
+        if self.merged is not None:
+            # if a "change" has no number, it's not a change, but a push
+            # and cannot possibly pass this test.
+            if hasattr(change, 'number'):
+                if self.merged != change.is_merged:
                     return False
             else:
                 return False
