@@ -39,6 +39,9 @@ extensions = [
 #extensions = ['sphinx.ext.intersphinx']
 #intersphinx_mapping = {'python': ('http://docs.python.org/2.7', None)}
 
+# The docs build references a non-local image served at zuul-ci.org.
+suppress_warnings = ['image.nonlocal_uri']
+
 primary_domain = 'zuuldoc'
 
 # Add any paths that contain templates here, relative to this directory.
