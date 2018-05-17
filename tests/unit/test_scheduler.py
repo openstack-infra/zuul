@@ -4160,11 +4160,11 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(queue.window, 2)
         self.assertTrue(len(self.builds), 4)
 
-        self.executor_server.release('job1')
         self.waitUntilSettled()
         self.commitConfigUpdate('org/common-config',
                                 'layouts/reconfigure-window-fixed2.yaml')
         self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
         tenant = self.sched.abide.tenants.get('tenant-one')
         queue = tenant.layout.pipelines['gate'].queues[0]
         # Because we have configured a static window, it should
@@ -4179,6 +4179,7 @@ class TestScheduler(ZuulTestCase):
         tenant = self.sched.abide.tenants.get('tenant-one')
         queue = tenant.layout.pipelines['gate'].queues[0]
         self.assertEqual(queue.window, 1)
+        self.waitUntilSettled()
         # B's builds have been canceled now
         self.assertTrue(len(self.builds), 2)
 
@@ -4190,9 +4191,9 @@ class TestScheduler(ZuulTestCase):
         self.waitUntilSettled()
         self.assertHistory([
             dict(name='job1', result='SUCCESS', changes='1,1'),
-            dict(name='job1', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='job1', result='ABORTED', changes='1,1 2,1'),
             dict(name='job2', result='SUCCESS', changes='1,1'),
-            dict(name='job2', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='job2', result='ABORTED', changes='1,1 2,1'),
             dict(name='job1', result='SUCCESS', changes='1,1 2,1'),
             dict(name='job2', result='SUCCESS', changes='1,1 2,1'),
         ], ordered=False)
