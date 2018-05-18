@@ -6,6 +6,10 @@ Install Nodepool
 Initial Setup
 -------------
 
+First we'll create the nodepool user and set up some directories it
+needs.  We also need to create an SSH key for Zuul to use when it logs
+into the nodes that Nodepool provides.
+
 .. code-block:: console
 
    $ sudo adduser --system nodepool --home-dir /var/lib/nodepool --create-home
@@ -17,6 +21,10 @@ Initial Setup
 
 Installation
 ------------
+
+Clone the Nodepool git repository and install it.  The ``bindep``
+program is used to determine any additional binary dependencies which
+are required.
 
 .. code-block:: console
 

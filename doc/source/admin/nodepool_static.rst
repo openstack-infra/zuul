@@ -26,7 +26,10 @@ the command::
 Nodepool Configuration
 ----------------------
 
-Below is a sample nodepool.yaml file that sets up static nodes::
+Below is a sample Nodepool configuration file that sets up static
+nodes.  Place this file in ``/etc/nodepool/nodepool.yaml``.
+
+::
 
   zookeeper-servers:
     - host: localhost

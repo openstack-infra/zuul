@@ -8,7 +8,7 @@ Setup
 
 Before starting on this, you need to download your `openrc`
 configuration from your OpenStack cloud.  Put it on your server in the
-fedora user's home directory.  It should be called
+staging user's home directory.  It should be called
 ``<username>-openrc.sh``.  Once that is done, create a new keypair
 that will be installed when instantiating the servers::
 
@@ -41,7 +41,8 @@ have been filled out.
 Configuration
 -------------
 
-Inputs needed for this file:
+You'll need the following information in order to create the Nodepool
+configuration file:
 
 * cloud name / region name - from clouds.yaml
 * flavor-name
