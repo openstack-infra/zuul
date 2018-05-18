@@ -134,6 +134,22 @@ def simple_layout(path, driver='gerrit'):
     return decorator
 
 
+def never_capture():
+    """Never capture logs/output
+
+    Due to high volume, log files are normally captured and attached
+    to the subunit stream only on error.  This can make diagnosing
+    some problems difficult.  Use this dectorator on a test to
+    indicate that logs and output should not be captured.
+
+    """
+
+    def decorator(test):
+        test.__never_capture__ = True
+        return test
+    return decorator
+
+
 class GerritChangeReference(git.Reference):
     _common_path_default = "refs/changes"
     _points_to_commits_only = True
@@ -1995,6 +2011,13 @@ class BaseTestCase(testtools.TestCase):
             False)
         self.addDetail('logging', content)
 
+    def shouldNeverCapture(self):
+        test_name = self.id().split('.')[-1]
+        test = getattr(self, test_name)
+        if hasattr(test, '__never_capture__'):
+            return getattr(test, '__never_capture__')
+        return False
+
     def setUp(self):
         super(BaseTestCase, self).setUp()
         test_timeout = os.environ.get('OS_TEST_TIMEOUT', 0)
@@ -2006,18 +2029,23 @@ class BaseTestCase(testtools.TestCase):
         if test_timeout > 0:
             self.useFixture(fixtures.Timeout(test_timeout, gentle=False))
 
-        if (os.environ.get('OS_STDOUT_CAPTURE') == 'True' or
-            os.environ.get('OS_STDOUT_CAPTURE') == '1'):
-            stdout = self.useFixture(fixtures.StringStream('stdout')).stream
-            self.useFixture(fixtures.MonkeyPatch('sys.stdout', stdout))
-        if (os.environ.get('OS_STDERR_CAPTURE') == 'True' or
-            os.environ.get('OS_STDERR_CAPTURE') == '1'):
-            stderr = self.useFixture(fixtures.StringStream('stderr')).stream
-            self.useFixture(fixtures.MonkeyPatch('sys.stderr', stderr))
-        if (os.environ.get('OS_LOG_CAPTURE') == 'True' or
-            os.environ.get('OS_LOG_CAPTURE') == '1'):
-            self._log_stream = StringIO()
-            self.addOnException(self.attachLogs)
+        if not self.shouldNeverCapture():
+            if (os.environ.get('OS_STDOUT_CAPTURE') == 'True' or
+                os.environ.get('OS_STDOUT_CAPTURE') == '1'):
+                stdout = self.useFixture(
+                    fixtures.StringStream('stdout')).stream
+                self.useFixture(fixtures.MonkeyPatch('sys.stdout', stdout))
+            if (os.environ.get('OS_STDERR_CAPTURE') == 'True' or
+                os.environ.get('OS_STDERR_CAPTURE') == '1'):
+                stderr = self.useFixture(
+                    fixtures.StringStream('stderr')).stream
+                self.useFixture(fixtures.MonkeyPatch('sys.stderr', stderr))
+            if (os.environ.get('OS_LOG_CAPTURE') == 'True' or
+                os.environ.get('OS_LOG_CAPTURE') == '1'):
+                self._log_stream = StringIO()
+                self.addOnException(self.attachLogs)
+            else:
+                self._log_stream = sys.stdout
         else:
             self._log_stream = sys.stdout
 
