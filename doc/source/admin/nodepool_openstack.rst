@@ -14,7 +14,6 @@ that will be installed when instantiating the servers::
 
    cd ~
    source <username>-openrc.sh  # this may prompt for password - enter it
-   ssh-keygen -t rsa -b 2048 -f nodepool_rsa  # don't enter a passphrase
    openstack keypair create --public-key nodepool_rsa.pub nodepool
 
 We'll use the private key later wheen configuring Zuul.  In the same
@@ -38,13 +37,6 @@ session, configure nodepool to talk to your cloud::
 
 Once you've written out the file, double check all the required fields
 have been filled out.
-
-::
-
-   sudo mkdir /etc/nodepool/
-   sudo mkdir /var/log/nodepool
-   sudo chgrp -R nodepool /var/log/nodepool/
-   sudo chmod 775 /var/log/nodepool/
 
 Configuration
 -------------
