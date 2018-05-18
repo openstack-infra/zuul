@@ -4,8 +4,7 @@ coverage>=3.6
 sphinx>=1.5.1,<1.6
 sphinxcontrib-blockdiag>=1.1.0
 fixtures>=0.3.14
-python-subunit
-testrepository>=0.0.17
+stestr>=1.0.0 # Apache-2.0
 testtools>=0.9.32
 sphinxcontrib-programoutput
 sphinx-autodoc-typehints

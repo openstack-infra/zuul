@@ -50,6 +50,7 @@ Run The Tests
 *Navigate to the project's root directory and execute*::
 
   tox
+
 Note: completing this command may take a long time (depends on system resources)
 also, you might not see any output until tox is complete.
 
@@ -79,21 +80,20 @@ To run individual tests with tox::
 
   tox -e <env> -- path.to.module.Class.test
 
-For example, to *run the basic Zuul test*::
+For example, to *run a single Zuul test*::
 
   tox -e py35 -- tests.unit.test_scheduler.TestScheduler.test_jobs_executed
 
 To *run one test in the foreground* (after previously having run tox
 to set up the virtualenv)::
 
-  . .tox/py35/bin/activate
-  python -m testtools.run tests.unit.test_scheduler.TestScheduler.test_jobs_executed
+  .tox/py35/bin/stestr run -t tests.unit.test_scheduler.TestScheduler.test_jobs_executed
 
 List Failing Tests
 ------------------
 
   .tox/py35/bin/activate
-  testr failing --list
+  stestr failing --list
 
 Hanging Tests
 -------------
@@ -102,7 +102,7 @@ The following will run each test in turn and print the name of the
 test as it is run::
 
   . .tox/py35/bin/activate
-  testr run --subunit | subunit2pyunit
+  stestr run
 
 You can compare the output of that to::
 
@@ -111,10 +111,4 @@ You can compare the output of that to::
 Need More Info?
 ---------------
 
-More information about testr: https://wiki.openstack.org/wiki/Testr
-
-More information about nose: https://nose.readthedocs.org/en/latest/
-
-
-More information about testing OpenStack code can be found here:
-https://wiki.openstack.org/wiki/Testing
+More information about stestr: http://stestr.readthedocs.io/en/latest/
