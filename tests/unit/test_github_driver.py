@@ -101,6 +101,13 @@ class TestGithubDriver(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(2, len(self.history))
 
+        # Test an unmatched comment, history should remain the same
+        C = self.fake_github.openFakePullRequest('org/project', 'master', 'C')
+        self.fake_github.emitEvent(
+            C.getIssueCommentAddedEvent('a non-PR issue comment'))
+        self.waitUntilSettled()
+        self.assertEqual(2, len(self.history))
+
     @simple_layout('layouts/push-tag-github.yaml', driver='github')
     def test_tag_event(self):
         self.executor_server.hold_jobs_in_build = True

@@ -293,6 +293,9 @@ class GithubEventConnector(threading.Thread):
         action = body.get('action')
         if action != 'created':
             return
+        if not body.get('issue', {}).get('pull_request'):
+            # Do not process non-PR issue comment
+            return
         pr_body = self._issue_to_pull_request(body)
         number = body.get('issue').get('number')
         project_name = body.get('repository').get('full_name')
