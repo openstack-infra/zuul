@@ -967,7 +967,9 @@ class GithubConnection(BaseConnection):
 
         revs = self._getPullReviews(owner, proj, number)
 
+        permissions = {}
         reviews = {}
+
         for rev in revs:
             user = rev.get('user').get('login')
             review = {
@@ -984,7 +986,13 @@ class GithubConnection(BaseConnection):
 
             # Get user's rights. A user always has read to leave a review
             review['permission'] = 'read'
-            permission = self.getRepoPermission(project.name, user)
+
+            if user in permissions:
+                permission = permissions[user]
+            else:
+                permission = self.getRepoPermission(project.name, user)
+                permissions[user] = permission
+
             if permission == 'write':
                 review['permission'] = 'write'
             if permission == 'admin':
