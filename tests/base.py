@@ -178,7 +178,7 @@ class FakeGerritChange(object):
             'status': status,
             'subject': subject,
             'submitRecords': [],
-            'url': 'https://%s/%s' % (self.gerrit.server, number)}
+            'url': '%s/%s' % (self.gerrit.baseurl.rstrip('/'), number)}
 
         self.upstream_root = upstream_root
         self.addPatchset(files=files, parent=parent)

@@ -15,6 +15,7 @@
 import logging
 import re
 from collections import OrderedDict
+from urllib.parse import urlparse
 
 import zuul.driver.zuul
 import zuul.driver.gerrit
@@ -170,6 +171,9 @@ class ConnectionRegistry(object):
                     return self.getSource(connection.connection_name)
             if hasattr(connection, 'server'):
                 if connection.server == hostname:
+                    return self.getSource(connection.connection_name)
+            if hasattr(connection, 'baseurl'):
+                if urlparse(connection.baseurl).hostname == hostname:
                     return self.getSource(connection.connection_name)
         return None
 

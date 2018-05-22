@@ -686,3 +686,52 @@ class TestGerritCRD(ZuulTestCase):
         self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(2))
         self.waitUntilSettled()
         self.assertEqual(B.reported, 2)
+
+
+class TestGerritCRDAltBaseUrl(ZuulTestCase):
+    tenant_config_file = 'config/single-tenant/main.yaml'
+
+    def setup_config(self):
+        super().setup_config()
+        self.baseurl = 'https://review.example.com/prefixed_gerrit_ui/'
+        self.config.set(
+            'connection gerrit',
+            'baseurl', self.baseurl)
+
+    def test_basic_crd_check(self):
+        "Test basic cross-repo dependencies with an alternate gerrit baseurl"
+
+        self.executor_server.hold_jobs_in_build = True
+        self.gearman_server.hold_jobs_in_queue = True
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+
+        self.assertEqual(B.data['url'], '%s/2' % self.baseurl.rstrip('/'))
+        # A Depends-On: B
+        A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            A.subject, B.data['url'])
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.gearman_server.hold_jobs_in_queue = False
+        self.gearman_server.release()
+        self.waitUntilSettled()
+
+        self.executor_server.release('.*-merge')
+        self.waitUntilSettled()
+
+        self.assertTrue(self.builds[0].hasChanges(A, B))
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(B.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1)
+        self.assertEqual(B.reported, 0)
+
+        self.assertEqual(self.history[0].changes, '2,1 1,1')
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        self.assertEqual(len(tenant.layout.pipelines['check'].queues), 0)
