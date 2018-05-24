@@ -1106,18 +1106,6 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         pr = self.pull_requests[number]
         return pr.reviews
 
-    def getRepoPermission(self, project, login):
-        owner, proj = project.split('/')
-        for pr in self.pull_requests.values():
-            pr_owner, pr_project = pr.project.split('/')
-            if (pr_owner == owner and proj == pr_project):
-                if login in pr.admins:
-                    return 'admin'
-                elif login in pr.writers:
-                    return 'write'
-                else:
-                    return 'read'
-
     def getGitUrl(self, project):
         if self.git_url_with_auth:
             auth_token = ''.join(
