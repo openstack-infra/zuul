@@ -28,7 +28,7 @@ class GithubReporter(BaseReporter):
     name = 'github'
     log = logging.getLogger("zuul.GithubReporter")
 
-    def __init__(self, driver, connection, config=None):
+    def __init__(self, driver, connection, pipeline, config=None):
         super(GithubReporter, self).__init__(driver, connection, config)
         self._commit_status = self.config.get('status', None)
         self._create_comment = self.config.get('comment', True)
@@ -39,6 +39,7 @@ class GithubReporter(BaseReporter):
         self._unlabels = self.config.get('unlabel', [])
         if not isinstance(self._unlabels, list):
             self._unlabels = [self._unlabels]
+        self.context = "{}/{}".format(pipeline.tenant_name, pipeline.name)
 
     def report(self, item):
         """Report on an event."""
@@ -98,8 +99,6 @@ class GithubReporter(BaseReporter):
             sha = item.change.patchset
         elif hasattr(item.change, 'newrev'):
             sha = item.change.newrev
-        context = '%s/%s' % (item.pipeline.layout.tenant.name,
-                             item.pipeline.name)
         state = self._commit_status
 
         url_pattern = self.config.get('status-url')
@@ -123,10 +122,10 @@ class GithubReporter(BaseReporter):
             'Reporting change %s, params %s, '
             'context: %s, state: %s, description: %s, url: %s' %
             (item.change, self.config,
-             context, state, description, url))
+             self.context, state, description, url))
 
         self.connection.setCommitStatus(
-            project, sha, state, url, description, context)
+            project, sha, state, url, description, self.context)
 
     def mergePull(self, item):
         project = item.change.project.name
@@ -191,6 +190,21 @@ class GithubReporter(BaseReporter):
         message += self.connection.getUserUri(username)
 
         return message
+
+    def getSubmitAllowNeeds(self):
+        """Get a list of code review labels that are allowed to be
+        "needed" in the submit records for a change, with respect
+        to this queue.  In other words, the list of review labels
+        this reporter itself is likely to set before submitting.
+        """
+
+        # check if we report a status, if not we can return an empty list
+        status = self.config.get('status')
+        if not status:
+            return []
+
+        # we return a status so return the status we report to github
+        return [self.context]
 
 
 def getSchema():

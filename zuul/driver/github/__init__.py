@@ -13,7 +13,7 @@
 # under the License.
 
 from zuul.driver import Driver, ConnectionInterface, TriggerInterface
-from zuul.driver import SourceInterface
+from zuul.driver import SourceInterface, ReporterInterface
 from zuul.driver.github import githubconnection
 from zuul.driver.github import githubtrigger
 from zuul.driver.github import githubsource
@@ -21,7 +21,7 @@ from zuul.driver.github import githubreporter
 
 
 class GithubDriver(Driver, ConnectionInterface, TriggerInterface,
-                   SourceInterface):
+                   SourceInterface, ReporterInterface):
     name = 'github'
 
     def getConnection(self, name, config):
@@ -33,8 +33,9 @@ class GithubDriver(Driver, ConnectionInterface, TriggerInterface,
     def getSource(self, connection):
         return githubsource.GithubSource(self, connection)
 
-    def getReporter(self, connection, config=None):
-        return githubreporter.GithubReporter(self, connection, config)
+    def getReporter(self, connection, pipeline, config=None):
+        return githubreporter.GithubReporter(
+            self, connection, pipeline, config)
 
     def getTriggerSchema(self):
         return githubtrigger.getSchema()
