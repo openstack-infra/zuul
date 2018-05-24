@@ -351,7 +351,7 @@ as the following::
     require:
       my-github:
         review:
-          - type: approval
+          - type: approved
 
 This indicates that changes originating from the GitHub connection
 named ``my-github`` must have an approved code review in order to be
