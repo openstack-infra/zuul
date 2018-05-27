@@ -1,0 +1,8 @@
+- hosts: localhost
+  tasks:
+    # We except a namespace, a context and a pod name
+    - assert:
+        that:
+          - zuul.resources.container.namespace == 'zuul-ci-abcdefg'
+          - zuul.resources.container.context == 'zuul-ci-abcdefg:zuul-worker/'
+          - zuul.resources.container.pod == 'fedora-abcdefg'

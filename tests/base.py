@@ -1841,6 +1841,20 @@ class FakeNodepool(object):
             data['connection_type'] = 'winrm'
         if 'network' in node_type:
             data['connection_type'] = 'network_cli'
+        if 'kubernetes-namespace' in node_type or 'fedora-pod' in node_type:
+            data['connection_type'] = 'namespace'
+            data['connection_port'] = {
+                'name': 'zuul-ci',
+                'namespace': 'zuul-ci-abcdefg',
+                'host': 'localhost',
+                'skiptls': True,
+                'token': 'FakeToken',
+                'ca_crt': 'FakeCA',
+                'user': 'zuul-worker',
+            }
+            if 'fedora-pod' in node_type:
+                data['connection_type'] = 'kubectl'
+                data['connection_port']['pod'] = 'fedora-abcdefg'
 
         data = json.dumps(data).encode('utf8')
         path = self.client.create(path, data,

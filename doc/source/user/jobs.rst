@@ -436,6 +436,52 @@ of item.
          The patchset identifier for the change.  If a change is
          revised, this will have a different value.
 
+
+      .. var:: resources
+         :type: dict
+
+         A job using a container build resources has access to a resources variable
+         that describes the resource. Resources is a dictionary of group keys,
+         each value consists of:
+
+        .. var:: namespace
+
+            The resource's namespace name.
+
+        .. var:: context
+
+            The kube config context name.
+
+        .. var:: pod
+
+            The name of the pod when the label defines a kubectl connection.
+
+        Project or namespace resources might be used in a template as:
+
+        .. code-block:: yaml
+
+            - hosts: localhost
+                tasks:
+                - name: Create a k8s resource
+                    k8s_raw:
+                    state: present
+                    context: "{{ zuul.resources['node-name'].context }}"
+                    namespace: "{{ zuul.resources['node-name'].namespace }}"
+
+        Kubectl resources might be used in a template as:
+
+        .. code-block:: yaml
+
+            - hosts: localhost
+                tasks:
+                - name: Copy src repos to the pod
+                    command: >
+                    oc rsync -q --progress=false
+                        {{ zuul.executor.src_root }}/
+                        {{ zuul.resources['node-name'].pod }}:src/
+                    no_log: true
+
+
 .. var:: zuul_success
 
    Post run playbook(s) will be passed this variable to indicate if the run
