@@ -153,7 +153,9 @@ def extract_projects(data):
 def expand_project_names(required, full):
     projects = []
     for name in full:
-        org, repo = name.split('/')
+        repo = name
+        if '/' in name:
+            org, repo = name.split('/')
         if repo in required or name in required:
             projects.append(name)
     return projects
@@ -1471,8 +1473,10 @@ class ZuulMigrate:
                 if not orig_name:
                     jobs.append(job)
                     continue
-                orig_name = orig_name.format(
-                    name=project['name'].split('/')[1])
+                project_name = project['name']
+                if '/' in project['name']:
+                    project_name = project['name'].split('/')[1]
+                orig_name = orig_name.format(name=project_name)
                 info = {}
                 for layout_job in self.mapping.layout.get('jobs', []):
                     if 'parameter-function' in layout_job:
@@ -1615,7 +1619,10 @@ class ZuulMigrate:
             if not orig_name:
                 self.log.error("Job without old name: %s", new_job_name)
                 continue
-            orig_name = orig_name.format(name=project['name'].split('/')[1])
+            project_name = project['name']
+            if '/' in project['name']:
+                project_name = project['name'].split('/')[1]
+            orig_name = orig_name.format(name=project_name)
 
             for layout_job in self.mapping.layout.get('jobs', []):
                 if 'parameter-function' in layout_job:
