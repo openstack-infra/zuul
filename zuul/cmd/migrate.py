@@ -47,6 +47,7 @@ TEMPLATES_TO_EXPAND = {}  # type: Dict[str, List]
 JOBS_FOR_EXPAND = collections.defaultdict(dict)  # type: ignore
 JOBS_BY_ORIG_TEMPLATE = {}  # type: ignore
 SUFFIXES = []  # type: ignore
+SKIP_MACROS = [] # type: ignore
 ENVIRONMENT = '{{ zuul | zuul_legacy_vars }}'
 DESCRIPTION = """Migrate zuul v2 and Jenkins Job Builder to Zuul v3.
 
@@ -476,6 +477,9 @@ class JJB(jenkins_jobs.builder.Builder):
             component_list_type = component_type + 's'
             new_components = []
             for new_component in job.get(component_list_type, []):
+                # Skip macros defined in mappings.yaml
+                if new_component in SKIP_MACROS:
+                    continue
                 new_components.extend(self.expandComponent(component_type,
                                                            new_component, {}))
             job[component_list_type] = new_components
@@ -1005,6 +1009,8 @@ class JobMapping:
             self.default_node = mapping_data['default-node']
             global SUFFIXES
             SUFFIXES = mapping_data.get('strip-suffixes', [])
+            global SKIP_MACROS
+            SKIP_MACROS = mapping_data.get('skip-macros', [])
             self.unshare = mapping_data.get('unshare', [])
             for map_info in mapping_data.get('job-mapping', []):
                 if map_info['old'].startswith('^'):
