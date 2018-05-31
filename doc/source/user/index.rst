@@ -17,3 +17,4 @@ configure it to meet your needs.
    jobs
    encryption
    badges
+   howtos
