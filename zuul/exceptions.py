@@ -33,3 +33,7 @@ class RevNotFound(Exception):
 
 class MergeFailure(Exception):
     pass
+
+
+class ConfigurationError(Exception):
+    pass

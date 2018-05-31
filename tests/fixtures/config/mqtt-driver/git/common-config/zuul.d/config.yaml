@@ -1,0 +1,38 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    start:
+      mqtt:
+        topic: "{tenant}/zuul_start/{pipeline}/{project}/{branch}"
+    success:
+      gerrit:
+        Verified: 1
+      mqtt:
+        topic: "{tenant}/zuul_buildset/{pipeline}/{project}/{branch}"
+    failure:
+      gerrit:
+        Verified: -1
+      mqtt:
+        topic: "{tenant}/zuul_buildset/{pipeline}/{project}/{branch}"
+
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: test
+    run: playbooks/test.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - test
+
+- project:
+    name: common-config
+    check:
+      jobs: []
