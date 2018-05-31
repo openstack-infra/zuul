@@ -1882,17 +1882,21 @@ class WebProxyFixture(fixtures.Fixture):
 
 
 class ZuulWebFixture(fixtures.Fixture):
-    def __init__(self, gearman_server_port, connections):
+    def __init__(self, gearman_server_port, connections, info=None):
         super(ZuulWebFixture, self).__init__()
         self.gearman_server_port = gearman_server_port
         self.connections = connections
+        if info is None:
+            self.info = zuul.model.WebInfo()
+        else:
+            self.info = info
 
     def _setUp(self):
         # Start the web server
         self.web = zuul.web.ZuulWeb(
-            listen_address='127.0.0.1', listen_port=0,
+            listen_address='::', listen_port=0,
             gear_server='127.0.0.1', gear_port=self.gearman_server_port,
-            info=zuul.model.WebInfo(),
+            info=self.info,
             connections=self.connections)
         self.web.start()
         self.addCleanup(self.web.stop)

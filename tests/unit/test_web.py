@@ -25,6 +25,7 @@ import requests
 import zuul.web
 
 from tests.base import ZuulTestCase, ZuulDBTestCase, FIXTURE_DIR
+from tests.base import ZuulWebFixture
 
 
 class FakeConfig(object):
@@ -45,6 +46,16 @@ class BaseTestWeb(ZuulTestCase):
 
     def setUp(self):
         super(BaseTestWeb, self).setUp()
+
+        self.zuul_ini_config = FakeConfig(self.config_ini_data)
+
+        # Start the web server
+        self.web = self.useFixture(
+            ZuulWebFixture(
+                self.gearman_server.port,
+                self.connections,
+                info=zuul.model.WebInfo.fromConfig(self.zuul_ini_config)))
+
         self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('Code-Review', 2)
@@ -53,17 +64,6 @@ class BaseTestWeb(ZuulTestCase):
         B.addApproval('Code-Review', 2)
         self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
         self.waitUntilSettled()
-
-        self.zuul_ini_config = FakeConfig(self.config_ini_data)
-        # Start the web server
-        self.web = zuul.web.ZuulWeb(
-            listen_address='127.0.0.1', listen_port=0,
-            gear_server='127.0.0.1', gear_port=self.gearman_server.port,
-            info=zuul.model.WebInfo.fromConfig(self.zuul_ini_config),
-            connections=self.connections
-        )
-        self.web.start()
-        self.addCleanup(self.web.stop)
 
         self.host = 'localhost'
         self.port = self.web.port
