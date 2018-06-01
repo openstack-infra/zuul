@@ -102,7 +102,7 @@ class CallbackModule(CallbackBase):
         }
 
     def _new_task(self, task):
-        return {
+        data = {
             'task': {
                 'name': task.name,
                 'id': str(task._uuid),
@@ -112,6 +112,12 @@ class CallbackModule(CallbackBase):
             },
             'hosts': {}
         }
+        if task._role:
+            data['role'] = {
+                'name': task._role.get_name(),
+                'id': str(task._role._uuid)
+            }
+        return data
 
     def v2_playbook_on_start(self, playbook):
         self._playbook_name = os.path.splitext(playbook._file_name)[0]
