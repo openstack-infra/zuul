@@ -21,11 +21,6 @@ cryptography>=1.6
 cachecontrol
 pyjwt
 iso8601
-pathlib;python_version<='3.5.2'
-yarl==1.1.1;python_version<='3.5.2'
-async-timeout<3.0.0;python_version<='3.5.2'
-aiohttp<3.0.0
-uvloop;python_version>='3.5'
 psutil
 fb-re2>=1.0.6
 paho-mqtt
