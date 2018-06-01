@@ -22,9 +22,8 @@ from unittest import skip
 
 import git
 
-import zuul.web
-
 from tests.base import ZuulTestCase, simple_layout, random_sha1
+from tests.base import ZuulWebFixture
 
 
 class TestGithubDriver(ZuulTestCase):
@@ -800,12 +799,9 @@ class TestGithubWebhook(ZuulTestCase):
         super(TestGithubWebhook, self).setUp()
 
         # Start the web server
-        self.web = zuul.web.ZuulWeb(
-            listen_address='127.0.0.1', listen_port=0,
-            gear_server='127.0.0.1', gear_port=self.gearman_server.port,
-            connections=self.connections)
-        self.web.start()
-        self.addCleanup(self.web.stop)
+        self.web = self.useFixture(
+            ZuulWebFixture(self.gearman_server.port,
+                           self.connections))
 
         host = '127.0.0.1'
         # Wait until web server is started

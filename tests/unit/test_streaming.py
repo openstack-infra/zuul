@@ -28,7 +28,7 @@ import zuul.web
 import zuul.lib.log_streamer
 import zuul.lib.fingergw
 import tests.base
-from tests.base import iterate_timeout
+from tests.base import iterate_timeout, ZuulWebFixture
 
 from ws4py.client import WebSocketBaseClient
 
@@ -230,6 +230,11 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         By making the 1024th character in the log file a multi-byte character
         (here, the Euro character), we can test this.
         '''
+        # Start the web server
+        web = self.useFixture(
+            ZuulWebFixture(self.gearman_server.port,
+                           self.connections))
+
         # Start the finger streamer daemon
         streamer = zuul.lib.log_streamer.LogStreamer(
             self.host, 0, self.executor_server.jobdir_root)
@@ -280,29 +285,12 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         logfile = open(ansible_log, 'r')
         self.addCleanup(logfile.close)
 
-        # Start the web server
-        web_server = zuul.web.ZuulWeb(
-            listen_address='::', listen_port=0,
-            gear_server='127.0.0.1', gear_port=self.gearman_server.port,
-            static_path=tempfile.gettempdir(),
-            connections=self.connections)
-        web_server.start()
-        self.addCleanup(web_server.stop)
-
-        # Wait until web server is started
-        for x in iterate_timeout(30, "web server to start"):
-            port = web_server.port
-            try:
-                with socket.create_connection((self.host, port)):
-                    break
-            except ConnectionRefusedError:
-                pass
-
         # Start a thread with the websocket client
         ws_client_event = threading.Event()
         self.ws_client_results = ''
         ws_client_thread = threading.Thread(
-            target=self.runWSClient, args=(port, build.uuid, ws_client_event)
+            target=self.runWSClient, args=(web.port, build.uuid,
+                                           ws_client_event)
         )
         ws_client_thread.start()
         ws_client_event.wait()
@@ -324,6 +312,11 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         self.assertEqual(file_contents, self.ws_client_results)
 
     def test_websocket_streaming(self):
+        # Start the web server
+        web = self.useFixture(
+            ZuulWebFixture(self.gearman_server.port,
+                           self.connections))
+
         # Start the finger streamer daemon
         streamer = zuul.lib.log_streamer.LogStreamer(
             self.host, 0, self.executor_server.jobdir_root)
@@ -367,29 +360,12 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         logfile = open(ansible_log, 'r')
         self.addCleanup(logfile.close)
 
-        # Start the web server
-        web_server = zuul.web.ZuulWeb(
-            listen_address='::', listen_port=0,
-            gear_server='127.0.0.1', gear_port=self.gearman_server.port,
-            static_path=tempfile.gettempdir(),
-            connections=self.connections)
-        web_server.start()
-        self.addCleanup(web_server.stop)
-
-        # Wait until web server is started
-        for x in iterate_timeout(30, "connection to web server"):
-            port = web_server.port
-            try:
-                with socket.create_connection((self.host, port)):
-                    break
-            except ConnectionRefusedError:
-                pass
-
         # Start a thread with the websocket client
         ws_client_event = threading.Event()
         self.ws_client_results = ''
         ws_client_thread = threading.Thread(
-            target=self.runWSClient, args=(port, build.uuid, ws_client_event)
+            target=self.runWSClient, args=(web.port, build.uuid,
+                                           ws_client_event)
         )
         ws_client_thread.start()
         ws_client_event.wait()
@@ -405,7 +381,6 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         self.waitUntilSettled()
 
         file_contents = logfile.read()
-        logfile.close()
         self.log.debug("\n\nFile contents: %s\n\n", file_contents)
         self.log.debug("\n\nStreamed: %s\n\n", self.ws_client_results)
         self.assertEqual(file_contents, self.ws_client_results)
