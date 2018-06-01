@@ -283,21 +283,13 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
             listen_address='::', listen_port=0,
             gear_server='127.0.0.1', gear_port=self.gearman_server.port,
             static_path=tempfile.gettempdir(),
-            _connections=self.connections)
-        loop = asyncio.new_event_loop()
-        loop.set_debug(True)
-        ws_thread = threading.Thread(target=web_server.run, args=(loop,))
-        ws_thread.start()
-        self.addCleanup(loop.close)
-        self.addCleanup(ws_thread.join)
+            connections=self.connections)
+        web_server.start()
         self.addCleanup(web_server.stop)
 
         # Wait until web server is started
         while True:
-            if web_server.server is None:
-                time.sleep(0.1)
-                continue
-            port = web_server.server.sockets[0].getsockname()[1]
+            port = web_server.port
             try:
                 with socket.create_connection((self.host, port)):
                     break
@@ -374,21 +366,13 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
             listen_address='::', listen_port=0,
             gear_server='127.0.0.1', gear_port=self.gearman_server.port,
             static_path=tempfile.gettempdir(),
-            _connections=self.connections)
-        loop = asyncio.new_event_loop()
-        loop.set_debug(True)
-        ws_thread = threading.Thread(target=web_server.run, args=(loop,))
-        ws_thread.start()
-        self.addCleanup(loop.close)
-        self.addCleanup(ws_thread.join)
+            connections=self.connections)
+        web_server.start()
         self.addCleanup(web_server.stop)
 
         # Wait until web server is started
         while True:
-            if web_server.server is None:
-                time.sleep(0.1)
-                continue
-            port = web_server.server.sockets[0].getsockname()[1]
+            port = web_server.port
             try:
                 with socket.create_connection((self.host, port)):
                     break

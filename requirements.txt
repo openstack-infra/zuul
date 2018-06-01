@@ -29,3 +29,6 @@ uvloop;python_version>='3.5'
 psutil
 fb-re2>=1.0.6
 paho-mqtt
+cherrypy
+ws4py
+routes

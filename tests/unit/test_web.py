@@ -15,12 +15,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import asyncio
 import json
-import threading
 import os
 import urllib.parse
-import time
 import socket
 
 import requests
@@ -63,25 +60,15 @@ class BaseTestWeb(ZuulTestCase):
             listen_address='127.0.0.1', listen_port=0,
             gear_server='127.0.0.1', gear_port=self.gearman_server.port,
             info=zuul.model.WebInfo.fromConfig(self.zuul_ini_config),
-            connections=self.connections.connections.values(),
-            _connections=self.connections
+            connections=self.connections
         )
-        loop = asyncio.new_event_loop()
-        loop.set_debug(True)
-        ws_thread = threading.Thread(target=self.web.run, args=(loop,))
-        ws_thread.start()
-        self.addCleanup(loop.close)
-        self.addCleanup(ws_thread.join)
+        self.web.start()
         self.addCleanup(self.web.stop)
 
         self.host = 'localhost'
+        self.port = self.web.port
         # Wait until web server is started
         while True:
-            time.sleep(0.1)
-            if self.web.server is None:
-                continue
-            self.port = self.web.server.sockets[0].getsockname()[1]
-            print(self.host, self.port)
             try:
                 with socket.create_connection((self.host, self.port)):
                     break

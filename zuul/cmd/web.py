@@ -13,11 +13,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import asyncio
 import logging
 import signal
 import sys
-import threading
 
 import zuul.cmd
 import zuul.model
@@ -55,13 +53,11 @@ class WebServer(zuul.cmd.ZuulDaemonApp):
         params['ssl_cert'] = get_default(self.config, 'gearman', 'ssl_cert')
         params['ssl_ca'] = get_default(self.config, 'gearman', 'ssl_ca')
 
-        params['_connections'] = self.connections
-        params['connections'] = []
+        params['connections'] = self.connections
         # Validate config here before we spin up the ZuulWeb object
         for conn_name, connection in self.connections.connections.items():
             try:
-                if connection.validateWebConfig(self.config, self.connections):
-                    params['connections'].append(connection)
+                connection.validateWebConfig(self.config, self.connections)
             except Exception:
                 self.log.exception("Error validating config")
                 sys.exit(1)
@@ -72,15 +68,11 @@ class WebServer(zuul.cmd.ZuulDaemonApp):
             self.log.exception("Error creating ZuulWeb:")
             sys.exit(1)
 
-        loop = asyncio.get_event_loop()
         signal.signal(signal.SIGUSR1, self.exit_handler)
         signal.signal(signal.SIGTERM, self.exit_handler)
 
         self.log.info('Zuul Web Server starting')
-        self.thread = threading.Thread(target=self.web.run,
-                                       args=(loop,),
-                                       name='web')
-        self.thread.start()
+        self.web.start()
 
         try:
             signal.pause()
@@ -88,9 +80,7 @@ class WebServer(zuul.cmd.ZuulDaemonApp):
             print("Ctrl + C: asking web server to exit nicely...\n")
             self.exit_handler(signal.SIGINT, None)
 
-        self.thread.join()
-        loop.stop()
-        loop.close()
+        self.web.stop()
         self.log.info("Zuul Web Server stopped")
 
     def run(self):
