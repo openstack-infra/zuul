@@ -1908,7 +1908,8 @@ class MySQLSchemaFixture(fixtures.Fixture):
                               for x in range(8))
         self.name = '%s_%s' % (random_bits, os.getpid())
         self.passwd = uuid.uuid4().hex
-        db = pymysql.connect(host="127.0.0.1",
+        self.host = os.environ.get('ZUUL_MYSQL_HOST', '127.0.0.1')
+        db = pymysql.connect(host=self.host,
                              user="openstack_citest",
                              passwd="openstack_citest",
                              db="openstack_citest")
@@ -1919,14 +1920,13 @@ class MySQLSchemaFixture(fixtures.Fixture):
             (self.name, self.name, self.passwd))
         cur.execute("flush privileges")
 
-        self.dburi = 'mysql+pymysql://%s:%s@127.0.0.1/%s' % (self.name,
-                                                             self.passwd,
-                                                             self.name)
+        self.dburi = 'mysql+pymysql://{name}:{passwd}@{host}/{name}'.format(
+            name=self.name, passwd=self.passwd, host=self.host)
         self.addDetail('dburi', testtools.content.text_content(self.dburi))
         self.addCleanup(self.cleanup)
 
     def cleanup(self):
-        db = pymysql.connect(host="127.0.0.1",
+        db = pymysql.connect(host=self.host,
                              user="openstack_citest",
                              passwd="openstack_citest",
                              db="openstack_citest")
@@ -1946,7 +1946,8 @@ class PostgresqlSchemaFixture(fixtures.Fixture):
                               for x in range(8))
         self.name = '%s_%s' % (random_bits, os.getpid())
         self.passwd = uuid.uuid4().hex
-        db = psycopg2.connect(host="localhost",
+        self.host = os.environ.get('ZUUL_POSTGRES_HOST', '127.0.0.1')
+        db = psycopg2.connect(host=self.host,
                               user="openstack_citest",
                               password="openstack_citest",
                               database="openstack_citest")
@@ -1957,15 +1958,14 @@ class PostgresqlSchemaFixture(fixtures.Fixture):
         cur.execute("create database %s OWNER %s TEMPLATE template0 "
                     "ENCODING 'UTF8';" % (self.name, self.name))
 
-        self.dburi = 'postgresql://%s:%s@localhost/%s' % (self.name,
-                                                          self.passwd,
-                                                          self.name)
+        self.dburi = 'postgresql://{name}:{passwd}@{host}/{name}'.format(
+            name=self.name, passwd=self.passwd, host=self.host)
 
         self.addDetail('dburi', testtools.content.text_content(self.dburi))
         self.addCleanup(self.cleanup)
 
     def cleanup(self):
-        db = psycopg2.connect(host="localhost",
+        db = psycopg2.connect(host=self.host,
                               user="openstack_citest",
                               password="openstack_citest",
                               database="openstack_citest")
