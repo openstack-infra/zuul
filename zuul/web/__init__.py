@@ -340,7 +340,7 @@ class ZuulWeb(object):
                           controller=api, action='builds')
 
         for connection in connections.connections.values():
-            controller = connection.getWebController(self, self.info)
+            controller = connection.getWebController(self)
             if controller:
                 cherrypy.tree.mount(
                     controller,
