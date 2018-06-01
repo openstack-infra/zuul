@@ -120,7 +120,7 @@ if (module.hot) {
 }
 
 angular.module('zuulStatus', []).controller(
-  'mainController', function ($scope, $http, $location) {
+  'mainController', function ($location) {
     zuulStart(jQuery, $location)
   }
 )
