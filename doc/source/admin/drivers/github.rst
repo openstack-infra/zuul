@@ -409,6 +409,11 @@ enqueued into the pipeline.
       A boolean value (``true`` or ``false``) that indicates whether
       the change must be open or closed in order to be enqueued.
 
+   .. attr:: merged
+
+      A boolean value (``true`` or ``false``) that indicates whether
+      the change must be merged or not in order to be enqueued.
+
    .. attr:: current-patchset
 
       A boolean value (``true`` or ``false``) that indicates whether

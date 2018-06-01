@@ -72,6 +72,22 @@ class TestGithubDriver(ZuulTestCase):
 
         self.assertEqual(2, len(self.history))
 
+        # now emit closed event without merging
+        self.fake_github.emitEvent(A.getPullRequestClosedEvent())
+        self.waitUntilSettled()
+
+        # nothing should have happened due to the merged requirement
+        self.assertEqual(2, len(self.history))
+
+        # now merge the PR and emit the event again
+        A.setMerged('merged')
+
+        self.fake_github.emitEvent(A.getPullRequestClosedEvent())
+        self.waitUntilSettled()
+
+        # post job must be run
+        self.assertEqual(3, len(self.history))
+
     @simple_layout('layouts/files-github.yaml', driver='github')
     def test_pull_matched_file_event(self):
         A = self.fake_github.openFakePullRequest(

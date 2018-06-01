@@ -132,6 +132,7 @@ class GithubSource(BaseSource):
             statuses=to_list(config.get('status')),
             required_reviews=to_list(config.get('review')),
             open=config.get('open'),
+            merged=config.get('merged'),
             current_patchset=config.get('current-patchset'),
             labels=to_list(config.get('label')),
         )
@@ -144,6 +145,7 @@ class GithubSource(BaseSource):
             reject_labels=to_list(config.get('label')),
             reject_statuses=to_list(config.get('status')),
             reject_open=config.get('open'),
+            reject_merged=config.get('merged'),
             reject_current_patchset=config.get('current-patchset'),
         )
         return [f]
@@ -165,6 +167,7 @@ def getRequireSchema():
     require = {'status': scalar_or_list(str),
                'review': scalar_or_list(review),
                'open': bool,
+               'merged': bool,
                'current-patchset': bool,
                'label': scalar_or_list(str)}
     return require
@@ -174,6 +177,7 @@ def getRejectSchema():
     reject = {'status': scalar_or_list(str),
               'review': scalar_or_list(review),
               'open': bool,
+              'merged': bool,
               'current-patchset': bool,
               'label': scalar_or_list(str)}
     return reject
