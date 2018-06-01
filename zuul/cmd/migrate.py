@@ -1212,7 +1212,7 @@ class ZuulMigrate:
             if 'gate' not in project:
                 continue
             gate_jobs = set()
-            for template in project['template']:
+            for template in project.get('template', []):
                 for pt in self.layout.get('project-templates'):
                     if pt['name'] != template['name']:
                         continue
