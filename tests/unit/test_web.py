@@ -63,7 +63,8 @@ class BaseTestWeb(ZuulTestCase):
             listen_address='127.0.0.1', listen_port=0,
             gear_server='127.0.0.1', gear_port=self.gearman_server.port,
             info=zuul.model.WebInfo.fromConfig(self.zuul_ini_config),
-            connections=self.connections.connections.values()
+            connections=self.connections.connections.values(),
+            _connections=self.connections
         )
         loop = asyncio.new_event_loop()
         loop.set_debug(True)

@@ -265,6 +265,7 @@ class ZuulWeb(object):
                  ssl_key=None, ssl_cert=None, ssl_ca=None,
                  static_cache_expiry=3600,
                  connections=None,
+                 _connections=None,
                  info=None,
                  static_path=None):
         self.start_time = time.time()
@@ -287,6 +288,7 @@ class ZuulWeb(object):
         for connection in connections:
             self._connection_handlers.extend(
                 connection.getWebHandlers(self, self.info))
+        self.connections = _connections
         self._plugin_routes.extend(self._connection_handlers)
 
     async def _handleWebsocket(self, request):
@@ -349,6 +351,7 @@ class ZuulWeb(object):
             thread event loop is used. This should be supplied if ZuulWeb
             is run within a separate (non-main) thread.
         """
+        sql_driver = self.connections.drivers['sql']
         routes = [
             ('GET', '/api/info', self._handleRootInfo),
             ('GET', '/api/tenants', self._handleTenantsRequest),
@@ -361,6 +364,8 @@ class ZuulWeb(object):
              self._handleWebsocket),
             ('GET', '/api/tenant/{tenant}/key/{project:.*}.pub',
              self._handleKeyRequest),
+            ('GET', '/api/tenant/{tenant}/builds',
+             sql_driver.handleRequest),
         ]
 
         static_routes = [
@@ -385,6 +390,7 @@ class ZuulWeb(object):
         self.event_loop = loop
         self.log_streaming_handler.setEventLoop(loop)
         self.gearman_handler.setEventLoop(loop)
+        sql_driver.setEventLoop(loop)
 
         for handler in self._connection_handlers:
             if hasattr(handler, 'setEventLoop'):
