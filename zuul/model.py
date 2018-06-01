@@ -910,8 +910,6 @@ class Job(ConfigObject):
             success_message=None,
             failure_url=None,
             success_url=None,
-            # Matchers.  These are separate so they can be individually
-            # overidden.
             branch_matcher=None,
             file_matcher=None,
             irrelevant_file_matcher=None,  # skip-if
@@ -1270,7 +1268,7 @@ class Job(ConfigObject):
 
         self.inheritance_path = self.inheritance_path + (repr(other),)
 
-    def changeMatches(self, change, override_branch=None):
+    def changeMatchesBranch(self, change, override_branch=None):
         if override_branch is None:
             branch_change = change
         else:
@@ -1283,7 +1281,9 @@ class Job(ConfigObject):
         if self.branch_matcher and not self.branch_matcher.matches(
                 branch_change):
             return False
+        return True
 
+    def changeMatchesFiles(self, change):
         if self.file_matcher and not self.file_matcher.matches(change):
             return False
 
@@ -3031,8 +3031,9 @@ class Layout(object):
                 branches = self.tenant.getProjectBranches(project)
                 if override_branch not in branches:
                     override_branch = None
-            if not variant.changeMatches(change,
-                                         override_branch=override_branch):
+            if not variant.changeMatchesBranch(
+                    change,
+                    override_branch=override_branch):
                 self.log.debug("Variant %s did not match %s", repr(variant),
                                change)
                 item.debug("Variant {variant} did not match".format(
@@ -3114,7 +3115,7 @@ class Layout(object):
             # jobs which match.
             override_checkouts = {}
             for variant in job_list.jobs[jobname]:
-                if variant.changeMatches(change):
+                if variant.changeMatchesBranch(change):
                     self._updateOverrideCheckouts(override_checkouts, variant)
             try:
                 variants = self.collectJobs(
@@ -3141,7 +3142,7 @@ class Layout(object):
             # variants
             matched = False
             for variant in job_list.jobs[jobname]:
-                if variant.changeMatches(change):
+                if variant.changeMatchesBranch(change):
                     frozen_job.applyVariant(variant, item.layout)
                     matched = True
                     self.log.debug("Pipeline variant %s matched %s",
@@ -3157,6 +3158,12 @@ class Layout(object):
                 # A change must match at least one project pipeline
                 # job variant.
                 item.debug("No matching pipeline variants for {jobname}".
+                           format(jobname=jobname), indent=2)
+                continue
+            if not frozen_job.changeMatchesFiles(change):
+                self.log.debug("Job %s did not match files in %s",
+                               repr(frozen_job), change)
+                item.debug("Job {jobname} did not match files".
                            format(jobname=jobname), indent=2)
                 continue
             if frozen_job.abstract:

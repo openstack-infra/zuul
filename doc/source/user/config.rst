@@ -967,24 +967,21 @@ Here is an example of two job definitions:
       it will remain set for all child jobs and variants (it can not be
       set to ``false``).
 
-   .. _matchers:
-
-   The following job attributes are considered "matchers".  They are
-   not inherited in the usual manner, instead, these attributes are
-   used to determine whether a specific variant is used when
-   running a job.
-
    .. attr:: branches
 
       A regular expression (or list of regular expressions) which
       describe on what branches a job should run (or in the case of
-      variants: to alter the behavior of a job for a certain branch).
+      variants, to alter the behavior of a job for a certain branch).
+
+      This attribute is not inherited in the usual manner.  Instead,
+      it is used to determine whether each variant on which it appears
+      will be used when running the job.
 
       If there is no job definition for a given job which matches the
       branch of an item, then that job is not run for the item.
-      Otherwise, all of the job variants which match that branch (and
-      any other selection criteria) are used when freezing the job.
-      However, if :attr:`job.override-checkout` or
+      Otherwise, all of the job variants which match that branch are
+      used when freezing the job.  However, if
+      :attr:`job.override-checkout` or
       :attr:`job.required-projects.override-checkout` are set for a
       project, Zuul will attempt to use the job variants which match
       the values supplied in ``override-checkout`` for jobs defined in
@@ -1053,18 +1050,20 @@ Here is an example of two job definitions:
 
    .. attr:: files
 
-      This matcher indicates that the job should only run on changes
-      where the specified files are modified.  This is a regular
-      expression or list of regular expressions.
+      This indicates that the job should only run on changes where the
+      specified files are modified.  Unlike **branches**, this value
+      is subject to inheritance and overriding, so only the final
+      value is used to determine if the job should run. This is a
+      regular expression or list of regular expressions.
 
    .. attr:: irrelevant-files
 
-      This matcher is a negative complement of **files**.  It
-      indicates that the job should run unless *all* of the files
-      changed match this list.  In other words, if the regular
-      expression ``docs/.*`` is supplied, then this job will not run
-      if the only files changed are in the docs directory.  A regular
-      expression or list of regular expressions.
+      This is a negative complement of **files**.  It indicates that
+      the job should run unless *all* of the files changed match this
+      list.  In other words, if the regular expression ``docs/.*`` is
+      supplied, then this job will not run if the only files changed
+      are in the docs directory.  A regular expression or list of
+      regular expressions.
 
 .. _project:
 

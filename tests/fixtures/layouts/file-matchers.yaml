@@ -1,0 +1,63 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: parent-override-job
+    files: parent1.txt
+
+- job:
+    name: parent-override-job
+    files: parent2.txt
+
+- job:
+    name: child-job
+    parent: parent-override-job
+
+- job:
+    name: child-override-job
+    parent: parent-override-job
+    files: child.txt
+
+- job:
+    name: project-override-job
+    parent: parent-override-job
+
+- job:
+    name: irr-job
+    files:
+      - tests/.*
+    irrelevant-files:
+      - README
+
+- job:
+    name: irr-override-job
+    parent: irr-job
+    irrelevant-files:
+      - README
+      - tests/docs/.*
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - child-job  # parent2
+        - child-override-job  # child
+        - project-override-job:  # project
+            files: project.txt
+        - irr-job  # tests/docs/foo tests/foo
+        - irr-override-job  # tests/foo
