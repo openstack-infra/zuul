@@ -1,0 +1,4 @@
+- hosts: all
+  tasks:
+    - name: Some command
+      command: echo 123
