@@ -23,12 +23,12 @@ import socket
 import tempfile
 import testtools
 import threading
-import time
 
 import zuul.web
 import zuul.lib.log_streamer
 import zuul.lib.fingergw
 import tests.base
+from tests.base import iterate_timeout
 
 from ws4py.client import WebSocketBaseClient
 
@@ -115,18 +115,21 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
 
         # We don't have any real synchronization for the ansible jobs, so
         # just wait until we get our running build.
-        while not len(self.builds):
-            time.sleep(0.1)
+        for x in iterate_timeout(30, "builds"):
+            if len(self.builds):
+                break
         build = self.builds[0]
         self.assertEqual(build.name, 'python27')
 
         build_dir = os.path.join(self.executor_server.jobdir_root, build.uuid)
-        while not os.path.exists(build_dir):
-            time.sleep(0.1)
+        for x in iterate_timeout(30, "build dir"):
+            if os.path.exists(build_dir):
+                break
 
         # Need to wait to make sure that jobdir gets set
-        while build.jobdir is None:
-            time.sleep(0.1)
+        for x in iterate_timeout(30, "jobdir"):
+            if build.jobdir is not None:
+                break
             build = self.builds[0]
 
         # Wait for the job to begin running and create the ansible log file.
@@ -135,8 +138,9 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         # to be kept open for it after the job finishes) but wait to read the
         # contents until the job is done.
         ansible_log = os.path.join(build.jobdir.log_root, 'job-output.txt')
-        while not os.path.exists(ansible_log):
-            time.sleep(0.1)
+        for x in iterate_timeout(30, "ansible log"):
+            if os.path.exists(ansible_log):
+                break
         logfile = open(ansible_log, 'r')
         self.addCleanup(logfile.close)
 
@@ -190,7 +194,7 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
 
     def runFingerClient(self, build_uuid, gateway_address, event):
         # Wait until the gateway is started
-        while True:
+        for x in iterate_timeout(30, "finger client to start"):
             try:
                 # NOTE(Shrews): This causes the gateway to begin to handle
                 # a request for which it never receives data, and thus
@@ -199,7 +203,7 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
                 with socket.create_connection(gateway_address) as s:
                     break
             except ConnectionRefusedError:
-                time.sleep(0.1)
+                pass
 
         with socket.create_connection(gateway_address) as s:
             msg = "%s\r\n" % build_uuid
@@ -240,18 +244,21 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
 
         # We don't have any real synchronization for the ansible jobs, so
         # just wait until we get our running build.
-        while not len(self.builds):
-            time.sleep(0.1)
+        for x in iterate_timeout(30, "builds"):
+            if len(self.builds):
+                break
         build = self.builds[0]
         self.assertEqual(build.name, 'python27')
 
         build_dir = os.path.join(self.executor_server.jobdir_root, build.uuid)
-        while not os.path.exists(build_dir):
-            time.sleep(0.1)
+        for x in iterate_timeout(30, "build dir"):
+            if os.path.exists(build_dir):
+                break
 
         # Need to wait to make sure that jobdir gets set
-        while build.jobdir is None:
-            time.sleep(0.1)
+        for x in iterate_timeout(30, "jobdir"):
+            if build.jobdir is not None:
+                break
             build = self.builds[0]
 
         # Wait for the job to begin running and create the ansible log file.
@@ -260,8 +267,9 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         # to be kept open for it after the job finishes) but wait to read the
         # contents until the job is done.
         ansible_log = os.path.join(build.jobdir.log_root, 'job-output.txt')
-        while not os.path.exists(ansible_log):
-            time.sleep(0.1)
+        for x in iterate_timeout(30, "ansible log"):
+            if os.path.exists(ansible_log):
+                break
 
         # Replace log file contents with the 1024th character being a
         # multi-byte character.
@@ -282,13 +290,13 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         self.addCleanup(web_server.stop)
 
         # Wait until web server is started
-        while True:
+        for x in iterate_timeout(30, "web server to start"):
             port = web_server.port
             try:
                 with socket.create_connection((self.host, port)):
                     break
             except ConnectionRefusedError:
-                time.sleep(0.1)
+                pass
 
         # Start a thread with the websocket client
         ws_client_event = threading.Event()
@@ -330,18 +338,21 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
 
         # We don't have any real synchronization for the ansible jobs, so
         # just wait until we get our running build.
-        while not len(self.builds):
-            time.sleep(0.1)
+        for x in iterate_timeout(30, "build"):
+            if len(self.builds):
+                break
         build = self.builds[0]
         self.assertEqual(build.name, 'python27')
 
         build_dir = os.path.join(self.executor_server.jobdir_root, build.uuid)
-        while not os.path.exists(build_dir):
-            time.sleep(0.1)
+        for x in iterate_timeout(30, "build dir"):
+            if os.path.exists(build_dir):
+                break
 
         # Need to wait to make sure that jobdir gets set
-        while build.jobdir is None:
-            time.sleep(0.1)
+        for x in iterate_timeout(30, "jobdir"):
+            if build.jobdir is not None:
+                break
             build = self.builds[0]
 
         # Wait for the job to begin running and create the ansible log file.
@@ -350,8 +361,9 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         # to be kept open for it after the job finishes) but wait to read the
         # contents until the job is done.
         ansible_log = os.path.join(build.jobdir.log_root, 'job-output.txt')
-        while not os.path.exists(ansible_log):
-            time.sleep(0.1)
+        for x in iterate_timeout(30, "ansible log"):
+            if os.path.exists(ansible_log):
+                break
         logfile = open(ansible_log, 'r')
         self.addCleanup(logfile.close)
 
@@ -365,13 +377,13 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         self.addCleanup(web_server.stop)
 
         # Wait until web server is started
-        while True:
+        for x in iterate_timeout(30, "connection to web server"):
             port = web_server.port
             try:
                 with socket.create_connection((self.host, port)):
                     break
             except ConnectionRefusedError:
-                time.sleep(0.1)
+                pass
 
         # Start a thread with the websocket client
         ws_client_event = threading.Event()
@@ -413,18 +425,21 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
 
         # We don't have any real synchronization for the ansible jobs, so
         # just wait until we get our running build.
-        while not len(self.builds):
-            time.sleep(0.1)
+        for x in iterate_timeout(30, "build"):
+            if len(self.builds):
+                break
         build = self.builds[0]
         self.assertEqual(build.name, 'python27')
 
         build_dir = os.path.join(self.executor_server.jobdir_root, build.uuid)
-        while not os.path.exists(build_dir):
-            time.sleep(0.1)
+        for x in iterate_timeout(30, "build dir"):
+            if os.path.exists(build_dir):
+                break
 
         # Need to wait to make sure that jobdir gets set
-        while build.jobdir is None:
-            time.sleep(0.1)
+        for x in iterate_timeout(30, "jobdir"):
+            if build.jobdir is not None:
+                break
             build = self.builds[0]
 
         # Wait for the job to begin running and create the ansible log file.
@@ -433,8 +448,9 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         # to be kept open for it after the job finishes) but wait to read the
         # contents until the job is done.
         ansible_log = os.path.join(build.jobdir.log_root, 'job-output.txt')
-        while not os.path.exists(ansible_log):
-            time.sleep(0.1)
+        for x in iterate_timeout(30, "ansible log"):
+            if os.path.exists(ansible_log):
+                break
         logfile = open(ansible_log, 'r')
         self.addCleanup(logfile.close)
 
