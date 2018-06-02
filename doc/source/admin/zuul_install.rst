@@ -6,6 +6,10 @@ Install Zuul
 Initial Setup
 -------------
 
+First we'll create the zuul user and set up some directories it needs.
+We'll also install the SSH private key that we previously created
+during the Nodepool setup.
+
 .. code-block:: console
 
    $ sudo adduser --system zuul --home-dir /var/lib/zuul --create-home
@@ -19,6 +23,10 @@ Initial Setup
 
 Installation
 ------------
+
+Clone the Zuul git repository and install it.  The ``bindep`` program
+is used to determine any additional binary dependencies which are
+required.
 
 .. code-block:: console
 

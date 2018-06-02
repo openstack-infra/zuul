@@ -88,6 +88,10 @@ start Nodepool and Zuul  services with::
 Use Zuul Jobs
 -------------
 
+Zuul provides a `standard library`_ of jobs and roles.  To take advantage
+of these jobs, add the ``zuul-jobs`` repo, which is hosted by the Zuul
+project, to your system.
+
 Add to ``/etc/zuul/zuul.conf``::
 
    sudo bash -c "cat >> /etc/zuul/zuul.conf <<EOF
@@ -101,6 +105,8 @@ Restart executor and scheduler::
 
    sudo systemctl restart zuul-executor.service
    sudo systemctl restart zuul-scheduler.service
+
+.. _standard library: https://zuul-ci.org/docs/zuul-jobs/
 
 Setup Your Repo
 ---------------

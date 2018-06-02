@@ -6,8 +6,11 @@ GitHub
 Configure GitHub
 ----------------
 
-You'll need an organization in Github for this, so create one if you
-haven't already.  In this example we will use `my-org`.
+The recommended way to use Zuul with GitHub is by creating a GitHub
+App.  This allows you to easily add it to GitHub projects, and reduces
+the likelihood of running into GitHub rate limits.  You'll need an
+organization in Github for this, so create one if you haven't already.
+In this example we will use `my-org`.
 
 .. NOTE Duplicate content here and in drivers/github.rst.  Keep them
    in sync.
@@ -83,8 +86,8 @@ configured.
 
 Create two new repositories in your org.  One will hold the
 configuration for this tenant in Zuul, the other should be a normal
-project repo to use for testing.  We'll call them `zuul-test-config`
-and `zuul-test`, respectively.
+project repo to use for testing.  We'll call them ``zuul-test-config``
+and ``zuul-test``, respectively.
 
 Visit the public app page on GitHub,
 https://github.com/apps/my-org-zuul, and install the app into your org.
@@ -105,9 +108,9 @@ Edit ``/etc/zuul/main.yaml`` so that it looks like this::
            untrusted-projects:
              - my-org/zuul-test
 
-The first section, under 'zuul-git' imports the "standard library" of
-Zuul jobs, a collection of jobs that can be used by any Zuul
-installation.
+The first section, under ``zuul-git`` imports the standard library of
+Zuul jobs that we configured earlier.  This adds a number of jobs that
+you can immediately use in your Zuul installation.
 
 The second section is your GitHub configuration.
 

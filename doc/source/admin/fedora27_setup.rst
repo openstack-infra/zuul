@@ -8,8 +8,8 @@ We're going to be using Fedora 27 on a cloud server for this installation.
 Prerequisites
 -------------
 
-- Port 9000 must be open and accessible from the internet so that
-  Github can communicate with the Zuul web service.
+- Port 9000 must be open and accessible from the Internet so that
+  GitHub can communicate with the Zuul web service.
 
 Login to your environment
 -------------------------
@@ -25,6 +25,12 @@ To get started, ssh to your machine as the ``fedora`` user::
 Environment Setup
 -----------------
 
+First, make sure the system packages are up to date, and then install
+some packages which will be required later.  Most of Zuul's binary
+dependencies are handled by the bindep program, but a few additional
+dependencies are needed to install bindep, and for other commands
+which we will use in these instructions.
+
 ::
 
    sudo dnf update -y
@@ -34,6 +40,10 @@ Environment Setup
 
 Install Zookeeper
 -----------------
+
+Nodepool uses Zookeeper to keep track of information about the
+resources it manages, and it's also how Zuul makes requests to
+Nodepool for nodes.
 
 ::
 

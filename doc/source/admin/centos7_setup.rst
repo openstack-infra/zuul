@@ -8,8 +8,8 @@ We're going to be using CentOS 7 on a cloud server for this installation.
 Prerequisites
 -------------
 
-- Port 9000 must be open and accessible from the internet so that
-  Github can communicate with the Zuul web service.
+- Port 9000 must be open and accessible from the Internet so that
+  GitHub can communicate with the Zuul web service.
 
 Login to your environment
 -------------------------
@@ -35,6 +35,12 @@ The repositories and the packages installed from those are listed below.
 * ius-release: python35u, python35u-pip, python35u-devel
 * bigtop: zookeeper
 
+First, make sure the system packages are up to date, and then install
+some packages which will be required later.  Most of Zuul's binary
+dependencies are handled by the bindep program, but a few additional
+dependencies are needed to install bindep, and for other commands
+which we will use in these instructions.
+
 .. code-block:: console
 
    $ sudo yum update -y
@@ -47,6 +53,10 @@ The repositories and the packages installed from those are listed below.
 
 Install Zookeeper
 -----------------
+
+Nodepool uses Zookeeper to keep track of information about the
+resources it manages, and it's also how Zuul makes requests to
+Nodepool for nodes.
 
 .. code-block:: console
 
