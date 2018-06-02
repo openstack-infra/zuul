@@ -1369,6 +1369,7 @@ class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
             BuildHistory(name=build.name, result=result, changes=build.changes,
                          node=build.node, uuid=build.unique,
                          ref=build.parameters['zuul']['ref'],
+                         newrev=build.parameters['zuul'].get('newrev'),
                          parameters=build.parameters, jobdir=build.jobdir,
                          pipeline=build.parameters['zuul']['pipeline'])
         )

@@ -596,7 +596,9 @@ class PipelineManager(object):
             self.cancelJobs(item, prime=False)
         else:
             item_ahead_merged = False
-            if (item_ahead and item_ahead.change.is_merged):
+            if (item_ahead and
+                hasattr(item_ahead.change, 'is_merged') and
+                item_ahead.change.is_merged):
                 item_ahead_merged = True
             if (item_ahead != nnfi and not item_ahead_merged):
                 # Our current base is different than what we expected,

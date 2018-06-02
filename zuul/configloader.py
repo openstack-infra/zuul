@@ -28,6 +28,7 @@ from zuul import model
 from zuul.lib import yamlutil as yaml
 import zuul.manager.dependent
 import zuul.manager.independent
+import zuul.manager.supercedent
 from zuul import change_matcher
 from zuul.lib import encryption
 
@@ -1014,7 +1015,8 @@ class PipelineParser(object):
 
     def getSchema(self):
         manager = vs.Any('independent',
-                         'dependent')
+                         'dependent',
+                         'supercedent')
 
         precedence = vs.Any('normal', 'low', 'high')
 
@@ -1117,6 +1119,9 @@ class PipelineParser(object):
                 self.pcontext.scheduler, pipeline)
         elif manager_name == 'independent':
             manager = zuul.manager.independent.IndependentPipelineManager(
+                self.pcontext.scheduler, pipeline)
+        elif manager_name == 'supercedent':
+            manager = zuul.manager.supercedent.SupercedentPipelineManager(
                 self.pcontext.scheduler, pipeline)
 
         pipeline.setManager(manager)
