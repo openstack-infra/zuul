@@ -16,3 +16,4 @@ configure it to meet your needs.
    config
    jobs
    encryption
+   badges
