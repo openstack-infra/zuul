@@ -119,7 +119,13 @@ if (module.hot) {
   // })
 }
 
-angular.module('zuulStatus', []).controller(
+angular.module('zuulStatus', [], function ($locationProvider) {
+  $locationProvider.html5Mode({
+    enabled: true,
+    requireBase: false
+  })
+  $locationProvider.hashPrefix('')
+}).controller(
   'mainController', function ($location) {
     zuulStart(jQuery, $location)
   }
