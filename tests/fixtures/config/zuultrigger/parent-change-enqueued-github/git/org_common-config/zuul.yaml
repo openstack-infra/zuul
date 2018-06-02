@@ -61,12 +61,3 @@
 - job:
     name: project-gate
     run: playbooks/project-gate.yaml
-
-- project:
-    name: org/project
-    check:
-      jobs:
-        - project-check
-    gate:
-      jobs:
-        - project-gate

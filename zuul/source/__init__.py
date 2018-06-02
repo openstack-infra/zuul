@@ -61,7 +61,7 @@ class BaseSource(object, metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def getChangesDependingOn(self, change, projects):
+    def getChangesDependingOn(self, change, projects, tenant):
         """Return changes which depend on changes at the supplied URIs.
 
         Search this source for changes which depend on the supplied
@@ -72,6 +72,9 @@ class BaseSource(object, metaclass=abc.ABCMeta):
         If the projects argument is None, search across all known
         projects.  If it is supplied, the search may optionally be
         restricted to only those projects.
+
+        The tenant argument can be used by the source to limit the
+        search scope.
         """
 
     @abc.abstractmethod
