@@ -1153,7 +1153,7 @@ class GithubConnection(BaseConnection):
 
         return statuses
 
-    def getWebController(self, zuul_web, info):
+    def getWebController(self, zuul_web):
         return GithubWebController(zuul_web, self)
 
     def validateWebConfig(self, config, connections):
