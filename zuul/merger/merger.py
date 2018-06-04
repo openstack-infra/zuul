@@ -157,7 +157,15 @@ class Repo(object):
                 break
             except Exception as e:
                 if attempt < self.retry_attempts:
-                    time.sleep(self.retry_interval)
+                    if 'fatal: bad config' in e.stderr:
+                        # This error can be introduced by a merge conflict
+                        # in the .gitmodules which was left by the last
+                        # merge operation. In this case reset and clean
+                        # the repo and try again immediately.
+                        reset_repo_to_head(repo)
+                        repo.git.clean('-x', '-f', '-d')
+                    else:
+                        time.sleep(self.retry_interval)
                     self.log.exception("Retry %s: Fetch %s %s %s" % (
                         attempt, self.local_path, remote, ref))
                     self._ensure_cloned()
