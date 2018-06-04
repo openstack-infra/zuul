@@ -867,16 +867,19 @@ class Scheduler(threading.Thread):
             self.log.debug("Run handler awake")
             self.run_handler_lock.acquire()
             try:
-                while not self.management_event_queue.empty():
+                while (not self.management_event_queue.empty() and
+                       not self._stopped):
                     self.process_management_queue()
 
                 # Give result events priority -- they let us stop builds,
                 # whereas trigger events cause us to execute builds.
-                while not self.result_event_queue.empty():
+                while (not self.result_event_queue.empty() and
+                       not self._stopped):
                     self.process_result_queue()
 
                 if not self._pause:
-                    while not self.trigger_event_queue.empty():
+                    while (not self.trigger_event_queue.empty() and
+                           not self._stopped):
                         self.process_event_queue()
 
                 if self._pause and self._areAllBuildsComplete():
@@ -884,7 +887,8 @@ class Scheduler(threading.Thread):
 
                 for tenant in self.abide.tenants.values():
                     for pipeline in tenant.layout.pipelines.values():
-                        while pipeline.manager.processQueue():
+                        while (pipeline.manager.processQueue() and
+                               not self._stopped):
                             pass
 
             except Exception:
