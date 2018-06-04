@@ -16,6 +16,8 @@
 
 import re
 
+FAKE_BASE_URL = 'https://example.com/api/v3/'
+
 
 class FakeUser(object):
     def __init__(self, login):
@@ -31,18 +33,18 @@ class FakeBranch(object):
 
 class FakeStatus(object):
     def __init__(self, state, url, description, context, user):
-        self._state = state
+        self.state = state
+        self.context = context
         self._url = url
         self._description = description
-        self._context = context
         self._user = user
 
     def as_dict(self):
         return {
-            'state': self._state,
+            'state': self.state,
             'url': self._url,
             'description': self._description,
-            'context': self._context,
+            'context': self.context,
             'creator': {
                 'login': self._user
             }
@@ -67,6 +69,7 @@ class FakeCommit(object):
 
 class FakeRepository(object):
     def __init__(self, name, data):
+        self._api = FAKE_BASE_URL
         self._branches = [FakeBranch()]
         self._commits = {}
         self.data = data
@@ -77,6 +80,16 @@ class FakeRepository(object):
             # simulate there is no protected branch
             return []
         return self._branches
+
+    def _build_url(self, *args, **kwargs):
+        path_args = ['repos', self.name]
+        path_args.extend(args)
+        fakepath = '/'.join(path_args)
+        return FAKE_BASE_URL + fakepath
+
+    def _get(self, url, headers=None):
+        client = FakeGithubClient(self.data)
+        return client.session.get(url, headers)
 
     def create_status(self, sha, state, url, description, context,
                       user='zuul'):
@@ -94,6 +107,31 @@ class FakeRepository(object):
             commit = FakeCommit(sha)
             self._commits[sha] = commit
         return commit
+
+    def get_url(self, path):
+        entity, request = path.split('/', 1)
+
+        if entity == 'branches':
+            return self.get_url_branch(request)
+        else:
+            return None
+
+    def get_url_branch(self, path):
+        branch, entity = path.split('/')
+
+        if entity == 'protection':
+            return self.get_url_protection(branch)
+        else:
+            return None
+
+    def get_url_protection(self, branch):
+        contexts = self.data.required_contexts.get((self.name, branch), [])
+        data = {
+            'required_status_checks': {
+                'contexts': contexts
+            }
+        }
+        return FakeResponse(data)
 
     def pull_requests(self, state=None):
         pulls = []
@@ -145,6 +183,11 @@ class FakePull(object):
         repo = client.repo_from_project(self._fake_pull_request.project)
         return repo.commit(self._fake_pull_request.head_sha)
 
+    def commits(self):
+        # since we don't know all commits of a pr we just return here a list
+        # with the head_sha as the only commit
+        return [self.head]
+
     def as_dict(self):
         pr = self._fake_pull_request
         connection = pr.github
@@ -180,16 +223,59 @@ class FakeIssueSearchResult(object):
         self.issue = issue
 
 
+class FakeResponse(object):
+    def __init__(self, data):
+        self.status_code = 200
+        self.data = data
+
+    def json(self):
+        return self.data
+
+
+class FakeGithubSession(object):
+
+    def __init__(self, data):
+        self._data = data
+
+    def build_url(self, *args):
+        fakepath = '/'.join(args)
+        return FAKE_BASE_URL + fakepath
+
+    def get(self, url, headers=None):
+        request = url
+        if request.startswith(FAKE_BASE_URL):
+            request = request[len(FAKE_BASE_URL):]
+
+        entity, request = request.split('/', 1)
+
+        if entity == 'repos':
+            return self.get_repo(request)
+        else:
+            # unknown entity to process
+            return None
+
+    def get_repo(self, request):
+        org, project, request = request.split('/', 2)
+        project_name = '{}/{}'.format(org, project)
+
+        client = FakeGithubClient(self._data)
+        repo = client.repo_from_project(project_name)
+
+        return repo.get_url(request)
+
+
 class FakeGithubData(object):
     def __init__(self, pull_requests):
         self.pull_requests = pull_requests
         self.repos = {}
+        self.required_contexts = {}
 
 
 class FakeGithubClient(object):
     def __init__(self, data, inst_id=None):
         self._data = data
         self._inst_id = inst_id
+        self.session = FakeGithubSession(data)
 
     def user(self, login):
         return FakeUser(login)

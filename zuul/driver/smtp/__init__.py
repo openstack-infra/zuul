@@ -23,7 +23,7 @@ class SMTPDriver(Driver, ConnectionInterface, ReporterInterface):
     def getConnection(self, name, config):
         return smtpconnection.SMTPConnection(self, name, config)
 
-    def getReporter(self, connection, config=None):
+    def getReporter(self, connection, pipeline, config=None):
         return smtpreporter.SMTPReporter(self, connection, config)
 
     def getReporterSchema(self):

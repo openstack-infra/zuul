@@ -219,7 +219,7 @@ class ReporterInterface(object, metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def getReporter(self, connection, config=None):
+    def getReporter(self, connection, pipeline, config=None):
         """Create and return a new Reporter object.
 
         This method is required by the interface.
@@ -227,6 +227,8 @@ class ReporterInterface(object, metaclass=abc.ABCMeta):
         :arg Connection connection: The Connection object associated
             with the reporter (as previously returned by getConnection)
             or None.
+        :arg Pipeline pipeline: The pipeline object associated with the
+            reporter.
         :arg dict config: The configuration information supplied along
             with the reporter in the layout.
 

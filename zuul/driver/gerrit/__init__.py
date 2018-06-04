@@ -33,7 +33,7 @@ class GerritDriver(Driver, ConnectionInterface, TriggerInterface,
     def getSource(self, connection):
         return gerritsource.GerritSource(self, connection)
 
-    def getReporter(self, connection, config=None):
+    def getReporter(self, connection, pipeline, config=None):
         return gerritreporter.GerritReporter(self, connection, config)
 
     def getTriggerSchema(self):

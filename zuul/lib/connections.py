@@ -158,9 +158,9 @@ class ConnectionRegistry(object):
                 sources.append(connection.driver.getSource(connection))
         return sources
 
-    def getReporter(self, connection_name, config=None):
+    def getReporter(self, connection_name, pipeline, config=None):
         connection = self.connections[connection_name]
-        return connection.driver.getReporter(connection, config)
+        return connection.driver.getReporter(connection, pipeline, config)
 
     def getTrigger(self, connection_name, config=None):
         connection = self.connections[connection_name]

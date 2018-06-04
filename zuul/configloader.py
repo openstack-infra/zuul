@@ -1088,7 +1088,7 @@ class PipelineParser(object):
                 for reporter_name, params \
                     in conf.get(conf_key).items():
                     reporter = self.pcontext.connections.getReporter(
-                        reporter_name, params)
+                        reporter_name, pipeline, params)
                     reporter.setAction(conf_key)
                     reporter_set.append(reporter)
             setattr(pipeline, action, reporter_set)

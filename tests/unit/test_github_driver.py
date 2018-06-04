@@ -771,6 +771,32 @@ class TestGithubDriver(ZuulTestCase):
             ('ping', pevent),
         )
 
+    @simple_layout('layouts/gate-github.yaml', driver='github')
+    def test_status_checks(self):
+        github = self.fake_github.getGithubClient()
+        github._data.required_contexts[('org/project', 'master')] = [
+            'tenant-one/check',
+            'tenant-one/gate']
+
+        A = self.fake_github.openFakePullRequest('org/project', 'master', 'A')
+        self.fake_github.emitEvent(A.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+
+        # since the required status 'tenant-one/check' is not fulfilled no
+        # job is expected
+        self.assertEqual(0, len(self.history))
+
+        # now set the required status 'tenant-one/check'
+        repo = github.repo_from_project('org/project')
+        repo.create_status(A.head_sha, 'success', 'example.com', 'description',
+                           'tenant-one/check')
+
+        self.fake_github.emitEvent(A.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+
+        # the change should have entered the gate
+        self.assertEqual(2, len(self.history))
+
 
 class TestGithubUnprotectedBranches(ZuulTestCase):
     config_file = 'zuul-github-driver.conf'

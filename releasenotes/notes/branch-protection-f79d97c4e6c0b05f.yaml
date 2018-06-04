@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    The GitHub driver can determine the required status checks of pull requests
+    which are needed for entering a gate pipeline. This eliminates the need to
+    hard code required status checks in the gate pipeline and makes
+    interoperation with other GitHub apps much more flexible.
