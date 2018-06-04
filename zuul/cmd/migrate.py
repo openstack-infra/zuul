@@ -928,9 +928,9 @@ class Job:
             output['parent'] = 'legacy-publish-openstack-artifacts'
         elif has_draft:
             output['success-url'] = 'html/'
-        output['run'] = os.path.join(self.job_path, 'run')
+        output['run'] = os.path.join(self.job_path, 'run.yaml')
         if has_post:
-            output['post-run'] = os.path.join(self.job_path, 'post')
+            output['post-run'] = os.path.join(self.job_path, 'post.yaml')
 
         if self.vars:
             output['vars'] = self.vars.copy()
