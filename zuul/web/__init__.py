@@ -241,9 +241,15 @@ class ZuulWebAPI(object):
                uuid=None, job_name=None, voting=None, node_name=None,
                result=None, limit=50, skip=0):
         sql_driver = self.zuulweb.connections.drivers['sql']
-        connection = sql_driver.tenant_connections.get(tenant)
-        if not connection:
+
+        # Ask the scheduler which sql connection to use for this tenant
+        job = self.rpc.submitJob('zuul:tenant_sql_connection',
+                                 {'tenant': tenant})
+        connection_name = json.loads(job.data[0])
+
+        if not connection_name:
             raise Exception("Unable to find connection for tenant %s" % tenant)
+        connection = self.zuulweb.connections.connections[connection_name]
 
         args = {
             'buildset_filters': {'tenant': [tenant]},

@@ -58,6 +58,7 @@ class RPCListener(object):
         self.worker.registerFunction("zuul:get_running_jobs")
         self.worker.registerFunction("zuul:get_job_log_stream_address")
         self.worker.registerFunction("zuul:tenant_list")
+        self.worker.registerFunction("zuul:tenant_sql_connection")
         self.worker.registerFunction("zuul:status_get")
         self.worker.registerFunction("zuul:job_list")
         self.worker.registerFunction("zuul:key_get")
@@ -319,6 +320,16 @@ class RPCListener(object):
                            'projects': len(tenant.untrusted_projects),
                            'queue': queue_size})
         job.sendWorkComplete(json.dumps(output))
+
+    def handle_tenant_sql_connection(self, job):
+        args = json.loads(job.arguments)
+        sql_driver = self.sched.connections.drivers['sql']
+        conn = sql_driver.tenant_connections.get(args['tenant'])
+        if conn:
+            name = conn.connection_name
+        else:
+            name = ''
+        job.sendWorkComplete(json.dumps(name))
 
     def handle_status_get(self, job):
         args = json.loads(job.arguments)

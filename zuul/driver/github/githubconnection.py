@@ -508,8 +508,12 @@ class GithubConnection(BaseConnection):
         self.gearman_worker.start()
 
     def onStop(self):
-        self.gearman_worker.stop()
-        self._stop_event_connector()
+        # TODO(jeblair): remove this check which is here only so that
+        # zuul-web can call connections.stop to shut down the sql
+        # connection.
+        if hasattr(self, 'gearman_worker'):
+            self.gearman_worker.stop()
+            self._stop_event_connector()
 
     def _start_event_connector(self):
         self.github_event_connector = GithubEventConnector(self)

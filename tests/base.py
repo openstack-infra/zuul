@@ -62,6 +62,8 @@ import tests.fakegithub
 import zuul.driver.gerrit.gerritsource as gerritsource
 import zuul.driver.gerrit.gerritconnection as gerritconnection
 import zuul.driver.github.githubconnection as githubconnection
+import zuul.driver.github
+import zuul.driver.sql
 import zuul.scheduler
 import zuul.executor.server
 import zuul.executor.client
@@ -1904,10 +1906,14 @@ class WebProxyFixture(fixtures.Fixture):
 
 
 class ZuulWebFixture(fixtures.Fixture):
-    def __init__(self, gearman_server_port, connections, info=None):
+    def __init__(self, gearman_server_port, config, info=None):
         super(ZuulWebFixture, self).__init__()
         self.gearman_server_port = gearman_server_port
-        self.connections = connections
+        self.connections = zuul.lib.connections.ConnectionRegistry()
+        self.connections.configure(
+            config,
+            include_drivers=[zuul.driver.sql.SQLDriver,
+                             zuul.driver.github.GithubDriver])
         if info is None:
             self.info = zuul.model.WebInfo()
         else:
@@ -1921,7 +1927,7 @@ class ZuulWebFixture(fixtures.Fixture):
             info=self.info,
             connections=self.connections)
         self.web.start()
-        self.addCleanup(self.web.stop)
+        self.addCleanup(self.stop)
 
         self.host = 'localhost'
         # Wait until web server is started
@@ -1932,6 +1938,10 @@ class ZuulWebFixture(fixtures.Fixture):
                     break
             except ConnectionRefusedError:
                 pass
+
+    def stop(self):
+        self.web.stop()
+        self.connections.stop()
 
 
 class MySQLSchemaFixture(fixtures.Fixture):
