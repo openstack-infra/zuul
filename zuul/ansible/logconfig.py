@@ -110,6 +110,10 @@ _DEFAULT_SERVER_LOGGING_CONFIG = {
             'handlers': ['console'],
             'level': 'INFO',
         },
+        'cherrypy': {
+            'handlers': ['console'],
+            'level': 'WARN',
+        },
     },
     'root': {'handlers': []},
 }
