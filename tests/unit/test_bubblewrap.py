@@ -74,10 +74,10 @@ class TestBubblewrap(testtools.TestCase):
                 sleep_proc = [pid for pid in os.listdir("/proc") if
                               os.path.isfile("/proc/%s/cmdline" % pid) and
                               open("/proc/%s/cmdline" % pid).read() == cmdline]
+                if not sleep_proc:
+                    break
             except FileNotFoundError:
                 pass
             except ProcessLookupError:
                 pass
-            if not sleep_proc:
-                break
             time.sleep(1)
