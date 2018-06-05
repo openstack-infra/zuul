@@ -121,6 +121,11 @@ class CallbackModule(default.CallbackModule):
         while True:
             try:
                 s = socket.create_connection((ip, LOG_STREAM_PORT), 5)
+                # Disable the socket timeout after we have successfully
+                # connected to accomodate the fact that jobs may not be writing
+                # logs continously. Without this we can easily trip the 5
+                # second timeout.
+                s.settimeout(None)
             except socket.timeout:
                 self._log(
                     "Timeout exception waiting for the logger. "
