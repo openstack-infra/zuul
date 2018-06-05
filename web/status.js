@@ -122,7 +122,8 @@ if (module.hot) {
 angular.module('zuulStatus', [], function ($locationProvider) {
   $locationProvider.html5Mode({
     enabled: true,
-    requireBase: false
+    requireBase: false,
+    rewriteLinks: false
   })
   $locationProvider.hashPrefix('')
 }).controller(
