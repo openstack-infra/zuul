@@ -22,7 +22,7 @@ from unittest import mock
 import zuul.executor.server
 import zuul.model
 
-from tests.base import ZuulTestCase, simple_layout
+from tests.base import ZuulTestCase, simple_layout, iterate_timeout
 
 
 class TestExecutorRepos(ZuulTestCase):
@@ -498,6 +498,19 @@ class TestGovernor(ZuulTestCase):
             self.log.debug("Build %s complete", build)
 
     def test_slow_start(self):
+        # Note: This test relies on the fact that manageLoad is only
+        # run at specific points.  Several times in the test we check
+        # that manageLoad has disabled or enabled job acceptance based
+        # on the number of "starting" jobs.  Some of those jobs may
+        # have actually moved past the "starting" phase and are
+        # actually "running".  But because manageLoad hasn't run
+        # again, it still uses the old values.  Keep this in mind when
+        # double checking its calculations.
+        #
+        # Disable the periodic governor runs to make sure they don't
+        # interefere (only possible if the test runs longer than 10
+        # seconds).
+        self.executor_server.governor_stop_event.set()
         self.executor_server.hold_jobs_in_build = True
         self.executor_server.max_starting_builds = 1
         self.executor_server.min_starting_builds = 1
@@ -513,12 +526,33 @@ class TestGovernor(ZuulTestCase):
         self.assertEqual(len(self.executor_server.job_workers), 1)
         # Allow enough starting builds for the test to complete.
         self.executor_server.max_starting_builds = 3
+        # We must wait for build1 to enter a waiting state otherwise
+        # the subsequent release() is a noop and the build is never
+        # released.  We don't use waitUntilSettled as that requires
+        # the other two builds to start which can't happen while we
+        # don't accept jobs.
+        for x in iterate_timeout(30, "build1 is waiting"):
+            if build1.waiting:
+                break
         build1.release()
         self.waitForWorkerCompletion(build1)
         self.executor_server.manageLoad()
+        # This manageLoad call has determined that there are 0 workers
+        # running, so our full complement of 3 starting builds is
+        # available.  It will re-register for work and pick up the
+        # next two jobs.
 
         self.waitForExecutorBuild('test2')
         self.waitForExecutorBuild('test3')
+        # When each of these jobs started, they caused manageLoad to
+        # be called, the second invocation calculated that there were
+        # 2 workers running, so our starting build limit was reduced
+        # to 1.  Usually it will calculate that there are 2 starting
+        # builds, but theoretically it could count only 1 if the first
+        # build manages to leave the starting phase before the second
+        # build starts.  It should always count the second build as
+        # starting.  As long as at least one build is still in the
+        # starting phase, this will exceed the limit and unregister.
         self.assertFalse(self.executor_server.accepting_work)
 
         self.executor_server.hold_jobs_in_build = False

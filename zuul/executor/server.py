@@ -2133,8 +2133,11 @@ class ExecutorServer(object):
             base_key = 'zuul.executor.{hostname}'
             self.statsd.incr(base_key + '.builds')
         self.job_workers[job.unique] = self._job_class(self, job)
-        self.job_workers[job.unique].run()
+        # Run manageLoad before starting the thread mostly for the
+        # benefit of the unit tests to make the calculation of the
+        # number of starting jobs more deterministic.
         self.manageLoad()
+        self.job_workers[job.unique].run()
 
     def run_governor(self):
         while not self.governor_stop_event.wait(10):
