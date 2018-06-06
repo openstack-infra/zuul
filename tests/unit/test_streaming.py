@@ -33,6 +33,30 @@ from tests.base import iterate_timeout, ZuulWebFixture
 from ws4py.client import WebSocketBaseClient
 
 
+class WSClient(WebSocketBaseClient):
+    def __init__(self, port, build_uuid):
+        self.port = port
+        self.build_uuid = build_uuid
+        self.results = ''
+        self.event = threading.Event()
+        uri = 'ws://[::1]:%s/api/tenant/tenant-one/console-stream' % port
+        super(WSClient, self).__init__(uri)
+
+        self.thread = threading.Thread(target=self.run)
+        self.thread.start()
+
+    def received_message(self, message):
+        if message.is_text:
+            self.results += message.data.decode('utf-8')
+
+    def run(self):
+        self.connect()
+        req = {'uuid': self.build_uuid, 'logfile': None}
+        self.send(json.dumps(req))
+        self.event.set()
+        super(WSClient, self).run()
+
+
 class TestLogStreamer(tests.base.BaseTestCase):
 
     def startStreamer(self, host, port, root=None):
@@ -173,24 +197,10 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         self.log.debug("\n\nStreamed: %s\n\n", self.streaming_data)
         self.assertEqual(file_contents, self.streaming_data)
 
-    def runWSClient(self, port, build_uuid, event):
-        class TestWSClient(WebSocketBaseClient):
-            def __init__(self, *args, **kw):
-                super(TestWSClient, self).__init__(*args, **kw)
-                self.results = ''
-
-            def received_message(self, message):
-                if message.is_text:
-                    self.results += message.data.decode('utf-8')
-
-        uri = 'ws://[::1]:%s/api/tenant/tenant-one/console-stream' % port
-        ws = TestWSClient(uri)
-        ws.connect()
-        req = {'uuid': build_uuid, 'logfile': None}
-        ws.send(json.dumps(req))
-        event.set()
-        ws.run()
-        self.ws_client_results += ws.results
+    def runWSClient(self, port, build_uuid):
+        client = WSClient(port, build_uuid)
+        client.event.wait()
+        return client
 
     def runFingerClient(self, build_uuid, gateway_address, event):
         # Wait until the gateway is started
@@ -286,14 +296,8 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         self.addCleanup(logfile.close)
 
         # Start a thread with the websocket client
-        ws_client_event = threading.Event()
-        self.ws_client_results = ''
-        ws_client_thread = threading.Thread(
-            target=self.runWSClient, args=(web.port, build.uuid,
-                                           ws_client_event)
-        )
-        ws_client_thread.start()
-        ws_client_event.wait()
+        client1 = self.runWSClient(web.port, build.uuid)
+        client1.event.wait()
 
         # Allow the job to complete
         flag_file = os.path.join(build_dir, 'test_wait')
@@ -301,15 +305,15 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
 
         # Wait for the websocket client to complete, which it should when
         # it's received the full log.
-        ws_client_thread.join()
+        client1.thread.join()
 
         self.waitUntilSettled()
 
         file_contents = logfile.read()
         logfile.close()
         self.log.debug("\n\nFile contents: %s\n\n", file_contents)
-        self.log.debug("\n\nStreamed: %s\n\n", self.ws_client_results)
-        self.assertEqual(file_contents, self.ws_client_results)
+        self.log.debug("\n\nStreamed: %s\n\n", client1.results)
+        self.assertEqual(file_contents, client1.results)
 
     def test_websocket_streaming(self):
         # Start the web server
@@ -361,14 +365,10 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         self.addCleanup(logfile.close)
 
         # Start a thread with the websocket client
-        ws_client_event = threading.Event()
-        self.ws_client_results = ''
-        ws_client_thread = threading.Thread(
-            target=self.runWSClient, args=(web.port, build.uuid,
-                                           ws_client_event)
-        )
-        ws_client_thread.start()
-        ws_client_event.wait()
+        client1 = self.runWSClient(web.port, build.uuid)
+        client1.event.wait()
+        client2 = self.runWSClient(web.port, build.uuid)
+        client2.event.wait()
 
         # Allow the job to complete
         flag_file = os.path.join(build_dir, 'test_wait')
@@ -376,14 +376,17 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
 
         # Wait for the websocket client to complete, which it should when
         # it's received the full log.
-        ws_client_thread.join()
+        client1.thread.join()
+        client2.thread.join()
 
         self.waitUntilSettled()
 
         file_contents = logfile.read()
         self.log.debug("\n\nFile contents: %s\n\n", file_contents)
-        self.log.debug("\n\nStreamed: %s\n\n", self.ws_client_results)
-        self.assertEqual(file_contents, self.ws_client_results)
+        self.log.debug("\n\nStreamed: %s\n\n", client1.results)
+        self.assertEqual(file_contents, client1.results)
+        self.log.debug("\n\nStreamed: %s\n\n", client2.results)
+        self.assertEqual(file_contents, client2.results)
 
     def test_finger_gateway(self):
         # Start the finger streamer daemon
