@@ -241,7 +241,7 @@ class CallbackModule(default.CallbackModule):
 
     def _process_result_for_localhost(self, result, is_task=True):
         result_dict = dict(result._result)
-        localhost_names = ('localhost', '127.0.0.1')
+        localhost_names = ('localhost', '127.0.0.1', '::1')
         is_localhost = False
         task_host = result._host.get_name()
         delegated_vars = result_dict.get('_ansible_delegated_vars', None)
