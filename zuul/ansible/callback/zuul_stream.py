@@ -391,9 +391,12 @@ class CallbackModule(default.CallbackModule):
             #    msg: Some debug text the user was looking for
             #
             # So we log it with self._log to get just the raw string the
-            # user provided.
+            # user provided. Note that msg may be a multi line block quote
+            # so we handle that here as well.
             if keyname == 'msg':
-                self._log(msg=result_dict['msg'])
+                msg_lines = result_dict['msg'].rstrip().split('\n')
+                for msg_line in msg_lines:
+                    self._log(msg=msg_line)
             else:
                 self._log_message(
                     msg=json.dumps(result_dict, indent=2, sort_keys=True),
