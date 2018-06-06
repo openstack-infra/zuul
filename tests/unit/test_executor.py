@@ -486,17 +486,6 @@ class TestGovernor(ZuulTestCase):
         self.log.debug("Worker for %s started: %s", jobname, worker.started)
         return build
 
-    def waitForWorkerCompletion(self, build):
-        self.log.debug("Waiting for %s to complete", build)
-        timeout = time.time() + 30
-        while (time.time() < timeout and
-               build.uuid in self.executor_server.job_workers):
-            time.sleep(0.1)
-        if build.uuid in self.executor_server.job_workers:
-            self.log.debug("Build %s did not complete", build)
-        else:
-            self.log.debug("Build %s complete", build)
-
     def test_slow_start(self):
         # Note: This test relies on the fact that manageLoad is only
         # run at specific points.  Several times in the test we check
@@ -535,7 +524,9 @@ class TestGovernor(ZuulTestCase):
             if build1.waiting:
                 break
         build1.release()
-        self.waitForWorkerCompletion(build1)
+        for x in iterate_timeout(30, "Wait for build1 to complete"):
+            if build1.uuid not in self.executor_server.job_workers:
+                break
         self.executor_server.manageLoad()
         # This manageLoad call has determined that there are 0 workers
         # running, so our full complement of 3 starting builds is
