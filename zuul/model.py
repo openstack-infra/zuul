@@ -760,6 +760,13 @@ class SourceContext(ConfigObject):
                 self.path == other.path and
                 self.trusted == other.trusted)
 
+    def toDict(self):
+        return dict(
+            project=self.project.name,
+            branch=self.branch,
+            path=self.path,
+        )
+
 
 class PlaybookContext(ConfigObject):
     """A reference to a playbook in the context of a project.
