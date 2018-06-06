@@ -99,6 +99,15 @@ class LogStreamHandler(WebSocket):
                 self.log.exception("Error processing websocket message:")
                 raise
 
+    def closed(self, code, reason):
+        self.log.debug("Websocket closed: %s %s", code, reason)
+        if self.streamer:
+            try:
+                self.streamer.zuulweb.stream_manager.unregisterStreamer(
+                    self.streamer)
+            except Exception:
+                self.log.exception("Error on remote websocket close:")
+
     def logClose(self, code, msg):
         self.log.debug("Websocket close: %s %s", code, msg)
         try:

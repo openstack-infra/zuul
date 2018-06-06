@@ -23,6 +23,7 @@ import socket
 import tempfile
 import testtools
 import threading
+import time
 
 import zuul.web
 import zuul.lib.log_streamer
@@ -387,6 +388,79 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         self.assertEqual(file_contents, client1.results)
         self.log.debug("\n\nStreamed: %s\n\n", client2.results)
         self.assertEqual(file_contents, client2.results)
+
+    def test_websocket_hangup(self):
+        # Start the web server
+        web = self.useFixture(
+            ZuulWebFixture(self.gearman_server.port,
+                           self.config))
+
+        # Start the finger streamer daemon
+        streamer = zuul.lib.log_streamer.LogStreamer(
+            self.host, 0, self.executor_server.jobdir_root)
+        self.addCleanup(streamer.stop)
+
+        # Need to set the streaming port before submitting the job
+        finger_port = streamer.server.socket.getsockname()[1]
+        self.executor_server.log_streaming_port = finger_port
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+
+        # We don't have any real synchronization for the ansible jobs, so
+        # just wait until we get our running build.
+        for x in iterate_timeout(30, "build"):
+            if len(self.builds):
+                break
+        build = self.builds[0]
+        self.assertEqual(build.name, 'python27')
+
+        build_dir = os.path.join(self.executor_server.jobdir_root, build.uuid)
+        for x in iterate_timeout(30, "build dir"):
+            if os.path.exists(build_dir):
+                break
+
+        # Need to wait to make sure that jobdir gets set
+        for x in iterate_timeout(30, "jobdir"):
+            if build.jobdir is not None:
+                break
+            build = self.builds[0]
+
+        # Wait for the job to begin running and create the ansible log file.
+        # The job waits to complete until the flag file exists, so we can
+        # safely access the log here.
+        ansible_log = os.path.join(build.jobdir.log_root, 'job-output.txt')
+        for x in iterate_timeout(30, "ansible log"):
+            if os.path.exists(ansible_log):
+                break
+
+        # Start a thread with the websocket client
+        client1 = self.runWSClient(web.port, build.uuid)
+        client1.event.wait()
+
+        # Wait until we've streamed everything so far
+        for x in iterate_timeout(30, "streamer is caught up"):
+            with open(ansible_log, 'r') as logfile:
+                if client1.results == logfile.read():
+                    break
+            # This is intensive, give it some time
+            time.sleep(1)
+        self.assertNotEqual(len(web.web.stream_manager.streamers.keys()), 0)
+
+        # Hangup the client side
+        client1.close(1000, 'test close')
+        client1.thread.join()
+
+        # The client should be de-registered shortly
+        for x in iterate_timeout(30, "client cleanup"):
+            if len(web.web.stream_manager.streamers.keys()) == 0:
+                break
+
+        # Allow the job to complete
+        flag_file = os.path.join(build_dir, 'test_wait')
+        open(flag_file, 'w').close()
+
+        self.waitUntilSettled()
 
     def test_finger_gateway(self):
         # Start the finger streamer daemon
