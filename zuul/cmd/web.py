@@ -20,6 +20,8 @@ import sys
 import zuul.cmd
 import zuul.model
 import zuul.web
+import zuul.driver.sql
+import zuul.driver.github
 
 from zuul.lib.config import get_default
 
@@ -87,7 +89,9 @@ class WebServer(zuul.cmd.ZuulDaemonApp):
         self.setup_logging('web', 'log_config')
         self.log = logging.getLogger("zuul.WebServer")
 
-        self.configure_connections()
+        self.configure_connections(
+            include_drivers=[zuul.driver.sql.SQLDriver,
+                             zuul.driver.github.GithubDriver])
 
         try:
             self._run()

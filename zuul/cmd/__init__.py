@@ -150,9 +150,9 @@ class ZuulApp(object):
                 logging_config = logconfig.ServerLoggingConfig(server=section)
         logging_config.apply()
 
-    def configure_connections(self, source_only=False):
+    def configure_connections(self, source_only=False, include_drivers=None):
         self.connections = zuul.lib.connections.ConnectionRegistry()
-        self.connections.configure(self.config, source_only)
+        self.connections.configure(self.config, source_only, include_drivers)
 
 
 class ZuulDaemonApp(ZuulApp, metaclass=abc.ABCMeta):

@@ -53,7 +53,7 @@ class BaseTestWeb(ZuulTestCase):
         self.web = self.useFixture(
             ZuulWebFixture(
                 self.gearman_server.port,
-                self.connections,
+                self.config,
                 info=zuul.model.WebInfo.fromConfig(self.zuul_ini_config)))
 
         self.executor_server.hold_jobs_in_build = True
