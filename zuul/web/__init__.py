@@ -479,7 +479,7 @@ class ZuulWeb(object):
             'global': {
                 'environment': 'production',
                 'server.socket_host': listen_address,
-                'server.socket_port': listen_port,
+                'server.socket_port': int(listen_port),
             },
         })
 
