@@ -23,8 +23,6 @@ import gc
 import time
 from unittest import skip
 
-import testtools
-
 import zuul.configloader
 from zuul.lib import encryption
 from tests.base import AnsibleZuulTestCase, ZuulTestCase, FIXTURE_DIR
@@ -943,6 +941,39 @@ class TestInRepoConfig(ZuulTestCase):
                       'is already defined',
                       A.messages[0],
                       "A should have failed the check pipeline")
+
+    def test_dynamic_config_errors_not_accumulated(self):
+        """Test that requesting broken dynamic configs
+        does not appear in tenant layout error accumulator"""
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test1
+
+            - project:
+                name: org/project
+                check:
+                  jobs:
+                    - non-existent-job
+            """)
+
+        in_repo_playbook = textwrap.dedent(
+            """
+            - hosts: all
+              tasks: []
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf,
+                     'playbooks/project-test2.yaml': in_repo_playbook}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        self.assertEquals(
+            len(tenant.layout.loading_errors), 0,
+            "No error should have been accumulated")
+        self.assertHistory([])
 
     def test_dynamic_config_non_existing_job(self):
         """Test that requesting a non existent job fails"""
@@ -2329,19 +2360,128 @@ class TestPostPlaybooks(AnsibleZuulTestCase):
 
 
 class TestBrokenConfig(ZuulTestCase):
-    # Test that we get an appropriate syntax error if we start with a
-    # broken config.
+    # Test we can deal with a broken config
 
     tenant_config_file = 'config/broken/main.yaml'
 
-    def setUp(self):
-        with testtools.ExpectedException(
-                zuul.configloader.ConfigurationSyntaxError,
-                "\nZuul encountered a syntax error"):
-            super(TestBrokenConfig, self).setUp()
-
     def test_broken_config_on_startup(self):
-        pass
+        # verify get the errors at tenant level.
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        self.assertEquals(
+            len(tenant.layout.loading_errors), 1,
+            "An error should have been stored")
+        self.assertIn(
+            "Zuul encountered a syntax error",
+            str(tenant.layout.loading_errors[0][1]))
+
+    def test_dynamic_conf_on_broken_config(self):
+        # Verify dynamic config behaviors inside a tenant broken config
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        # There is a configuration error
+        self.assertEquals(
+            len(tenant.layout.loading_errors), 1,
+            "An error should have been stored")
+
+        # Inside a broken tenant configuration environment,
+        # send a valid config to an "unbroken" project and verify
+        # that tenant configuration have been validated and job executed
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test
+                run: playbooks/project-test.yaml
+
+            - project:
+                check:
+                  jobs:
+                    - project-test
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(A.patchsets[0]['approvals'][0]['value'], "1")
+        self.assertHistory([
+            dict(name='project-test', result='SUCCESS', changes='1,1')])
+
+        # Inside a broken tenant configuration environment,
+        # send an invalid config to an "unbroken" project and verify
+        # that tenant configuration have not been validated
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test
+                run: playbooks/project-test.yaml
+
+            - project:
+                check:
+                  jobs:
+                    - non-existent-job
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(B.reported, 1,
+                         "A should report failure")
+        self.assertEqual(B.patchsets[0]['approvals'][0]['value'], "-1")
+        self.assertIn('Job non-existent-job not defined', B.messages[0],
+                      "A should have failed the check pipeline")
+
+        # Inside a broken tenant configuration environment,
+        # send an invalid config to a "broken" project and verify
+        # that tenant configuration have not been validated
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test
+                run: playbooks/project-test.yaml
+
+            - project:
+                check:
+                  jobs:
+                    - non-existent-job
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(C.reported, 1,
+                         "A should report failure")
+        self.assertEqual(C.patchsets[0]['approvals'][0]['value'], "-1")
+        self.assertIn('Job non-existent-job not defined', C.messages[0],
+                      "A should have failed the check pipeline")
+
+        # Inside a broken tenant configuration environment,
+        # send an valid config to a "broken" project and verify
+        # that tenant configuration have been validated and job executed
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: project-test2
+                run: playbooks/project-test.yaml
+
+            - project:
+                check:
+                  jobs:
+                    - project-test2
+         """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        D = self.fake_gerrit.addFakeChange('org/project2', 'master', 'D',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(D.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(D.patchsets[0]['approvals'][0]['value'], "1")
+        self.assertHistory([
+            dict(name='project-test', result='SUCCESS', changes='1,1'),
+            dict(name='project-test2', result='SUCCESS', changes='4,1')])
 
 
 class TestProjectKeys(ZuulTestCase):

@@ -81,6 +81,30 @@ NODE_STATES = set([STATE_BUILDING,
                    STATE_HOLD,
                    STATE_DELETING])
 
+MAX_ERROR_LENGTH = 10
+
+
+class LoadingErrors(object):
+    """A configuration errors accumalator attached to a layout object
+    """
+    def __init__(self, length):
+        self.length = length
+        self.errors = []
+
+    def append(self, error):
+        if len(self.errors) < self.length:
+            self.errors.append(error)
+
+    def extend(self, errors):
+        for err in errors:
+            self.append(err)
+
+    def __getitem__(self, index):
+        return self.errors[index]
+
+    def __len__(self):
+        return len(self.errors)
+
 
 class NoMatchingParentError(Exception):
     """A job referenced a parent, but that parent had no variants which
@@ -2814,6 +2838,8 @@ class Layout(object):
         self.nodesets = {}
         self.secrets = {}
         self.semaphores = {}
+        self.loading_errors = LoadingErrors(
+            length=MAX_ERROR_LENGTH)
 
     def getJob(self, name):
         if name in self.jobs:

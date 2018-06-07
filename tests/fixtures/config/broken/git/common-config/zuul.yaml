@@ -11,5 +11,11 @@
       gerrit:
         Verified: -1
 
+- job:
+    name: base
+    parent: null
+
 - project:
-error: true
+    name: org/project2
+    check:
+      jobs: []
