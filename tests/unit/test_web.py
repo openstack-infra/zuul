@@ -572,6 +572,20 @@ class TestWeb(BaseTestWeb):
         resp = self.get_url("api/tenant/non-tenant/jobs")
         self.assertEqual(404, resp.status_code)
 
+    def test_jobs_list_variants(self):
+        resp = self.get_url("api/tenant/tenant-one/jobs").json()
+        for job in resp:
+            if job['name'] in ["base", "noop"]:
+                variants = None
+            elif job['name'] == 'project-test1':
+                variants = [
+                    {'parent': 'base'},
+                    {'branches': ['stable'], 'parent': 'base'},
+                ]
+            else:
+                variants = [{'parent': 'base'}]
+            self.assertEqual(variants, job.get('variants'))
+
     def test_web_job_noop(self):
         job = self.get_url("api/tenant/tenant-one/job/noop").json()
         self.assertEqual("noop", job[0]["name"])
