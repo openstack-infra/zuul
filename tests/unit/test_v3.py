@@ -3844,3 +3844,30 @@ class TestPlugins(AnsibleZuulTestCase):
                       roles="roles: [{zuul: 'org/project2'}]")
         self._run_job('filter-plugin-shared-bare-role',
                       roles="roles: [{zuul: 'org/project3', name: 'shared'}]")
+
+
+class TestNoLog(AnsibleZuulTestCase):
+    tenant_config_file = 'config/ansible-no-log/main.yaml'
+
+    def _get_file(self, build, path):
+        p = os.path.join(build.jobdir.root, path)
+        with open(p) as f:
+            return f.read()
+
+    def test_no_log_unreachable(self):
+        # Output extra ansible info so we might see errors.
+        self.executor_server.verbose = True
+        self.executor_server.keep_jobdir = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        json_log = self._get_file(self.history[0], 'work/logs/job-output.json')
+        text_log = self._get_file(self.history[0], 'work/logs/job-output.txt')
+
+        self.assertNotIn('my-very-secret-password-1', json_log)
+        self.assertNotIn('my-very-secret-password-2', json_log)
+        self.assertNotIn('my-very-secret-password-1', text_log)
+        self.assertNotIn('my-very-secret-password-2', text_log)
