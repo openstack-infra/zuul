@@ -199,7 +199,7 @@ def early_configuration_exceptions(context):
 
 
 @contextmanager
-def configuration_exceptions(stanza, conf, accumulator=None):
+def configuration_exceptions(stanza, conf, accumulator):
     try:
         yield
     except ConfigurationSyntaxError:
@@ -231,14 +231,12 @@ def configuration_exceptions(stanza, conf, accumulator=None):
                      stanza=stanza,
                      content=indent(start_mark.snippet.rstrip()),
                      start_mark=str(start_mark))
-        if accumulator is not None:
-            accumulator.append((context, m))
-        else:
-            raise ConfigurationSyntaxError(m)
+
+        accumulator.append((context, m))
 
 
 @contextmanager
-def reference_exceptions(stanza, obj):
+def reference_exceptions(stanza, obj, accumulator):
     try:
         yield
     except ConfigurationSyntaxError:
@@ -269,7 +267,8 @@ def reference_exceptions(stanza, obj):
                      stanza=stanza,
                      content=indent(start_mark.snippet.rstrip()),
                      start_mark=str(start_mark))
-        raise ConfigurationSyntaxError(m)
+
+        accumulator.append((context, m))
 
 
 class ZuulMark(object):
@@ -392,8 +391,7 @@ class PragmaParser(object):
         self.pcontext = pcontext
 
     def fromYaml(self, conf):
-        with configuration_exceptions('pragma', conf):
-            self.schema(conf)
+        self.schema(conf)
 
         bm = conf.get('implied-branch-matchers')
 
@@ -482,8 +480,7 @@ class SecretParser(object):
         return vs.Schema(secret)
 
     def fromYaml(self, conf):
-        with configuration_exceptions('secret', conf):
-            self.schema(conf)
+        self.schema(conf)
         s = model.Secret(conf['name'], conf['_source_context'])
         s.source_context = conf['_source_context']
         s.start_mark = conf['_start_mark']
@@ -608,8 +605,7 @@ class JobParser(object):
     def fromYaml(self, conf, project_pipeline=False, name=None,
                  validate=True):
         if validate:
-            with configuration_exceptions('job', conf):
-                self.schema(conf)
+            self.schema(conf)
 
         if name is None:
             name = conf['name']
@@ -855,8 +851,7 @@ class ProjectTemplateParser(object):
 
     def fromYaml(self, conf, validate=True, freeze=True):
         if validate:
-            with configuration_exceptions('project-template', conf):
-                self.schema(conf)
+            self.schema(conf)
         source_context = conf['_source_context']
         start_mark = conf['_start_mark']
         project_template = model.ProjectConfig(conf.get('name'))
@@ -1057,8 +1052,7 @@ class PipelineParser(object):
         return vs.Schema(pipeline)
 
     def fromYaml(self, conf):
-        with configuration_exceptions('pipeline', conf):
-            self.schema(conf)
+        self.schema(conf)
         pipeline = model.Pipeline(conf['name'], self.pcontext.tenant.name)
         pipeline.source_context = conf['_source_context']
         pipeline.description = conf.get('description')
@@ -1569,12 +1563,9 @@ class TenantParser(object):
 
     def filterUntrustedProjectYAML(self, data, loading_errors):
         if data and data.pipelines:
-            try:
-                with configuration_exceptions('pipeline', data.pipelines[0]):
-                    raise PipelineNotPermittedError()
-            except ConfigurationSyntaxError as e:
-                loading_errors.append(
-                    (data.pipelines[0]['_source_context'], e))
+            with configuration_exceptions(
+                    'pipeline', data.pipelines[0], loading_errors):
+                raise PipelineNotPermittedError()
         return data.copy(trusted=False)
 
     def _getLoadClasses(self, tenant, conf_object):
@@ -1599,75 +1590,56 @@ class TenantParser(object):
             classes = self._getLoadClasses(tenant, config_pipeline)
             if 'pipeline' not in classes:
                 continue
-            try:
-                with configuration_exceptions('pipeline', config_pipeline):
-                    parsed_config.pipelines.append(
-                        pcontext.pipeline_parser.fromYaml(config_pipeline))
-            except ConfigurationSyntaxError as e:
-                loading_errors.append(
-                    (config_pipeline['_source_context'], e))
+            with configuration_exceptions('pipeline',
+                                          config_pipeline, loading_errors):
+                parsed_config.pipelines.append(
+                    pcontext.pipeline_parser.fromYaml(config_pipeline))
 
         for config_nodeset in unparsed_config.nodesets:
             classes = self._getLoadClasses(tenant, config_nodeset)
             if 'nodeset' not in classes:
                 continue
-            try:
-                with configuration_exceptions('nodeset', config_nodeset):
-                    parsed_config.nodesets.append(
-                        pcontext.nodeset_parser.fromYaml(config_nodeset))
-            except ConfigurationSyntaxError as e:
-                loading_errors.append(
-                    (config_nodeset['_source_context'], e))
+            with configuration_exceptions('nodeset',
+                                          config_nodeset, loading_errors):
+                parsed_config.nodesets.append(
+                    pcontext.nodeset_parser.fromYaml(config_nodeset))
 
         for config_secret in unparsed_config.secrets:
             classes = self._getLoadClasses(tenant, config_secret)
             if 'secret' not in classes:
                 continue
-            try:
-                with configuration_exceptions('secret', config_secret):
-                    parsed_config.secrets.append(
-                        pcontext.secret_parser.fromYaml(config_secret))
-            except ConfigurationSyntaxError as e:
-                loading_errors.append(
-                    (config_secret['_source_context'], e))
+            with configuration_exceptions('secret',
+                                          config_secret, loading_errors):
+                parsed_config.secrets.append(
+                    pcontext.secret_parser.fromYaml(config_secret))
 
         for config_job in unparsed_config.jobs:
             classes = self._getLoadClasses(tenant, config_job)
             if 'job' not in classes:
                 continue
-            try:
-                with configuration_exceptions('job', config_job):
-                    parsed_config.jobs.append(
-                        pcontext.job_parser.fromYaml(config_job))
-            except ConfigurationSyntaxError as e:
-                loading_errors.append(
-                    (config_job['_source_context'], e))
+            with configuration_exceptions('job',
+                                          config_job, loading_errors):
+                parsed_config.jobs.append(
+                    pcontext.job_parser.fromYaml(config_job))
 
         for config_semaphore in unparsed_config.semaphores:
             classes = self._getLoadClasses(tenant, config_semaphore)
             if 'semaphore' not in classes:
                 continue
-            try:
-                with configuration_exceptions('semaphore', config_semaphore):
-                    parsed_config.semaphores.append(
-                        pcontext.semaphore_parser.fromYaml(config_semaphore))
-            except ConfigurationSyntaxError as e:
-                loading_errors.append(
-                    (config_semaphore['_source_context'], e))
+            with configuration_exceptions('semaphore',
+                                          config_semaphore, loading_errors):
+                parsed_config.semaphores.append(
+                    pcontext.semaphore_parser.fromYaml(config_semaphore))
 
         for config_template in unparsed_config.project_templates:
             classes = self._getLoadClasses(tenant, config_template)
             if 'project-template' not in classes:
                 continue
-            try:
-                with configuration_exceptions(
-                        'project-template', config_template):
-                    parsed_config.project_templates.append(
-                        pcontext.project_template_parser.fromYaml(
-                            config_template))
-            except ConfigurationSyntaxError as e:
-                loading_errors.append(
-                    (config_template['_source_context'], e))
+            with configuration_exceptions(
+                    'project-template', config_template, loading_errors):
+                parsed_config.project_templates.append(
+                    pcontext.project_template_parser.fromYaml(
+                        config_template))
 
         for config_project in unparsed_config.projects:
             classes = self._getLoadClasses(tenant, config_project)
@@ -1735,29 +1707,17 @@ class TenantParser(object):
                 layout.addPipeline(pipeline)
 
         for nodeset in parsed_config.nodesets:
-            try:
-                with reference_exceptions('nodeset', nodeset):
-                    layout.addNodeSet(nodeset)
-            except ConfigurationSyntaxError as e:
-                layout.loading_errors.append(
-                    (nodeset.source_context, e))
+            with reference_exceptions(
+                    'nodeset', nodeset, layout.loading_errors):
+                layout.addNodeSet(nodeset)
 
         for secret in parsed_config.secrets:
-            try:
-                with reference_exceptions('secret', secret):
-                    layout.addSecret(secret)
-            except ConfigurationSyntaxError as e:
-                layout.loading_errors.append(
-                    (secret.source_context, e))
+            with reference_exceptions('secret', secret, layout.loading_errors):
+                layout.addSecret(secret)
 
         for job in parsed_config.jobs:
-            try:
-                with reference_exceptions('job', job):
-                    added = layout.addJob(job)
-            except ConfigurationSyntaxError as e:
-                layout.loading_errors.append(
-                    (job.source_context, e))
-                continue
+            with reference_exceptions('job', job, layout.loading_errors):
+                added = layout.addJob(job)
             if not added:
                 self.log.debug(
                     "Skipped adding job %s which shadows an existing job" %
@@ -1767,12 +1727,8 @@ class TenantParser(object):
         # config objects.
         for jobs in layout.jobs.values():
             for job in jobs:
-                try:
-                    with reference_exceptions('job', job):
-                        job.validateReferences(layout)
-                except ConfigurationSyntaxError as e:
-                    layout.loading_errors.append(
-                        (job.source_context, e))
+                with reference_exceptions('job', job, layout.loading_errors):
+                    job.validateReferences(layout)
 
         if skip_semaphores:
             # We should not actually update the layout with new
@@ -1783,20 +1739,14 @@ class TenantParser(object):
         else:
             semaphore_layout = layout
         for semaphore in parsed_config.semaphores:
-            try:
-                with reference_exceptions('semaphore', semaphore):
-                    semaphore_layout.addSemaphore(semaphore)
-            except ConfigurationSyntaxError as e:
-                layout.loading_errors.append(
-                    (semaphore.source_context, e))
+            with reference_exceptions(
+                    'semaphore', semaphore, layout.loading_errors):
+                semaphore_layout.addSemaphore(semaphore)
 
         for template in parsed_config.project_templates:
-            try:
-                with reference_exceptions('project-template', template):
-                    layout.addProjectTemplate(template)
-            except ConfigurationSyntaxError as e:
-                layout.loading_errors.append(
-                    (template.source_context, e))
+            with reference_exceptions(
+                    'project-template', template, layout.loading_errors):
+                layout.addProjectTemplate(template)
 
         # The project stanzas containing a regex are separated from the normal
         # project stanzas and organized by regex. We need to loop over each
@@ -1834,27 +1784,21 @@ class TenantParser(object):
 
         for project_name in layout.project_configs.keys():
             for project_config in layout.project_configs[project_name]:
-                try:
-                    with reference_exceptions('project', project_config):
-                        for template_name in project_config.templates:
-                            if template_name not in layout.project_templates:
-                                raise TemplateNotFoundError(template_name)
-                            project_templates = layout.getProjectTemplates(
-                                template_name)
-                            for p_tmpl in project_templates:
-                                try:
-                                    with reference_exceptions(
-                                            'project-template', p_tmpl):
-                                        for ppc in p_tmpl.pipelines.values():
-                                            inner_validate_ppcs(ppc)
-                                except ConfigurationSyntaxError as e:
-                                    layout.loading_errors.append(
-                                        (p_tmpl.source_context, e))
-                        for ppc in project_config.pipelines.values():
-                            inner_validate_ppcs(ppc)
-                except ConfigurationSyntaxError as e:
-                    layout.loading_errors.append(
-                        (project_config.source_context, e))
+                with reference_exceptions(
+                        'project', project_config, layout.loading_errors):
+                    for template_name in project_config.templates:
+                        if template_name not in layout.project_templates:
+                            raise TemplateNotFoundError(template_name)
+                        project_templates = layout.getProjectTemplates(
+                            template_name)
+                        for p_tmpl in project_templates:
+                            with reference_exceptions(
+                                    'project-template', p_tmpl,
+                                    layout.loading_errors):
+                                for ppc in p_tmpl.pipelines.values():
+                                    inner_validate_ppcs(ppc)
+                    for ppc in project_config.pipelines.values():
+                        inner_validate_ppcs(ppc)
 
     def _parseLayout(self, tenant, data, loading_errors):
         # Don't call this method from dynamic reconfiguration because
