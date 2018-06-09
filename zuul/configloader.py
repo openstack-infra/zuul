@@ -199,7 +199,7 @@ def early_configuration_exceptions(context):
 
 
 @contextmanager
-def configuration_exceptions(stanza, conf):
+def configuration_exceptions(stanza, conf, accumulator=None):
     try:
         yield
     except ConfigurationSyntaxError:
@@ -231,7 +231,10 @@ def configuration_exceptions(stanza, conf):
                      stanza=stanza,
                      content=indent(start_mark.snippet.rstrip()),
                      start_mark=str(start_mark))
-        raise ConfigurationSyntaxError(m)
+        if accumulator is not None:
+            accumulator.append((context, m))
+        else:
+            raise ConfigurationSyntaxError(m)
 
 
 @contextmanager
@@ -1670,21 +1673,18 @@ class TenantParser(object):
             classes = self._getLoadClasses(tenant, config_project)
             if 'project' not in classes:
                 continue
-            try:
-                with configuration_exceptions('project', config_project):
-                    # we need to separate the regex projects as they are
-                    # processed differently later
-                    name = config_project.get('name')
-                    parsed_project = pcontext.project_parser.fromYaml(
-                        config_project)
-                    if name and name.startswith('^'):
-                        parsed_config.projects_by_regex.setdefault(
-                            name, []).append(parsed_project)
-                    else:
-                        parsed_config.projects.append(parsed_project)
-            except ConfigurationSyntaxError as e:
-                loading_errors.append(
-                    (config_project['_source_context'], e))
+            with configuration_exceptions('project', config_project,
+                                          loading_errors):
+                # we need to separate the regex projects as they are
+                # processed differently later
+                name = config_project.get('name')
+                parsed_project = pcontext.project_parser.fromYaml(
+                    config_project)
+                if name and name.startswith('^'):
+                    parsed_config.projects_by_regex.setdefault(
+                        name, []).append(parsed_project)
+                else:
+                    parsed_config.projects.append(parsed_project)
 
         return parsed_config
 
