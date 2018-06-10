@@ -748,11 +748,23 @@ class TestGithubDriver(ZuulTestCase):
         # record previous tenant reconfiguration time, which may not be set
         old = self.sched.tenant_last_reconfigured.get('tenant-one', 0)
         time.sleep(1)
+        self.waitUntilSettled()
+
+        # clear the gearman jobs history so we can count the cat jobs issued
+        # during reconfiguration
+        self.gearman_server.jobs_history.clear()
+
         self.fake_github.emitEvent(pevent)
         self.waitUntilSettled()
         new = self.sched.tenant_last_reconfigured.get('tenant-one', 0)
         # New timestamp should be greater than the old timestamp
         self.assertLess(old, new)
+
+        # We only expect one cat job here as the (empty) config of org/project
+        # should be cached.
+        cat_jobs = [job for job in self.gearman_server.jobs_history
+                    if job.name == b'merger:cat']
+        self.assertEqual(1, len(cat_jobs))
 
     # TODO(jlk): Make this a more generic test for unknown project
     @skip("Skipped for rewrite of webhook handler")

@@ -1519,13 +1519,12 @@ class TenantParser(object):
                     self.log.info(
                         "Loading configuration from %s" %
                         (source_context,))
-                    project = source_context.project
-                    branch = source_context.branch
                     incdata = self.loadProjectYAML(
                         job.files[fn], source_context, loading_errors)
                     unparsed_config.extend(incdata)
-                    abide.cacheUnparsedConfig(project.canonical_name,
-                                              branch, unparsed_config)
+            abide.cacheUnparsedConfig(
+                job.source_context.project.canonical_name,
+                job.source_context.branch, unparsed_config)
 
     def _loadTenantYAML(self, abide, tenant, loading_errors):
         config_projects_config = model.UnparsedConfig()
