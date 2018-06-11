@@ -82,22 +82,22 @@ class TestJob(BaseTestCase):
     def test_change_matches_returns_false_for_matched_skip_if(self):
         change = model.Change('project')
         change.files = ['/COMMIT_MSG', 'docs/foo']
-        self.assertFalse(self.job.changeMatches(change))
+        self.assertFalse(self.job.changeMatchesFiles(change))
 
     def test_change_matches_returns_false_for_single_matched_skip_if(self):
         change = model.Change('project')
         change.files = ['docs/foo']
-        self.assertFalse(self.job.changeMatches(change))
+        self.assertFalse(self.job.changeMatchesFiles(change))
 
     def test_change_matches_returns_true_for_unmatched_skip_if(self):
         change = model.Change('project')
         change.files = ['/COMMIT_MSG', 'foo']
-        self.assertTrue(self.job.changeMatches(change))
+        self.assertTrue(self.job.changeMatchesFiles(change))
 
     def test_change_matches_returns_true_for_single_unmatched_skip_if(self):
         change = model.Change('project')
         change.files = ['foo']
-        self.assertTrue(self.job.changeMatches(change))
+        self.assertTrue(self.job.changeMatchesFiles(change))
 
     def test_job_sets_defaults_for_boolean_attributes(self):
         self.assertIsNotNone(self.job.voting)
@@ -203,9 +203,9 @@ class TestJob(BaseTestCase):
         item = queue.enqueueChange(change)
         item.layout = self.layout
 
-        self.assertTrue(base.changeMatches(change))
-        self.assertTrue(python27.changeMatches(change))
-        self.assertFalse(python27diablo.changeMatches(change))
+        self.assertTrue(base.changeMatchesBranch(change))
+        self.assertTrue(python27.changeMatchesBranch(change))
+        self.assertFalse(python27diablo.changeMatchesBranch(change))
 
         item.freezeJobGraph()
         self.assertEqual(len(item.getJobs()), 1)
@@ -217,9 +217,9 @@ class TestJob(BaseTestCase):
         item = queue.enqueueChange(change)
         item.layout = self.layout
 
-        self.assertTrue(base.changeMatches(change))
-        self.assertTrue(python27.changeMatches(change))
-        self.assertTrue(python27diablo.changeMatches(change))
+        self.assertTrue(base.changeMatchesBranch(change))
+        self.assertTrue(python27.changeMatchesBranch(change))
+        self.assertTrue(python27diablo.changeMatchesBranch(change))
 
         item.freezeJobGraph()
         self.assertEqual(len(item.getJobs()), 1)
@@ -269,8 +269,8 @@ class TestJob(BaseTestCase):
         item = queue.enqueueChange(change)
         item.layout = self.layout
 
-        self.assertTrue(base.changeMatches(change))
-        self.assertFalse(python27.changeMatches(change))
+        self.assertTrue(base.changeMatchesFiles(change))
+        self.assertFalse(python27.changeMatchesFiles(change))
 
         item.freezeJobGraph()
         self.assertEqual([], item.getJobs())

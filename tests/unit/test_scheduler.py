@@ -4893,10 +4893,61 @@ For CI problems and help debugging, contact ci@example.org"""
         self.waitUntilSettled()
 
         self.assertHistory([
-            dict(name='child-job', result='SUCCESS', changes='2,1'),
             dict(name='child-job', result='SUCCESS', changes='3,1'),
             dict(name='child-job', result='SUCCESS', changes='4,1'),
-        ])
+        ], ordered=False)
+
+    @simple_layout('layouts/file-matchers.yaml')
+    def test_file_matchers(self):
+        "Test several file matchers"
+        files = {'parent1.txt': ''}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=files)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        files = {'parent2.txt': ''}
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B',
+                                           files=files)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        files = {'child.txt': ''}
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C',
+                                           files=files)
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        files = {'project.txt': ''}
+        D = self.fake_gerrit.addFakeChange('org/project', 'master', 'D',
+                                           files=files)
+        self.fake_gerrit.addEvent(D.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        files = {'tests/foo': ''}
+        E = self.fake_gerrit.addFakeChange('org/project', 'master', 'E',
+                                           files=files)
+        self.fake_gerrit.addEvent(E.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        files = {'tests/docs/foo': ''}
+        F = self.fake_gerrit.addFakeChange('org/project', 'master', 'F',
+                                           files=files)
+        self.fake_gerrit.addEvent(F.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='child-job', result='SUCCESS', changes='2,1'),
+
+            dict(name='child-override-job', result='SUCCESS', changes='3,1'),
+
+            dict(name='project-override-job', result='SUCCESS', changes='4,1'),
+
+            dict(name='irr-job', result='SUCCESS', changes='5,1'),
+            dict(name='irr-override-job', result='SUCCESS', changes='5,1'),
+
+            dict(name='irr-job', result='SUCCESS', changes='6,1'),
+        ], ordered=False)
 
     def test_trusted_project_dep_on_non_live_untrusted_project(self):
         # Test we get a layout for trusted projects when they depend on
