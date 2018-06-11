@@ -99,7 +99,7 @@ class LogStreamHandler(WebSocket):
                 self.log.exception("Error processing websocket message:")
                 raise
 
-    def closed(self, code, reason):
+    def closed(self, code, reason=None):
         self.log.debug("Websocket closed: %s %s", code, reason)
         if self.streamer:
             try:
