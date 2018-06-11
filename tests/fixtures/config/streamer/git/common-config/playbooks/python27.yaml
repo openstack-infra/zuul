@@ -5,6 +5,12 @@
   tasks:
     - debug: var=waitpath
 
+    - debug:
+        msg: |
+          Multiline
+          Debug Test Token String
+          Message
+
      # Do not finish until test creates the flag file
     - wait_for:
         state: present

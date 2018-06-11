@@ -19,6 +19,7 @@ import logging
 import json
 import os
 import os.path
+import re
 import socket
 import tempfile
 import testtools
@@ -197,6 +198,13 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         self.log.debug("\n\nFile contents: %s\n\n", file_contents)
         self.log.debug("\n\nStreamed: %s\n\n", self.streaming_data)
         self.assertEqual(file_contents, self.streaming_data)
+
+        # Check that we logged a multiline debug message
+        pattern = (r'^\d\d\d\d-\d\d-\d\d \d\d:\d\d\:\d\d\.\d\d\d\d\d\d \| '
+                   r'Debug Test Token String$')
+        r = re.compile(pattern, re.MULTILINE)
+        match = r.search(self.streaming_data)
+        self.assertNotEqual(match, None)
 
     def runWSClient(self, port, build_uuid):
         client = WSClient(port, build_uuid)
