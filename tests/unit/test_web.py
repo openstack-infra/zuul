@@ -263,6 +263,7 @@ class TestWeb(BaseTestWeb):
 
         resp = self.get_url("api/tenant/tenant-one/key/org/project.pub")
         self.assertEqual(resp.content, public_pem)
+        self.assertIn('text/plain', resp.headers.get('Content-Type'))
 
     def test_web_404_on_unknown_tenant(self):
         resp = self.get_url("api/tenant/non-tenant/status")
