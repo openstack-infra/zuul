@@ -279,6 +279,7 @@ class ZuulWebAPI(object):
                                                   'project': project})
         resp = cherrypy.response
         resp.headers['Access-Control-Allow-Origin'] = '*'
+        resp.headers['Content-Type'] = 'text/plain'
         return job.data[0]
 
     @cherrypy.expose
