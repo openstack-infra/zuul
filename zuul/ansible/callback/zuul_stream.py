@@ -233,6 +233,9 @@ class CallbackModule(default.CallbackModule):
                 streamer.start()
                 self._streamers.append(streamer)
 
+    def v2_playbook_on_handler_task_start(self, task):
+        self.v2_playbook_on_task_start(task, False)
+
     def _stop_streamers(self):
         self._streamers_stop = True
         while True:

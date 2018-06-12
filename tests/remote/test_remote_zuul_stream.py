@@ -95,11 +95,12 @@ class TestZuulStream(AnsibleZuulTestCase):
                 'controller \| ok: Runtime: \d:\d\d:\d\d\.\d\d\d\d\d\d', text)
             self.assertLogLine('TASK \[Show contents of second file\]', text)
             self.assertLogLine('controller \| command test two', text)
+            self.assertLogLine('controller \| This is a handler', text)
             self.assertLogLine(
                 'controller \| ok: Runtime: \d:\d\d:\d\d\.\d\d\d\d\d\d', text)
             self.assertLogLine('PLAY RECAP', text)
             self.assertLogLine(
-                'controller \| ok: 5 changed: \d unreachable: 0 failed: 0',
+                'controller \| ok: \d+ changed: \d+ unreachable: 0 failed: 0',
                 text)
             self.assertLogLine(
                 'RUN END RESULT_NORMAL: \[untrusted : review.example.com/'
