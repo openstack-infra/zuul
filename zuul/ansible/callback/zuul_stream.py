@@ -210,9 +210,6 @@ class CallbackModule(default.CallbackModule):
 
         if self._play.strategy != 'free':
             task_name = self._print_task_banner(task)
-        else:
-            task_name = task.get_name().strip()
-
         if task.action in ('command', 'shell'):
             log_id = uuid.uuid4().hex
             task.args['zuul_log_id'] = log_id
@@ -235,9 +232,6 @@ class CallbackModule(default.CallbackModule):
                 streamer.daemon = True
                 streamer.start()
                 self._streamers.append(streamer)
-
-    def v2_playbook_on_handler_task_start(self, task):
-        self.v2_playbook_on_task_start(task, False)
 
     def _stop_streamers(self):
         self._streamers_stop = True

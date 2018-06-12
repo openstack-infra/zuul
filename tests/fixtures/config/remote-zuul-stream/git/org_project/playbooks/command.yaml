@@ -1,20 +1,5 @@
 - hosts: all
   tasks:
-    # Create unwritable /tmp/console-None.log
-    # This ensures that no further task can write to it without failing.
-    # A task trying to write to /tmp/console-None.log is considered broken
-    # because zuul_log_id is missing.
-    - name: Create unwritable /tmp/console-None.log
-      file:
-        path: /tmp/console-None.log
-        state: touch
-        mode: 0444
-      # FIXME(tobiash): This is currently needed because the currently
-      # running zuul in OpenStack already shows this misbehavior and creates
-      # that file as root. So for now it is safe to ignore errors here.
-      # This should be removed once a fixed zuul is deployed.
-      failed_when: False
-
     - name: Start zuul_console daemon
       zuul_console:
     - name: Create first file
@@ -29,20 +14,3 @@
       command: "cat {{ ansible_user_dir }}/command_test_file1"
     - name: Show contents of second file
       command: "cat {{ ansible_user_dir }}/command_test_file2"
-
-    # Test a task with a handler
-    - name: Run a command with notifying a handler
-      command: /bin/true
-      notify: test handler
-
-  handlers:
-    - name: test handler
-      command: echo "This is a handler"
-
-- hosts: all
-  strategy: free
-  tasks:
-    - name: Command task 1 within free strategy
-      command: echo "First free task"
-    - name: Command task 2 within free strategy
-      command: echo "Second free task"
