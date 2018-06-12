@@ -606,3 +606,5 @@ class CallbackModule(default.CallbackModule):
                 delegated_host=delegated_vars['ansible_host'])
         else:
             return result._host.get_name()
+
+    v2_runner_on_unreachable = v2_runner_on_failed
