@@ -35,6 +35,18 @@
       command: /bin/true
       notify: test handler
 
+    # Test cleanup task
+    - name: Block with cleanup
+      block:
+        - name: Run a command
+          command: /bin/false
+      rescue:
+        - name: Rescue task
+          command: echo "This is a rescue task"
+      always:
+        - name: Always task
+          command: echo "This is an always task"
+
   handlers:
     - name: test handler
       command: echo "This is a handler"
