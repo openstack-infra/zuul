@@ -1085,7 +1085,9 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         payload = json.dumps(data).encode('utf8')
         secret = self.connection_config['webhook_token']
         signature = githubconnection._sign_request(payload, secret)
-        headers = {'x-github-event': name, 'x-hub-signature': signature}
+        headers = {'x-github-event': name,
+                   'x-hub-signature': signature,
+                   'x-github-delivery': str(uuid.uuid4())}
 
         if use_zuulweb:
             return requests.post(

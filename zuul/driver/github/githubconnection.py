@@ -110,7 +110,7 @@ class GithubGearmanWorker(object):
         headers = args.get("headers")
         body = args.get("body")
 
-        delivery = headers.get('X-GitHub-Delivery')
+        delivery = headers.get('x-github-delivery')
         self.log.debug("Github Webhook Received: {delivery}".format(
             delivery=delivery))
 
