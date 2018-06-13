@@ -53,6 +53,7 @@ class GithubTriggerEvent(TriggerEvent):
         self.title = None
         self.label = None
         self.unlabel = None
+        self.action = None
         self.delivery = None
 
     def isPatchsetCreated(self):
@@ -67,6 +68,11 @@ class GithubTriggerEvent(TriggerEvent):
 
     def _repr(self):
         r = [super(GithubTriggerEvent, self)._repr()]
+        if self.action:
+            r.append(self.action)
+        r.append(self.canonical_project_name)
+        if self.change_number:
+            r.append('%s,%s' % (self.change_number, self.patch_number))
         if self.delivery:
             r.append('delivery: %s' % self.delivery)
         return ' '.join(r)
