@@ -50,6 +50,10 @@ class ActionModule(normal.ActionModule):
             return True
         return False
 
+    def handle_zuul_return(self):
+        '''Allow zuul_return module on localhost.'''
+        pass
+
     def handle_stat(self):
         '''Allow stat module on localhost if it doesn't touch unsafe files.
 

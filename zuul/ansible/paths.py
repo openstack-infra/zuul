@@ -16,6 +16,7 @@
 import imp
 import os
 
+from ansible import constants as C
 from ansible.errors import AnsibleError
 import ansible.modules
 import ansible.plugins.action
@@ -131,7 +132,10 @@ def _import_ansible_lookup_plugin(name):
 def _is_official_module(module):
     task_module_path = module._shared_loader_obj.module_loader.find_plugin(
         module._task.action)
-    ansible_module_path = os.path.dirname(ansible.modules.__file__)
+    ansible_module_paths = [os.path.dirname(ansible.modules.__file__)]
+    # Also check library path in ansible.cfg for action plugins like
+    # zuul_return.
+    ansible_module_paths.extend(C.DEFAULT_MODULE_PATH)
 
     # If the module is not beneath the main ansible library path that means
     # someone has included a module with a playbook or a role that has the
@@ -139,7 +143,10 @@ def _is_official_module(module):
     # local execution it's a problem because their version could subvert our
     # path checks and/or do other things on the local machine that we don't
     # want them to do.
-    return task_module_path.startswith(ansible_module_path)
+    for path in ansible_module_paths:
+        if task_module_path.startswith(path):
+            return True
+    return False
 
 
 def _fail_module_dict(module_name):
