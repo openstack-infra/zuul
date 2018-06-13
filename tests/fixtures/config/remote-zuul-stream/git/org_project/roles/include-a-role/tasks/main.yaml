@@ -1,0 +1,7 @@
+# We've seen callback problems with shell tasks after included roles.
+- name: Emit a debug message
+  include_role:
+    name: debug-role
+
+- name: Include role shell task
+  shell: echo "This is a shell task after an included role"

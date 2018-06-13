@@ -46,6 +46,8 @@ class TestZuulStream(AnsibleZuulTestCase):
                   - zuul: org/common-config
                 nodeset:
                   nodes:
+                    - name: compute1
+                      label: whatever
                     - name: controller
                       label: whatever
 
@@ -100,6 +102,10 @@ class TestZuulStream(AnsibleZuulTestCase):
             self.assertLogLine('controller \| This is a handler', text)
             self.assertLogLine('controller \| First free task', text)
             self.assertLogLine('controller \| Second free task', text)
+            self.assertLogLine('controller \| This is a shell task after an '
+                               'included role', text)
+            self.assertLogLine('compute1 \| This is a shell task after an '
+                               'included role', text)
             self.assertLogLine(
                 'controller \| ok: Runtime: \d:\d\d:\d\d\.\d\d\d\d\d\d', text)
             self.assertLogLine('PLAY RECAP', text)

@@ -58,3 +58,9 @@
       command: echo "First free task"
     - name: Command task 2 within free strategy
       command: echo "Second free task"
+
+# Test a role that has an include_role
+- hosts: all
+  strategy: linear
+  roles:
+    - include-a-role
