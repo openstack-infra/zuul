@@ -96,6 +96,8 @@ class TestZuulStream(AnsibleZuulTestCase):
             self.assertLogLine('TASK \[Show contents of second file\]', text)
             self.assertLogLine('controller \| command test two', text)
             self.assertLogLine('controller \| This is a handler', text)
+            self.assertLogLine('controller \| First free task', text)
+            self.assertLogLine('controller \| Second free task', text)
             self.assertLogLine(
                 'controller \| ok: Runtime: \d:\d\d:\d\d\.\d\d\d\d\d\d', text)
             self.assertLogLine('PLAY RECAP', text)

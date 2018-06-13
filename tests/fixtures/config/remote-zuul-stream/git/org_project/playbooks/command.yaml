@@ -38,3 +38,11 @@
   handlers:
     - name: test handler
       command: echo "This is a handler"
+
+- hosts: all
+  strategy: free
+  tasks:
+    - name: Command task 1 within free strategy
+      command: echo "First free task"
+    - name: Command task 2 within free strategy
+      command: echo "Second free task"
