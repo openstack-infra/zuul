@@ -1401,6 +1401,8 @@ class AnsibleJob(object):
                          % self.executor_server.library_dir)
             config.write('command_warnings = False\n')
             config.write('callback_plugins = %s\n' % callback_path)
+            config.write('strategy_plugins = %s\n' %
+                         self.executor_server.strategy_dir)
             config.write('stdout_callback = zuul_stream\n')
             config.write('filter_plugins = %s\n'
                          % self.executor_server.filter_dir)
@@ -1856,6 +1858,7 @@ class ExecutorServer(object):
         self.library_dir = os.path.join(plugin_dir, 'library')
         self.action_dir = os.path.join(plugin_dir, 'action')
         self.callback_dir = os.path.join(plugin_dir, 'callback')
+        self.strategy_dir = os.path.join(plugin_dir, 'strategy')
         self.lookup_dir = os.path.join(plugin_dir, 'lookup')
         self.filter_dir = os.path.join(plugin_dir, 'filter')
 
