@@ -290,22 +290,25 @@ class StrategyModule(StrategyBase):
                         if (task.any_errors_fatal or run_once) and not task.ignore_errors:
                             any_errors_fatal = True
 
+                        display.debug("sending task start callback, copying the task so we can template it temporarily")
+                        saved_name = task.name
+                        display.debug("done copying, going to template now")
+                        try:
+                            task.name = to_text(templar.template(task.name, fail_on_undefined=False), nonstring='empty')
+                            display.debug("done templating")
+                        except:
+                            # just ignore any errors during task name templating,
+                            # we don't care if it just shows the raw name
+                            display.debug("templating failed for some reason")
+                        display.debug("here goes the callback...")
                         if not callback_sent:
-                            display.debug("sending task start callback, copying the task so we can template it temporarily")
-                            saved_name = task.name
-                            display.debug("done copying, going to template now")
-                            try:
-                                task.name = to_text(templar.template(task.name, fail_on_undefined=False), nonstring='empty')
-                                display.debug("done templating")
-                            except:
-                                # just ignore any errors during task name templating,
-                                # we don't care if it just shows the raw name
-                                display.debug("templating failed for some reason")
-                            display.debug("here goes the callback...")
                             self._tqm.send_callback('v2_playbook_on_task_start', task, is_conditional=False)
-                            task.name = saved_name
-                            callback_sent = True
-                            display.debug("sending task start callback")
+                        else:
+                            self._tqm.send_callback('zuul_on_task_start', task, is_conditional=False)
+
+                        task.name = saved_name
+                        callback_sent = True
+                        display.debug("sending task start callback")
 
                         self._blocked_hosts[host.get_name()] = True
                         self._queue_task(host, task, task_vars, play_context)

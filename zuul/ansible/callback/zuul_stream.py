@@ -236,6 +236,11 @@ class CallbackModule(default.CallbackModule):
                 streamer.start()
                 self._streamers.append(streamer)
 
+    def zuul_on_task_start(self, task, is_conditional):
+        if (task.action in ('command', 'shell') and
+            'zuul_log_id' not in task.args):
+            self.v2_playbook_on_task_start(task, False)
+
     def v2_playbook_on_handler_task_start(self, task):
         self.v2_playbook_on_task_start(task, False)
 
