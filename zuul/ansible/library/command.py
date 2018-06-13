@@ -585,6 +585,9 @@ def main():
         module.warn("As of Ansible 2.4, the parameter 'executable' is no longer supported with the 'command' module. Not using '%s'." % executable)
         executable = None
 
+    if not zuul_log_id:
+        module.fail_json(rc=256, msg="zuul_log_id missing: %s" % module.params)
+
     if not args or args.strip() == '':
         module.fail_json(rc=256, msg="no command given")
 
