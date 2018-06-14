@@ -2221,6 +2221,7 @@ class TestAnsible(AnsibleZuulTestCase):
             ('block_local_override', 'FAILURE'),
             ('file_local_good', 'SUCCESS'),
             ('file_local_bad', 'FAILURE'),
+            ('zuul_return', 'SUCCESS'),
         ]
         for job_name, result in plugin_tests:
             count += 1
