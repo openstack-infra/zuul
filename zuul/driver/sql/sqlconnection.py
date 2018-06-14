@@ -18,6 +18,8 @@ import alembic
 import alembic.command
 import alembic.config
 import sqlalchemy as sa
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 import sqlalchemy.pool
 from sqlalchemy.sql import select
 import voluptuous
@@ -54,7 +56,7 @@ class SQLConnection(BaseConnection):
                 pool_recycle=self.connection_config.get('pool_recycle', 1))
             self._migrate()
             self.zuul_buildset_table, self.zuul_build_table \
-                = self._setup_tables()
+                = self._setup_models()
             self.tables_established = True
         except sa.exc.NoSuchModuleError:
             self.log.exception(
@@ -83,44 +85,44 @@ class SQLConnection(BaseConnection):
             tag = {'table_prefix': self.table_prefix}
             alembic.command.upgrade(config, 'head', tag=tag)
 
-    def _setup_tables(self):
-        metadata = sa.MetaData()
+    def _setup_models(self):
+        Base = declarative_base(metadata=sa.MetaData())
 
-        zuul_buildset_table = sa.Table(
-            self.table_prefix + BUILDSET_TABLE, metadata,
-            sa.Column('id', sa.Integer, primary_key=True),
-            sa.Column('zuul_ref', sa.String(255)),
-            sa.Column('pipeline', sa.String(255)),
-            sa.Column('project', sa.String(255)),
-            sa.Column('branch', sa.String(255)),
-            sa.Column('change', sa.Integer, nullable=True),
-            sa.Column('patchset', sa.String(255), nullable=True),
-            sa.Column('ref', sa.String(255)),
-            sa.Column('oldrev', sa.String(255)),
-            sa.Column('newrev', sa.String(255)),
-            sa.Column('ref_url', sa.String(255)),
-            sa.Column('result', sa.String(255)),
-            sa.Column('message', sa.TEXT()),
-            sa.Column('tenant', sa.String(255)),
-        )
+        class BuildModel(Base):
+            __tablename__ = self.table_prefix + BUILD_TABLE
+            id = sa.Column(sa.Integer, primary_key=True)
+            buildset_id = sa.Column(sa.String, sa.ForeignKey(
+                self.table_prefix + BUILDSET_TABLE + ".id"))
+            uuid = sa.Column(sa.String(36))
+            job_name = sa.Column(sa.String(255))
+            result = sa.Column(sa.String(255))
+            start_time = sa.Column(sa.DateTime)
+            end_time = sa.Column(sa.DateTime)
+            voting = sa.Column(sa.Boolean)
+            log_url = sa.Column(sa.String(255))
+            node_name = sa.Column(sa.String(255))
 
-        zuul_build_table = sa.Table(
-            self.table_prefix + BUILD_TABLE, metadata,
-            sa.Column('id', sa.Integer, primary_key=True),
-            sa.Column('buildset_id', sa.Integer,
-                      sa.ForeignKey(self.table_prefix +
-                                    BUILDSET_TABLE + ".id")),
-            sa.Column('uuid', sa.String(36)),
-            sa.Column('job_name', sa.String(255)),
-            sa.Column('result', sa.String(255)),
-            sa.Column('start_time', sa.DateTime()),
-            sa.Column('end_time', sa.DateTime()),
-            sa.Column('voting', sa.Boolean),
-            sa.Column('log_url', sa.String(255)),
-            sa.Column('node_name', sa.String(255)),
-        )
+        class BuildSetModel(Base):
+            __tablename__ = self.table_prefix + BUILDSET_TABLE
+            id = sa.Column(sa.Integer, primary_key=True)
+            builds = relationship(BuildModel, lazy="subquery")
+            zuul_ref = sa.Column(sa.String(255))
+            pipeline = sa.Column(sa.String(255))
+            project = sa.Column(sa.String(255))
+            branch = sa.Column(sa.String(255))
+            change = sa.Column(sa.Integer, nullable=True)
+            patchset = sa.Column(sa.String(255), nullable=True)
+            ref = sa.Column(sa.String(255))
+            oldrev = sa.Column(sa.String(255))
+            newrev = sa.Column(sa.String(255))
+            ref_url = sa.Column(sa.String(255))
+            result = sa.Column(sa.String(255))
+            message = sa.Column(sa.TEXT())
+            tenant = sa.Column(sa.String(255))
 
-        return zuul_buildset_table, zuul_build_table
+        self.buildModel = BuildModel
+        self.buildSetModel = BuildSetModel
+        return self.buildSetModel.__table__, self.buildModel.__table__
 
     def onStop(self):
         self.log.debug("Stopping SQL connection %s" % self.connection_name)
