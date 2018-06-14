@@ -1409,11 +1409,17 @@ class AnsibleJob(object):
             # bump the timeout because busy nodes may take more than
             # 10s to respond
             config.write('timeout = 30\n')
+
+            # We need at least the general action dir as this overwrites the
+            # command action plugin for log streaming.
+            action_dirs = [self.executor_server.action_dir_general]
             if not trusted:
-                config.write('action_plugins = %s\n'
-                             % self.executor_server.action_dir)
+                action_dirs.append(self.executor_server.action_dir)
                 config.write('lookup_plugins = %s\n'
                              % self.executor_server.lookup_dir)
+
+            config.write('action_plugins = %s\n'
+                         % ':'.join(action_dirs))
 
             if jobdir_playbook.roles_path:
                 config.write('roles_path = %s\n' % ':'.join(
@@ -1857,6 +1863,7 @@ class ExecutorServer(object):
 
         self.library_dir = os.path.join(plugin_dir, 'library')
         self.action_dir = os.path.join(plugin_dir, 'action')
+        self.action_dir_general = os.path.join(plugin_dir, 'action-general')
         self.callback_dir = os.path.join(plugin_dir, 'callback')
         self.strategy_dir = os.path.join(plugin_dir, 'strategy')
         self.lookup_dir = os.path.join(plugin_dir, 'lookup')

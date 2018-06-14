@@ -27,9 +27,9 @@ import os
 import socket
 import threading
 import time
-import uuid
 
 from ansible.plugins.callback import default
+from zuul.ansible import paths
 
 from zuul.ansible import logconfig
 
@@ -214,8 +214,6 @@ class CallbackModule(default.CallbackModule):
             task_name = task.get_name().strip()
 
         if task.action in ('command', 'shell'):
-            log_id = uuid.uuid4().hex
-            task.args['zuul_log_id'] = log_id
             play_vars = self._play._variable_manager._hostvars
 
             hosts = self._get_task_hosts(task)
@@ -229,6 +227,8 @@ class CallbackModule(default.CallbackModule):
                 if ip in ('localhost', '127.0.0.1'):
                     # Don't try to stream from localhost
                     continue
+                log_id = "%s-%s" % (
+                    task._uuid, paths._sanitize_filename(host))
                 streamer = threading.Thread(
                     target=self._read_log, args=(
                         host, ip, log_id, task_name, hosts))

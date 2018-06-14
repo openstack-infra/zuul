@@ -188,3 +188,7 @@ def _is_localhost_task(task):
         or task._task.delegate_to == 'localhost'):
         return True
     return False
+
+
+def _sanitize_filename(name):
+    return ''.join(c for c in name if c.isalnum())

@@ -29,6 +29,9 @@ class TestZuulStream(AnsibleZuulTestCase):
         ansible_remote = os.environ.get('ZUUL_REMOTE_IPV4')
         self.assertIsNotNone(ansible_remote)
 
+        # on some systems this test may run longer than 30 seconds
+        self.wait_timeout = 60
+
     def _run_job(self, job_name):
         # Keep the jobdir around so we can inspect contents if an
         # assert fails. It will be cleaned up anyway as it is contained
@@ -96,15 +99,23 @@ class TestZuulStream(AnsibleZuulTestCase):
             self.assertLogLine(
                 'controller \| ok: Runtime: \d:\d\d:\d\d\.\d\d\d\d\d\d', text)
             self.assertLogLine('TASK \[Show contents of second file\]', text)
+            self.assertLogLine('compute1 \| command test two', text)
             self.assertLogLine('controller \| command test two', text)
+            self.assertLogLine('compute1 \| This is a rescue task', text)
             self.assertLogLine('controller \| This is a rescue task', text)
+            self.assertLogLine('compute1 \| This is an always task', text)
             self.assertLogLine('controller \| This is an always task', text)
+            self.assertLogLine('compute1 \| This is a handler', text)
             self.assertLogLine('controller \| This is a handler', text)
             self.assertLogLine('controller \| First free task', text)
             self.assertLogLine('controller \| Second free task', text)
             self.assertLogLine('controller \| This is a shell task after an '
                                'included role', text)
             self.assertLogLine('compute1 \| This is a shell task after an '
+                               'included role', text)
+            self.assertLogLine('controller \| This is a command task after an '
+                               'included role', text)
+            self.assertLogLine('compute1 \| This is a command task after an '
                                'included role', text)
             self.assertLogLine(
                 'controller \| ok: Runtime: \d:\d\d:\d\d\.\d\d\d\d\d\d', text)
