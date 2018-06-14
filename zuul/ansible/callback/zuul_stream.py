@@ -135,7 +135,7 @@ class CallbackModule(default.CallbackModule):
                     "localhost",
                     "Timeout exception waiting for the logger. "
                     "Please check connectivity to [%s:%s]"
-                    % (ip, LOG_STREAM_PORT), executor=True)
+                    % (ip, LOG_STREAM_PORT))
                 return
             except Exception:
                 self._log("[%s] Waiting on logger" % host,
