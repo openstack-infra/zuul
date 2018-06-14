@@ -117,6 +117,10 @@ class TestZuulStream(AnsibleZuulTestCase):
                                'included role', text)
             self.assertLogLine('compute1 \| This is a command task after an '
                                'included role', text)
+            self.assertLogLine('controller \| This is a shell task with '
+                               'delegate compute1', text)
+            self.assertLogLine('controller \| This is a shell task with '
+                               'delegate controller', text)
             self.assertLogLine(
                 'controller \| ok: Runtime: \d:\d\d:\d\d\.\d\d\d\d\d\d', text)
             self.assertLogLine('PLAY RECAP', text)

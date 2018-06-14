@@ -217,7 +217,7 @@ class CallbackModule(default.CallbackModule):
             play_vars = self._play._variable_manager._hostvars
 
             hosts = self._get_task_hosts(task)
-            for host in hosts:
+            for host, inventory_hostname in hosts:
                 if host in ('localhost', '127.0.0.1'):
                     # Don't try to stream from localhost
                     continue
@@ -228,7 +228,7 @@ class CallbackModule(default.CallbackModule):
                     # Don't try to stream from localhost
                     continue
                 log_id = "%s-%s" % (
-                    task._uuid, paths._sanitize_filename(host))
+                    task._uuid, paths._sanitize_filename(inventory_hostname))
                 streamer = threading.Thread(
                     target=self._read_log, args=(
                         host, ip, log_id, task_name, hosts))
@@ -560,14 +560,21 @@ class CallbackModule(default.CallbackModule):
         return task
 
     def _get_task_hosts(self, task):
-        # If this task has as delegate to, we don't care about the play hosts,
-        # we care about the task's delegate target.
-        if task.delegate_to:
-            return [task.delegate_to]
+        result = []
 
         # _restriction returns the parsed/compiled list of hosts after
         # applying subsets/limits
-        return self._play._variable_manager._inventory._restriction
+        hosts = self._play._variable_manager._inventory._restriction
+        for inventory_host in hosts:
+            # If this task has as delegate to, we don't care about the play
+            # hosts, we care about the task's delegate target.
+            if task.delegate_to:
+                host = task.delegate_to
+            else:
+                host = inventory_host
+            result.append((host, inventory_host))
+
+        return result
 
     def _dump_result_dict(self, result_dict):
         result_dict = result_dict.copy()

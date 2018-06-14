@@ -8,3 +8,7 @@
 
 - name: Include role command task
   command: echo "This is a command task after an included role"
+
+- name: Include role shell task delegate
+  shell: echo "This is a shell task with delegate {{ inventory_hostname }}"
+  delegate_to: controller
