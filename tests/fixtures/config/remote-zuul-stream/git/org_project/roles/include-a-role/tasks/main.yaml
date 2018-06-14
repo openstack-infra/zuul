@@ -5,3 +5,6 @@
 
 - name: Include role shell task
   shell: echo "This is a shell task after an included role"
+
+- name: Include role command task
+  command: echo "This is a command task after an included role"
