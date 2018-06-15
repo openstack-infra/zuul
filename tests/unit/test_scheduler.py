@@ -2809,10 +2809,10 @@ class TestScheduler(ZuulTestCase):
         self.sched.run_handler_lock.acquire()
         self.assertEqual(self.sched.management_event_queue.qsize(), 0)
 
-        self.sched.reconfigureTenant(tenant, project)
+        self.sched.reconfigureTenant(tenant, project, None)
         self.assertEqual(self.sched.management_event_queue.qsize(), 1)
 
-        self.sched.reconfigureTenant(tenant, project)
+        self.sched.reconfigureTenant(tenant, project, None)
         # The second event should have been combined with the first
         # so we should still only have one entry.
         self.assertEqual(self.sched.management_event_queue.qsize(), 1)
@@ -4853,7 +4853,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.waitUntilSettled()
         # Reconfigure while we still have an outstanding merge job
         self.sched.reconfigureTenant(self.sched.abide.tenants['tenant-one'],
-                                     None)
+                                     None, None)
         self.waitUntilSettled()
         # Verify the merge job is still running and that the item is
         # in the pipeline

@@ -133,8 +133,9 @@ class GithubGearmanWorker(object):
             self.log.debug("Request headers missing the X-Github-Event.")
             raise Exception('Please specify a X-Github-Event header.')
 
+        delivery = headers.get('x-github-delivery')
         try:
-            self.connection.addEvent(body, event)
+            self.connection.addEvent(body, event, delivery)
         except Exception:
             message = 'Exception deserializing JSON body'
             self.log.exception(message)
@@ -183,7 +184,7 @@ class GithubEventConnector(threading.Thread):
         self.connection.addEvent(None)
 
     def _handleEvent(self):
-        ts, json_body, event_type = self.connection.getEvent()
+        ts, json_body, event_type, delivery = self.connection.getEvent()
         if self._stopped:
             return
 
@@ -218,6 +219,7 @@ class GithubEventConnector(threading.Thread):
             event = None
 
         if event:
+            event.delivery = delivery
             if event.change_number:
                 project = self.connection.source.getProject(event.project_name)
                 self.connection._getChange(project,
@@ -671,8 +673,8 @@ class GithubConnection(BaseConnection):
                 # check if we need to do further paged calls
                 url = response.links.get('next', {}).get('url')
 
-    def addEvent(self, data, event=None):
-        return self.event_queue.put((time.time(), data, event))
+    def addEvent(self, data, event=None, delivery=None):
+        return self.event_queue.put((time.time(), data, event, delivery))
 
     def getEvent(self):
         return self.event_queue.get()

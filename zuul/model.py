@@ -2463,6 +2463,20 @@ class TriggerEvent(object):
     def isChangeAbandoned(self):
         return False
 
+    def _repr(self):
+        flags = [str(self.type)]
+        if self.branch_updated:
+            flags.append('branch_updated')
+        if self.branch_created:
+            flags.append('branch_created')
+        if self.branch_deleted:
+            flags.append('branch_deleted')
+        return ' '.join(flags)
+
+    def __repr__(self):
+        return '<%s 0x%x %s>' % (self.__class__.__name__,
+                                 id(self), self._repr())
+
 
 class BaseFilter(ConfigObject):
     """Base Class for filtering which Changes and Events to process."""

@@ -425,9 +425,10 @@ class Scheduler(threading.Thread):
         self.result_event_queue.put(event)
         self.wake_event.set()
 
-    def reconfigureTenant(self, tenant, project):
+    def reconfigureTenant(self, tenant, project, event):
         self.log.debug("Submitting tenant reconfiguration event for "
-                       "%s due to project %s", tenant.name, project)
+                       "%s due to event %s in project %s",
+                       tenant.name, event, project)
         event = TenantReconfigureEvent(tenant, project)
         self.management_event_queue.put(event)
         self.wake_event.set()
@@ -942,7 +943,7 @@ class Scheduler(threading.Thread):
                     # or a branch was just created or deleted.  Clear
                     # out cached data for this project and perform a
                     # reconfiguration.
-                    self.reconfigureTenant(tenant, change.project)
+                    self.reconfigureTenant(tenant, change.project, event)
                 for pipeline in tenant.layout.pipelines.values():
                     if event.isPatchsetCreated():
                         pipeline.manager.removeOldVersionsOfChange(change)
