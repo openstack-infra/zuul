@@ -142,7 +142,7 @@ success, the pipeline reports back to Gerrit with ``Verified`` vote of
    .. attr:: manager
       :required:
 
-      There are currently two schemes for managing pipelines:
+      There are three schemes for managing pipelines:
 
       .. value:: independent
 
@@ -185,6 +185,23 @@ success, the pipeline reports back to Gerrit with ``Verified`` vote of
 
          For more detail on the theory and operation of Zuul's
          dependent pipeline manager, see: :doc:`gating`.
+
+      .. value:: supercedent
+
+         This is like an independent pipeline, in that every item is
+         distinct, except that items are grouped by project and ref,
+         and only one item for each project-ref is processed at a
+         time.  If more than one additional item is enqueued for the
+         project-ref, previously enqueued items which have not started
+         processing are removed.
+
+         In other words, this pipeline manager will only run jobs for
+         the most recent item enqueued for a given project-ref.
+
+         This may be useful for post-merge pipelines which perform
+         artifact builds where only the latest version is of use.  In
+         these cases, build resources can be conserved by avoiding
+         building intermediate versions.
 
    .. attr:: post-review
       :default: false

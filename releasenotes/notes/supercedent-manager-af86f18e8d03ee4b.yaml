@@ -1,0 +1,5 @@
+features:
+  - |
+    The :value:`pipeline.manager.supercedent` pipeline manager has
+    been added.  It is designed to make post-merge artifact build
+    pipelines more efficient.

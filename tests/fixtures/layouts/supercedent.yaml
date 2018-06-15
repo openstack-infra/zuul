@@ -1,0 +1,21 @@
+- pipeline:
+    name: post
+    manager: supercedent
+    trigger:
+      gerrit:
+        - event: ref-updated
+          ref: ^(?!refs/).*$
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: post-job
+
+- project:
+    name: org/project
+    post:
+      jobs:
+        - post-job
