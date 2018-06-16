@@ -1,4 +1,4 @@
-features:
+upgrade:
   - |
     Files (and irrelevant-files) matchers are now overridable.  Zuul
     now uses only branch matchers to collect job variants.  Once those
@@ -6,3 +6,4 @@ features:
     irrelevant-files attributes are inherited and overridden as any
     other job attribute.  The final values are used to determine
     whether the job should ultimately run.
+  - Zuul now uses Ansible 2.5.
