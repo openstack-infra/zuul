@@ -596,7 +596,8 @@ class Scheduler(threading.Thread):
         # a request
         self.layout_lock.acquire()
         try:
-            self.log.info("Tenant reconfiguration beginning")
+            self.log.info("Tenant reconfiguration beginning for %s due to "
+                          "projects %s", event.tenant_name, event.projects)
             # If a change landed to a project, clear out the cached
             # config before reconfiguring.
             # TODO(jeblair): this could probably clear only the specific branch
