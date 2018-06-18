@@ -246,6 +246,29 @@ class TestTenantGroups4(TenantParserTestCase):
         self.assertEqual(1, len(cat_jobs))
 
 
+class TestTenantGroups5(TenantParserTestCase):
+    tenant_config_file = 'config/tenant-parser/groups5.yaml'
+
+    def test_tenant_single_projet_exclude(self):
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        self.assertEqual(['common-config'],
+                         [x.name for x in tenant.config_projects])
+        self.assertEqual(['org/project1'],
+                         [x.name for x in tenant.untrusted_projects])
+        project = tenant.config_projects[0]
+        tpc = tenant.project_configs[project.canonical_name]
+        self.assertEqual(self.CONFIG_SET, tpc.load_classes)
+        project = tenant.untrusted_projects[0]
+        tpc = tenant.project_configs[project.canonical_name]
+        self.assertEqual(set([]),
+                         tpc.load_classes)
+        # Check that only one merger:cat job was requested
+        # org/project1 and org/project2 have an empty load_classes
+        cat_jobs = [job for job in self.gearman_server.jobs_history
+                    if job.name == b'merger:cat']
+        self.assertEqual(1, len(cat_jobs))
+
+
 class TestTenantFromScript(TestTenantSimple):
     tenant_config_file = None
     tenant_config_script_file = 'config/tenant-parser/tenant_config_script.py'

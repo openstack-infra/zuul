@@ -1383,10 +1383,12 @@ class TenantParser(object):
             project = source.getProject(project_name)
             shadow_projects = as_list(conf[project_name].get('shadow', []))
 
-            project_include = frozenset(
-                as_list(conf[project_name].get('include', [])))
-            if not project_include:
+            # We check for None since the user may set include to an empty list
+            if conf[project_name].get("include") is None:
                 project_include = current_include
+            else:
+                project_include = frozenset(
+                    as_list(conf[project_name]['include']))
             project_exclude = frozenset(
                 as_list(conf[project_name].get('exclude', [])))
             if project_exclude:
