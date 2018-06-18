@@ -18,6 +18,7 @@ import time
 
 from kazoo.client import KazooClient, KazooState
 from kazoo import exceptions as kze
+from kazoo.handlers.threading import KazooTimeoutError
 from kazoo.recipe.lock import Lock
 
 import zuul.model
@@ -44,12 +45,16 @@ class ZooKeeper(object):
     REQUEST_ROOT = '/nodepool/requests'
     NODE_ROOT = '/nodepool/nodes'
 
+    # Log zookeeper retry every 10 seconds
+    retry_log_rate = 10
+
     def __init__(self):
         '''
         Initialize the ZooKeeper object.
         '''
         self.client = None
         self._became_lost = False
+        self._last_retry_log = 0
 
     def _dictToStr(self, data):
         return json.dumps(data).encode('utf8')
@@ -90,6 +95,12 @@ class ZooKeeper(object):
     def resetLostFlag(self):
         self._became_lost = False
 
+    def logConnectionRetryEvent(self):
+        now = time.monotonic()
+        if now - self._last_retry_log >= self.retry_log_rate:
+            self.log.warning("Retrying zookeeper connection")
+            self._last_retry_log = now
+
     def connect(self, hosts, read_only=False, timeout=10.0):
         '''
         Establish a connection with ZooKeeper cluster.
@@ -107,7 +118,13 @@ class ZooKeeper(object):
             self.client = KazooClient(hosts=hosts, read_only=read_only,
                                       timeout=timeout)
             self.client.add_listener(self._connection_listener)
-            self.client.start()
+            # Manually retry initial connection attempt
+            while True:
+                try:
+                    self.client.start(1)
+                    break
+                except KazooTimeoutError:
+                    self.logConnectionRetryEvent()
 
     def disconnect(self):
         '''
