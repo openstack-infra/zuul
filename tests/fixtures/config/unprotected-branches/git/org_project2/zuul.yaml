@@ -1,1 +1,2 @@
-This zuul.yaml is intentionally broken and should not be loaded on startup.
+- job:
+    name: unused-job
