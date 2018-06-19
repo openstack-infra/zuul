@@ -9,11 +9,6 @@
         path: /tmp/console-None.log
         state: touch
         mode: 0444
-      # FIXME(tobiash): This is currently needed because the currently
-      # running zuul in OpenStack already shows this misbehavior and creates
-      # that file as root. So for now it is safe to ignore errors here.
-      # This should be removed once a fixed zuul is deployed.
-      failed_when: False
 
     - name: Start zuul_console daemon
       zuul_console:
