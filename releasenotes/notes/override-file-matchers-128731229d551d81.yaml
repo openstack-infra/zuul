@@ -7,3 +7,13 @@ upgrade:
     other job attribute.  The final values are used to determine
     whether the job should ultimately run.
   - Zuul now uses Ansible 2.5.
+security:
+  - |
+    Tobias Henkel (BMW Car IT GmbH) discovered a vulnerability which
+    is fixed in this release. If nodes become offline during the
+    build, the no_log attribute of a task is ignored. If the
+    unreachable error occurred in a task used with a loop variable
+    (e.g., with_items), the contents of the loop items would be
+    printed in the console. This could lead to accidentally leaking
+    credentials or secrets. MITRE has assigned CVE-2018-12557 to this
+    vulnerability.
