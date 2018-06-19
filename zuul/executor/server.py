@@ -1861,7 +1861,7 @@ class ExecutorServer(object):
 
         self.library_dir = os.path.join(plugin_dir, 'library')
         self.action_dir = os.path.join(plugin_dir, 'action')
-        self.action_dir_general = os.path.join(plugin_dir, 'action-general')
+        self.action_dir_general = os.path.join(plugin_dir, 'actiongeneral')
         self.callback_dir = os.path.join(plugin_dir, 'callback')
         self.lookup_dir = os.path.join(plugin_dir, 'lookup')
         self.filter_dir = os.path.join(plugin_dir, 'filter')
