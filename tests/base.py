@@ -22,6 +22,7 @@ import errno
 import gc
 import hashlib
 from io import StringIO
+import itertools
 import json
 import logging
 import os
@@ -2963,9 +2964,14 @@ class ZuulTestCase(BaseTestCase):
         while time.time() < (start + 5):
             # Note our fake statsd just queues up results in a queue.
             # We just keep going through them until we find one that
-            # matches, or fail out.
-            for stat in self.statsd.stats:
-                k, v = stat.decode('utf-8').split(':')
+            # matches, or fail out.  If statsd pipelines are used,
+            # large single packets are sent with stats separated by
+            # newlines; thus we first flatten the stats out into
+            # single entries.
+            stats = itertools.chain.from_iterable(
+                [s.decode('utf-8').split('\n') for s in self.statsd.stats])
+            for stat in stats:
+                k, v = stat.split(':')
                 if key == k:
                     if kind is None:
                         # key with no qualifiers is found
