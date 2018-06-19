@@ -844,6 +844,79 @@ class TestGithubUnprotectedBranches(ZuulTestCase):
         self.assertIn('master', tpc1.parsed_branch_config.keys())
         self.assertIn('master', tpc2.parsed_branch_config.keys())
 
+    def test_unprotected_push(self):
+        """Test that unprotected pushes don't cause tenant reconfigurations"""
+
+        # Prepare repo with an initial commit
+        A = self.fake_github.openFakePullRequest('org/project2', 'master', 'A')
+        A.setMerged("merging A")
+
+        # Do a push on top of A
+        pevent = self.fake_github.getPushEvent(project='org/project2',
+                                               old_rev=A.head_sha,
+                                               ref='refs/heads/master',
+                                               modified_files=['zuul.yaml'])
+
+        # record previous tenant reconfiguration time, which may not be set
+        old = self.sched.tenant_last_reconfigured.get('tenant-one', 0)
+        self.waitUntilSettled()
+        time.sleep(1)
+
+        self.fake_github.emitEvent(pevent)
+        self.waitUntilSettled()
+        new = self.sched.tenant_last_reconfigured.get('tenant-one', 0)
+
+        # We don't expect a reconfiguration because the push was to an
+        # unprotected branch
+        self.assertEqual(old, new)
+
+        # now enable branch protection and trigger the push event again
+        github = self.fake_github.getGithubClient()
+        repo = github.repo_from_project('org/project2')
+        repo._set_branch_protection('master', True)
+
+        self.fake_github.emitEvent(pevent)
+        self.waitUntilSettled()
+        new = self.sched.tenant_last_reconfigured.get('tenant-one', 0)
+
+        # We now expect that zuul reconfigured itself
+        self.assertLess(old, new)
+
+    def test_unprotected_branch_delete(self):
+        """Test that protected branch deletes trigger a tenant reconfig"""
+
+        # Prepare repo with an initial commit
+        A = self.fake_github.openFakePullRequest('org/project2', 'master', 'A')
+        A.setMerged("merging A")
+
+        # now enable branch protection and trigger a reconfiguration
+        github = self.fake_github.getGithubClient()
+        repo = github.repo_from_project('org/project2')
+        repo._set_branch_protection('feat-x', True)
+
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        # record previous tenant reconfiguration time, which may not be set
+        old = self.sched.tenant_last_reconfigured.get('tenant-one', 0)
+        self.waitUntilSettled()
+        time.sleep(1)
+
+        # Delete the branch
+        pevent = self.fake_github.getPushEvent(project='org/project2',
+                                               old_rev=A.head_sha,
+                                               new_rev='0' * 40,
+                                               ref='refs/heads/master',
+                                               modified_files=['zuul.yaml'])
+
+        self.fake_github.emitEvent(pevent)
+        self.waitUntilSettled()
+        new = self.sched.tenant_last_reconfigured.get('tenant-one', 0)
+
+        # We now expect that zuul reconfigured itself as we deleted a protected
+        # branch
+        self.assertLess(old, new)
+
 
 class TestGithubWebhook(ZuulTestCase):
     config_file = 'zuul-github-driver.conf'

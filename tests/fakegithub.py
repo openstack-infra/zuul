@@ -31,6 +31,12 @@ class FakeBranch(object):
         self.name = branch
         self.protected = protected
 
+    def as_dict(self):
+        return {
+            'name': self.name,
+            'protected': self.protected
+        }
+
 
 class FakeStatus(object):
     def __init__(self, state, url, description, context, user):
@@ -119,19 +125,30 @@ class FakeRepository(object):
         entity, request = path.split('/', 1)
 
         if entity == 'branches':
-            return self.get_url_branch(request)
+            return self.get_url_branches(request)
         if entity == 'collaborators':
             return self.get_url_collaborators(request)
         else:
             return None
 
-    def get_url_branch(self, path):
-        branch, entity = path.split('/')
+    def get_url_branches(self, path):
+        elements = path.split('/')
 
+        branch = elements[0]
+        if len(elements) == 1:
+            return self.get_url_branch(branch)
+
+        entity = elements[1]
         if entity == 'protection':
             return self.get_url_protection(branch)
         else:
             return None
+
+    def get_url_branch(self, branch_name):
+        for branch in self._branches:
+            if branch.name == branch_name:
+                return FakeResponse(branch.as_dict())
+        return FakeResponse(None, 404)
 
     def get_url_collaborators(self, path):
         login, entity = path.split('/')
@@ -257,8 +274,8 @@ class FakeIssueSearchResult(object):
 
 
 class FakeResponse(object):
-    def __init__(self, data):
-        self.status_code = 200
+    def __init__(self, data, status_code=200):
+        self.status_code = status_code
         self.data = data
 
     def json(self):

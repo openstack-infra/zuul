@@ -934,11 +934,24 @@ class Scheduler(threading.Thread):
                                    "source %s",
                                    e.change, project.source)
                     continue
+                reconfigure_tenant = False
                 if ((event.branch_updated and
                      hasattr(change, 'files') and
                      change.updatesConfig()) or
                     event.branch_created or
                     event.branch_deleted):
+
+                    reconfigure_tenant = True
+
+                # If the branch is unprotected and unprotected branches
+                # are excluded from the tenant for that project skip reconfig.
+                if (reconfigure_tenant and not
+                    event.branch_protected and
+                    tenant.getExcludeUnprotectedBranches(project)):
+
+                    reconfigure_tenant = False
+
+                if reconfigure_tenant:
                     # The change that just landed updates the config
                     # or a branch was just created or deleted.  Clear
                     # out cached data for this project and perform a
