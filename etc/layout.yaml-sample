@@ -8,7 +8,7 @@ pipelines:
       gerrit:
         Verified: 1
     failure:
-     gerrit:
+      gerrit:
         Verified: -1
 
   - name: tests
