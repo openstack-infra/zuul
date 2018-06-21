@@ -81,7 +81,7 @@ class GerritEventConnector(threading.Thread):
             event.change_url = change.get('url')
             patchset = data.get('patchSet')
             if patchset:
-                event.patch_number = patchset.get('number')
+                event.patch_number = str(patchset.get('number'))
                 event.ref = patchset.get('ref')
             event.approvals = data.get('approvals', [])
             event.comment = data.get('comment')
@@ -382,6 +382,9 @@ class GerritConnection(BaseConnection):
         return change
 
     def _getChange(self, number, patchset, refresh=False, history=None):
+        # Ensure number and patchset are str
+        number = str(number)
+        patchset = str(patchset)
         change = self._change_cache.get(number, {}).get(patchset)
         if change and not refresh:
             return change
@@ -430,7 +433,8 @@ class GerritConnection(BaseConnection):
                 result['commitMessage']):
                 if match != change_id:
                     continue
-                key = (result['number'], result['currentPatchSet']['number'])
+                key = (str(result['number']),
+                       str(result['currentPatchSet']['number']))
                 if key in seen:
                     continue
                 self.log.debug("Updating %s: Found change %s,%s "
@@ -468,8 +472,7 @@ class GerritConnection(BaseConnection):
         change._data = data
 
         if change.patchset is None:
-            change.patchset = data['currentPatchSet']['number']
-
+            change.patchset = str(data['currentPatchSet']['number'])
         if 'project' not in data:
             raise exceptions.ChangeNotFound(change.number, change.patchset)
         change.project = self.source.getProject(data['project'])
@@ -483,12 +486,12 @@ class GerritConnection(BaseConnection):
         max_ps = 0
         files = []
         for ps in data['patchSets']:
-            if ps['number'] == change.patchset:
+            if str(ps['number']) == change.patchset:
                 change.ref = ps['ref']
                 for f in ps.get('files', []):
                     files.append(f['file'])
             if int(ps['number']) > int(max_ps):
-                max_ps = ps['number']
+                max_ps = str(ps['number'])
         if max_ps == change.patchset:
             change.is_current_patchset = True
         else:
@@ -533,8 +536,8 @@ class GerritConnection(BaseConnection):
         compat_needs_changes = []
         for record in self._getDependsOnFromCommit(data['commitMessage'],
                                                    change):
-            dep_num = record['number']
-            dep_ps = record['currentPatchSet']['number']
+            dep_num = str(record['number'])
+            dep_ps = str(record['currentPatchSet']['number'])
             self.log.debug("Updating %s: Getting commit-dependent "
                            "change %s,%s" %
                            (change, dep_num, dep_ps))
@@ -561,8 +564,8 @@ class GerritConnection(BaseConnection):
 
         compat_needed_by_changes = []
         for record in self._getNeededByFromCommit(data['id'], change):
-            dep_num = record['number']
-            dep_ps = record['currentPatchSet']['number']
+            dep_num = str(record['number'])
+            dep_ps = str(record['currentPatchSet']['number'])
             self.log.debug("Updating %s: Getting commit-needed change %s,%s" %
                            (change, dep_num, dep_ps))
             # Because a commit needed-by may be a cross-repo
