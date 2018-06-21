@@ -478,6 +478,82 @@ class FakeGerritChange(object):
         self.reported += 1
 
 
+class GerritWebServer(object):
+
+    def __init__(self, fake_gerrit):
+        super(GerritWebServer, self).__init__()
+        self.fake_gerrit = fake_gerrit
+
+    def start(self):
+        fake_gerrit = self.fake_gerrit
+
+        class Server(http.server.SimpleHTTPRequestHandler):
+            log = logging.getLogger("zuul.test.FakeGerritConnection")
+            review_re = re.compile('/a/changes/(.*?)/revisions/(.*?)/review')
+            submit_re = re.compile('/a/changes/(.*?)/submit')
+
+            def do_POST(self):
+                path = self.path
+                self.log.debug("Got POST %s", path)
+
+                data = self.rfile.read(int(self.headers['Content-Length']))
+                data = json.loads(data.decode('utf-8'))
+                self.log.debug("Got data %s", data)
+
+                m = self.review_re.match(path)
+                if m:
+                    return self.review(m.group(1), m.group(2), data)
+                m = self.submit_re.match(path)
+                if m:
+                    return self.submit(m.group(1), data)
+                self.send_response(500)
+                self.end_headers()
+
+            def _404(self):
+                self.send_response(404)
+                self.end_headers()
+
+            def _get_change(self, change_id):
+                for c in fake_gerrit.changes.values():
+                    if c.data['id'] == change_id:
+                        return c
+
+            def review(self, change_id, revision, data):
+                change = self._get_change(change_id)
+                if not change:
+                    return self._404()
+
+                message = data['message']
+                action = data['labels']
+                fake_gerrit._test_handle_review(
+                    int(change.data['number']), message, action)
+                self.send_response(200)
+                self.end_headers()
+
+            def submit(self, change_id, data):
+                change = self._get_change(change_id)
+                if not change:
+                    return self._404()
+
+                message = None
+                action = {'submit': True}
+                fake_gerrit._test_handle_review(
+                    int(change.data['number']), message, action)
+                self.send_response(200)
+                self.end_headers()
+
+        self.httpd = socketserver.ThreadingTCPServer(('', 0), Server)
+        self.port = self.httpd.socket.getsockname()[1]
+        self.thread = threading.Thread(name='GerritWebServer',
+                                       target=self.httpd.serve_forever)
+        self.thread.daemon = True
+        self.thread.start()
+
+    def stop(self):
+        self.httpd.shutdown()
+        self.thread.join()
+
+
 class FakeGerritConnection(gerritconnection.GerritConnection):
     """A Fake Gerrit connection for use in tests.
 
@@ -490,6 +566,15 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
 
     def __init__(self, driver, connection_name, connection_config,
                  changes_db=None, upstream_root=None):
+
+        if connection_config.get('password'):
+            self.web_server = GerritWebServer(self)
+            self.web_server.start()
+            url = 'http://localhost:%s' % self.web_server.port
+            connection_config['baseurl'] = url
+        else:
+            self.web_server = None
+
         super(FakeGerritConnection, self).__init__(driver, connection_name,
                                                    connection_config)
 
@@ -570,9 +655,15 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
         }
         return event
 
-    def review(self, project, changeid, message, action):
-        number, ps = changeid.split(',')
-        change = self.changes[int(number)]
+    def review(self, change, message, action):
+        if self.web_server:
+            return super(FakeGerritConnection, self).review(
+                change, message, action)
+        self._test_handle_review(int(change.number), message, action)
+
+    def _test_handle_review(self, change_number, message, action):
+        # Handle a review action from a test
+        change = self.changes[change_number]
 
         # Add the approval back onto the change (ie simulate what gerrit would
         # do).
@@ -588,7 +679,8 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
             if cat != 'submit':
                 change.addApproval(cat, action[cat], username=self.user)
 
-        change.messages.append(message)
+        if message:
+            change.messages.append(message)
 
         if 'submit' in action:
             change.setMerged()
@@ -2340,6 +2432,9 @@ class ZuulTestCase(BaseTestCase):
             con = FakeGerritConnection(driver, name, config,
                                        changes_db=db,
                                        upstream_root=self.upstream_root)
+            if con.web_server:
+                self.addCleanup(con.web_server.stop)
+
             self.event_queues.append(con.event_queue)
             setattr(self, 'fake_' + name, con)
             return con
@@ -2651,6 +2746,7 @@ class ZuulTestCase(BaseTestCase):
                      'pydevd.Reader',
                      'pydevd.Writer',
                      'socketserver_Thread',
+                     'GerritWebServer',
                      ]
         threads = [t for t in threading.enumerate()
                    if t.name not in whitelist]

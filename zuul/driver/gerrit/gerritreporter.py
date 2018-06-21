@@ -42,12 +42,10 @@ class GerritReporter(BaseReporter):
 
         self.log.debug("Report change %s, params %s, message: %s" %
                        (item.change, self.config, message))
-        changeid = '%s,%s' % (item.change.number, item.change.patchset)
         item.change._ref_sha = item.change.project.source.getRefSha(
             item.change.project, 'refs/heads/' + item.change.branch)
 
-        return self.connection.review(item.change.project.name, changeid,
-                                      message, self.config)
+        return self.connection.review(item.change, message, self.config)
 
     def getSubmitAllowNeeds(self):
         """Get a list of code review labels that are allowed to be

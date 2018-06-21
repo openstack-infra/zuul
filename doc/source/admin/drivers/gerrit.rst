@@ -36,6 +36,7 @@ The supported options in ``zuul.conf`` connections are:
          The connection must set ``driver=gerrit`` for Gerrit connections.
 
    .. attr:: server
+      :required:
 
       Fully qualified domain name of Gerrit server.
 
@@ -58,8 +59,9 @@ The supported options in ``zuul.conf`` connections are:
       Gerrit server port.
 
    .. attr:: baseurl
+      :default: https://{server}
 
-      Path to Gerrit web interface.
+      Path to Gerrit web interface.  Omit the trailing ``/``.
 
    .. attr:: gitweb_url_template
       :default: {baseurl}/gitweb?p={project.name}.git;a=commitdiff;h={sha}
@@ -86,6 +88,40 @@ The supported options in ``zuul.conf`` connections are:
       :default: 60
 
       SSH connection keepalive timeout; ``0`` disables.
+
+   .. attr:: password
+
+      The HTTP authentication password for the user.  This is
+      optional, but if it is provided, Zuul will report to Gerrit via
+      HTTP rather than SSH.  It is required in order for file and line
+      comments to reported (the Gerrit SSH API only supports review
+      messages).  Retrieve this password from the ``HTTP Password``
+      section of the ``Settings`` page in Gerrit.
+
+   .. attr:: auth_type
+      :default: digest
+
+      The HTTP authentication mechanism.
+
+      .. value:: digest
+
+         HTTP Digest authentication; the default for most Gerrit
+         installations.
+
+      .. value:: basic
+
+         HTTP Basic authentication.
+
+      .. value:: form
+
+         Zuul will submit a username and password to a form in order
+         to authenticate.
+
+   .. attr:: verify_ssl
+      :default: true
+
+      When using a self-signed certificate, this may be set to
+      ``false`` to disable SSL certificate verification.
 
 Trigger Configuration
 ---------------------
