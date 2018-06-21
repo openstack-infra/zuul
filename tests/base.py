@@ -1952,9 +1952,10 @@ class MySQLSchemaFixture(fixtures.Fixture):
                              db="openstack_citest")
         cur = db.cursor()
         cur.execute("create database %s" % self.name)
-        cur.execute(
-            "grant all on %s.* to '%s'@'' identified by '%s'" %
-            (self.name, self.name, self.passwd))
+        cur.execute("create user '{user}'@'' identified by '{passwd}'".format(
+            user=self.name, passwd=self.passwd))
+        cur.execute("grant all on {name}.* to '{name}'@''".format(
+            name=self.name))
         cur.execute("flush privileges")
 
         self.dburi = 'mysql+pymysql://{name}:{passwd}@{host}/{name}'.format(
