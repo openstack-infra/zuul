@@ -9,6 +9,7 @@
         path: /tmp/console-None.log
         state: touch
         mode: 0444
+      run_once: True
 
     - name: Start zuul_console daemon
       zuul_console:
