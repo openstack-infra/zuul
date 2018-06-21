@@ -177,9 +177,10 @@ class FakeGerritChange(object):
         self.needed_by_changes = []
         self.fail_merge = False
         self.messages = []
+        self.comments = []
         self.data = {
             'branch': branch,
-            'comments': [],
+            'comments': self.comments,
             'commitMessage': subject,
             'createdOn': time.time(),
             'id': 'I' + random_sha1(),
@@ -271,6 +272,19 @@ class FakeGerritChange(object):
         self.data['currentPatchSet'] = d
         self.patchsets.append(d)
         self.data['submitRecords'] = self.getSubmitRecords()
+
+    def addComment(self, filename, line, message, name, email, username):
+        comment = {
+            'file': filename,
+            'line': int(line),
+            'reviewer': {
+                'name': name,
+                'email': email,
+                'username': username,
+            },
+            'message': message,
+        }
+        self.comments.append(comment)
 
     def getPatchsetCreatedEvent(self, patchset):
         event = {"type": "patchset-created",
@@ -525,8 +539,9 @@ class GerritWebServer(object):
 
                 message = data['message']
                 action = data['labels']
+                comments = data.get('comments', {})
                 fake_gerrit._test_handle_review(
-                    int(change.data['number']), message, action)
+                    int(change.data['number']), message, action, comments)
                 self.send_response(200)
                 self.end_headers()
 
@@ -655,13 +670,14 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
         }
         return event
 
-    def review(self, change, message, action):
+    def review(self, change, message, action, file_comments):
         if self.web_server:
             return super(FakeGerritConnection, self).review(
-                change, message, action)
+                change, message, action, file_comments)
         self._test_handle_review(int(change.number), message, action)
 
-    def _test_handle_review(self, change_number, message, action):
+    def _test_handle_review(self, change_number, message, action,
+                            file_comments=None):
         # Handle a review action from a test
         change = self.changes[change_number]
 
@@ -682,6 +698,12 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
         if message:
             change.messages.append(message)
 
+        if file_comments:
+            for filename, commentlist in file_comments.items():
+                for comment in commentlist:
+                    change.addComment(filename, comment['line'],
+                                      comment['message'], 'Zuul',
+                                      'zuul@example.com', self.user)
         if 'submit' in action:
             change.setMerged()
         if message:

@@ -776,14 +776,16 @@ class GerritConnection(BaseConnection):
     def eventDone(self):
         self.event_queue.task_done()
 
-    def review(self, change, message, action={}):
+    def review(self, change, message, action={},
+               file_comments={}):
         if self.session:
             meth = self.review_http
         else:
             meth = self.review_ssh
-        return meth(change, message, action)
+        return meth(change, message, action, file_comments)
 
-    def review_ssh(self, change, message, action={}):
+    def review_ssh(self, change, message, action={},
+                   file_comments={}):
         project = change.project.name
         cmd = 'gerrit review --project %s' % project
         if message:
