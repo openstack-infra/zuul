@@ -23,7 +23,9 @@
     - name: Show contents of first file
       command: "cat {{ ansible_user_dir }}/command_test_file1"
     - name: Show contents of second file
-      command: "cat {{ ansible_user_dir }}/command_test_file2"
+      # We use a sleep here to ensure that we log even after
+      # a period of no logging.
+      shell: "sleep 6 && cat {{ ansible_user_dir }}/command_test_file2"
 
     # Test a task with a handler
     - name: Run a command with notifying a handler
