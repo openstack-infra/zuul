@@ -647,6 +647,9 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
         path = os.path.join(self.upstream_root, project.name)
         repo = git.Repo(path)
         for ref in repo.refs:
+            if ref.path.endswith('.lock'):
+                # don't treat lockfiles as ref
+                continue
             r = ref.object.hexsha + ' ' + ref.path + '\n'
             ret += '%04x%s' % (len(r) + 4, r)
         ret += '0000'
