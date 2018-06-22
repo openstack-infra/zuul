@@ -53,6 +53,7 @@ class GithubTriggerEvent(TriggerEvent):
         self.title = None
         self.label = None
         self.unlabel = None
+        self.delivery = None
 
     def isPatchsetCreated(self):
         if self.type == 'pull_request':
@@ -63,6 +64,12 @@ class GithubTriggerEvent(TriggerEvent):
         if self.type == 'pull_request':
             return 'closed' == self.action
         return False
+
+    def _repr(self):
+        r = [super(GithubTriggerEvent, self)._repr()]
+        if self.delivery:
+            r.append('delivery: %s' % self.delivery)
+        return ' '.join(r)
 
 
 class GithubCommonFilter(object):
