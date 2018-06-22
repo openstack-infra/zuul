@@ -739,19 +739,21 @@ class TestGithubDriver(ZuulTestCase):
         self.assertNotIn('merge', B.labels)
         self.assertNotIn('merge', C.labels)
 
-    @simple_layout('layouts/basic-github.yaml', driver='github')
-    def test_push_event_reconfigure(self):
-        pevent = self.fake_github.getPushEvent(project='org/common-config',
-                                               ref='refs/heads/master',
-                                               modified_files=['zuul.yaml'])
+    def _test_push_event_reconfigure(self, project, branch,
+                                     old_sha='0' * 40, expected_cat_jobs=1):
+        pevent = self.fake_github.getPushEvent(
+            project=project,
+            ref='refs/heads/%s' % branch,
+            old_rev=old_sha,
+            modified_files=['zuul.yaml'])
 
         # record previous tenant reconfiguration time, which may not be set
         old = self.sched.tenant_last_reconfigured.get('tenant-one', 0)
         time.sleep(1)
         self.waitUntilSettled()
 
-        # clear the gearman jobs history so we can count the cat jobs issued
-        # during reconfiguration
+        # clear the gearman jobs history so we can count the cat jobs
+        # issued during reconfiguration
         self.gearman_server.jobs_history.clear()
 
         self.fake_github.emitEvent(pevent)
@@ -760,11 +762,36 @@ class TestGithubDriver(ZuulTestCase):
         # New timestamp should be greater than the old timestamp
         self.assertLess(old, new)
 
-        # We only expect one cat job here as the (empty) config of org/project
-        # should be cached.
-        cat_jobs = [job for job in self.gearman_server.jobs_history
-                    if job.name == b'merger:cat']
-        self.assertEqual(1, len(cat_jobs))
+        # Check the expected number of cat jobs here as the (empty) config of
+        # org/project should be cached.
+        cat_jobs = set([job for job in self.gearman_server.jobs_history
+                       if job.name == b'merger:cat'])
+        self.assertEqual(expected_cat_jobs, len(cat_jobs), cat_jobs)
+
+    @simple_layout('layouts/basic-github.yaml', driver='github')
+    def test_push_event_reconfigure(self):
+        self._test_push_event_reconfigure('org/common-config', 'master')
+
+    @simple_layout('layouts/basic-github.yaml', driver='github')
+    def test_push_event_reconfigure_complex_branch(self):
+
+        branch = 'feature/somefeature'
+        project = 'org/common-config'
+
+        # prepare an existing branch
+        self.create_branch(project, branch)
+
+        github = self.fake_github.getGithubClient()
+        repo = github.repo_from_project(project)
+        repo._create_branch(branch)
+
+        A = self.fake_github.openFakePullRequest(project, branch, 'A')
+        old_sha = A.head_sha
+        A.setMerged("merging A")
+
+        self._test_push_event_reconfigure(project, branch,
+                                          old_sha=old_sha,
+                                          expected_cat_jobs=2)
 
     # TODO(jlk): Make this a more generic test for unknown project
     @skip("Skipped for rewrite of webhook handler")

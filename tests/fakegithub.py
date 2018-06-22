@@ -104,6 +104,9 @@ class FakeRepository(object):
         client = FakeGithubClient(self.data)
         return client.session.get(url, headers)
 
+    def _create_branch(self, branch):
+        self._branches.append((FakeBranch(branch=branch)))
+
     def create_status(self, sha, state, url, description, context,
                       user='zuul'):
         # Since we're bypassing github API, which would require a user, we
@@ -134,15 +137,14 @@ class FakeRepository(object):
     def get_url_branches(self, path):
         elements = path.split('/')
 
-        branch = elements[0]
-        if len(elements) == 1:
-            return self.get_url_branch(branch)
-
-        entity = elements[1]
+        entity = elements[-1]
         if entity == 'protection':
+            branch = '/'.join(elements[0:-1])
             return self.get_url_protection(branch)
         else:
-            return None
+            # fall back to treat all elements as branch
+            branch = '/'.join(elements)
+            return self.get_url_branch(branch)
 
     def get_url_branch(self, branch_name):
         for branch in self._branches:

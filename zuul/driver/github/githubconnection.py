@@ -242,7 +242,7 @@ class GithubEventConnector(threading.Thread):
         event.newrev = body.get('after')
         event.commits = body.get('commits')
 
-        ref_parts = event.ref.split('/')  # ie, ['refs', 'heads', 'master']
+        ref_parts = event.ref.split('/', 2)  # ie, ['refs', 'heads', 'foo/bar']
 
         if ref_parts[1] == "heads":
             # necessary for the scheduler to match against particular branches
