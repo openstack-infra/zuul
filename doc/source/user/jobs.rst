@@ -364,7 +364,13 @@ of item.
 
    Post run playbook(s) will be passed this variable to indicate if the run
    phase of the job was successful or not. This variable is meant to be used
-   with the `boolean` filter.
+   with the `bool` filter.
+
+   .. code-block:: yaml
+
+     tasks:
+       - shell: echo example
+         when: zuul_success | bool
 
 
 Change Items
