@@ -842,8 +842,15 @@ class GithubConnection(BaseConnection):
         change.labels = change.pr.get('labels')
         # ensure message is at least an empty string
         change.message = change.pr.get('body') or ''
-        change.updated_at = self._ghTimestampToDate(
-            change.pr.get('updated_at'))
+
+        # Note(tobiash): The updated_at timestamp is a moving target that is
+        # not bound to the pull request 'version' we can solve that by just not
+        # updating the timestamp if the pull request is updated in the cache.
+        # This way the old pull request object retains its old timestamp and
+        # the update check works.
+        if not change.updated_at:
+            change.updated_at = self._ghTimestampToDate(
+                change.pr.get('updated_at'))
         change.url = change.pr.get('url')
         change.uris = [
             '%s/%s/pull/%s' % (self.server, change.project.name,
