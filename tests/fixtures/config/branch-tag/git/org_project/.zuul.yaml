@@ -6,4 +6,5 @@
     name: org/project
     tag:
       jobs:
+        - central-job
         - test-job

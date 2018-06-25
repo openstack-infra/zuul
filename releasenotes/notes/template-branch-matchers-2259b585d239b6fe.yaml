@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Project Templates are now branch-aware and behave more like
+    project stanzas.  If a template is defined on a branch, it will
+    only apply to changes to that branch.

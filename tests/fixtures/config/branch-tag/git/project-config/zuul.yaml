@@ -10,6 +10,10 @@
     name: base
     parent: null
 
+- job:
+    name: central-job
+    run: playbooks/central-job.yaml
+
 - project:
     name: project-config
     tag:

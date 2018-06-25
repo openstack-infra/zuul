@@ -402,13 +402,36 @@ class TestBranchDeletion(ZuulTestCase):
 class TestBranchTag(ZuulTestCase):
     tenant_config_file = 'config/branch-tag/main.yaml'
 
-    def test_negative_branch_match(self):
-        # Test that a negative branch matcher works with implied branches.
+    def test_no_branch_match(self):
+        # Test that tag jobs run with no explicit branch matchers
         event = self.fake_gerrit.addFakeTag('org/project', 'master', 'foo')
         self.fake_gerrit.addEvent(event)
         self.waitUntilSettled()
         self.assertHistory([
-            dict(name='test-job', result='SUCCESS', ref='refs/tags/foo')])
+            dict(name='central-job', result='SUCCESS', ref='refs/tags/foo'),
+            dict(name='test-job', result='SUCCESS', ref='refs/tags/foo')],
+            ordered=False)
+
+    def test_no_branch_match_multi_branch(self):
+        # Test that tag jobs run with no explicit branch matchers in a
+        # multi-branch project (where jobs generally get implied
+        # branch matchers)
+        self.create_branch('org/project', 'stable/pike')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project', 'stable/pike'))
+        self.waitUntilSettled()
+
+        event = self.fake_gerrit.addFakeTag('org/project', 'master', 'foo')
+        self.fake_gerrit.addEvent(event)
+        self.waitUntilSettled()
+        # test-job does not run in this case because it is defined in
+        # a branched repo with implied branch matchers.  A release job
+        # defined in a multi-branch repo would need at least one
+        # top-level variant with no branch matcher in order to match a
+        # tag.
+        self.assertHistory([
+            dict(name='central-job', result='SUCCESS', ref='refs/tags/foo')])
 
 
 class TestBranchNegative(ZuulTestCase):

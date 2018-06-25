@@ -1034,27 +1034,6 @@ Here is an example of two job definitions:
         branch, the branch containing the job definition is used as an
         implied branch specifier.
 
-      * In the case of a job variant defined within a :ref:`project`,
-        if the project definition is in a :term:`config-project`, no
-        implied branch specifier is used.  If it appears in an
-        :term:`untrusted-project`, with no branch specifier, the
-        branch containing the project definition is used as an implied
-        branch specifier.
-
-      * In the case of a job variant defined within a
-        :ref:`project-template`, if no branch specifier appears, the
-        implied branch containing the project-template definition is
-        used as an implied branch specifier.  This means that
-        definitions of the same project-template on different branches
-        may run different jobs.
-
-        When that project-template is used by a :ref:`project`
-        definition within a :term:`untrusted-project`, the branch
-        containing that project definition is combined with the branch
-        specifier of the project-template.  This means it is possible
-        for a project to use a template on one branch, but not on
-        another.
-
       This allows for the very simple and expected workflow where if a
       project defines a job on the ``master`` branch with no branch
       specifier, and then creates a new branch based on ``master``,
@@ -1098,8 +1077,13 @@ participates in a pipeline.
 Multiple project definitions may appear for the same project (for
 example, in a central :term:`config projects <config-project>` as well
 as in a repo's own ``.zuul.yaml``).  In this case, all of the project
-definitions are combined (the jobs listed in all of the definitions
-will be run).
+definitions for the relevant branch are combined (the jobs listed in
+all of the matching definitions will be run).  If a project definition
+appears in a :term:`config-project`, it will apply to all branches of
+the project.  If it appears in a branch of an
+:term:`untrusted-project` it will only apply to changes on that
+branch.  In the case of an item which does not have a branch (for
+example, a tag), all of the project definitions will be combined.
 
 Consider the following project definition::
 
@@ -1266,7 +1250,14 @@ A Project Template uses the same syntax as a :ref:`project`
 definition, however, in the case of a template, the
 :attr:`project.name` attribute does not refer to the name of a
 project, but rather names the template so that it can be referenced in
-a `Project` definition.
+a :ref:`project` definition.
+
+Because Project Templates may be used outside of the projects they are
+defined, they honor the implied branches :ref:`pragma` (unlike
+Projects).  The same heuristics described in :attr:`job.branches` that
+determine what implied branches a :ref:`job` will receive apply to
+Project Templates (with the exception that it is not possible to
+explicity set a branch matcher on a Project Template).
 
 .. _secret:
 
@@ -1333,7 +1324,7 @@ branch will not immediately produce a configuration error.
    .. attr:: name
       :required:
 
-      The name of the secret, used in a :ref:`Job` definition to
+      The name of the secret, used in a :ref:`job` definition to
       request the secret.
 
    .. attr:: data
@@ -1507,9 +1498,9 @@ pragma directives may not be set and then unset within the same file.
 
       This is a boolean, which, if set, may be used to enable
       (``True``) or disable (``False``) the addition of implied branch
-      matchers to job definitions.  Normally Zuul decides whether to
-      add these based on heuristics described in :attr:`job.branches`.
-      This attribute overrides that behavior.
+      matchers to job and project-template definitions.  Normally Zuul
+      decides whether to add these based on heuristics described in
+      :attr:`job.branches`.  This attribute overrides that behavior.
 
       This can be useful if a project has multiple branches, yet the
       jobs defined in the master branch should apply to all branches.
@@ -1521,7 +1512,8 @@ pragma directives may not be set and then unset within the same file.
 
       This is a list of regular expressions, just as
       :attr:`job.branches`, which may be used to supply the value of
-      the implied branch matcher for all jobs in a file.
+      the implied branch matcher for all jobs and project-templates in
+      a file.
 
       This may be useful if two projects share jobs but have
       dissimilar branch names.  If, for example, two projects have

@@ -1753,6 +1753,8 @@ class QueueItem(object):
             # Conditionally set self.ppc so that the debug method can
             # consult it as we resolve the jobs.
             self.project_pipeline_config = ppc
+            for msg in ppc.debug_messages:
+                self.debug(msg)
             job_graph = self.layout.createJobGraph(self, ppc)
             for job in job_graph.getJobs():
                 # Ensure that each jobs's dependencies are fully
@@ -2537,6 +2539,10 @@ class ProjectPipelineConfig(ConfigObject):
         self.job_list = JobList()
         self.queue_name = None
         self.debug = False
+        self.debug_messages = []
+
+    def addDebug(self, msg):
+        self.debug_messages.append(msg)
 
     def update(self, other):
         if not isinstance(other, ProjectPipelineConfig):
@@ -2564,6 +2570,10 @@ class ProjectConfig(ConfigObject):
         self.merge_mode = None
         self.default_branch = None
 
+    def __repr__(self):
+        return '<ProjectConfig %s source: %s %s>' % (
+            self.name, self.source_context, self.branch_matcher)
+
     def copy(self):
         r = self.__class__(self.name)
         r.source_context = self.source_context
@@ -2575,8 +2585,16 @@ class ProjectConfig(ConfigObject):
         r.default_branch = self.default_branch
         return r
 
-    def addImpliedBranchMatcher(self, branch):
-        self.branch_matcher = change_matcher.ImpliedBranchMatcher(branch)
+    def setImpliedBranchMatchers(self, branches):
+        if len(branches) == 0:
+            self.branch_matcher = None
+        elif len(branches) > 1:
+            matchers = [change_matcher.ImpliedBranchMatcher(branch)
+                        for branch in branches]
+            self.branch_matcher = change_matcher.MatchAny(matchers)
+        else:
+            self.branch_matcher = change_matcher.ImpliedBranchMatcher(
+                branches[0])
 
     def changeMatches(self, change):
         if self.branch_matcher and not self.branch_matcher.matches(change):
@@ -3037,12 +3055,28 @@ class Layout(object):
         project_in_pipeline = False
         for pc in self.getProjectConfigs(item.change.project.canonical_name):
             if not pc.changeMatches(item.change):
+                msg = "Project %s did not match" % (pc,)
+                ppc.addDebug(msg)
+                self.log.debug("%s item %s" % (msg, item))
                 continue
+            msg = "Project %s matched" % (pc,)
+            ppc.addDebug(msg)
+            self.log.debug("%s item %s" % (msg, item))
             for template_name in pc.templates:
                 templates = self.getProjectTemplates(template_name)
                 for template in templates:
                     template_ppc = template.pipelines.get(item.pipeline.name)
                     if template_ppc:
+                        if not template.changeMatches(item.change):
+                            msg = "Project template %s did not match" % (
+                                template,)
+                            ppc.addDebug(msg)
+                            self.log.debug("%s item %s" % (msg, item))
+                            continue
+                        msg = "Project template %s matched" % (
+                            template,)
+                        ppc.addDebug(msg)
+                        self.log.debug("%s item %s" % (msg, item))
                         project_in_pipeline = True
                         ppc.update(template_ppc)
             project_ppc = pc.pipelines.get(item.pipeline.name)
