@@ -40,6 +40,7 @@ import gear
 import zuul.merger.merger
 import zuul.ansible.logconfig
 from zuul.executor.sensors.cpu import CPUSensor
+from zuul.executor.sensors.hdd import HDDSensor
 from zuul.executor.sensors.pause import PauseSensor
 from zuul.executor.sensors.startingbuilds import StartingBuildsSensor
 from zuul.executor.sensors.ram import RAMSensor
@@ -1874,6 +1875,7 @@ class ExecutorServer(object):
         cpu_sensor = CPUSensor(config)
         self.sensors = [
             cpu_sensor,
+            HDDSensor(config),
             self.pause_sensor,
             RAMSensor(config),
             StartingBuildsSensor(self, cpu_sensor.max_load_avg)
