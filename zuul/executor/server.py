@@ -26,6 +26,7 @@ import tempfile
 import threading
 import time
 import traceback
+
 from zuul.lib.yamlutil import yaml
 from zuul.lib.config import get_default
 from zuul.lib.statsd import get_statsd
@@ -39,6 +40,7 @@ import gear
 import zuul.merger.merger
 import zuul.ansible.logconfig
 from zuul.executor.sensors.cpu import CPUSensor
+from zuul.executor.sensors.pause import PauseSensor
 from zuul.executor.sensors.startingbuilds import StartingBuildsSensor
 from zuul.executor.sensors.ram import RAMSensor
 from zuul.lib import commandsocket
@@ -1868,9 +1870,11 @@ class ExecutorServer(object):
                                               self.stopJobDiskFull,
                                               self.merge_root)
 
+        self.pause_sensor = PauseSensor()
         cpu_sensor = CPUSensor(config)
         self.sensors = [
             cpu_sensor,
+            self.pause_sensor,
             RAMSensor(config),
             StartingBuildsSensor(self, cpu_sensor.max_load_avg)
         ]
@@ -2005,12 +2009,10 @@ class ExecutorServer(object):
         self.executor_thread.join()
 
     def pause(self):
-        # TODOv3: implement
-        pass
+        self.pause_sensor.pause = True
 
     def unpause(self):
-        # TODOv3: implement
-        pass
+        self.pause_sensor.pause = False
 
     def graceful(self):
         # TODOv3: implement
