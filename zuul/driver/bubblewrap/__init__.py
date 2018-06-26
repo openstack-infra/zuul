@@ -195,6 +195,7 @@ class BubblewrapDriver(Driver, WrapperInterface):
             '--ro-bind', '/sbin', '/sbin',
             '--ro-bind', '/etc/resolv.conf', '/etc/resolv.conf',
             '--ro-bind', '/etc/hosts', '/etc/hosts',
+            '--ro-bind', '/etc/localtime', '/etc/localtime',
             '--ro-bind', '{ssh_auth_sock}', '{ssh_auth_sock}',
             '--bind', '{work_dir}', '{work_dir}',
             '--proc', '/proc',
