@@ -3477,6 +3477,16 @@ class Tenant(object):
         tpc = self.project_configs[project.canonical_name]
         return tpc.branches
 
+    def getExcludeUnprotectedBranches(self, project):
+        # Evaluate if unprotected branches should be excluded or not. The first
+        # match wins. The order is project -> tenant (default is false).
+        project_config = self.project_configs.get(project.canonical_name)
+        if project_config.exclude_unprotected_branches is not None:
+            exclude_unprotected = project_config.exclude_unprotected_branches
+        else:
+            exclude_unprotected = self.exclude_unprotected_branches
+        return exclude_unprotected
+
     def addConfigProject(self, tpc):
         self.config_projects.append(tpc.project)
         self._addProject(tpc)
