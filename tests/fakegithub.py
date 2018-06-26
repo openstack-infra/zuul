@@ -27,8 +27,9 @@ class FakeUser(object):
 
 
 class FakeBranch(object):
-    def __init__(self, branch='master'):
+    def __init__(self, branch='master', protected=False):
         self.name = branch
+        self.protected = protected
 
 
 class FakeStatus(object):
@@ -78,8 +79,14 @@ class FakeRepository(object):
     def branches(self, protected=False):
         if protected:
             # simulate there is no protected branch
-            return []
+            return [b for b in self._branches if b.protected]
         return self._branches
+
+    def _set_branch_protection(self, branch_name, protected):
+        for branch in self._branches:
+            if branch.name == branch_name:
+                branch.protected = protected
+                return
 
     def _build_url(self, *args, **kwargs):
         path_args = ['repos', self.name]

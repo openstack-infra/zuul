@@ -829,6 +829,21 @@ class TestGithubUnprotectedBranches(ZuulTestCase):
         # project2 should have no parsed branch
         self.assertEqual(0, len(tpc2.parsed_branch_config.keys()))
 
+        # now enable branch protection and trigger reload
+        github = self.fake_github.getGithubClient()
+        repo = github.repo_from_project('org/project2')
+        repo._set_branch_protection('master', True)
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        tpc1 = tenant.project_configs[project1.canonical_name]
+        tpc2 = tenant.project_configs[project2.canonical_name]
+
+        # project1 and project2 should have parsed master now
+        self.assertIn('master', tpc1.parsed_branch_config.keys())
+        self.assertIn('master', tpc2.parsed_branch_config.keys())
+
 
 class TestGithubWebhook(ZuulTestCase):
     config_file = 'zuul-github-driver.conf'
