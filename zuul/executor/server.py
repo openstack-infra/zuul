@@ -16,9 +16,7 @@ import collections
 import datetime
 import json
 import logging
-import multiprocessing
 import os
-import psutil
 import shutil
 import signal
 import shlex
@@ -40,6 +38,9 @@ import gear
 
 import zuul.merger.merger
 import zuul.ansible.logconfig
+from zuul.executor.sensors.cpu import CPUSensor
+from zuul.executor.sensors.startingbuilds import StartingBuildsSensor
+from zuul.executor.sensors.ram import RAMSensor
 from zuul.lib import commandsocket
 
 BUFFER_LINES_FOR_SYNTAX = 200
@@ -1824,13 +1825,6 @@ class ExecutorServer(object):
         # If the execution driver ever becomes configurable again,
         # this is where it would happen.
         execution_wrapper_name = 'bubblewrap'
-        load_multiplier = float(get_default(self.config, 'executor',
-                                            'load_multiplier', '2.5'))
-        self.max_load_avg = multiprocessing.cpu_count() * load_multiplier
-        self.max_starting_builds = self.max_load_avg * 2
-        self.min_starting_builds = max(int(multiprocessing.cpu_count() / 2), 1)
-        self.min_avail_mem = float(get_default(self.config, 'executor',
-                                               'min_avail_mem', '5.0'))
         self.accepting_work = False
         self.execution_wrapper = connections.drivers[execution_wrapper_name]
 
@@ -1880,6 +1874,13 @@ class ExecutorServer(object):
                                               self.disk_limit_per_job,
                                               self.stopJobDiskFull,
                                               self.merge_root)
+
+        cpu_sensor = CPUSensor(config)
+        self.sensors = [
+            cpu_sensor,
+            RAMSensor(config),
+            StartingBuildsSensor(self, cpu_sensor.max_load_avg)
+        ]
 
     def _getMerger(self, root, cache_root, logger=None):
         return zuul.merger.merger.Merger(
@@ -2167,52 +2168,33 @@ class ExecutorServer(object):
             return self._manageLoad()
 
     def _manageLoad(self):
-        load_avg = os.getloadavg()[0]
-        avail_mem_pct = 100.0 - psutil.virtual_memory().percent
-        starting_builds = 0
-        for worker in self.job_workers.values():
-            if not worker.started:
-                starting_builds += 1
-        max_starting_builds = max(
-            self.max_starting_builds - len(self.job_workers),
-            self.min_starting_builds)
+
         if self.accepting_work:
             # Don't unregister if we don't have any active jobs.
-            if load_avg > self.max_load_avg:
-                self.log.info(
-                    "Unregistering due to high system load {} > {}".format(
-                        load_avg, self.max_load_avg))
-                self.unregister_work()
-            elif avail_mem_pct < self.min_avail_mem:
-                self.log.info(
-                    "Unregistering due to low memory {:3.1f}% < {}".format(
-                        avail_mem_pct, self.min_avail_mem))
-                self.unregister_work()
-            elif starting_builds >= max_starting_builds:
-                self.log.info(
-                    "Unregistering due to too many starting builds {} >= {}"
-                    .format(starting_builds, max_starting_builds))
-                self.unregister_work()
-        elif (load_avg <= self.max_load_avg and
-              avail_mem_pct >= self.min_avail_mem and
-              starting_builds < max_starting_builds):
-            self.log.info(
-                "Re-registering as job is within limits "
-                "{} <= {} {:3.1f}% <= {} {} < {}".format(
-                    load_avg, self.max_load_avg,
-                    avail_mem_pct, self.min_avail_mem,
-                    starting_builds, max_starting_builds))
-            self.register_work()
+            for sensor in self.sensors:
+                ok, message = sensor.isOk()
+                if not ok:
+                    self.log.info(
+                        "Unregistering due to {}".format(message))
+                    self.unregister_work()
+                    break
+        else:
+            reregister = True
+            limits = []
+            for sensor in self.sensors:
+                ok, message = sensor.isOk()
+                limits.append(message)
+                if not ok:
+                    reregister = False
+                    break
+            if reregister:
+                self.log.info("Re-registering as job is within its limits "
+                              "{}".format(", ".join(limits)))
+                self.register_work()
         if self.statsd:
             base_key = 'zuul.executor.{hostname}'
-            self.statsd.gauge(base_key + '.load_average',
-                              int(load_avg * 100))
-            self.statsd.gauge(base_key + '.pct_used_ram',
-                              int((100.0 - avail_mem_pct) * 100))
-            self.statsd.gauge(base_key + '.running_builds',
-                              len(self.job_workers))
-            self.statsd.gauge(base_key + '.starting_builds',
-                              starting_builds)
+            for sensor in self.sensors:
+                sensor.reportStats(self.statsd, base_key)
 
     def finishJob(self, unique):
         del(self.job_workers[unique])

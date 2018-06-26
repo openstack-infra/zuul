@@ -23,6 +23,7 @@ import zuul.executor.server
 import zuul.model
 
 from tests.base import ZuulTestCase, simple_layout, iterate_timeout
+from zuul.executor.sensors.startingbuilds import StartingBuildsSensor
 
 
 class TestExecutorRepos(ZuulTestCase):
@@ -487,6 +488,13 @@ class TestGovernor(ZuulTestCase):
         return build
 
     def test_slow_start(self):
+
+        def _set_starting_builds(min, max):
+            for sensor in self.executor_server.sensors:
+                if isinstance(sensor, StartingBuildsSensor):
+                    sensor.min_starting_builds = min
+                    sensor.max_starting_builds = max
+
         # Note: This test relies on the fact that manageLoad is only
         # run at specific points.  Several times in the test we check
         # that manageLoad has disabled or enabled job acceptance based
@@ -501,8 +509,7 @@ class TestGovernor(ZuulTestCase):
         # seconds).
         self.executor_server.governor_stop_event.set()
         self.executor_server.hold_jobs_in_build = True
-        self.executor_server.max_starting_builds = 1
-        self.executor_server.min_starting_builds = 1
+        _set_starting_builds(1, 1)
         self.executor_server.manageLoad()
         self.assertTrue(self.executor_server.accepting_work)
         A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A')
@@ -514,7 +521,7 @@ class TestGovernor(ZuulTestCase):
         self.assertFalse(self.executor_server.accepting_work)
         self.assertEqual(len(self.executor_server.job_workers), 1)
         # Allow enough starting builds for the test to complete.
-        self.executor_server.max_starting_builds = 3
+        _set_starting_builds(1, 3)
         # We must wait for build1 to enter a waiting state otherwise
         # the subsequent release() is a noop and the build is never
         # released.  We don't use waitUntilSettled as that requires
