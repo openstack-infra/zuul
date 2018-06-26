@@ -645,17 +645,25 @@ class GithubConnection(BaseConnection):
             return
 
         url = '%s/app/installations' % self.base_url
-
+        installations = []
         headers = self._get_app_auth_headers()
-        self.log.debug("Fetching installations for GitHub app")
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
+        page = 1
+        while url:
+            self.log.debug("Fetching installations for GitHub app "
+                           "(page %s)" % page)
+            page += 1
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            installations.extend(response.json())
 
-        data = response.json()
+            # check if we need to do further paged calls
+            url = response.links.get(
+                'next', {}).get('url')
 
-        for install in data:
+        for install in installations:
             inst_id = install.get('id')
-            token = self._get_installation_key(project=None, inst_id=inst_id)
+            token = self._get_installation_key(
+                project=None, inst_id=inst_id)
             headers = {'Accept': PREVIEW_JSON_ACCEPT,
                        'Authorization': 'token %s' % token}
 
