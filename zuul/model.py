@@ -1394,7 +1394,7 @@ class JobGraph(object):
     def getJobs(self):
         return list(self.jobs.values())  # Report in the order of layout cfg
 
-    def _getDirectDependentJobs(self, parent_job):
+    def getDirectDependentJobs(self, parent_job):
         ret = set()
         for dependent_name, parent_names in self._dependencies.items():
             if parent_job in parent_names:
@@ -1406,7 +1406,7 @@ class JobGraph(object):
         jobs_to_iterate = set([parent_job])
         while len(jobs_to_iterate) > 0:
             current_job = jobs_to_iterate.pop()
-            current_dependent_jobs = self._getDirectDependentJobs(current_job)
+            current_dependent_jobs = self.getDirectDependentJobs(current_job)
             new_dependent_jobs = current_dependent_jobs - all_dependent_jobs
             jobs_to_iterate |= new_dependent_jobs
             all_dependent_jobs |= new_dependent_jobs

@@ -175,6 +175,11 @@ of item.
       configuration of items ahead in a dependent pipeline changes,
       Zuul creates a new buildset and restarts all of the jobs.
 
+   .. var:: child_jobs
+
+      A list of the first level child jobs to be run after this job
+      has finished successfully.
+
    .. var:: ref
 
       The git ref of the item.  This will be the full path (e.g.,
