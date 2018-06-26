@@ -1,0 +1,47 @@
+<!--
+Copyright 2017 Red Hat
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may
+not use this file except in compliance with the License. You may obtain
+a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+License for the specific language governing permissions and limitations
+under the License.
+-->
+<div class="container-fluid">
+  <table class="table table-hover table-condensed">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+        <th>Last builds</th>
+      </tr>
+    </thead>
+    <tbody>
+      <ng-container *ngFor="let job of jobs">
+        <tr>
+          <td>{{ job.name }}</td>
+          <td>{{ job.description }}</td>
+          <td><a [routerLink]="['../builds.html']"
+                 [queryParams]="{job_name: job.name}" target="_self">
+              builds</a></td>
+        </tr>
+        <tr *ngIf="job.expanded">
+          <td colspan="3">
+            <ul class="list-group">
+              <li class="list-group-item" *ngFor="let detail of job.details">
+                <!-- TODO: make clickable link to cgit files ? -->
+                {{ detail.source_context }}
+              </li>
+            </ul>
+          </td>
+        </tr>
+      </ng-container>
+    </tbody>
+  </table>
+</div>

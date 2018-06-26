@@ -3,8 +3,5 @@ plugins:
   - standard
 rules:
   camelcase: off
-  indent:
-    - off
-    - 2
 extends:
   - ./node_modules/eslint-config-standard/eslintrc.json

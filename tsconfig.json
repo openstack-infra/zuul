@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "sourceMap": true,
+    "moduleResolution": "node",
+    "outDir": "./zuul/web/static/",
+    "noImplicitAny": false,
+    "target": "es6",
+    "lib": [ "es2015", "dom" ],
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowJs": false
+  },
+  "include": [
+    "webpack.config.ts",
+    "web/**/*.ts"
+  ]
+}

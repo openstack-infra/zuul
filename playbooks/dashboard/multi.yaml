@@ -1,0 +1,11 @@
+- hosts: all
+  tasks:
+
+    - name: Make symlinks to allow multi-tenant preview to work
+      file:
+        src: .
+        dest: '{{ zuul.project.src_dir }}/{{ javascript_content_dir }}/{{ item }}'
+        state: link
+      with_items:
+        - local
+        - t
