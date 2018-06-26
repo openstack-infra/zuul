@@ -1802,14 +1802,24 @@ class QueueItem(object):
     def didAllJobsSucceed(self):
         if not self.hasJobGraph():
             return False
+
+        skipped = True
         for job in self.getJobs():
             if not job.voting:
                 continue
             build = self.current_build_set.getBuild(job.name)
             if not build:
                 return False
-            if build.result != 'SUCCESS':
+            if build.result == 'SKIPPED':
+                continue
+            elif build.result != 'SUCCESS':
                 return False
+            skipped = False
+
+        # NOTE(pabelanger): We shouldn't be able to skip all jobs.
+        if skipped:
+            return False
+
         return True
 
     def didAnyJobFail(self):
@@ -1971,12 +1981,39 @@ class QueueItem(object):
     def setResult(self, build):
         if build.retry:
             self.removeBuild(build)
+            return
+
+        skipped = []
+        # NOTE(pabelanger): Check successful jobs to see if zuul_return
+        # includes zuul.child_jobs.
+        build_result = build.result_data.get('zuul', {})
+        if 'child_jobs' in build_result:
+            zuul_return = build_result.get('child_jobs', [])
+            dependent_jobs = self.job_graph.getDirectDependentJobs(
+                build.job.name)
+
+            if not zuul_return:
+                # If zuul.child_jobs exists and is empty, user want to skip all
+                # child jobs.
+                skipped += self.job_graph.getDependentJobsRecursively(
+                    build.job.name)
+            else:
+                # We have list of jobs to run.
+                intersect_jobs = dependent_jobs.intersection(zuul_return)
+
+                for skip in (dependent_jobs - intersect_jobs):
+                    skipped.append(self.job_graph.jobs.get(skip))
+                    skipped += self.job_graph.getDependentJobsRecursively(
+                        skip)
+
         elif build.result != 'SUCCESS':
-            for job in self.job_graph.getDependentJobsRecursively(
-                    build.job.name):
-                fakebuild = Build(job, None)
-                fakebuild.result = 'SKIPPED'
-                self.addBuild(fakebuild)
+            skipped += self.job_graph.getDependentJobsRecursively(
+                build.job.name)
+
+        for job in skipped:
+            fakebuild = Build(job, None)
+            fakebuild.result = 'SKIPPED'
+            self.addBuild(fakebuild)
 
     def setNodeRequestFailure(self, job):
         fakebuild = Build(job, None)

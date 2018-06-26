@@ -21,6 +21,18 @@
     run: playbooks/data-return.yaml
 
 - job:
+    name: data-return-child-jobs
+    run: playbooks/data-return-child-jobs.yaml
+
+- job:
+    name: data-return-invalid-child-job
+    run: playbooks/data-return-invalid-child-job.yaml
+
+- job:
+    name: data-return-skip-all
+    run: playbooks/data-return-skip-all.yaml
+
+- job:
     name: data-return-relative
     success-url: docs/index.html
     run: playbooks/data-return-relative.yaml
@@ -39,3 +51,36 @@
             dependencies:
               - data-return
               - data-return-relative
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - data-return-child-jobs
+        - data-return:
+            dependencies:
+              - data-return-child-jobs
+        - child:
+            dependencies:
+              - data-return-child-jobs
+
+- project:
+    name: org/project2
+    check:
+      jobs:
+        - data-return-invalid-child-job
+        - data-return:
+            dependencies:
+              - data-return-invalid-child-job
+
+- project:
+    name: org/project3
+    check:
+      jobs:
+        - data-return-skip-all
+        - data-return:
+            dependencies:
+              - data-return-skip-all
+        - child:
+            dependencies:
+              - data-return-skip-all

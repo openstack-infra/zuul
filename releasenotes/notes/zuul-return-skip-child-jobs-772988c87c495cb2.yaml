@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    It is now possible to use zuul_return to skip child jobs. You can
+    use the :var:`zuul.child_jobs` inventory variable to get a list of
+    child jobs configured to run, then use zuul_return to modify the
+    list.  Any child job not in zuul_return zuul.child_jobs will be
+    skipped. See :ref:`return_values` for examples.
