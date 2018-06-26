@@ -274,6 +274,17 @@ class ZuulWebAPI(object):
 
     @cherrypy.expose
     @cherrypy.tools.save_params()
+    @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
+    def config_errors(self, tenant):
+        config_errors = self.rpc.submitJob(
+            'zuul:config_errors_list', {'tenant': tenant})
+        ret = json.loads(config_errors.data[0])
+        resp = cherrypy.response
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return ret
+
+    @cherrypy.expose
+    @cherrypy.tools.save_params()
     def key(self, tenant, project):
         job = self.rpc.submitJob('zuul:key_get', {'tenant': tenant,
                                                   'project': project})
@@ -457,6 +468,8 @@ class ZuulWeb(object):
                           controller=api, action='console_stream')
         route_map.connect('api', '/api/tenant/{tenant}/builds',
                           controller=api, action='builds')
+        route_map.connect('api', '/api/tenant/{tenant}/config-errors',
+                          controller=api, action='config_errors')
 
         for connection in connections.connections.values():
             controller = connection.getWebController(self)
