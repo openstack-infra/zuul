@@ -464,6 +464,14 @@ class TestGovernor(ZuulTestCase):
         self.executor_server.manageLoad()
         self.assertFalse(self.executor_server.accepting_work)
 
+    def test_pause_governor(self):
+        self.executor_server.manageLoad()
+        self.assertTrue(self.executor_server.accepting_work)
+
+        self.executor_server.pause_sensor.pause = True
+        self.executor_server.manageLoad()
+        self.assertFalse(self.executor_server.accepting_work)
+
     def waitForExecutorBuild(self, jobname):
         self.log.debug("Waiting for %s to start", jobname)
         timeout = time.time() + 30
