@@ -258,6 +258,26 @@ class GithubEventConnector(threading.Thread):
         if event.newrev == '0' * 40:
             event.branch_deleted = True
 
+        if event.branch:
+            if event.branch_deleted:
+                # We currently cannot determine if a deleted branch was
+                # protected so we need to assume it was. GitHub doesn't allow
+                # deletion of protected branches but we don't get a
+                # notification about branch protection settings. Thus we don't
+                # know if branch protection has been disabled before deletion
+                # of the branch.
+                # FIXME(tobiash): Find a way to handle that case
+                event.branch_protected = True
+            elif event.branch_created:
+                # A new branch never can be protected because that needs to be
+                # configured after it has been created.
+                event.branch_protected = False
+            else:
+                # An updated branch can be protected or not so we have to ask
+                # GitHub whether it is.
+                b = self.connection.getBranch(event.project_name, event.branch)
+                event.branch_protected = b.get('protected')
+
         return event
 
     def _event_pull_request(self, body):
@@ -919,6 +939,22 @@ class GithubConnection(BaseConnection):
                 self.log.error(str(e), exc_info=True)
 
         return self._project_branch_cache[project.name]
+
+    def getBranch(self, project_name, branch):
+        github = self.getGithubClient(project_name)
+
+        # Note that we directly use a web request here because if we use the
+        # github3.py api directly we need a repository object which needs
+        # an unneeded web request during creation.
+        url = github.session.build_url('repos', project_name,
+                                       'branches', branch)
+
+        resp = github.session.get(url)
+
+        if resp.status_code == 404:
+            return None
+
+        return resp.json()
 
     def getPullUrl(self, project, number):
         return '%s/pull/%s' % (self.getGitwebUrl(project), number)
