@@ -1,6 +1,9 @@
 /* global Image, jQuery */
 // jquery plugin for Zuul status page
 //
+// @licstart  The following is the entire license notice for the
+// JavaScript code in this page.
+//
 // Copyright 2012 OpenStack Foundation
 // Copyright 2013 Timo Tijhof
 // Copyright 2013 Wikimedia Foundation
@@ -17,14 +20,17 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
+//
+// @licend  The above is the entire license notice
+// for the JavaScript code in this page.
 
-import RedImage from '../images/red.png'
-import GreyImage from '../images/grey.png'
-import GreenImage from '../images/green.png'
-import BlackImage from '../images/black.png'
-import LineImage from '../images/line.png'
-import LineAngleImage from '../images/line-angle.png'
-import LineTImage from '../images/line-t.png';
+import RedImage from './images/red.png'
+import GreyImage from './images/grey.png'
+import GreenImage from './images/green.png'
+import BlackImage from './images/black.png'
+import LineImage from './images/line.png'
+import LineAngleImage from './images/line-angle.png'
+import LineTImage from './images/line-t.png';
 
 (function ($) {
   function setCookie (name, value) {
@@ -75,20 +81,20 @@ import LineTImage from '../images/line-t.png';
       if (options.graphite_url !== '') {
         if (!(pipelineName in zuulSparklineURLs)) {
           zuulSparklineURLs[pipelineName] = $.fn.graphite
-            .geturl({
-              url: options.graphite_url,
-              from: '-8hours',
-              width: 100,
-              height: 26,
-              margin: 0,
-              hideLegend: true,
-              hideAxes: true,
-              hideGrid: true,
-              target: [
-                'color(stats.gauges.zuul.pipeline.' + pipelineName +
-                ".current_changes, '6b8182')"
-              ]
-            })
+                        .geturl({
+                          url: options.graphite_url,
+                          from: '-8hours',
+                          width: 100,
+                          height: 26,
+                          margin: 0,
+                          hideLegend: true,
+                          hideAxes: true,
+                          hideGrid: true,
+                          target: [
+                            'color(stats.gauges.zuul.pipeline.' + pipelineName +
+                                ".current_changes, '6b8182')"
+                          ]
+                        })
         }
         return zuulSparklineURLs[pipelineName]
       }
@@ -101,34 +107,34 @@ import LineTImage from '../images/line-t.png';
 
         if (job.result !== null) {
           $jobLine.append(
-            $('<a />')
-              .addClass('zuul-job-name')
-              .attr('href', job.report_url)
-              .text(job.name)
-          )
+                        $('<a />')
+                            .addClass('zuul-job-name')
+                            .attr('href', job.report_url)
+                            .text(job.name)
+                    )
         } else if (job.url !== null) {
           $jobLine.append(
-            $('<a />')
-              .addClass('zuul-job-name')
-              .attr('href', job.url)
-              .text(job.name)
-          )
+                        $('<a />')
+                            .addClass('zuul-job-name')
+                            .attr('href', job.url)
+                            .text(job.name)
+                    )
         } else {
           $jobLine.append(
-            $('<span />')
-              .addClass('zuul-job-name')
-              .text(job.name)
-          )
+                        $('<span />')
+                            .addClass('zuul-job-name')
+                            .text(job.name)
+                    )
         }
 
         $jobLine.append(this.job_status(job))
 
         if (job.voting === false) {
           $jobLine.append(
-            $(' <small />')
-              .addClass('zuul-non-voting-desc')
-              .text(' (non-voting)')
-          )
+                        $(' <small />')
+                            .addClass('zuul-non-voting-desc')
+                            .text(' (non-voting)')
+                    )
         }
 
         $jobLine.append($('<div style="clear: both"></div>'))
@@ -143,7 +149,7 @@ import LineTImage from '../images/line-t.png';
 
         if (result === 'in progress') {
           return this.job_progress_bar(job.elapsed_time,
-            job.remaining_time)
+                                                        job.remaining_time)
         } else {
           return this.status_label(result)
         }
@@ -178,17 +184,17 @@ import LineTImage from '../images/line-t.png';
         let progressPercent = 100 * (elapsedTime / (elapsedTime +
                                                               remainingTime))
         let $barInner = $('<div />')
-          .addClass('progress-bar')
-          .attr('role', 'progressbar')
-          .attr('aria-valuenow', 'progressbar')
-          .attr('aria-valuemin', progressPercent)
-          .attr('aria-valuemin', '0')
-          .attr('aria-valuemax', '100')
-          .css('width', progressPercent + '%')
+                    .addClass('progress-bar')
+                    .attr('role', 'progressbar')
+                    .attr('aria-valuenow', 'progressbar')
+                    .attr('aria-valuemin', progressPercent)
+                    .attr('aria-valuemin', '0')
+                    .attr('aria-valuemax', '100')
+                    .css('width', progressPercent + '%')
 
         let $barOutter = $('<div />')
-          .addClass('progress zuul-job-result')
-          .append($barInner)
+                    .addClass('progress zuul-job-result')
+                    .append($barInner)
 
         return $barOutter
       },
@@ -244,7 +250,7 @@ import LineTImage from '../images/line-t.png';
       changeTotalProgressBar: function (change) {
         let jobPercent = Math.floor(100 / change.jobs.length)
         let $barOutter = $('<div />')
-          .addClass('progress zuul-change-total-result')
+                    .addClass('progress zuul-change-total-result')
 
         $.each(change.jobs, function (i, job) {
           let result = job.result ? job.result.toLowerCase() : null
@@ -254,7 +260,7 @@ import LineTImage from '../images/line-t.png';
 
           if (result !== 'queued') {
             let $barInner = $('<div />')
-              .addClass('progress-bar')
+                            .addClass('progress-bar')
 
             switch (result) {
               case 'success':
@@ -272,7 +278,7 @@ import LineTImage from '../images/line-t.png';
                 break
             }
             $barInner.attr('title', job.name)
-              .css('width', jobPercent + '%')
+                            .css('width', jobPercent + '%')
             $barOutter.append($barInner)
           }
         })
@@ -287,25 +293,25 @@ import LineTImage from '../images/line-t.png';
           let githubId = changeId.match(/^([0-9]+),([0-9a-f]{40})$/)
           if (githubId) {
             $changeLink.append(
-              $('<a />').attr('href', change.url).append(
-                $('<abbr />')
-                  .attr('title', changeId)
-                  .text('#' + githubId[1])
-              )
-            )
+                            $('<a />').attr('href', change.url).append(
+                                $('<abbr />')
+                                    .attr('title', changeId)
+                                    .text('#' + githubId[1])
+                            )
+                        )
           } else if (/^[0-9a-f]{40}$/.test(changeId)) {
             let changeIdShort = changeId.slice(0, 7)
             $changeLink.append(
-              $('<a />').attr('href', change.url).append(
-                $('<abbr />')
-                  .attr('title', changeId)
-                  .text(changeIdShort)
-              )
-            )
+                            $('<a />').attr('href', change.url).append(
+                                $('<abbr />')
+                                    .attr('title', changeId)
+                                    .text(changeIdShort)
+                            )
+                        )
           } else {
             $changeLink.append(
-              $('<a />').attr('href', change.url).text(changeId)
-            )
+                            $('<a />').attr('href', change.url).text(changeId)
+                        )
           }
         } else {
           if (changeId.length === 40) {
@@ -315,54 +321,54 @@ import LineTImage from '../images/line-t.png';
         }
 
         let $changeProgressRowLeft = $('<div />')
-          .addClass('col-xs-4')
-          .append($changeLink)
+                    .addClass('col-xs-4')
+                    .append($changeLink)
         let $changeProgressRowRight = $('<div />')
-          .addClass('col-xs-8')
-          .append(this.changeTotalProgressBar(change))
+                    .addClass('col-xs-8')
+                    .append(this.changeTotalProgressBar(change))
 
         let $changeProgressRow = $('<div />')
-          .addClass('row')
-          .append($changeProgressRowLeft)
-          .append($changeProgressRowRight)
+                    .addClass('row')
+                    .append($changeProgressRowLeft)
+                    .append($changeProgressRowRight)
 
         let $projectSpan = $('<span />')
-          .addClass('change_project')
-          .text(change.project)
+                    .addClass('change_project')
+                    .text(change.project)
 
         let $left = $('<div />')
-          .addClass('col-xs-8')
-          .append($projectSpan, $changeProgressRow)
+                    .addClass('col-xs-8')
+                    .append($projectSpan, $changeProgressRow)
 
         let remainingTime = this.time(change.remaining_time, true)
         let enqueueTime = this.enqueueTime(change.enqueue_time)
         let $remainingTime = $('<small />').addClass('time')
-          .attr('title', 'Remaining Time').html(remainingTime)
+                    .attr('title', 'Remaining Time').html(remainingTime)
         let $enqueueTime = $('<small />').addClass('time')
-          .attr('title', 'Elapsed Time').html(enqueueTime)
+                    .attr('title', 'Elapsed Time').html(enqueueTime)
 
         let $right = $('<div />')
         if (change.live === true) {
           $right.addClass('col-xs-4 text-right')
-            .append($remainingTime, $('<br />'), $enqueueTime)
+                        .append($remainingTime, $('<br />'), $enqueueTime)
         }
 
         let $header = $('<div />')
-          .addClass('row')
-          .append($left, $right)
+                    .addClass('row')
+                    .append($left, $right)
         return $header
       },
 
       change_list: function (jobs) {
         let format = this
         let $list = $('<ul />')
-          .addClass('list-group zuul-patchset-body')
+                    .addClass('list-group zuul-patchset-body')
 
         $.each(jobs, function (i, job) {
           let $item = $('<li />')
-            .addClass('list-group-item')
-            .addClass('zuul-change-job')
-            .append(format.job(job))
+                        .addClass('list-group-item')
+                        .addClass('zuul-change-job')
+                        .append(format.job(job))
           $list.append($item)
         })
 
@@ -371,17 +377,17 @@ import LineTImage from '../images/line-t.png';
 
       changePanel: function (change) {
         let $header = $('<div />')
-          .addClass('panel-heading zuul-patchset-header')
-          .append(this.changeHeader(change))
+                    .addClass('panel-heading zuul-patchset-header')
+                    .append(this.changeHeader(change))
 
         let panelId = change.id ? change.id.replace(',', '_')
-          : change.project.replace('/', '_') +
+                                         : change.project.replace('/', '_') +
                                            '-' + change.enqueue_time
         let $panel = $('<div />')
-          .attr('id', panelId)
-          .addClass('panel panel-default zuul-change')
-          .append($header)
-          .append(this.change_list(change.jobs))
+                    .attr('id', panelId)
+                    .addClass('panel panel-default zuul-change')
+                    .append($header)
+                    .append(this.change_list(change.jobs))
 
         $header.click(this.toggle_patchset)
         return $panel
@@ -414,9 +420,9 @@ import LineTImage from '../images/line-t.png';
         }
 
         let $icon = $('<img />')
-          .attr('src', iconFile)
-          .attr('title', iconTitle)
-          .css('display', 'block')
+                    .attr('src', iconFile)
+                    .attr('title', iconTitle)
+                    .css('margin-top', '-6px')
 
         return $icon
       },
@@ -426,27 +432,27 @@ import LineTImage from '../images/line-t.png';
 
         for (let i = 0; i < changeQueue._tree_columns; i++) {
           let $treeCell = $('<td />')
-            .css('height', '100%')
-            .css('padding', '0 0 10px 0')
-            .css('margin', '0')
-            .css('width', '16px')
-            .css('min-width', '16px')
-            .css('overflow', 'hidden')
-            .css('vertical-align', 'top')
+                        .css('height', '100%')
+                        .css('padding', '0 0 10px 0')
+                        .css('margin', '0')
+                        .css('width', '16px')
+                        .css('min-width', '16px')
+                        .css('overflow', 'hidden')
+                        .css('vertical-align', 'top')
 
           if (i < change._tree.length && change._tree[i] !== null) {
             $treeCell.css('background-image',
-              'url(' + LineImage + ')')
-              .css('background-repeat', 'repeat-y')
+                                       'url(' + LineImage + ')')
+                            .css('background-repeat', 'repeat-y')
           }
 
           if (i === change._tree_index) {
             $treeCell.append(
-              this.change_status_icon(change))
+                            this.change_status_icon(change))
           }
           if (change._tree_branches.indexOf(i) !== -1) {
             let $image = $('<img />')
-              .css('vertical-align', 'baseline')
+                            .css('vertical-align', 'baseline')
             if (change._tree_branches.indexOf(i) ===
                             change._tree_branches.length - 1) {
               // Angle line
@@ -462,17 +468,17 @@ import LineTImage from '../images/line-t.png';
 
         let changeWidth = 360 - 16 * changeQueue._tree_columns
         let $changeColumn = $('<td />')
-          .css('width', changeWidth + 'px')
-          .addClass('zuul-change-cell')
-          .append(this.changePanel(change))
+                    .css('width', changeWidth + 'px')
+                    .addClass('zuul-change-cell')
+                    .append(this.changePanel(change))
 
         $changeRow.append($changeColumn)
 
         let $changeTable = $('<table />')
-          .addClass('zuul-change-box')
-          .css('-moz-box-sizing', 'content-box')
-          .css('box-sizing', 'content-box')
-          .append($changeRow)
+                    .addClass('zuul-change-box')
+                    .css('-moz-box-sizing', 'content-box')
+                    .css('box-sizing', 'content-box')
+                    .append($changeRow)
 
         return $changeTable
       },
@@ -480,8 +486,8 @@ import LineTImage from '../images/line-t.png';
       pipeline_sparkline: function (pipelineName) {
         if (options.graphite_url !== '') {
           let $sparkline = $('<img />')
-            .addClass('pull-right')
-            .attr('src', getSparklineURL(pipelineName))
+                        .addClass('pull-right')
+                        .attr('src', getSparklineURL(pipelineName))
           return $sparkline
         }
         return false
@@ -490,28 +496,28 @@ import LineTImage from '../images/line-t.png';
       pipeline_header: function (pipeline, count) {
         // Format the pipeline name, sparkline and description
         let $headerDiv = $('<div />')
-          .addClass('zuul-pipeline-header')
+                    .addClass('zuul-pipeline-header')
 
         let $heading = $('<h3 />')
-          .css('vertical-align', 'middle')
-          .text(pipeline.name)
-          .append(
-            $('<span />')
-              .addClass('badge pull-right')
-              .css('vertical-align', 'middle')
-              .css('margin-top', '0.5em')
-              .text(count)
-          )
-          .append(this.pipeline_sparkline(pipeline.name))
+                    .css('vertical-align', 'middle')
+                    .text(pipeline.name)
+                    .append(
+                        $('<span />')
+                            .addClass('badge pull-right')
+                            .css('vertical-align', 'middle')
+                            .css('margin-top', '0.5em')
+                            .text(count)
+                    )
+                    .append(this.pipeline_sparkline(pipeline.name))
 
         $headerDiv.append($heading)
 
         if (typeof pipeline.description === 'string') {
           let descr = $('<small />')
           $.each(pipeline.description.split(/\r?\n\r?\n/),
-            function (index, descrPart) {
-              descr.append($('<p />').text(descrPart))
-            })
+                  function (index, descrPart) {
+                    descr.append($('<p />').text(descrPart))
+                  })
           $headerDiv.append($('<p />').append(descr))
         }
         return $headerDiv
@@ -520,44 +526,34 @@ import LineTImage from '../images/line-t.png';
       pipeline: function (pipeline, count) {
         let format = this
         let $html = $('<div />')
-          .addClass('zuul-pipeline col-md-4')
-          .append(this.pipeline_header(pipeline, count))
+                    .addClass('zuul-pipeline col-md-4')
+                    .append(this.pipeline_header(pipeline, count))
 
         $.each(pipeline.change_queues, function (queueIndex, changeQueue) {
           $.each(changeQueue.heads, function (headIndex, changes) {
-            let $changeQueueHtml = $('<div />')
-              .addClass('change-queue')
-              .data('zuul-pipeline', pipeline.name)
-            $html.append($changeQueueHtml)
-
             if (pipeline.change_queues.length > 1 && headIndex === 0) {
               let name = changeQueue.name
               let shortName = name
               if (shortName.length > 32) {
                 shortName = shortName.substr(0, 32) + '...'
               }
-              $changeQueueHtml.append($('<p />')
-                .text('Queue: ')
-                .append(
-                  $('<abbr />')
-                    .attr('title', name)
-                    .text(shortName)
-                )
-              )
+              $html.append($('<p />')
+                            .text('Queue: ')
+                            .append(
+                                $('<abbr />')
+                                .attr('title', name)
+                                .text(shortName)
+                                )
+                            )
             }
 
-            let $changeBoxes = $.map(changes, function (change) {
-              return format.change_with_status_tree(change, changeQueue)
+            $.each(changes, function (changeIndex, change) {
+              let $changeBox =
+                        format.change_with_status_tree(
+                                change, changeQueue)
+              $html.append($changeBox)
+              format.display_patchset($changeBox)
             })
-
-            let visible = $.map($changeBoxes, function (changeBox) {
-              $changeQueueHtml.append(changeBox)
-              return format.display_patchset(changeBox)
-            }).some(function (visible) {
-              return visible
-            })
-
-            if (!visible) $changeQueueHtml.remove()
           })
         })
         return $html
@@ -566,7 +562,7 @@ import LineTImage from '../images/line-t.png';
       toggle_patchset: function (e) {
         // Toggle showing/hiding the patchset when the header is clicked.
         if (e.target.nodeName.toLowerCase() === 'a') {
-          // Ignore clicks from gerrit patch set link
+                    // Ignore clicks from gerrit patch set link
           return
         }
 
@@ -575,7 +571,7 @@ import LineTImage from '../images/line-t.png';
         let $body = $panel.children('.zuul-patchset-body')
         $body.toggle(200)
         let collapsedIndex = collapsedExceptions.indexOf(
-          $panel.attr('id'))
+                    $panel.attr('id'))
         if (collapsedIndex === -1) {
           // Currently not an exception, add it to list
           collapsedExceptions.push($panel.attr('id'))
@@ -594,10 +590,10 @@ import LineTImage from '../images/line-t.png';
         let panelChange = $panel.attr('id')
         let $body = $panel.children('.zuul-patchset-body')
         let expandByDefault = $('#expand_by_default')
-          .prop('checked')
+                    .prop('checked')
 
         let collapsedIndex = collapsedExceptions
-          .indexOf(panelChange)
+                    .indexOf(panelChange)
 
         if ((expandByDefault && collapsedIndex === -1) ||
                     (!expandByDefault && collapsedIndex !== -1)) {
@@ -609,18 +605,16 @@ import LineTImage from '../images/line-t.png';
 
         // Check if we should hide the whole panel
         let panelProject = $panel.find('.change_project').text()
-          .toLowerCase()
+                    .toLowerCase()
 
         let panelPipeline = $changeBox
-          .parents('.zuul-pipeline')
-          .find('.zuul-pipeline-header > h3')
-          .html()
-          .toLowerCase()
-
-        let showPanel = true
+                    .parents('.zuul-pipeline')
+                    .find('.zuul-pipeline-header > h3')
+                    .html()
+                    .toLowerCase()
 
         if (currentFilter !== '') {
-          showPanel = false
+          let showPanel = false
           let filter = currentFilter.trim().split(/[\s,]+/)
           $.each(filter, function (index, filterVal) {
             if (filterVal !== '') {
@@ -632,15 +626,14 @@ import LineTImage from '../images/line-t.png';
               }
             }
           })
-        }
-
-        if (showPanel === true) {
-          $changeBox.show(animate)
+          if (showPanel === true) {
+            $changeBox.show(animate)
+          } else {
+            $changeBox.hide(animate)
+          }
         } else {
-          $changeBox.hide(animate)
+          $changeBox.show(animate)
         }
-
-        return showPanel
       }
     }
 
@@ -664,12 +657,12 @@ import LineTImage from '../images/line-t.png';
       injest: function (data, $msg) {
         if ('message' in data) {
           $msg.removeClass('alert-danger')
-            .addClass('alert-info')
-            .text(data.message)
-            .show()
+                        .addClass('alert-info')
+                        .text(data.message)
+                        .show()
         } else {
           $msg.empty()
-            .hide()
+                        .hide()
         }
 
         if ('zuul_version' in data) {
@@ -679,7 +672,7 @@ import LineTImage from '../images/line-t.png';
           let lastReconfigured =
                         new Date(data.last_reconfigured)
           $('#last-reconfigured-span').text(
-            lastReconfigured.toString())
+                        lastReconfigured.toString())
         }
 
         let $pipelines = $(options.pipelines_id)
@@ -687,17 +680,17 @@ import LineTImage from '../images/line-t.png';
         $.each(data.pipelines, function (i, pipeline) {
           let count = app.create_tree(pipeline)
           $pipelines.append(
-            format.pipeline(pipeline, count))
+                        format.pipeline(pipeline, count))
         })
 
         $(options.queue_events_num).text(
-          data.trigger_event_queue
-            ? data.trigger_event_queue.length : '0'
-        )
+                    data.trigger_event_queue
+                        ? data.trigger_event_queue.length : '0'
+                )
         $(options.queue_results_num).text(
-          data.result_event_queue
-            ? data.result_event_queue.length : '0'
-        )
+                    data.result_event_queue
+                        ? data.result_event_queue.length : '0'
+                )
       },
       /** @return {jQuery.Promise} */
       update: function () {
@@ -715,22 +708,22 @@ import LineTImage from '../images/line-t.png';
           return
         }
         xhr = $.getJSON(options.source)
-          .done(function (data) {
-            app.injest(data, $msg)
-          })
-          .fail(function (jqXHR, statusText, errMsg) {
-            if (statusText === 'abort') {
-              return
-            }
-            $msg.text(options.source + ': ' + errMsg)
-              .addClass('alert-danger')
-              .removeClass('zuul-msg-wrap-off')
-              .show()
-          })
-          .always(function () {
-            xhr = undefined
-            app.emit('update-end')
-          })
+                    .done(function (data) {
+                      app.injest(data, $msg)
+                    })
+                    .fail(function (jqXHR, statusText, errMsg) {
+                      if (statusText === 'abort') {
+                        return
+                      }
+                      $msg.text(options.source + ': ' + errMsg)
+                            .addClass('alert-danger')
+                            .removeClass('zuul-msg-wrap-off')
+                            .show()
+                    })
+                    .always(function () {
+                      xhr = undefined
+                      app.emit('update-end')
+                    })
 
         return xhr
       },
@@ -763,13 +756,13 @@ import LineTImage from '../images/line-t.png';
         // Build the filter form filling anything from cookies
 
         let $controlForm = $('<form />')
-          .attr('role', 'form')
-          .addClass('form-inline')
-          .submit(this.handleFilterChange)
+                    .attr('role', 'form')
+                    .addClass('form-inline')
+                    .submit(this.handleFilterChange)
 
         $controlForm
-          .append(this.filterFormGroup())
-          .append(this.expandFormGroup())
+                    .append(this.filterFormGroup())
+                    .append(this.expandFormGroup())
 
         return $controlForm
       },
@@ -778,28 +771,28 @@ import LineTImage from '../images/line-t.png';
         // Update the filter form with a clear button if required
 
         let $label = $('<label />')
-          .addClass('control-label')
-          .attr('for', 'filter_string')
-          .text('Filters')
-          .css('padding-right', '0.5em')
+                    .addClass('control-label')
+                    .attr('for', 'filter_string')
+                    .text('Filters')
+                    .css('padding-right', '0.5em')
 
         let $input = $('<input />')
-          .attr('type', 'text')
-          .attr('id', 'filter_string')
-          .addClass('form-control')
-          .attr('title',
-            'project(s), pipeline(s) or review(s) comma ' +
+                    .attr('type', 'text')
+                    .attr('id', 'filter_string')
+                    .addClass('form-control')
+                    .attr('title',
+                          'project(s), pipeline(s) or review(s) comma ' +
                           'separated')
-          .attr('value', currentFilter)
+                    .attr('value', currentFilter)
 
         $input.change(this.handleFilterChange)
 
         let $clearIcon = $('<span />')
-          .addClass('form-control-feedback')
-          .addClass('glyphicon glyphicon-remove-circle')
-          .attr('id', 'filter_form_clear_box')
-          .attr('title', 'clear filter')
-          .css('cursor', 'pointer')
+                    .addClass('form-control-feedback')
+                    .addClass('glyphicon glyphicon-remove-circle')
+                    .attr('id', 'filter_form_clear_box')
+                    .attr('title', 'clear filter')
+                    .css('cursor', 'pointer')
 
         $clearIcon.click(function () {
           $('#filter_string').val('').change()
@@ -810,29 +803,29 @@ import LineTImage from '../images/line-t.png';
         }
 
         let $formGroup = $('<div />')
-          .addClass('form-group has-feedback')
-          .append($label, $input, $clearIcon)
+                    .addClass('form-group has-feedback')
+                    .append($label, $input, $clearIcon)
         return $formGroup
       },
 
       expandFormGroup: function () {
         let expandByDefault = (
-          readCookie('zuul_expand_by_default', false) === 'true')
+                    readCookie('zuul_expand_by_default', false) === 'true')
 
         let $checkbox = $('<input />')
-          .attr('type', 'checkbox')
-          .attr('id', 'expand_by_default')
-          .prop('checked', expandByDefault)
-          .change(this.handleExpandByDefault)
+                    .attr('type', 'checkbox')
+                    .attr('id', 'expand_by_default')
+                    .prop('checked', expandByDefault)
+                    .change(this.handleExpandByDefault)
 
         let $label = $('<label />')
-          .css('padding-left', '1em')
-          .html('Expand by default: ')
-          .append($checkbox)
+                    .css('padding-left', '1em')
+                    .html('Expand by default: ')
+                    .append($checkbox)
 
         let $formGroup = $('<div />')
-          .addClass('checkbox')
-          .append($label)
+                    .addClass('checkbox')
+                    .append($label)
         return $formGroup
       },
 
@@ -846,7 +839,10 @@ import LineTImage from '../images/line-t.png';
           $('#filter_form_clear_box').show()
         }
 
-        this.update()
+        $('.zuul-change-box').each(function (index, obj) {
+          let $changeBox = $(obj)
+          format.display_patchset($changeBox, 200)
+        })
         return false
       },
 
@@ -864,59 +860,59 @@ import LineTImage from '../images/line-t.png';
         let count = 0
         let pipelineMaxTreeColumns = 1
         $.each(pipeline.change_queues,
-          function (changeQueueIndex, changeQueue) {
-            let tree = []
-            let maxTreeColumns = 1
-            let changes = []
-            let lastTreeLength = 0
-            $.each(changeQueue.heads, function (headIndex, head) {
-              $.each(head, function (changeIndex, change) {
-                changes[change.id] = change
-                change._tree_position = changeIndex
-              })
-            })
-            $.each(changeQueue.heads, function (headIndex, head) {
-              $.each(head, function (changeIndex, change) {
-                if (change.live === true) {
-                  count += 1
-                }
-                let idx = tree.indexOf(change.id)
-                if (idx > -1) {
-                  change._tree_index = idx
-                  // remove...
-                  tree[idx] = null
-                  while (tree[tree.length - 1] === null) {
-                    tree.pop()
-                  }
-                } else {
-                  change._tree_index = 0
-                }
-                change._tree_branches = []
-                change._tree = []
-                if (typeof (change.items_behind) === 'undefined') {
-                  change.items_behind = []
-                }
-                change.items_behind.sort(function (a, b) {
-                  return (changes[b]._tree_position - changes[a]._tree_position)
+                function (changeQueueIndex, changeQueue) {
+                  let tree = []
+                  let maxTreeColumns = 1
+                  let changes = []
+                  let lastTreeLength = 0
+                  $.each(changeQueue.heads, function (headIndex, head) {
+                    $.each(head, function (changeIndex, change) {
+                      changes[change.id] = change
+                      change._tree_position = changeIndex
+                    })
+                  })
+                  $.each(changeQueue.heads, function (headIndex, head) {
+                    $.each(head, function (changeIndex, change) {
+                      if (change.live === true) {
+                        count += 1
+                      }
+                      let idx = tree.indexOf(change.id)
+                      if (idx > -1) {
+                        change._tree_index = idx
+                        // remove...
+                        tree[idx] = null
+                        while (tree[tree.length - 1] === null) {
+                          tree.pop()
+                        }
+                      } else {
+                        change._tree_index = 0
+                      }
+                      change._tree_branches = []
+                      change._tree = []
+                      if (typeof (change.items_behind) === 'undefined') {
+                        change.items_behind = []
+                      }
+                      change.items_behind.sort(function (a, b) {
+                        return (changes[b]._tree_position - changes[a]._tree_position)
+                      })
+                      $.each(change.items_behind, function (i, id) {
+                        tree.push(id)
+                        if (tree.length > lastTreeLength && lastTreeLength > 0) {
+                          change._tree_branches.push(tree.length - 1)
+                        }
+                      })
+                      if (tree.length > maxTreeColumns) {
+                        maxTreeColumns = tree.length
+                      }
+                      if (tree.length > pipelineMaxTreeColumns) {
+                        pipelineMaxTreeColumns = tree.length
+                      }
+                      change._tree = tree.slice(0) // make a copy
+                      lastTreeLength = tree.length
+                    })
+                  })
+                  changeQueue._tree_columns = maxTreeColumns
                 })
-                $.each(change.items_behind, function (i, id) {
-                  tree.push(id)
-                  if (tree.length > lastTreeLength && lastTreeLength > 0) {
-                    change._tree_branches.push(tree.length - 1)
-                  }
-                })
-                if (tree.length > maxTreeColumns) {
-                  maxTreeColumns = tree.length
-                }
-                if (tree.length > pipelineMaxTreeColumns) {
-                  pipelineMaxTreeColumns = tree.length
-                }
-                change._tree = tree.slice(0) // make a copy
-                lastTreeLength = tree.length
-              })
-            })
-            changeQueue._tree_columns = maxTreeColumns
-          })
         pipeline._tree_columns = pipelineMaxTreeColumns
         return count
       }

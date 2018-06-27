@@ -1,6 +1,9 @@
 /* global URL, WebSocket, BuiltinConfig */
 // Client script for Zuul Log Streaming
 //
+// @licstart  The following is the entire license notice for the
+// JavaScript code in this page.
+//
 // Copyright 2017 BMW Car IT GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,6 +17,14 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
+//
+// @licend  The above is the entire license notice for the JavaScript code in
+// this page.
+
+import angular from 'angular'
+import './styles/stream.css'
+
+import { getSourceUrl } from './util'
 
 function escapeLog (text) {
   const pattern = /[<>&"']/g
@@ -23,7 +34,7 @@ function escapeLog (text) {
   })
 }
 
-function zuulStartStream (tenant, zuulService) {
+function zuulStartStream ($location) {
   let pageUpdateInMS = 250
   let receiveBuffer = ''
 
@@ -54,8 +65,16 @@ function zuulStartStream (tenant, zuulService) {
   } else if (url.searchParams.has('websocket_url')) {
     params['websocket_url'] = url.searchParams.get('websocket_url')
   } else {
-    params['websocket_url'] = zuulService.getWebsocketUrl(
-      'console-stream', tenant)
+    // Websocket doesn't accept relative urls so construct an
+    // absolute one.
+    let protocol = ''
+    if (url['protocol'] === 'https:') {
+      protocol = 'wss://'
+    } else {
+      protocol = 'ws://'
+    }
+    let path = getSourceUrl('console-stream', $location)
+    params['websocket_url'] = protocol + url['host'] + path
   }
   let ws = new WebSocket(params['websocket_url'])
 
@@ -75,4 +94,8 @@ function zuulStartStream (tenant, zuulService) {
   }
 }
 
-export default zuulStartStream
+angular.module('zuulStream', []).controller(
+  'mainController', function ($scope, $http, $location) {
+    window.onload = zuulStartStream($location)
+  }
+)

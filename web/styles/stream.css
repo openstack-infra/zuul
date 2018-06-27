@@ -1,15 +1,18 @@
+body#zuulstream {
+  font-family: monospace;
+  background-color: black;
+  color: lightgrey;
+}
+
 #zuulstreamoverlay {
-    float: right;
     position: fixed;
     top: 5px;
     right: 5px;
-    background-color: white;
-    padding: 2px;
+    background-color: darkgrey;
     color: black;
 }
 
 pre#zuulstreamcontent {
-    font-family: monospace;
     white-space: pre;
     margin: 0px 10px;
     background-color: black;

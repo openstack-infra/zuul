@@ -1,13 +1,9 @@
-const path = require('path')
-const webpack = require('webpack')
-const HtmlWebpackPlugin = require('html-webpack-plugin')
-const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin')
+const path = require('path');
+const webpack = require('webpack');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
-  entry: './web/main.ts',
-  resolve: {
-    extensions: [ '.tsx', '.ts', '.js' ]
-  },
+  entry: './web/main.js',
   output: {
     filename: '[name].js',
     // path.resolve(__dirname winds up relative to the config dir
@@ -24,14 +20,13 @@ module.exports = {
       cacheGroups: {
         commons: {
           test: /node_modules/,
-          name: 'vendor',
-          chunks: 'all'
+          name: "vendor",
+          chunks: "all"
         }
       }
     }
   },
   plugins: [
-    new ForkTsCheckerWebpackPlugin(),
     new webpack.ProvidePlugin({
         $: 'jquery/dist/jquery',
         jQuery: 'jquery/dist/jquery',
@@ -41,43 +36,32 @@ module.exports = {
     // output file.
     new HtmlWebpackPlugin({
       filename: 'status.html',
-      template: 'web/config/main.ejs',
+      template: 'web/templates/status.ejs',
       title: 'Zuul Status'
     }),
     new HtmlWebpackPlugin({
       title: 'Zuul Builds',
-      template: 'web/config/main.ejs',
+      template: 'web/templates/builds.ejs',
       filename: 'builds.html'
     }),
     new HtmlWebpackPlugin({
       title: 'Zuul Jobs',
-      template: 'web/config/main.ejs',
+      template: 'web/templates/jobs.ejs',
       filename: 'jobs.html'
     }),
     new HtmlWebpackPlugin({
       title: 'Zuul Tenants',
-      template: 'web/config/main.ejs',
+      template: 'web/templates/tenants.ejs',
       filename: 'tenants.html'
     }),
     new HtmlWebpackPlugin({
       title: 'Zuul Console Stream',
-      template: 'web/config/main.ejs',
+      template: 'web/templates/stream.ejs',
       filename: 'stream.html'
     })
   ],
   module: {
     rules: [
-      {
-        test: /\.ts$/,
-        exclude: /node_modules/,
-        use: {
-          loader: 'ts-loader',
-          options: {
-            // disable type checker - we will use it in fork plugin
-            transpileOnly: true
-          }
-        }
-      },
       {
         test: /\.js$/,
         exclude: /node_modules/,
@@ -101,7 +85,7 @@ module.exports = {
       {
         test: /\.woff(2)?(\?v=\d+\.\d+\.\d+)?$/,
         use: {
-          loader: 'url-loader',
+          loader: "url-loader",
           options: {
             limit: 10000,
             mimetype: 'application/font-woff'
@@ -111,7 +95,7 @@ module.exports = {
       {
         test: /\.ttf(\?v=\d+\.\d+\.\d+)?$/,
         use: {
-          loader: 'url-loader',
+          loader: "url-loader",
           options: {
             limit: 10000,
             mimetype: 'application/octet-stream'
@@ -125,7 +109,7 @@ module.exports = {
       {
         test: /\.svg(\?v=\d+\.\d+\.\d+)?$/,
         use: {
-          loader: 'url-loader',
+          loader: "url-loader",
           options: {
             limit: 10000,
             mimetype: 'image/svg+xml'
@@ -134,7 +118,7 @@ module.exports = {
       },
       {
         test: /\.html$/,
-        use: ['html-loader'],
+        use: ['raw-loader'],
         exclude: /node_modules/
       }
     ]

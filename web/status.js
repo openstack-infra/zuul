@@ -1,5 +1,8 @@
-/* global URL, DemoStatusBasic, DemoStatusOpenStack, DemoStatusTree, BuiltinConfig */
+/* global jQuery, URL, DemoStatusBasic, DemoStatusOpenStack, DemoStatusTree, BuiltinConfig */
 // Client script for Zuul status page
+//
+// @licstart  The following is the entire license notice for the
+// JavaScript code in this page.
 //
 // Copyright 2013 OpenStack Foundation
 // Copyright 2013 Timo Tijhof
@@ -17,16 +20,23 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
+//
+// @licend  The above is the entire license notice
+// for the JavaScript code in this page.
 
+import 'bootstrap/dist/css/bootstrap.css'
 import 'jquery-visibility/jquery-visibility'
 import 'graphitejs/jquery.graphite.js'
+import angular from 'angular'
 
+import './styles/zuul.css'
 import './jquery.zuul'
+import { getSourceUrl } from './util'
 
 /**
  * @return The $.zuul instance
  */
-function zuulStart ($, tenant, zuulService) {
+function zuulStart ($, $location) {
   // Start the zuul app (expects default dom)
 
   let $container, $indicator
@@ -50,7 +60,7 @@ function zuulStart ($, tenant, zuulService) {
       params['source_data'] = DemoStatusTree
     }
   } else {
-    params['source'] = zuulService.getSourceUrl('status', tenant)
+    params['source'] = getSourceUrl('status', $location)
   }
 
   let zuul = $.zuul(params)
@@ -99,4 +109,25 @@ function zuulStart ($, tenant, zuulService) {
   return zuul
 }
 
-export default zuulStart
+if (module.hot) {
+  // This doesn't fully work with our jquery plugin because $.zuul is already
+  // instantiated. Leaving it here to show where a hook can happen if we can
+  // figure out a way to live update it. When it's not there, an update to
+  // jquery.zuul.js triggers a page reload.
+  // module.hot.accept('./jquery.zuul', function() {
+  //   console.log('Accepting the updated module!');
+  // })
+}
+
+angular.module('zuulStatus', [], function ($locationProvider) {
+  $locationProvider.html5Mode({
+    enabled: true,
+    requireBase: false,
+    rewriteLinks: false
+  })
+  $locationProvider.hashPrefix('')
+}).controller(
+  'mainController', function ($location) {
+    zuulStart(jQuery, $location)
+  }
+)
