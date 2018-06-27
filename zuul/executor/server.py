@@ -1350,7 +1350,8 @@ class AnsibleJob(object):
             src_root=self.jobdir.src_root,
             log_root=self.jobdir.log_root,
             work_root=self.jobdir.work_root,
-            result_data_file=self.jobdir.result_data_file)
+            result_data_file=self.jobdir.result_data_file,
+            inventory_file=self.jobdir.inventory)
 
         nodes = self.getHostList(args)
         setup_inventory = make_setup_inventory_dict(nodes)

@@ -511,6 +511,13 @@ executor running the job is available:
 
          The path to the working directory.
 
+      .. var:: inventory_file
+
+         The path to the inventory. This variable is needed for jobs running
+         without a nodeset since Ansible doesn't set it for localhost, see
+         this `porting guide
+         <https://docs.ansible.com/ansible/latest/porting_guides/porting_guide_2.4.html#inventory>`_
+
 .. _user_sitewide_variables:
 
 Site-wide Variables
