@@ -29,7 +29,7 @@ class ZuulService {
     if (typeof ZUUL_API_URL !== 'undefined') {
       this.baseHref = ZUUL_API_URL
     } else {
-      this.baseHref = getBaseHrefFromPath(window.location.pathname)
+      this.baseHref = getBaseHrefFromPath(window.location.href)
     }
     if (this.baseHref.endsWith('/')) {
       this.baseHref = this.baseHref.slice(0, 1)
