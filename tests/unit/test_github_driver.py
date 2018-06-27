@@ -270,7 +270,13 @@ class TestGithubDriver(ZuulTestCase):
         # event update stamp has resolution one second, wait so the latter
         # one has newer timestamp
         time.sleep(1)
+
+        # On a push to a PR Github may emit a pull_request_review event with
+        # the old head so send that right before the synchronized event.
+        review_event = A.getReviewAddedEvent('dismissed')
         A.addCommit()
+        self.fake_github.emitEvent(review_event)
+
         self.fake_github.emitEvent(A.getPullRequestSynchronizeEvent())
         self.waitUntilSettled()
 
