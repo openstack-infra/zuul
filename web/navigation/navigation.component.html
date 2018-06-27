@@ -16,7 +16,7 @@ under the License.
 <nav class="navbar navbar-default">
   <div class="container-fluid">
     <div class="navbar-header">
-      <a class="navbar-brand" [routerLink]="zuul.getBaseHref()" target="_self">Zuul Dashboard</a>
+      <a class="navbar-brand" [routerLink]="zuul.appBaseHref" target="_self">Zuul Dashboard</a>
     </div>
     <ul class="nav navbar-nav" *ngIf="showNavbar">
       <li routerLinkActive="active" *ngFor="let route of navbarRoutes">

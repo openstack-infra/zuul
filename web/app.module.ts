@@ -24,7 +24,7 @@ import { FormsModule } from '@angular/forms'
 
 import { AppRoutingModule } from './app-routing.module'
 import { AppComponent } from './app.component'
-import { getBaseHref } from './util'
+import { getAppBaseHref } from './zuul/zuul.service'
 
 import BuildsComponent from './builds/builds.component'
 import NavigationComponent from './navigation/navigation.component'
@@ -61,7 +61,7 @@ import ZuulService from './zuul/zuul.service'
   ],
   providers: [
     ZuulService,
-    {provide: APP_BASE_HREF, useValue: getBaseHref()}
+    {provide: APP_BASE_HREF, useValue: getAppBaseHref()}
   ],
   bootstrap: [
     AppComponent
