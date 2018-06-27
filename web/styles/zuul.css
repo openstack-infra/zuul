@@ -1,3 +1,5 @@
+@import url('~bootstrap/dist/css/bootstrap.css');
+
 .zuul-change {
     margin-bottom: 10px;
 }
@@ -55,4 +57,8 @@
 .zuul-patchset-header {
     font-size: small;
     padding: 8px 12px;
+}
+
+.form-inline > .form-group {
+    padding-right: 5px;
 }
