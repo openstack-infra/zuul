@@ -14,8 +14,10 @@
 # under the License.
 
 from contextlib import contextmanager
+from urllib.parse import urlsplit, urlunsplit
 import logging
 import os
+import re
 import shutil
 import time
 
@@ -40,6 +42,17 @@ def reset_repo_to_head(repo):
         # modifications after the reset
         if e.status != 1:
             raise
+
+
+def redact_url(url):
+    parsed = urlsplit(url)
+    if parsed.password is None:
+        return url
+
+    # items[1] is the netloc containing credentials and hostname
+    items = list(parsed)
+    items[1] = re.sub('.*@', '******@', items[1])
+    return urlunsplit(items)
 
 
 @contextmanager
@@ -100,8 +113,8 @@ class Repo(object):
         # If the repo does not exist, clone the repo.
         rewrite_url = False
         if not repo_is_cloned:
-            self.log.debug("Cloning from %s to %s" % (self.remote_url,
-                                                      self.local_path))
+            self.log.debug("Cloning from %s to %s" % (
+                redact_url(self.remote_url), self.local_path))
             if self.cache_path:
                 self._git_clone(self.cache_path)
                 rewrite_url = True
@@ -395,7 +408,7 @@ class Repo(object):
     def setRemoteUrl(self, url):
         if self.remote_url == url:
             return
-        self.log.debug("Set remote url to %s" % url)
+        self.log.debug("Set remote url to %s" % redact_url(url))
         self.remote_url = url
         self._git_set_remote_url(self.createRepoObject(), self.remote_url)
 
