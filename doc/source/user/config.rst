@@ -1252,12 +1252,12 @@ definition, however, in the case of a template, the
 project, but rather names the template so that it can be referenced in
 a :ref:`project` definition.
 
-Because Project Templates may be used outside of the projects they are
-defined, they honor the implied branches :ref:`pragma` (unlike
-Projects).  The same heuristics described in :attr:`job.branches` that
-determine what implied branches a :ref:`job` will receive apply to
-Project Templates (with the exception that it is not possible to
-explicity set a branch matcher on a Project Template).
+Because Project Templates may be used outside of the projects where
+they are defined, they honor the implied branch :ref:`pragmas <pragma>`
+(unlike Projects).  The same heuristics described in
+:attr:`job.branches` that determine what implied branches a :ref:`job`
+will receive apply to Project Templates (with the exception that it is
+not possible to explicity set a branch matcher on a Project Template).
 
 .. _secret:
 
