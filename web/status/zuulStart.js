@@ -53,7 +53,7 @@ function zuulStart ($, tenant, zuulService) {
     params['source'] = zuulService.getSourceUrl('status', tenant)
   }
 
-  let zuul = $.zuul(params)
+  let zuul = $.zuul(params, zuulService)
 
   zuul.jq.on('update-start', function () {
     $container.addClass('zuul-container-loading')

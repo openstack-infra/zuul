@@ -46,7 +46,7 @@ import LineTImage from '../images/line-t.png';
     return defaultValue
   }
 
-  $.zuul = function (options) {
+  $.zuul = function (options, zuulService) {
     options = $.extend({
       'enabled': true,
       'graphite_url': '',
@@ -414,7 +414,7 @@ import LineTImage from '../images/line-t.png';
         }
 
         let $icon = $('<img />')
-          .attr('src', iconFile)
+          .attr('src', zuulService.appBaseHref + iconFile)
           .attr('title', iconTitle)
           .css('display', 'block')
 
