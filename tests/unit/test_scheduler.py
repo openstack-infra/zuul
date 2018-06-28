@@ -5227,7 +5227,7 @@ class TestSchedulerTemplatedProject(ZuulTestCase):
 
     def test_unimplied_branch_matchers(self):
         # This tests that there are no implied branch matchers added
-        # by project templates.
+        # to project templates in unbranched projects.
         self.create_branch('org/layered-project', 'stable')
 
         A = self.fake_gerrit.addFakeChange(

@@ -577,32 +577,6 @@ class JobParser(object):
         self.log = logging.getLogger("zuul.JobParser")
         self.pcontext = pcontext
 
-    def _getImpliedBranches(self, job):
-        # If the user has set a pragma directive for this, use the
-        # value (if unset, the value is None).
-        if job.source_context.implied_branch_matchers is True:
-            if job.source_context.implied_branches is not None:
-                return job.source_context.implied_branches
-            return [job.source_context.branch]
-        elif job.source_context.implied_branch_matchers is False:
-            return None
-
-        # If this is a trusted project, don't create implied branch
-        # matchers.
-        if job.source_context.trusted:
-            return None
-
-        # If this project only has one branch, don't create implied
-        # branch matchers.  This way central job repos can work.
-        branches = self.pcontext.tenant.getProjectBranches(
-            job.source_context.project)
-        if len(branches) == 1:
-            return None
-
-        if job.source_context.implied_branches is not None:
-            return job.source_context.implied_branches
-        return [job.source_context.branch]
-
     def fromYaml(self, conf, project_pipeline=False, name=None,
                  validate=True):
         if validate:
@@ -782,10 +756,10 @@ class JobParser(object):
             job.allowed_projects = frozenset(allowed)
 
         branches = None
-        if ('branches' not in conf):
-            branches = self._getImpliedBranches(job)
-        if (not branches) and ('branches' in conf):
+        if 'branches' in conf:
             branches = as_list(conf['branches'])
+        elif not project_pipeline:
+            branches = self.pcontext.getImpliedBranches(job.source_context)
         if branches:
             job.setBranchMatcher(branches)
         if 'files' in conf:
@@ -868,6 +842,13 @@ class ProjectTemplateParser(object):
             self.parseJobList(
                 conf_pipeline.get('jobs', []),
                 source_context, start_mark, project_pipeline.job_list)
+
+        # If this project definition is in a place where it
+        # should get implied branch matchers, set it.
+        branches = self.pcontext.getImpliedBranches(source_context)
+        if branches:
+            project_template.setImpliedBranchMatchers(branches)
+
         if freeze:
             project_template.freeze()
         return project_template
@@ -957,11 +938,15 @@ class ProjectParser(object):
 
             project_config.name = project.canonical_name
 
-            if not conf['_source_context'].trusted:
-                # If this project definition is in a place where it
-                # should get implied branch matchers, set it.
-                project_config.addImpliedBranchMatcher(
-                    conf['_source_context'].branch)
+            # Pragmas can cause templates to end up with implied
+            # branch matchers for arbitrary branches, but project
+            # stanzas should not.  They should either have the current
+            # branch or no branch matcher.
+            if conf['_source_context'].trusted:
+                project_config.setImpliedBranchMatchers([])
+            else:
+                project_config.setImpliedBranchMatchers(
+                    [conf['_source_context'].branch])
 
         # Add templates
         for name in conf.get('templates', []):
@@ -1183,6 +1168,32 @@ class ParseContext(object):
         self.semaphore_parser = SemaphoreParser(self)
         self.project_template_parser = ProjectTemplateParser(self)
         self.project_parser = ProjectParser(self)
+
+    def getImpliedBranches(self, source_context):
+        # If the user has set a pragma directive for this, use the
+        # value (if unset, the value is None).
+        if source_context.implied_branch_matchers is True:
+            if source_context.implied_branches is not None:
+                return source_context.implied_branches
+            return [source_context.branch]
+        elif source_context.implied_branch_matchers is False:
+            return None
+
+        # If this is a trusted project, don't create implied branch
+        # matchers.
+        if source_context.trusted:
+            return None
+
+        # If this project only has one branch, don't create implied
+        # branch matchers.  This way central job repos can work.
+        branches = self.tenant.getProjectBranches(
+            source_context.project)
+        if len(branches) == 1:
+            return None
+
+        if source_context.implied_branches is not None:
+            return source_context.implied_branches
+        return [source_context.branch]
 
 
 class TenantParser(object):
