@@ -690,8 +690,11 @@ class AnsibleJob(object):
 
     def _execute(self):
         args = json.loads(self.job.arguments)
-        self.log.debug("Beginning job %s for ref %s" %
-                       (self.job.name, args['zuul']['ref']))
+        self.log.info(
+            "Beginning job %s for ref %s (change %s)" % (
+                args['zuul']['job'],
+                args['zuul']['ref'],
+                args['zuul']['change_url']))
         self.log.debug("Job root: %s" % (self.jobdir.root,))
         tasks = []
         projects = set()
