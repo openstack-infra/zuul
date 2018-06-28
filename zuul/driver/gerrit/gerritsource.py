@@ -97,7 +97,8 @@ class GerritSource(BaseSource):
                         break
                 if not found:
                     continue
-                key = (result['number'], result['currentPatchSet']['number'])
+                key = (str(result['number']),
+                       str(result['currentPatchSet']['number']))
                 if key in seen:
                     continue
                 seen.add(key)
