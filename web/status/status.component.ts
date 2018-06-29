@@ -24,6 +24,7 @@ interface ZuulStatusOption {
 
 interface ZuulStatus {
   options: ZuulStatusOption
+  timer: number
 }
 
 @Component({
@@ -36,15 +37,19 @@ export default class StatusComponent implements OnInit, OnDestroy {
   constructor(private route: ActivatedRoute, private zuul: ZuulService) {}
 
   ngOnInit() {
-    if (this.app) {
-      this.app.options.enabled = true
-    } else {
-      this.app = zuulStart(
-        jQuery, this.route.snapshot.paramMap.get('tenant'), this.zuul)
+    if (typeof this.app === 'undefined') {
+       this.app = zuulStart(
+           jQuery, this.route.snapshot.paramMap.get('tenant'), this.zuul)
     }
+    this.app.options.enabled = true
   }
 
   ngOnDestroy() {
     this.app.options.enabled = false
+    if (typeof this.app.timer !== 'undefined') {
+        clearTimeout(this.app.timer)
+        this.app.timer = 0
+    }
+    jQuery(document).off()
   }
 }

@@ -648,11 +648,11 @@ import LineTImage from '../images/line-t.png';
       schedule: function (app) {
         app = app || this
         if (!options.enabled) {
-          setTimeout(function () { app.schedule(app) }, 5000)
+          app.timer = setTimeout(function () { app.schedule(app) }, 5000)
           return
         }
         app.update().always(function () {
-          setTimeout(function () { app.schedule(app) }, 5000)
+          app.timer = setTimeout(function () { app.schedule(app) }, 5000)
         })
 
         // Only update graphs every minute
