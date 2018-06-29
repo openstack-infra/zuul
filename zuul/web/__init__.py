@@ -83,6 +83,7 @@ class LogStreamHandler(WebSocket):
     log = logging.getLogger("zuul.web")
 
     def __init__(self, *args, **kw):
+        kw['heartbeat_freq'] = 20
         super(LogStreamHandler, self).__init__(*args, **kw)
         self.streamer = None
 
