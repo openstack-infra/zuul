@@ -1753,8 +1753,9 @@ class QueueItem(object):
             # Conditionally set self.ppc so that the debug method can
             # consult it as we resolve the jobs.
             self.project_pipeline_config = ppc
-            for msg in ppc.debug_messages:
-                self.debug(msg)
+            if ppc:
+                for msg in ppc.debug_messages:
+                    self.debug(msg)
             job_graph = self.layout.createJobGraph(self, ppc)
             for job in job_graph.getJobs():
                 # Ensure that each jobs's dependencies are fully
