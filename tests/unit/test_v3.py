@@ -2398,7 +2398,7 @@ class TestBrokenConfig(ZuulTestCase):
             "Zuul encountered a syntax error",
             str(tenant.layout.loading_errors[0][1]))
 
-    def test_dynamic_conf_on_broken_config(self):
+    def test_dynamic_ignore(self):
         # Verify dynamic config behaviors inside a tenant broken config
         tenant = self.sched.abide.tenants.get('tenant-one')
         # There is a configuration error
@@ -2430,6 +2430,14 @@ class TestBrokenConfig(ZuulTestCase):
         self.assertHistory([
             dict(name='project-test', result='SUCCESS', changes='1,1')])
 
+    def test_dynamic_fail_unbroken(self):
+        # Verify dynamic config behaviors inside a tenant broken config
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        # There is a configuration error
+        self.assertEquals(
+            len(tenant.layout.loading_errors), 1,
+            "An error should have been stored")
+
         # Inside a broken tenant configuration environment,
         # send an invalid config to an "unbroken" project and verify
         # that tenant configuration have not been validated
@@ -2455,6 +2463,14 @@ class TestBrokenConfig(ZuulTestCase):
         self.assertEqual(B.patchsets[0]['approvals'][0]['value'], "-1")
         self.assertIn('Job non-existent-job not defined', B.messages[0],
                       "A should have failed the check pipeline")
+
+    def test_dynamic_fail_broken(self):
+        # Verify dynamic config behaviors inside a tenant broken config
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        # There is a configuration error
+        self.assertEquals(
+            len(tenant.layout.loading_errors), 1,
+            "An error should have been stored")
 
         # Inside a broken tenant configuration environment,
         # send an invalid config to a "broken" project and verify
@@ -2482,6 +2498,14 @@ class TestBrokenConfig(ZuulTestCase):
         self.assertIn('Job non-existent-job not defined', C.messages[0],
                       "A should have failed the check pipeline")
 
+    def test_dynamic_fix_broken(self):
+        # Verify dynamic config behaviors inside a tenant broken config
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        # There is a configuration error
+        self.assertEquals(
+            len(tenant.layout.loading_errors), 1,
+            "An error should have been stored")
+
         # Inside a broken tenant configuration environment,
         # send an valid config to a "broken" project and verify
         # that tenant configuration have been validated and job executed
@@ -2504,8 +2528,7 @@ class TestBrokenConfig(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(D.patchsets[0]['approvals'][0]['value'], "1")
         self.assertHistory([
-            dict(name='project-test', result='SUCCESS', changes='1,1'),
-            dict(name='project-test2', result='SUCCESS', changes='4,1')])
+            dict(name='project-test2', result='SUCCESS', changes='1,1')])
 
 
 class TestProjectKeys(ZuulTestCase):
