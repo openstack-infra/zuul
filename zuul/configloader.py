@@ -196,6 +196,29 @@ def indent(s):
 
 
 @contextmanager
+def project_configuration_exceptions(context, accumulator):
+    try:
+        yield
+    except ConfigurationSyntaxError:
+        raise
+    except Exception as e:
+        intro = textwrap.fill(textwrap.dedent("""\
+        Zuul encountered an error while accessing the repo {repo}.  The error
+        was:""".format(
+            repo=context.project.name,
+        )))
+
+        m = textwrap.dedent("""\
+        {intro}
+
+        {error}""")
+
+        m = m.format(intro=intro,
+                     error=indent(str(e)))
+        accumulator.addError(context, None, m)
+
+
+@contextmanager
 def early_configuration_exceptions(context):
     try:
         yield
@@ -1396,12 +1419,15 @@ class TenantParser(object):
         for tpc in untrusted_tpcs:
             tenant.addUntrustedProject(tpc)
 
-        for tpc in config_tpcs + untrusted_tpcs:
-            self._getProjectBranches(tenant, tpc)
-            self._resolveShadowProjects(tenant, tpc)
-
         # We prepare a stack to store config loading issues
         loading_errors = model.LoadingErrors()
+
+        for tpc in config_tpcs + untrusted_tpcs:
+            source_context = model.ProjectContext(tpc.project)
+            with project_configuration_exceptions(source_context,
+                                                  loading_errors):
+                self._getProjectBranches(tenant, tpc)
+                self._resolveShadowProjects(tenant, tpc)
 
         # Set default ansible version
         default_ansible_version = conf.get('default-ansible-version')
