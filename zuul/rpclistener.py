@@ -364,6 +364,6 @@ class RPCListener(object):
         output = []
         for err in tenant.layout.loading_errors.errors:
             output.append({
-                'source_context': err[0].toDict(),
-                'error': err[1]})
+                'source_context': err.key.context.toDict(),
+                'error': err.error})
         job.sendWorkComplete(json.dumps(output))
