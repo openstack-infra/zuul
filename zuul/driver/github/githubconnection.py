@@ -927,24 +927,37 @@ class GithubConnection(BaseConnection):
 
     def getProjectBranches(self, project, tenant):
         github = self.getGithubClient(project.name)
-        try:
-            owner, proj = project.name.split('/')
-            repository = github.repository(owner, proj)
-            exclude_unprotected = tenant.getExcludeUnprotectedBranches(project)
-            self._project_branch_cache[project.name] = [
-                branch.name for branch in repository.branches(
-                    protected=exclude_unprotected)]
-            self.log.debug('Got project branches for %s: %s', project.name,
-                           self._project_branch_cache[project.name])
-            log_rate_limit(self.log, github)
-        except github3.exceptions.ForbiddenError as e:
-            self.log.error(str(e), exc_info=True)
-            rate_limit = github.rate_limit()
-            if rate_limit['resources']['core']['remaining'] == 0:
-                self.log.debug("Rate limit exceeded, using stale branch list")
-            else:
-                self.log.error(str(e), exc_info=True)
+        exclude_unprotected = tenant.getExcludeUnprotectedBranches(project)
 
+        url = github.session.build_url('repos', project.name,
+                                       'branches')
+
+        headers = {'Accept': 'application/vnd.github.loki-preview+json'}
+        protected = 1 if exclude_unprotected else 0
+        params = {'per_page': 100, 'protected': protected}
+
+        branches = []
+        while url:
+            resp = github.session.get(
+                url, headers=headers, params=params)
+
+            # check if we need to do further paged calls
+            url = resp.links.get(
+                'next', {}).get('url')
+
+            if resp.status_code == 403:
+                self.log.error(str(resp))
+                rate_limit = github.rate_limit()
+                if rate_limit['resources']['core']['remaining'] == 0:
+                    self.log.warning(
+                        "Rate limit exceeded, using stale branch list")
+                # failed to list branches so use a stale branch list
+                return self._project_branch_cache.get(project.name, [])
+
+            branches.extend([x['name'] for x in resp.json()])
+
+        log_rate_limit(self.log, github)
+        self._project_branch_cache[project.name] = branches
         return self._project_branch_cache[project.name]
 
     def getBranch(self, project_name, branch):

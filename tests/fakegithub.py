@@ -124,17 +124,25 @@ class FakeRepository(object):
             self._commits[sha] = commit
         return commit
 
-    def get_url(self, path):
-        entity, request = path.split('/', 1)
+    def get_url(self, path, params=None):
+        if '/' in path:
+            entity, request = path.split('/', 1)
+        else:
+            entity = path
+            request = None
 
         if entity == 'branches':
-            return self.get_url_branches(request)
+            return self.get_url_branches(request, params=params)
         if entity == 'collaborators':
             return self.get_url_collaborators(request)
         else:
             return None
 
-    def get_url_branches(self, path):
+    def get_url_branches(self, path, params=None):
+        if path is None:
+            # request wants a branch list
+            return self.get_url_branch_list(params)
+
         elements = path.split('/')
 
         entity = elements[-1]
@@ -145,6 +153,15 @@ class FakeRepository(object):
             # fall back to treat all elements as branch
             branch = '/'.join(elements)
             return self.get_url_branch(branch)
+
+    def get_url_branch_list(self, params):
+        if params.get('protected') == 1:
+            exclude_unprotected = True
+        else:
+            exclude_unprotected = False
+        branches = [x.as_dict() for x in self.branches(exclude_unprotected)]
+
+        return FakeResponse(branches, 200)
 
     def get_url_branch(self, branch_name):
         for branch in self._branches:
@@ -279,6 +296,7 @@ class FakeResponse(object):
     def __init__(self, data, status_code=200):
         self.status_code = status_code
         self.data = data
+        self.links = {}
 
     def json(self):
         return self.data
@@ -293,7 +311,7 @@ class FakeGithubSession(object):
         fakepath = '/'.join(args)
         return FAKE_BASE_URL + fakepath
 
-    def get(self, url, headers=None):
+    def get(self, url, headers=None, params=None):
         request = url
         if request.startswith(FAKE_BASE_URL):
             request = request[len(FAKE_BASE_URL):]
@@ -301,19 +319,19 @@ class FakeGithubSession(object):
         entity, request = request.split('/', 1)
 
         if entity == 'repos':
-            return self.get_repo(request)
+            return self.get_repo(request, params=params)
         else:
             # unknown entity to process
             return None
 
-    def get_repo(self, request):
+    def get_repo(self, request, params=None):
         org, project, request = request.split('/', 2)
         project_name = '{}/{}'.format(org, project)
 
         client = FakeGithubClient(self._data)
         repo = client.repo_from_project(project_name)
 
-        return repo.get_url(request)
+        return repo.get_url(request, params=params)
 
 
 class FakeGithubData(object):
