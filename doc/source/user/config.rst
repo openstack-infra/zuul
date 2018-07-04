@@ -672,7 +672,8 @@ Here is an example of two job definitions:
       .. code-block:: yaml
 
          - secret:
-             important-secret:
+             name: important-secret
+             data:
                key: encrypted-secret-key-data
 
          - job:
