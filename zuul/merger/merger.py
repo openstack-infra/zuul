@@ -113,13 +113,16 @@ class Repo(object):
         # If the repo does not exist, clone the repo.
         rewrite_url = False
         if not repo_is_cloned:
-            self.log.debug("Cloning from %s to %s" % (
-                redact_url(self.remote_url), self.local_path))
             if self.cache_path:
-                self._git_clone(self.cache_path)
+                clone_url = self.cache_path
                 rewrite_url = True
             else:
-                self._git_clone(self.remote_url)
+                clone_url = self.remote_url
+
+            self.log.debug("Cloning from %s to %s" % (
+                redact_url(clone_url), self.local_path))
+            self._git_clone(clone_url)
+
         repo = git.Repo(self.local_path)
         repo.git.update_environment(**self.env)
         # Create local branches corresponding to all the remote branches
