@@ -318,9 +318,6 @@ class GithubEventConnector(threading.Thread):
             # Do not process non-PR issue comment
             return
         pr_body = self._issue_to_pull_request(body)
-        number = body.get('issue').get('number')
-        project_name = body.get('repository').get('full_name')
-        pr_body = self.connection.getPull(project_name, number)
         if pr_body is None:
             return
 
