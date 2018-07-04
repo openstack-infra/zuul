@@ -1,0 +1,11 @@
+- tenant:
+    name: tenant-one
+    source:
+      review_gerrit:
+        config-projects:
+          - common-config
+        untrusted-projects:
+          - org/project
+      another_gerrit:
+        untrusted-projects:
+          - org/project

@@ -828,7 +828,9 @@ class Scheduler(threading.Thread):
 
     def _doEnqueueEvent(self, event):
         tenant = self.abide.tenants.get(event.tenant_name)
-        (trusted, project) = tenant.getProject(event.project_name)
+        full_project_name = ('/'.join([event.project_hostname,
+                                       event.project_name]))
+        (trusted, project) = tenant.getProject(full_project_name)
         pipeline = tenant.layout.pipelines[event.forced_pipeline]
         change = project.source.getChange(event, project)
         self.log.debug("Event %s for change %s was directly assigned "
