@@ -309,6 +309,22 @@ class TestSplitConfig(ZuulTestCase):
     def test_split_config(self):
         tenant = self.sched.abide.tenants.get('tenant-one')
         self.assertIn('project-test1', tenant.layout.jobs)
+        self.assertIn('project-test2', tenant.layout.jobs)
+        test1 = tenant.layout.getJob('project-test1')
+        self.assertEqual(test1.source_context.project.name, 'common-config')
+        self.assertEqual(test1.source_context.branch, 'master')
+        self.assertEqual(test1.source_context.path, 'zuul.d/jobs.yaml')
+        self.assertEqual(test1.source_context.trusted, True)
+        test2 = tenant.layout.getJob('project-test2')
+        self.assertEqual(test2.source_context.project.name, 'common-config')
+        self.assertEqual(test2.source_context.branch, 'master')
+        self.assertEqual(test2.source_context.path, 'zuul.d/more-jobs.yaml')
+        self.assertEqual(test2.source_context.trusted, True)
+
+        self.assertNotEqual(test1.source_context, test2.source_context)
+        self.assertTrue(test1.source_context.isSameProject(
+            test2.source_context))
+
         project_config = tenant.layout.project_configs.get(
             'review.example.com/org/project')
         self.assertIn('project-test1',
