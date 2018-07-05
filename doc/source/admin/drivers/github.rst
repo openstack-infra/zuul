@@ -56,24 +56,25 @@ To create a `GitHub application
 * Create a Webhook secret
 * Set permissions:
 
-  * Commit statuses: Read & Write
+  * Repository administration: Read
+  * Repository contents: Read & Write (write to let zuul merge change)
   * Issues: Read & Write
   * Pull requests: Read & Write
-  * Repository contents: Read & Write (write to let zuul merge change)
-  * Repository administration: Read
+  * Commit statuses: Read & Write
 
 * Set events subscription:
-  * Label
-  * Status
-  * Issue comment
-  * Issues
-  * Pull request
-  * Pull request review
-  * Pull request review comment
+
   * Commit comment
   * Create
   * Push
   * Release
+  * Issue comment
+  * Issues
+  * Label
+  * Pull request
+  * Pull request review
+  * Pull request review comment
+  * Status
 
 * Set Where can this GitHub App be installed to "Any account"
 * Create the App
