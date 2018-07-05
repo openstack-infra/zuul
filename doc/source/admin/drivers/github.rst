@@ -160,6 +160,12 @@ The supported options in ``zuul.conf`` connections are:
       Enable or disable ssl verification for GitHub Enterprise.  This
       is useful for a connection to a test installation.
 
+   .. attr:: rate_limit_logging
+      :default: true
+
+      Enable or disable GitHub rate limit logging. If rate limiting is disabled
+      in GitHub Enterprise this can save some network round trip times.
+
 Trigger Configuration
 ---------------------
 GitHub webhook events can be configured as triggers.
