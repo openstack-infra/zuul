@@ -1526,7 +1526,8 @@ class TenantParser(object):
                             (job.source_context,))
                         continue
                     loaded = conf_root
-                    source_context = job.source_context
+                    # Create a new source_context so we have unique filenames.
+                    source_context = job.source_context.copy()
                     source_context.path = fn
                     self.log.info(
                         "Loading configuration from %s" %
