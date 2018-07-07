@@ -53,8 +53,7 @@ changes as execution contexts are available may be tested in parallel
 and merged at once.  In the worst case, changes are tested one at a
 time (as each subsequent change fails, changes behind it start again).
 
-For example, if a core developer approves five changes in rapid
-succession::
+For example, if a reviewer approves five changes in rapid succession::
 
   A, B, C, D, E
 
