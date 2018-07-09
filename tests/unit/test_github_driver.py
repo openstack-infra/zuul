@@ -915,17 +915,20 @@ class TestGithubUnprotectedBranches(ZuulTestCase):
         # We now expect that zuul reconfigured itself
         self.assertLess(old, new)
 
-    def test_unprotected_branch_delete(self):
+    def test_protected_branch_delete(self):
         """Test that protected branch deletes trigger a tenant reconfig"""
 
-        # Prepare repo with an initial commit
+        # Prepare repo with an initial commit and enable branch protection
+        github = self.fake_github.getGithubClient()
+        repo = github.repo_from_project('org/project2')
+        repo._set_branch_protection('master', True)
+
         A = self.fake_github.openFakePullRequest('org/project2', 'master', 'A')
         A.setMerged("merging A")
 
-        # now enable branch protection and trigger a reconfiguration
-        github = self.fake_github.getGithubClient()
-        repo = github.repo_from_project('org/project2')
-        repo._set_branch_protection('feat-x', True)
+        # add a spare branch so that the project is not empty after master gets
+        # deleted.
+        repo._create_branch('feat-x')
 
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
