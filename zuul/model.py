@@ -180,11 +180,14 @@ class Pipeline(object):
     Reporter
         Communicates success and failure results somewhere
     """
-    def __init__(self, name, tenant_name):
+    def __init__(self, name, tenant):
         self.name = name
-        self.tenant_name = tenant_name
+        # Note that pipelines are not portable across tenants (new
+        # pipeline objects must be made when a tenant is
+        # reconfigured).  A pipeline requires a tenant in order to
+        # reach the currently active layout for that tenant.
+        self.tenant = tenant
         self.source_context = None
-        self.tenant = None
         self.description = None
         self.failure_message = None
         self.merge_failure_message = None
@@ -2989,6 +2992,11 @@ class Layout(object):
         self.semaphores[semaphore.name] = semaphore
 
     def addPipeline(self, pipeline):
+        if pipeline.tenant is not self.tenant:
+            raise Exception("Pipeline created for tenant %s "
+                            "may not be added to %s" % (
+                                pipeline.tenant,
+                                self.tenant))
         self.pipelines[pipeline.name] = pipeline
 
     def addProjectTemplate(self, project_template):

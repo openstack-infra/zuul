@@ -53,7 +53,7 @@ class TestJob(BaseTestCase):
                                                      'test', False)
         self.tpc = model.TenantProjectConfig(self.project)
         self.tenant.addUntrustedProject(self.tpc)
-        self.pipeline = model.Pipeline('gate', self.layout)
+        self.pipeline = model.Pipeline('gate', self.tenant)
         self.pipeline.source_context = self.context
         self.layout.addPipeline(self.pipeline)
         self.queue = model.ChangeQueue(self.pipeline)
@@ -153,7 +153,7 @@ class TestJob(BaseTestCase):
             job.applyVariant(bad_final, self.layout)
 
     def test_job_inheritance_job_tree(self):
-        pipeline = model.Pipeline('gate', self.layout)
+        pipeline = model.Pipeline('gate', self.tenant)
         pipeline.source_context = self.context
         self.layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
@@ -228,7 +228,7 @@ class TestJob(BaseTestCase):
         self.assertEqual(job.timeout, 70)
 
     def test_inheritance_keeps_matchers(self):
-        pipeline = model.Pipeline('gate', self.layout)
+        pipeline = model.Pipeline('gate', self.tenant)
         pipeline.source_context = self.context
         self.layout.addPipeline(pipeline)
         queue = model.ChangeQueue(pipeline)
