@@ -877,18 +877,17 @@ class FakeGithubPullRequest(object):
         repo.git.clean('-x', '-f', '-d')
 
         if files:
-            fn = files[0]
             self.files = files
         else:
             fn = '%s-%s' % (self.branch.replace('/', '_'), self.number)
-            self.files = [fn]
+            self.files = {fn: "test %s %s\n" % (self.branch, self.number)}
         msg = self.subject + '-' + str(self.number_of_commits)
-        fn = os.path.join(repo.working_dir, fn)
-        f = open(fn, 'w')
-        with open(fn, 'w') as f:
-            f.write("test %s %s\n" %
-                    (self.branch, self.number))
-        repo.index.add([fn])
+        for fn, content in self.files.items():
+            fn = os.path.join(repo.working_dir, fn)
+            f = open(fn, 'w')
+            with open(fn, 'w') as f:
+                f.write(content)
+            repo.index.add([fn])
 
         self.head_sha = repo.index.commit(msg).hexsha
         # Create an empty set of statuses for the given sha,

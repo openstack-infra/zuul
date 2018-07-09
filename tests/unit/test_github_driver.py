@@ -89,14 +89,14 @@ class TestGithubDriver(ZuulTestCase):
     def test_pull_matched_file_event(self):
         A = self.fake_github.openFakePullRequest(
             'org/project', 'master', 'A',
-            files=['random.txt', 'build-requires'])
+            files={'random.txt': 'test', 'build-requires': 'test'})
         self.fake_github.emitEvent(A.getPullRequestOpenedEvent())
         self.waitUntilSettled()
         self.assertEqual(1, len(self.history))
 
         # test_pull_unmatched_file_event
         B = self.fake_github.openFakePullRequest('org/project', 'master', 'B',
-                                                 files=['random.txt'])
+                                                 files={'random.txt': 'test2'})
         self.fake_github.emitEvent(B.getPullRequestOpenedEvent())
         self.waitUntilSettled()
         self.assertEqual(1, len(self.history))
