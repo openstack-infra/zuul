@@ -30,14 +30,13 @@ class DependentPipelineManager(PipelineManager):
 
     def _postConfig(self, layout):
         super(DependentPipelineManager, self)._postConfig(layout)
-        self.buildChangeQueues()
+        self.buildChangeQueues(layout)
 
-    def buildChangeQueues(self):
+    def buildChangeQueues(self, layout):
         self.log.debug("Building shared change queues")
         change_queues = {}
-        layout = self.pipeline.layout
+        tenant = self.pipeline.tenant
         layout_project_configs = layout.project_configs
-        tenant = layout.tenant
 
         for project_name, project_configs in layout_project_configs.items():
             (trusted, project) = tenant.getProject(project_name)
@@ -119,7 +118,7 @@ class DependentPipelineManager(PipelineManager):
             self.log.debug("  Checking source: %s", source)
             for c in source.getChangesDependingOn(change,
                                                   change_queue.projects,
-                                                  self.pipeline.layout.tenant):
+                                                  self.pipeline.tenant):
                 if c not in seen:
                     seen.add(c)
                     needed_by_changes.append(c)

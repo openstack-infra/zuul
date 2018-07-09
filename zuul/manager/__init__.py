@@ -278,7 +278,7 @@ class PipelineManager(object):
             self.enqueueChangesBehind(change, quiet, ignore_requirements,
                                       change_queue)
             zuul_driver = self.sched.connections.drivers['zuul']
-            tenant = self.pipeline.layout.tenant
+            tenant = self.pipeline.tenant
             zuul_driver.onChangeEnqueued(tenant, item.change, self.pipeline)
             return True
 
@@ -353,7 +353,7 @@ class PipelineManager(object):
                     # If we hit an exception we don't have a build in the
                     # current item so a potentially aquired semaphore must be
                     # released as it won't be released on dequeue of the item.
-                    tenant = item.pipeline.layout.tenant
+                    tenant = item.pipeline.tenant
                     tenant.semaphore_handler.release(item, job)
                 except Exception:
                     self.log.exception("Exception while releasing semaphore")
@@ -365,7 +365,7 @@ class PipelineManager(object):
             return False
 
         jobs = item.findJobsToRun(
-            item.pipeline.layout.tenant.semaphore_handler)
+            item.pipeline.tenant.semaphore_handler)
         if jobs:
             self._executeJobs(item, jobs)
 
@@ -390,7 +390,7 @@ class PipelineManager(object):
                 self.log.exception("Exception while canceling build %s "
                                    "for change %s" % (build, item.change))
             finally:
-                tenant = old_build_set.item.pipeline.layout.tenant
+                tenant = old_build_set.item.pipeline.tenant
                 tenant.semaphore_handler.release(
                     old_build_set.item, build.job)
 
@@ -430,7 +430,7 @@ class PipelineManager(object):
             if trusted_updates:
                 self.log.debug("Loading dynamic layout (phase 1)")
                 layout = loader.createDynamicLayout(
-                    item.pipeline.layout.tenant,
+                    item.pipeline.tenant,
                     build_set.files,
                     include_config_projects=True)
                 if not len(layout.loading_errors):
@@ -441,7 +441,7 @@ class PipelineManager(object):
             if untrusted_updates:
                 self.log.debug("Loading dynamic layout (phase 2)")
                 layout = loader.createDynamicLayout(
-                    item.pipeline.layout.tenant,
+                    item.pipeline.tenant,
                     build_set.files,
                     include_config_projects=False)
             else:
@@ -449,7 +449,7 @@ class PipelineManager(object):
                 # config items ahead), so just use the current pipeline
                 # layout.
                 if not len(layout.loading_errors):
-                    return item.queue.pipeline.layout
+                    return item.queue.pipeline.tenant.layout
             if len(layout.loading_errors):
                 self.log.info("Configuration syntax error in dynamic layout")
                 if trusted_layout_verified:
@@ -498,7 +498,7 @@ class PipelineManager(object):
     def getLayout(self, item):
         if not self._queueUpdatesConfig(item):
             # No config updates in queue. Use existing pipeline layout
-            return item.queue.pipeline.layout
+            return item.queue.pipeline.tenant.layout
         elif (not item.change.updatesConfig() and
                 item.item_ahead and item.item_ahead.live):
             # Current change does not update layout, use its parent if parent
@@ -710,7 +710,7 @@ class PipelineManager(object):
         self.log.debug("Build %s of %s completed" % (build, item.change))
 
         item.setResult(build)
-        item.pipeline.layout.tenant.semaphore_handler.release(item, build.job)
+        item.pipeline.tenant.semaphore_handler.release(item, build.job)
         self.log.debug("Item %s status is now:\n %s" %
                        (item, item.formatStatus()))
 
@@ -776,7 +776,7 @@ class PipelineManager(object):
                                (change_queue, change_queue.window))
 
                 zuul_driver = self.sched.connections.drivers['zuul']
-                tenant = self.pipeline.layout.tenant
+                tenant = self.pipeline.tenant
                 zuul_driver.onChangeMerged(tenant, item.change, source)
 
     def _reportItem(self, item):
@@ -789,7 +789,7 @@ class PipelineManager(object):
         # pipeline, use the dynamic layout if available, otherwise,
         # fall back to the current static layout as a best
         # approximation.
-        layout = (item.layout or self.pipeline.layout)
+        layout = (item.layout or self.pipeline.tenant.layout)
 
         project_in_pipeline = True
         if not layout.getProjectPipelineConfig(item):
@@ -850,7 +850,7 @@ class PipelineManager(object):
                 dt = None
             items = len(self.pipeline.getAllItems())
 
-            tenant = self.pipeline.layout.tenant
+            tenant = self.pipeline.tenant
             basekey = 'zuul.tenant.%s' % tenant.name
             key = '%s.pipeline.%s' % (basekey, self.pipeline.name)
             # stats.timers.zuul.tenant.<tenant>.pipeline.<pipeline>.resident_time

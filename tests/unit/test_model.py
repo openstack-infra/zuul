@@ -406,7 +406,7 @@ class TestTimeDataBase(BaseTestCase):
         self.db = model.TimeDataBase(self.tmp_root)
 
     def test_timedatabase(self):
-        pipeline = Dummy(layout=Dummy(tenant=Dummy(name='test-tenant')))
+        pipeline = Dummy(tenant=Dummy(name='test-tenant'))
         change = Dummy(project=Dummy(canonical_name='git.example.com/foo/bar'))
         job = Dummy(name='job-name')
         item = Dummy(pipeline=pipeline,

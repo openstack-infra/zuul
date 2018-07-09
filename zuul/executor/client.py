@@ -135,7 +135,7 @@ class ExecutorClient(object):
 
     def execute(self, job, item, pipeline, dependent_changes=[],
                 merger_items=[]):
-        tenant = pipeline.layout.tenant
+        tenant = pipeline.tenant
         uuid = str(uuid4().hex)
         nodeset = item.current_build_set.getJobNodeSet(job.name)
         self.log.info(

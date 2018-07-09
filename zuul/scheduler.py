@@ -378,7 +378,7 @@ class Scheduler(threading.Thread):
         build.result = result
         try:
             if self.statsd and build.pipeline:
-                tenant = build.pipeline.layout.tenant
+                tenant = build.pipeline.tenant
                 jobname = build.job.name.replace('.', '_').replace('/', '_')
                 hostname = (build.build_set.item.change.project.
                             canonical_hostname.replace('.', '_'))
@@ -1028,7 +1028,7 @@ class Scheduler(threading.Thread):
     def _getAutoholdRequestKey(self, build):
         change = build.build_set.item.change
 
-        autohold_key_base = (build.pipeline.layout.tenant.name,
+        autohold_key_base = (build.pipeline.tenant.name,
                              change.project.canonical_name,
                              build.job.name)
 

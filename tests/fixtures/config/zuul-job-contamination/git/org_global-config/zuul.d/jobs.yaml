@@ -1,0 +1,5 @@
+- job:
+    name: base
+    parent: null
+    vars:
+      basevar: basejob
