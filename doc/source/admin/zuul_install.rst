@@ -31,10 +31,19 @@ required.
 
 .. code-block:: console
 
+   # All:
    $ git clone https://git.zuul-ci.org/zuul
-   $ cd zuul/
+   $ pushd zuul/
+
+   # For Fedora and CentOS:
    $ sudo yum -y install $(bindep -b)
+
+   # For openSUSE:
+   $ zypper install -y $(bindep -b)
+
+   # All:
    $ sudo pip3 install .
+   $ popd
 
 Service Files
 -------------

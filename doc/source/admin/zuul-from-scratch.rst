@@ -12,6 +12,7 @@ Follow the instructions below, depending on your server type.
 
   * :doc:`fedora27_setup`
   * :doc:`centos7_setup`
+  * :doc:`opensuse_leap15_setup`
 
 Installation
 ------------
