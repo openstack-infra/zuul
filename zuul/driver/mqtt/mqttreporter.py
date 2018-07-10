@@ -29,7 +29,7 @@ class MQTTReporter(BaseReporter):
                        (item.change, self.config))
         message = {
             'action': self._action,
-            'tenant': item.pipeline.layout.tenant.name,
+            'tenant': item.pipeline.tenant.name,
             'zuul_ref': item.current_build_set.ref,
             'pipeline': item.pipeline.name,
             'project': item.change.project.name,
@@ -65,7 +65,7 @@ class MQTTReporter(BaseReporter):
         topic = None
         try:
             topic = self.config['topic'].format(
-                tenant=item.pipeline.layout.tenant.name,
+                tenant=item.pipeline.tenant.name,
                 pipeline=item.pipeline.name,
                 project=item.change.project.name,
                 branch=getattr(item.change, 'branch', None),

@@ -1986,6 +1986,70 @@ class TestInRepoConfig(ZuulTestCase):
                       A.messages[0], "A should have debug info")
 
 
+class TestJobContamination(AnsibleZuulTestCase):
+
+    config_file = 'zuul-connections-gerrit-and-github.conf'
+    tenant_config_file = 'config/zuul-job-contamination/main.yaml'
+
+    def test_job_contamination_playbooks(self):
+        conf = textwrap.dedent(
+            """
+            - job:
+                name: base
+                post-run:
+                  - playbooks/something-new.yaml
+                parent: null
+                vars:
+                  basevar: basejob
+            """)
+
+        file_dict = {'zuul.d/jobs.yaml': conf}
+        A = self.fake_github.openFakePullRequest(
+            'org/global-config', 'master', 'A', files=file_dict)
+        self.fake_github.emitEvent(A.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+
+        B = self.fake_github.openFakePullRequest('org/project1', 'master', 'A')
+        self.fake_github.emitEvent(B.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+
+        statuses_b = self.fake_github.getCommitStatuses(
+            'org/project1', B.head_sha)
+
+        self.assertEqual(len(statuses_b), 1)
+
+        # B should not be affected by the A PR
+        self.assertEqual('success', statuses_b[0]['state'])
+
+    def test_job_contamination_vars(self):
+        conf = textwrap.dedent(
+            """
+            - job:
+                name: base
+                parent: null
+                vars:
+                  basevar: basejob-modified
+            """)
+
+        file_dict = {'zuul.d/jobs.yaml': conf}
+        A = self.fake_github.openFakePullRequest(
+            'org/global-config', 'master', 'A', files=file_dict)
+        self.fake_github.emitEvent(A.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+
+        B = self.fake_github.openFakePullRequest('org/project1', 'master', 'A')
+        self.fake_github.emitEvent(B.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+
+        statuses_b = self.fake_github.getCommitStatuses(
+            'org/project1', B.head_sha)
+
+        self.assertEqual(len(statuses_b), 1)
+
+        # B should not be affected by the A PR
+        self.assertEqual('success', statuses_b[0]['state'])
+
+
 class TestInRepoJoin(ZuulTestCase):
     # In this config, org/project is not a member of any pipelines, so
     # that we may test the changes that cause it to join them.

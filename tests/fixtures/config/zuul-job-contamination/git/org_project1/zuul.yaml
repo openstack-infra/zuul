@@ -1,0 +1,12 @@
+- job:
+    name: python27
+    nodeset:
+      nodes:
+        - name: controller
+          label: ubuntu-trusty
+    run: playbooks/python27.yaml
+
+- project:
+    check:
+      jobs:
+        - python27

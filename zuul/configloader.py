@@ -1722,6 +1722,8 @@ class TenantParser(object):
         # reference_exceptions has it; add tests if needed.
         if not skip_pipelines:
             for pipeline in parsed_config.pipelines:
+                if not pipeline.tenant:
+                    pipeline.tenant = tenant
                 layout.addPipeline(pipeline)
 
         for nodeset in parsed_config.nodesets:

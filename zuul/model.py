@@ -184,7 +184,7 @@ class Pipeline(object):
         self.name = name
         self.tenant_name = tenant_name
         self.source_context = None
-        self.layout = None
+        self.tenant = None
         self.description = None
         self.failure_message = None
         self.merge_failure_message = None
@@ -1670,7 +1670,7 @@ class BuildSet(object):
                 break
             item = item.item_ahead
         if not layout:
-            layout = self.item.pipeline.layout
+            layout = self.item.pipeline.tenant.layout
         if layout:
             project = self.item.change.project
             project_metadata = layout.getProjectMetadata(
@@ -1838,7 +1838,7 @@ class QueueItem(object):
     def includesConfigUpdates(self):
         includes_trusted = False
         includes_untrusted = False
-        tenant = self.pipeline.layout.tenant
+        tenant = self.pipeline.tenant
         item = self
         while item:
             if item.change.updatesConfig():
@@ -2013,7 +2013,7 @@ class QueueItem(object):
         # secrets, etc.
         safe_change = self.change.getSafeAttributes()
         safe_pipeline = self.pipeline.getSafeAttributes()
-        safe_tenant = self.pipeline.layout.tenant.getSafeAttributes()
+        safe_tenant = self.pipeline.tenant.getSafeAttributes()
         safe_buildset = self.current_build_set.getSafeAttributes()
         safe_job = job.getSafeAttributes() if job else {}
         safe_build = build.getSafeAttributes() if build else {}
@@ -2990,7 +2990,6 @@ class Layout(object):
 
     def addPipeline(self, pipeline):
         self.pipelines[pipeline.name] = pipeline
-        pipeline.layout = self
 
     def addProjectTemplate(self, project_template):
         template_list = self.project_templates.get(project_template.name)
@@ -3626,7 +3625,7 @@ class TimeDataBase(object):
 
         dir_path = os.path.join(
             self.root,
-            build.build_set.item.pipeline.layout.tenant.name,
+            build.build_set.item.pipeline.tenant.name,
             build.build_set.item.change.project.canonical_name,
             branch)
         if not os.path.exists(dir_path):

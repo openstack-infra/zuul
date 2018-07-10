@@ -1,0 +1,6 @@
+- hosts: all
+  tasks:
+    - name: Test basevar
+      assert:
+        that:
+          - basevar == 'basejob'
