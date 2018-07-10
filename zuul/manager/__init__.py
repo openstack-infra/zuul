@@ -47,7 +47,7 @@ class PipelineManager(object):
 
     def __init__(self, sched, pipeline):
         self.log = logging.getLogger("zuul.Pipeline.%s.%s" %
-                                     (pipeline.tenant_name,
+                                     (pipeline.tenant.name,
                                       pipeline.name,))
         self.sched = sched
         self.pipeline = pipeline

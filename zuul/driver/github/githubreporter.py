@@ -39,7 +39,7 @@ class GithubReporter(BaseReporter):
         self._unlabels = self.config.get('unlabel', [])
         if not isinstance(self._unlabels, list):
             self._unlabels = [self._unlabels]
-        self.context = "{}/{}".format(pipeline.tenant_name, pipeline.name)
+        self.context = "{}/{}".format(pipeline.tenant.name, pipeline.name)
 
     def report(self, item):
         """Report on an event."""
