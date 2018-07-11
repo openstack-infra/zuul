@@ -1116,7 +1116,7 @@ class GithubConnection(BaseConnection):
         resp = github.session.get(url, headers=headers)
 
         if resp.status_code == 404:
-            return None
+            return {}
 
         return resp.json()
 

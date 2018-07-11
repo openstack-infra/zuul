@@ -195,6 +195,10 @@ class FakeRepository(object):
 
     def get_url_protection(self, branch):
         contexts = self.data.required_contexts.get((self.name, branch), [])
+        if not contexts:
+            # Note that GitHub returns 404 if branch protection is off so do
+            # the same here as well
+            return FakeResponse({}, 404)
         data = {
             'required_status_checks': {
                 'contexts': contexts
