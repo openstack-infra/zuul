@@ -129,8 +129,9 @@ class ConfigurationErrorKey(object):
 class ConfigurationError(object):
 
     """A configuration error"""
-    def __init__(self, context, mark, error):
+    def __init__(self, context, mark, error, short_error=None):
         self.error = str(error)
+        self.short_error = short_error
         self.key = ConfigurationErrorKey(context, mark, self.error)
 
 
@@ -141,8 +142,8 @@ class LoadingErrors(object):
         self.errors = []
         self.error_keys = set()
 
-    def addError(self, context, mark, error):
-        e = ConfigurationError(context, mark, error)
+    def addError(self, context, mark, error, short_error=None):
+        e = ConfigurationError(context, mark, error, short_error)
         self.errors.append(e)
         self.error_keys.add(e.key)
 
@@ -1641,7 +1642,7 @@ class BuildSet(object):
         self.dependent_changes = None
         self.merger_items = None
         self.unable_to_merge = False
-        self.config_error = None  # None or an error message string.
+        self.config_errors = []  # list of ConfigurationErrors
         self.failing_reasons = []
         self.debug_messages = []
         self.merge_state = self.NEW
@@ -1869,7 +1870,7 @@ class QueueItem(object):
         return True
 
     def areAllJobsComplete(self):
-        if (self.current_build_set.config_error or
+        if (self.current_build_set.config_errors or
             self.current_build_set.unable_to_merge):
             return True
         if not self.hasJobGraph():
@@ -1937,8 +1938,8 @@ class QueueItem(object):
     def didMergerFail(self):
         return self.current_build_set.unable_to_merge
 
-    def getConfigError(self):
-        return self.current_build_set.config_error
+    def getConfigErrors(self):
+        return self.current_build_set.config_errors
 
     def wasDequeuedNeedingChange(self):
         return self.dequeued_needing_change
@@ -2131,7 +2132,11 @@ class QueueItem(object):
         self._setAllJobsSkipped()
 
     def setConfigError(self, error):
-        self.current_build_set.config_error = error
+        err = ConfigurationError(None, None, error)
+        self.setConfigErrors([err])
+
+    def setConfigErrors(self, errors):
+        self.current_build_set.config_errors = errors
         self._setAllJobsSkipped()
 
     def _setAllJobsSkipped(self):

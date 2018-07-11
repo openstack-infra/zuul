@@ -208,8 +208,8 @@ class PipelineManager(object):
                 # Similarly, reset the item state.
                 if item.current_build_set.unable_to_merge:
                     item.setUnableToMerge()
-                if item.current_build_set.config_error:
-                    item.setConfigError(item.current_build_set.config_error)
+                if item.current_build_set.config_errors:
+                    item.setConfigErrors(item.current_build_set.config_errors)
                 if item.dequeued_needing_change:
                     item.setDequeuedNeedingChange()
 
@@ -480,14 +480,17 @@ class PipelineManager(object):
                     # Find a layout loading error that match
                     # the current item.change and only report
                     # if one is found.
+                    relevant_errors = []
                     for err in layout.loading_errors.errors:
                         econtext = err.key.context
                         if ((err.key not in
                              parent_layout.loading_errors.error_keys) or
                             (econtext.project == item.change.project.name and
                              econtext.branch == item.change.branch)):
-                            item.setConfigError(err.error)
-                            return None
+                            relevant_errors.append(err)
+                    if relevant_errors:
+                        item.setConfigErrors(relevant_errors)
+                        return None
                     self.log.info(
                         "Configuration syntax error not related to "
                         "change context. Error won't be reported.")
@@ -557,7 +560,7 @@ class PipelineManager(object):
             return False
         if build_set.unable_to_merge:
             return False
-        if build_set.config_error:
+        if build_set.config_errors:
             return False
         return True
 
@@ -650,7 +653,7 @@ class PipelineManager(object):
                     if (not item.live) and (not dequeued):
                         self.dequeueItem(item)
                         changed = dequeued = True
-                if item.current_build_set.config_error:
+                if item.current_build_set.config_errors:
                     failing_reasons.append("it has an invalid configuration")
                     if (not item.live) and (not dequeued):
                         self.dequeueItem(item)
@@ -808,7 +811,7 @@ class PipelineManager(object):
                 item.change.project, self.pipeline, item.change))
             project_in_pipeline = False
             actions = []
-        elif item.getConfigError():
+        elif item.getConfigErrors():
             self.log.debug("Invalid config for change %s" % item.change)
             # TODOv3(jeblair): consider a new reporter action for this
             actions = self.pipeline.merge_failure_actions

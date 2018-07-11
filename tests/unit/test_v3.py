@@ -1033,6 +1033,16 @@ class TestInRepoConfig(ZuulTestCase):
         self.assertIn('Job non-existent-job not defined', A.messages[0],
                       "A should have failed the check pipeline")
         self.assertHistory([])
+        self.assertEqual(len(A.comments), 1)
+        comments = sorted(A.comments, key=lambda x: x['line'])
+        self.assertEqual(comments[0],
+                         {'file': '.zuul.yaml',
+                          'line': 9,
+                          'message': 'Job non-existent-job not defined',
+                          'reviewer': {'email': 'zuul@example.com',
+                                       'name': 'Zuul',
+                                       'username': 'jenkins'}}
+        )
 
     def test_dynamic_config_non_existing_job_in_template(self):
         """Test that requesting a non existent job fails"""
