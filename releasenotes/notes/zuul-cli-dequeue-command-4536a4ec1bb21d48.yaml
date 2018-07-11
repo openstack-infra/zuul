@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    The `dequeue` command has been added to the Zuul CLI.
+    It allows operators to stop a given buildset at will.

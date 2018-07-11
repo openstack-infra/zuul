@@ -119,6 +119,32 @@ class PromoteEvent(ManagementEvent):
         self.change_ids = change_ids
 
 
+class DequeueEvent(ManagementEvent):
+    """Dequeue a change from a pipeline
+
+    :arg str tenant_name: the name of the tenant
+    :arg str pipeline_name: the name of the pipeline
+    :arg str project_name: the name of the project
+    :arg str change: optional, the change to dequeue
+    :arg str ref: optional, the ref to look for
+    """
+
+    def __init__(self, tenant_name, pipeline_name, project_name, change, ref):
+        super(DequeueEvent, self).__init__()
+        self.tenant_name = tenant_name
+        self.pipeline_name = pipeline_name
+        self.project_name = project_name
+        self.change = change
+        if change is not None:
+            self.change_number, self.patch_number = change.split(',')
+        else:
+            self.change_number, self.patch_number = (None, None)
+        self.ref = ref
+        # set to mock values
+        self.oldrev = '0000000000000000000000000000000000000000'
+        self.newrev = '0000000000000000000000000000000000000000'
+
+
 class EnqueueEvent(ManagementEvent):
     """Enqueue a change into a pipeline
 
@@ -464,6 +490,15 @@ class Scheduler(threading.Thread):
         self.log.debug("Waiting for promotion")
         event.wait()
         self.log.debug("Promotion complete")
+
+    def dequeue(self, tenant_name, pipeline_name, project_name, change, ref):
+        event = DequeueEvent(
+            tenant_name, pipeline_name, project_name, change, ref)
+        self.management_event_queue.put(event)
+        self.wake_event.set()
+        self.log.debug("Waiting for dequeue")
+        event.wait()
+        self.log.debug("Dequeue complete")
 
     def enqueue(self, trigger_event):
         event = EnqueueEvent(trigger_event)
@@ -830,6 +865,23 @@ class Scheduler(threading.Thread):
                 quiet=True,
                 ignore_requirements=True)
 
+    def _doDequeueEvent(self, event):
+        tenant = self.abide.tenants.get(event.tenant_name)
+        pipeline = tenant.layout.pipelines[event.pipeline_name]
+        (trusted, project) = tenant.getProject(event.project_name)
+        change = project.source.getChange(event, project)
+        for shared_queue in pipeline.queues:
+            for item in shared_queue.queue:
+                if (isinstance(item.change, model.Change) and
+                        item.change.number == change.number and
+                        item.change.patchset == change.patchset) or\
+                   (item.change.ref == change.ref):
+                    pipeline.manager.removeItem(item)
+                    return
+        raise Exception("Unable to find shared change queue for %s:%s" %
+                        (event.project_name,
+                         event.change or event.ref))
+
     def _doEnqueueEvent(self, event):
         tenant = self.abide.tenants.get(event.tenant_name)
         full_project_name = ('/'.join([event.project_hostname,
@@ -987,6 +1039,8 @@ class Scheduler(threading.Thread):
                 self._doTenantReconfigureEvent(event)
             elif isinstance(event, PromoteEvent):
                 self._doPromoteEvent(event)
+            elif isinstance(event, DequeueEvent):
+                self._doDequeueEvent(event)
             elif isinstance(event, EnqueueEvent):
                 self._doEnqueueEvent(event.trigger_event)
             else:

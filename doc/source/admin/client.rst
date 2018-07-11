@@ -30,6 +30,15 @@ Example::
 
   zuul autohold --tenant openstack --project example_project --job example_job --reason "reason text" --count 1
 
+Dequeue
+^^^^^^^
+.. program-output:: zuul dequeue --help
+
+Examples::
+
+    zuul dequeue --tenant openstack --pipeline check --project example_project --change 5,1
+    zuul dequeue --tenant openstack --pipeline periodic --project example_project --ref refs/heads/master
+
 Enqueue
 ^^^^^^^
 .. program-output:: zuul enqueue --help

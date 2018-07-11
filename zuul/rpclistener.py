@@ -52,6 +52,7 @@ class RPCListener(object):
     def register(self):
         self.worker.registerFunction("zuul:autohold")
         self.worker.registerFunction("zuul:autohold_list")
+        self.worker.registerFunction("zuul:dequeue")
         self.worker.registerFunction("zuul:enqueue")
         self.worker.registerFunction("zuul:enqueue_ref")
         self.worker.registerFunction("zuul:promote")
@@ -120,6 +121,21 @@ class RPCListener(object):
                 return
             except Exception:
                 self.log.exception("Exception while getting job")
+
+    def handle_dequeue(self, job):
+        args = json.loads(job.arguments)
+        tenant_name = args['tenant']
+        pipeline_name = args['pipeline']
+        project_name = args['project']
+        change = args['change']
+        ref = args['ref']
+        try:
+            self.sched.dequeue(
+                tenant_name, pipeline_name, project_name, change, ref)
+        except Exception as e:
+            job.sendWorkException(str(e).encode('utf8'))
+            return
+        job.sendWorkComplete()
 
     def handle_autohold_list(self, job):
         req = {}
