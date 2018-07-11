@@ -1073,7 +1073,7 @@ class Job(ConfigObject):
     def __repr__(self):
         ln = 0
         if self.start_mark:
-            ln = self.start_mark.line
+            ln = self.start_mark.line + 1
         return '<Job %s branches: %s source: %s#%s>' % (
             self.name,
             self.branch_matcher,
