@@ -15,8 +15,9 @@ Each project in Zuul has its own automatically generated RSA keypair
 which can be used by anyone to encrypt a secret and only Zuul is able
 to decrypt it.  Zuul serves each project's public key using its
 build-in webserver.  They can be fetched at the path
-``/<tenant>/<project>.pub`` where ``<project>`` is the canonical name
-of a project and ``<tenant>`` is the name of a tenant with that project.
+``/api/tenant/<tenant>/key/<project>.pub`` where ``<project>`` is the
+canonical name of a project and ``<tenant>`` is the name of a tenant
+with that project.
 
 Zuul currently supports one encryption scheme, PKCS#1 with OAEP, which
 can not store secrets longer than the 3760 bits (derived from the key
