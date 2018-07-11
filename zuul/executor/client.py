@@ -182,6 +182,8 @@ class ExecutorClient(object):
             zuul_params['newrev'] = item.change.newrev
         zuul_params['projects'] = {}  # Set below
         zuul_params['items'] = dependent_changes
+        zuul_params['child_jobs'] = list(item.job_graph.getDirectDependentJobs(
+            job.name))
 
         params = dict()
         params['job'] = job.name

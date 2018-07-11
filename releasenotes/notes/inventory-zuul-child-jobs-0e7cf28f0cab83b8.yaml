@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    A new Ansible inventory variable :var:`zuul.child_jobs` which is a
+    list of the first level child jobs to be run after a job has
+    finished successfully.
