@@ -1,0 +1,8 @@
+- hosts: localhost
+  tasks:
+    - zuul_return:
+        data:
+          zuul:
+            child_jobs:
+              - invalid-job
+            log_url: http://example.com/test/log/url/
