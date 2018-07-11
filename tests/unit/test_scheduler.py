@@ -18,6 +18,7 @@ import textwrap
 
 import os
 import shutil
+import socket
 import time
 from unittest import mock
 from unittest import skip
@@ -2883,6 +2884,32 @@ class TestScheduler(ZuulTestCase):
                          'SUCCESS')
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
+
+    def test_live_reconfiguration_command_socket(self):
+        "Test that live reconfiguration via command socket works"
+
+        # record previous tenant reconfiguration time, which may not be set
+        old = self.sched.tenant_last_reconfigured.get('tenant-one', 0)
+        time.sleep(1)
+        self.waitUntilSettled()
+
+        command_socket = self.config.get('scheduler', 'command_socket')
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+            s.connect(command_socket)
+            s.sendall('full-reconfigure\n'.encode('utf8'))
+
+        # Wait for full reconfiguration. Note that waitUntilSettled is not
+        # reliable here because the reconfigure event may arrive in the
+        # event queue after waitUntilSettled.
+        start = time.time()
+        while True:
+            if time.time() - start > 15:
+                raise Exception("Timeout waiting for full reconfiguration")
+            new = self.sched.tenant_last_reconfigured.get('tenant-one', 0)
+            if old < new:
+                break
+            else:
+                time.sleep(0)
 
     def test_live_reconfiguration_abort(self):
         # Raise an exception during reconfiguration and verify we

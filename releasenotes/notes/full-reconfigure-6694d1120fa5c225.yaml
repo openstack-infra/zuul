@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Zuul now supports triggering a full reconfiguration by using the command
+    ``zuul-scheduler full-reconfigure``.
+deprecations:
+  - |
+    Signal based triggering of a full reconfiguration via sending `SIGHUP` to
+    the zuul-scheduler PID is deprecated. Use the command
+    ``zuul-scheduler full-reconfigure`` now.
