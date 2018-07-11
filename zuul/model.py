@@ -81,23 +81,70 @@ NODE_STATES = set([STATE_BUILDING,
                    STATE_HOLD,
                    STATE_DELETING])
 
-MAX_ERROR_LENGTH = 10
+
+class ConfigurationErrorKey(object):
+    """A class which attempts to uniquely identify configuration errors
+    based on their file location.  It's not perfect, but it's usually
+    sufficient to determine whether we should show an error to a user.
+    """
+
+    def __init__(self, context, mark, error_text):
+        self.context = context
+        self.mark = mark
+        self.error_text = error_text
+        elements = []
+        if context:
+            elements.extend([
+                context.project.canonical_name,
+                context.branch,
+                context.path,
+            ])
+        else:
+            elements.extend([None, None, None])
+        if mark:
+            elements.extend([
+                mark.line,
+                mark.snippet,
+            ])
+        else:
+            elements.extend([None, None])
+        elements.append(error_text)
+        self._hash = hash('|'.join([str(x) for x in elements]))
+
+    def __hash__(self):
+        return self._hash
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        if not isinstance(other, ConfigurationErrorKey):
+            return False
+        return (self.context == other.context and
+                self.mark.line == other.mark.line and
+                self.mark.snippet == other.mark.snippet and
+                self.error_text == other.error_text)
+
+
+class ConfigurationError(object):
+
+    """A configuration error"""
+    def __init__(self, context, mark, error):
+        self.error = str(error)
+        self.key = ConfigurationErrorKey(context, mark, self.error)
 
 
 class LoadingErrors(object):
     """A configuration errors accumalator attached to a layout object
     """
-    def __init__(self, length):
-        self.length = length
+    def __init__(self):
         self.errors = []
+        self.error_keys = set()
 
-    def append(self, error):
-        if len(self.errors) < self.length:
-            self.errors.append(error)
-
-    def extend(self, errors):
-        for err in errors:
-            self.append(err)
+    def addError(self, context, mark, error):
+        e = ConfigurationError(context, mark, error)
+        self.errors.append(e)
+        self.error_keys.add(e.key)
 
     def __getitem__(self, index):
         return self.errors[index]
@@ -2919,8 +2966,7 @@ class Layout(object):
         self.nodesets = {}
         self.secrets = {}
         self.semaphores = {}
-        self.loading_errors = LoadingErrors(
-            length=MAX_ERROR_LENGTH)
+        self.loading_errors = LoadingErrors()
 
     def getJob(self, name):
         if name in self.jobs:

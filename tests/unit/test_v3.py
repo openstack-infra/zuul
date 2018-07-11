@@ -2460,7 +2460,7 @@ class TestBrokenConfig(ZuulTestCase):
             "An error should have been stored")
         self.assertIn(
             "Zuul encountered a syntax error",
-            str(tenant.layout.loading_errors[0][1]))
+            str(tenant.layout.loading_errors[0].error))
 
     def test_dynamic_ignore(self):
         # Verify dynamic config behaviors inside a tenant broken config
@@ -2593,6 +2593,54 @@ class TestBrokenConfig(ZuulTestCase):
         self.assertEqual(D.patchsets[0]['approvals'][0]['value'], "1")
         self.assertHistory([
             dict(name='project-test2', result='SUCCESS', changes='1,1')])
+
+    def test_dynamic_fail_cross_repo(self):
+        # Verify dynamic config behaviors inside a tenant broken config
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        # There is a configuration error
+        self.assertEquals(
+            len(tenant.layout.loading_errors), 1,
+            "An error should have been stored")
+
+        # Inside a broken tenant configuration environment, remove a
+        # job used in another repo and verify that an error is
+        # reported despite the error being in a repo other than the
+        # change.
+        in_repo_conf = textwrap.dedent(
+            """
+            - pipeline:
+                name: check
+                manager: independent
+                trigger:
+                  gerrit:
+                    - event: patchset-created
+                success:
+                  gerrit:
+                    Verified: 1
+                failure:
+                  gerrit:
+                    Verified: -1
+            - job:
+                name: base
+                parent: null
+
+            - project:
+                name: common-config
+                check:
+                  jobs:
+                    - noop
+            """)
+
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertEqual(A.patchsets[0]['approvals'][0]['value'], "-1")
+        self.assertIn('Job central-test not defined', A.messages[0],
+                      "A should have failed the check pipeline")
 
 
 class TestProjectKeys(ZuulTestCase):

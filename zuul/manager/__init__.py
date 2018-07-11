@@ -419,6 +419,15 @@ class PipelineManager(object):
             self.sched.connections, self.sched, None)
 
         self.log.debug("Loading dynamic layout")
+
+        parent_layout = None
+        parent = item.item_ahead
+        while not parent_layout and parent:
+            parent_layout = parent.layout
+            parent = parent.item_ahead
+        if not parent_layout:
+            parent_layout = item.pipeline.tenant.layout
+
         (trusted_updates, untrusted_updates) = item.includesConfigUpdates()
         build_set = item.current_build_set
         trusted_layout_verified = False
@@ -472,11 +481,13 @@ class PipelineManager(object):
                     # the current item.change and only report
                     # if one is found.
                     for err in layout.loading_errors.errors:
-                        context = err[0]
-                        if context.project.name == item.change.project.name:
-                            if context.branch == item.change.branch:
-                                item.setConfigError(str(err[1]))
-                                return None
+                        econtext = err.key.context
+                        if ((err.key not in
+                             parent_layout.loading_errors.error_keys) or
+                            (econtext.project == item.change.project.name and
+                             econtext.branch == item.change.branch)):
+                            item.setConfigError(err.error)
+                            return None
                     self.log.info(
                         "Configuration syntax error not related to "
                         "change context. Error won't be reported.")
