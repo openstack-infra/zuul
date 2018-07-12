@@ -336,6 +336,9 @@ class TestTenantInfoConfigBroken(BaseTestWeb):
         self.assertIn('Zuul encountered a syntax error',
                       config_errors[0]['error'])
 
+        resp = self.get_url("api/tenant/non-tenant/config-errors")
+        self.assertEqual(404, resp.status_code)
+
 
 class TestWebSocketInfo(TestInfo):
 

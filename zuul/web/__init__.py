@@ -280,6 +280,8 @@ class ZuulWebAPI(object):
         config_errors = self.rpc.submitJob(
             'zuul:config_errors_list', {'tenant': tenant})
         ret = json.loads(config_errors.data[0])
+        if ret is None:
+            raise cherrypy.HTTPError(404, 'Tenant %s does not exist.' % tenant)
         resp = cherrypy.response
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return ret
