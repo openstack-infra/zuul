@@ -302,8 +302,8 @@ class GerritConnection(BaseConnection):
         self.event_queue = queue.Queue()
         self.client = None
 
-        self.baseurl = self.connection_config.get('baseurl',
-                                                  'https://%s' % self.server)
+        self.baseurl = self.connection_config.get(
+            'baseurl', 'https://%s' % self.server).rstrip('/')
         default_gitweb_url_template = '{baseurl}/gitweb?' \
                                       'p={project.name}.git;' \
                                       'a=commitdiff;h={sha}'
