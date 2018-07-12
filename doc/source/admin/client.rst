@@ -113,3 +113,14 @@ Show
 Example::
 
   zuul show running-jobs
+
+tenant-conf-check
+^^^^^^^^^^^^^^^^^
+.. program-output:: zuul tenant-conf-check --help
+
+Example::
+
+  zuul tenant-conf-check
+
+This command validates the tenant configuration schema. It exits '-1' in
+case of errors detected.

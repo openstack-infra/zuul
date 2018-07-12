@@ -140,6 +140,11 @@ class Client(zuul.cmd.ZuulApp):
         # TODO: add filters such as queue, project, changeid etc
         show_running_jobs.set_defaults(func=self.show_running_jobs)
 
+        cmd_conf_check = subparsers.add_parser(
+            'tenant-conf-check',
+            help='validate the tenant configuration')
+        cmd_conf_check.set_defaults(func=self.validate)
+
         return parser
 
     def parseArguments(self, args=None):
@@ -386,6 +391,28 @@ class Client(zuul.cmd.ZuulApp):
                 'title': 'Worker Hostname'
             },
         }
+
+    def validate(self):
+        from zuul import scheduler
+        from zuul import configloader
+        sched = scheduler.Scheduler(self.config, testonly=True)
+        self.configure_connections(source_only=True)
+        sched.registerConnections(self.connections, load=False)
+        loader = configloader.ConfigLoader(
+            sched.connections, sched, None)
+        tenant_config, script = sched._checkTenantSourceConf(self.config)
+        unparsed_abide = loader.readConfig(tenant_config, from_script=script)
+        try:
+            for conf_tenant in unparsed_abide.tenants:
+                loader.tenant_parser.getSchema()(conf_tenant)
+            print("Tenants config validated with success")
+            err_code = 0
+        except Exception as e:
+            print("Error when validating tenants config")
+            print(e)
+            err_code = 1
+        finally:
+            sys.exit(err_code)
 
 
 def main():
