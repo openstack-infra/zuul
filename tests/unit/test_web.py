@@ -271,6 +271,13 @@ class TestWeb(BaseTestWeb):
         resp = self.get_url("api/tenant/non-tenant/status")
         self.assertEqual(404, resp.status_code)
 
+    def test_jobs_list(self):
+        jobs = self.get_url("api/tenant/tenant-one/jobs").json()
+        self.assertEqual(len(jobs), 8)
+
+        resp = self.get_url("api/tenant/non-tenant/jobs")
+        self.assertEqual(404, resp.status_code)
+
 
 class TestInfo(BaseTestWeb):
 
