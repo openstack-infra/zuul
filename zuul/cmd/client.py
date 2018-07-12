@@ -122,7 +122,7 @@ class Client(zuul.cmd.ZuulApp):
         cmd_promote.set_defaults(func=self.promote)
 
         cmd_show = subparsers.add_parser('show',
-                                         help='valid show subcommands')
+                                         help='show current statuses')
         cmd_show.set_defaults(func=self.show_running_jobs)
         show_subparsers = cmd_show.add_subparsers(title='show')
         show_running_jobs = show_subparsers.add_parser(
