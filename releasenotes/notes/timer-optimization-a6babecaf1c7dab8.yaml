@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    The timer trigger does not enqueue an event for every branch of every
+    project anymore and it now only processes projects actually using the
+    pipeline triggered by a timer.

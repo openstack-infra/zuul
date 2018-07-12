@@ -3375,6 +3375,18 @@ class TestScheduler(ZuulTestCase):
 
         self.assertEqual(len(self.builds), 2)
 
+        merge_count_project1 = 0
+        for job in self.gearman_server.jobs_history:
+            if job.name == b'merger:refstate':
+                args = job.arguments
+                if isinstance(args, bytes):
+                    args = args.decode('utf-8')
+                args = json.loads(args)
+                if args["items"][0]["project"] == "org/project1":
+                    merge_count_project1 += 1
+        self.assertEquals(merge_count_project1, 0,
+                          "project1 shouldn't have any refstate call")
+
         self.executor_server.hold_jobs_in_build = False
         # Stop queuing timer triggered jobs so that the assertions
         # below don't race against more jobs being queued.

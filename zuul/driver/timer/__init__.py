@@ -79,7 +79,13 @@ class TimerDriver(Driver, TriggerInterface):
                     jobs.append(job)
 
     def _onTrigger(self, tenant, pipeline_name, timespec):
-        for project_name in tenant.layout.project_configs.keys():
+        for project_name, pcs in tenant.layout.project_configs.items():
+            # timer operates on branch heads and doesn't need speculative
+            # layouts to decide if it should be enqueued or not.
+            # So it can be decided on cached data if it needs to run or not.
+            if not [True for pc in pcs if pipeline_name in pc.pipelines]:
+                continue
+
             (trusted, project) = tenant.getProject(project_name)
             for branch in project.source.getProjectBranches(project, tenant):
                 event = TimerTriggerEvent()

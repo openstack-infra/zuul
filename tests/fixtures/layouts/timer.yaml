@@ -40,6 +40,12 @@
     run: playbooks/project-bitrot.yaml
 
 - project:
+    name: org/project1
+    check:
+      jobs:
+        - project-test1
+
+- project:
     name: org/project
     check:
       jobs:
