@@ -289,6 +289,9 @@ class ZuulWebAPI(object):
     def key(self, tenant, project):
         job = self.rpc.submitJob('zuul:key_get', {'tenant': tenant,
                                                   'project': project})
+        if not job.data:
+            raise cherrypy.HTTPError(
+                404, 'Project %s does not exist.' % project)
         resp = cherrypy.response
         resp.headers['Access-Control-Allow-Origin'] = '*'
         resp.headers['Content-Type'] = 'text/plain'
