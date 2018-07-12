@@ -309,7 +309,8 @@ class ZuulWebAPI(object):
         connection_name = json.loads(job.data[0])
 
         if not connection_name:
-            raise Exception("Unable to find connection for tenant %s" % tenant)
+            raise cherrypy.HTTPError(404, 'Tenant %s does not exist.' % tenant)
+
         connection = self.zuulweb.connections.connections[connection_name]
 
         args = {
