@@ -124,6 +124,9 @@ class TestWeb(BaseTestWeb):
                     self.assertEqual(q['window'], 0)
                 for head in q['heads']:
                     for change in head:
+                        self.assertIn(
+                            'review.example.com/org/project',
+                            change['project_canonical'])
                         self.assertTrue(change['active'])
                         self.assertIn(change['id'], ('1,1', '2,1', '3,1'))
                         for job in change['jobs']:

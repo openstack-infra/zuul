@@ -2230,11 +2230,13 @@ class QueueItem(object):
         ret['zuul_ref'] = self.current_build_set.ref
         if self.change.project:
             ret['project'] = self.change.project.name
+            ret['project_canonical'] = self.change.project.canonical_name
         else:
             # For cross-project dependencies with the depends-on
             # project not known to zuul, the project is None
             # Set it to a static value
             ret['project'] = "Unknown Project"
+            ret['project_canonical'] = "Unknown Project"
         ret['enqueue_time'] = int(self.enqueue_time * 1000)
         ret['jobs'] = []
         if hasattr(self.change, 'owner'):
