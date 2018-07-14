@@ -18,6 +18,7 @@ import re
 import select
 import threading
 import time
+import urllib
 import paramiko
 import logging
 import pprint
@@ -478,9 +479,12 @@ class GerritConnection(BaseConnection):
         change.project = self.source.getProject(data['project'])
         change.branch = data['branch']
         change.url = data['url']
+        urlparse = urllib.parse.urlparse(self.baseurl)
+        baseurl = "%s%s" % (urlparse.netloc, urlparse.path)
+        baseurl = baseurl.rstrip('/')
         change.uris = [
-            '%s/%s' % (self.server, change.number),
-            '%s/#/c/%s' % (self.server, change.number),
+            '%s/%s' % (baseurl, change.number),
+            '%s/#/c/%s' % (baseurl, change.number),
         ]
 
         max_ps = 0
