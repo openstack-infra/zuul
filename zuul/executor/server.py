@@ -636,6 +636,9 @@ class AnsibleJob(object):
 
         self.executor_variables_file = None
 
+        self.cpu_times = {'user': 0, 'system': 0,
+                          'children_user': 0, 'children_system': 0}
+
         if self.executor_server.config.has_option('executor', 'variables'):
             self.executor_variables_file = self.executor_server.config.get(
                 'executor', 'variables')
@@ -951,6 +954,13 @@ class AnsibleJob(object):
                 # zuul try again
                 pre_failed = True
                 break
+
+        self.log.debug(
+            "Overall ansible cpu times: user=%.2f, system=%.2f, "
+            "children_user=%.2f, children_system=%.2f" %
+            (self.cpu_times['user'], self.cpu_times['system'],
+             self.cpu_times['children_user'],
+             self.cpu_times['children_system']))
 
         if not pre_failed:
             ansible_timeout = self.getAnsibleTimeout(time_started, job_timeout)
@@ -1575,6 +1585,17 @@ class AnsibleJob(object):
                 line = line[:1024].rstrip()
                 self.log.debug("Ansible output: %s" % (line,))
             self.log.debug("Ansible output terminated")
+            cpu_times = self.proc.cpu_times()
+            self.log.debug("Ansible cpu times: user=%.2f, system=%.2f, "
+                           "children_user=%.2f, "
+                           "children_system=%.2f" %
+                           (cpu_times.user, cpu_times.system,
+                            cpu_times.children_user,
+                            cpu_times.children_system))
+            self.cpu_times['user'] += cpu_times.user
+            self.cpu_times['system'] += cpu_times.system
+            self.cpu_times['children_user'] += cpu_times.children_user
+            self.cpu_times['children_system'] += cpu_times.children_system
             ret = self.proc.wait()
             self.log.debug("Ansible exit code: %s" % (ret,))
         finally:

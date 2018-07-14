@@ -19,6 +19,7 @@ import fcntl
 import grp
 import logging
 import os
+import psutil
 import pwd
 import shlex
 import subprocess
@@ -52,7 +53,7 @@ class WrappedPopen(object):
                     if fd not in pass_fds:
                         pass_fds.append(fd)
                 kwargs['pass_fds'] = pass_fds
-            proc = subprocess.Popen(args, *sub_args, **kwargs)
+            proc = psutil.Popen(args, *sub_args, **kwargs)
         finally:
             self.__del__()
         return proc
