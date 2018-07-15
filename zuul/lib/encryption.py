@@ -17,6 +17,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
+from functools import lru_cache
 
 
 # https://cryptography.io/en/latest/hazmat/primitives/asymmetric/rsa/#generation
@@ -95,6 +96,8 @@ def deserialize_rsa_keypair(data):
 
 
 # https://cryptography.io/en/latest/hazmat/primitives/asymmetric/rsa/#decryption
+# lru_cache performs best if maxsize is a power of two
+@lru_cache(maxsize=1024)
 def decrypt_pkcs1_oaep(ciphertext, private_key):
     """Decrypt PKCS#1 (RSAES-OAEP) encoded ciphertext
 
