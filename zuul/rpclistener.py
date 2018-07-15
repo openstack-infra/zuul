@@ -341,6 +341,8 @@ class RPCListener(object):
         args = json.loads(job.arguments)
         tenant = self.sched.abide.tenants.get(args.get("tenant"))
         output = []
+        if not tenant:
+            job.sendWorkComplete(json.dumps(None))
         for job_name in sorted(tenant.layout.jobs):
             desc = None
             for tenant_job in tenant.layout.jobs[job_name]:
