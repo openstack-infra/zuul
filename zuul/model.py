@@ -3296,6 +3296,7 @@ class Layout(object):
                     override_checkouts=override_checkouts)
             except NoMatchingParentError:
                 variants = None
+            self.log.debug("Collected jobs %s for %s", jobname, change)
             if not variants:
                 # A change must match at least one defined job variant
                 # (that is to say that it must match more than just
@@ -3311,6 +3312,7 @@ class Layout(object):
                     frozen_job.applyVariant(variant, item.layout)
                     frozen_job.name = variant.name
             frozen_job.name = jobname
+            self.log.debug("Froze job %s for %s", jobname, change)
             # Whether the change matches any of the project pipeline
             # variants
             matched = False
