@@ -367,6 +367,9 @@ class RPCListener(object):
         args = json.loads(job.arguments)
         tenant = self.sched.abide.tenants.get(args.get("tenant"))
         output = []
+        if not tenant:
+            job.sendWorkComplete(json.dumps(None))
+            return
         for err in tenant.layout.loading_errors.errors:
             output.append({
                 'source_context': err.key.context.toDict(),
