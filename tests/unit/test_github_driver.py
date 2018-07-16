@@ -814,7 +814,7 @@ class TestGithubDriver(ZuulTestCase):
                                           expect_reconfigure=True,
                                           old_sha=old_sha,
                                           modified_files=['zuul.yaml'],
-                                          expected_cat_jobs=2)
+                                          expected_cat_jobs=1)
 
         # Check if deleting that branch will not lead to a reconfiguration as
         # this branch is not protected
