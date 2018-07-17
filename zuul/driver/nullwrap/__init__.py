@@ -15,7 +15,7 @@
 # under the License.
 
 import logging
-import subprocess
+import psutil
 
 from zuul.driver import (Driver, WrapperInterface)
 from zuul.execution_context import BaseExecutionContext
@@ -25,7 +25,7 @@ class NullExecutionContext(BaseExecutionContext):
     log = logging.getLogger("zuul.NullExecutionContext")
 
     def getPopen(self, **kwargs):
-        return subprocess.Popen
+        return psutil.Popen
 
 
 class NullwrapDriver(Driver, WrapperInterface):
