@@ -4983,6 +4983,30 @@ For CI problems and help debugging, contact ci@example.org"""
         ], ordered=False)
 
 
+class TestAmbiguousProjectNames(ZuulTestCase):
+    config_file = 'zuul-connections-multiple-gerrits.conf'
+    tenant_config_file = 'config/ambiguous-names/main.yaml'
+
+    def test_client_enqueue_canonical(self):
+        "Test that the RPC client can enqueue a change using canonical name"
+        A = self.fake_review_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('Code-Review', 2)
+        A.addApproval('Approved', 1)
+
+        client = zuul.rpcclient.RPCClient('127.0.0.1',
+                                          self.gearman_server.port)
+        self.addCleanup(client.shutdown)
+        r = client.enqueue(tenant='tenant-one',
+                           pipeline='check',
+                           project='review.example.com/org/project',
+                           trigger='gerrit',
+                           change='1,1')
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
+                         'SUCCESS')
+        self.assertEqual(r, True)
+
+
 class TestExecutor(ZuulTestCase):
     tenant_config_file = 'config/single-tenant/main.yaml'
 

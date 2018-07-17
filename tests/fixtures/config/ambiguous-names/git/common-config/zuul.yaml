@@ -1,0 +1,47 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      review_gerrit:
+        - event: patchset-created
+    success:
+      review_gerrit:
+        Verified: 1
+      another_gerrit:
+        Verified: 1
+    failure:
+      review_gerrit:
+        Verified: -1
+      another_gerrit:
+        Verified: -1
+
+- job:
+    name: base
+    parent: null
+
+- job:
+    name: project-merge
+    hold-following-changes: true
+    nodeset:
+      nodes:
+        - name: controller
+          label: label1
+    run: playbooks/project-merge.yaml
+
+- project:
+    name: review.example.com/org/project
+    check:
+      jobs:
+        - project-merge
+
+- project:
+    name: another.example.com/org/project
+    check:
+      jobs:
+        - project-merge
+
+- project:
+    name: common-config
+    check:
+      jobs:
+        - project-merge
