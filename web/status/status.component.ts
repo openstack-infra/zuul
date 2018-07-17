@@ -36,10 +36,12 @@ export default class StatusComponent implements OnInit, OnDestroy {
 
   constructor(private route: ActivatedRoute, private zuul: ZuulService) {}
 
-  ngOnInit() {
+  async ngOnInit() {
+    await this.zuul.setTenant(this.route.snapshot.paramMap.get('tenant'))
+
     if (typeof this.app === 'undefined') {
        this.app = zuulStart(
-           jQuery, this.route.snapshot.paramMap.get('tenant'), this.zuul)
+           jQuery, this.zuul)
     }
     this.app.options.enabled = true
   }

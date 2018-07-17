@@ -62,6 +62,10 @@ const appRoutes: Routes = [
     component: TenantsComponent
   },
   {
+    path: 't/tenants.html',
+    component: TenantsComponent
+  },
+  {
     path: '**',
     component: StatusComponent
   }

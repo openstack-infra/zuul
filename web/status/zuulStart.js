@@ -26,7 +26,7 @@ import './jquery.zuul'
 /**
  * @return The $.zuul instance
  */
-function zuulStart ($, tenant, zuulService) {
+function zuulStart ($, zuulService) {
   // Start the zuul app (expects default dom)
 
   let $container, $indicator
@@ -50,7 +50,7 @@ function zuulStart ($, tenant, zuulService) {
       params['source_data'] = DemoStatusTree
     }
   } else {
-    params['source'] = zuulService.getSourceUrl('status', tenant)
+    params['source'] = zuulService.getSourceUrl('status')
   }
 
   let zuul = $.zuul(params, zuulService)

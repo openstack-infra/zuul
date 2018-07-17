@@ -34,7 +34,8 @@ export default class StreamComponent implements OnInit {
 
   constructor(private route: ActivatedRoute, private zuul: ZuulService) {}
 
-  ngOnInit() {
+  async ngOnInit() {
+    await this.zuul.setTenant(this.route.snapshot.paramMap.get('tenant'))
     this.startStream()
   }
 
@@ -54,7 +55,6 @@ export default class StreamComponent implements OnInit {
     }, pageUpdateInMS)
 
     const queryParamMap = this.route.snapshot.queryParamMap
-    const tenant = this.route.snapshot.paramMap.get('tenant')
 
     const params = {
       uuid: queryParamMap.get('uuid')
@@ -68,8 +68,7 @@ export default class StreamComponent implements OnInit {
     } else if (queryParamMap.has('websocket_url')) {
       params['websocket_url'] = queryParamMap.get('websocket_url')
     } else {
-      params['websocket_url'] = this.zuul.getWebsocketUrl(
-        'console-stream', tenant)
+      params['websocket_url'] = this.zuul.getWebsocketUrl('console-stream')
     }
     const ws = new WebSocket(params['websocket_url'])
 

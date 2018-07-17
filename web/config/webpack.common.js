@@ -40,6 +40,11 @@ module.exports = {
     // entry items from above. We can collapse this to just do one single
     // output file.
     new HtmlWebpackPlugin({
+      filename: 'index.html',
+      template: 'web/config/main.ejs',
+      title: 'Zuul Status'
+    }),
+    new HtmlWebpackPlugin({
       filename: 'status.html',
       template: 'web/config/main.ejs',
       title: 'Zuul Status'

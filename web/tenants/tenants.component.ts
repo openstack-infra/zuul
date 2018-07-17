@@ -26,7 +26,8 @@ export default class TenantsComponent implements OnInit {
 
   constructor(private http: HttpClient, private zuul: ZuulService) {}
 
-  ngOnInit() {
+  async ngOnInit() {
+    await this.zuul.setTenant()
     this.tenantsFetch()
   }
 

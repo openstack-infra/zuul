@@ -30,16 +30,14 @@ export default class BuildsComponent implements OnInit {
   pipeline: string
   job_name: string
   project: string
-  tenant: string
 
   constructor(
     private http: HttpClient, private route: ActivatedRoute,
     private zuul: ZuulService
   ) {}
 
-  ngOnInit() {
-
-    this.tenant = this.route.snapshot.paramMap.get('tenant')
+  async ngOnInit() {
+    await this.zuul.setTenant(this.route.snapshot.paramMap.get('tenant'))
 
     this.pipeline = this.route.snapshot.queryParamMap.get('pipeline')
     this.job_name = this.route.snapshot.queryParamMap.get('job_name')
@@ -54,18 +52,20 @@ export default class BuildsComponent implements OnInit {
     if (this.job_name) { params = params.set('job_name', this.job_name) }
     if (this.project) { params = params.set('project', this.project) }
 
-    const remoteLocation = this.zuul.getSourceUrl('builds', this.tenant)
-    this.http.get<Build[]>(remoteLocation, {params: params})
-      .subscribe(builds => {
-        for (const build of builds) {
-          /* Fix incorect url for post_failure job */
-          /* TODO(mordred) Maybe let's fix this server side? */
-          if (build.log_url === build.job_name) {
-            build.log_url = undefined
+    const remoteLocation = this.zuul.getSourceUrl('builds')
+    if (remoteLocation) {
+      this.http.get<Build[]>(remoteLocation, {params: params})
+        .subscribe(builds => {
+          for (const build of builds) {
+            /* Fix incorect url for post_failure job */
+            /* TODO(mordred) Maybe let's fix this server side? */
+            if (build.log_url === build.job_name) {
+              build.log_url = undefined
+            }
           }
-        }
-        this.builds = builds
-      })
+          this.builds = builds
+        })
+    }
   }
 
   getRowClass(build: Build): string {

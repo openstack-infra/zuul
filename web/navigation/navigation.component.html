@@ -16,10 +16,11 @@ under the License.
 <nav class="navbar navbar-default">
   <div class="container-fluid">
     <div class="navbar-header">
-      <a class="navbar-brand" [routerLink]="zuul.appBaseHref" target="_self">Zuul Dashboard</a>
+      <a *ngIf="zuul.info && !zuul.info.whiteLabel" class="navbar-brand" [routerLink]="dashboardLink" target="_self">Zuul Dashboard</a>
+      <span *ngIf="zuul.info && zuul.info.whiteLabel" class="navbar-brand">Zuul Dashboard</span>
     </div>
-    <ul class="nav navbar-nav" *ngIf="showNavbar">
-      <li routerLinkActive="active" *ngFor="let route of navbarRoutes">
+    <ul class="nav navbar-nav" *ngIf="zuul.info && zuul.info.tenant !== ''">
+      <li routerLinkActive="active" *ngFor="let route of zuul.navbarRoutes">
         <a [routerLink]="route.url">
           {{ route.title }}
         </a>
