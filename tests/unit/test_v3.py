@@ -25,7 +25,12 @@ from unittest import skip
 
 import zuul.configloader
 from zuul.lib import encryption
-from tests.base import AnsibleZuulTestCase, ZuulTestCase, FIXTURE_DIR
+from tests.base import (
+    AnsibleZuulTestCase,
+    ZuulTestCase,
+    FIXTURE_DIR,
+    simple_layout,
+)
 
 
 class TestMultipleTenants(AnsibleZuulTestCase):
@@ -2454,6 +2459,18 @@ class TestBrokenConfig(ZuulTestCase):
 
     def test_broken_config_on_startup(self):
         # verify get the errors at tenant level.
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        self.assertEquals(
+            len(tenant.layout.loading_errors), 1,
+            "An error should have been stored")
+        self.assertIn(
+            "Zuul encountered a syntax error",
+            str(tenant.layout.loading_errors[0].error))
+
+    @simple_layout('layouts/broken-template.yaml')
+    def test_broken_config_on_startup_template(self):
+        # Verify that a missing project-template doesn't break gate
+        # pipeline construction.
         tenant = self.sched.abide.tenants.get('tenant-one')
         self.assertEquals(
             len(tenant.layout.loading_errors), 1,
