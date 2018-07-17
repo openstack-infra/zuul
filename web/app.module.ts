@@ -22,6 +22,8 @@ import { BrowserModule } from '@angular/platform-browser'
 import { HttpClientModule } from '@angular/common/http'
 import { FormsModule } from '@angular/forms'
 
+import { CoreModule } from './core/core.module'
+
 import { AppRoutingModule } from './app-routing.module'
 import { AppComponent } from './app.component'
 import { getAppBaseHref } from './zuul/zuul.service'
@@ -40,6 +42,7 @@ import ZuulService from './zuul/zuul.service'
     BrowserModule,
     HttpClientModule,
     FormsModule,
+    CoreModule.forRoot({}),
     AppRoutingModule,
   ],
   declarations: [

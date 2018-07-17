@@ -26,21 +26,23 @@ import Job from './job'
 export default class JobsComponent implements OnInit {
 
   jobs: Job[]
-  tenant?: string
 
   constructor(
     private http: HttpClient, private route: ActivatedRoute,
     private zuul: ZuulService
   ) {}
 
-  ngOnInit() {
-    this.tenant = this.route.snapshot.paramMap.get('tenant')
+  async ngOnInit() {
+    await this.zuul.setTenant(this.route.snapshot.paramMap.get('tenant'))
     this.jobsFetch()
   }
 
   jobsFetch(): void {
-    this.http.get<Job[]>(this.zuul.getSourceUrl('jobs', this.tenant))
-      .subscribe(jobs => this.injestJobs(jobs))
+    const remoteLocation = this.zuul.getSourceUrl('jobs')
+    if (remoteLocation) {
+      this.http.get<Job[]>(remoteLocation)
+        .subscribe(jobs => this.injestJobs(jobs))
+    }
   }
 
   injestJobs(jobs: Job[]): void {

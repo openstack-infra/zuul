@@ -12,10 +12,16 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
-import { Injectable } from '@angular/core'
-import { ActivatedRoute } from '@angular/router'
+import { Injectable,  EventEmitter, Output } from '@angular/core'
+import { HttpClient } from '@angular/common/http'
+import { Router } from '@angular/router'
+import { BehaviorSubject } from 'rxjs/BehaviorSubject'
 
 import * as url from 'url'
+
+import Info from './info'
+import InfoResponse from './infoResponse'
+import RouteDescription from './description'
 
 declare var ZUUL_API_URL: string
 declare var ZUUL_BASE_HREF: string
@@ -48,15 +54,37 @@ export function getAppBaseHref (): string {
   return path
 }
 
-
-@Injectable()
-class ZuulService {
+@Injectable({
+  providedIn: 'root',
+})
+export class ZuulService {
   public baseApiUrl: string
   public appBaseHref: string
+  public info: Info
+  navbarRoutes: RouteDescription[]
+  private routePages = ['status', 'jobs', 'builds']
 
-  constructor() {
+  constructor(private router: Router, private http: HttpClient) {
     this.baseApiUrl = this.getBaseApiUrl()
     this.appBaseHref = getAppBaseHref()
+  }
+
+  async setTenant (tenant?: string) {
+    if (!this.info) {
+      const infoEndpoint = this.baseApiUrl + 'api/info'
+      const infoResponse = await this.http.get<InfoResponse>(
+          infoEndpoint).toPromise()
+      this.info = infoResponse.info
+      if (this.info.tenant && !tenant) {
+        this.info.whiteLabel = true
+      } else {
+        this.info.whiteLabel = false
+      }
+    }
+    if (tenant) {
+      this.info.tenant = tenant
+    }
+    this.navbarRoutes = this.getNavbarRoutes()
   }
 
   getBaseApiUrl (): string {
@@ -72,20 +100,51 @@ class ZuulService {
     return path
   }
 
-  getSourceUrl (filename: string, tenant?: string): string {
-    if (tenant) {
-      // Multi-tenant deploy. This is at t/a-tenant/x.html
-      return url.resolve(this.baseApiUrl, `api/tenant/${tenant}/${filename}`)
-    } else {
-      // Whitelabel deploy or tenants list, such as /status.html,
-      // /tenants.html or /zuul/status.html or /zuul/tenants.html
+  getSourceUrl (filename: string): string {
+    const tenant = this.info.tenant
+    if (this.info.whiteLabel || filename === 'tenants') {
+      if (!this.info.whiteLabel) {
+        // Reset selected tenant
+        this.info.tenant = ''
+      }
       return url.resolve(this.baseApiUrl, `api/${filename}`)
     }
+    if (!tenant) {
+      // No tenant selected, go to tenant list
+      console.log('No tenant selected, navigate to tenants list')
+      this.router.navigate(['/tenants.html'])
+    }
+    return url.resolve(this.baseApiUrl, `api/tenant/${tenant}/${filename}`)
   }
 
-  getWebsocketUrl (filename: string, tenant?: string): string {
-    return this.getSourceUrl(filename, tenant)
+  getWebsocketUrl (filename: string): string {
+    return this.getSourceUrl(filename)
       .replace(/(http)(s)?\:\/\//, 'ws$2://')
+  }
+
+  getNavbarRoutes(): RouteDescription[] {
+    const routes = []
+    for (const routePage of this.routePages) {
+      const description: RouteDescription = {
+        title: this.getRouteTitle(routePage),
+        url: this.getRouterLink(routePage)
+      }
+      routes.push(description)
+    }
+    return routes
+  }
+
+  getRouteTitle(target: string): string {
+    return target.charAt(0).toUpperCase() + target.slice(1)
+  }
+
+  getRouterLink(target: string): string[] {
+    const htmlTarget = target + '.html'
+    if (this.info.whiteLabel) {
+      return ['/' + htmlTarget]
+    } else {
+      return ['/t', this.info.tenant, htmlTarget]
+    }
   }
 
 }
