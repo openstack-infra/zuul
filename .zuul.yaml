@@ -98,6 +98,7 @@
               - yarn.lock
         - zuul-stream-functional
         - zuul-tox-remote
+        - pbrx-build-container-images
         - nodepool-zuul-functional:
             voting: false
     gate:
@@ -132,6 +133,7 @@
               - yarn.lock
         - zuul-stream-functional
         - zuul-tox-remote
+        - pbrx-build-container-images
     post:
       jobs:
         - publish-zuul-docs
