@@ -1897,6 +1897,15 @@ class ExecutorServer(object):
         with open(os.path.join(zuul_dir, '__init__.py'), 'w'):
             pass
 
+        # If keep is not set, ensure the job dir is empty on startup,
+        # in case we were uncleanly shut down.
+        if not self.keep_jobdir:
+            for fn in os.listdir(self.jobdir_root):
+                if not os.path.isdir(fn):
+                    continue
+                self.log.info("Deleting stale jobdir %s", fn)
+                shutil.rmtree(os.path.join(self.jobdir_root, fn))
+
         self.job_workers = {}
         self.disk_accountant = DiskAccountant(self.jobdir_root,
                                               self.disk_limit_per_job,
