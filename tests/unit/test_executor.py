@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright 2012 Hewlett-Packard Development Company, L.P.
 # Copyright 2014 Wikimedia Foundation Inc.
 #

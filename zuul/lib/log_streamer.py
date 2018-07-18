@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright (c) 2016 IBM Corp.
 # Copyright 2017 Red Hat, Inc.
 #
