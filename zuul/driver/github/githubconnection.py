@@ -1039,6 +1039,9 @@ class GithubConnection(BaseConnection):
                     self.log.warning(
                         "Rate limit exceeded, using empty branch list")
                 return []
+            elif resp.status_code == 404:
+                raise Exception("Got status code 404 when lising branches "
+                                "of project %s" % project.name)
 
             branches.extend([x['name'] for x in resp.json()])
 
