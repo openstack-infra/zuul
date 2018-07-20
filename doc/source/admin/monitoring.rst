@@ -177,16 +177,16 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
            Example of possible counters for each phase are: ``RESULT_NORMAL``,
            ``RESULT_TIMED_OUT``, ``RESULT_UNREACHABLE``, ``RESULT_ABORTED``.
 
-   .. stat:: load_average
-      :type: gauge
+  .. stat:: load_average
+     :type: gauge
 
-      The one-minute load average of this executor, multiplied by 100.
+     The one-minute load average of this executor, multiplied by 100.
 
-   .. stat:: pct_used_ram
-      :type: gauge
+  .. stat:: pct_used_ram
+     :type: gauge
 
-      The used RAM (excluding buffers and cache) on this executor, as
-      a percentage multiplied by 100.
+     The used RAM (excluding buffers and cache) on this executor, as
+     a percentage multiplied by 100.
 
 .. stat:: zuul.nodepool
 
