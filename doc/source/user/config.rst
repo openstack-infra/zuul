@@ -1203,6 +1203,13 @@ pipeline.
          Cherry-picks each change onto the branch rather than
          performing any merges.
 
+   .. attr:: vars
+      :default: None
+
+      A dictionary of variables to be made available for all jobs in
+      all pipelines of this project.  For more information see
+      :ref:`variable inheritance <user_jobs_variable_inheritance>`.
+
    .. attr:: <pipeline>
 
       Each pipeline that the project participates in should have an

@@ -2643,9 +2643,17 @@ class TestScheduler(ZuulTestCase):
             dict(name='child1', result='SUCCESS'),
             dict(name='child2', result='SUCCESS'),
             dict(name='child3', result='SUCCESS'),
+            dict(name='override_project_var', result='SUCCESS'),
+            dict(name='job_from_template1', result='SUCCESS'),
+            dict(name='job_from_template2', result='SUCCESS'),
         ], ordered=False)
         j = self.getJobFromHistory('parentjob')
         rp = set([p['name'] for p in j.parameters['projects']])
+        self.assertEqual(j.parameters['vars']['project_var'], 'set_in_project')
+        self.assertEqual(j.parameters['vars']['template_var1'],
+                         'set_in_template1')
+        self.assertEqual(j.parameters['vars']['template_var2'],
+                         'set_in_template2')
         self.assertEqual(j.parameters['vars']['override'], 0)
         self.assertEqual(j.parameters['vars']['child1override'], 0)
         self.assertEqual(j.parameters['vars']['parent'], 0)
@@ -2657,6 +2665,7 @@ class TestScheduler(ZuulTestCase):
                                   'org/project0']))
         j = self.getJobFromHistory('child1')
         rp = set([p['name'] for p in j.parameters['projects']])
+        self.assertEqual(j.parameters['vars']['project_var'], 'set_in_project')
         self.assertEqual(j.parameters['vars']['override'], 1)
         self.assertEqual(j.parameters['vars']['child1override'], 1)
         self.assertEqual(j.parameters['vars']['parent'], 0)
@@ -2667,6 +2676,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(rp, set(['org/project', 'org/project0',
                                   'org/project1']))
         j = self.getJobFromHistory('child2')
+        self.assertEqual(j.parameters['vars']['project_var'], 'set_in_project')
         rp = set([p['name'] for p in j.parameters['projects']])
         self.assertEqual(j.parameters['vars']['override'], 2)
         self.assertEqual(j.parameters['vars']['child1override'], 0)
@@ -2678,6 +2688,7 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(rp, set(['org/project', 'org/project0',
                                   'org/project2']))
         j = self.getJobFromHistory('child3')
+        self.assertEqual(j.parameters['vars']['project_var'], 'set_in_project')
         rp = set([p['name'] for p in j.parameters['projects']])
         self.assertEqual(j.parameters['vars']['override'], 3)
         self.assertEqual(j.parameters['vars']['child1override'], 0)
@@ -2688,6 +2699,9 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(j.parameters['vars']['child3'], 3)
         self.assertEqual(rp, set(['org/project', 'org/project0',
                                   'org/project3']))
+        j = self.getJobFromHistory('override_project_var')
+        self.assertEqual(j.parameters['vars']['project_var'],
+                         'override_in_job')
 
     @simple_layout('layouts/job-variants.yaml')
     def test_job_branch_variants(self):

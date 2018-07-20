@@ -1,0 +1,5 @@
+---
+features:
+  - Project and project-templates may now create variables via a
+    ``vars`` configuration entry.  Jobs can access these at runtime
+    in the same manner as job variables.

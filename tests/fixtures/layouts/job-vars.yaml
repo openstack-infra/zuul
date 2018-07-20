@@ -65,8 +65,45 @@
     parent: parentjob
     run: playbooks/child3.yaml
 
+- job:
+    name: override_project_var
+    parent: parentjob
+    run: playbooks/override_project_var.yaml
+
+- job:
+    name: job_from_template1
+    parent: parentjob
+    run: playbooks/job_from_template.yaml
+
+- job:
+    name: job_from_template2
+    parent: parentjob
+    run: playbooks/job_from_template.yaml
+
+- project-template:
+    name: template_with_vars1
+    vars:
+      template_var1: 'set_in_template1'
+    check:
+      jobs:
+        - job_from_template1
+
+- project-template:
+    name: template_with_vars2
+    vars:
+      template_var2: 'set_in_template2'
+    check:
+      jobs:
+        - job_from_template2
+
 - project:
     name: org/project
+    description: test description
+    templates:
+      - template_with_vars1
+      - template_with_vars2
+    vars:
+      project_var: 'set_in_project'
     check:
       jobs:
         - parentjob
@@ -81,6 +118,9 @@
                 child3: 3
               override: 3
               child3: 3
+        - override_project_var:
+            vars:
+              project_var: 'override_in_job'
 
 - project:
     name: org/project0
