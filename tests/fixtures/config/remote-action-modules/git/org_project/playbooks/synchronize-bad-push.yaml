@@ -1,0 +1,12 @@
+- hosts: all
+  tasks:
+    - name: Execute common-copy role
+      include_role:
+        name: common-copy
+
+    - name: Test push mode
+      synchronize:
+        dest: "{{ destdir.path }}/"
+        mode: push
+        src: "/tmp"
+        verify_host: true

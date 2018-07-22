@@ -18,6 +18,8 @@ import textwrap
 from tests.base import AnsibleZuulTestCase, FIXTURE_DIR
 
 ERROR_ACCESS_OUTSIDE = "Accessing files from outside the working dir"
+ERROR_SYNC_TO_OUTSIDE = "Syncing files to outside the working dir"
+ERROR_SYNC_FROM_OUTSIDE = "Syncing files from outside the working dir"
 
 
 class TestActionModules(AnsibleZuulTestCase):
@@ -153,6 +155,12 @@ class TestActionModules(AnsibleZuulTestCase):
 
     def test_shell_module(self):
         self._run_job('shell-good', 'SUCCESS')
+
+    def test_synchronize_module(self):
+        self._run_job('synchronize-good', 'SUCCESS')
+        self._run_job('synchronize-bad-pull', 'FAILURE', ERROR_SYNC_TO_OUTSIDE)
+        self._run_job(
+            'synchronize-bad-push', 'FAILURE', ERROR_SYNC_FROM_OUTSIDE)
 
     def test_template_module(self):
         self._run_job('template-good', 'SUCCESS')
