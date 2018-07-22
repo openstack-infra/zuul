@@ -161,6 +161,7 @@ class TestActionModules(AnsibleZuulTestCase):
         self._run_job('synchronize-bad-pull', 'FAILURE', ERROR_SYNC_TO_OUTSIDE)
         self._run_job(
             'synchronize-bad-push', 'FAILURE', ERROR_SYNC_FROM_OUTSIDE)
+        self._run_job('synchronize-delegate-good', 'SUCCESS')
 
     def test_template_module(self):
         self._run_job('template-good', 'SUCCESS')

@@ -24,6 +24,14 @@ class ActionModule(synchronize.ActionModule):
         if not paths._is_official_module(self):
             return paths._fail_module_dict(self._task.action)
 
+        try:
+            delegate_to = self._task.delegate_to
+        except (AttributeError, KeyError):
+            delegate_to = None
+
+        if delegate_to and not paths._is_localhost_task(self):
+            return super(ActionModule, self).run(tmp, task_vars)
+
         source = self._task.args.get('src', None)
         dest = self._task.args.get('dest', None)
         mode = self._task.args.get('mode', 'push')
