@@ -1491,9 +1491,9 @@ class JobGraph(object):
             all_dependent_jobs |= new_dependent_jobs
         return [self.jobs[name] for name in all_dependent_jobs]
 
-    def getParentJobsRecursively(self, dependent_job):
+    def getParentJobsRecursively(self, dependent_job, soft=False):
         return [self.jobs[name] for name in
-                self._getParentJobNamesRecursively(dependent_job)]
+                self._getParentJobNamesRecursively(dependent_job, soft)]
 
     def _getParentJobNamesRecursively(self, dependent_job, soft=False):
         all_parent_jobs = set()
@@ -1534,6 +1534,7 @@ class Build(object):
         self.end_time = None
         self.estimated_time = None
         self.canceled = False
+        self.paused = False
         self.retry = False
         self.parameters = {}
         self.worker = Worker()
@@ -1998,7 +1999,7 @@ class QueueItem(object):
         for job in self.job_graph.getJobs():
             build = self.current_build_set.getBuild(job.name)
             if build:
-                if build.result == 'SUCCESS':
+                if build.result == 'SUCCESS' or build.paused:
                     successful_job_names.add(job.name)
             else:
                 jobs_not_started.add(job)
@@ -2056,7 +2057,7 @@ class QueueItem(object):
         jobs_not_requested = set()
         for job in self.job_graph.getJobs():
             build = build_set.getBuild(job.name)
-            if build and build.result == 'SUCCESS':
+            if build and (build.result == 'SUCCESS' or build.paused):
                 successful_job_names.add(job.name)
             else:
                 nodeset = build_set.getJobNodeSet(job.name)
@@ -2108,7 +2109,7 @@ class QueueItem(object):
                     skipped += self.job_graph.getDependentJobsRecursively(
                         skip)
 
-        elif build.result != 'SUCCESS':
+        elif build.result != 'SUCCESS' and not build.paused:
             skipped += self.job_graph.getDependentJobsRecursively(
                 build.job.name)
 
@@ -2306,6 +2307,7 @@ class QueueItem(object):
                 'estimated_time': build.estimated_time if build else None,
                 'pipeline': build.pipeline.name if build else None,
                 'canceled': build.canceled if build else None,
+                'paused': build.paused if build else None,
                 'retry': build.retry if build else None,
                 'node_labels': build.node_labels if build else [],
                 'node_name': build.node_name if build else None,

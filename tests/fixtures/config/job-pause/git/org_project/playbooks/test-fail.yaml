@@ -1,0 +1,5 @@
+- hosts: all
+  tasks:
+    - name: Fail
+      fail:
+        msg: This shall fail

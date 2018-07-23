@@ -627,8 +627,10 @@ class AnsibleJob(object):
         self.proc_lock = threading.Lock()
         self.running = False
         self.started = False  # Whether playbooks have started running
+        self.paused = False
         self.aborted = False
         self.aborted_reason = None
+        self._resume_event = threading.Event()
         self.thread = None
         self.project_info = {}
         self.private_key_file = get_default(self.executor_server.config,
@@ -654,7 +656,46 @@ class AnsibleJob(object):
     def stop(self, reason=None):
         self.aborted = True
         self.aborted_reason = reason
+
+        # if paused we need to resume the job so it can be stopped
+        self.resume()
         self.abortRunningProc()
+
+    def pause(self):
+        args = json.loads(self.job.arguments)
+        self.log.info(
+            "Pausing job %s for ref %s (change %s)" % (
+                args['zuul']['job'],
+                args['zuul']['ref'],
+                args['zuul']['change_url']))
+        with open(self.jobdir.job_output_file, 'a') as job_output:
+            job_output.write(
+                "{now} |\n"
+                "{now} | Job paused\n".format(now=datetime.datetime.now()))
+
+        self.paused = True
+
+        data = {'paused': self.paused, 'data': self.getResultData()}
+        self.job.sendWorkData(json.dumps(data))
+        self._resume_event.wait()
+
+    def resume(self):
+        if not self.paused:
+            return
+
+        args = json.loads(self.job.arguments)
+        self.log.info(
+            "Resuming job %s for ref %s (change %s)" % (
+                args['zuul']['job'],
+                args['zuul']['ref'],
+                args['zuul']['change_url']))
+        with open(self.jobdir.job_output_file, 'a') as job_output:
+            job_output.write(
+                "{now} | Job resumed\n"
+                "{now} |\n".format(now=datetime.datetime.now()))
+
+        self.paused = False
+        self._resume_event.set()
 
     def wait(self):
         if self.thread:
@@ -985,6 +1026,12 @@ class AnsibleJob(object):
                 # The result of the job is indeterminate.  Zuul will
                 # run it again.
                 return None
+
+        # check if we need to pause here
+        result_data = self.getResultData()
+        pause = result_data.get('zuul', {}).get('pause')
+        if pause:
+            self.pause()
 
         post_timeout = args['post_timeout']
         for index, playbook in enumerate(self.jobdir.post_playbooks):
@@ -1984,6 +2031,8 @@ class ExecutorServer(object):
 
     def register(self):
         self.register_work()
+        self.executor_worker.registerFunction("executor:resume:%s" %
+                                              self.hostname)
         self.executor_worker.registerFunction("executor:stop:%s" %
                                               self.hostname)
         self.merger_worker.registerFunction("merger:merge")
@@ -2182,6 +2231,9 @@ class ExecutorServer(object):
             if job.name == 'executor:execute':
                 self.log.debug("Got execute job: %s" % job.unique)
                 self.executeJob(job)
+            elif job.name.startswith('executor:resume'):
+                self.log.debug("Got resume job: %s" % job.unique)
+                self.resumeJob(job)
             elif job.name.startswith('executor:stop'):
                 self.log.debug("Got stop job: %s" % job.unique)
                 self.stopJob(job)
@@ -2249,6 +2301,15 @@ class ExecutorServer(object):
         unique = os.path.basename(jobdir)
         self.stopJobByUnique(unique, reason=AnsibleJob.RESULT_DISK_FULL)
 
+    def resumeJob(self, job):
+        try:
+            args = json.loads(job.arguments)
+            self.log.debug("Resume job with arguments: %s" % (args,))
+            unique = args['uuid']
+            self.resumeJobByUnique(unique)
+        finally:
+            job.sendWorkComplete()
+
     def stopJob(self, job):
         try:
             args = json.loads(job.arguments)
@@ -2257,6 +2318,17 @@ class ExecutorServer(object):
             self.stopJobByUnique(unique)
         finally:
             job.sendWorkComplete()
+
+    def resumeJobByUnique(self, unique):
+        job_worker = self.job_workers.get(unique)
+        if not job_worker:
+            self.log.debug("Unable to find worker for job %s" % (unique,))
+            return
+        try:
+            job_worker.resume()
+        except Exception:
+            self.log.exception("Exception sending resume command "
+                               "to worker:")
 
     def stopJobByUnique(self, unique, reason=None):
         job_worker = self.job_workers.get(unique)

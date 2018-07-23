@@ -4131,3 +4131,42 @@ class TestNoLog(AnsibleZuulTestCase):
         self.assertNotIn('my-very-secret-password-2', json_log)
         self.assertNotIn('my-very-secret-password-1', text_log)
         self.assertNotIn('my-very-secret-password-2', text_log)
+
+
+class TestJobPause(AnsibleZuulTestCase):
+    tenant_config_file = 'config/job-pause/main.yaml'
+
+    def _get_file(self, build, path):
+        p = os.path.join(build.jobdir.root, path)
+        with open(p) as f:
+            return f.read()
+
+    def test_job_pause(self):
+
+        self.wait_timeout = 120
+
+        # Output extra ansible info so we might see errors.
+        self.executor_server.verbose = True
+        self.executor_server.keep_jobdir = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='test-fail', result='FAILURE', changes='1,1'),
+            dict(name='test-good', result='SUCCESS', changes='1,1'),
+            dict(name='test1-after-compile1', result='SUCCESS', changes='1,1'),
+            dict(name='test2-after-compile1', result='SUCCESS', changes='1,1'),
+            dict(name='test-after-compile2', result='SUCCESS', changes='1,1'),
+            dict(name='compile2', result='SUCCESS', changes='1,1'),
+            dict(name='compile1', result='SUCCESS', changes='1,1'),
+        ], ordered=False)
+
+        # The order of some of these tests is not deterministic so check that
+        # the last two are compile2, compile1 in this order.
+        history_compile1 = self.history[-1]
+        history_compile2 = self.history[-2]
+        self.assertEqual('compile1', history_compile1.name)
+        self.assertEqual('compile2', history_compile2.name)

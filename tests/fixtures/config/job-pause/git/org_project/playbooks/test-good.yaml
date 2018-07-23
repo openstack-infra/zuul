@@ -1,0 +1,5 @@
+- hosts: all
+  tasks:
+    - name: Good
+      debug:
+        msg: This shall not fail

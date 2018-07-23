@@ -1,0 +1,15 @@
+- hosts: all
+  tasks:
+    # Copy a file into the test root to indicate that this job is alive. This
+    # file will be removed in the post-run so a child job can check if the
+    # parent is alive and in pause state.
+    - copy:
+        content: "Built project"
+        dest: "{{zuul.executor.log_root}}/../../../compile2-pause.txt"
+
+    - name: Pause and let child run
+      zuul_return:
+        data:
+          zuul:
+            pause: true
+          compile2: test

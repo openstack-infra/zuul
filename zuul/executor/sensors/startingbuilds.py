@@ -36,6 +36,13 @@ class StartingBuildsSensor(SensorInterface):
     def _getRunningBuilds(self):
         return len(self.executor.job_workers)
 
+    def _getPausedBuilds(self):
+        paused_builds = 0
+        for worker in self.executor.job_workers.values():
+            if not worker.paused:
+                paused_builds += 1
+        return paused_builds
+
     def isOk(self):
         starting_builds = self._getStartingBuilds()
         max_starting_builds = max(
@@ -49,5 +56,6 @@ class StartingBuildsSensor(SensorInterface):
         return True, "{} <= {}".format(starting_builds, max_starting_builds)
 
     def reportStats(self, statsd, base_key):
+        statsd.gauge(base_key + '.paused_builds', self._getPausedBuilds())
         statsd.gauge(base_key + '.running_builds', self._getRunningBuilds())
         statsd.gauge(base_key + '.starting_builds', self._getStartingBuilds())

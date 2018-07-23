@@ -1,0 +1,5 @@
+- hosts: all
+  tasks:
+    - file:
+        path: "{{zuul.executor.log_root}}/../../../compile1-pause.txt"
+        state: absent

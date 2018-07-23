@@ -1,0 +1,23 @@
+- hosts: all
+  tasks:
+    # We expect the pause indicator of compile1 and compile2 to exist
+    - stat:
+        path: "{{zuul.executor.log_root}}/../../../compile1-pause.txt"
+      register: build_artifact
+    - assert:
+        that:
+          - build_artifact.stat.exists
+    - stat:
+        path: "{{zuul.executor.log_root}}/../../../compile2-pause.txt"
+      register: build_artifact
+    - assert:
+        that:
+          - build_artifact.stat.exists
+
+    # We expect the variables of compile1 and compile2 to exist
+    - assert:
+        that:
+          - compile1 is defined
+          - compile1 == 'test'
+          - compile2 is defined
+          - compile2 == 'test'
