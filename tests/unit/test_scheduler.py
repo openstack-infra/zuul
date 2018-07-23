@@ -1446,6 +1446,33 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(B.reported, 2)
         self.assertEqual(C.reported, 2)
 
+    @simple_layout('layouts/nonvoting-job-approval.yaml')
+    def test_nonvoting_job_approval(self):
+        "Test that non-voting jobs don't vote but leave approval"
+
+        A = self.fake_gerrit.addFakeChange('org/nonvoting-project',
+                                           'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.executor_server.failJob('nonvoting-project-test2', A)
+
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'NEW')
+        self.assertEqual(A.reported, 1)
+
+        self.assertEqual(
+            self.getJobFromHistory('nonvoting-project-test1').result,
+            'SUCCESS')
+        self.assertEqual(
+            self.getJobFromHistory('nonvoting-project-test2').result,
+            'FAILURE')
+
+        self.assertFalse(self.getJobFromHistory('nonvoting-project-test1').
+                         parameters['zuul']['voting'])
+        self.assertFalse(self.getJobFromHistory('nonvoting-project-test2').
+                         parameters['zuul']['voting'])
+        self.assertEqual(A.patchsets[0]['approvals'][0]['value'], "1")
+
     @simple_layout('layouts/nonvoting-job.yaml')
     def test_nonvoting_job(self):
         "Test that non-voting jobs don't vote."

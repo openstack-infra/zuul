@@ -1863,16 +1863,20 @@ class QueueItem(object):
 
         skipped = True
         for job in self.getJobs():
-            if not job.voting:
-                continue
             build = self.current_build_set.getBuild(job.name)
-            if not build:
+            if build:
+                # If the build ran, record whether or not it was skipped
+                # and return False if the build was voting and has an
+                # unsuccessful return value
+                if build.result != 'SKIPPED':
+                    skipped = False
+                if job.voting and build.result not in ['SUCCESS', 'SKIPPED']:
+                    return False
+            elif job.voting:
+                # If the build failed to run and was voting that is an
+                # unsuccessful build. But we don't count against it if not
+                # voting.
                 return False
-            if build.result == 'SKIPPED':
-                continue
-            elif build.result != 'SUCCESS':
-                return False
-            skipped = False
 
         # NOTE(pabelanger): We shouldn't be able to skip all jobs.
         if skipped:

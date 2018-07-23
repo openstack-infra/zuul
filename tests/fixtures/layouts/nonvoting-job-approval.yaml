@@ -1,0 +1,34 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: nonvoting-project-test1
+    voting: false
+    run: playbooks/nonvoting-project-test1.yaml
+
+- job:
+    name: nonvoting-project-test2
+    voting: false
+    run: playbooks/nonvoting-project-test2.yaml
+
+- project:
+    name: org/nonvoting-project
+    check:
+      jobs:
+        - nonvoting-project-test1
+        - nonvoting-project-test2
