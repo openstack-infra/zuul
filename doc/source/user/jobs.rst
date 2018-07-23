@@ -686,12 +686,24 @@ Build Status
 
 A job build may have the following status:
 
-* SUCCESS/FAILURE: nominal job execution.
-* RETRY_LIMIT: the ``pre-run`` playbook failed more than the maximum number of
+**SUCCESS**
+  nominal job execution
+
+**FAILURE**
+  job executed correctly, but exited with a failure
+
+**RETRY_LIMIT**
+  the ``pre-run`` playbook failed more than the maximum number of
   retry ``attempts``.
-* POST_FAILURE: the ``post-run`` playbook failed.
-* SKIPPED: one of the build dependencies failed and this job was not executed.
-* NODE_FAILURE: the test instance provider was unable to fullfill the nodeset
-  request.
-  Note: this can happen if the Nodepool quota is exceeding the provider
-  capacity, resulting in ERROR server creation: "No valid host found".
+
+**POST_FAILURE**
+  the ``post-run`` playbook failed.
+
+**SKIPPED**
+  one of the build dependencies failed and this job was not executed.
+
+**NODE_FAILURE**
+  the test instance provider was unable to fullfill the nodeset
+  request.  Note: this can happen if the Nodepool quota is exceeding
+  the provider capacity, resulting in ``ERROR server creation: "No valid
+  host found"``.
