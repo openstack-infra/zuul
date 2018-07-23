@@ -512,7 +512,7 @@ The following sections of ``zuul.conf`` are used by the executor:
       those used by jobs.  Prefixing variable names with a
       site-specific identifier is recommended.  The default is not to
       add any site-wide variables.  See the :ref:`User's Guide
-      <user_sitewide_variables>` for more information.
+      <user_jobs_sitewide_variables>` for more information.
 
    .. attr:: disk_limit_per_job
       :default: 250

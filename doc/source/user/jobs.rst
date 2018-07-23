@@ -85,28 +85,28 @@ There are several sources of variables which are available to Ansible:
 variables defined in jobs, secrets, and site-wide variables.  The
 order of precedence is:
 
-* Site-wide variables
-
-* Secrets
-
-* Job variables
-
-* Parent job results
+#. :ref:`Site-wide variables <user_jobs_sitewide_variables>`
+#. :ref:`Secrets <user_jobs_secrets>`
+#. :ref:`Job variables <user_jobs_job_variables>`
+#. :ref:`Parent job results <user_jobs_parent_results>`
 
 Meaning that a site-wide variable with the same name as any other will
 override its value, and similarly, secrets override job variables of
 the same name which override data returned from parent jobs.  Each of
 the sources is described below.
 
+.. _user_jobs_sitewide_variables:
 
-Job Variables
-~~~~~~~~~~~~~
+Site-wide Variables
+~~~~~~~~~~~~~~~~~~~
 
-Any variables specified in the job definition (using the
-:attr:`job.vars` attribute) are available as Ansible host variables.
-They are added to the ``vars`` section of the inventory file under the
-``all`` hosts group, so they are available to all hosts.  Simply refer
-to them by the name specified in the job's ``vars`` section.
+The Zuul administrator may define variables which will be available to
+all jobs running in the system.  These are statically defined and may
+not be altered by jobs.  See the :ref:`Administrator's Guide
+<admin_sitewide_variables>` for information on how a site
+administrator may define these variables.
+
+.. _user_jobs_secrets:
 
 Secrets
 ~~~~~~~
@@ -136,8 +136,27 @@ Secrets are only available to playbooks associated with the job
 definition which uses the secret; they are not available to playbooks
 associated with child jobs or job variants.
 
+.. _user_jobs_job_variables:
+
+Job Variables
+~~~~~~~~~~~~~
+
+Any variables specified in the job definition (using the
+:attr:`job.vars` attribute) are available as Ansible host variables.
+They are added to the ``vars`` section of the inventory file under the
+``all`` hosts group, so they are available to all hosts.  Simply refer
+to them by the name specified in the job's ``vars`` section.
+
+.. _user_jobs_parent_results:
+
+Parent Job Results
+~~~~~~~~~~~~~~~~~~
+
+A job may return data to Zuul for later use by jobs which depend on
+it.  For details, see :ref:`return_values`.
+
 Zuul Variables
-~~~~~~~~~~~~~~
+--------------
 
 Zuul supplies not only the variables specified by the job definition
 to Ansible, but also some variables from Zuul itself.
@@ -379,7 +398,7 @@ of item.
 
 
 Change Items
-++++++++++++
+~~~~~~~~~~~~
 
 A change to the repository.  Most often, this will be a git reference
 which has not yet been merged into the repository (e.g., a gerrit
@@ -409,7 +428,7 @@ are available:
       `https://github.com/example/example/pull/1234`.
 
 Branch Items
-++++++++++++
+~~~~~~~~~~~~
 
 This represents a branch tip.  This item may have been enqueued
 because the branch was updated (via a change having merged, or a
@@ -438,7 +457,7 @@ additional variables are available:
       be included here.  Otherwise, this variable will be undefined.
 
 Tag Items
-+++++++++
+~~~~~~~~~
 
 This represents a git tag.  The item may have been enqueued because a
 tag was created or deleted.  The following additional variables are
@@ -464,7 +483,7 @@ available:
       was deleted, this variable will be undefined.
 
 Ref Items
-+++++++++
+~~~~~~~~~
 
 This represents a git reference that is neither a change, branch, or
 tag.  Note that all items include a `ref` attribute which may be used
@@ -487,7 +506,7 @@ available:
       was deleted, this variable will be undefined.
 
 Working Directory
-+++++++++++++++++
+~~~~~~~~~~~~~~~~~
 
 Additionally, some information about the working directory and the
 executor running the job is available:
@@ -522,23 +541,6 @@ executor running the job is available:
          without a nodeset since Ansible doesn't set it for localhost, see
          this `porting guide
          <https://docs.ansible.com/ansible/latest/porting_guides/porting_guide_2.4.html#inventory>`_
-
-.. _user_sitewide_variables:
-
-Site-wide Variables
-~~~~~~~~~~~~~~~~~~~
-
-The Zuul administrator may define variables which will be available to
-all jobs running in the system.  These are statically defined and may
-not be altered by jobs.  See the :ref:`Administrator's Guide
-<admin_sitewide_variables>` for information on how a site
-administrator may define these variables.
-
-Parent Job Results
-~~~~~~~~~~~~~~~~~~
-
-A job may return data to Zuul for later use by jobs which depend on
-it.  For details, see :ref:`return_values`.
 
 SSH Keys
 --------
