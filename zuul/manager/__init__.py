@@ -660,7 +660,7 @@ class PipelineManager(object):
         if ready and self.executeJobs(item):
             changed = True
 
-        if item.didAnyJobFail():
+        if item.hasAnyJobFailed():
             failing_reasons.append("at least one job failed")
         if (not item.live) and (not item.items_behind) and (not dequeued):
             failing_reasons.append("is a non-live item with no items behind")
