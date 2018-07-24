@@ -194,7 +194,7 @@ class ZuulDaemonApp(ZuulApp, metaclass=abc.ABCMeta):
             with pid:
                 pass
 
-            with daemon.DaemonContext(pidfile=pid):
+            with daemon.DaemonContext(pidfile=pid, umask=0o022):
                 self.run()
 
     def send_command(self, cmd):
