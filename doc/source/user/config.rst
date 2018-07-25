@@ -1332,9 +1332,9 @@ branch will not immediately produce a configuration error.
       :required:
 
       A dictionary which will be added to the Ansible variables
-      available to the job.  The values can either be plain text
-      strings, or encrypted values.  See :ref:`encryption` for more
-      information.
+      available to the job.  The values can be any of the normal YAML
+      data types (strings, integers, dictionaries or lists) or
+      encrypted strings.  See :ref:`encryption` for more information.
 
 .. _nodeset:
 

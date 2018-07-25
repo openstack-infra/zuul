@@ -754,18 +754,31 @@ class Secret(ConfigObject):
     def __repr__(self):
         return '<Secret %s>' % (self.name,)
 
+    def _decrypt(self, private_key, secret_data):
+        # recursive function to decrypt data
+        if hasattr(secret_data, 'decrypt'):
+            return secret_data.decrypt(private_key)
+
+        if isinstance(secret_data, (dict, types.MappingProxyType)):
+            decrypted_secret_data = {}
+            for k, v in secret_data.items():
+                decrypted_secret_data[k] = self._decrypt(private_key, v)
+            return decrypted_secret_data
+
+        if isinstance(secret_data, (list, tuple)):
+            decrypted_secret_data = []
+            for v in secret_data:
+                decrypted_secret_data.append(self._decrypt(private_key, v))
+            return decrypted_secret_data
+
+        return secret_data
+
     def decrypt(self, private_key):
         """Return a copy of this secret with any encrypted data decrypted.
         Note that the original remains encrypted."""
 
         r = Secret(self.name, self.source_context)
-        decrypted_secret_data = {}
-        for k, v in self.secret_data.items():
-            if hasattr(v, 'decrypt'):
-                decrypted_secret_data[k] = v.decrypt(private_key)
-            else:
-                decrypted_secret_data[k] = v
-        r.secret_data = decrypted_secret_data
+        r.secret_data = self._decrypt(private_key, self.secret_data)
         return r
 
 
