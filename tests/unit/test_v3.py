@@ -3474,6 +3474,32 @@ class TestSecrets(ZuulTestCase):
         self.assertIn('already defined in project org/project1',
                       A.messages[0])
 
+    def test_complex_secret(self):
+        # Test that we can use a complex secret
+        with open(os.path.join(FIXTURE_DIR,
+                               'config/secrets/git/',
+                               'org_project2/zuul-complex.yaml')) as f:
+            config = f.read()
+
+        file_dict = {'zuul.yaml': config}
+        A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(A.reported, 1, "A should report success")
+        self.assertHistory([
+            dict(name='project2-complex', result='SUCCESS', changes='1,1'),
+        ])
+        secret = {'complex_secret':
+                  {'dict': {'password': 'test-password',
+                            'username': 'test-username'},
+                   'list': ['one', 'test-password', 'three'],
+                   'profile': 'cloudy'}}
+
+        self.assertEqual(
+            self._getSecrets('project2-complex', 'playbooks'),
+            [secret])
+
 
 class TestSecretInheritance(ZuulTestCase):
     tenant_config_file = 'config/secret-inheritance/main.yaml'

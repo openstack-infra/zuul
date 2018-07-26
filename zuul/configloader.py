@@ -470,10 +470,8 @@ class SecretParser(object):
         self.schema = self.getSchema()
 
     def getSchema(self):
-        data = {str: vs.Any(str, EncryptedPKCS1_OAEP)}
-
         secret = {vs.Required('name'): str,
-                  vs.Required('data'): data,
+                  vs.Required('data'): dict,
                   '_source_context': model.SourceContext,
                   '_start_mark': ZuulMark,
                   }
