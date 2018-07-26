@@ -231,6 +231,7 @@ class ExecutorClient(object):
         params['nodes'] = nodes
         params['groups'] = [group.toDict() for group in nodeset.getGroups()]
         params['vars'] = job.variables
+        params['extra_vars'] = job.extra_variables
         params['host_vars'] = job.host_variables
         params['group_vars'] = job.group_variables
         params['zuul'] = zuul_params

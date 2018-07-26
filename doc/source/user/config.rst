@@ -910,6 +910,12 @@ Here is an example of two job definitions:
       same name will override a previously defined variable, but new
       variable names will be added to the set of defined variables.
 
+   .. attr:: extra-vars
+
+      A dictionary of variables to be passed to ansible command-line
+      using the --extra-vars flag. Note by using extra-vars, these
+      variables always win precedence.
+
    .. attr:: host-vars
 
       A dictionary of host variables to supply to Ansible.  The keys

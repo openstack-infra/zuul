@@ -86,6 +86,7 @@ variables defined in jobs, secrets, and site-wide variables.  The
 order of precedence is:
 
 #. :ref:`Site-wide variables <user_jobs_sitewide_variables>`
+#. :ref:`Job extra variables <user_jobs_job_extra_variables>`
 #. :ref:`Secrets <user_jobs_secrets>`
 #. :ref:`Job variables <user_jobs_job_variables>`
 #. :ref:`Parent job results <user_jobs_parent_results>`
@@ -105,6 +106,14 @@ all jobs running in the system.  These are statically defined and may
 not be altered by jobs.  See the :ref:`Administrator's Guide
 <admin_sitewide_variables>` for information on how a site
 administrator may define these variables.
+
+.. _user_jobs_job_extra_variables:
+
+Job Extra Variables
+~~~~~~~~~~~~~~~~~~~
+
+Any extra variables in the job definition (using the :attr:`job.extra-vars`
+attribute) are available to Ansible but not added into the inventory file.
 
 .. _user_jobs_secrets:
 
