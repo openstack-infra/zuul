@@ -1235,6 +1235,11 @@ class Job(ConfigObject):
         self.parent_data = v
         self.variables = Job._deepUpdate(self.parent_data, self.variables)
 
+    def updateProjectVariables(self, project_vars):
+        # Merge project/template variables directly into the job
+        # variables.  Job variables override project variables.
+        self.variables = Job._deepUpdate(project_vars, self.variables)
+
     def updateProjects(self, other_projects):
         required_projects = self.required_projects.copy()
         required_projects.update(other_projects)
@@ -2672,6 +2677,7 @@ class ProjectPipelineConfig(ConfigObject):
         self.queue_name = None
         self.debug = False
         self.debug_messages = []
+        self.variables = {}
 
     def addDebug(self, msg):
         self.debug_messages.append(msg)
@@ -2685,6 +2691,12 @@ class ProjectPipelineConfig(ConfigObject):
             self.debug = other.debug
         self.job_list.inheritFrom(other.job_list)
 
+    def updateVariables(self, other):
+        # We need to keep this separate to update() because we wish to
+        # apply the project variables all the time, even if its jobs
+        # only come from templates.
+        self.variables = Job._deepUpdate(self.variables, other)
+
 
 class ProjectConfig(ConfigObject):
     # Represents a project configuration
@@ -2695,6 +2707,7 @@ class ProjectConfig(ConfigObject):
         # Pipeline name -> ProjectPipelineConfig
         self.pipelines = {}
         self.branch_matcher = None
+        self.variables = {}
         # These represent the values from the config file, but should
         # not be used directly; instead, use the ProjectMetadata to
         # find the computed value from across all project config
@@ -2713,6 +2726,7 @@ class ProjectConfig(ConfigObject):
         r.templates = self.templates
         r.pipelines = self.pipelines
         r.branch_matcher = self.branch_matcher
+        r.variables = self.variables
         r.merge_mode = self.merge_mode
         r.default_branch = self.default_branch
         return r
@@ -3218,6 +3232,13 @@ class Layout(object):
                         self.log.debug("%s item %s" % (msg, item))
                         project_in_pipeline = True
                         ppc.update(template_ppc)
+                        ppc.updateVariables(template.variables)
+
+            # Now merge in project variables (they will override
+            # template variables; later job variables may override
+            # these again)
+            ppc.updateVariables(pc.variables)
+
             project_ppc = pc.pipelines.get(item.pipeline.name)
             if project_ppc:
                 project_in_pipeline = True
@@ -3320,7 +3341,8 @@ class Layout(object):
             raise NoMatchingParentError()
         return jobs
 
-    def _createJobGraph(self, item, job_list, job_graph):
+    def _createJobGraph(self, item, ppc, job_graph):
+        job_list = ppc.job_list
         change = item.change
         pipeline = item.pipeline
         item.debug("Freezing job graph")
@@ -3401,6 +3423,11 @@ class Layout(object):
             if not frozen_job.run:
                 raise Exception("Job %s does not specify a run playbook" % (
                     frozen_job.name,))
+
+            # Now merge variables set from this parent ppc
+            # (i.e. project+templates) directly into the job vars
+            frozen_job.updateProjectVariables(ppc.variables)
+
             job_graph.addJob(frozen_job)
 
     def createJobGraph(self, item, ppc):
@@ -3408,7 +3435,7 @@ class Layout(object):
         # configured pipeline, if so return an empty JobGraph.
         ret = JobGraph()
         if ppc:
-            self._createJobGraph(item, ppc.job_list, ret)
+            self._createJobGraph(item, ppc, ret)
         return ret
 
 

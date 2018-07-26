@@ -78,6 +78,8 @@ behavior.
 
 .. TODO: document src (and logs?) directory
 
+.. _user_jobs_variable_inheritance:
+
 Variables
 ---------
 
@@ -89,6 +91,7 @@ order of precedence is:
 #. :ref:`Job extra variables <user_jobs_job_extra_variables>`
 #. :ref:`Secrets <user_jobs_secrets>`
 #. :ref:`Job variables <user_jobs_job_variables>`
+#. :ref:`Project variables <user_jobs_project_variables>`
 #. :ref:`Parent job results <user_jobs_parent_results>`
 
 Meaning that a site-wide variable with the same name as any other will
@@ -155,6 +158,46 @@ Any variables specified in the job definition (using the
 They are added to the ``vars`` section of the inventory file under the
 ``all`` hosts group, so they are available to all hosts.  Simply refer
 to them by the name specified in the job's ``vars`` section.
+
+.. _user_jobs_project_variables:
+
+Project Variables
+~~~~~~~~~~~~~~~~~
+
+Any variables specified in the project definition (using the
+:attr:`project.vars` attribute) are available to jobs as Ansible host
+variables in the same way as :ref:`job variables
+<user_jobs_job_variables>`.  Variables set in a ``project-template``
+are merged into the project variables when the template is included by
+a project.
+
+.. code-block:: yaml
+
+  - project-template:
+      name: sample-template
+      description: Description
+      vars:
+        var_from_template: foo
+      post:
+        jobs:
+          - template_job
+      release:
+        jobs:
+          - template_job
+
+  - project:
+      name: Sample project
+      description: Description
+      templates:
+        - sample-template
+      vars:
+        var_for_all_jobs: value
+      check:
+        jobs:
+          - job1
+          - job2:
+              vars:
+                var_for_all_jobs: override
 
 .. _user_jobs_parent_results:
 

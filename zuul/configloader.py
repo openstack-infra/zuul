@@ -806,7 +806,7 @@ class ProjectTemplateParser(object):
         self.pcontext = pcontext
         self.schema = self.getSchema()
         self.not_pipelines = ['name', 'description', 'templates',
-                              'merge-mode', 'default-branch',
+                              'merge-mode', 'default-branch', 'vars',
                               '_source_context', '_start_mark']
 
     def getSchema(self):
@@ -822,6 +822,7 @@ class ProjectTemplateParser(object):
         project = {
             'name': str,
             'description': str,
+            'vars': dict,
             str: pipeline_contents,
             '_source_context': model.SourceContext,
             '_start_mark': ZuulMark,
@@ -853,6 +854,13 @@ class ProjectTemplateParser(object):
         branches = self.pcontext.getImpliedBranches(source_context)
         if branches:
             project_template.setImpliedBranchMatchers(branches)
+
+        variables = conf.get('vars', {})
+        if variables:
+            if 'zuul' in variables or 'nodepool' in variables:
+                raise Exception("Variables named 'zuul' or 'nodepool' "
+                                "are not allowed.")
+            project_template.variables = variables
 
         if freeze:
             project_template.freeze()
@@ -895,6 +903,7 @@ class ProjectParser(object):
         project = {
             'name': str,
             'description': str,
+            'vars': dict,
             'templates': [str],
             'merge-mode': vs.Any('merge', 'merge-resolve',
                                  'cherry-pick'),
@@ -963,6 +972,13 @@ class ProjectParser(object):
 
         default_branch = conf.get('default-branch', 'master')
         project_config.default_branch = default_branch
+
+        variables = conf.get('vars', {})
+        if variables:
+            if 'zuul' in variables or 'nodepool' in variables:
+                raise Exception("Variables named 'zuul' or 'nodepool' "
+                                "are not allowed.")
+            project_config.variables = variables
 
         project_config.freeze()
         return project_config
@@ -1723,7 +1739,6 @@ class TenantParser(object):
 
     def _addLayoutItems(self, layout, tenant, parsed_config,
                         skip_pipelines=False, skip_semaphores=False):
-
         # TODO(jeblair): make sure everything needing
         # reference_exceptions has it; add tests if needed.
         if not skip_pipelines:
