@@ -563,7 +563,7 @@ Return Values
 -------------
 
 A job may return some values to Zuul to affect its behavior and for
-use by other jobs..  To return a value, use the ``zuul_return``
+use by child jobs.  To return a value, use the ``zuul_return``
 Ansible module in a job playbook running on the executor 'localhost' node.
 For example:
 
@@ -578,6 +578,20 @@ Will return the dictionary ``{'foo': 'bar'}`` to Zuul.
 
 .. TODO: xref to section describing formatting
 
+Any values other than those in the ``zuul`` hierarchy will be supplied
+as Ansible variables to child jobs.  These variables have less
+precedence than any other type of variable in Zuul, so be sure their
+names are not shared by any job variables.  If more than one parent
+job returns the same variable, the value from the later job in the job
+graph will take precedence.
+
+The values in the ``zuul`` hierarchy are special variables that influence the
+behavior of zuul itself. The following paragraphs describe the currently
+supported special variables and their meaning.
+
+Returning the log url
+~~~~~~~~~~~~~~~~~~~~~
+
 To set the log URL for a build, use *zuul_return* to set the
 **zuul.log_url** value.  For example:
 
@@ -588,6 +602,10 @@ To set the log URL for a build, use *zuul_return* to set the
         data:
           zuul:
             log_url: http://logs.example.com/path/to/build/logs
+
+
+Skipping child jobs
+~~~~~~~~~~~~~~~~~~~
 
 To skip a child job for the current build, use *zuul_return* to set the
 :var:`zuul.child_jobs` value. For example:
@@ -607,13 +625,6 @@ child jobs. If child_jobB was configured, it would be now marked as SKIPPED. If
 zuul.child_jobs is empty, all jobs will be marked as SKIPPED. Invalid child jobs
 are stripped and ignored, if only invalid jobs are listed it is the same as
 providing an empty list to zuul.child_jobs.
-
-Any values other than those in the ``zuul`` hierarchy will be supplied
-as Ansible variables to child jobs.  These variables have less
-precedence than any other type of variable in Zuul, so be sure their
-names are not shared by any job variables.  If more than one parent
-job returns the same variable, the value from the later job in the job
-graph will take precedence.
 
 
 .. _build_status:
