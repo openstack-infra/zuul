@@ -1315,8 +1315,8 @@ used to publish an artifact).  In these cases, the
 indicate the job should only run in post-review pipelines.
 
 If a job with secrets is unsafe to be used by other projects, the
-`allowed-projects` job attribute can be used to restrict the projects
-which can invoke that job.
+:attr:`job.allowed-projects` attribute can be used to restrict the
+projects which can invoke that job.
 
 Secrets, like most configuration items, are unique within a tenant,
 though a secret may be defined on multiple branches of the same
