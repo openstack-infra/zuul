@@ -1876,10 +1876,19 @@ class QueueItem(object):
         return True
 
     def didAllJobsSucceed(self):
+        """Check if all jobs have completed with status SUCCESS.
+
+        Return True if all voting jobs have completed with status
+        SUCCESS.  Non-voting jobs are ignored.  Skipped jobs are
+        ignored, but skipping all jobs returns a failure.  Incomplete
+        builds are considered a failure, hence this is unlikely to be
+        useful unless all builds are complete.
+
+        """
         if not self.hasJobGraph():
             return False
 
-        skipped = True
+        all_jobs_skipped = True
         for job in self.getJobs():
             build = self.current_build_set.getBuild(job.name)
             if build:
@@ -1887,7 +1896,7 @@ class QueueItem(object):
                 # and return False if the build was voting and has an
                 # unsuccessful return value
                 if build.result != 'SKIPPED':
-                    skipped = False
+                    all_jobs_skipped = False
                 if job.voting and build.result not in ['SUCCESS', 'SKIPPED']:
                     return False
             elif job.voting:
@@ -1897,12 +1906,19 @@ class QueueItem(object):
                 return False
 
         # NOTE(pabelanger): We shouldn't be able to skip all jobs.
-        if skipped:
+        if all_jobs_skipped:
             return False
 
         return True
 
-    def didAnyJobFail(self):
+    def hasAnyJobFailed(self):
+        """Check if any jobs have finished with a non-success result.
+
+        Return True if any job in the job graph has returned with a
+        status not equal to SUCCESS, else return False.  Non-voting
+        and in-flight jobs are ignored.
+
+        """
         if not self.hasJobGraph():
             return False
         for job in self.getJobs():
