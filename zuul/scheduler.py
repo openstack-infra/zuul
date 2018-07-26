@@ -79,11 +79,13 @@ class TenantReconfigureEvent(ManagementEvent):
     :arg Tenant tenant: the tenant to reconfigure
     :arg Project project: if supplied, clear the cached configuration
          from this project first
+    :arg Branch branch: if supplied along with project, only remove the
+         configuration of the specific branch from the cache
     """
-    def __init__(self, tenant, project):
+    def __init__(self, tenant, project, branch):
         super(TenantReconfigureEvent, self).__init__()
         self.tenant_name = tenant.name
-        self.projects = set([project])
+        self.project_branches = set([(project, branch)])
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -98,7 +100,7 @@ class TenantReconfigureEvent(ManagementEvent):
     def merge(self, other):
         if self.tenant_name != other.tenant_name:
             raise Exception("Can not merge events from different tenants")
-        self.projects |= other.projects
+        self.project_branches |= other.project_branches
 
 
 class PromoteEvent(ManagementEvent):
@@ -429,7 +431,8 @@ class Scheduler(threading.Thread):
         self.log.debug("Submitting tenant reconfiguration event for "
                        "%s due to event %s in project %s",
                        tenant.name, event, project)
-        event = TenantReconfigureEvent(tenant, project)
+        branch = event.branch if event is not None else None
+        event = TenantReconfigureEvent(tenant, project, branch)
         self.management_event_queue.put(event)
         self.wake_event.set()
 
@@ -598,12 +601,13 @@ class Scheduler(threading.Thread):
         self.layout_lock.acquire()
         try:
             self.log.info("Tenant reconfiguration beginning for %s due to "
-                          "projects %s", event.tenant_name, event.projects)
+                          "projects %s",
+                          event.tenant_name, event.project_branches)
             # If a change landed to a project, clear out the cached
-            # config before reconfiguring.
-            # TODO(jeblair): this could probably clear only the specific branch
-            for project in event.projects:
-                self.abide.clearUnparsedConfigCache(project.canonical_name)
+            # config of the changed branch before reconfiguring.
+            for (project, branch) in event.project_branches:
+                self.abide.clearUnparsedConfigCache(project.canonical_name,
+                                                    branch)
             old_tenant = self.abide.tenants[event.tenant_name]
             loader = configloader.ConfigLoader(
                 self.connections, self, self.merger)
