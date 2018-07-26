@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Zuul client got a new command 'tenant-conf-check'. This command validates the
+    schema of the tenant configuration and exits -1 if errors have been detected.
