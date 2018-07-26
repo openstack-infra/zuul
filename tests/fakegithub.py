@@ -107,6 +107,9 @@ class FakeRepository(object):
     def _create_branch(self, branch):
         self._branches.append((FakeBranch(branch=branch)))
 
+    def _delete_branch(self, branch_name):
+        self._branches = [b for b in self._branches if b.name != branch_name]
+
     def create_status(self, sha, state, url, description, context,
                       user='zuul'):
         # Since we're bypassing github API, which would require a user, we

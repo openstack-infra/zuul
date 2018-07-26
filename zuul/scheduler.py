@@ -942,7 +942,9 @@ class Scheduler(threading.Thread):
                      hasattr(change, 'files') and
                      change.updatesConfig()) or
                     event.branch_created or
-                    event.branch_deleted):
+                    (event.branch_deleted and
+                     self.abide.getUnparsedConfig(event.project_name,
+                                                  event.branch) is not None)):
 
                     reconfigure_tenant = True
 

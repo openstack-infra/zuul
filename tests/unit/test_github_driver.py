@@ -746,37 +746,52 @@ class TestGithubDriver(ZuulTestCase):
         self.assertNotIn('merge', C.labels)
 
     def _test_push_event_reconfigure(self, project, branch,
-                                     old_sha='0' * 40, expected_cat_jobs=1):
+                                     expect_reconfigure=False,
+                                     old_sha=None, new_sha=None,
+                                     modified_files=None,
+                                     expected_cat_jobs=None):
         pevent = self.fake_github.getPushEvent(
             project=project,
             ref='refs/heads/%s' % branch,
             old_rev=old_sha,
-            modified_files=['zuul.yaml'])
+            new_rev=new_sha,
+            modified_files=modified_files)
 
         # record previous tenant reconfiguration time, which may not be set
         old = self.sched.tenant_last_reconfigured.get('tenant-one', 0)
         time.sleep(1)
         self.waitUntilSettled()
 
-        # clear the gearman jobs history so we can count the cat jobs
-        # issued during reconfiguration
-        self.gearman_server.jobs_history.clear()
+        if expected_cat_jobs is not None:
+            # clear the gearman jobs history so we can count the cat jobs
+            # issued during reconfiguration
+            self.gearman_server.jobs_history.clear()
 
         self.fake_github.emitEvent(pevent)
         self.waitUntilSettled()
         new = self.sched.tenant_last_reconfigured.get('tenant-one', 0)
-        # New timestamp should be greater than the old timestamp
-        self.assertLess(old, new)
 
-        # Check the expected number of cat jobs here as the (empty) config of
-        # org/project should be cached.
-        cat_jobs = set([job for job in self.gearman_server.jobs_history
-                       if job.name == b'merger:cat'])
-        self.assertEqual(expected_cat_jobs, len(cat_jobs), cat_jobs)
+        if expect_reconfigure:
+            # New timestamp should be greater than the old timestamp
+            self.assertLess(old, new)
+        else:
+            # Timestamps should be equal as no reconfiguration shall happen
+            self.assertEqual(old, new)
+
+        if expected_cat_jobs is not None:
+            # Check the expected number of cat jobs here as the (empty) config
+            # of org/project should be cached.
+            cat_jobs = set([job for job in self.gearman_server.jobs_history
+                           if job.name == b'merger:cat'])
+            self.assertEqual(expected_cat_jobs, len(cat_jobs), cat_jobs)
 
     @simple_layout('layouts/basic-github.yaml', driver='github')
     def test_push_event_reconfigure(self):
-        self._test_push_event_reconfigure('org/common-config', 'master')
+        self._test_push_event_reconfigure('org/common-config', 'master',
+                                          modified_files=['zuul.yaml'],
+                                          old_sha='0' * 40,
+                                          expect_reconfigure=True,
+                                          expected_cat_jobs=1)
 
     @simple_layout('layouts/basic-github.yaml', driver='github')
     def test_push_event_reconfigure_complex_branch(self):
@@ -796,8 +811,20 @@ class TestGithubDriver(ZuulTestCase):
         A.setMerged("merging A")
 
         self._test_push_event_reconfigure(project, branch,
+                                          expect_reconfigure=True,
                                           old_sha=old_sha,
+                                          modified_files=['zuul.yaml'],
                                           expected_cat_jobs=2)
+
+        # Check if deleting that branch will not lead to a reconfiguration as
+        # this branch is not protected
+        repo._delete_branch(branch)
+
+        self._test_push_event_reconfigure(project, branch,
+                                          expect_reconfigure=False,
+                                          old_sha=old_sha,
+                                          new_sha='0' * 40,
+                                          modified_files=[])
 
     # TODO(jlk): Make this a more generic test for unknown project
     @skip("Skipped for rewrite of webhook handler")
@@ -841,6 +868,38 @@ class TestGithubDriver(ZuulTestCase):
 
         # the change should have entered the gate
         self.assertEqual(2, len(self.history))
+
+    # This test case verifies that no reconfiguration happens if a branch was
+    # deleted that didn't contain configuration.
+    @simple_layout('layouts/basic-github.yaml', driver='github')
+    def test_no_reconfigure_on_non_config_branch_delete(self):
+        branch = 'feature/somefeature'
+        project = 'org/common-config'
+
+        # prepare an existing branch
+        self.create_branch(project, branch)
+
+        github = self.fake_github.getGithubClient()
+        repo = github.repo_from_project(project)
+        repo._create_branch(branch)
+
+        A = self.fake_github.openFakePullRequest(project, branch, 'A')
+        old_sha = A.head_sha
+        A.setMerged("merging A")
+
+        self._test_push_event_reconfigure(project, branch,
+                                          expect_reconfigure=False,
+                                          old_sha=old_sha,
+                                          modified_files=['README.md'])
+
+        # Check if deleting that branch is ignored as well
+        repo._delete_branch(branch)
+
+        self._test_push_event_reconfigure(project, branch,
+                                          expect_reconfigure=False,
+                                          old_sha=old_sha,
+                                          new_sha='0' * 40,
+                                          modified_files=['README.md'])
 
 
 class TestGithubUnprotectedBranches(ZuulTestCase):
