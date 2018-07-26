@@ -1,0 +1,59 @@
+- hosts: all
+  tasks:
+    - name: Execute common-copy role
+      include_role:
+        name: common-copy
+
+    - name: create temporary build directory
+      tempfile:
+        path: /tmp
+        state: directory
+      register: _tmpdir
+
+    - name: Ensure controller pull directory
+      file:
+        path: "{{ _tmpdir.path }}/pull"
+        state: directory
+
+    - name: Test pull mode
+      synchronize:
+        dest: "{{ _tmpdir.path }}/pull/"
+        mode: pull
+        src: "{{ destdir.path }}/"
+        verify_host: true
+      delegate_to: "{{ inventory_hostname }}"
+
+    - name: Validate pull
+      stat:
+        path: "{{ _tmpdir.path }}/pull/common-file"
+      register: _pull
+
+    - name: Assert pull
+      assert:
+        that:
+          - _pull.stat.exists
+          - _pull.stat.isreg
+
+    - name: Ensure controller push directory
+      file:
+        path: "{{ _tmpdir.path }}/push"
+        state: directory
+
+    - name: Test push mode
+      synchronize:
+        dest: "{{ _tmpdir.path }}/push/"
+        mode: push
+        src: "{{ destdir.path }}/"
+        verify_host: true
+      delegate_to: "{{ inventory_hostname }}"
+
+    - name: Validate push
+      stat:
+        path: "{{ _tmpdir.path }}/push/common-file"
+      register: _push
+
+    - name: Assert push
+      assert:
+        that:
+          - _push.stat.exists
+          - _push.stat.isreg
