@@ -42,13 +42,16 @@ Nodepool for nodes.
 
 You should follow the `official deployment instructions for zookeeper
 <https://zookeeper.apache.org/doc/current/zookeeperAdmin.html>`_,
-but to get started quickly, just download, unpack and run:
+but to get started quickly, just download, unpack and run.
+
+To download follow the directions on `Zookeeper's releases page
+<https://zookeeper.apache.org/releases.html>`_ to grab the latest
+release of zookeeper. Then:
 
 ::
 
    sudo zypper install -y java-1_8_0-openjdk
-   wget http://apache.mirror.amaze.com.au/zookeeper/stable/zookeeper-3.4.12.tar.gz
-   tar -xzf zookeeper-3.4.12.tar.gz
+   tar -xzf zookeeper-3.4.12.tar.gz # Tarball downloaded from Zookeeper
    cp zookeeper-3.4.12/conf/zoo_sample.cfg zookeeper-3.4.12/conf/zoo.cfg
    ./zookeeper-3.4.12/bin/zkServer.sh start
 
