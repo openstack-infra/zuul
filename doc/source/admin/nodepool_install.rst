@@ -29,10 +29,19 @@ are required.
 
 .. code-block:: console
 
+   # All:
    $ git clone https://git.zuul-ci.org/nodepool
-   $ cd nodepool/
+   $ pushd nodepool/
+
+   # For Fedora and CentOS:
    $ sudo yum -y install $(bindep -b)
+
+   # For openSUSE:
+   $ sudo zypper install -y $(bindep -b)
+
+   # All:
    $ sudo pip3 install .
+   $ popd
 
 Service File
 ------------
