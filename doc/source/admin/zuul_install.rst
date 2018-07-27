@@ -12,7 +12,8 @@ during the Nodepool setup.
 
 .. code-block:: console
 
-   $ sudo adduser --system zuul --home-dir /var/lib/zuul --create-home
+   $ sudo groupadd --system zuul
+   $ sudo useradd --system zuul --home-dir /var/lib/zuul --create-home -g zuul
    $ sudo mkdir /etc/zuul/
    $ sudo mkdir /var/log/zuul/
    $ sudo chown zuul.zuul /var/log/zuul/

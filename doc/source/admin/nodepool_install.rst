@@ -12,7 +12,8 @@ into the nodes that Nodepool provides.
 
 .. code-block:: console
 
-   $ sudo adduser --system nodepool --home-dir /var/lib/nodepool --create-home
+   $ sudo groupadd --system nodepool
+   $ sudo useradd --system nodepool --home-dir /var/lib/nodepool --create-home -g nodepool
    $ ssh-keygen -t rsa -b 2048 -f nodepool_rsa  # don't enter a passphrase
    $ sudo mkdir /etc/nodepool/
    $ sudo mkdir /var/log/nodepool
