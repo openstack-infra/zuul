@@ -53,6 +53,6 @@ for pipeline in data['pipelines']:
                     "--pipeline %s --project %s --change %s,%s" % (
                         options.tenant,
                         options.pipeline,
-                        change['project'],
+                        change['project_canonical'],
                         cid, cps)
                 )
