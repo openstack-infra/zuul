@@ -16,7 +16,7 @@ import os
 from unittest import mock
 
 import tests.base
-from tests.base import BaseTestCase
+from tests.base import BaseTestCase, ZuulTestCase
 from zuul.driver.gerrit import GerritDriver
 from zuul.driver.gerrit.gerritconnection import GerritConnection
 
@@ -76,3 +76,27 @@ class TestGerrit(BaseTestCase):
                  'simple_query_pagination_old_3']
         expected_patches = 5
         self.run_query(files, expected_patches)
+
+
+class TestGerritWeb(ZuulTestCase):
+    config_file = 'zuul-gerrit-web.conf'
+    tenant_config_file = 'config/single-tenant/main.yaml'
+
+    def test_jobs_executed(self):
+        "Test that jobs are executed and a change is merged"
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('project-merge').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertEqual(self.getJobFromHistory('project-test1').node,
+                         'label1')
+        self.assertEqual(self.getJobFromHistory('project-test2').node,
+                         'label1')

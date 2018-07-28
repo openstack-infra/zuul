@@ -1,0 +1,5 @@
+---
+features:
+  - The Gerrit driver can now (optionally) report via HTTP instead of
+    SSH.  In the future, this will be used to report file and line
+    comments (the SSH API only supports review messages).

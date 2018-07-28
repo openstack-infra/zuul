@@ -25,6 +25,7 @@ import pprint
 import shlex
 import queue
 import voluptuous as v
+import requests
 
 from typing import Dict, List
 
@@ -32,6 +33,11 @@ from zuul.connection import BaseConnection
 from zuul.model import Ref, Tag, Branch, Project
 from zuul import exceptions
 from zuul.driver.gerrit.gerritmodel import GerritChange, GerritTriggerEvent
+from zuul.driver.gerrit.auth import FormAuth
+from zuul import version as zuul_version
+
+# HTTP timeout in seconds
+TIMEOUT = 30
 
 
 class GerritEventConnector(threading.Thread):
@@ -317,6 +323,53 @@ class GerritConnection(BaseConnection):
         self.gerrit_event_connector = None
         self.source = driver.getSource(self)
 
+        self.session = None
+        self.password = self.connection_config.get('password', None)
+        if self.password:
+            self.auth_type = self.connection_config.get('auth_type', None)
+            self.verify_ssl = self.connection_config.get('verify_ssl', True)
+            if self.verify_ssl not in ['true', 'True', '1', 1, 'TRUE']:
+                self.verify_ssl = False
+            self.user_agent = 'Zuul/%s %s' % (
+                zuul_version.release_string,
+                requests.utils.default_user_agent())
+            self.session = requests.Session()
+            if self.auth_type == 'basic':
+                authclass = requests.auth.HTTPBasicAuth
+            elif self.auth_type == 'form':
+                authclass = FormAuth
+            else:
+                authclass = requests.auth.HTTPDigestAuth
+            self.auth = authclass(
+                self.user, self.password)
+
+    def url(self, path):
+        return self.baseurl + '/a/' + path
+
+    def post(self, path, data):
+        url = self.url(path)
+        self.log.debug('POST: %s' % (url,))
+        self.log.debug('data: %s' % (data,))
+        r = self.session.post(
+            url, data=json.dumps(data).encode('utf8'),
+            verify=self.verify_ssl,
+            auth=self.auth, timeout=TIMEOUT,
+            headers={'Content-Type': 'application/json;charset=UTF-8',
+                     'User-Agent': self.user_agent})
+        self.log.debug('Received: %s %s' % (r.status_code, r.text,))
+        if r.status_code != 200:
+            raise Exception("Received response %s" % (r.status_code,))
+        ret = None
+        if r.text and len(r.text) > 4:
+            try:
+                ret = json.loads(r.text[4:])
+            except Exception:
+                self.log.exception(
+                    "Unable to parse result %s from post to %s" %
+                    (r.text, url))
+                raise
+        return ret
+
     def getProject(self, name: str) -> Project:
         return self.projects.get(name)
 
@@ -477,6 +530,7 @@ class GerritConnection(BaseConnection):
         if 'project' not in data:
             raise exceptions.ChangeNotFound(change.number, change.patchset)
         change.project = self.source.getProject(data['project'])
+        change.id = data['id']
         change.branch = data['branch']
         change.url = data['url']
         urlparse = urllib.parse.urlparse(self.baseurl)
@@ -492,6 +546,7 @@ class GerritConnection(BaseConnection):
         for ps in data['patchSets']:
             if str(ps['number']) == change.patchset:
                 change.ref = ps['ref']
+                change.commit = ps['revision']
                 for f in ps.get('files', []):
                     files.append(f['file'])
             if int(ps['number']) > int(max_ps):
@@ -721,7 +776,15 @@ class GerritConnection(BaseConnection):
     def eventDone(self):
         self.event_queue.task_done()
 
-    def review(self, project, change, message, action={}):
+    def review(self, change, message, action={}):
+        if self.session:
+            meth = self.review_http
+        else:
+            meth = self.review_ssh
+        return meth(change, message, action)
+
+    def review_ssh(self, change, message, action={}):
+        project = change.project.name
         cmd = 'gerrit review --project %s' % project
         if message:
             cmd += ' --message %s' % shlex.quote(message)
@@ -730,9 +793,50 @@ class GerritConnection(BaseConnection):
                 cmd += ' --%s' % key
             else:
                 cmd += ' --label %s=%s' % (key, val)
-        cmd += ' %s' % change
+        changeid = '%s,%s' % (change.number, change.patchset)
+        cmd += ' %s' % changeid
         out, err = self._ssh(cmd)
         return err
+
+    def review_http(self, change, message, action={},
+                    file_comments={}):
+        data = dict(message=message,
+                    strict_labels=False)
+        submit = False
+        labels = {}
+        for key, val in action.items():
+            if val is True:
+                if key == 'submit':
+                    submit = True
+            else:
+                labels[key] = val
+        if change.is_current_patchset:
+            if labels:
+                data['labels'] = labels
+            if file_comments:
+                data['comments'] = file_comments
+                # { path: [
+                #     {line=42, message='foobar'},
+                #     {line=40, message='baz'},
+                #   ]
+                # }
+        for x in range(1, 4):
+            try:
+                self.post('changes/%s/revisions/%s/review' %
+                          (change.id, change.commit),
+                          data)
+                break
+            except Exception:
+                self.log.exception(
+                    "Error submitting data to gerrit, attempt %s", x)
+                time.sleep(x * 10)
+        if change.is_current_patchset and submit:
+            try:
+                self.post('changes/%s/submit' % (change.id,), {})
+            except Exception:
+                self.log.exception(
+                    "Error submitting data to gerrit, attempt %s", x)
+                time.sleep(x * 10)
 
     def query(self, query):
         args = '--all-approvals --comments --commit-message'
