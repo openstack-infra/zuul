@@ -696,9 +696,17 @@ change, set the **zuul.file_comments** value.  For example:
                   message: "Line too long"
                 - line: 82
                   message: "Line too short"
+                - line: 119
+                  message: "This block is indented too far."
+                  range:
+                    start_line: 117
+                    start_character:    0
+                    end_line:   119
+                    end_character:  37
 
-Not all reporters currently support line comments; in these cases,
-reporters will simply ignore this data.
+Not all reporters currently support line comments (or all of the
+features of line comments); in these cases, reporters will simply
+ignore this data.
 
 .. _build_status:
 

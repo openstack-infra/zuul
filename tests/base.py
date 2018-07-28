@@ -273,7 +273,8 @@ class FakeGerritChange(object):
         self.patchsets.append(d)
         self.data['submitRecords'] = self.getSubmitRecords()
 
-    def addComment(self, filename, line, message, name, email, username):
+    def addComment(self, filename, line, message, name, email, username,
+                   comment_range=None):
         comment = {
             'file': filename,
             'line': int(line),
@@ -284,6 +285,8 @@ class FakeGerritChange(object):
             },
             'message': message,
         }
+        if comment_range:
+            comment['range'] = comment_range
         self.comments.append(comment)
 
     def getPatchsetCreatedEvent(self, patchset):
@@ -703,7 +706,8 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
                 for comment in commentlist:
                     change.addComment(filename, comment['line'],
                                       comment['message'], 'Zuul',
-                                      'zuul@example.com', self.user)
+                                      'zuul@example.com', self.user,
+                                      comment.get('range'))
         if 'submit' in action:
             change.setMerged()
         if message:

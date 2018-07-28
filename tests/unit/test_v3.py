@@ -1041,8 +1041,12 @@ class TestInRepoConfig(ZuulTestCase):
                           'message': 'Job non-existent-job not defined',
                           'reviewer': {'email': 'zuul@example.com',
                                        'name': 'Zuul',
-                                       'username': 'jenkins'}}
-        )
+                                       'username': 'jenkins'},
+                          'range': {'end_character': 0,
+                                    'end_line': 9,
+                                    'start_character': 2,
+                                    'start_line': 5},
+                          })
 
     def test_dynamic_config_non_existing_job_in_template(self):
         """Test that requesting a non existent job fails"""
