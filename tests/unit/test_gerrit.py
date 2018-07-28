@@ -16,7 +16,7 @@ import os
 from unittest import mock
 
 import tests.base
-from tests.base import BaseTestCase, ZuulTestCase
+from tests.base import BaseTestCase, ZuulTestCase, AnsibleZuulTestCase
 from zuul.driver.gerrit import GerritDriver
 from zuul.driver.gerrit.gerritconnection import GerritConnection
 
@@ -100,3 +100,44 @@ class TestGerritWeb(ZuulTestCase):
                          'label1')
         self.assertEqual(self.getJobFromHistory('project-test2').node,
                          'label1')
+
+
+class TestFileComments(AnsibleZuulTestCase):
+    # A temporary class to hold new tests while others are disabled
+    config_file = 'zuul-gerrit-web.conf'
+    tenant_config_file = 'config/gerrit-file-comments/main.yaml'
+
+    def test_multiple_tenants(self):
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('file-comments').result,
+                         'SUCCESS')
+        self.assertEqual(len(A.comments), 3)
+        comments = sorted(A.comments, key=lambda x: x['line'])
+        self.assertEqual(comments[0],
+                         {'file': 'otherfile.txt',
+                          'line': 21,
+                          'message': 'This is a much longer message.\n\n'
+                          'With multiple paragraphs.\n',
+                          'reviewer': {'email': 'zuul@example.com',
+                                       'name': 'Zuul',
+                                       'username': 'jenkins'}}
+        )
+        self.assertEqual(comments[1],
+                         {'file': 'path/to/file.py',
+                          'line': 42,
+                          'message': 'line too long',
+                          'reviewer': {'email': 'zuul@example.com',
+                                       'name': 'Zuul',
+                                       'username': 'jenkins'}}
+        )
+        self.assertEqual(comments[2],
+                         {'file': 'path/to/file.py',
+                          'line': 82,
+                          'message': 'line too short',
+                          'reviewer': {'email': 'zuul@example.com',
+                                       'name': 'Zuul',
+                                       'username': 'jenkins'}}
+        )

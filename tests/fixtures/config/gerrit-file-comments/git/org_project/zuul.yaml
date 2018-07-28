@@ -1,0 +1,10 @@
+- job:
+    parent: base
+    name: file-comments
+    run: playbooks/file-comments.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - file-comments

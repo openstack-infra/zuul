@@ -1,0 +1,17 @@
+- hosts: all
+  tasks:
+    - zuul_return:
+        data:
+          zuul:
+            file_comments:
+              path/to/file.py:
+                - line: 42
+                  message: line too long
+                - line: 82
+                  message: line too short
+              otherfile.txt:
+                - line: 21
+                  message: |
+                    This is a much longer message.
+
+                    With multiple paragraphs.

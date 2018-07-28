@@ -25,6 +25,17 @@ class GerritReporter(BaseReporter):
     name = 'gerrit'
     log = logging.getLogger("zuul.GerritReporter")
 
+    def _getFileComments(self, item):
+        ret = {}
+        for build in item.current_build_set.getBuilds():
+            fc = build.result_data.get('zuul', {}).get('file_comments')
+            if not fc:
+                continue
+            for fn, comments in fc.items():
+                existing_comments = ret.setdefault(fn, [])
+                existing_comments += comments
+        return ret
+
     def report(self, item):
         """Send a message to gerrit."""
 
@@ -39,13 +50,16 @@ class GerritReporter(BaseReporter):
             return
 
         message = self._formatItemReport(item)
+        comments = self._getFileComments(item)
 
-        self.log.debug("Report change %s, params %s, message: %s" %
-                       (item.change, self.config, message))
+        self.log.debug("Report change %s, params %s,"
+                       " message: %s, comments: %s" %
+                       (item.change, self.config, message, comments))
         item.change._ref_sha = item.change.project.source.getRefSha(
             item.change.project, 'refs/heads/' + item.change.branch)
 
-        return self.connection.review(item.change, message, self.config)
+        return self.connection.review(item.change, message, self.config,
+                                      comments)
 
     def getSubmitAllowNeeds(self):
         """Get a list of code review labels that are allowed to be

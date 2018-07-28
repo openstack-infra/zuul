@@ -678,6 +678,27 @@ zuul.child_jobs is empty, all jobs will be marked as SKIPPED. Invalid child jobs
 are stripped and ignored, if only invalid jobs are listed it is the same as
 providing an empty list to zuul.child_jobs.
 
+Leaving file comments
+~~~~~~~~~~~~~~~~~~~~~
+
+To instruct the reporters to leave line comments on files in the
+change, set the **zuul.file_comments** value.  For example:
+
+.. code-block:: yaml
+
+  tasks:
+    - zuul_return:
+        data:
+          zuul:
+            file_comments:
+              path/to/file.py:
+                - line: 42
+                  message: "Line too long"
+                - line: 82
+                  message: "Line too short"
+
+Not all reporters currently support line comments; in these cases,
+reporters will simply ignore this data.
 
 .. _build_status:
 

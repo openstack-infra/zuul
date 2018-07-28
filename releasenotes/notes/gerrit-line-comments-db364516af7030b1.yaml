@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Zuul now supports leaving file comments, though currently only when using
+    the Gerrit driver.  See the documentation for ``zuul_return`` for details.
