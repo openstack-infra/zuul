@@ -90,8 +90,8 @@ class BaseReporter(object, metaclass=abc.ABCMeta):
             msg = 'This change depends on a change that failed to merge.\n'
         elif item.didMergerFail():
             msg = item.pipeline.merge_failure_message
-        elif item.getConfigError():
-            msg = item.getConfigError()
+        elif item.getConfigErrors():
+            msg = str(item.getConfigErrors()[0].error)
         else:
             msg = item.pipeline.failure_message
             if with_jobs:

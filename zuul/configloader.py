@@ -233,7 +233,7 @@ def configuration_exceptions(stanza, conf, accumulator):
                      content=indent(start_mark.snippet.rstrip()),
                      start_mark=str(start_mark))
 
-        accumulator.addError(context, start_mark, m)
+        accumulator.addError(context, start_mark, m, str(e))
 
 
 @contextmanager
@@ -269,7 +269,7 @@ def reference_exceptions(stanza, obj, accumulator):
                      content=indent(start_mark.snippet.rstrip()),
                      start_mark=str(start_mark))
 
-        accumulator.addError(context, start_mark, m)
+        accumulator.addError(context, start_mark, m, str(e))
 
 
 class ZuulMark(object):
@@ -280,7 +280,10 @@ class ZuulMark(object):
         self.name = start_mark.name
         self.index = start_mark.index
         self.line = start_mark.line
+        self.end_line = end_mark.line
+        self.end_index = end_mark.index
         self.column = start_mark.column
+        self.end_column = end_mark.column
         self.snippet = stream[start_mark.index:end_mark.index]
 
     def __str__(self):
