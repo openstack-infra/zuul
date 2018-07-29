@@ -41,7 +41,12 @@ class GerritReporter(BaseReporter):
                 continue
             existing_comments = ret.setdefault(context.path, [])
             existing_comments.append(dict(line=mark.end_line,
-                                          message=err.short_error))
+                                          message=err.short_error,
+                                          range=dict(
+                                              start_line=mark.line + 1,
+                                              start_character=mark.column,
+                                              end_line=mark.end_line,
+                                              end_character=mark.end_column)))
         return ret
 
     def report(self, item):
