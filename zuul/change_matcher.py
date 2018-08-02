@@ -77,7 +77,7 @@ class ImpliedBranchMatcher(AbstractChangeMatcher):
 
     def matches(self, change):
         if hasattr(change, 'branch'):
-            if self.regex.match(change.branch):
+            if self.regex.fullmatch(change.branch):
                 return True
             return False
         return True

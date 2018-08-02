@@ -5451,6 +5451,36 @@ class TestSchedulerTemplatedProject(ZuulTestCase):
             self.getJobFromHistory('project-test1').
             parameters['zuul']['_inheritance_path'])
 
+        # Now create a new branch named stable-foo and change the project
+        # pipeline
+        self.create_branch('untrusted-config', 'stable-foo')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'untrusted-config', 'stable-foo'))
+        self.waitUntilSettled()
+
+        in_repo_conf = textwrap.dedent(
+            """
+            - project:
+                name: untrusted-config
+                templates:
+                  - test-three-and-four
+            """)
+        file_dict = {'zuul.d/project.yaml': in_repo_conf}
+        B = self.fake_gerrit.addFakeChange('untrusted-config', 'stable-foo',
+                                           'B', files=file_dict)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='project-test1', result='SUCCESS', changes='1,1'),
+            dict(name='project-test2', result='SUCCESS', changes='1,1'),
+            dict(name='layered-project-test3', result='SUCCESS',
+                 changes='2,1'),
+            dict(name='layered-project-test4', result='SUCCESS',
+                 changes='2,1'),
+        ], ordered=False)
+
 
 class TestSchedulerSuccessURL(ZuulTestCase):
     tenant_config_file = 'config/success-url/main.yaml'
