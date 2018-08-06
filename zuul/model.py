@@ -2404,19 +2404,22 @@ class Ref(object):
 
     def __repr__(self):
         rep = None
+        pname = None
+        if self.project and self.project.name:
+            pname = self.project.name
         if self.newrev == '0000000000000000000000000000000000000000':
-            rep = '<%s 0x%x deletes %s from %s' % (
-                type(self).__name__,
-                id(self), self.ref, self.oldrev)
+            rep = '<%s 0x%x %s deletes %s from %s' % (
+                type(self).__name__, id(self), pname,
+                self.ref, self.oldrev)
         elif self.oldrev == '0000000000000000000000000000000000000000':
-            rep = '<%s 0x%x creates %s on %s>' % (
-                type(self).__name__,
-                id(self), self.ref, self.newrev)
+            rep = '<%s 0x%x %s creates %s on %s>' % (
+                type(self).__name__, id(self), pname,
+                self.ref, self.newrev)
         else:
             # Catch all
-            rep = '<%s 0x%x %s updated %s..%s>' % (
-                type(self).__name__,
-                id(self), self.ref, self.oldrev, self.newrev)
+            rep = '<%s 0x%x %s %s updated %s..%s>' % (
+                type(self).__name__, id(self), pname,
+                self.ref, self.oldrev, self.newrev)
         return rep
 
     def equals(self, other):
@@ -2524,7 +2527,10 @@ class Change(Branch):
         return '%s,%s' % (self.number, self.patchset)
 
     def __repr__(self):
-        return '<Change 0x%x %s>' % (id(self), self._id())
+        pname = None
+        if self.project and self.project.name:
+            pname = self.project.name
+        return '<Change 0x%x %s %s>' % (id(self), pname, self._id())
 
     def equals(self, other):
         if self.number == other.number and self.patchset == other.patchset:
@@ -2618,6 +2624,10 @@ class TriggerEvent(object):
 
     def _repr(self):
         flags = [str(self.type)]
+        if self.project_name:
+            flags.append(self.project_name)
+        if self.ref:
+            flags.append(self.ref)
         if self.branch_updated:
             flags.append('branch_updated')
         if self.branch_created:
