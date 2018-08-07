@@ -24,6 +24,7 @@ import logging
 import pprint
 import shlex
 import queue
+import urllib.parse
 import voluptuous as v
 import requests
 
@@ -817,15 +818,14 @@ class GerritConnection(BaseConnection):
                 data['labels'] = labels
             if file_comments:
                 data['comments'] = file_comments
-                # { path: [
-                #     {line=42, message='foobar'},
-                #     {line=40, message='baz'},
-                #   ]
-                # }
+        changeid = "%s~%s~%s" % (
+            urllib.parse.quote(str(change.project), safe=''),
+            urllib.parse.quote(str(change.branch), safe=''),
+            change.id)
         for x in range(1, 4):
             try:
                 self.post('changes/%s/revisions/%s/review' %
-                          (change.id, change.commit),
+                          (changeid, change.commit),
                           data)
                 break
             except Exception:
@@ -834,7 +834,7 @@ class GerritConnection(BaseConnection):
                 time.sleep(x * 10)
         if change.is_current_patchset and submit:
             try:
-                self.post('changes/%s/submit' % (change.id,), {})
+                self.post('changes/%s/submit' % (changeid,), {})
             except Exception:
                 self.log.exception(
                     "Error submitting data to gerrit, attempt %s", x)

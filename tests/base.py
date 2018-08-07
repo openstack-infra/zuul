@@ -531,8 +531,9 @@ class GerritWebServer(object):
                 self.end_headers()
 
             def _get_change(self, change_id):
+                project, branch, change = change_id.split('~')
                 for c in fake_gerrit.changes.values():
-                    if c.data['id'] == change_id:
+                    if c.data['id'] == change:
                         return c
 
             def review(self, change_id, revision, data):
