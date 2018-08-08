@@ -2791,6 +2791,10 @@ class TestRoleBranches(RoleTestCase):
         # dependency chain.
         # First we create some branch-specific content in project1:
         self.create_branch('project1', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'project1', 'stable'))
+        self.waitUntilSettled()
 
         # A pre-playbook with unique stable branch content.
         p = self._addPlaybook('project1', 'stable',
@@ -3143,6 +3147,10 @@ class TestPragma(ZuulTestCase):
 
     def test_no_pragma(self):
         self.create_branch('org/project', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project', 'stable'))
+        self.waitUntilSettled()
         with open(os.path.join(FIXTURE_DIR,
                                'config/pragma/git/',
                                'org_project/nopragma.yaml')) as f:
@@ -3166,6 +3174,10 @@ class TestPragma(ZuulTestCase):
 
     def test_pragma(self):
         self.create_branch('org/project', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project', 'stable'))
+        self.waitUntilSettled()
         with open(os.path.join(FIXTURE_DIR,
                                'config/pragma/git/',
                                'org_project/pragma.yaml')) as f:

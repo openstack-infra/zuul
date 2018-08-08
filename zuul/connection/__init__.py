@@ -68,12 +68,25 @@ class BaseConnection(object, metaclass=abc.ABCMeta):
     def registerScheduler(self, sched):
         self.sched = sched
 
+    def clearBranchCache(self):
+        """Clear the branch cache for this connection.
+
+        This is called immediately prior to performing a full
+        reconfiguration.  The branch cache should be cleared so that a
+        full reconfiguration can be used to correct any errors in
+        cached data.
+
+        """
+        pass
+
     def maintainCache(self, relevant):
+
         """Make cache contain relevant changes.
 
         This lets the user supply a list of change objects that are
         still in use.  Anything in our cache that isn't in the supplied
         list should be safe to remove from the cache."""
+        pass
 
     def getWebController(self, zuul_web):
         """Return a cherrypy web controller to register with zuul-web.

@@ -155,6 +155,11 @@ class TestScheduler(ZuulTestCase):
     def test_job_branch(self):
         "Test the correct variant of a job runs on a branch"
         self.create_branch('org/project', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project', 'stable'))
+        self.waitUntilSettled()
+
         A = self.fake_gerrit.addFakeChange('org/project', 'stable', 'A')
         A.addApproval('Code-Review', 2)
         self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
@@ -181,6 +186,10 @@ class TestScheduler(ZuulTestCase):
                 self.executor_server.merger_worker.unRegisterFunction(f)
 
         self.create_branch('org/project', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project', 'stable'))
+        self.waitUntilSettled()
         A = self.fake_gerrit.addFakeChange('org/project', 'stable', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
@@ -2707,7 +2716,15 @@ class TestScheduler(ZuulTestCase):
     @simple_layout('layouts/job-variants.yaml')
     def test_job_branch_variants(self):
         self.create_branch('org/project', 'stable/diablo')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project', 'stable/diablo'))
         self.create_branch('org/project', 'stable/essex')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project', 'stable/essex'))
+        self.waitUntilSettled()
+
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
@@ -3876,6 +3893,10 @@ class TestScheduler(ZuulTestCase):
         self.addCleanup(client.shutdown)
 
         self.create_branch('org/project', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project', 'stable'))
+        self.waitUntilSettled()
         self.executor_server.hold_jobs_in_build = True
         self.commitConfigUpdate('common-config', 'layouts/timer.yaml')
         self.sched.reconfigure(self.config)
@@ -5495,6 +5516,10 @@ class TestSchedulerTemplatedProject(ZuulTestCase):
         # This tests that there are no implied branch matchers added
         # to project templates in unbranched projects.
         self.create_branch('org/layered-project', 'stable')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/layered-project', 'stable'))
+        self.waitUntilSettled()
 
         A = self.fake_gerrit.addFakeChange(
             'org/layered-project', 'stable', 'A')
@@ -5634,6 +5659,10 @@ class TestSchedulerMerges(ZuulTestCase):
     def test_merge_branch(self):
         "Test that the right commits are on alternate branches"
         self.create_branch('org/project-merge-branches', 'mp')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project-merge-branches', 'mp'))
+        self.waitUntilSettled()
 
         self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange(
@@ -5679,6 +5708,10 @@ class TestSchedulerMerges(ZuulTestCase):
     def test_merge_multi_branch(self):
         "Test that dependent changes on multiple branches are merged"
         self.create_branch('org/project-merge-branches', 'mp')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project-merge-branches', 'mp'))
+        self.waitUntilSettled()
 
         self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange(
@@ -6370,6 +6403,10 @@ class TestSchedulerBranchMatcher(ZuulTestCase):
         not be run on a change to that branch.
         '''
         self.create_branch('org/project', 'featureA')
+        self.fake_gerrit.addEvent(
+            self.fake_gerrit.getFakeBranchCreatedEvent(
+                'org/project', 'featureA'))
+        self.waitUntilSettled()
         A = self.fake_gerrit.addFakeChange('org/project', 'featureA', 'A')
         A.addApproval('Code-Review', 2)
         self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
