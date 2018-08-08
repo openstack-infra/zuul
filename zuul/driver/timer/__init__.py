@@ -83,7 +83,8 @@ class TimerDriver(Driver, TriggerInterface):
             # timer operates on branch heads and doesn't need speculative
             # layouts to decide if it should be enqueued or not.
             # So it can be decided on cached data if it needs to run or not.
-            if not [True for pc in pcs if pipeline_name in pc.pipelines]:
+            pcst = tenant.layout.getAllProjectConfigs(project_name)
+            if not [True for pc in pcst if pipeline_name in pc.pipelines]:
                 continue
 
             (trusted, project) = tenant.getProject(project_name)

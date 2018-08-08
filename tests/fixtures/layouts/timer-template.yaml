@@ -1,0 +1,61 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+- pipeline:
+    name: periodic
+    manager: independent
+    trigger:
+      timer:
+        - time: '* * * * * */1'
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: project-test1
+    run: playbooks/project-test1.yaml
+
+- job:
+    name: project-test2
+    run: playbooks/project-test2.yaml
+
+- job:
+    name: project-bitrot
+    nodeset:
+      nodes:
+        - name: static
+          label: ubuntu-xenial
+    run: playbooks/project-bitrot.yaml
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - project-test1
+
+- project-template:
+    name: periodic-jobs
+    periodic:
+      jobs:
+        - project-bitrot
+
+- project:
+    name: org/project
+    templates:
+      - periodic-jobs
+    check:
+      jobs:
+        - project-test1
+        - project-test2
