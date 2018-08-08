@@ -113,8 +113,7 @@ class GerritApprovalFilter(object):
             if not hasattr(change, 'number'):
                 # Not a change, no reviews
                 return False
-        if (self.required_approvals and not change.approvals
-                or self.reject_approvals and not change.approvals):
+        if self.required_approvals and not change.approvals:
             # A change with no approvals can not match
             return False
 
