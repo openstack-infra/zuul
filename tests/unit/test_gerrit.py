@@ -13,6 +13,7 @@
 # under the License.
 
 import os
+import textwrap
 from unittest import mock
 
 import tests.base
@@ -101,9 +102,63 @@ class TestGerritWeb(ZuulTestCase):
         self.assertEqual(self.getJobFromHistory('project-test2').node,
                          'label1')
 
+    def test_dynamic_line_comment(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: garbage-job
+                garbage: True
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.patchsets[0]['approvals'][0]['value'], "-1")
+        self.assertIn('Zuul encountered a syntax error',
+                      A.messages[0])
+        comments = sorted(A.comments, key=lambda x: x['line'])
+        self.assertEqual(comments[0],
+                         {'file': '.zuul.yaml',
+                          'line': 4,
+                          'message': "extra keys not allowed @ "
+                                     "data['garbage']",
+                          'range': {'end_character': 0,
+                                    'end_line': 4,
+                                    'start_character': 2,
+                                    'start_line': 2},
+                          'reviewer': {'email': 'zuul@example.com',
+                                       'name': 'Zuul',
+                                       'username': 'jenkins'}}
+        )
+
+    def test_dependent_dynamic_line_comment(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: garbage-job
+                garbage: True
+            """)
+
+        file_dict = {'.zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
+        B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            B.subject, A.data['id'])
+
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(B.patchsets[0]['approvals'][0]['value'], "-1")
+        self.assertIn('Zuul encountered a syntax error',
+                      B.messages[0])
+        self.assertEqual(B.comments, [])
+
 
 class TestFileComments(AnsibleZuulTestCase):
-    # A temporary class to hold new tests while others are disabled
     config_file = 'zuul-gerrit-web.conf'
     tenant_config_file = 'config/gerrit-file-comments/main.yaml'
 

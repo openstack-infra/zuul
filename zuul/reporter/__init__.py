@@ -49,6 +49,39 @@ class BaseReporter(object, metaclass=abc.ABCMeta):
     def postConfig(self):
         """Run tasks after configuration is reloaded"""
 
+    def addConfigurationErrorComments(self, item, comments):
+        """Add file comments for configuration errors.
+
+        Updates the comments dictionary with additional file comments
+        for any relevant configuration errors for this item's change.
+
+        :arg QueueItem item: The queue item
+        :arg dict comments: a file comments dictionary
+
+        """
+
+        for err in item.getConfigErrors():
+            context = err.key.context
+            mark = err.key.mark
+            if not (context and mark and err.short_error):
+                continue
+            if context.project != item.change.project:
+                continue
+            if not hasattr(item.change, 'branch'):
+                continue
+            if context.branch != item.change.branch:
+                continue
+            if context.path not in item.change.files:
+                continue
+            existing_comments = comments.setdefault(context.path, [])
+            existing_comments.append(dict(line=mark.end_line,
+                                          message=err.short_error,
+                                          range=dict(
+                                              start_line=mark.line + 1,
+                                              start_character=mark.column,
+                                              end_line=mark.end_line,
+                                              end_character=mark.end_column)))
+
     def _getFormatter(self):
         format_methods = {
             'start': self._formatItemReportStart,

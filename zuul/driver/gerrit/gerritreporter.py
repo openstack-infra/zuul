@@ -34,19 +34,7 @@ class GerritReporter(BaseReporter):
             for fn, comments in fc.items():
                 existing_comments = ret.setdefault(fn, [])
                 existing_comments += comments
-        for err in item.getConfigErrors():
-            context = err.key.context
-            mark = err.key.mark
-            if not (context and mark and err.short_error):
-                continue
-            existing_comments = ret.setdefault(context.path, [])
-            existing_comments.append(dict(line=mark.end_line,
-                                          message=err.short_error,
-                                          range=dict(
-                                              start_line=mark.line + 1,
-                                              start_character=mark.column,
-                                              end_line=mark.end_line,
-                                              end_character=mark.end_column)))
+        self.addConfigurationErrorComments(item, ret)
         return ret
 
     def report(self, item):
