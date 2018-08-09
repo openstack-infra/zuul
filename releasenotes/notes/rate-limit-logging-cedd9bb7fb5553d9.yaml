@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    GitHub :attr:`<github connection>.rate_limit_logging` now can be configured.
+    If disabled this can save some network round trip times. This can be
+    configured per connection.
