@@ -138,7 +138,13 @@ import LineTImage from '../images/line-t.png';
       job_status: function (job) {
         let result = job.result ? job.result.toLowerCase() : null
         if (result === null) {
-          result = job.url ? 'in progress' : 'queued'
+          if (job.url === null) {
+            result = 'queued'
+          } else if (job.paused !== null && job.paused) {
+            result = 'paused'
+          } else {
+            result = 'in progress'
+          }
         }
 
         if (result === 'in progress') {

@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    A job now can pause itself using :ref:`return_values` and let the child jobs
+    run until they are finished. This can be used to serve some service which
+    can be used by the child jobs.

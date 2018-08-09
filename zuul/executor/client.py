@@ -417,6 +417,12 @@ class ExecutorClient(object):
             # Update information about worker
             build.worker.updateFromData(data)
 
+            if 'paused' in data and build.paused != data['paused']:
+                build.paused = data['paused']
+                if build.paused:
+                    result_data = data.get('data', {})
+                    self.sched.onBuildPaused(build, result_data)
+
             if not started:
                 self.log.info("Build %s started" % job)
                 build.__gearman_worker = data.get('worker_name')
@@ -464,6 +470,19 @@ class ExecutorClient(object):
         self.gearman.submitJob(stop_job, precedence=gear.PRECEDENCE_HIGH,
                                timeout=300)
         return True
+
+    def resumeBuild(self, build):
+        if not build.__gearman_worker:
+            self.log.error("Build %s has no manager while resuming" %
+                           (build,))
+        resume_uuid = str(uuid4().hex)
+        data = dict(uuid=build.__gearman_job.unique)
+        stop_job = gear.TextJob("executor:resume:%s" % build.__gearman_worker,
+                                json_dumps(data), unique=resume_uuid)
+        self.meta_jobs[resume_uuid] = stop_job
+        self.log.debug("Submitting resume job: %s", stop_job)
+        self.gearman.submitJob(stop_job, precedence=gear.PRECEDENCE_HIGH,
+                               timeout=300)
 
     def lookForLostBuilds(self):
         self.log.debug("Looking for lost builds")

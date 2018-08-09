@@ -1,0 +1,49 @@
+- job:
+    name: compile1
+    run: playbooks/compile1.yaml
+    post-run: playbooks/compile1-post.yaml
+
+- job:
+    name: compile2
+    run: playbooks/compile2.yaml
+    post-run: playbooks/compile2-post.yaml
+
+- job:
+    name: test1-after-compile1
+    run: playbooks/test-compile1.yaml
+
+- job:
+    name: test2-after-compile1
+    run: playbooks/test-compile1.yaml
+
+- job:
+    name: test-after-compile2
+    run: playbooks/test-compile2.yaml
+
+- job:
+    name: test-good
+    run: playbooks/test-good.yaml
+
+- job:
+    name: test-fail
+    run: playbooks/test-fail.yaml
+
+
+- project:
+    check:
+      jobs:
+        - compile1
+        - compile2:
+            dependencies:
+              - compile1
+        - test1-after-compile1:
+            dependencies:
+              - compile1
+        - test2-after-compile1:
+            dependencies:
+              - compile1
+        - test-after-compile2:
+            dependencies:
+              - compile2
+        - test-good
+        - test-fail

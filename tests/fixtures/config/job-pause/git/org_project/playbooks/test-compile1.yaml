@@ -1,0 +1,23 @@
+- hosts: all
+  tasks:
+    # We expect the pause indicator of compile1 to exist
+    - stat:
+        path: "{{zuul.executor.log_root}}/../../../compile1-pause.txt"
+      register: build_artifact
+    - assert:
+        that:
+          - build_artifact.stat.exists
+
+    # We expect the variables of compile1 to exist
+    - assert:
+        that:
+          - compile1 is defined
+          - compile1 == 'test'
+
+    # This job has no child job so just pause to check if
+    # we don't break if there are no child jobs.
+    - name: Pause
+      zuul_return:
+        data:
+          zuul:
+            pause: true
