@@ -14,13 +14,21 @@
 # under the License.
 
 import logging
+import os
 import time
 from unittest import mock
 
 import zuul.executor.server
 import zuul.model
 
-from tests.base import ZuulTestCase, simple_layout, iterate_timeout
+from tests.base import (
+    ZuulTestCase,
+    AnsibleZuulTestCase,
+    FIXTURE_DIR,
+    simple_layout,
+    iterate_timeout
+)
+
 from zuul.executor.sensors.startingbuilds import StartingBuildsSensor
 
 
@@ -596,3 +604,43 @@ class TestGovernor(ZuulTestCase):
         self.waitUntilSettled()
         self.executor_server.manageLoad()
         self.assertTrue(self.executor_server.accepting_work)
+
+
+class TestLineMapping(AnsibleZuulTestCase):
+    config_file = 'zuul-gerrit-web.conf'
+    tenant_config_file = 'config/line-mapping/main.yaml'
+
+    def test_line_mapping(self):
+        header = 'add something to the top\n'
+        footer = 'this is the change\n'
+
+        with open(os.path.join(FIXTURE_DIR,
+                               'config/line-mapping/git/',
+                               'org_project/README')) as f:
+            content = f.read()
+
+        # The change under test adds a line to the end.
+        file_dict = {'README': content + footer}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+
+        # An intervening change adds a line to the top.
+        file_dict = {'README': header + content}
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B',
+                                           files=file_dict)
+        B.setMerged()
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(self.getJobFromHistory('file-comments').result,
+                         'SUCCESS')
+        self.assertEqual(len(A.comments), 1)
+        comments = sorted(A.comments, key=lambda x: x['line'])
+        self.assertEqual(comments[0],
+                         {'file': 'README',
+                          'line': 14,
+                          'message': 'interesting comment',
+                          'reviewer': {'email': 'zuul@example.com',
+                                       'name': 'Zuul',
+                                       'username': 'jenkins'}}
+        )

@@ -417,9 +417,10 @@ class Scheduler(threading.Thread):
         self.result_event_queue.put(event)
         self.wake_event.set()
 
-    def onBuildCompleted(self, build, result, result_data):
+    def onBuildCompleted(self, build, result, result_data, warnings):
         build.end_time = time.time()
         build.result_data = result_data
+        build.build_set.warning_messages.extend(warnings)
         # Note, as soon as the result is set, other threads may act
         # upon this, even though the event hasn't been fully
         # processed.  Ensure that any other data from the event (eg,
