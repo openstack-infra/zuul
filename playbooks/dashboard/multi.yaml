@@ -1,11 +1,18 @@
 - hosts: all
   tasks:
 
-    - name: Make symlinks to allow multi-tenant preview to work
+    - name: Make tenant subdir
       file:
-        src: .
-        dest: '{{ zuul.project.src_dir }}/{{ javascript_content_dir }}/{{ item }}'
-        state: link
+        state: directory
+        dest: '{{ zuul.project.src_dir }}/{{ javascript_content_dir }}/t'
+
+    - name: Copy the html/javascript content into subdirs
+      shell: |
+          mkdir {{ zuul.project.src_dir }}/{{ javascript_content_dir }}/t/{{ item }}
+          cp {{ zuul.project.src_dir }}/{{ javascript_content_dir }}/* {{ zuul.project.src_dir }}/{{ javascript_content_dir }}/t/{{ item }}
       with_items:
         - local
-        - t
+        - ansible
+        - ansible-dev
+        - openstack.org
+        - rdoproject.org
