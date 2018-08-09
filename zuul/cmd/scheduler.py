@@ -50,8 +50,7 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
         if self.args.command:
             self.args.nodaemon = True
 
-    def reconfigure_handler(self, signum, frame):
-        signal.signal(signal.SIGHUP, signal.SIG_IGN)
+    def fullReconfigure(self):
         self.log.debug("Reconfiguration triggered")
         self.readConfig()
         self.setup_logging('scheduler', 'log_config')
@@ -59,6 +58,10 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
             self.sched.reconfigure(self.config)
         except Exception:
             self.log.exception("Reconfiguration failed:")
+
+    def reconfigure_handler(self, signum, frame):
+        signal.signal(signal.SIGHUP, signal.SIG_IGN)
+        self.fullReconfigure()
         signal.signal(signal.SIGHUP, self.reconfigure_handler)
 
     def exit_handler(self, signum, frame):
@@ -129,6 +132,7 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
         self.sched = zuul.scheduler.Scheduler(self.config)
 
         gearman = zuul.executor.client.ExecutorClient(self.config, self.sched)
+        self.sched.setZuulApp(self)
         merger = zuul.merger.client.MergeClient(self.config, self.sched)
         nodepool = zuul.nodepool.Nodepool(self.sched)
 

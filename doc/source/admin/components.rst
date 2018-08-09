@@ -284,9 +284,10 @@ PID which was saved in the pidfile specified in the configuration.
 Most of Zuul's configuration is automatically updated as changes to
 the repositories which contain it are merged.  However, Zuul must be
 explicitly notified of changes to the tenant config file, since it is
-not read from a git repository.  To do so, send the scheduler PID
-(saved in the pidfile specified in the configuration) a `SIGHUP`
-signal.
+not read from a git repository.  To do so, run
+``zuul-scheduler full-reconfigure``. The signal based method by sending
+a `SIGHUP` signal to the scheduler PID is deprecated.
+
 
 Merger
 ------

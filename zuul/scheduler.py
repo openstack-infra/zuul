@@ -36,7 +36,7 @@ from zuul.lib.config import get_default
 from zuul.lib.statsd import get_statsd
 import zuul.lib.queue
 
-COMMANDS = ['stop']
+COMMANDS = ['full-reconfigure', 'stop']
 
 
 class ManagementEvent(object):
@@ -257,12 +257,14 @@ class Scheduler(threading.Thread):
         self.wake_event = threading.Event()
         self.layout_lock = threading.Lock()
         self.run_handler_lock = threading.Lock()
-        self.command_map = dict(
-            stop=self.stop,
-        )
+        self.command_map = {
+            'stop': self.stop,
+            'full-reconfigure': self.fullReconfigureCommandHandler,
+        }
         self._pause = False
         self._exit = False
         self._stopped = False
+        self._zuul_app = None
         self.executor = None
         self.merger = None
         self.connections = None
@@ -345,6 +347,9 @@ class Scheduler(threading.Thread):
 
     def stopConnections(self):
         self.connections.stop()
+
+    def setZuulApp(self, app):
+        self._zuul_app = app
 
     def setExecutor(self, executor):
         self.executor = executor
@@ -477,6 +482,9 @@ class Scheduler(threading.Thread):
         event = TenantReconfigureEvent(tenant, project, branch)
         self.management_event_queue.put(event)
         self.wake_event.set()
+
+    def fullReconfigureCommandHandler(self):
+        self._zuul_app.fullReconfigure()
 
     def reconfigure(self, config):
         self.log.debug("Submitting reconfiguration event")
