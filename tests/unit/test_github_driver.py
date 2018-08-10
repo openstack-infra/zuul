@@ -806,6 +806,12 @@ class TestGithubDriver(ZuulTestCase):
         repo = github.repo_from_project(project)
         repo._create_branch(branch)
 
+        self.fake_github.emitEvent(
+            self.fake_github.getPushEvent(
+                project,
+                ref='refs/heads/%s' % branch))
+        self.waitUntilSettled()
+
         A = self.fake_github.openFakePullRequest(project, branch, 'A')
         old_sha = A.head_sha
         A.setMerged("merging A")

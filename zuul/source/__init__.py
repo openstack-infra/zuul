@@ -49,7 +49,14 @@ class BaseSource(object, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def getChange(self, event):
-        """Get the change representing an event."""
+        """Get the change representing an event.
+
+        This method is called very frequently, and should generally
+        return quickly.  The connection is expected to cache change
+        objects and automatically update them as related events are
+        received.
+
+        """
 
     @abc.abstractmethod
     def getChangeByURL(self, url):
@@ -91,7 +98,15 @@ class BaseSource(object, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def getProjectBranches(self, project, tenant):
-        """Get branches for a project"""
+        """Get branches for a project
+
+        This method is called very frequently, and should generally
+        return quickly.  The connection is expected to cache branch
+        lists for all projects queried, and further, to automatically
+        clear or update that cache when it observes branch creation or
+        deletion events.
+
+        """
 
     @abc.abstractmethod
     def getRequireFilters(self, config):

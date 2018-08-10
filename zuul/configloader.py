@@ -1267,7 +1267,7 @@ class TenantParser(object):
                   }
         return vs.Schema(tenant)
 
-    def fromYaml(self, abide, project_key_dir, conf, old_tenant):
+    def fromYaml(self, abide, project_key_dir, conf):
         self.getSchema()(conf)
         tenant = model.Tenant(conf['name'])
         if conf.get('max-nodes-per-job') is not None:
@@ -1289,7 +1289,7 @@ class TenantParser(object):
             tenant.addUntrustedProject(tpc)
 
         for tpc in config_tpcs + untrusted_tpcs:
-            self._getProjectBranches(tenant, tpc, old_tenant)
+            self._getProjectBranches(tenant, tpc)
             self._resolveShadowProjects(tenant, tpc)
 
         # We prepare a stack to store config loading issues
@@ -1335,16 +1335,9 @@ class TenantParser(object):
             shadow_projects.append(project)
         tpc.shadow_projects = frozenset(shadow_projects)
 
-    def _getProjectBranches(self, tenant, tpc, old_tenant):
-        # If we're performing a tenant reconfiguration, we will have
-        # an old_tenant object, however, we may be doing so because of
-        # a branch creation event, so if we don't have any cached
-        # data, query the branches again as well.
-        if old_tenant and tpc.parsed_branch_config:
-            branches = old_tenant.getProjectBranches(tpc.project)[:]
-        else:
-            branches = sorted(tpc.project.source.getProjectBranches(
-                tpc.project, tenant))
+    def _getProjectBranches(self, tenant, tpc):
+        branches = sorted(tpc.project.source.getProjectBranches(
+            tpc.project, tenant))
         if 'master' in branches:
             branches.remove('master')
             branches = ['master'] + branches
@@ -1901,7 +1894,7 @@ class ConfigLoader(object):
         for conf_tenant in unparsed_abide.tenants:
             # When performing a full reload, do not use cached data.
             tenant = self.tenant_parser.fromYaml(abide, project_key_dir,
-                                                 conf_tenant, old_tenant=None)
+                                                 conf_tenant)
             abide.tenants[tenant.name] = tenant
             if len(tenant.layout.loading_errors):
                 self.log.warning(
@@ -1923,7 +1916,7 @@ class ConfigLoader(object):
         new_tenant = self.tenant_parser.fromYaml(
             new_abide,
             project_key_dir,
-            tenant.unparsed_config, old_tenant=tenant)
+            tenant.unparsed_config)
         new_abide.tenants[tenant.name] = new_tenant
         if len(new_tenant.layout.loading_errors):
             self.log.warning(

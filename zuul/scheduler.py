@@ -639,6 +639,10 @@ class Scheduler(threading.Thread):
         self.config = event.config
         try:
             self.log.info("Full reconfiguration beginning")
+            for connection in self.connections.connections.values():
+                self.log.debug("Clear branch cache for: %s" % connection)
+                connection.clearBranchCache()
+
             loader = configloader.ConfigLoader(
                 self.connections, self, self.merger)
             tenant_config, script = self._checkTenantSourceConf(self.config)
@@ -665,6 +669,8 @@ class Scheduler(threading.Thread):
             # If a change landed to a project, clear out the cached
             # config of the changed branch before reconfiguring.
             for (project, branch) in event.project_branches:
+                self.log.debug("Clearing unparsed config: %s @%s",
+                               project.canonical_name, branch)
                 self.abide.clearUnparsedConfigCache(project.canonical_name,
                                                     branch)
             old_tenant = self.abide.tenants[event.tenant_name]

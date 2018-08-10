@@ -142,9 +142,13 @@ class GerritEventConnector(threading.Thread):
             if event.oldrev == '0' * 40:
                 event.branch_created = True
                 event.branch = event.ref
+                project = self.connection.source.getProject(event.project_name)
+                self.connection._clearBranchCache(project)
             if event.newrev == '0' * 40:
                 event.branch_deleted = True
                 event.branch = event.ref
+                project = self.connection.source.getProject(event.project_name)
+                self.connection._clearBranchCache(project)
 
         self._getChange(event)
         self.connection.logEvent(event)
@@ -292,6 +296,7 @@ class GerritConnection(BaseConnection):
     def __init__(self, driver, connection_name, connection_config):
         super(GerritConnection, self).__init__(driver, connection_name,
                                                connection_config)
+        self._project_branch_cache = {}
         if 'server' not in self.connection_config:
             raise Exception('server is required for gerrit connections in '
                             '%s' % self.connection_name)
@@ -376,6 +381,15 @@ class GerritConnection(BaseConnection):
 
     def addProject(self, project: Project) -> None:
         self.projects[project.name] = project
+
+    def clearBranchCache(self):
+        self._project_branch_cache = {}
+
+    def _clearBranchCache(self, project):
+        try:
+            del self._project_branch_cache[project.name]
+        except KeyError:
+            pass
 
     def maintainCache(self, relevant):
         # This lets the user supply a list of change objects that are
@@ -763,9 +777,14 @@ class GerritConnection(BaseConnection):
         return changes
 
     def getProjectBranches(self, project: Project, tenant) -> List[str]:
+        branches = self._project_branch_cache.get(project.name)
+        if branches is not None:
+            return branches
+
         refs = self.getInfoRefs(project)
         heads = [str(k[len('refs/heads/'):]) for k in refs.keys()
                  if k.startswith('refs/heads/')]
+        self._project_branch_cache[project.name] = heads
         return heads
 
     def addEvent(self, data):

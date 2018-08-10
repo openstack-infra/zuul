@@ -259,6 +259,7 @@ class GithubEventConnector(threading.Thread):
             event.branch_deleted = True
 
         if event.branch:
+            project = self.connection.source.getProject(event.project_name)
             if event.branch_deleted:
                 # We currently cannot determine if a deleted branch was
                 # protected so we need to assume it was. GitHub doesn't allow
@@ -268,15 +269,19 @@ class GithubEventConnector(threading.Thread):
                 # of the branch.
                 # FIXME(tobiash): Find a way to handle that case
                 event.branch_protected = True
+                self.connection._clearBranchCache(project)
             elif event.branch_created:
                 # A new branch never can be protected because that needs to be
                 # configured after it has been created.
                 event.branch_protected = False
+                self.connection._clearBranchCache(project)
             else:
                 # An updated branch can be protected or not so we have to ask
                 # GitHub whether it is.
                 b = self.connection.getBranch(event.project_name, event.branch)
                 event.branch_protected = b.get('protected')
+                self.connection.checkBranchCache(project, event.branch,
+                                                 event.branch_protected)
 
         return event
 
@@ -457,7 +462,8 @@ class GithubConnection(BaseConnection):
         super(GithubConnection, self).__init__(
             driver, connection_name, connection_config)
         self._change_cache = {}
-        self._project_branch_cache = {}
+        self._project_branch_cache_include_unprotected = {}
+        self._project_branch_cache_exclude_unprotected = {}
         self.projects = {}
         self.git_ssh_key = self.connection_config.get('sshkey')
         self.server = self.connection_config.get('server', 'github.com')
@@ -929,10 +935,22 @@ class GithubConnection(BaseConnection):
     def addProject(self, project):
         self.projects[project.name] = project
 
-    def getProjectBranches(self, project, tenant):
-        github = self.getGithubClient(project.name)
-        exclude_unprotected = tenant.getExcludeUnprotectedBranches(project)
+    def clearBranchCache(self):
+        self._project_branch_cache_exclude_unprotected = {}
+        self._project_branch_cache_include_unprotected = {}
 
+    def getProjectBranches(self, project, tenant):
+        exclude_unprotected = tenant.getExcludeUnprotectedBranches(project)
+        if exclude_unprotected:
+            cache = self._project_branch_cache_exclude_unprotected
+        else:
+            cache = self._project_branch_cache_include_unprotected
+
+        branches = cache.get(project.name)
+        if branches is not None:
+            return branches
+
+        github = self.getGithubClient(project.name)
         url = github.session.build_url('repos', project.name,
                                        'branches')
 
@@ -946,23 +964,21 @@ class GithubConnection(BaseConnection):
                 url, headers=headers, params=params)
 
             # check if we need to do further paged calls
-            url = resp.links.get(
-                'next', {}).get('url')
+            url = resp.links.get('next', {}).get('url')
 
             if resp.status_code == 403:
                 self.log.error(str(resp))
                 rate_limit = github.rate_limit()
                 if rate_limit['resources']['core']['remaining'] == 0:
                     self.log.warning(
-                        "Rate limit exceeded, using stale branch list")
-                # failed to list branches so use a stale branch list
-                return self._project_branch_cache.get(project.name, [])
+                        "Rate limit exceeded, using empty branch list")
+                return []
 
             branches.extend([x['name'] for x in resp.json()])
 
         self.log_rate_limit(self.log, github)
-        self._project_branch_cache[project.name] = branches
-        return self._project_branch_cache[project.name]
+        cache[project.name] = branches
+        return branches
 
     def getBranch(self, project_name, branch):
         github = self.getGithubClient(project_name)
@@ -1328,6 +1344,46 @@ class GithubConnection(BaseConnection):
         else:
             log.debug('GitHub API rate limit remaining: %s reset: %s',
                       remaining, reset)
+
+    def _clearBranchCache(self, project):
+        self.log.debug("Clearing branch cache for %s", project.name)
+        for cache in [
+                self._project_branch_cache_exclude_unprotected,
+                self._project_branch_cache_include_unprotected,
+        ]:
+            try:
+                del cache[project.name]
+            except KeyError:
+                pass
+
+    def checkBranchCache(self, project, branch, protected):
+        # If the branch appears in the exclude_unprotected cache but
+        # is unprotected, clear the exclude cache.
+
+        # If the branch does not appear in the exclude_unprotected
+        # cache but is protected, clear the exclude cache.
+
+        # All branches should always appear in the include_unprotected
+        # cache, so we never clear it.
+
+        cache = self._project_branch_cache_exclude_unprotected
+        branches = cache.get(project.name, [])
+        if (branch in branches) and (not protected):
+            self.log.debug("Clearing protected branch cache for %s",
+                           project.name)
+            try:
+                del cache[project.name]
+            except KeyError:
+                pass
+            return
+        if (branch not in branches) and (protected):
+            self.log.debug("Clearing protected branch cache for %s",
+                           project.name)
+            try:
+                del cache[project.name]
+            except KeyError:
+                pass
+            return
 
 
 class GithubWebController(BaseWebController):
