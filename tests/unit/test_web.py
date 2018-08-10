@@ -342,6 +342,35 @@ class TestWeb(BaseTestWeb):
                 'voting': True
             }], data)
 
+        data = self.get_url('api/tenant/tenant-one/job/test-job').json()
+        self.assertEqual([
+            {
+                'abstract': False,
+                'attempts': 3,
+                'branches': [],
+                'dependencies': [],
+                'description': None,
+                'files': [],
+                'final': False,
+                'implied_branch': None,
+                'irrelevant_files': [],
+                'name': 'test-job',
+                'parent': 'base',
+                'post_review': None,
+                'protected': None,
+                'required_projects': [
+                    {'override_branch': None,
+                     'override_checkout': None,
+                     'project_name': 'review.example.com/org/project'}],
+                'roles': [common_config_role],
+                'semaphore': None,
+                'source_context': source_ctx,
+                'timeout': None,
+                'variables': {},
+                'variant_description': '',
+                'voting': True
+            }], data)
+
     def test_web_keys(self):
         with open(os.path.join(FIXTURE_DIR, 'public.pem'), 'rb') as f:
             public_pem = f.read()
@@ -362,7 +391,7 @@ class TestWeb(BaseTestWeb):
 
     def test_jobs_list(self):
         jobs = self.get_url("api/tenant/tenant-one/jobs").json()
-        self.assertEqual(len(jobs), 8)
+        self.assertEqual(len(jobs), 9)
 
         resp = self.get_url("api/tenant/non-tenant/jobs")
         self.assertEqual(404, resp.status_code)

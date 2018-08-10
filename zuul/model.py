@@ -1110,7 +1110,7 @@ class Job(ConfigObject):
         d['source_context'] = self.source_context.toDict()
         d['description'] = self.description
         d['required_projects'] = []
-        for project in self.required_projects:
+        for project in self.required_projects.values():
             d['required_projects'].append(project.toDict())
         d['semaphore'] = self.semaphore
         d['variables'] = self.variables
