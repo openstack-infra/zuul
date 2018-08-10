@@ -8,8 +8,11 @@
 
     - name: Copy the html/javascript content into subdirs
       shell: |
-          mkdir {{ zuul.project.src_dir }}/{{ javascript_content_dir }}/t/{{ item }}
-          cp {{ zuul.project.src_dir }}/{{ javascript_content_dir }}/* {{ zuul.project.src_dir }}/{{ javascript_content_dir }}/t/{{ item }}
+          CONTENT_DIR="{{ zuul.project.src_dir }}/{{ javascript_content_dir }}"
+          mkdir $CONTENT_DIR/t/{{ item }}
+          for f in $(find $CONTENT_DIR -type f -mindepth 1 -maxdepth 1) ; do
+              cp $f $CONTENT_DIR/t/{{ item }}
+          done
       with_items:
         - local
         - ansible
