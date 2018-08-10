@@ -280,6 +280,7 @@ class TestGerritToGithubCRD(ZuulTestCase):
         A = self.fake_gerrit.addFakeChange('gerrit/project1', 'master', 'A')
         B = self.fake_github.openFakePullRequest(
             'github/project2', 'master', 'B')
+        self.waitUntilSettled()
 
         # A Depends-On: B
         A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
