@@ -189,3 +189,9 @@
             dependencies: project-merge
         - project1-project2-integration:
             dependencies: project-merge
+
+- job:
+    name: test-job
+    run: playbooks/project-merge.yaml
+    required-projects:
+      - org/project
