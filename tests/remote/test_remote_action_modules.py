@@ -97,6 +97,12 @@ class TestActionModules(AnsibleZuulTestCase):
     def test_command_module(self):
         self._run_job('command-good', 'SUCCESS')
 
+    def test_zuul_return_module(self):
+        self._run_job('zuul_return-good', 'SUCCESS')
+
+    def test_zuul_return_module_delegate_to(self):
+        self._run_job('zuul_return-good-delegate', 'SUCCESS')
+
     def test_copy_module(self):
         self._run_job('copy-good', 'SUCCESS')
 

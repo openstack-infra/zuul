@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The zuul_return module has been converted to an Ansible action plugin.
+    Job playbooks no longer need to use delegate_to or a localhost only play
+    with this module as action plugin by default run on localhost.
