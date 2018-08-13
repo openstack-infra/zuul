@@ -1282,11 +1282,10 @@ class Scheduler(threading.Thread):
         websocket_url = get_default(self.config, 'web', 'websocket_url', None)
 
         if self._pause:
-            ret = '<p><b>Queue only mode:</b> preparing to '
+            ret = 'Queue only mode: preparing to '
             if self._exit:
                 ret += 'exit'
             ret += ', queue length: %s' % self.trigger_event_queue.qsize()
-            ret += '</p>'
             data['message'] = ret
 
         data['trigger_event_queue'] = {}
