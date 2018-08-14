@@ -1,7 +1,0 @@
-parser: babel-eslint
-plugins:
-  - standard
-rules:
-  camelcase: off
-extends:
-  - ./node_modules/eslint-config-standard/eslintrc.json

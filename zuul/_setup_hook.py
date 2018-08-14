@@ -24,10 +24,14 @@ _old_from_git = pbr.packaging._from_git
 def _build_javascript():
     if subprocess.call(['which', 'yarn']) != 0:
         return
-    if not os.path.exists('node_modules/.bin/webpack'):
-        subprocess.check_call(['yarn', 'install', '-d'])
-    if not os.path.exists('zuul/web/static/status.bundle.js'):
-        subprocess.check_call(['npm', 'run', 'build:dist'])
+    if not os.path.exists('web/node_modules/.bin/webpack'):
+        r = subprocess.Popen(['yarn', 'install', '-d'], cwd="web/").wait()
+        if r:
+            raise RuntimeError("Yarn install failed")
+    if not os.path.exists('web/build/index.html'):
+        r = subprocess.Popen(['yarn', 'build'], cwd="web/").wait()
+        if r:
+            raise RuntimeError("Yarn build failed")
 
 
 def _from_git(distribution):

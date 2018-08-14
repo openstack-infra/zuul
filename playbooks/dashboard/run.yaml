@@ -1,18 +1,19 @@
 - hosts: all
+  pre_tasks:
+    - name: Update homepage for sub directory deployment
+      replace:
+        path: '{{ zuul.project.src_dir }}/web/package.json'
+        regexp: '"homepage": "/"'
+        replace: '"homepage": "./"'
+        # NOTE: using "./" is not enough to support html5 links, even with
+        # rewrite rules for unknown files, accessing 'job/devstack' will make
+        # the dashboard load static files from 'job/static/...'
+        # This works for the preview dashboard that can only be loaded from the
+        # npm/html directory anyway.
   roles:
     - revoke-sudo
     - set-zuul-log-path-fact
-    # Both sets of quotes are required.
-    # The "" quotes are for the shell to protect the '' quotes.
-    # We need the '' quotes because defines here are essentially
-    # direct string substitutions. Therefore:
-    #   --define "ZUUL_API_URL='https://zuul.openstack.org'"
-    # with the javascript code:
-    #   return ZUUL_API_URL
-    # results in
-    #   return 'https://zuul.openstack.org'
-    # in the compiled javascript.
     - role: npm
-      npm_command: >-
-        build:dist --
-          --define "ZUUL_API_URL='{{ zuul_api_url }}'"
+      npm_command: build
+  environment:
+    REACT_APP_ZUUL_API: "{{ zuul_api_url }}/api/"
