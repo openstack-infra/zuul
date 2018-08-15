@@ -2665,7 +2665,11 @@ class ZuulTestCase(BaseTestCase):
         key_root = os.path.join(self.state_root, 'keys')
         if not os.path.isdir(key_root):
             os.mkdir(key_root, 0o700)
-        private_key_file = os.path.join(key_root, source, project + '.pem')
+            fn = os.path.join(key_root, '.version')
+            with open(fn, 'w') as f:
+                f.write('1')
+        private_key_file = os.path.join(
+            key_root, 'secrets', 'project', source, project, '0.pem')
         private_key_dir = os.path.dirname(private_key_file)
         self.log.debug("Installing test keys for project %s at %s" % (
             project, private_key_file))
@@ -2729,6 +2733,8 @@ class ZuulTestCase(BaseTestCase):
         key_root = os.path.join(self.state_root, 'keys')
         for root, dirname, files in os.walk(key_root):
             for fn in files:
+                if fn == '.version':
+                    continue
                 with open(os.path.join(root, fn)) as f:
                     self.assertEqual(test_key, f.read())
 

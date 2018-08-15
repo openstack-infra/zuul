@@ -30,6 +30,7 @@ import zuul.manager.dependent
 import zuul.manager.independent
 import zuul.manager.supercedent
 from zuul.lib import encryption
+from zuul.lib.keystorage import KeyStorage
 
 
 # Several forms accept either a single item or a list, this makes
@@ -1213,11 +1214,12 @@ class ParseContext(object):
 
 
 class TenantParser(object):
-    def __init__(self, connections, scheduler, merger):
+    def __init__(self, connections, scheduler, merger, keystorage):
         self.log = logging.getLogger("zuul.TenantParser")
         self.connections = connections
         self.scheduler = scheduler
         self.merger = merger
+        self.keystorage = keystorage
 
     classes = vs.Any('pipeline', 'job', 'semaphore', 'project',
                      'project-template', 'nodeset', 'secret')
@@ -1267,7 +1269,7 @@ class TenantParser(object):
                   }
         return vs.Schema(tenant)
 
-    def fromYaml(self, abide, project_key_dir, conf):
+    def fromYaml(self, abide, conf):
         self.getSchema()(conf)
         tenant = model.Tenant(conf['name'])
         if conf.get('max-nodes-per-job') is not None:
@@ -1281,8 +1283,7 @@ class TenantParser(object):
 
         tenant.unparsed_config = conf
         # tpcs is TenantProjectConfigs
-        config_tpcs, untrusted_tpcs = \
-            self._loadTenantProjects(project_key_dir, conf)
+        config_tpcs, untrusted_tpcs = self._loadTenantProjects(conf)
         for tpc in config_tpcs:
             tenant.addConfigProject(tpc)
         for tpc in untrusted_tpcs:
@@ -1343,10 +1344,9 @@ class TenantParser(object):
             branches = ['master'] + branches
         tpc.branches = branches
 
-    def _loadProjectKeys(self, project_key_dir, connection_name, project):
-        project.private_key_file = (
-            os.path.join(project_key_dir, connection_name,
-                         project.name + '.pem'))
+    def _loadProjectKeys(self, connection_name, project):
+        project.private_key_file = self.keystorage.getProjectSecretsKeyFile(
+            connection_name, project.name)
 
         self._generateKeys(project)
         self._loadKeys(project)
@@ -1371,11 +1371,11 @@ class TenantParser(object):
             "Saving RSA keypair for project %s to %s" % (
                 project.name, project.private_key_file)
         )
-        with open(project.private_key_file, 'wb') as f:
-            f.write(pem_private_key)
 
         # Ensure private key is read/write for zuul user only.
-        os.chmod(project.private_key_file, 0o600)
+        with open(os.open(project.private_key_file,
+                          os.O_CREAT | os.O_WRONLY, 0o600), 'wb') as f:
+            f.write(pem_private_key)
 
     @staticmethod
     def _loadKeys(project):
@@ -1451,7 +1451,7 @@ class TenantParser(object):
             raise Exception("Unable to parse project %s", conf)
         return projects
 
-    def _loadTenantProjects(self, project_key_dir, conf_tenant):
+    def _loadTenantProjects(self, conf_tenant):
         config_projects = []
         untrusted_projects = []
 
@@ -1466,8 +1466,7 @@ class TenantParser(object):
                 # tpcs = TenantProjectConfigs
                 tpcs = self._getProjects(source, conf_repo, current_include)
                 for tpc in tpcs:
-                    self._loadProjectKeys(
-                        project_key_dir, source_name, tpc.project)
+                    self._loadProjectKeys(source_name, tpc.project)
                     config_projects.append(tpc)
 
             current_include = frozenset(default_include - set(['pipeline']))
@@ -1475,8 +1474,7 @@ class TenantParser(object):
                 tpcs = self._getProjects(source, conf_repo,
                                          current_include)
                 for tpc in tpcs:
-                    self._loadProjectKeys(
-                        project_key_dir, source_name, tpc.project)
+                    self._loadProjectKeys(source_name, tpc.project)
                     untrusted_projects.append(tpc)
 
         return config_projects, untrusted_projects
@@ -1845,11 +1843,16 @@ class TenantParser(object):
 class ConfigLoader(object):
     log = logging.getLogger("zuul.ConfigLoader")
 
-    def __init__(self, connections, scheduler, merger):
+    def __init__(self, connections, scheduler, merger, key_dir):
         self.connections = connections
         self.scheduler = scheduler
         self.merger = merger
-        self.tenant_parser = TenantParser(connections, scheduler, merger)
+        if key_dir:
+            self.keystorage = KeyStorage(key_dir)
+        else:
+            self.keystorage = None
+        self.tenant_parser = TenantParser(connections, scheduler,
+                                          merger, self.keystorage)
 
     def expandConfigPath(self, config_path):
         if config_path:
@@ -1889,12 +1892,11 @@ class ConfigLoader(object):
         unparsed_abide.extend(data)
         return unparsed_abide
 
-    def loadConfig(self, unparsed_abide, project_key_dir):
+    def loadConfig(self, unparsed_abide):
         abide = model.Abide()
         for conf_tenant in unparsed_abide.tenants:
             # When performing a full reload, do not use cached data.
-            tenant = self.tenant_parser.fromYaml(abide, project_key_dir,
-                                                 conf_tenant)
+            tenant = self.tenant_parser.fromYaml(abide, conf_tenant)
             abide.tenants[tenant.name] = tenant
             if len(tenant.layout.loading_errors):
                 self.log.warning(
@@ -1906,7 +1908,7 @@ class ConfigLoader(object):
                     self.log.warning(err.error)
         return abide
 
-    def reloadTenant(self, project_key_dir, abide, tenant):
+    def reloadTenant(self, abide, tenant):
         new_abide = model.Abide()
         new_abide.tenants = abide.tenants.copy()
         new_abide.unparsed_project_branch_config = \
@@ -1915,7 +1917,6 @@ class ConfigLoader(object):
         # When reloading a tenant only, use cached data if available.
         new_tenant = self.tenant_parser.fromYaml(
             new_abide,
-            project_key_dir,
             tenant.unparsed_config)
         new_abide.tenants[tenant.name] = new_tenant
         if len(new_tenant.layout.loading_errors):

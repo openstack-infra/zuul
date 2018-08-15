@@ -416,7 +416,7 @@ class PipelineManager(object):
         # Late import to break an import loop
         import zuul.configloader
         loader = zuul.configloader.ConfigLoader(
-            self.sched.connections, self.sched, None)
+            self.sched.connections, self.sched, None, None)
 
         self.log.debug("Loading dynamic layout")
 

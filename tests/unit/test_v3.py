@@ -2686,7 +2686,9 @@ class TestProjectKeys(ZuulTestCase):
 
     def test_key_generation(self):
         key_root = os.path.join(self.state_root, 'keys')
-        private_key_file = os.path.join(key_root, 'gerrit/org/project.pem')
+        private_key_file = os.path.join(
+            key_root,
+            'secrets/project/gerrit/org/project/0.pem')
         # Make sure that a proper key was created on startup
         with open(private_key_file, "rb") as f:
             private_key, public_key = \

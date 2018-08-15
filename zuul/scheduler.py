@@ -553,7 +553,7 @@ class Scheduler(threading.Thread):
             os.mkdir(d)
         return d
 
-    def _get_project_key_dir(self):
+    def _get_key_dir(self):
         state_dir = get_default(self.config, 'scheduler', 'state_dir',
                                 '/var/lib/zuul', expand_user=True)
         key_dir = os.path.join(state_dir, 'keys')
@@ -645,13 +645,12 @@ class Scheduler(threading.Thread):
                 connection.clearBranchCache()
 
             loader = configloader.ConfigLoader(
-                self.connections, self, self.merger)
+                self.connections, self, self.merger,
+                self._get_key_dir())
             tenant_config, script = self._checkTenantSourceConf(self.config)
             self.unparsed_abide = loader.readConfig(
                 tenant_config, from_script=script)
-            abide = loader.loadConfig(
-                self.unparsed_abide,
-                self._get_project_key_dir())
+            abide = loader.loadConfig(self.unparsed_abide)
             for tenant in abide.tenants.values():
                 self._reconfigureTenant(tenant)
             self.abide = abide
@@ -676,9 +675,9 @@ class Scheduler(threading.Thread):
                                                     branch)
             old_tenant = self.abide.tenants[event.tenant_name]
             loader = configloader.ConfigLoader(
-                self.connections, self, self.merger)
+                self.connections, self, self.merger,
+                self._get_key_dir())
             abide = loader.reloadTenant(
-                self._get_project_key_dir(),
                 self.abide, old_tenant)
             tenant = abide.tenants[event.tenant_name]
             self._reconfigureTenant(tenant)
