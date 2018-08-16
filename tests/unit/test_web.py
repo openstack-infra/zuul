@@ -499,5 +499,12 @@ class TestBuildInfo(ZuulDBTestCase, BaseTestWeb):
         builds = self.get_url("api/tenant/tenant-one/builds").json()
         self.assertEqual(len(builds), 6)
 
+        uuid = builds[0]['uuid']
+        build = self.get_url("api/tenant/tenant-one/build/%s" % uuid).json()
+        self.assertEqual(build['job_name'], builds[0]['job_name'])
+
+        resp = self.get_url("api/tenant/tenant-one/build/1234")
+        self.assertEqual(404, resp.status_code)
+
         resp = self.get_url("api/tenant/non-tenant/builds")
         self.assertEqual(404, resp.status_code)
