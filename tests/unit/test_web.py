@@ -664,5 +664,10 @@ class TestBuildInfo(ZuulDBTestCase, BaseTestWeb):
         resp = self.get_url("api/tenant/tenant-one/build/1234")
         self.assertEqual(404, resp.status_code)
 
+        builds_query = self.get_url("api/tenant/tenant-one/builds?"
+                                    "project=org/project&"
+                                    "project=org/project1").json()
+        self.assertEqual(len(builds_query), 6)
+
         resp = self.get_url("api/tenant/non-tenant/builds")
         self.assertEqual(404, resp.status_code)
