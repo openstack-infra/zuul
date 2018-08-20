@@ -708,6 +708,14 @@ Not all reporters currently support line comments (or all of the
 features of line comments); in these cases, reporters will simply
 ignore this data.
 
+Zuul will attempt to automatically translate the supplied line numbers
+to the corresponding lines in the original change as written (they may
+differ due to other changes which may have merged since the change was
+written).  If this produces erroneous results for a job, the behavior
+may be disabled by setting the
+**zuul.disable_file_comment_line_mapping** variable to ``true`` in
+*zuul_return*.
+
 Pausing the job
 ~~~~~~~~~~~~~~~
 

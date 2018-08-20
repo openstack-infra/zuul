@@ -142,7 +142,7 @@ class MergeServer(object):
             result['commit'] = result['files'] = result['repo_state'] = None
         else:
             (result['commit'], result['files'], result['repo_state'],
-             recent) = ret
+             recent, orig_commit) = ret
         job.sendWorkComplete(json.dumps(result))
 
     def refstate(self, job):

@@ -298,7 +298,7 @@ class ExecutorClient(object):
 
         if job.name == 'noop':
             self.sched.onBuildStarted(build)
-            self.sched.onBuildCompleted(build, 'SUCCESS', {})
+            self.sched.onBuildCompleted(build, 'SUCCESS', {}, [])
             return build
 
         gearman_job = gear.TextJob('executor:execute', json_dumps(params),
@@ -391,14 +391,15 @@ class ExecutorClient(object):
                 # Always retry if the executor just went away
                 build.retry = True
             result_data = data.get('data', {})
-            self.log.info("Build %s complete, result %s" %
-                          (job, result))
+            warnings = data.get('warnings', [])
+            self.log.info("Build %s complete, result %s, warnings %s" %
+                          (job, result, warnings))
             # If the build should be retried, don't supply the result
             # so that elsewhere we don't have to deal with keeping
             # track of which results are non-final.
             if build.retry:
                 result = None
-            self.sched.onBuildCompleted(build, result, result_data)
+            self.sched.onBuildCompleted(build, result, result_data, warnings)
             # The test suite expects the build to be removed from the
             # internal dict after it's added to the report queue.
             del self.builds[job.unique]
@@ -453,7 +454,7 @@ class ExecutorClient(object):
             # Since this isn't otherwise going to get a build complete
             # event, send one to the scheduler so that it can unlock
             # the nodes.
-            self.sched.onBuildCompleted(build, 'CANCELED', {})
+            self.sched.onBuildCompleted(build, 'CANCELED', {}, [])
             return True
         return False
 

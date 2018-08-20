@@ -1,0 +1,9 @@
+- hosts: all
+  tasks:
+    - zuul_return:
+        data:
+          zuul:
+            file_comments:
+              - not_a_list.py:
+                  - line: 42
+                    message: line too long

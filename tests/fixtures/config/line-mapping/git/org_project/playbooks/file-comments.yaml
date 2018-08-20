@@ -1,0 +1,9 @@
+- hosts: all
+  tasks:
+    - zuul_return:
+        data:
+          zuul:
+            file_comments:
+              README:
+                - line: 15
+                  message: interesting comment

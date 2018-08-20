@@ -162,12 +162,14 @@ class TestFileComments(AnsibleZuulTestCase):
     config_file = 'zuul-gerrit-web.conf'
     tenant_config_file = 'config/gerrit-file-comments/main.yaml'
 
-    def test_multiple_tenants(self):
+    def test_file_comments(self):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('Code-Review', 2)
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
         self.assertEqual(self.getJobFromHistory('file-comments').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('file-comments-error').result,
                          'SUCCESS')
         self.assertEqual(len(A.comments), 3)
         comments = sorted(A.comments, key=lambda x: x['line'])
@@ -196,3 +198,5 @@ class TestFileComments(AnsibleZuulTestCase):
                                        'name': 'Zuul',
                                        'username': 'jenkins'}}
         )
+        self.assertIn('expected a dictionary', A.messages[0],
+                      "A should have a validation error reported")

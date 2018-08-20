@@ -3,14 +3,8 @@
     name: file-comments
     run: playbooks/file-comments.yaml
 
-- job:
-    parent: base
-    name: file-comments-error
-    run: playbooks/file-comments-error.yaml
-
 - project:
     name: org/project
     check:
       jobs:
         - file-comments
-        - file-comments-error

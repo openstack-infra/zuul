@@ -67,6 +67,9 @@ def timeout_handler(path):
 
 
 class Repo(object):
+    commit_re = re.compile('^commit ([0-9a-f]{40})$')
+    diff_re = re.compile('^@@ -\d+,\d \+(\d+),\d @@$')
+
     def __init__(self, remote, local, email, username, speed_limit, speed_time,
                  sshkey=None, cache_path=None, logger=None, git_timeout=300,
                  retry_attempts=3, retry_interval=30):
@@ -348,6 +351,10 @@ class Repo(object):
         #   So try again if an AssertionError is caught.
         self._git_fetch(repo, 'origin', ref)
 
+    def revParse(self, ref):
+        repo = self.createRepoObject()
+        return repo.git.rev_parse(ref)
+
     def fetchFrom(self, repository, ref):
         repo = self.createRepoObject()
         self._git_fetch(repo, repository, ref)
@@ -414,6 +421,24 @@ class Repo(object):
         self.log.debug("Set remote url to %s" % redact_url(url))
         self.remote_url = url
         self._git_set_remote_url(self.createRepoObject(), self.remote_url)
+
+    def mapLine(self, commit, filename, lineno):
+        repo = self.createRepoObject()
+        # Trace the specified line back to the specified commit and
+        # return the line number in that commit.
+        cur_commit = None
+        out = repo.git.log(L='%s,%s:%s' % (lineno, lineno, filename))
+        for l in out.split('\n'):
+            if cur_commit is None:
+                m = self.commit_re.match(l)
+                if m:
+                    if m.group(1) == commit:
+                        cur_commit = commit
+                continue
+            m = self.diff_re.match(l)
+            if m:
+                return int(m.group(1))
+        return None
 
 
 class Merger(object):
@@ -537,7 +562,7 @@ class Merger(object):
             repo.checkout(ref)
         except Exception:
             self.log.exception("Unable to checkout %s" % ref)
-            return None
+            return None, None
 
         try:
             mode = item['merge_mode']
@@ -553,12 +578,13 @@ class Merger(object):
             # Log git exceptions at debug level because they are
             # usually benign merge conflicts
             self.log.debug("Unable to merge %s" % item, exc_info=True)
-            return None
+            return None, None
         except Exception:
             self.log.exception("Exception while merging a change:")
-            return None
+            return None, None
 
-        return commit
+        orig_commit = repo.revParse('FETCH_HEAD')
+        return orig_commit, commit
 
     def _mergeItem(self, item, recent, repo_state):
         self.log.debug("Processing ref %s for project %s/%s / %s uuid %s" %
@@ -579,7 +605,7 @@ class Merger(object):
                 repo.reset()
             except Exception:
                 self.log.exception("Unable to reset repo %s" % repo)
-                return None
+                return None, None
             self._restoreRepoState(item['connection'], item['project'], repo,
                                    repo_state)
 
@@ -598,12 +624,12 @@ class Merger(object):
             repo.setRemoteRef(item['branch'], base)
 
         # Merge the change
-        commit = self._mergeChange(item, base)
+        orig_commit, commit = self._mergeChange(item, base)
         if not commit:
-            return None
+            return None, None
         # Store this commit as the most recent for this project-branch
         recent[key] = commit
-        return commit
+        return orig_commit, commit
 
     def mergeChanges(self, items, files=None, dirs=None, repo_state=None):
         # connection+project+branch -> commit
@@ -616,7 +642,7 @@ class Merger(object):
         for item in items:
             self.log.debug("Merging for change %s,%s" %
                            (item["number"], item["patchset"]))
-            commit = self._mergeItem(item, recent, repo_state)
+            orig_commit, commit = self._mergeItem(item, recent, repo_state)
             if not commit:
                 return None
             if files or dirs:
@@ -630,7 +656,7 @@ class Merger(object):
         ret_recent = {}
         for k, v in recent.items():
             ret_recent[k] = v.hexsha
-        return commit.hexsha, read_files, repo_state, ret_recent
+        return commit.hexsha, read_files, repo_state, ret_recent, orig_commit
 
     def setRepoState(self, items, repo_state):
         # Sets the repo state for the items
