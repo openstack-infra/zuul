@@ -411,3 +411,33 @@ class TestRequirementsReject(ZuulTestCase):
     def test_trigger_require_reject(self):
         "Test trigger requirement: rejections absent"
         return self._test_require_reject('org/project2', 'project2-job')
+
+    def test_pipeline_requirement_reject_unrelated(self):
+        "Test if reject is obeyed if another unrelated approval is present"
+
+        # Having no approvals whatsoever shall not reject the change
+        A = self.fake_gerrit.addFakeChange('org/project3', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getChangeCommentEvent(1))
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 1)
+
+        # Setting another unrelated approval shall not change the behavior of
+        # the configured reject.
+        comment = A.addApproval('Approved', 1, username='reviewer_e')
+        self.fake_gerrit.addEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 2)
+
+        # Setting the approval 'Verified' to a rejected value shall not lead to
+        # a build.
+        comment = A.addApproval('Verified', -1, username='jenkins')
+        self.fake_gerrit.addEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 2)
+
+        # Setting the approval 'Verified' to an accepted value shall lead to
+        # a build.
+        comment = A.addApproval('Verified', 1, username='jenkins')
+        self.fake_gerrit.addEvent(comment)
+        self.waitUntilSettled()
+        self.assertEqual(len(self.history), 3)
