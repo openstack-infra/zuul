@@ -65,14 +65,10 @@
       javascript_copy_links: false
 
 - project:
+    templates:
+      - build-tox-docs
     check:
       jobs:
-        - build-sphinx-docs:
-            irrelevant-files:
-              - zuul/cmd/migrate.py
-              - playbooks/zuul-migrate/.*
-            vars:
-              sphinx_python: python3
         - tox-pep8
         - tox-py35:
             irrelevant-files:
@@ -105,12 +101,6 @@
             voting: false
     gate:
       jobs:
-        - build-sphinx-docs:
-            irrelevant-files:
-              - zuul/cmd/migrate.py
-              - playbooks/zuul-migrate/.*
-            vars:
-              sphinx_python: python3
         - tox-pep8
         - tox-py35:
             irrelevant-files:
