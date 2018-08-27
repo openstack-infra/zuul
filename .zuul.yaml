@@ -135,6 +135,10 @@
         - publish-openstack-javascript-content:
             vars:
                 node_version: 8
+        - openstackzuul-pbrx-push-container-images:
+            vars:
+              pbrx_prefix: zuul
+
     release:
       jobs:
         - publish-zuul-docs
