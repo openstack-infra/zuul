@@ -58,6 +58,12 @@ class JobsPage extends React.Component {
     const headerFormat = value => <Table.Heading>{value}</Table.Heading>
     const cellFormat = (value) => (
       <Table.Cell>{value}</Table.Cell>)
+    const cellJobFormat = (value) => (
+      <Table.Cell>
+        <Link to={this.props.tenant.linkPrefix + '/job/' + value}>
+          {value}
+        </Link>
+      </Table.Cell>)
     const cellBuildFormat = (value) => (
       <Table.Cell>
         <Link to={this.props.tenant.linkPrefix + '/builds?job_name=' + value}>
@@ -69,6 +75,9 @@ class JobsPage extends React.Component {
     myColumns.forEach(column => {
       let formatter = cellFormat
       let prop = column
+      if (column === 'name') {
+        formatter = cellJobFormat
+      }
       if (column === 'Last builds') {
         prop = 'name'
         formatter = cellBuildFormat

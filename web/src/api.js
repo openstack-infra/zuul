@@ -121,6 +121,9 @@ function fetchBuilds (apiPrefix, queryString) {
   }
   return Axios.get(apiUrl + apiPrefix + path)
 }
+function fetchJob (apiPrefix, jobName) {
+  return Axios.get(apiUrl + apiPrefix + 'job/' + jobName)
+}
 function fetchJobs (apiPrefix) {
   return Axios.get(apiUrl + apiPrefix + 'jobs')
 }
@@ -131,6 +134,7 @@ export {
   fetchStatus,
   fetchBuild,
   fetchBuilds,
+  fetchJob,
   fetchJobs,
   fetchTenants,
   fetchInfo

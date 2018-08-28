@@ -13,6 +13,7 @@
 // under the License.
 
 import StatusPage from './pages/Status'
+import JobPage from './pages/Job'
 import JobsPage from './pages/Jobs'
 import BuildPage from './pages/Build'
 import BuildsPage from './pages/Builds'
@@ -42,6 +43,10 @@ const routes = () => [
   {
     to: '/stream/:buildId',
     component: StreamPage
+  },
+  {
+    to: '/job/:jobName',
+    component: JobPage
   },
   {
     to: '/build/:buildId',
