@@ -20,23 +20,31 @@ import PropTypes from 'prop-types'
 import { matchPath, withRouter } from 'react-router'
 import { Link, Redirect, Route, Switch } from 'react-router-dom'
 import { connect } from 'react-redux'
-import { Masthead } from 'patternfly-react'
+import {
+  Icon,
+  Masthead,
+  Notification,
+  NotificationDrawer,
+} from 'patternfly-react'
 
 import logo from './images/logo.png'
 import { routes } from './routes'
-import { setTenantAction } from './reducers'
+import { fetchConfigErrorsAction, setTenantAction } from './reducers'
 
 
 class App extends React.Component {
   static propTypes = {
+    configErrors: PropTypes.array,
     info: PropTypes.object,
     tenant: PropTypes.object,
     location: PropTypes.object,
+    history: PropTypes.object,
     dispatch: PropTypes.func
   }
 
   state = {
-      menuCollapsed: true
+    menuCollapsed: true,
+    showErrors: false
   }
 
   onNavToggleClick = () => {
@@ -126,14 +134,75 @@ class App extends React.Component {
       }
       // Set tenant only if it changed to prevent DidUpdate loop
       if (typeof tenant.name === 'undefined' || tenant.name !== tenantName) {
-        this.props.dispatch(setTenantAction(tenantName, whiteLabel))
+        const tenantAction = setTenantAction(tenantName, whiteLabel)
+        this.props.dispatch(tenantAction)
+        if (tenantName) {
+          this.props.dispatch(fetchConfigErrorsAction(tenantAction.tenant))
+        }
       }
     }
   }
 
+  renderConfigErrors = (configErrors) => {
+    const { history } = this.props
+    const errors = []
+    configErrors.forEach((item, idx) => {
+      let error = item.error
+      let cookie = error.indexOf('The error was:')
+      if (cookie !== -1) {
+        error = error.slice(cookie + 18).split('\n')[0]
+      }
+      let ctxPath = item.source_context.path
+      if (item.source_context.branch !== 'master') {
+        ctxPath += ' (' + item.source_context.branch + ')'
+      }
+      errors.push(
+        <Notification
+          key={idx}
+          seen={false}
+          onClick={() => {
+            history.push(this.props.tenant.linkPrefix + '/config-errors')
+            this.setState({showErrors: false})
+          }}
+          >
+          <Icon className='pull-left' type='pf' name='error-circle-o' />
+          <Notification.Content>
+            <Notification.Message>
+              {error}
+            </Notification.Message>
+            <Notification.Info
+              leftText={item.source_context.project}
+              rightText={ctxPath}
+              />
+          </Notification.Content>
+        </Notification>
+      )
+    })
+    return (
+      <NotificationDrawer style={{minWidth: '500px'}}>
+      <NotificationDrawer.Panel>
+        <NotificationDrawer.PanelHeading>
+          <NotificationDrawer.PanelTitle>
+            Config Errors
+          </NotificationDrawer.PanelTitle>
+          <NotificationDrawer.PanelCounter
+            text={errors.length + ' error(s)'} />
+        </NotificationDrawer.PanelHeading>
+        <NotificationDrawer.PanelCollapse id={1} collapseIn>
+          <NotificationDrawer.PanelBody key='containsNotifications'>
+            {errors.map(item => (item))}
+          </NotificationDrawer.PanelBody>
+
+        </NotificationDrawer.PanelCollapse>
+        </NotificationDrawer.Panel>
+      </NotificationDrawer>
+    )
+  }
+
   render() {
-    const { menuCollapsed } = this.state
-    const { tenant } = this.props
+    const { menuCollapsed, showErrors } = this.state
+    const { tenant, configErrors } = this.props
+
     if (typeof tenant.name === 'undefined') {
       return (<h2>Loading...</h2>)
     }
@@ -149,6 +218,16 @@ class App extends React.Component {
           <div className='collapse navbar-collapse'>
             {tenant.name && this.renderMenu()}
             <ul className='nav navbar-nav navbar-utility'>
+              { configErrors.length > 0 &&
+                <NotificationDrawer.Toggle
+                  className="zuul-config-errors"
+                  hasUnreadMessages
+                  style={{color: 'orange'}}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    this.setState({showErrors: !this.state.showErrors})}}
+                  />
+              }
               <li>
                 <a href='https://zuul-ci.org/docs'
                    rel='noopener noreferrer' target='_blank'>
@@ -163,6 +242,7 @@ class App extends React.Component {
                 </li>
               )}
             </ul>
+            {showErrors && this.renderConfigErrors(configErrors)}
           </div>
           {!menuCollapsed && (
             <div className='collapse navbar-collapse navbar-collapse-1 in'>
@@ -181,6 +261,7 @@ class App extends React.Component {
 // This connect the info state from the store to the info property of the App.
 export default withRouter(connect(
   state => ({
+    configErrors: state.configErrors,
     info: state.info,
     tenant: state.tenant
   })

@@ -28,6 +28,8 @@ import * as api from './api'
 api.fetchInfo = jest.fn()
 api.fetchTenants = jest.fn()
 api.fetchStatus = jest.fn()
+api.fetchConfigErrors = jest.fn()
+api.fetchConfigErrors.mockImplementation(() => Promise.resolve({data: []}))
 
 
 it('renders without crashing', () => {

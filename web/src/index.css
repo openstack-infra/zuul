@@ -9,6 +9,11 @@ a.refresh {
   text-decoration: none;
 }
 
+/* Notification bell color */
+.fa-bell {
+  color: orange;
+}
+
 /* Status page */
 .zuul-change {
     margin-bottom: 10px;

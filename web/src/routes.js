@@ -17,6 +17,7 @@ import JobPage from './pages/Job'
 import JobsPage from './pages/Jobs'
 import BuildPage from './pages/Build'
 import BuildsPage from './pages/Builds'
+import ConfigErrorsPage from './pages/ConfigErrors'
 import TenantsPage from './pages/Tenants'
 import StreamPage from './pages/Stream'
 
@@ -51,6 +52,10 @@ const routes = () => [
   {
     to: '/build/:buildId',
     component: BuildPage
+  },
+  {
+    to: '/config-errors',
+    component: ConfigErrorsPage,
   },
   {
     to: '/tenants',
