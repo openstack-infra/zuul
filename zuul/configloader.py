@@ -1345,17 +1345,18 @@ class TenantParser(object):
         tpc.branches = branches
 
     def _loadProjectKeys(self, connection_name, project):
-        project.private_key_file = self.keystorage.getProjectSecretsKeyFile(
-            connection_name, project.name)
+        project.private_secrets_key_file = \
+            self.keystorage.getProjectSecretsKeyFile(
+                connection_name, project.name)
 
         self._generateKeys(project)
         self._loadKeys(project)
 
     def _generateKeys(self, project):
-        if os.path.isfile(project.private_key_file):
+        if os.path.isfile(project.private_secrets_key_file):
             return
 
-        key_dir = os.path.dirname(project.private_key_file)
+        key_dir = os.path.dirname(project.private_secrets_key_file)
         if not os.path.isdir(key_dir):
             os.makedirs(key_dir, 0o700)
 
@@ -1369,25 +1370,25 @@ class TenantParser(object):
         # because the public key can be constructed from it.
         self.log.info(
             "Saving RSA keypair for project %s to %s" % (
-                project.name, project.private_key_file)
+                project.name, project.private_secrets_key_file)
         )
 
         # Ensure private key is read/write for zuul user only.
-        with open(os.open(project.private_key_file,
+        with open(os.open(project.private_secrets_key_file,
                           os.O_CREAT | os.O_WRONLY, 0o600), 'wb') as f:
             f.write(pem_private_key)
 
     @staticmethod
     def _loadKeys(project):
         # Check the key files specified are there
-        if not os.path.isfile(project.private_key_file):
+        if not os.path.isfile(project.private_secrets_key_file):
             raise Exception(
                 'Private key file {0} not found'.format(
-                    project.private_key_file))
+                    project.private_secrets_key_file))
 
         # Load keypair
-        with open(project.private_key_file, "rb") as f:
-            (project.private_key, project.public_key) = \
+        with open(project.private_secrets_key_file, "rb") as f:
+            (project.private_secrets_key, project.public_secrets_key) = \
                 encryption.deserialize_rsa_keypair(f.read())
 
     @staticmethod

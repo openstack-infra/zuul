@@ -62,8 +62,9 @@ class TestJob(BaseTestCase):
 
         private_key_file = os.path.join(FIXTURE_DIR, 'private.pem')
         with open(private_key_file, "rb") as f:
-            self.project.private_key, self.project.public_key = \
-                encryption.deserialize_rsa_keypair(f.read())
+            priv, pub = encryption.deserialize_rsa_keypair(f.read())
+            self.project.private_secrets_key = priv
+            self.project.public_secrets_key = pub
         m = yaml.Mark('name', 0, 0, 0, '', 0)
         self.start_mark = configloader.ZuulMark(m, m, '')
 

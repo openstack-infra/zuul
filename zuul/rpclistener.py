@@ -400,7 +400,7 @@ class RPCListener(object):
             job.sendWorkComplete("")
             return
         job.sendWorkComplete(
-            encryption.serialize_rsa_public_key(project.public_key))
+            encryption.serialize_rsa_public_key(project.public_secrets_key))
 
     def handle_config_errors_list(self, job):
         args = json.loads(job.arguments)

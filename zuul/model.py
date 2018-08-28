@@ -921,14 +921,14 @@ class PlaybookContext(ConfigObject):
                     "are used".format(
                         name=secret_name))
             # Decrypt a copy of the secret to verify it can be done
-            secret.decrypt(self.source_context.project.private_key)
+            secret.decrypt(self.source_context.project.private_secrets_key)
 
     def freezeSecrets(self, layout):
         secrets = []
         for (secret_name, secret_alias) in self.secrets:
             secret = layout.secrets.get(secret_name)
             decrypted_secret = secret.decrypt(
-                self.source_context.project.private_key)
+                self.source_context.project.private_secrets_key)
             decrypted_secret.name = secret_alias
             secrets.append(decrypted_secret)
         self.decrypted_secrets = tuple(secrets)
