@@ -66,7 +66,7 @@ class Client(zuul.cmd.ZuulApp):
                                         'node set be in HOLD status '
                                         '(default: nodepool\'s max-hold-age '
                                         'if set, or indefinitely)'),
-                                  required=False, default=0)
+                                  required=False, type=int, default=0)
         cmd_autohold.set_defaults(func=self.autohold)
 
         cmd_autohold_list = subparsers.add_parser(
