@@ -230,6 +230,11 @@ class ExecutorClient(object):
             nodes.append(n)
         params['nodes'] = nodes
         params['groups'] = [group.toDict() for group in nodeset.getGroups()]
+        params['ssh_keys'] = []
+        if pipeline.post_review:
+            params['ssh_keys'].append(dict(
+                name='%s project key' % item.change.project.canonical_name,
+                key=item.change.project.private_ssh_key))
         params['vars'] = job.variables
         params['extra_vars'] = job.extra_variables
         params['host_vars'] = job.host_variables

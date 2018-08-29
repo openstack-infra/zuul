@@ -20,6 +20,7 @@ from unittest import mock
 
 import zuul.executor.server
 import zuul.model
+import gear
 
 from tests.base import (
     ZuulTestCase,
@@ -425,8 +426,7 @@ class TestAnsibleJob(ZuulTestCase):
 
     def setUp(self):
         super(TestAnsibleJob, self).setUp()
-        job = zuul.model.Job('test')
-        job.unique = 'test'
+        job = gear.TextJob('executor:execute', '{}', unique='test')
         self.test_job = zuul.executor.server.AnsibleJob(self.executor_server,
                                                         job)
 

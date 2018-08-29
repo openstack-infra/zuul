@@ -235,6 +235,20 @@ class SshAgent(object):
             raise
         self.log.info('Added SSH Key {}'.format(key_path))
 
+    def addData(self, name, key_data):
+        env = os.environ.copy()
+        env.update(self.env)
+        self.log.debug('Adding SSH Key {}'.format(name))
+        try:
+            subprocess.check_output(['ssh-add', '-'], env=env,
+                                    input=key_data.encode('utf8'),
+                                    stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            self.log.exception('ssh-add failed. stdout: %s, stderr: %s',
+                               e.output, e.stderr)
+            raise
+        self.log.info('Added SSH Key {}'.format(name))
+
     def remove(self, key_path):
         env = os.environ.copy()
         env.update(self.env)
@@ -624,6 +638,7 @@ class AnsibleJob(object):
         self.log = AnsibleJobLogAdapter(logger, {'job': job.unique})
         self.executor_server = executor_server
         self.job = job
+        self.arguments = json.loads(job.arguments)
         self.jobdir = None
         self.proc = None
         self.proc_lock = threading.Lock()
@@ -670,12 +685,11 @@ class AnsibleJob(object):
         self.abortRunningProc()
 
     def pause(self):
-        args = json.loads(self.job.arguments)
         self.log.info(
             "Pausing job %s for ref %s (change %s)" % (
-                args['zuul']['job'],
-                args['zuul']['ref'],
-                args['zuul']['change_url']))
+                self.arguments['zuul']['job'],
+                self.arguments['zuul']['ref'],
+                self.arguments['zuul']['change_url']))
         with open(self.jobdir.job_output_file, 'a') as job_output:
             job_output.write(
                 "{now} |\n"
@@ -691,12 +705,11 @@ class AnsibleJob(object):
         if not self.paused:
             return
 
-        args = json.loads(self.job.arguments)
         self.log.info(
             "Resuming job %s for ref %s (change %s)" % (
-                args['zuul']['job'],
-                args['zuul']['ref'],
-                args['zuul']['change_url']))
+                self.arguments['zuul']['job'],
+                self.arguments['zuul']['ref'],
+                self.arguments['zuul']['change_url']))
         with open(self.jobdir.job_output_file, 'a') as job_output:
             job_output.write(
                 "{now} | Job resumed\n"
@@ -713,6 +726,8 @@ class AnsibleJob(object):
         try:
             self.ssh_agent.start()
             self.ssh_agent.add(self.private_key_file)
+            for key in self.arguments.get('ssh_keys', []):
+                self.ssh_agent.addData(key['name'], key['key'])
             self.jobdir = JobDir(self.executor_server.jobdir_root,
                                  self.executor_server.keep_jobdir,
                                  str(self.job.unique))
@@ -743,7 +758,7 @@ class AnsibleJob(object):
                 self.log.exception("Error finalizing job thread:")
 
     def _execute(self):
-        args = json.loads(self.job.arguments)
+        args = self.arguments
         self.log.info(
             "Beginning job %s for ref %s (change %s)" % (
                 args['zuul']['job'],
