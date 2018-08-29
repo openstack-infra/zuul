@@ -16,6 +16,10 @@ import tempfile
 import logging
 import os
 
+import paramiko
+
+RSA_KEY_SIZE = 2048
+
 
 class Migration(object):
     log = logging.getLogger("zuul.KeyStorage")
@@ -119,6 +123,7 @@ class MigrationV1(Migration):
 
 
 class KeyStorage(object):
+    log = logging.getLogger("zuul.KeyStorage")
     current_version = MigrationV1
 
     def __init__(self, root):
@@ -133,3 +138,41 @@ class KeyStorage(object):
             version = '0'
         return os.path.join(self.root, 'secrets', 'project',
                             connection, project, version + '.pem')
+
+    def getProjectSSHKeyFile(self, connection, project, version=None):
+        """Return the path to the private ssh key for the project"""
+        # We don't actually support multiple versions yet
+        if version is None:
+            version = '0'
+        return os.path.join(self.root, 'ssh', 'project',
+                            connection, project, version + '.pem')
+
+    def getProjectSSHKeys(self, connection, project):
+        """Return the private and public SSH keys for the project
+
+        A new key will be created if necessary.
+
+        :returns: A tuple containing the PEM encoded private key and
+            base64 encoded public key.
+
+        """
+
+        private_key_file = self.getProjectSSHKeyFile(connection, project)
+        if not os.path.exists(private_key_file):
+            self.log.info(
+                "Generating SSH public key for project %s", project
+            )
+            self._createSSHKey(private_key_file)
+        key = paramiko.RSAKey.from_private_key_file(private_key_file)
+        with open(private_key_file, 'r') as f:
+            private_key = f.read()
+        public_key = key.get_base64()
+        return (private_key, public_key)
+
+    def _createSSHKey(self, fn):
+        key_dir = os.path.dirname(fn)
+        if not os.path.isdir(key_dir):
+            os.makedirs(key_dir, 0o700)
+
+        pk = paramiko.RSAKey.generate(bits=RSA_KEY_SIZE)
+        pk.write_private_key_file(fn)

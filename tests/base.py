@@ -2668,14 +2668,27 @@ class ZuulTestCase(BaseTestCase):
             fn = os.path.join(key_root, '.version')
             with open(fn, 'w') as f:
                 f.write('1')
+        # secrets key
         private_key_file = os.path.join(
             key_root, 'secrets', 'project', source, project, '0.pem')
         private_key_dir = os.path.dirname(private_key_file)
-        self.log.debug("Installing test keys for project %s at %s" % (
+        self.log.debug("Installing test secrets keys for project %s at %s" % (
             project, private_key_file))
         if not os.path.isdir(private_key_dir):
             os.makedirs(private_key_dir)
         with open(os.path.join(FIXTURE_DIR, 'private.pem')) as i:
+            with open(private_key_file, 'w') as o:
+                o.write(i.read())
+
+        # ssh key
+        private_key_file = os.path.join(
+            key_root, 'ssh', 'project', source, project, '0.pem')
+        private_key_dir = os.path.dirname(private_key_file)
+        self.log.debug("Installing test ssh keys for project %s at %s" % (
+            project, private_key_file))
+        if not os.path.isdir(private_key_dir):
+            os.makedirs(private_key_dir)
+        with open(os.path.join(FIXTURE_DIR, 'ssh.pem')) as i:
             with open(private_key_file, 'w') as o:
                 o.write(i.read())
 
@@ -2727,8 +2740,11 @@ class ZuulTestCase(BaseTestCase):
         if self.create_project_keys:
             return
 
-        with open(os.path.join(FIXTURE_DIR, 'private.pem')) as i:
-            test_key = i.read()
+        test_keys = []
+        key_fns = ['private.pem', 'ssh.pem']
+        for fn in key_fns:
+            with open(os.path.join(FIXTURE_DIR, fn)) as i:
+                test_keys.append(i.read())
 
         key_root = os.path.join(self.state_root, 'keys')
         for root, dirname, files in os.walk(key_root):
@@ -2736,7 +2752,7 @@ class ZuulTestCase(BaseTestCase):
                 if fn == '.version':
                     continue
                 with open(os.path.join(root, fn)) as f:
-                    self.assertEqual(test_key, f.read())
+                    self.assertTrue(f.read() in test_keys)
 
     def assertFinalState(self):
         self.log.debug("Assert final state")

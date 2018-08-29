@@ -21,6 +21,8 @@ import gc
 import time
 from unittest import skip
 
+import paramiko
+
 import zuul.configloader
 from zuul.lib import encryption
 from tests.base import (
@@ -2685,24 +2687,40 @@ class TestProjectKeys(ZuulTestCase):
     tenant_config_file = 'config/in-repo/main.yaml'
 
     def test_key_generation(self):
+        test_keys = []
+        key_fns = ['private.pem', 'ssh.pem']
+        for fn in key_fns:
+            with open(os.path.join(FIXTURE_DIR, fn)) as i:
+                test_keys.append(i.read())
+
         key_root = os.path.join(self.state_root, 'keys')
-        private_key_file = os.path.join(
+        secrets_key_file = os.path.join(
             key_root,
             'secrets/project/gerrit/org/project/0.pem')
         # Make sure that a proper key was created on startup
-        with open(private_key_file, "rb") as f:
-            private_key, public_key = \
+        with open(secrets_key_file, "rb") as f:
+            private_secrets_key, public_secrets_key = \
                 encryption.deserialize_rsa_keypair(f.read())
-
-        with open(os.path.join(FIXTURE_DIR, 'private.pem')) as i:
-            fixture_private_key = i.read()
 
         # Make sure that we didn't just end up with the static fixture
         # key
-        self.assertNotEqual(fixture_private_key, private_key)
+        self.assertTrue(private_secrets_key not in test_keys)
 
         # Make sure it's the right length
-        self.assertEqual(4096, private_key.key_size)
+        self.assertEqual(4096, private_secrets_key.key_size)
+
+        ssh_key_file = os.path.join(
+            key_root,
+            'ssh/project/gerrit/org/project/0.pem')
+        # Make sure that a proper key was created on startup
+        ssh_key = paramiko.RSAKey.from_private_key_file(ssh_key_file)
+
+        # Make sure that we didn't just end up with the static fixture
+        # key
+        self.assertTrue(private_secrets_key not in test_keys)
+
+        # Make sure it's the right length
+        self.assertEqual(2048, ssh_key.get_bits())
 
 
 class RoleTestCase(ZuulTestCase):

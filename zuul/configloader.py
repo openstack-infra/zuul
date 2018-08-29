@@ -1348,15 +1348,22 @@ class TenantParser(object):
         project.private_secrets_key_file = \
             self.keystorage.getProjectSecretsKeyFile(
                 connection_name, project.name)
+        project.private_ssh_key_file = \
+            self.keystorage.getProjectSSHKeyFile(
+                connection_name, project.name)
 
         self._generateKeys(project)
         self._loadKeys(project)
 
+        (project.private_ssh_key, project.public_ssh_key) = \
+            self.keystorage.getProjectSSHKeys(connection_name, project.name)
+
     def _generateKeys(self, project):
-        if os.path.isfile(project.private_secrets_key_file):
+        filename = project.private_secrets_key_file
+        if os.path.isfile(filename):
             return
 
-        key_dir = os.path.dirname(project.private_secrets_key_file)
+        key_dir = os.path.dirname(filename)
         if not os.path.isdir(key_dir):
             os.makedirs(key_dir, 0o700)
 
@@ -1370,16 +1377,15 @@ class TenantParser(object):
         # because the public key can be constructed from it.
         self.log.info(
             "Saving RSA keypair for project %s to %s" % (
-                project.name, project.private_secrets_key_file)
+                project.name, filename)
         )
 
         # Ensure private key is read/write for zuul user only.
-        with open(os.open(project.private_secrets_key_file,
+        with open(os.open(filename,
                           os.O_CREAT | os.O_WRONLY, 0o600), 'wb') as f:
             f.write(pem_private_key)
 
-    @staticmethod
-    def _loadKeys(project):
+    def _loadKeys(self, project):
         # Check the key files specified are there
         if not os.path.isfile(project.private_secrets_key_file):
             raise Exception(
