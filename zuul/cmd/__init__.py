@@ -178,7 +178,8 @@ class ZuulDaemonApp(ZuulApp, metaclass=abc.ABCMeta):
     def setup_logging(self, section, parameter):
         super(ZuulDaemonApp, self).setup_logging(section, parameter)
         from zuul.version import version_info as zuul_version_info
-        log = logging.getLogger("zuul.{section}".format(section=section.title))
+        log = logging.getLogger(
+            "zuul.{section}".format(section=section.title()))
         log.debug(
             "Configured logging: {version}".format(
                 version=zuul_version_info.release_string()))
