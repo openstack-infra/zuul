@@ -78,6 +78,35 @@ class TestGerrit(BaseTestCase):
         expected_patches = 5
         self.run_query(files, expected_patches)
 
+    def test_ref_name_check_rules(self):
+        # See man git-check-ref-format for the rules referenced here
+        test_strings = [
+            ('refs/heads/normal', True),
+            ('refs/heads/.bad', False),  # rule 1
+            ('refs/heads/bad.lock', False),  # rule 1
+            ('refs/heads/good.locked', True),
+            ('refs/heads/go.od', True),
+            ('refs/heads//bad', False),  # rule 6
+            ('refs/heads/b?d', False),  # rule 5
+            ('refs/heads/b[d', False),  # rule 5
+            ('refs/heads/b..ad', False),  # rule 3
+            ('bad', False),  # rule 2
+            ('refs/heads/\nbad', False),  # rule 4
+            ('/refs/heads/bad', False),  # rule 6
+            ('refs/heads/bad/', False),  # rule 6
+            ('refs/heads/bad.', False),  # rule 7
+            ('.refs/heads/bad', False),  # rule 1
+            ('refs/he@{ads/bad', False),  # rule 8
+            ('@', False),  # rule 9
+            ('refs\\heads/bad', False)  # rule 10
+        ]
+
+        for ref, accepted in test_strings:
+            self.assertEqual(
+                accepted,
+                GerritConnection._checkRefFormat(ref),
+                ref + ' shall be ' + ('accepted' if accepted else 'rejected'))
+
 
 class TestGerritWeb(ZuulTestCase):
     config_file = 'zuul-gerrit-web.conf'
