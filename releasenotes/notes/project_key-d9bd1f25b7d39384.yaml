@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    An SSH keypair is now generated for every project and may be used in
+    post-review jobs to access systems which trust that project.

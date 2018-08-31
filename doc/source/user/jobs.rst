@@ -597,17 +597,46 @@ executor running the job is available:
 SSH Keys
 --------
 
-Zuul starts each job with an SSH agent running and the key used to
-access the job's nodes added to that agent.  Generally you won't need
-to be aware of this since Ansible will use this when performing any
-tasks on remote nodes.  However, under some circumstances you may want
-to interact with the agent.  For example, you may wish to add a key
-provided as a secret to the job in order to access a specific host, or
-you may want to, in a pre-playbook, replace the key used to log into
-the assigned nodes in order to further protect it from being abused by
-untrusted job content.
+Zuul starts each job with an SSH agent running and at least one key
+added to that agent.  Generally you won't need to be aware of this
+since Ansible will use this when performing any tasks on remote nodes.
+However, under some circumstances you may want to interact with the
+agent.  For example, you may wish to add a key provided as a secret to
+the job in order to access a specific host, or you may want to, in a
+pre-playbook, replace the key used to log into the assigned nodes in
+order to further protect it from being abused by untrusted job
+content.
 
-.. TODO: describe standard lib and link to published docs for it.
+A description of each of the keys added to the SSH agent follows.
+
+Nodepool Key
+~~~~~~~~~~~~
+
+This key is supplied by the system administrator.  It is expected to
+be accepted by every node supplied by Nodepool and is generally the
+key that will be used by Zuul when running jobs.  Because of the
+potential for an unrelated job to add an arbitrary host to the Ansible
+inventory which might accept this key (e.g., a node for another job,
+or a static host), the use of the `add-build-sshkey
+<https://zuul-ci.org/docs/zuul-jobs/roles.html#role-add-build-sshkey>`
+role is recommended.
+
+Project Key
+~~~~~~~~~~~
+
+Each project in Zuul has its own SSH keypair.  This key is added to
+the SSH agent for all jobs running in a post-review pipeline.  If a
+system administrator trusts that project, they can add the project's
+public key to systems to allow post-review jobs to access those
+systems.  The systems may be added to the inventory using the
+``add_host`` Ansible module, or they may be supplied by static nodes
+in Nodepool.
+
+Zuul serves each project's public SSH key using its build-in
+webserver.  They can be fetched at the path
+``/api/tenant/<tenant>/project-ssh-key/<project>.pub`` where
+``<project>`` is the canonical name of a project and ``<tenant>`` is
+the name of a tenant with that project.
 
 .. _return_values:
 

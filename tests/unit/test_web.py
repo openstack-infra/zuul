@@ -385,6 +385,14 @@ class TestWeb(BaseTestWeb):
         resp = self.get_url("api/tenant/tenant-one/key/org/no-project.pub")
         self.assertEqual(404, resp.status_code)
 
+        with open(os.path.join(FIXTURE_DIR, 'ssh.pub'), 'rb') as f:
+            public_ssh = f.read()
+
+        resp = self.get_url("api/tenant/tenant-one/project-ssh-key/"
+                            "org/project.pub")
+        self.assertEqual(resp.content, public_ssh)
+        self.assertIn('text/plain', resp.headers.get('Content-Type'))
+
     def test_web_404_on_unknown_tenant(self):
         resp = self.get_url("api/tenant/non-tenant/status")
         self.assertEqual(404, resp.status_code)

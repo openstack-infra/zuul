@@ -399,8 +399,16 @@ class RPCListener(object):
         if not project:
             job.sendWorkComplete("")
             return
-        job.sendWorkComplete(
-            encryption.serialize_rsa_public_key(project.public_secrets_key))
+        keytype = args.get('key', 'secrets')
+        if keytype == 'secrets':
+            job.sendWorkComplete(
+                encryption.serialize_rsa_public_key(
+                    project.public_secrets_key))
+        elif keytype == 'ssh':
+            job.sendWorkComplete(project.public_ssh_key)
+        else:
+            job.sendWorkComplete("")
+            return
 
     def handle_config_errors_list(self, job):
         args = json.loads(job.arguments)

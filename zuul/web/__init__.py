@@ -305,7 +305,8 @@ class ZuulWebAPI(object):
     @cherrypy.tools.save_params()
     def key(self, tenant, project):
         job = self.rpc.submitJob('zuul:key_get', {'tenant': tenant,
-                                                  'project': project})
+                                                  'project': project,
+                                                  'key': 'secrets'})
         if not job.data:
             raise cherrypy.HTTPError(
                 404, 'Project %s does not exist.' % project)
@@ -313,6 +314,20 @@ class ZuulWebAPI(object):
         resp.headers['Access-Control-Allow-Origin'] = '*'
         resp.headers['Content-Type'] = 'text/plain'
         return job.data[0]
+
+    @cherrypy.expose
+    @cherrypy.tools.save_params()
+    def project_ssh_key(self, tenant, project):
+        job = self.rpc.submitJob('zuul:key_get', {'tenant': tenant,
+                                                  'project': project,
+                                                  'key': 'ssh'})
+        if not job.data:
+            raise cherrypy.HTTPError(
+                404, 'Project %s does not exist.' % project)
+        resp = cherrypy.response
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        resp.headers['Content-Type'] = 'text/plain'
+        return job.data[0] + '\n'
 
     @cherrypy.expose
     @cherrypy.tools.save_params()
@@ -488,6 +503,9 @@ class ZuulWeb(object):
                           controller=api, action='job')
         route_map.connect('api', '/api/tenant/{tenant}/key/{project:.*}.pub',
                           controller=api, action='key')
+        route_map.connect('api', '/api/tenant/{tenant}/'
+                          'project-ssh-key/{project:.*}.pub',
+                          controller=api, action='project_ssh_key')
         route_map.connect('api', '/api/tenant/{tenant}/console-stream',
                           controller=api, action='console_stream')
         route_map.connect('api', '/api/tenant/{tenant}/builds',

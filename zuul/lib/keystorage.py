@@ -167,7 +167,7 @@ class KeyStorage(object):
         with open(private_key_file, 'r') as f:
             private_key = f.read()
         public_key = key.get_base64()
-        return (private_key, public_key)
+        return (private_key, 'ssh-rsa ' + public_key)
 
     def _createSSHKey(self, fn):
         key_dir = os.path.dirname(fn)
