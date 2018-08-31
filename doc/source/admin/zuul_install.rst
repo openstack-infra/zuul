@@ -16,11 +16,11 @@ during the Nodepool setup.
    $ sudo useradd --system zuul --home-dir /var/lib/zuul --create-home -g zuul
    $ sudo mkdir /etc/zuul/
    $ sudo mkdir /var/log/zuul/
-   $ sudo chown zuul.zuul /var/log/zuul/
+   $ sudo chown zuul:zuul /var/log/zuul/
    $ sudo mkdir /var/lib/zuul/.ssh
    $ sudo chmod 0700 /var/lib/zuul/.ssh
    $ sudo mv nodepool_rsa /var/lib/zuul/.ssh
-   $ sudo chown -R zuul.zuul /var/lib/zuul/.ssh
+   $ sudo chown -R zuul:zuul /var/lib/zuul/.ssh
 
 Installation
 ------------
