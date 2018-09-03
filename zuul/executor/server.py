@@ -1830,6 +1830,8 @@ class AnsibleJob(object):
         cmd = ['ansible', '*', verbose, '-m', 'setup',
                '-i', self.jobdir.setup_inventory,
                '-a', 'gather_subset=!all']
+        if self.executor_variables_file is not None:
+            cmd.extend(['-e@%s' % self.executor_variables_file])
 
         result, code = self.runAnsible(
             cmd=cmd, timeout=60, playbook=playbook,
