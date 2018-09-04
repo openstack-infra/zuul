@@ -1,7 +1,7 @@
 flake8
 
 coverage>=3.6
-sphinx>=1.5.1,<1.6
+sphinx>=1.6.1
 sphinxcontrib-blockdiag>=1.1.0
 fixtures>=0.3.14
 stestr>=1.0.0 # Apache-2.0
