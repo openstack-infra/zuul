@@ -29,7 +29,9 @@ class RPCClient(object):
     def __init__(self, server, port, ssl_key=None, ssl_cert=None, ssl_ca=None):
         self.log.debug("Connecting to gearman at %s:%s" % (server, port))
         self.gearman = gear.Client()
-        self.gearman.addServer(server, port, ssl_key, ssl_cert, ssl_ca)
+        self.gearman.addServer(server, port, ssl_key, ssl_cert, ssl_ca,
+                               keepalive=True, tcp_keepidle=60,
+                               tcp_keepintvl=30, tcp_keepcnt=5)
         self.log.debug("Waiting for gearman")
         self.gearman.waitForServer()
 

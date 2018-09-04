@@ -2090,10 +2090,14 @@ class ExecutorServer(object):
         ssl_cert = get_default(self.config, 'gearman', 'ssl_cert')
         ssl_ca = get_default(self.config, 'gearman', 'ssl_ca')
         self.merger_worker = ExecutorMergeWorker(self, 'Zuul Executor Merger')
-        self.merger_worker.addServer(server, port, ssl_key, ssl_cert, ssl_ca)
+        self.merger_worker.addServer(server, port, ssl_key, ssl_cert, ssl_ca,
+                                     keepalive=True, tcp_keepidle=60,
+                                     tcp_keepintvl=30, tcp_keepcnt=5)
         self.executor_worker = ExecutorExecuteWorker(
             self, 'Zuul Executor Server')
-        self.executor_worker.addServer(server, port, ssl_key, ssl_cert, ssl_ca)
+        self.executor_worker.addServer(server, port, ssl_key, ssl_cert, ssl_ca,
+                                       keepalive=True, tcp_keepidle=60,
+                                       tcp_keepintvl=30, tcp_keepcnt=5)
         self.log.debug("Waiting for server")
         self.merger_worker.waitForServer()
         self.executor_worker.waitForServer()

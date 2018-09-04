@@ -8,7 +8,7 @@ python-daemon>=2.0.4,<2.1.0
 extras
 statsd>=3.0
 voluptuous>=0.10.2
-gear>=0.9.0,<1.0.0
+gear>=0.13.0,<1.0.0
 apscheduler>=3.0
 PrettyTable>=0.6,<0.8
 babel>=1.0
