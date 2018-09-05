@@ -220,12 +220,30 @@ class GithubEventConnector(threading.Thread):
 
         if event:
             event.delivery = delivery
+            project = self.connection.source.getProject(event.project_name)
             if event.change_number:
-                project = self.connection.source.getProject(event.project_name)
                 self.connection._getChange(project,
                                            event.change_number,
                                            event.patch_number,
                                            refresh=True)
+
+            # If this event references a branch and we're excluding unprotected
+            # branches, we might need to check whether the branch is now
+            # protected.
+            if event.branch:
+                b = self.connection.getBranch(project.name, event.branch)
+                if b is not None:
+                    branch_protected = b.get('protected')
+                    self.connection.checkBranchCache(project, event.branch,
+                                                     branch_protected)
+                    event.branch_protected = branch_protected
+                else:
+                    # This can happen if the branch was deleted in GitHub. In
+                    # this case we assume that the branch COULD have been
+                    # protected before. The cache update is handled by the
+                    # push event, so we don't touch the cache here again.
+                    event.branch_protected = True
+
             event.project_hostname = self.connection.canonical_hostname
             self.connection.logEvent(event)
             self.connection.sched.addEvent(event)
@@ -268,20 +286,11 @@ class GithubEventConnector(threading.Thread):
                 # know if branch protection has been disabled before deletion
                 # of the branch.
                 # FIXME(tobiash): Find a way to handle that case
-                event.branch_protected = True
                 self.connection._clearBranchCache(project)
             elif event.branch_created:
                 # A new branch never can be protected because that needs to be
                 # configured after it has been created.
-                event.branch_protected = False
                 self.connection._clearBranchCache(project)
-            else:
-                # An updated branch can be protected or not so we have to ask
-                # GitHub whether it is.
-                b = self.connection.getBranch(event.project_name, event.branch)
-                event.branch_protected = b.get('protected')
-                self.connection.checkBranchCache(project, event.branch,
-                                                 event.branch_protected)
 
         return event
 
