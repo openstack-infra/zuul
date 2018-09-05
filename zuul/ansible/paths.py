@@ -176,10 +176,6 @@ def _is_localhost_task(task):
     #
     # localhost is special, since it's not in the inventory but instead is
     # added directly by ansible.
-    #
-    # The only way a user could supply a remote_addr with arbitrary ipv6
-    # values is if they used add_host - which we don't let unprivileged code
-    # do.
 
     if (task._play_context.connection == 'local'
         or task._play_context.remote_addr == 'localhost'

@@ -1,0 +1,4 @@
+---
+features:
+  - |
+    The restriction on using ``add_host`` in playbooks has been lifted.
