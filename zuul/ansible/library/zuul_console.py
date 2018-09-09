@@ -49,7 +49,7 @@ def daemonize():
     sys.stderr.flush()
     i = open('/dev/null', 'r')
     o = open('/dev/null', 'a+')
-    e = open('/dev/null', 'a+', 0)
+    e = open('/dev/null', 'ab+', 0)
     os.dup2(i.fileno(), sys.stdin.fileno())
     os.dup2(o.fileno(), sys.stdout.fileno())
     os.dup2(e.fileno(), sys.stderr.fileno())
