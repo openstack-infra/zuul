@@ -24,6 +24,6 @@ iso8601
 psutil
 fb-re2>=1.0.6
 paho-mqtt
-cherrypy<18.0.0
+cherrypy
 ws4py
 routes
