@@ -36,10 +36,10 @@ required.
    $ pushd zuul/
 
    # For Fedora and CentOS:
-   $ sudo yum -y install $(bindep -b)
+   $ sudo yum -y install $(bindep -b compile)
 
    # For openSUSE:
-   $ zypper install -y $(bindep -b)
+   $ zypper install -y $(bindep -b compile)
 
    # All:
    $ sudo pip3 install .

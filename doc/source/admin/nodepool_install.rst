@@ -34,10 +34,10 @@ are required.
    $ pushd nodepool/
 
    # For Fedora and CentOS:
-   $ sudo yum -y install $(bindep -b)
+   $ sudo yum -y install $(bindep -b compile)
 
    # For openSUSE:
-   $ sudo zypper install -y $(bindep -b)
+   $ sudo zypper install -y $(bindep -b compile)
 
    # All:
    $ sudo pip3 install .
