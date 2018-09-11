@@ -336,8 +336,6 @@ class ZuulWebAPI(object):
                branch=None, patchset=None, ref=None, newrev=None,
                uuid=None, job_name=None, voting=None, node_name=None,
                result=None, limit=50, skip=0):
-        sql_driver = self.zuulweb.connections.drivers['sql']
-
         # Ask the scheduler which sql connection to use for this tenant
         job = self.rpc.submitJob('zuul:tenant_sql_connection',
                                  {'tenant': tenant})
@@ -366,6 +364,34 @@ class ZuulWebAPI(object):
             if v:
                 args['build_filters'].setdefault(k, []).append(v)
         data = connection.get_builds(args)
+        resp = cherrypy.response
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return data
+
+    @cherrypy.expose
+    @cherrypy.tools.save_params()
+    @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
+    def build(self, tenant, uuid):
+        # Ask the scheduler which sql connection to use for this tenant
+        job = self.rpc.submitJob('zuul:tenant_sql_connection',
+                                 {'tenant': tenant})
+        connection_name = json.loads(job.data[0])
+
+        if not connection_name:
+            raise cherrypy.HTTPError(404, 'Tenant %s does not exist.' % tenant)
+
+        connection = self.zuulweb.connections.connections[connection_name]
+
+        args = {
+            'buildset_filters': {'tenant': [tenant]},
+            'build_filters': {'uuid': [uuid]},
+            'limit': 1,
+            'skip': 0,
+        }
+        data = connection.get_builds(args)
+        if not data:
+            raise cherrypy.HTTPError(404, "Build not found")
+        data = data[0]
         resp = cherrypy.response
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return data
@@ -510,6 +536,8 @@ class ZuulWeb(object):
                           controller=api, action='console_stream')
         route_map.connect('api', '/api/tenant/{tenant}/builds',
                           controller=api, action='builds')
+        route_map.connect('api', '/api/tenant/{tenant}/build/{uuid}',
+                          controller=api, action='build')
         route_map.connect('api', '/api/tenant/{tenant}/config-errors',
                           controller=api, action='config_errors')
 
