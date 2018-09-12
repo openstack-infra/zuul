@@ -1198,7 +1198,7 @@ class Scheduler(threading.Thread):
     def _processAutohold(self, build):
         # We explicitly only want to hold nodes for jobs if they have
         # failed / retry_limit / post_failure and have an autohold request.
-        hold_list = ["FAILURE", "RETRY_LIMIT", "POST_FAILURE"]
+        hold_list = ["FAILURE", "RETRY_LIMIT", "POST_FAILURE", "TIMED_OUT"]
         if build.result not in hold_list:
             return
 
