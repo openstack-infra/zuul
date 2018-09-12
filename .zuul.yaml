@@ -65,10 +65,9 @@
       javascript_copy_links: false
 
 - project:
-    templates:
-      - build-tox-docs
     check:
       jobs:
+        - tox-docs
         - tox-pep8
         - tox-py35:
             irrelevant-files:
@@ -101,6 +100,7 @@
             voting: false
     gate:
       jobs:
+        - tox-docs
         - tox-pep8
         - tox-py35:
             irrelevant-files:
