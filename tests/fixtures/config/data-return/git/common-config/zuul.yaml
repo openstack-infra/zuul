@@ -41,6 +41,15 @@
     name: child
     run: playbooks/child.yaml
 
+- job:
+    name: several-zuul-return-parent
+    post-run: playbooks/several-zuul-return-parent-post.yaml
+
+- job:
+    name: several-zuul-return-child
+    parent: several-zuul-return-parent
+    run: playbooks/several-zuul-return-child.yaml
+
 - project:
     name: org/project
     check:
@@ -84,3 +93,12 @@
         - child:
             dependencies:
               - data-return-skip-all
+
+- project:
+    name: org/project4
+    check:
+      jobs:
+        - several-zuul-return-child
+        - data-return:
+            dependencies:
+              - several-zuul-return-child

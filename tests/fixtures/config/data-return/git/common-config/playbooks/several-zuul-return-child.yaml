@@ -1,0 +1,6 @@
+- hosts: localhost
+  tasks:
+    - zuul_return:
+        data:
+          zuul:
+            child_jobs: []

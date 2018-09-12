@@ -3084,6 +3084,20 @@ class TestDataReturn(AnsibleZuulTestCase):
         self.assertIn('data-return : SKIPPED', A.messages[-1])
         self.assertIn('Build succeeded', A.messages[-1])
 
+    def test_several_zuul_return(self):
+        A = self.fake_gerrit.addFakeChange('org/project4', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='several-zuul-return-child', result='SUCCESS',
+                 changes='1,1'),
+        ])
+        self.assertIn(
+            '- several-zuul-return-child http://example.com/test/log/url/',
+            A.messages[-1])
+        self.assertIn('data-return : SKIPPED', A.messages[-1])
+        self.assertIn('Build succeeded', A.messages[-1])
+
 
 class TestDiskAccounting(AnsibleZuulTestCase):
     config_file = 'zuul-disk-accounting.conf'

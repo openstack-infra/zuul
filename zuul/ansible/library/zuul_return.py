@@ -20,6 +20,22 @@ import json
 import tempfile
 
 
+def merge_dict(dict_a, dict_b):
+    """
+    Add dict_a into dict_b
+    Merge values if possible else dict_a value replace dict_b value
+    """
+    for key in dict_a:
+        if key in dict_b:
+            if isinstance(dict_a[key], dict) and isinstance(dict_b[key], dict):
+                merge_dict(dict_a[key], dict_b[key])
+            else:
+                dict_b[key] = dict_a[key]
+        else:
+            dict_b[key] = dict_a[key]
+    return dict_b
+
+
 def set_value(path, new_data, new_file):
     workdir = os.path.dirname(path)
     data = None
@@ -33,9 +49,9 @@ def set_value(path, new_data, new_file):
 
     if new_file:
         with open(new_file, 'r') as f:
-            data.update(json.load(f))
+            merge_dict(json.load(f), data)
     if new_data:
-        data.update(new_data)
+        merge_dict(new_data, data)
 
     (f, tmp_path) = tempfile.mkstemp(dir=workdir)
     try:
