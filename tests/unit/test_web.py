@@ -109,6 +109,7 @@ class TestWeb(BaseTestWeb):
         self.assertIn('Access-Control-Allow-Origin', resp.headers)
         self.assertIn('Cache-Control', resp.headers)
         self.assertIn('Last-Modified', resp.headers)
+        self.assertTrue(resp.headers['Last-Modified'].endswith(' GMT'))
 
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()

@@ -21,6 +21,7 @@ from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 from ws4py.websocket import WebSocket
 import codecs
 import copy
+from datetime import datetime
 import json
 import logging
 import os
@@ -245,7 +246,9 @@ class ZuulWebAPI(object):
         resp = cherrypy.response
         resp.headers["Cache-Control"] = "public, max-age=%d" % \
                                         self.cache_expiry
-        resp.headers["Last-modified"] = self.cache_time[tenant]
+        last_modified = datetime.utcfromtimestamp(self.cache_time[tenant])
+        last_modified_header = last_modified.strftime('%a, %d %b %Y %X GMT')
+        resp.headers["Last-modified"] = last_modified_header
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return payload
 
