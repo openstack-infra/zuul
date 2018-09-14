@@ -590,9 +590,12 @@ executor running the job is available:
       .. var:: inventory_file
 
          The path to the inventory. This variable is needed for jobs running
-         without a nodeset since Ansible doesn't set it for localhost, see
+         without a nodeset since Ansible doesn't set it for localhost; see
          this `porting guide
-         <https://docs.ansible.com/ansible/latest/porting_guides/porting_guide_2.4.html#inventory>`_
+         <https://docs.ansible.com/ansible/latest/porting_guides/porting_guide_2.4.html#inventory>`_.
+
+         The inventory file is only readable by jobs running in a
+         :term:`trusted execution context`.
 
 SSH Keys
 --------
