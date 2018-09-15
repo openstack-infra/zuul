@@ -4193,6 +4193,8 @@ class TestUnreachable(AnsibleZuulTestCase):
             dict(name='pre-unreachable', result=None, changes='1,1'),
             dict(name='run-unreachable', result=None, changes='1,1'),
             dict(name='run-unreachable', result=None, changes='1,1'),
+            dict(name='post-unreachable', result=None, changes='1,1'),
+            dict(name='post-unreachable', result=None, changes='1,1'),
         ], ordered=False)
         unreachable_log = self._get_file(self.history[0],
                                          '.ansible/nodes.unreachable')
