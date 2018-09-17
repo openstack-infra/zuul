@@ -628,9 +628,8 @@ In order to stop the executor and under normal circumstances it is
 best to pause and wait for all currently running jobs to finish
 before stopping it. To do so run ``zuul-executor pause``.
 
-To stop the executor immediately, aborting all jobs (they may be
-relaunched according to their retry policy), run ``zuul-executor
-stop``.
+To stop the executor immediately, run ``zuul-executor stop``. Jobs that were
+running on the stopped executor will be rescheduled on other executors.
 
 To enable or disable running Ansible in verbose mode (with the
 ``-vvv`` argument to ansible-playbook) run ``zuul-executor verbose``
