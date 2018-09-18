@@ -980,11 +980,11 @@ class FakeGithubPullRequest(object):
     def _createPRRef(self):
         repo = self._getRepo()
         GithubChangeReference.create(
-            repo, self._getPRReference(), 'refs/tags/init')
+            repo, self.getPRReference(), 'refs/tags/init')
 
     def _addCommitToRepo(self, files=[], reset=False):
         repo = self._getRepo()
-        ref = repo.references[self._getPRReference()]
+        ref = repo.references[self.getPRReference()]
         if reset:
             self.number_of_commits = 0
             ref.set_object('refs/tags/init')
@@ -1007,6 +1007,7 @@ class FakeGithubPullRequest(object):
             repo.index.add([fn])
 
         self.head_sha = repo.index.commit(msg).hexsha
+        repo.create_head(self.getPRReference(), self.head_sha, force=True)
         # Create an empty set of statuses for the given sha,
         # each sha on a PR may have a status set on it
         self.statuses[self.head_sha] = []
@@ -1020,7 +1021,7 @@ class FakeGithubPullRequest(object):
 
     def getPRHeadSha(self):
         repo = self._getRepo()
-        return repo.references[self._getPRReference()].commit.hexsha
+        return repo.references[self.getPRReference()].commit.hexsha
 
     def addReview(self, user, state, granted_on=None):
         gh_time_format = '%Y-%m-%dT%H:%M:%SZ'
@@ -1056,7 +1057,7 @@ class FakeGithubPullRequest(object):
             'submitted_at': submitted_at,
         })
 
-    def _getPRReference(self):
+    def getPRReference(self):
         return '%s/head' % self.number
 
     def _getPullRequestEvent(self, action):
