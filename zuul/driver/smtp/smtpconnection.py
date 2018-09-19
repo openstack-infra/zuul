@@ -36,6 +36,13 @@ class SMTPConnection(BaseConnection):
             'default_from', 'zuul')
         self.smtp_default_to = self.connection_config.get(
             'default_to', 'zuul')
+        self.smtp_user = self.connection_config.get('user')
+        self.smtp_pass = self.connection_config.get('password')
+        starttls = self.connection_config.get('use_starttls', 'false')
+        if starttls.lower() == 'false':
+            self.smtp_starttls = False
+        else:
+            self.smtp_starttls = True
 
     def sendMail(self, subject, message, from_email=None, to_email=None):
         # Create a text/plain email message
@@ -50,11 +57,15 @@ class SMTPConnection(BaseConnection):
 
         try:
             s = smtplib.SMTP(self.smtp_server, self.smtp_port)
+            if self.smtp_starttls:
+                s.starttls()
+                s.ehlo()
+            if self.smtp_user is not None and self.smtp_pass is not None:
+                s.login(self.smtp_user, self.smtp_pass)
             s.sendmail(from_email, to_email.split(','), msg.as_string())
             s.quit()
-        except Exception:
-            return "Could not send email via SMTP"
-        return
+        except Exception as e:
+            self.log.warning("Error sending mail via SMTP: %s", e)
 
 
 def getSchema():
