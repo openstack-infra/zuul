@@ -306,6 +306,34 @@ class ZuulWebAPI(object):
 
     @cherrypy.expose
     @cherrypy.tools.save_params()
+    @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
+    def projects(self, tenant):
+        job = self.rpc.submitJob('zuul:project_list', {'tenant': tenant})
+        ret = json.loads(job.data[0])
+        if ret is None:
+            raise cherrypy.HTTPError(404, 'Tenant %s does not exist.' % tenant)
+        resp = cherrypy.response
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return ret
+
+    @cherrypy.expose
+    @cherrypy.tools.save_params()
+    @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
+    def project(self, tenant, project):
+        job = self.rpc.submitJob(
+            'zuul:project_get', {'tenant': tenant, 'project': project})
+        ret = json.loads(job.data[0])
+        if ret is None:
+            raise cherrypy.HTTPError(404, 'Tenant %s does not exist.' % tenant)
+        if not ret:
+            raise cherrypy.HTTPError(
+                404, 'Project %s does not exist.' % project)
+        resp = cherrypy.response
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return ret
+
+    @cherrypy.expose
+    @cherrypy.tools.save_params()
     def key(self, tenant, project):
         job = self.rpc.submitJob('zuul:key_get', {'tenant': tenant,
                                                   'project': project,
@@ -530,6 +558,10 @@ class ZuulWeb(object):
                           controller=api, action='jobs')
         route_map.connect('api', '/api/tenant/{tenant}/job/{job_name}',
                           controller=api, action='job')
+        route_map.connect('api', '/api/tenant/{tenant}/projects',
+                          controller=api, action='projects')
+        route_map.connect('api', '/api/tenant/{tenant}/project/{project:.*}',
+                          controller=api, action='project')
         route_map.connect('api', '/api/tenant/{tenant}/key/{project:.*}.pub',
                           controller=api, action='key')
         route_map.connect('api', '/api/tenant/{tenant}/'
