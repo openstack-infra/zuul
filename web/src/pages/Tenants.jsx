@@ -47,18 +47,27 @@ class TenantsPage extends Refreshable {
     const cellFormat = (value) => (
       <Table.Cell>{value}</Table.Cell>)
     const columns = []
-    const myColumns = ['name', 'status', 'jobs', 'builds', 'projects', 'queue']
+    const myColumns = [
+      'name', 'status', 'projects', 'jobs', 'builds', 'projects count', 'queue']
     myColumns.forEach(column => {
+      let prop = column
+      if (column === 'projects count') {
+        prop = 'projects'
+      } else if (column === 'projects') {
+        prop = 'projects_link'
+      }
       columns.push({
         header: {label: column,
           formatters: [headerFormat]},
-        property: column,
+        property: prop,
         cell: {formatters: [cellFormat]}
       })
     })
     tenants.forEach(tenant => {
       tenant.status = (
         <Link to={'/t/' + tenant.name + '/status'}>Status</Link>)
+      tenant.projects_link = (
+        <Link to={'/t/' + tenant.name + '/projects'}>Projects</Link>)
       tenant.jobs = (
         <Link to={'/t/' + tenant.name + '/jobs'}>Jobs</Link>)
       tenant.builds = (
