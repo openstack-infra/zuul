@@ -18,6 +18,7 @@ import ProjectPage from './pages/Project'
 import ProjectsPage from './pages/Projects'
 import JobPage from './pages/Job'
 import JobsPage from './pages/Jobs'
+import LabelsPage from './pages/Labels'
 import BuildPage from './pages/Build'
 import BuildsPage from './pages/Builds'
 import ConfigErrorsPage from './pages/ConfigErrors'
@@ -43,6 +44,11 @@ const routes = () => [
     title: 'Jobs',
     to: '/jobs',
     component: JobsPage
+  },
+  {
+    title: 'Labels',
+    to: '/labels',
+    component: LabelsPage
   },
   {
     title: 'Builds',

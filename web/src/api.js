@@ -140,6 +140,9 @@ function fetchJob (apiPrefix, jobName) {
 function fetchJobs (apiPrefix) {
   return Axios.get(apiUrl + apiPrefix + 'jobs')
 }
+function fetchLabels (apiPrefix) {
+  return Axios.get(apiUrl + apiPrefix + 'labels')
+}
 
 export {
   getHomepageUrl,
@@ -153,6 +156,7 @@ export {
   fetchProjects,
   fetchJob,
   fetchJobs,
+  fetchLabels,
   fetchTenants,
   fetchInfo
 }
