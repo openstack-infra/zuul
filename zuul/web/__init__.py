@@ -200,6 +200,7 @@ class ZuulWebAPI(object):
         self.cache_time = {}
         self.cache_expiry = 1
         self.static_cache_expiry = zuulweb.static_cache_expiry
+        self.status_lock = threading.Lock()
 
     @cherrypy.expose
     @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
@@ -234,12 +235,13 @@ class ZuulWebAPI(object):
         return ret
 
     def _getStatus(self, tenant):
-        if tenant not in self.cache or \
-           (time.time() - self.cache_time[tenant]) > self.cache_expiry:
-            job = self.rpc.submitJob('zuul:status_get',
-                                     {'tenant': tenant})
-            self.cache[tenant] = json.loads(job.data[0])
-            self.cache_time[tenant] = time.time()
+        with self.status_lock:
+            if tenant not in self.cache or \
+               (time.time() - self.cache_time[tenant]) > self.cache_expiry:
+                job = self.rpc.submitJob('zuul:status_get',
+                                         {'tenant': tenant})
+                self.cache[tenant] = json.loads(job.data[0])
+                self.cache_time[tenant] = time.time()
         payload = self.cache[tenant]
         if payload.get('code') == 404:
             raise cherrypy.HTTPError(404, payload['message'])
