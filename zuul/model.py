@@ -1638,8 +1638,8 @@ class Build(object):
         self.nodeset = None
 
     def __repr__(self):
-        return ('<Build %s of %s on %s>' %
-                (self.uuid, self.job.name, self.worker))
+        return ('<Build %s of %s voting:%s on %s>' %
+                (self.uuid, self.job.name, self.job.voting, self.worker))
 
     @property
     def pipeline(self):
