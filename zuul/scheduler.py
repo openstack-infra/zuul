@@ -1261,14 +1261,22 @@ class Scheduler(threading.Thread):
             return
 
         if build_set is not build_set.item.current_build_set:
-            self.log.warning("Build set %s is not current" % (build_set,))
+            self.log.warning("Build set %s is not current "
+                             "for node request %s", build_set, request)
+            if request.fulfilled:
+                self.nodepool.returnNodeSet(request.nodeset)
+            return
+        if request.job.name not in [x.name for x in build_set.item.getJobs()]:
+            self.log.warning("Item %s does not contain job %s "
+                             "for node request %s",
+                             build_set.item, request.job.name, request)
             if request.fulfilled:
                 self.nodepool.returnNodeSet(request.nodeset)
             return
         pipeline = build_set.item.pipeline
         if not pipeline:
-            self.log.warning("Build set %s is not associated with a pipeline" %
-                             (build_set,))
+            self.log.warning("Build set %s is not associated with a pipeline "
+                             "for node request %s", build_set, request)
             if request.fulfilled:
                 self.nodepool.returnNodeSet(request.nodeset)
             return

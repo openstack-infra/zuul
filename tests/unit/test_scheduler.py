@@ -5095,6 +5095,31 @@ For CI problems and help debugging, contact ci@example.org"""
         self.fake_nodepool.paused = False
         self.waitUntilSettled()
 
+    def test_nodepool_job_removal(self):
+        "Test that nodes are returned unused after job removal"
+
+        self.fake_nodepool.paused = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.commitConfigUpdate('common-config', 'layouts/no-jobs.yaml')
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        self.fake_nodepool.paused = False
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertEqual(A.reported, 2)
+        self.assertHistory([
+            dict(name='gate-noop', result='SUCCESS', changes='1,1'),
+        ])
+        for node in self.fake_nodepool.getNodes():
+            self.assertFalse(node['_lock'])
+            self.assertEqual(node['state'], 'ready')
+
     @simple_layout('layouts/multiple-templates.yaml')
     def test_multiple_project_templates(self):
         # Test that applying multiple project templates to a project
