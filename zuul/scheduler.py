@@ -845,7 +845,7 @@ class Scheduler(threading.Thread):
         if self.statsd:
             try:
                 for pipeline in tenant.layout.pipelines.values():
-                    items = len(pipeline.getAllItems())
+                    items = len([x for x in pipeline.getAllItems() if x.live])
                     # stats.gauges.zuul.tenant.<tenant>.pipeline.
                     #    <pipeline>.current_changes
                     key = 'zuul.tenant.%s.pipeline.%s' % (
