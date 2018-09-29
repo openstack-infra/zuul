@@ -245,9 +245,9 @@ class TestWeb(BaseTestWeb):
         self.assertEqual(1, data[0]['queue'])
 
     def test_web_bad_url(self):
-        # do we redirect to index.html
+        # do we 404 correctly
         resp = self.get_url("status/foo")
-        self.assertEqual(200, resp.status_code)
+        self.assertEqual(404, resp.status_code)
 
     def test_web_find_change(self):
         # can we filter by change id

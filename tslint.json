@@ -1,0 +1,7 @@
+{
+  "extends": ["tslint-angular"],
+  "rules": {
+    "array-type": [true, "array-simple"],
+    "semicolon": [true, "never"]
+  }
+}

@@ -51,8 +51,10 @@ class TestWebURLs(ZuulTestCase):
         ]:
             for item in page.find_all(tag):
                 suburl = item.get(attr)
-                if suburl.startswith('/'):
-                    suburl = suburl[1:]
+                # Skip empty urls. Also skip the navbar relative link for now.
+                # TODO(mordred) Remove when we have the top navbar link sorted.
+                if suburl is None or suburl == "../":
+                    continue
                 link = urllib.parse.urljoin(url, suburl)
                 self._get(self.port, link)
 
@@ -64,8 +66,7 @@ class TestDirect(TestWebURLs):
         self.port = self.web.port
 
     def test_status_page(self):
-        self._crawl('/')
-        self._crawl('/t/tenant-one/status')
+        self._crawl('/t/tenant-one/status.html')
 
 
 class TestWhiteLabel(TestWebURLs):
@@ -80,8 +81,7 @@ class TestWhiteLabel(TestWebURLs):
         self.port = self.proxy.port
 
     def test_status_page(self):
-        self._crawl('/')
-        self._crawl('/status')
+        self._crawl('/status.html')
 
 
 class TestWhiteLabelAPI(TestWebURLs):
@@ -108,11 +108,11 @@ class TestSuburl(TestWebURLs):
     def setUp(self):
         super(TestSuburl, self).setUp()
         rules = [
-            ('^/zuul/(.*)$', 'http://localhost:{}/\\1'.format(
+            ('^/zuul3/(.*)$', 'http://localhost:{}/\\1'.format(
                 self.web.port)),
         ]
         self.proxy = self.useFixture(WebProxyFixture(rules))
         self.port = self.proxy.port
 
     def test_status_page(self):
-        self._crawl('/zuul/')
+        self._crawl('/zuul3/t/tenant-one/status.html')
