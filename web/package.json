@@ -1,0 +1,41 @@
+{
+  "name": "@zuul-ci/dashboard",
+  "version": "1.0.0",
+  "description": "Web Dashboard for Zuul",
+  "repository": "https://git.zuul-ci.org/zuul",
+  "author": "OpenStack Infra",
+  "license": "Apache-2.0",
+  "homepage": "/",
+  "private": true,
+  "dependencies": {
+    "axios": "^0.18.0",
+    "lodash": "^4.17.10",
+    "patternfly-react": "^2.13.1",
+    "prop-types": "^15.6.2",
+    "react": "^16.4.2",
+    "react-dom": "^16.4.2",
+    "react-redux": "^5.0.7",
+    "react-router": "^4.3.1",
+    "react-router-dom": "^4.3.1",
+    "react-scripts": "1.1.4",
+    "redux": "<4.0.0",
+    "redux-thunk": "^2.3.0",
+    "sockette": "^2.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^5.3.0",
+    "eslint-plugin-jest": "^21.21.0",
+    "eslint-plugin-react": "^7.11.1",
+    "eslint-plugin-standard": "^3.1.0",
+    "yarn": "^1.9.4"
+  },
+  "scripts": {
+    "start:openstack": "REACT_APP_ZUUL_API='https://zuul.openstack.org/api/' react-scripts start",
+    "start:multi": "REACT_APP_ZUUL_API='https://softwarefactory-project.io/zuul/api/' react-scripts start",
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject",
+    "lint": "eslint --ext .js --ext .jsx src"
+  }
+}

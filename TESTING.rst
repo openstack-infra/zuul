@@ -38,11 +38,15 @@ As of zuul v3, a running zookeeper is required to execute tests.
 
 *Install javascript dependencies*::
 
+  pushd web
   yarn install
+  popd
 
 *Build javascript assets*::
 
-  npm run build:dev
+  pushd web
+  yarn build
+  popd
 
 Run The Tests
 -------------
