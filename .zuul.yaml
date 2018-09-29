@@ -128,6 +128,7 @@
         - publish-openstack-javascript-content:
             vars:
                 node_version: 8
+                zuul_work_dir: "{{ zuul.project.src_dir }}/web"
         - openstackzuul-pbrx-push-container-images:
             vars:
               pbrx_prefix: zuul
