@@ -42,27 +42,20 @@
 - job:
     name: zuul-build-dashboard
     parent: build-javascript-content
-    success-url: 'npm/html/status.html'
+    success-url: 'npm/html/'
     files:
-      - package.json
-      - tsconfig.json
-      - tslint.json
       - web/.*
-      - webpack.config.js
-      - yarn.lock
     vars:
-      javascript_content_dir: zuul/web/static
+      javascript_content_dir: "../zuul/web/static"
+      zuul_work_dir: "{{ zuul.project.src_dir }}/web"
       zuul_api_url: https://zuul.openstack.org
     run: playbooks/dashboard/run.yaml
 
 - job:
     name: zuul-build-dashboard-multi-tenant
     parent: zuul-build-dashboard
-    success-url: 'npm/html/tenants.html'
-    post-run: playbooks/dashboard/multi.yaml
     vars:
       zuul_api_url: https://softwarefactory-project.io/zuul
-      javascript_copy_links: false
 
 - project:
     check:
@@ -82,15 +75,15 @@
         - zuul-build-dashboard-multi-tenant
         - nodejs-npm-run-lint:
             vars:
-                node_version: 8
+              node_version: 8
+              zuul_work_dir: "{{ zuul.project.src_dir }}/web"
+        - nodejs-npm-run-test:
+            vars:
+              node_version: 8
+              zuul_work_dir: "{{ zuul.project.src_dir }}/web"
             success-url: 'npm/reports/bundle.html'
             files:
-              - package.json
-              - tsconfig.json
-              - tslint.json
               - web/.*
-              - webpack.config.js
-              - yarn.lock
         - zuul-stream-functional
         - zuul-tox-remote
         - pbrx-build-container-images:
@@ -114,15 +107,15 @@
         - zuul-build-dashboard
         - nodejs-npm-run-lint:
             vars:
-                node_version: 8
+              node_version: 8
+              zuul_work_dir: "{{ zuul.project.src_dir }}/web"
+        - nodejs-npm-run-test:
+            vars:
+              node_version: 8
+              zuul_work_dir: "{{ zuul.project.src_dir }}/web"
             success-url: 'npm/reports/bundle.html'
             files:
-              - package.json
-              - tsconfig.json
-              - tslint.json
               - web/.*
-              - webpack.config.js
-              - yarn.lock
         - zuul-stream-functional
         - zuul-tox-remote
         - pbrx-build-container-images:
@@ -134,7 +127,9 @@
         - publish-openstack-python-branch-tarball
         - publish-openstack-javascript-content:
             vars:
-                node_version: 8
+              node_version: 8
+              zuul_work_dir: "{{ zuul.project.src_dir }}/web"
+              create_tarball_directory: build
         - openstackzuul-pbrx-push-container-images:
             vars:
               pbrx_prefix: zuul

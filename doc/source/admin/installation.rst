@@ -95,7 +95,7 @@ Static External
 Sub-URL
   Serve a Zuul dashboard from a location below the root URL as part of
   presenting integration with other application.
-  https://softwarefactory-project.io/zuul3/ is an example of a Zuul dashboard
+  https://softwarefactory-project.io/zuul/ is an example of a Zuul dashboard
   that is being served from a Sub-URL.
 
 None of those make any sense for simple non-production oriented deployments, so
@@ -121,18 +121,71 @@ simplest reverse-proxy case is::
 Static Offload
 --------------
 
-To have the Reverse Proxy serve the static html/javscript assets instead of
+To have the Reverse Proxy serve the static html/javascript assets instead of
 proxying them to the REST layer, register the location where you unpacked
-the web application as the document root and add a simple rewrite rule::
+the web application as the document root and add rewrite rules::
 
-  DocumentRoot /var/lib/html
-  <Directory /var/lib/html>
+  <Directory /usr/share/zuul>
     Require all granted
   </Directory>
-  RewriteEngine on
-  RewriteRule ^/t/.*/(.*)$ /$1 [L]
-  RewriteRule ^/api/tenant/(.*)/console-stream ws://localhost:9000/api/tenant/$1/console-stream [P]
-  RewriteRule ^/api/(.*)$ http://localhost:9000/api/$1 [P]
+  Alias / /usr/share/zuul/
+  <Location />
+    RewriteEngine on
+    RewriteBase /
+    # Rewrite api to the zuul-web endpoint
+    RewriteRule api/tenant/(.*)/console-stream ws://localhost:9000/api/tenant/$1/console-stream [P,L]
+    RewriteRule api/(.*)$ http://localhost:9000/api/$1 [P,L]
+    # Backward compatible rewrite
+    RewriteRule t/(.*)/(.*).html(.*) /t/$1/$2$3 [R=301,L,NE]
+
+    # Don't rewrite files or directories
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule . /index.html [L]
+  </Location>
+
+
+Sub directory serving
+---------------------
+
+The web application needs to be rebuild to update the internal location of
+the static files. Set the homepage setting in the package.json to an
+absolute path or url. For example, to deploy the web interface through a
+'/zuul/' sub directory:
+
+.. note::
+
+   The web dashboard source code and package.json are located in the ``web``
+   directory. All the yarn commands need to be executed from the ``web``
+   directory.
+
+.. code-block:: bash
+
+  sed -e 's#"homepage": "/"#"homepage": "/zuul/"#' -i package.json
+  yarn build
+
+Then assuming the web application is unpacked in /usr/share/zuul,
+add the following rewrite rules::
+
+  <Directory /usr/share/zuul>
+    Require all granted
+  </Directory>
+  Alias /zuul /usr/share/zuul/
+  <Location /zuul>
+    RewriteEngine on
+    RewriteBase /zuul
+    # Rewrite api to the zuul-web endpoint
+    RewriteRule api/tenant/(.*)/console-stream ws://localhost:9000/api/tenant/$1/console-stream [P,L]
+    RewriteRule api/(.*)$ http://localhost:9000/api/$1 [P,L]
+    # Backward compatible rewrite
+    RewriteRule t/(.*)/(.*).html(.*) /t/$1/$2$3 [R=301,L,NE]
+
+    # Don't rewrite files or directories
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule . /zuul/index.html [L]
+  </Location>
+
 
 White Labeled Tenant
 --------------------
@@ -147,14 +200,27 @@ rule to ensure connection webhooks don't try to get put into the tenant scope.
 
 Assuming the zuul tenant name is "example", the rewrite rules are::
 
-  DocumentRoot /var/lib/html
-  <Directory /var/lib/html>
+  <Directory /usr/share/zuul>
     Require all granted
   </Directory>
-  RewriteEngine on
-  RewriteRule ^/api/connection/(.*)$ http://localhost:9000/api/connection/$1 [P]
-  RewriteRule ^/api/console-stream ws://localhost:9000/api/tenant/example/console-stream [P]
-  RewriteRule ^/api/(.*)$ http://localhost:9000/api/tenant/example/$1 [P]
+  Alias / /usr/share/zuul/
+  <Location />
+    RewriteEngine on
+    RewriteBase /
+    # Rewrite api to the zuul-web endpoint
+    RewriteRule api/connection/(.*)$ http://localhost:9000/api/connection/$1 [P,L]
+    RewriteRule api/console-stream ws://localhost:9000/api/tenant/example/console-stream [P,L]
+    RewriteRule api/(.*)$ http://localhost:9000/api/tenant/example/$1 [P,L]
+    # Backward compatible rewrite
+    RewriteRule t/(.*)/(.*).html(.*) /t/$1/$2$3 [R=301,L,NE]
+
+    # Don't rewrite files or directories
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule . /index.html [L]
+  </Location>
+
+
 
 Static External
 ---------------
@@ -165,9 +231,8 @@ Static External
   dynamic url rewrite rules only works for white-labeled deployments.
 
 In order to serve the zuul dashboard code from an external static location,
-``ZUUL_API_URL`` must be set at javascript build time by passing the
-``--define`` flag to the ``npm build:dist`` command.
+``REACT_APP_ZUUl_API`` must be set at javascript build time:
 
 .. code-block:: bash
 
-  npm build:dist -- --define "ZUUL_API_URL='http://zuul-web.example.com'"
+  REACT_APP_ZUUL_API='http://zuul-web.example.com' yarn build

@@ -448,22 +448,24 @@ class ZuulWebAPI(object):
         cherrypy.request.ws_handler.zuulweb = self.zuulweb
 
 
-class TenantStaticHandler(object):
-    def __init__(self, path):
-        self._cp_config = {
-            'tools.staticdir.on': True,
-            'tools.staticdir.dir': path,
-            'tools.staticdir.index': 'status.html',
-        }
+class StaticHandler(object):
+    def __init__(self, root):
+        self.root = root
 
-
-class RootStaticHandler(object):
-    def __init__(self, path):
-        self._cp_config = {
-            'tools.staticdir.on': True,
-            'tools.staticdir.dir': path,
-            'tools.staticdir.index': 'tenants.html',
-        }
+    def default(self, path, **kwargs):
+        # Try to handle static file first
+        handled = cherrypy.lib.static.staticdir(
+            section="",
+            dir=self.root,
+            index='index.html')
+        if not path or not handled:
+            # When not found, serve the index.html
+            return cherrypy.lib.static.serve_file(
+                path=os.path.join(self.root, "index.html"),
+                content_type="text/html")
+        else:
+            return cherrypy.lib.static.serve_file(
+                path=os.path.join(self.root, path))
 
 
 class StreamManager(object):
@@ -556,8 +558,6 @@ class ZuulWeb(object):
 
         route_map = cherrypy.dispatch.RoutesDispatcher()
         api = ZuulWebAPI(self)
-        tenant_static = TenantStaticHandler(self.static_path)
-        root_static = RootStaticHandler(self.static_path)
         route_map.connect('api', '/api/info',
                           controller=api, action='info')
         route_map.connect('api', '/api/tenants',
@@ -600,10 +600,10 @@ class ZuulWeb(object):
                     '/api/connection/%s' % connection.connection_name)
 
         # Add fallthrough routes at the end for the static html/js files
-        route_map.connect('root_static', '/{path:.*}',
-                          controller=root_static, action='default')
-        route_map.connect('tenant_static', '/t/{tenant}/{path:.*}',
-                          controller=tenant_static, action='default')
+        route_map.connect(
+            'root_static', '/{path:.*}',
+            controller=StaticHandler(self.static_path),
+            action='default')
 
         conf = {
             '/': {

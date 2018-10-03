@@ -1,0 +1,122 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+}
+a.refresh {
+  cursor: pointer;
+  border-bottom-style: none;
+  text-decoration: none;
+}
+
+/* Status page */
+.zuul-change {
+    margin-bottom: 10px;
+}
+
+.zuul-change-id {
+    float: right;
+}
+
+.zuul-job-result {
+    float: right;
+    width: 70px;
+    height: 15px;
+    margin: 2px 0 0 0;
+}
+
+.zuul-change-total-result {
+    height: 10px;
+    width: 100px;
+    margin: 0;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.zuul-spinner,
+.zuul-spinner:hover {
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+    cursor: default;
+    pointer-events: none;
+}
+
+.zuul-spinner-on,
+.zuul-spinner-on:hover {
+    opacity: 1;
+    transition-duration: 0.2s;
+    cursor: progress;
+}
+
+.zuul-change-cell {
+    padding-left: 5px;
+}
+
+.zuul-change-job {
+    padding: 2px 8px;
+}
+
+.zuul-job-name {
+    font-size: small;
+}
+
+.zuul-non-voting-desc {
+    font-size: smaller;
+}
+
+.zuul-patchset-header {
+    font-size: small;
+    padding: 8px 12px;
+}
+
+.form-inline > .form-group {
+    padding-right: 5px;
+}
+
+.zuul-change-row {
+    height: 100%;
+    padding: 0 0 10px 0;
+    margin: 0;
+    width: 16px;
+    min-width: 16px;
+    overflow: hidden;
+    vertical-align: top;
+}
+
+.zuul-build-status {
+    background: white;
+    font-size: 16px;
+}
+
+.zuul-build-merge-conflict:before {
+    color: black;
+}
+
+.zuul-change-row-line {
+    background-image: url('images/line.png');
+    background-repeat: 'repeat-y';
+}
+
+/* Stream page */
+#zuulstreamoverlay {
+    float: right;
+    position: fixed;
+    top: 70px;
+    right: 5px;
+    background-color: white;
+    padding: 2px 0px 0px 2px;
+    color: black;
+}
+
+pre#zuulstreamcontent {
+    font-family: monospace;
+    white-space: pre;
+    margin: 0px 10px;
+    background-color: black;
+    color: lightgrey;
+    border: none;
+}
+p.zuulstreamline {
+    margin: 0px 0px;
+    line-height: 1.4;
+}
