@@ -141,4 +141,5 @@
 
     release:
       jobs:
+        - release-zuul-python
         - publish-zuul-docs
