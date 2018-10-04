@@ -13,6 +13,7 @@
 # under the License.
 
 import collections
+import concurrent.futures
 import datetime
 import logging
 import hmac
@@ -668,6 +669,23 @@ class GithubConnection(BaseConnection):
 
         return token
 
+    def _get_repos_of_installation(self, inst_id, headers):
+        url = '%s/installation/repositories?per_page=100' % self.base_url
+        project_names = []
+        while url:
+            self.log.debug("Fetching repos for install %s" % inst_id)
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            repos = response.json()
+
+            for repo in repos.get('repositories'):
+                project_name = repo.get('full_name')
+                project_names.append(project_name)
+
+            # check if we need to do further paged calls
+            url = response.links.get('next', {}).get('url')
+        return project_names
+
     def _prime_installation_map(self):
         """Walks each app install for the repos to prime install IDs"""
 
@@ -690,26 +708,34 @@ class GithubConnection(BaseConnection):
             url = response.links.get(
                 'next', {}).get('url')
 
-        for install in installations:
-            inst_id = install.get('id')
-            token = self._get_installation_key(
-                project=None, inst_id=inst_id)
-            headers = {'Accept': PREVIEW_JSON_ACCEPT,
-                       'Authorization': 'token %s' % token}
+        headers_per_inst = {}
+        with concurrent.futures.ThreadPoolExecutor() as executor:
 
-            url = '%s/installation/repositories?per_page=100' % self.base_url
-            while url:
-                self.log.debug("Fetching repos for install %s" % inst_id)
-                response = requests.get(url, headers=headers)
-                response.raise_for_status()
-                repos = response.json()
+            token_by_inst = {}
+            for install in installations:
+                inst_id = install.get('id')
+                token_by_inst[inst_id] = executor.submit(
+                    self._get_installation_key, project=None, inst_id=inst_id)
 
-                for repo in repos.get('repositories'):
-                    project_name = repo.get('full_name')
+            for inst_id, result in token_by_inst.items():
+                token = result.result()
+                headers_per_inst[inst_id] = {
+                    'Accept': PREVIEW_JSON_ACCEPT,
+                    'Authorization': 'token %s' % token
+                }
+
+            project_names_by_inst = {}
+            for install in installations:
+                inst_id = install.get('id')
+                headers = headers_per_inst[inst_id]
+
+                project_names_by_inst[inst_id] = executor.submit(
+                    self._get_repos_of_installation, inst_id, headers)
+
+            for inst_id, result in project_names_by_inst.items():
+                project_names = result.result()
+                for project_name in project_names:
                     self.installation_map[project_name] = inst_id
-
-                # check if we need to do further paged calls
-                url = response.links.get('next', {}).get('url')
 
     def addEvent(self, data, event=None, delivery=None):
         return self.event_queue.put((time.time(), data, event, delivery))
