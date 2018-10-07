@@ -1,0 +1,14 @@
+- tenant:
+    name: example-tenant
+    source:
+      gerrit:
+        config-projects:
+          - zuul-config
+        untrusted-projects:
+          - test1
+          - test2
+      zuul-ci.org:
+        untrusted-projects:
+          - zuul-jobs:
+              include:
+                - job

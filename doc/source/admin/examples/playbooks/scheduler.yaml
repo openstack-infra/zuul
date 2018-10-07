@@ -1,0 +1,19 @@
+# The Zuul scheduler needs to be able to connect to the remote systems
+# in order to start.
+
+- hosts: localhost
+  tasks:
+    - name: wait for gerrit to start
+      wait_for:
+        host: gerrit
+        port: 29418
+    - name: wait for zuul user to be created
+      uri:
+        url: http://gerrit:8080/a/accounts/zuul/sshkeys
+        method: GET
+        user: admin
+        password: secret
+      register: result
+      until: result.status == 200 and result.redirected == false
+      delay: 1
+      retries: 120

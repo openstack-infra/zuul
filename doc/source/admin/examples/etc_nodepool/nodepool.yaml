@@ -1,0 +1,16 @@
+zookeeper-servers:
+  - host: zk
+
+labels:
+  - name: ubuntu-bionic
+
+providers:
+  - name: static-vms
+    driver: static
+    pools:
+      - name: main
+        nodes:
+          - name: node
+            labels: ubuntu-bionic
+            host-key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFjDZ9C89nUVGQ1qZzG/X0onkmcju4kWJ2uTLBdIXsy1"
+            username: root

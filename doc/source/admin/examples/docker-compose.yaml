@@ -1,0 +1,100 @@
+# Version 2 is the latest that is supported by docker-compose in
+# Ubuntu Xenial.
+version: '2'
+
+services:
+  gerrit:
+    image: gerritcodereview/gerrit
+    ports:
+      - "8080:8080"
+      - "29418:29418"
+  gerritconfig:
+    build:
+      dockerfile: ansible-Dockerfile
+      context: ./
+      args:
+        http_proxy: "${http_proxy}"
+        https_proxy: "${http_proxy}"
+        no_proxy: "${no_proxy}"
+    environment:
+      no_proxy: "${no_proxy},gerrit"
+    depends_on:
+      - gerrit
+    volumes:
+      - "sshkey:/var/ssh"
+      - "nodessh:/var/node"
+      - "./playbooks/:/var/playbooks/"
+    command: "ansible-playbook /var/playbooks/setup.yaml"
+  zk:
+     image: zookeeper
+  scheduler:
+    depends_on:
+      - gerritconfig
+      - zk
+    environment:
+      no_proxy: "${no_proxy},gerrit"
+    command: "sh -c 'ansible-playbook /var/playbooks/scheduler.yaml; zuul-scheduler -d'"
+    image: zuul/zuul-scheduler
+    volumes:
+      - "./etc_zuul/:/etc/zuul/"
+      - "./playbooks/:/var/playbooks/"
+      - "sshkey:/var/ssh"
+      - /var/lib/zuul
+  web:
+    command: "zuul-web -d"
+    depends_on:
+      - scheduler
+    ports:
+      - "9000:9000"
+    image: zuul/zuul-web
+    volumes:
+      - "./etc_zuul/:/etc/zuul/"
+  executor:
+    privileged: true
+    environment:
+      no_proxy: "${no_proxy},gerrit"
+    command: "sh -c 'ansible-playbook /var/playbooks/executor.yaml; zuul-executor -d'"
+    depends_on:
+      - scheduler
+    image: zuul/zuul-executor
+    volumes:
+      - "./etc_zuul/:/etc/zuul/"
+      - "./playbooks/:/var/playbooks/"
+      - "sshkey:/var/ssh"
+      - "logs:/srv/static/logs"
+  node:
+    build:
+      dockerfile: node-Dockerfile
+      context: ./
+      args:
+        http_proxy: "${http_proxy}"
+        https_proxy: "${http_proxy}"
+        no_proxy: "${no_proxy}"
+    volumes:
+      - "nodessh:/root/.ssh"
+  launcher:
+    command: "nodepool-launcher -d"
+    depends_on:
+      - zk
+    image: zuul/nodepool
+    volumes:
+      - "./etc_nodepool/:/etc/nodepool/"
+    ports:
+      - "8022:8022"
+  logs:
+    build:
+      dockerfile: logs-Dockerfile
+      context: ./
+      args:
+        http_proxy: "${http_proxy}"
+        https_proxy: "${http_proxy}"
+        no_proxy: "${no_proxy}"
+    ports:
+      - "8000:80"
+    volumes:
+      - "logs:/usr/local/apache2/htdocs"
+
+volumes:
+  sshkey:
+  nodessh:
+  logs:

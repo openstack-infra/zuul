@@ -1,0 +1,22 @@
+- job:
+    name: base
+    parent: null
+    description: |
+      The recommended base job.
+
+      All jobs ultimately inherit from this.  It runs a pre-playbook
+      which copies all of the job's prepared git repos on to all of
+      the nodes in the nodeset.
+
+      It also sets a default timeout value (which may be overidden).
+    pre-run: playbooks/base/pre.yaml
+    post-run:
+      - playbooks/base/post-ssh.yaml
+      - playbooks/base/post-logs.yaml
+    roles:
+      - zuul: zuul-jobs
+    timeout: 1800
+    nodeset:
+      nodes:
+        - name: ubuntu-bionic
+          label: ubuntu-bionic

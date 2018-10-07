@@ -1,0 +1,5 @@
+- hosts: localhost
+  gather_facts: False
+  roles:
+    - role: upload-logs
+      zuul_log_url: "http://localhost:8000"

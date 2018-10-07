@@ -11,6 +11,7 @@ provides to in-project configuration.
 .. toctree::
    :maxdepth: 2
 
+   tutorial
    quick-start
    zuul-from-scratch
    installation

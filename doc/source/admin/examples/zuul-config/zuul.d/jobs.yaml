@@ -1,0 +1,7 @@
+- job:
+    name: base
+    parent: null
+    nodeset:
+      nodes:
+        - name: ubuntu-bionic
+          label: ubuntu-bionic
