@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    The Zuul web dashboard has been rewritten in React.
+upgrade:
+  - |
+    The Zuul web dashboard is now a single index.html and static offload
+    server needs new rewrite rules. Check the install instruction for backward
+    compatible rewrite rules. Note that serving the web dashboard from a
+    sub-directory requires the application to be rebuilt using the desired
+    homepage location.

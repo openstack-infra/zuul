@@ -1,6 +1,7 @@
 include AUTHORS
 include ChangeLog
 include zuul/web/static/*
+include zuul/web/static/static/*/*
 
 exclude .gitignore
 exclude .gitreview

@@ -1,0 +1,23 @@
+parser: babel-eslint
+plugins:
+  - standard
+  - jest
+rules:
+  no-console: off
+  semi: [error, never]
+  quotes: [error, single]
+  lines-between-class-members: error
+  react/prop-types: error
+  react/jsx-key: error
+  react/no-did-mount-set-state: error
+  react/no-did-update-set-state: error
+  react/no-deprecated: error
+extends:
+  - eslint:recommended
+  - plugin:react/recommended
+settings:
+  react:
+    version: 16.4
+env:
+  jest/globals: true
+  browser: true
