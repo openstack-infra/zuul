@@ -624,12 +624,13 @@ To start the executor, run ``zuul-executor``.
 There are several commands which can be run to control the executor's
 behavior once it is running.
 
+In order to stop the executor and under normal circumstances it is
+best to pause and wait for all currently running jobs to finish
+before stopping it. To do so run ``zuul-executor pause``.
+
 To stop the executor immediately, aborting all jobs (they may be
 relaunched according to their retry policy), run ``zuul-executor
 stop``.
-
-To request that the executor stop executing new jobs and exit when all
-currently running jobs have completed, run ``zuul-executor graceful``.
 
 To enable or disable running Ansible in verbose mode (with the
 ``-vvv`` argument to ansible-playbook) run ``zuul-executor verbose``
