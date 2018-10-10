@@ -1,0 +1,49 @@
+- hosts: all
+  vars:
+    workspace: /tmp/quickstart-test
+  tasks:
+    - name: Install docker-compose and git-review
+      package:
+        name:
+          - docker.io  # See note [1]
+          - docker-compose
+          - git-review
+        state: present
+      become: true
+    - name: Create workspace directory
+      file:
+        state: directory
+        path: "{{ workspace }}"
+    - name: Generate example user ssh key
+      command: "ssh-keygen -f {{ workspace }}/id_rsa -N ''"
+      args:
+        creates: "{{ workspace }}/id_rsa.pub"
+    - name: Load example user SSH key
+      shell: "cat {{ workspace }}/id_rsa.pub"
+      register: ssh_key_cat
+    - name: Register example user SSH key
+      set_fact:
+        ssh_public_key: "{{ ssh_key_cat.stdout }}"
+    - name: Start ssh-agent
+      command: ssh-agent
+      register: ssh_agent
+    - name: Add key to ssh agent
+      shell:
+        executable: /bin/bash
+        cmd: |
+          {{ ssh_agent.stdout }}
+          ssh-add {{ workspace }}/id_rsa
+    - block:
+        - name: Run tasks in ssh agent
+          include_tasks: main.yaml
+      always:
+        - name: Stop ssh-agent
+          shell:
+            executable: /bin/bash
+            cmd: |
+              {{ ssh_agent.stdout }}
+              ssh-agent -k
+
+# [1]: docker.io is a recommended package and is therefore typically
+# automatically installed, however our test images disable this
+# behavior, so it is listed explicitly here.
