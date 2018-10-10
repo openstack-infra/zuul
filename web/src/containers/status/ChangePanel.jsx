@@ -282,8 +282,9 @@ class ChangePanel extends React.Component {
       expand = expanded
     }
     const header = (
-      <div className='panel panel-default zuul-change' onClick={this.onClick}>
-        <div className='panel-heading zuul-patchset-header'>
+      <div className='panel panel-default zuul-change'>
+        <div className='panel-heading zuul-patchset-header'
+             onClick={this.onClick}>
           <div className='row'>
             <div className='col-xs-8'>
               <span className='change_project'>{change.project}</span>
