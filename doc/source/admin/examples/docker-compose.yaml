@@ -9,13 +9,7 @@ services:
       - "8080:8080"
       - "29418:29418"
   gerritconfig:
-    build:
-      dockerfile: ansible-Dockerfile
-      context: ./
-      args:
-        http_proxy: "${http_proxy}"
-        https_proxy: "${http_proxy}"
-        no_proxy: "${no_proxy}"
+    image: zuul/zuul
     environment:
       no_proxy: "${no_proxy},gerrit"
     depends_on:
