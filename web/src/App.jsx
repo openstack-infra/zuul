@@ -35,6 +35,22 @@ class App extends React.Component {
     dispatch: PropTypes.func
   }
 
+  state = {
+      menuCollapsed: true
+  }
+
+  onNavToggleClick = () => {
+    this.setState({
+      menuCollapsed: !this.state.menuCollapsed
+    })
+  }
+
+  onNavClick = () => {
+    this.setState({
+      menuCollapsed: true
+    })
+  }
+
   constructor() {
     super()
     this.menu = routes()
@@ -49,7 +65,9 @@ class App extends React.Component {
       <ul className='nav navbar-nav navbar-primary'>
         {this.menu.filter(item => item.title).map(item => (
           <li key={item.to} className={item === activeItem ? 'active' : ''}>
-            <Link to={this.props.tenant.linkPrefix + item.to}>
+            <Link
+              to={this.props.tenant.linkPrefix + item.to}
+              onClick={this.onNavClick}>
               {item.title}
             </Link>
           </li>
@@ -114,6 +132,7 @@ class App extends React.Component {
   }
 
   render() {
+    const { menuCollapsed } = this.state
     const { tenant } = this.props
     if (typeof tenant.name === 'undefined') {
       return (<h2>Loading...</h2>)
@@ -123,6 +142,7 @@ class App extends React.Component {
       <React.Fragment>
         <Masthead
           iconImg={logo}
+          onNavToggleClick={this.onNavToggleClick}
           navToggle
           thin
           >
@@ -144,6 +164,11 @@ class App extends React.Component {
               )}
             </ul>
           </div>
+          {!menuCollapsed && (
+            <div className='collapse navbar-collapse navbar-collapse-1 in'>
+              {tenant.name && this.renderMenu()}
+            </div>
+          )}
         </Masthead>
         <div className='container-fluid container-cards-pf'>
           {this.renderContent()}
