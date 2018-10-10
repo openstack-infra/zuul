@@ -20,9 +20,9 @@ Zuul and Nodepool.
 
 To get started, ssh to your machine as the ``centos`` user.
 
-.. code-block:: console
+.. code-block:: shell
 
-   $ ssh centos@<ip_address>
+   ssh centos@<ip_address>
 
 Environment Setup
 -----------------
@@ -41,15 +41,15 @@ dependencies are handled by the bindep program, but a few additional
 dependencies are needed to install bindep, and for other commands
 which we will use in these instructions.
 
-.. code-block:: console
+.. code-block:: shell
 
-   $ sudo yum update -y
-   $ sudo systemctl reboot
-   $ sudo yum install -y https://centos7.iuscommunity.org/ius-release.rpm
-   $ sudo yum install -y git python35u python35u-pip python35u-devel java-1.8.0-openjdk
-   $ sudo alternatives --install /usr/bin/python3 python3 /usr/bin/python3.5 10
-   $ sudo alternatives --install /usr/bin/pip3 pip3 /usr/bin/pip3.5 10
-   $ sudo pip3 install python-openstackclient bindep
+   sudo yum update -y
+   sudo systemctl reboot
+   sudo yum install -y https://centos7.iuscommunity.org/ius-release.rpm
+   sudo yum install -y git python35u python35u-pip python35u-devel java-1.8.0-openjdk
+   sudo alternatives --install /usr/bin/python3 python3 /usr/bin/python3.5 10
+   sudo alternatives --install /usr/bin/pip3 pip3 /usr/bin/pip3.5 10
+   sudo pip3 install python-openstackclient bindep
 
 Install Zookeeper
 -----------------
@@ -60,7 +60,7 @@ Nodepool for nodes.
 
 .. code-block:: console
 
-   $ sudo bash -c "cat << EOF > /etc/yum.repos.d/bigtop.repo
+   sudo bash -c "cat << EOF > /etc/yum.repos.d/bigtop.repo
    [bigtop]
    name=Bigtop
    enabled=1
@@ -69,7 +69,7 @@ Nodepool for nodes.
    baseurl=http://repos.bigtop.apache.org/releases/1.2.1/centos/7/x86_64
    gpgkey=https://dist.apache.org/repos/dist/release/bigtop/KEYS
    EOF"
-   $ sudo yum install -y zookeeper zookeeper-server
-   $ sudo systemctl start zookeeper-server.service
-   $ sudo systemctl status zookeeper-server.service
-   $ sudo systemctl enable zookeeper-server.service
+   sudo yum install -y zookeeper zookeeper-server
+   sudo systemctl start zookeeper-server.service
+   sudo systemctl status zookeeper-server.service
+   sudo systemctl enable zookeeper-server.service

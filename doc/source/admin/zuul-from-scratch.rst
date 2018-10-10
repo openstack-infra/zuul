@@ -1,9 +1,14 @@
 Zuul From Scratch
 =================
 
-.. note:: This is a work in progress that attempts to walk through all
-          of the steps needed to run Zuul on a all-in-one server, and
-          demonstrate running against either a GitHub or Gerrit project.
+This document details a fully manual installation of Zuul on a
+all-in-one server.  If you want to learn all the details about how to
+install Zuul without the aid of any existing installation tools, you
+may find this a useful reference.
+
+If, instead, you want to get Zuul running quickly, see the
+:ref:`quick_start` which runs all of the Zuul services in containers
+with a single command.
 
 Environment Setup
 -----------------
@@ -40,7 +45,7 @@ server to listen on all public addresses.  This is so that Zuul may
 receive webhook events from GitHub.  You may wish to proxy this or
 further restrict public access.
 
-::
+.. code-block:: shell
 
    sudo bash -c "cat > /etc/zuul/zuul.conf <<EOF
    [gearman]
@@ -68,7 +73,7 @@ Starting Services
 -----------------
 
 After you have Zookeeper, Nodepool, and Zuul installed and configured, you can
-start Nodepool and Zuul  services with::
+start Nodepool and Zuul services with::
 
    sudo systemctl daemon-reload
 
@@ -93,7 +98,9 @@ Zuul provides a `standard library`_ of jobs and roles.  To take advantage
 of these jobs, add the ``zuul-jobs`` repo, which is hosted by the Zuul
 project, to your system.
 
-Add to ``/etc/zuul/zuul.conf``::
+Add to ``/etc/zuul/zuul.conf``:
+
+.. code-block:: shell
 
    sudo bash -c "cat >> /etc/zuul/zuul.conf <<EOF
 
@@ -102,7 +109,9 @@ Add to ``/etc/zuul/zuul.conf``::
    baseurl=https://git.zuul-ci.org/
    EOF"
 
-Restart executor and scheduler::
+Restart executor and scheduler:
+
+.. code-block:: shell
 
    sudo systemctl restart zuul-executor.service
    sudo systemctl restart zuul-scheduler.service

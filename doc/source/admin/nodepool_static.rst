@@ -19,38 +19,42 @@ the following requirements:
 
 When setting up your nodepool.yaml file, you will need the host keys
 for each node for the ``host-key`` value. This can be obtained with
-the command::
+the command:
 
-  $ ssh-keyscan -t ed25519 <HOST>
+.. code-block:: shell
+
+  ssh-keyscan -t ed25519 <HOST>
 
 Nodepool Configuration
 ----------------------
 
 Below is a sample Nodepool configuration file that sets up static
-nodes.  Place this file in ``/etc/nodepool/nodepool.yaml``.
+nodes.  Place this file in ``/etc/nodepool/nodepool.yaml``:
 
-::
+.. code-block:: shell
 
-  zookeeper-servers:
-    - host: localhost
+   sudo bash -c "cat > /etc/nodepool/nodepool.yaml <<EOF
+   zookeeper-servers:
+     - host: localhost
 
-  labels:
-    - name: ubuntu-xenial
+   labels:
+     - name: ubuntu-xenial
 
-  providers:
-    - name: static-vms
-      driver: static
-      pools:
-        - name: main
-          nodes:
-            - name: 192.168.1.10
-              labels: ubuntu-xenial
-              host-key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGXqY02bdYqg1BcIf2x08zs60rS6XhlBSQ4qE47o5gb"
-              username: zuul
-            - name: 192.168.1.11
-              labels: ubuntu-xenial
-              host-key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGXqY02bdYqg1BcIf2x08zs60rS6XhlBSQ5sE47o5gc"
-              username: zuul
+   providers:
+     - name: static-vms
+       driver: static
+       pools:
+         - name: main
+           nodes:
+             - name: 192.168.1.10
+               labels: ubuntu-xenial
+               host-key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGXqY02bdYqg1BcIf2x08zs60rS6XhlBSQ4qE47o5gb"
+               username: zuul
+             - name: 192.168.1.11
+               labels: ubuntu-xenial
+               host-key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGXqY02bdYqg1BcIf2x08zs60rS6XhlBSQ5sE47o5gc"
+               username: zuul
+   EOF"
 
 Make sure that ``username``, ``host-key``, IP addresses and label names are
 customized for your environment.
