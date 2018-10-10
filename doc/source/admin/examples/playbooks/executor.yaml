@@ -1,0 +1,15 @@
+# Until https://review.openstack.org/608453 merges, we need to add
+# Gerrit's SSH host keys to the known hosts_file before starting.
+
+- hosts: localhost
+  tasks:
+    - name: wait for gerrit to start
+      wait_for:
+        host: gerrit
+        port: 29418
+    - name: make ssh dir
+      file:
+        state: directory
+        path: /root/.ssh
+    - name: fetch ssh host keys from gerrit
+      shell: ssh-keyscan -p 29418 gerrit > /root/.ssh/known_hosts

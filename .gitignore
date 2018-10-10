@@ -2,6 +2,7 @@
 *.egg
 *.egg-info
 *.pyc
+*.retry
 .idea
 .mypy_cache
 .test

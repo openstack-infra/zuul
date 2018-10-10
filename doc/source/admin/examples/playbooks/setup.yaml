@@ -1,0 +1,102 @@
+- hosts: localhost
+  tasks:
+    - name: wait for gerrit to start
+      wait_for:
+        host: gerrit
+        port: 29418
+    - name: generate admin ssh key
+      command: ssh-keygen -f /var/ssh/admin -N ''
+      args:
+        creates: /var/ssh/admin.pub
+    - name: generate zuul ssh key for gerrit
+      command: ssh-keygen -f /var/ssh/zuul -N ''
+      args:
+        creates: /var/ssh/zuul.pub
+    - name: generate zuul ssh key for nodepool
+      command: ssh-keygen -f /var/ssh/nodepool -N ''
+      args:
+        creates: /var/ssh/nodepool.pub
+    - name: add nodepool key to node authorized_keys file
+      command: cp /var/ssh/nodepool.pub /var/node/authorized_keys
+      args:
+        creates: /var/node/authorized_keys
+    - name: get first login screen
+      uri:
+        url: http://gerrit:8080/a/accounts/self/sshkeys
+        method: GET
+        user: admin
+        password: secret
+      ignore_errors: true
+    - name: add admin ssh key to gerrit
+      uri:
+        url: http://gerrit:8080/a/accounts/self/sshkeys
+        method: POST
+        user: admin
+        password: secret
+        body: "{{ lookup('file', '/var/ssh/admin.pub') }}"
+        status_code: 201
+
+    - name: create temp dir for config update
+      shell: mktemp -d
+      register: gerrit_tmp
+    - name: set fact
+      set_fact:
+        all_projects_repo: "{{ gerrit_tmp.stdout }}/All-Projects"
+    - name: checkout all-projects config
+      git:
+        repo: ssh://gerrit:29418/All-Projects/
+        ssh_opts: "-o StrictHostKeyChecking=no -i /var/ssh/admin -l admin"
+        dest: "{{ all_projects_repo }}"
+        refspec: '+refs/meta/config:refs/meta/config'
+        version: refs/meta/config
+    - name: copy all-projects config
+      copy:
+        src: "/var/playbooks/project.config"
+        dest: "{{ all_projects_repo }}/project.config"
+    - name: update all-projects config
+      shell: |
+        git config user.email 'admin@example.com'
+        git commit -a -m 'update config'
+        git push http://admin:secret@gerrit:8080/All-Projects +HEAD:refs/meta/config
+      args:
+        chdir: "{{ all_projects_repo }}"
+        warn: false
+
+    - name: create zuul-config project
+      include_role:
+        name: create_project
+      vars:
+        project: zuul-config
+    - name: create test1 project
+      include_role:
+        name: create_project
+      vars:
+        project: test1
+    - name: create test2 project
+      include_role:
+        name: create_project
+      vars:
+        project: test2
+
+    # The Zuul user is created last because it is an atomic operation
+    # which signals that Gerrit is ready for use and it is safe for
+    # the Zuul scheduler to start.
+    - block:
+        - name: check if zuul user exists
+          uri:
+            url: http://gerrit:8080/accounts/zuul
+      rescue:
+        - name: create zuul gerrit account
+          uri:
+            url: http://gerrit:8080/a/accounts/zuul
+            method: PUT
+            user: admin
+            password: secret
+            status_code: 201
+            body_format: json
+            body:
+              name: Zuul
+              ssh_key: "{{ lookup('file', '/var/ssh/zuul.pub') }}"
+              http_password: secret
+              groups:
+                - "Non-Interactive Users"

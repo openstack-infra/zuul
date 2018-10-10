@@ -500,6 +500,12 @@ The following sections of ``zuul.conf`` are used by the executor:
 
       SSH private key file to be used when logging into worker nodes.
 
+   .. attr:: default_username
+      :default: zuul
+
+      Username to use when logging into worker nodes, if none is
+      supplied by Nodepool.
+
    .. attr:: winrm_cert_key_file
       :default: ~/.winrm/winrm_client_cert.key
 
