@@ -10,14 +10,18 @@ Before starting on this, you need to download your `openrc`
 configuration from your OpenStack cloud.  Put it on your server in the
 staging user's home directory.  It should be called
 ``<username>-openrc.sh``.  Once that is done, create a new keypair
-that will be installed when instantiating the servers::
+that will be installed when instantiating the servers:
+
+.. code-block:: shell
 
    cd ~
    source <username>-openrc.sh  # this may prompt for password - enter it
    openstack keypair create --public-key nodepool_rsa.pub nodepool
 
 We'll use the private key later wheen configuring Zuul.  In the same
-session, configure nodepool to talk to your cloud::
+session, configure nodepool to talk to your cloud:
+
+.. code-block:: shell
 
    umask 0066
    sudo mkdir -p ~nodepool/.config/openstack
@@ -48,7 +52,7 @@ configuration file:
 * flavor-name
 * image-name - from your cloud
 
-::
+.. code-block:: shell
 
    sudo bash -c "cat >/etc/nodepool/nodepool.yaml <<EOF
    zookeeper-servers:

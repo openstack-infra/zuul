@@ -22,6 +22,7 @@ which is described below.
       Merger -- Gearman
       Executor -- Gearman
       Web -- Gearman
+      Finger -- Gearman
 
       Gearman -- Scheduler;
       Scheduler -- Gerrit;

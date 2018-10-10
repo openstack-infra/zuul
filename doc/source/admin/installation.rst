@@ -1,5 +1,5 @@
-Installation
-============
+Installation Reference
+======================
 
 Install Zuul
 ------------
@@ -17,8 +17,41 @@ interaction with other python packages installed on a system, you may
 wish to install Zuul within a Python virtualenv.
 
 Zuul has several system-level dependencies as well.  You can find a
-list of operating system packages in `bindep.txt` in Zuul's source
+list of operating system packages in ``bindep.txt`` in Zuul's source
 directory.
+
+Zuul Components
+---------------
+
+Zuul provides the following components:
+
+    - **zuul-scheduler**: The main Zuul process. Handles receiving
+      events, executing jobs, collecting results and posting reports.
+      Coordinates the work of the other components.  It also provides
+      a gearman daemon which the other components use for
+      coordination.
+
+    - **zuul-merger**: Scale-out component that performs git merge
+      operations.  Zuul performs a large number of git operations in
+      the course of its work.  Adding merger processes can help speed
+      Zuul's processing.  This component is optional (zero or more of
+      these can be run).
+
+    - **zuul-executor**: Scale-out component for executing jobs.  At
+      least one of these is required.  Depending on system
+      configuration, you can expect a single executor to handle up to
+      about 100 simultaneous jobs.  Can handle the functions of a
+      merger if dedicated mergers are not provided.  One or more of
+      these must be run.
+
+    - **zuul-web**: A web server that receives "webhook" events from
+      external providers, supplies a web dashboard, and provides
+      websocket access to live streaming of logs.
+
+    - **zuul-fingergw**: A gateway which provides finger protocol
+      access to live streaming of logs.
+
+For more detailed information about these, see :ref:`components`.
 
 External Dependencies
 ---------------------
@@ -68,10 +101,73 @@ the correct version will be installed automatically with Zuul.
 Because of the close integration of Zuul and Ansible, attempting to
 use other versions of Ansible with Zuul is not recommended.
 
+Zuul Setup
+----------
+
+At minimum you need to provide ``zuul.conf`` and ``main.yaml`` placed
+in ``/etc/zuul/``.  The following example uses the builtin gearman
+service in Zuul, and a connection to Gerrit.
+
+**zuul.conf**::
+
+    [scheduler]
+    tenant_config=/etc/zuul/main.yaml
+
+    [gearman_server]
+    start=true
+
+    [gearman]
+    server=127.0.0.1
+
+    [connection my_gerrit]
+    driver=gerrit
+    server=git.example.com
+    port=29418
+    baseurl=https://git.example.com/gerrit/
+    user=zuul
+    sshkey=/home/zuul/.ssh/id_rsa
+
+See :ref:`components` and :ref:`connections` for more details.
+
+The following tells Zuul to read its configuration from and operate on
+the *example-project* project:
+
+**main.yaml**::
+
+    - tenant:
+        name: example-tenant
+        source:
+          my_gerrit:
+            untrusted-projects:
+              - example-project
+
+Starting Zuul
+-------------
+
+You can run any zuul process with the **-d** option to make it not
+daemonize. It's a good idea at first to confirm there's no issues with
+your configuration.
+
+To start, simply run::
+
+    zuul-scheduler
+
+Once run you should have two zuul-scheduler processes (if using the
+built-in gearman server, or one process otherwise).
+
+Before Zuul can run any jobs, it needs to load its configuration, most
+of which is in the git repositories that Zuul operates on.  Start an
+executor to allow zuul to do that::
+
+    zuul-executor
+
+Zuul should now be able to read its configuration from the configured
+repo and process any jobs defined therein.
+
 .. _web-deployment-options:
 
 Web Deployment Options
-======================
+----------------------
 
 The ``zuul-web`` service provides an web dashboard, a REST API and a websocket
 log streaming service as a single holistic web application. For production use
@@ -104,7 +200,7 @@ Reverse Proxy. Where rewrite rule examples are given, they will be given
 with Apache syntax, but any other Reverse Proxy should work just fine.
 
 Basic Reverse Proxy
--------------------
+~~~~~~~~~~~~~~~~~~~
 
 Using Apache as the Reverse Proxy requires the ``mod_proxy``,
 ``mod_proxy_http`` and ``mod_proxy_wstunnel`` modules to be installed and
@@ -119,7 +215,7 @@ simplest reverse-proxy case is::
 
 
 Static Offload
---------------
+~~~~~~~~~~~~~~
 
 To have the Reverse Proxy serve the static html/javascript assets instead of
 proxying them to the REST layer, register the location where you unpacked
@@ -146,7 +242,7 @@ the web application as the document root and add rewrite rules::
 
 
 Sub directory serving
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 
 The web application needs to be rebuild to update the internal location of
 the static files. Set the homepage setting in the package.json to an
@@ -188,7 +284,7 @@ add the following rewrite rules::
 
 
 White Labeled Tenant
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 Running a white-labeled tenant is similar to the offload case, but adds a
 rule to ensure connection webhooks don't try to get put into the tenant scope.
@@ -223,7 +319,7 @@ Assuming the zuul tenant name is "example", the rewrite rules are::
 
 
 Static External
----------------
+~~~~~~~~~~~~~~~
 
 .. note::
 

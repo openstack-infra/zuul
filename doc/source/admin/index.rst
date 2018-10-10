@@ -11,12 +11,12 @@ provides to in-project configuration.
 .. toctree::
    :maxdepth: 2
 
-   tutorial
    quick-start
-   zuul-from-scratch
    installation
+   zuul-from-scratch
    components
    connections
    tenants
    monitoring
    client
+   troubleshooting
