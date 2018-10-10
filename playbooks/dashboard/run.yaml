@@ -3,8 +3,8 @@
     - name: Update homepage for sub directory deployment
       replace:
         path: '{{ zuul.project.src_dir }}/web/package.json'
-        regexp: '"homepage": "/"'
-        replace: '"homepage": "./"'
+        regexp: '^{$'
+        replace: '{\n  "homepage": "./",'
         # NOTE: using "./" is not enough to support html5 links, even with
         # rewrite rules for unknown files, accessing 'job/devstack' will make
         # the dashboard load static files from 'job/static/...'
