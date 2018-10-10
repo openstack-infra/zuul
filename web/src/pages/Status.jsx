@@ -57,6 +57,7 @@ class StatusPage extends React.Component {
   constructor () {
     super()
 
+    this.filterLoaded = false
     this.timer = null
     this.visible = true
 
@@ -221,7 +222,8 @@ class StatusPage extends React.Component {
     if (error) {
       return (<Alert>{this.state.error}</Alert>)
     }
-    if (this.filter && filter) {
+    if (this.filter && !this.filterLoaded && filter) {
+      this.filterLoaded = true
       this.filter.value = filter
     }
     const statusControl = (
