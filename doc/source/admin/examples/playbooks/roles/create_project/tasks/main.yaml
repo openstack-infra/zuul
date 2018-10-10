@@ -1,19 +1,22 @@
-- block:
-    - name: check if {{ project }} project exists
-      uri:
-        url: http://gerrit:8080/projects/{{ project }}
-  rescue:
-    - name: create temp dir for {{ project }} creation
+- name: Check if {{ project }} project exists
+  uri:
+    url: http://gerrit:8080/projects/{{ project }}
+    status_code: 200, 404
+  register: project_check
+- name: Create {{ project }}
+  when: project_check.status==404
+  block:
+    - name: Create temp dir for {{ project }} creation
       shell: mktemp -d
       register: project_tmp
-    - name: create {{ project }} project
+    - name: Create {{ project }} project in Gerrit
       uri:
         url: http://gerrit:8080/a/projects/{{ project }}
         method: PUT
         user: admin
         password: secret
         status_code: 201
-    - name: create initial commit
+    - name: Create initial commit in {{ project }}
       shell:
         executable: /bin/bash
         chdir: "{{ project_tmp.stdout }}"

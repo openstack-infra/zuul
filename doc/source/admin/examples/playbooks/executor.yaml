@@ -2,14 +2,15 @@
 # Gerrit's SSH host keys to the known hosts_file before starting.
 
 - hosts: localhost
+  gather_facts: false
   tasks:
-    - name: wait for gerrit to start
+    - name: Wait for gerrit to start
       wait_for:
         host: gerrit
         port: 29418
-    - name: make ssh dir
+    - name: Ensure SSH directory exists
       file:
         state: directory
         path: /root/.ssh
-    - name: fetch ssh host keys from gerrit
+    - name: Fetch SSH host keys from Gerrit
       shell: ssh-keyscan -p 29418 gerrit > /root/.ssh/known_hosts
