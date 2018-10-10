@@ -4714,7 +4714,7 @@ For CI problems and help debugging, contact ci@example.org"""
                 self.assertEqual('gate', job['pipeline'])
                 self.assertEqual(False, job['retry'])
                 self.assertEqual(
-                    'stream.html?uuid={uuid}&logfile=console.log'
+                    'stream/{uuid}?logfile=console.log'
                     .format(uuid=job['uuid']), job['url'])
                 self.assertEqual(
                     'finger://{hostname}/{uuid}'.format(
