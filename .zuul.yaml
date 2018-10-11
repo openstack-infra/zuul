@@ -45,6 +45,7 @@
     success-url: 'npm/html/'
     files:
       - web/.*
+      - playbooks/dashboard/.*
     vars:
       javascript_content_dir: "../zuul/web/static"
       zuul_work_dir: "{{ zuul.project.src_dir }}/web"

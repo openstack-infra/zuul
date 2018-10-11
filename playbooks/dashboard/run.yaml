@@ -1,15 +1,4 @@
 - hosts: all
-  pre_tasks:
-    - name: Update homepage for sub directory deployment
-      replace:
-        path: '{{ zuul.project.src_dir }}/web/package.json'
-        regexp: '^{$'
-        replace: '{\n  "homepage": "./",'
-        # NOTE: using "./" is not enough to support html5 links, even with
-        # rewrite rules for unknown files, accessing 'job/devstack' will make
-        # the dashboard load static files from 'job/static/...'
-        # This works for the preview dashboard that can only be loaded from the
-        # npm/html directory anyway.
   roles:
     - revoke-sudo
     - set-zuul-log-path-fact
@@ -17,3 +6,9 @@
       npm_command: build
   environment:
     REACT_APP_ZUUL_API: "{{ zuul_api_url }}/api/"
+    PUBLIC_URL: './'
+    # NOTE: using "./" is not enough to support html5 links, even with
+    # rewrite rules for unknown files, accessing 'job/devstack' will make
+    # the dashboard load static files from 'job/static/...'
+    # This works for the preview dashboard that can only be loaded from the
+    # npm/html directory anyway.
