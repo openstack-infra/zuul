@@ -61,6 +61,11 @@
     name: zuul-quick-start
     description: Run the commands in the Zuul quick-start documentation.
     run: playbooks/quick-start/run.yaml
+    roles:
+      - zuul: openstack-infra/zuul-jobs
+    required-projects:
+      - openstack/pbrx
+      - openstack-infra/nodepool
 
 - project:
     check:
@@ -91,8 +96,7 @@
               - web/.*
         - zuul-stream-functional
         - zuul-tox-remote
-        - zuul-quick-start:
-            voting: false
+        - zuul-quick-start
         - pbrx-build-container-images:
             vars:
               pbrx_prefix: zuul
@@ -125,6 +129,7 @@
               - web/.*
         - zuul-stream-functional
         - zuul-tox-remote
+        - zuul-quick-start
         - pbrx-build-container-images:
             vars:
               pbrx_prefix: zuul
