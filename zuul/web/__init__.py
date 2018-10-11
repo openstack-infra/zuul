@@ -402,12 +402,16 @@ class ZuulWebAPI(object):
                   "patchset", "ref", "newrev"):
             v = locals()[k]
             if v:
-                args['buildset_filters'].setdefault(k, []).append(v)
+                if not isinstance(v, list):
+                    v = [v]
+                args['buildset_filters'].setdefault(k, []).extend(v)
         for k in ("uuid", "job_name", "voting", "node_name",
                   "result"):
             v = locals()[k]
             if v:
-                args['build_filters'].setdefault(k, []).append(v)
+                if not isinstance(v, list):
+                    v = [v]
+                args['build_filters'].setdefault(k, []).extend(v)
         data = connection.get_builds(args)
         resp = cherrypy.response
         resp.headers['Access-Control-Allow-Origin'] = '*'
