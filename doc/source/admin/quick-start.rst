@@ -26,13 +26,24 @@ Before you start, ensure that some needed packages are installed.
 
 .. code-block:: shell
 
-   # Debian / Ubuntu:
+   # Red Hat / Fedora / CentOS:
+
+   sudo yum install docker docker-compose git git-review
+
+   # OpenSuse:
+
+   sudo zypper install docker docker-compose git git-review
+
+   # Ubuntu / Debian:
 
    sudo apt-get install docker-compose git git-review
 
-   # Red Hat / Fedora / SUSE:
+   # Start and Enable the docker service on Fedora / CentOS
+   # Red Hat / OpenSuse:
 
-   sudo yum install docker-compose git git-review
+   sudo systemctl enable docker.service
+   sudo systemctl start docker.service
+
 
 Clone the Zuul repository:
 
