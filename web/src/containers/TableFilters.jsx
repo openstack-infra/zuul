@@ -41,7 +41,7 @@ class TableFilters extends React.Component {
   }
 
   updateUrl (activeFilters) {
-    let path = this.props.location.pathname
+    let path = window.location.pathname
     if (activeFilters.length > 0) {
       path += '?'
       activeFilters.forEach((item, idx) => {
