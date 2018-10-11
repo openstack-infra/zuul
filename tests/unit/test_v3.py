@@ -4216,3 +4216,23 @@ class TestJobPause(AnsibleZuulTestCase):
         history_compile2 = self.history[-2]
         self.assertEqual('compile1', history_compile1.name)
         self.assertEqual('compile2', history_compile2.name)
+
+    def test_job_node_failure_resume(self):
+        self.wait_timeout = 120
+
+        # Output extra ansible info so we might see errors.
+        self.executor_server.verbose = True
+
+        # Second node request should fail
+        fail = {'_oid': '200-0000000001'}
+        self.fake_nodepool.addFailRequest(fail)
+
+        A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A')
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual([], self.builds)
+        self.assertHistory([
+            dict(name='just-pause', result='SUCCESS', changes='1,1'),
+        ], ordered=False)
