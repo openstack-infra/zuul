@@ -98,17 +98,20 @@ class StatusPage extends React.Component {
         // .then(sleeper(2000))
         .then(response => {
           this.setState({status: response.data, loading: false})
+          if (this.state.autoReload) {
+            this.timer = setTimeout(this.updateData, 5000)
+          }
         }).catch(error => {
           this.setState({error: error.message, status: null})
+          if (this.state.autoReload) {
+            this.timer = setTimeout(this.updateData, 5000)
+          }
         })
     }
     // Clear any running timer
     if (this.timer) {
       clearTimeout(this.timer)
       this.timer = null
-    }
-    if (this.state.autoReload) {
-      this.timer = setTimeout(this.updateData, 5000)
     }
   }
 
