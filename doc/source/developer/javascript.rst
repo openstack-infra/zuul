@@ -147,7 +147,7 @@ hot-updating of code can be started with:
   yarn start
 
 will build the code and launch the dev server on `localhost:3000`. Fake
-api response needs to be set in the ``web/public/api`` directory::
+api response needs to be set in the ``web/public/api`` directory.
 
 .. code-block:: bash
 
