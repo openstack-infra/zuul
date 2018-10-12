@@ -1,15 +1,20 @@
 - hosts: all
   vars:
     workspace: /tmp/quickstart-test
+  roles:
+    - name: install-docker
+      use_upstream_docker: false
   tasks:
-    # Our test images disable installation of recommended packages;
-    # re-enable that (the default) to make this test more closely
-    # resemble what a user will encounter.
-    - name: Remove disable-recommends
-      file:
-        name: /etc/apt/apt.conf.d/95disable-recommends
-        state: absent
-      become: true
+    - name: Install pbrx software
+      command: python3 -m pip install src/git.openstack.org/openstack/pbrx
+      become: yes
+    - name: Build container images
+      command: 'pbrx --debug build-images --prefix=zuul'
+      args:
+        chdir: '{{ zuul.projects[item].src_dir }}'
+      loop:
+        - git.openstack.org/openstack-infra/nodepool
+        - git.openstack.org/openstack-infra/zuul
     - name: Install docker-compose and git-review
       package:
         name:
