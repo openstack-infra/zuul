@@ -107,9 +107,9 @@ required in the web interface and you may become any user in the
 system at any time.
 
 To create your Gerrit account, visit http://localhost:8080 in your
-browser and click `Become`.
+browser and click `Sign in` in the top right corner.
 
-.. image:: images/become.png
+.. image:: images/sign-in.png
    :align: center
 
 Then click `New Account` under `Register`.
@@ -117,30 +117,44 @@ Then click `New Account` under `Register`.
 .. image:: images/register.png
    :align: center
 
-Enter your full name and click `Save Changes`.
+Don't bother to enter anything into the confirmation dialog that pops
+up, instead, click the `settings` link at the bottom.
 
-.. image:: images/name.png
+.. image:: images/confirm.png
    :align: center
 
-Enter the username you use to log into your workstation in the
-`Username` field and click `Select Username`.
+In the `Profile` section at the top, enter the username you use to log
+into your workstation in the `Username` field and your full name in
+the `Full name` field, then click `Save Changes`.
 
-.. image:: images/username.png
+.. image:: images/profile.png
    :align: center
 
-Copy and paste the contents of ``~/.ssh/id_rsa.pub`` into the SSH key
-field and click `Add`.
+Scroll down to the `Email Addresses` section and enter your email
+address into the `New email address` field, then click `Send
+Verification`.  Since Gerrit is in developer mode, it will not
+actually send any email, and the address will be automatically
+confirmed.  This step is useful since several parts of the Gerrit user
+interface expect to be able to display email addresses.
+
+.. image:: images/email.png
+   :align: center
+
+Scroll down to the `SSH keys` section and copy and paste the contents
+of ``~/.ssh/id_rsa.pub`` into the `New SSH key` field and click `Add
+New SSH Key`.
 
 .. image:: images/sshkey.png
    :align: center
 
-Click the `Continue` link at the bottom of the page.
+.. We ask them to click reload so that the page refreshes and their
+   avatar appears in the top right.  Otherwise it's difficult to see
+   that there's anything there to click.
 
-.. image:: images/continue.png
-   :align: center
-
-At this point you have created and logged into your personal account
-in Gerrit and are ready to begin configuring Zuul.
+Click the `Reload` button in your browser to reload the page with the
+new settings in effect.  At this point you have created and logged
+into your personal account in Gerrit and are ready to begin
+configuring Zuul.
 
 Configure Zuul Pipelines
 ------------------------
@@ -239,10 +253,14 @@ last time).  To do this, you need to switch to the Administrator
 account in Gerrit.  Visit http://localhost:8080 in your browser and
 then:
 
-Click on your name in the top right corner then click `Switch
-Account`.
+Click the avatar image in the top right corner then click `Sign out`.
 
-.. image:: images/switch-example.png
+.. image:: images/sign-out-user.png
+   :align: center
+
+Then click the `Sign in` link again.
+
+.. image:: images/sign-in.png
    :align: center
 
 Click `admin` to log in as the `admin` user.
@@ -250,8 +268,8 @@ Click `admin` to log in as the `admin` user.
 .. image:: images/become-select.png
    :align: center
 
-In the top left corner of the page, click `All` and `Open` to see the
-list of open changes, then click on the change you uploaded.
+You will then see a list of open changes; click on the change you
+uploaded.
 
 .. image:: images/open-changes.png
    :align: center
@@ -261,13 +279,13 @@ open a dialog where you can leave a review message and vote on the
 change.  As the administrator, you have access to vote in all of the
 review categories, even `Verified` which is normally reserved for
 Zuul.  Vote Code-Review: +2, Verified: +2, Workflow: +1, and then
-click `Post` to leave your approval votes.
+click `Send` to leave your approval votes.
 
 .. image:: images/review-1001.png
    :align: center
 
-Once the required votes have been set, the `Submit` button will
-appear; click it.  This will cause the change to be merged
+Once the required votes have been set, the `Submit` button will appear
+in the top right; click it.  This will cause the change to be merged
 immediately.  This is normally handled by Zuul, but as the
 administrator you can bypass Zuul to forcibly merge a change.
 
@@ -276,13 +294,18 @@ administrator you can bypass Zuul to forcibly merge a change.
 
 Now that the initial configuration has been bootstrapped, you should
 not need to bypass testing and code review again, so switch back to
-the account you created for yourself.  Click on `Administrator` in the
-top right corner then click `Switch Account`.
+the account you created for yourself.  Click on the avatar image in
+the top right corner then click `Sign out`.
 
-.. image:: images/switch-admin.png
+.. image:: images/sign-out-admin.png
    :align: center
 
-Click your username.
+Then click the `Sign in` link again.
+
+.. image:: images/sign-in.png
+   :align: center
+
+And click your username to log into your account.
 
 .. image:: images/become-select.png
    :align: center
@@ -336,7 +359,7 @@ Zuul will dynamically evaluate proposed changes to its configuration
 in *untrusted projects* immediately, so shortly after your change is
 uploaded, Zuul will run the new job and report back on the change.
 
-Visit http://localhost:8080/#/dashboard/self and open the change you
+Visit http://localhost:8080/dashboard/self and open the change you
 just uploaded.  If the build is complete, Zuul should have left a
 Verified: +1 vote on the change, along with a comment at the bottom.
 Expand the comments and you should see that the job succeeded, but
@@ -445,11 +468,11 @@ Then commit the change and upload it to Gerrit for review:
    git commit -m "Update Zuul base job"
    git review
 
-Visit http://localhost:8080/#/dashboard/self and open the
+Visit http://localhost:8080/dashboard/self and open the
 ``zuul-config`` change you just uploaded.
 
 You should see a Verified +1 vote from Zuul.  Click `Reply` then vote
-Code-Review: +2 and Workflow: +1 then click 'Post'.
+Code-Review: +2 and Workflow: +1 then click `Send`.
 
 .. image:: images/review-1003.png
    :align: center
@@ -457,9 +480,9 @@ Code-Review: +2 and Workflow: +1 then click 'Post'.
 Wait a few moments for Zuul to process the event, and then reload the
 page.  The change should have been merged.
 
-Visit http://localhost:8080/#/dashboard/self and return to the
+Visit http://localhost:8080/dashboard/self and return to the
 ``test1`` change you uploaded earlier.  Click `Reply` then type
-`recheck` into the text field and click `Post`.
+`recheck` into the text field and click `Send`.
 
 .. image:: images/recheck-1002.png
    :align: center
