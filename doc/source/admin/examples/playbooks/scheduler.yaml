@@ -2,12 +2,13 @@
 # in order to start.
 
 - hosts: localhost
+  gather_facts: false
   tasks:
-    - name: wait for gerrit to start
+    - name: Wait for Gerrit to start
       wait_for:
         host: gerrit
         port: 29418
-    - name: wait for zuul user to be created
+    - name: Wait for zuul user to be created
       uri:
         url: http://gerrit:8080/a/accounts/zuul/sshkeys
         method: GET
