@@ -192,3 +192,7 @@ As long as `yarn`_ is installed, the installation of zuul will run
 .. _React: https://reactjs.org/
 .. _Patternfly: https://www.patternfly.org/
 .. _create-react-app: https://github.com/facebook/create-react-app/blob/master/packages/react-scripts/template/README.md
+
+In some cases there is the need to disable the service worker which does
+advanced caching. In order to do that set the environment variable
+``REACT_APP_DISABLE_SERVICE_WORKER=true`` during installation.
