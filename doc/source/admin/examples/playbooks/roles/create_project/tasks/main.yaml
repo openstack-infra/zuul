@@ -18,7 +18,7 @@
         status_code: 201
     - name: Create initial commit in {{ project }}
       shell:
-        executable: /bin/bash
+        executable: /bin/sh
         chdir: "{{ project_tmp.stdout }}"
         cmd: |
           git init .
