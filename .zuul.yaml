@@ -58,6 +58,11 @@
     vars:
       zuul_api_url: https://softwarefactory-project.io/zuul
 
+- job:
+    name: zuul-quick-start
+    description: Run the commands in the Zuul quick-start documentation.
+    run: playbooks/quick-start/run.yaml
+
 - project:
     check:
       jobs:
@@ -87,6 +92,8 @@
               - web/.*
         - zuul-stream-functional
         - zuul-tox-remote
+        - zuul-quick-start:
+            voting: false
         - pbrx-build-container-images:
             vars:
               pbrx_prefix: zuul

@@ -1,0 +1,141 @@
+- name: Run docker-compose up
+  shell:
+    cmd: docker-compose up -d
+    chdir: src/git.openstack.org/openstack-infra/zuul/doc/source/admin/examples
+  become: true
+- name: Wait for Gerrit to start
+  wait_for:
+    host: localhost
+    port: 29418
+- name: Wait for Zuul user to be created
+  uri:
+    url: http://localhost:8080/a/accounts/zuul/sshkeys
+    method: GET
+    user: admin
+    password: secret
+  register: result
+  until: result.status == 200 and result.redirected == false
+  delay: 1
+  retries: 120
+- name: fetch ssh host keys from gerrit
+  shell: ssh-keyscan -p 29418 localhost >> ~/.ssh/known_hosts
+- name: Check if example user exists in Gerrit
+  uri:
+    url: http://localhost:8080/accounts/user
+    status_code: 200, 404
+  register: user_check
+- name: Create example gerrit account
+  when: user_check.status==404
+  uri:
+    url: http://localhost:8080/a/accounts/user
+    method: PUT
+    user: admin
+    password: secret
+    status_code: 201
+    body_format: json
+    body:
+      name: Example User
+      ssh_key: "{{ ssh_public_key }}"
+      http_password: secret
+- name: Clone zuul-config
+  git:
+    repo: http://localhost:8080/zuul-config
+    dest: "{{ workspace }}/zuul-config"
+- name: Make initial change in zuul-config
+  copy:
+    src: ../../doc/source/admin/examples/zuul-config/
+    dest: "{{ workspace }}/zuul-config/"
+- name: Commit and upload initial change in zuul-config
+  shell:
+    chdir: "{{ workspace }}/zuul-config/"
+    executable: /bin/bash
+    cmd: |
+      {{ ssh_agent.stdout }}
+      rm zuul.d/jobs.yaml
+      git config user.email 'user@example.com'
+      git config user.name 'Example User'
+      git config gitreview.username 'user'
+      git add zuul.d playbooks
+      git commit -m "Add initial Zuul configuration"
+      git review -v
+- name: Query open changes
+  uri:
+    url: http://localhost:8080/a/changes/?q=status:open+project:zuul-config&o=CURRENT_REVISION
+    method: GET
+    user: admin
+    password: secret
+    return_content: true
+  register: changes
+- name: Approve zuul-config change
+  uri:
+    url: "http://localhost:8080/a/changes/{{ (changes.content[5:]|from_json)[0].id }}/revisions/{{ (changes.content[5:]|from_json)[0].current_revision }}/review"
+    method: POST
+    user: admin
+    password: secret
+    status_code: 200
+    body_format: json
+    body:
+      labels:
+        Code-Review: +2
+        Verified: +2
+        Workflow: +1
+- name: Merge zuul-config change
+  uri:
+    url: "http://localhost:8080/a/changes/{{ (changes.content[5:]|from_json)[0].id }}/revisions/{{ (changes.content[5:]|from_json)[0].current_revision }}/submit"
+    method: POST
+    user: admin
+    password: secret
+    status_code: 200
+- name: Clone test1
+  git:
+    repo: http://localhost:8080/test1
+    dest: "{{ workspace }}/test1"
+- name: Make test change in test1
+  copy:
+    src: ../../doc/source/admin/examples/test1/
+    dest: "{{ workspace }}/test1/"
+- name: Commit and upload test change in test1
+  shell:
+    chdir: "{{ workspace }}/test1/"
+    executable: /bin/bash
+    cmd: |
+      {{ ssh_agent.stdout }}
+      git config user.email 'user@example.com'
+      git config user.name 'Example User'
+      git config gitreview.username 'user'
+      mv zuul.yaml .zuul.yaml
+      git add .zuul.yaml playbooks
+      git commit -m "Add test Zuul job"
+      git review
+- name: Query open changes
+  uri:
+    url: http://localhost:8080/a/changes/?q=status:open+project:test1&o=CURRENT_REVISION
+    method: GET
+    user: admin
+    password: secret
+    return_content: true
+  register: changes
+- name: Wait for Zuul to report
+  uri:
+    url: "http://localhost:8080/a/changes/{{ (changes.content[5:]|from_json)[0].id }}//detail"
+    method: GET
+    user: admin
+    password: secret
+    return_content: true
+  register: result
+  until: (result.content[5:]|from_json).messages|length > 1
+  delay: 1
+  retries: 120
+- name: Find the log URL
+  set_fact:
+    log_url: "{{ (result.content[5:]|from_json).messages[1].message|regex_search('(http://[^ ]*)') }}"
+- debug:
+    msg: "{{ log_url }}"
+- name: Fetch log URL
+  get_url:
+    url: "{{ log_url }}job-output.txt.gz"
+    dest: "{{ workspace }}/job-output.txt.gz"
+- name: Uncompress log
+  command: "gunzip -f {{ workspace }}/job-output.txt.gz"
+- name: Verify log contents
+  command: "grep 'Hello world!' {{ workspace }}/job-output.txt"
