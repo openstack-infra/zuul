@@ -2,10 +2,17 @@
   vars:
     workspace: /tmp/quickstart-test
   tasks:
+    # Our test images disable installation of recommended packages;
+    # re-enable that (the default) to make this test more closely
+    # resemble what a user will encounter.
+    - name: Remove disable-recommends
+      file:
+        name: /etc/apt/apt.conf.d/95disable-recommends
+        state: absent
+      become: true
     - name: Install docker-compose and git-review
       package:
         name:
-          - docker.io  # See note [1]
           - docker-compose
           - git-review
         state: present
@@ -43,7 +50,3 @@
             cmd: |
               {{ ssh_agent.stdout }}
               ssh-agent -k
-
-# [1]: docker.io is a recommended package and is therefore typically
-# automatically installed, however our test images disable this
-# behavior, so it is listed explicitly here.
