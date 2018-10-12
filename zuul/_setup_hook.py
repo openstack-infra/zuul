@@ -32,10 +32,6 @@ def _build_javascript():
         r = subprocess.Popen(['yarn', 'build'], cwd="web/").wait()
         if r:
             raise RuntimeError("Yarn build failed")
-    # Touch the static paths so that bdist_wheel includes them
-    for path in ('', 'static', 'static/js', 'static/css', 'static/media'):
-        with open(os.path.join('web/build', path, '__init__.py'), 'w'):
-            pass
 
 
 def _from_git(distribution):
