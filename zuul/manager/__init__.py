@@ -799,6 +799,7 @@ class PipelineManager(object):
             self.log.info("Node request %s: failure for %s" %
                           (request, request.job.name,))
             build_set.item.setNodeRequestFailure(request.job)
+            self._resumeParents(request)
         self.log.info("Completed node request %s for job %s of item %s "
                       "with nodes %s" %
                       (request, request.job, build_set.item,

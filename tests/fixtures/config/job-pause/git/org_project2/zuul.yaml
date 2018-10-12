@@ -1,0 +1,24 @@
+- job:
+    name: just-pause
+    run: playbooks/just-pause.yaml
+    nodeset:
+      nodes:
+        - name: fake
+          label: fake
+
+- job:
+    name: test-node-failure
+    run: playbooks/test-node-failure.yaml
+    nodeset:
+      nodes:
+        - name: fail
+          label: fail
+
+
+- project:
+    check:
+      jobs:
+        - just-pause
+        - test-node-failure:
+            dependencies:
+              - just-pause

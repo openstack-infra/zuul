@@ -5,3 +5,4 @@
         config-projects:
           - common-config
           - org/project
+          - org/project2
