@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    A new Build page in the web interface enable displaying a single Build
+    information.

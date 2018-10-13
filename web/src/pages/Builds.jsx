@@ -15,6 +15,7 @@
 import * as React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { Link } from 'react-router-dom'
 import { Table } from 'patternfly-react'
 
 import { fetchBuilds } from '../api'
@@ -71,9 +72,15 @@ class BuildsPage extends TableFilters {
         <a href={value} target='_blank' rel='noopener noreferrer'>link</a>
       </Table.Cell>
     )
+    const linkBuildFormat = (value) => (
+      <Table.Cell>
+        <Link to={this.props.tenant.linkPrefix + '/build/' + value}>link</Link>
+      </Table.Cell>
+    )
     this.columns = []
     this.filterTypes = []
     const myColumns = [
+      'build',
       'job',
       'project',
       'branch',
@@ -87,6 +94,10 @@ class BuildsPage extends TableFilters {
       let prop = column
       let formatter = cellFormat
       // Adapt column name and property name
+      if (column === 'build') {
+        prop = 'uuid'
+        formatter = linkBuildFormat
+      }
       if (column === 'job') {
         prop = 'job_name'
       } else if (column === 'start time') {

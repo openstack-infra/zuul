@@ -111,6 +111,9 @@ function fetchTenants () {
 function fetchStatus (apiPrefix) {
   return Axios.get(apiUrl + apiPrefix + 'status')
 }
+function fetchBuild (apiPrefix, buildId) {
+  return Axios.get(apiUrl + apiPrefix + 'build/' + buildId)
+}
 function fetchBuilds (apiPrefix, queryString) {
   let path = 'builds'
   if (queryString) {
@@ -126,6 +129,7 @@ export {
   getHomepageUrl,
   getStreamUrl,
   fetchStatus,
+  fetchBuild,
   fetchBuilds,
   fetchJobs,
   fetchTenants,
