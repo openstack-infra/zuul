@@ -13,6 +13,7 @@
 # under the License.
 
 import logging
+import time
 import voluptuous as v
 
 from zuul.reporter import BaseReporter
@@ -28,6 +29,7 @@ class MQTTReporter(BaseReporter):
         self.log.debug("Report change %s, params %s" %
                        (item.change, self.config))
         message = {
+            'timestamp': time.time(),
             'action': self._action,
             'tenant': item.pipeline.tenant.name,
             'zuul_ref': item.current_build_set.ref,
@@ -40,6 +42,7 @@ class MQTTReporter(BaseReporter):
             'ref': getattr(item.change, 'ref', ''),
             'message': self._formatItemReport(
                 item, with_jobs=False),
+            'enqueue_time': item.enqueue_time,
             'buildset': {
                 'uuid': item.current_build_set.uuid,
                 'builds': []

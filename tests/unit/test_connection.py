@@ -492,6 +492,8 @@ class TestMQTTConnection(ZuulTestCase):
                           'test')
         self.assertEquals(mqtt_payload['buildset']['builds'][0]['result'],
                           'SUCCESS')
+        self.assertIn('timestamp', mqtt_payload)
+        self.assertIn('enqueue_time', mqtt_payload)
 
     def test_mqtt_invalid_topic(self):
         in_repo_conf = textwrap.dedent(
