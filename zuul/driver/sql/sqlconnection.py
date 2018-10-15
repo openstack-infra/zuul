@@ -161,7 +161,6 @@ class SQLConnection(BaseConnection):
                 self.dburi,
                 poolclass=sqlalchemy.pool.QueuePool,
                 pool_recycle=self.connection_config.get('pool_recycle', 1))
-            self._migrate()
 
             # If we want the objects returned from query() to be
             # usable outside of the session, we need to expunge them
@@ -174,7 +173,6 @@ class SQLConnection(BaseConnection):
                                                     autoflush=False)
             self.session = orm.scoped_session(self.session_factory)
 
-            self.tables_established = True
         except sa.exc.NoSuchModuleError:
             self.log.exception(
                 "The required module for the dburi dialect isn't available. "
@@ -204,6 +202,20 @@ class SQLConnection(BaseConnection):
             # leverage that to tell the upgrade scripts about the table prefix.
             tag = {'table_prefix': self.table_prefix}
             alembic.command.upgrade(config, 'head', tag=tag)
+
+    def onLoad(self):
+        try:
+            self._migrate()
+            self.tables_established = True
+        except sa.exc.NoSuchModuleError:
+            self.log.exception(
+                "The required module for the dburi dialect isn't available. "
+                "SQL connection %s will be unavailable." %
+                self.connection_name)
+        except sa.exc.OperationalError:
+            self.log.exception(
+                "Unable to connect to the database or establish the required "
+                "tables. Connection %s is disabled" % self)
 
     def _setup_models(self):
         Base = declarative_base(metadata=sa.MetaData())
