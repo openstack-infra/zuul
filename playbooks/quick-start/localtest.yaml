@@ -1,0 +1,10 @@
+- hosts: localhost
+  vars:
+    workspace: /tmp/quickstart-test
+    local: true
+    ssh_public_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+    ssh_agent:
+      stdout: ''
+  tasks:
+    - name: Run tasks in ssh agent
+      include_tasks: main.yaml

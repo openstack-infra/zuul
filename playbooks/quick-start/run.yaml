@@ -1,6 +1,7 @@
 - hosts: all
   vars:
     workspace: /tmp/quickstart-test
+    local: false
   roles:
     - name: install-docker
       use_upstream_docker: false
