@@ -395,6 +395,21 @@ class ExecutorClient(object):
             if result in ('DISCONNECT', 'ABORTED'):
                 # Always retry if the executor just went away
                 build.retry = True
+            if result == 'MERGER_FAILURE':
+                # The build result MERGER_FAILURE is a bit misleading here
+                # because when we got here we know that there are no merge
+                # conflicts. Instead this is most likely caused by some
+                # infrastructure failure. This can be anything like connection
+                # issue, drive corruption, full disk, corrupted git cache, etc.
+                # This may or may not be a recoverable failure so we should
+                # retry here respecting the max retries. But to be able to
+                # distinguish from RETRY_LIMIT which normally indicates pre
+                # playbook failures we keep the build result after the max
+                # attempts.
+                if (build.build_set.getTries(build.job.name) <
+                    build.job.attempts):
+                    build.retry = True
+
             result_data = data.get('data', {})
             warnings = data.get('warnings', [])
             self.log.info("Build %s complete, result %s, warnings %s" %
