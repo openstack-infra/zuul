@@ -67,6 +67,7 @@
     required-projects:
       - openstack/pbrx
       - openstack-infra/nodepool
+      - openstack-infra/zuul
 
 - project:
     check:
