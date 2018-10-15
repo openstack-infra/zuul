@@ -86,6 +86,22 @@
     user: admin
     password: secret
     status_code: 200
+- name: Fetch status page
+  uri:
+    url: http://localhost:9000/t/example-tenant/status
+    return_content: true
+  register: status_page
+- name: Verify status page was served
+  assert:
+    that: "'You need to enable JavaScript to run this app.' in status_page.content"
+- name: Fetch status data
+  uri:
+    url: http://localhost:9000/api/tenant/example-tenant/status
+    return_content: true
+  register: status_data
+- name: Verify status data were served
+  assert:
+    that: "status_data.json.last_reconfigured > 0"
 - name: Clone test1
   git:
     repo: http://localhost:8080/test1

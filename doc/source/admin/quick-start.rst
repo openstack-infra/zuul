@@ -314,9 +314,15 @@ Test Zuul Pipelines
 -------------------
 
 Zuul is now running with a basic :term:`check` and :term:`gate`
-configuration.  We can now begin adding Zuul configuration to one of
-our :term:`untrusted projects<untrusted-project>`.  Start by cloning
-the `test1` project which was created by the setup script.
+configuration.  Now is a good time to take a look at Zuul's web
+interface.  Visit http://localhost:9000/t/example-tenant/status to see
+the current status of the system.  It should be idle, but if you leave
+this page open during the following steps, you will see it update
+automatically.
+
+We can now begin adding Zuul configuration to one of our
+:term:`untrusted projects<untrusted-project>`.  Start by cloning the
+`test1` project which was created by the setup script.
 
 .. code-block:: shell
 
