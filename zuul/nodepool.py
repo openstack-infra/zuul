@@ -120,8 +120,18 @@ class Nodepool(object):
             node.state = model.STATE_IN_USE
             self.sched.zk.storeNode(node)
 
-    def returnNodeSet(self, nodeset):
+    def returnNodeSet(self, nodeset, build=None):
         self.log.info("Returning nodeset %s" % (nodeset,))
+        if (build and build.start_time and build.end_time and
+            build.build_set and build.build_set.item and
+            build.build_set.item.change and
+            build.build_set.item.change.project):
+            duration = build.end_time - build.start_time
+            project = build.build_set.item.change.project
+            self.log.info("Nodeset %s with %s nodes was in use "
+                          "for %s seconds for build %s for project %s",
+                          nodeset, len(nodeset.nodes), duration, build,
+                          project)
         for node in nodeset.getNodes():
             if node.lock is None:
                 self.log.error("Node %s is not locked" % (node,))

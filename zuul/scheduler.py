@@ -1218,7 +1218,7 @@ class Scheduler(threading.Thread):
         except Exception:
             self.log.exception("Unable to process autohold for %s" % build)
         try:
-            self.nodepool.returnNodeSet(build.nodeset)
+            self.nodepool.returnNodeSet(build.nodeset, build)
         except Exception:
             self.log.exception("Unable to return nodeset %s" % build.nodeset)
 

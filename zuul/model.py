@@ -679,7 +679,7 @@ class NodeSet(ConfigObject):
             name = self.name + ' '
         else:
             name = ''
-        return '<NodeSet %s%s%s>' % (name, self.nodes, self.groups)
+        return '<NodeSet %s%s>' % (name, list(self.nodes.values()))
 
     def __len__(self):
         return len(self.nodes)

@@ -396,7 +396,7 @@ class PipelineManager(object):
 
             if not was_running:
                 nodeset = build.build_set.getJobNodeSet(build.job.name)
-                self.sched.nodepool.returnNodeSet(nodeset)
+                self.sched.nodepool.returnNodeSet(nodeset, build)
             build.result = 'CANCELED'
             canceled = True
             canceled_jobs.add(build.job.name)
