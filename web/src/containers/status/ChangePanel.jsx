@@ -223,10 +223,17 @@ class ChangePanel extends React.Component {
       name = <a className='zuul-job-name' href={job.report_url}>{job.name}</a>
     } else if (job.url !== null) {
       let url = job.url
+      // TODO: remove that first if block when
+      // I074b3a88a893e04d504e9cf21ced14ba86efc7ec is merged
       if (job.url.match('stream.html')) {
         const buildUuid = job.url.split('?')[1].split('&')[0].split('=')[1]
         const to = (
           tenant.linkPrefix + '/stream/' + buildUuid + '?logfile=console.log'
+        )
+        name = <Link to={to}>{job.name}</Link>
+      } else if (job.url.match('stream/')) {
+        const to = (
+          tenant.linkPrefix + '/' + job.url
         )
         name = <Link to={to}>{job.name}</Link>
       } else {

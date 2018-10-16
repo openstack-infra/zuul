@@ -135,7 +135,7 @@ class TestWeb(BaseTestWeb):
         self.assertEqual('project-merge', status_jobs[0]['name'])
         # TODO(mordred) pull uuids from self.builds
         self.assertEqual(
-            'stream.html?uuid={uuid}&logfile=console.log'.format(
+            'stream/{uuid}?logfile=console.log'.format(
                 uuid=status_jobs[0]['uuid']),
             status_jobs[0]['url'])
         self.assertEqual(
@@ -151,7 +151,7 @@ class TestWeb(BaseTestWeb):
             status_jobs[0]['report_url'])
         self.assertEqual('project-test1', status_jobs[1]['name'])
         self.assertEqual(
-            'stream.html?uuid={uuid}&logfile=console.log'.format(
+            'stream/{uuid}?logfile=console.log'.format(
                 uuid=status_jobs[1]['uuid']),
             status_jobs[1]['url'])
         self.assertEqual(
@@ -167,7 +167,7 @@ class TestWeb(BaseTestWeb):
 
         self.assertEqual('project-test2', status_jobs[2]['name'])
         self.assertEqual(
-            'stream.html?uuid={uuid}&logfile=console.log'.format(
+            'stream/{uuid}?logfile=console.log'.format(
                 uuid=status_jobs[2]['uuid']),
             status_jobs[2]['url'])
         self.assertEqual(

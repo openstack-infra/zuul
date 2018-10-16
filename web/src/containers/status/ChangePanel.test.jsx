@@ -26,7 +26,7 @@ const fakeChange = {
   project: 'org-project',
   jobs: [{
     name: 'job-name',
-    url: 'stream.html?build=42',
+    url: 'stream/42',
     result: null
   }]
 }
@@ -44,7 +44,7 @@ it('change panel render multi tenant links', () => {
   const jobLink = ReactTestUtils.findRenderedComponentWithType(
     application, Link)
   expect(jobLink.props.to).toEqual(
-    '/t/tenant-one/stream/42?logfile=console.log')
+    '/t/tenant-one/stream/42')
 })
 
 it('change panel render white-label tenant links', () => {
@@ -60,5 +60,5 @@ it('change panel render white-label tenant links', () => {
   const jobLink = ReactTestUtils.findRenderedComponentWithType(
     application, Link)
   expect(jobLink.props.to).toEqual(
-    '/stream/42?logfile=console.log')
+    '/stream/42')
 })
