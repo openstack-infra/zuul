@@ -283,7 +283,12 @@ class ZooKeeper(object):
         count = 0
         for nodeid in nodes:
             node_path = '%s/%s' % (self.NODE_ROOT, nodeid)
-            node_data, node_stat = self.client.get(node_path)
+            try:
+                node_data, node_stat = self.client.get(node_path)
+            except kze.NoNodeError:
+                # Node got removed on us. Just ignore.
+                continue
+
             if not node_data:
                 self.log.warning("Node ID %s has no data", nodeid)
                 continue
