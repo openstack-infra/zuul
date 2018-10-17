@@ -119,7 +119,8 @@ class CallbackModule(CallbackBase):
         if task._role:
             data['role'] = {
                 'name': task._role.get_name(),
-                'id': str(task._role._uuid)
+                'id': str(task._role._uuid),
+                'path': task._role._role_path,
             }
         return data
 
