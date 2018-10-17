@@ -77,7 +77,7 @@ services:
     command: "nodepool-launcher -d"
     depends_on:
       - zk
-    image: zuul/nodepool
+    image: zuul/nodepool-launcher
     volumes:
       - "./etc_nodepool/:/etc/nodepool/:z"
     ports:
