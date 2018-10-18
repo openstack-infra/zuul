@@ -37,6 +37,10 @@
       name: Example User
       ssh_key: "{{ ssh_public_key }}"
       http_password: secret
+# TODO(corvus): Fix this for real
+- name: Wait for Zuul to start
+  pause:
+    minutes: 1
 - name: Clone zuul-config
   git:
     repo: http://localhost:8080/zuul-config
