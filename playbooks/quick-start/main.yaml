@@ -1,8 +1,14 @@
 - name: Run docker-compose up
+  when: not local
   shell:
     cmd: docker-compose up -d
     chdir: src/git.openstack.org/openstack-infra/zuul/doc/source/admin/examples
   become: true
+- name: Run docker-compose up
+  when: local
+  shell:
+    cmd: docker-compose up -d
+    chdir: ../../doc/source/admin/examples
 - name: Wait for Gerrit to start
   wait_for:
     host: localhost
@@ -18,6 +24,7 @@
   delay: 1
   retries: 120
 - name: fetch ssh host keys from gerrit
+  when: not local
   shell: ssh-keyscan -p 29418 localhost >> ~/.ssh/known_hosts
 - name: Check if example user exists in Gerrit
   uri:
@@ -53,6 +60,7 @@
   shell:
     chdir: "{{ workspace }}/zuul-config/"
     executable: /bin/bash
+    warn: false
     cmd: |
       {{ ssh_agent.stdout }}
       rm zuul.d/jobs.yaml

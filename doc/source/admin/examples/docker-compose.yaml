@@ -27,11 +27,19 @@ services:
       - "./playbooks/:/var/playbooks/:z"
     command: "ansible-playbook /var/playbooks/setup.yaml"
   zk:
-     image: zookeeper
+    image: zookeeper
+  mysql:
+    image: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: zuul
+      MYSQL_USER: zuul
+      MYSQL_PASSWORD: secret
   scheduler:
     depends_on:
       - gerritconfig
       - zk
+      - mysql
     environment:
       no_proxy: "${no_proxy},gerrit"
     command: "sh -c 'ansible-playbook /var/playbooks/scheduler.yaml; zuul-scheduler -d'"
@@ -45,6 +53,7 @@ services:
     command: "zuul-web -d"
     depends_on:
       - scheduler
+      - mysql
     ports:
       - "9000:9000"
     image: zuul/zuul-web
