@@ -22,9 +22,9 @@ services:
     depends_on:
       - gerrit
     volumes:
-      - "sshkey:/var/ssh"
-      - "nodessh:/var/node"
-      - "./playbooks/:/var/playbooks/"
+      - "sshkey:/var/ssh:z"
+      - "nodessh:/var/node:z"
+      - "./playbooks/:/var/playbooks/:z"
     command: "ansible-playbook /var/playbooks/setup.yaml"
   zk:
      image: zookeeper
@@ -37,9 +37,9 @@ services:
     command: "sh -c 'ansible-playbook /var/playbooks/scheduler.yaml; zuul-scheduler -d'"
     image: zuul/zuul-scheduler
     volumes:
-      - "./etc_zuul/:/etc/zuul/"
-      - "./playbooks/:/var/playbooks/"
-      - "sshkey:/var/ssh"
+      - "./etc_zuul/:/etc/zuul/:z"
+      - "./playbooks/:/var/playbooks/:z"
+      - "sshkey:/var/ssh:z"
       - /var/lib/zuul
   web:
     command: "zuul-web -d"
@@ -49,7 +49,7 @@ services:
       - "9000:9000"
     image: zuul/zuul-web
     volumes:
-      - "./etc_zuul/:/etc/zuul/"
+      - "./etc_zuul/:/etc/zuul/:z"
   executor:
     privileged: true
     environment:
@@ -59,10 +59,10 @@ services:
       - scheduler
     image: zuul/zuul-executor
     volumes:
-      - "./etc_zuul/:/etc/zuul/"
-      - "./playbooks/:/var/playbooks/"
-      - "sshkey:/var/ssh"
-      - "logs:/srv/static/logs"
+      - "./etc_zuul/:/etc/zuul/:z"
+      - "./playbooks/:/var/playbooks/:z"
+      - "sshkey:/var/ssh:z"
+      - "logs:/srv/static/logs:z"
   node:
     build:
       dockerfile: node-Dockerfile
@@ -72,14 +72,14 @@ services:
         https_proxy: "${http_proxy}"
         no_proxy: "${no_proxy}"
     volumes:
-      - "nodessh:/root/.ssh"
+      - "nodessh:/root/.ssh:z"
   launcher:
     command: "nodepool-launcher -d"
     depends_on:
       - zk
     image: zuul/nodepool
     volumes:
-      - "./etc_nodepool/:/etc/nodepool/"
+      - "./etc_nodepool/:/etc/nodepool/:z"
     ports:
       - "8022:8022"
   logs:
@@ -93,7 +93,7 @@ services:
     ports:
       - "8000:80"
     volumes:
-      - "logs:/usr/local/apache2/htdocs"
+      - "logs:/usr/local/apache2/htdocs:z"
 
 volumes:
   sshkey:
