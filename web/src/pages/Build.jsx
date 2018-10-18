@@ -60,14 +60,14 @@ class BuildPage extends React.Component {
     const myColumns = [
       'job_name', 'result', 'voting',
       'pipeline', 'start_time', 'end_time', 'duration',
-      'project', 'branch', 'ref', 'new_rev', 'ref_url',
-      'log_url']
+      'project', 'branch', 'change', 'patchset', 'oldrev', 'newrev',
+      'ref', 'new_rev', 'ref_url', 'log_url']
 
     myColumns.forEach(column => {
       let label = column
       let value = build[column]
       if (column === 'job_name') {
-        label = 'Job'
+        label = 'job'
         value = (
           <Link to={this.props.tenant.linkPrefix + '/job/' + value}>
             {value}
@@ -76,13 +76,19 @@ class BuildPage extends React.Component {
       }
       if (column === 'voting') {
         if (value) {
-          value = 'Yes'
+          value = 'true'
         } else {
-          value = 'No'
+          value = 'false'
         }
       }
       if (value && (column === 'log_url' || column === 'ref_url')) {
         value = <a href={value}>{value}</a>
+      }
+      if (column === 'log_url') {
+        label = 'log url'
+      }
+      if (column === 'ref_url') {
+        label = 'ref url'
       }
       if (value) {
         rows.push({key: label, value: value})
