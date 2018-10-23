@@ -15,6 +15,7 @@
 
 import json
 import re
+import re2
 import select
 import threading
 import time
@@ -290,6 +291,9 @@ class GerritConnection(BaseConnection):
     iolog = logging.getLogger("zuul.GerritConnection.io")
     depends_on_re = re.compile(r"^Depends-On: (I[0-9a-f]{40})\s*$",
                                re.MULTILINE | re.IGNORECASE)
+    refname_bad_sequences = re2.compile(
+        r"[ \\*\[?:^~\x00-\x1F\x7F]|"  # Forbidden characters
+        r"@{|\.\.|\.$|^@$|/$|^/|//+")  # everything else we can check with re2
     replication_timeout = 300
     replication_retry_interval = 5
 
@@ -776,6 +780,17 @@ class GerritConnection(BaseConnection):
                                    (record.get('number'),))
         return changes
 
+    @staticmethod
+    def _checkRefFormat(refname: str) -> bool:
+        # These are the requirements for valid ref names as per
+        # man git-check-ref-format
+        parts = refname.split('/')
+        return \
+            (GerritConnection.refname_bad_sequences.search(refname) is None and
+             len(parts) > 1 and
+             not any(part.startswith('.') or part.endswith('.lock')
+                     for part in parts))
+
     def getProjectBranches(self, project: Project, tenant) -> List[str]:
         branches = self._project_branch_cache.get(project.name)
         if branches is not None:
@@ -783,7 +798,8 @@ class GerritConnection(BaseConnection):
 
         refs = self.getInfoRefs(project)
         heads = [str(k[len('refs/heads/'):]) for k in refs.keys()
-                 if k.startswith('refs/heads/')]
+                 if k.startswith('refs/heads/') and
+                 GerritConnection._checkRefFormat(k)]
         self._project_branch_cache[project.name] = heads
         return heads
 
