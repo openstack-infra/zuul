@@ -101,6 +101,19 @@ class TestGithubDriver(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(1, len(self.history))
 
+    @simple_layout('layouts/files-github.yaml', driver='github')
+    def test_pull_changed_files_length_mismatch(self):
+        files = {'{:03d}.txt'.format(n): 'test' for n in range(300)}
+        # File 301 which is not included in the list of files of the PR,
+        # since Github only returns max. 300 files in alphabetical order
+        files["foobar-requires"] = "test"
+        A = self.fake_github.openFakePullRequest(
+            'org/project', 'master', 'A', files=files)
+
+        self.fake_github.emitEvent(A.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+        self.assertEqual(1, len(self.history))
+
     @simple_layout('layouts/basic-github.yaml', driver='github')
     def test_comment_event(self):
         A = self.fake_github.openFakePullRequest('org/project', 'master', 'A')

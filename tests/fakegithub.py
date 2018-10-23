@@ -250,8 +250,9 @@ class FakePull(object):
         return FakeIssue(self._fake_pull_request)
 
     def files(self):
+        # Github lists max. 300 files of a PR in alphabetical order
         return [FakeFile(fn)
-                for fn in self._fake_pull_request.files]
+                for fn in sorted(self._fake_pull_request.files)][:300]
 
     @property
     def head(self):
@@ -284,12 +285,14 @@ class FakePull(object):
             'state': pr.state,
             'head': {
                 'sha': pr.head_sha,
+                'ref': pr.getPRReference(),
                 'repo': {
                     'full_name': pr.project
                 }
             },
             'merged': pr.is_merged,
-            'body': pr.body
+            'body': pr.body,
+            'changed_files': len(pr.files),
         }
         return data
 

@@ -401,12 +401,19 @@ class Repo(object):
 
     def getFilesChanges(self, branch, tosha=None):
         repo = self.createRepoObject()
+        self.fetch(branch)
+        head = repo.commit(self.revParse('FETCH_HEAD'))
         files = set()
-        head = repo.heads[branch].commit
+
+        merge_bases = []
+        if tosha is not None:
+            merge_bases = repo.merge_base(head, tosha)
+
         files.update(set(head.stats.files.keys()))
-        if tosha:
+        if merge_bases:
+            hexsha_list = [b.hexsha for b in merge_bases]
             for cmt in head.iter_parents():
-                if cmt.hexsha == tosha:
+                if cmt.hexsha in hexsha_list:
                     break
                 files.update(set(cmt.stats.files.keys()))
         return list(files)
