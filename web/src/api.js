@@ -108,6 +108,9 @@ function fetchInfo () {
 function fetchTenants () {
   return Axios.get(apiUrl + 'tenants')
 }
+function fetchConfigErrors (apiPrefix) {
+  return Axios.get(apiUrl + apiPrefix + 'config-errors')
+}
 function fetchStatus (apiPrefix) {
   return Axios.get(apiUrl + apiPrefix + 'status')
 }
@@ -131,6 +134,7 @@ function fetchJobs (apiPrefix) {
 export {
   getHomepageUrl,
   getStreamUrl,
+  fetchConfigErrors,
   fetchStatus,
   fetchBuild,
   fetchBuilds,

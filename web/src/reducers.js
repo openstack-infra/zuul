@@ -23,12 +23,21 @@
 import { applyMiddleware, createStore, combineReducers } from 'redux'
 import thunk from 'redux-thunk'
 
-import { fetchInfo } from './api'
+import { fetchConfigErrors, fetchInfo } from './api'
 
 const infoReducer = (state = {}, action) => {
   switch (action.type) {
     case 'FETCH_INFO_SUCCESS':
       return action.info
+    default:
+      return state
+  }
+}
+
+const configErrorsReducer = (state = [], action) => {
+  switch (action.type) {
+    case 'FETCH_CONFIGERRORS_SUCCESS':
+      return action.errors
     default:
       return state
   }
@@ -46,7 +55,8 @@ const tenantReducer = (state = {}, action) => {
 function createZuulStore() {
   return createStore(combineReducers({
     info: infoReducer,
-    tenant: tenantReducer
+    tenant: tenantReducer,
+    configErrors: configErrorsReducer,
   }), applyMiddleware(thunk))
 }
 
@@ -56,6 +66,18 @@ function fetchInfoAction () {
     return fetchInfo()
       .then(response => {
         dispatch({type: 'FETCH_INFO_SUCCESS', info: response.data.info})
+      })
+      .catch(error => {
+        throw (error)
+      })
+  }
+}
+function fetchConfigErrorsAction (tenant) {
+  return (dispatch) => {
+    return fetchConfigErrors(tenant.apiPrefix)
+      .then(response => {
+        dispatch({type: 'FETCH_CONFIGERRORS_SUCCESS',
+                  errors: response.data})
       })
       .catch(error => {
         throw (error)
@@ -90,5 +112,6 @@ function setTenantAction (name, whiteLabel) {
 export {
   createZuulStore,
   setTenantAction,
+  fetchConfigErrorsAction,
   fetchInfoAction
 }

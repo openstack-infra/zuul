@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    A new Notification Drawer and a ConfigErrors page in the web interface
+    enable displaying the config-errors endpoint data.
