@@ -118,10 +118,11 @@ def main():
         openssl_version = subprocess.check_output(
             ['openssl', 'version']).split()[1]
         if openssl_version.startswith(b'0.'):
-            m = re.match(r'^Modulus \((\d+) bit\):$', output, re.MULTILINE)
+            key_length_re = r'^Modulus \((?P<key_length>\d+) bit\):$'
         else:
-            m = re.match(r'^Public-Key: \((\d+) bit\)$', output, re.MULTILINE)
-        nbits = int(m.group(1))
+            key_length_re = r'^(|RSA )Public-Key: \((?P<key_length>\d+) bit\)$'
+        m = re.match(key_length_re, output, re.MULTILINE)
+        nbits = int(m.group('key_length'))
         nbytes = int(nbits / 8)
         max_bytes = nbytes - 42  # PKCS1-OAEP overhead
         chunks = int(math.ceil(float(len(plaintext)) / max_bytes))
