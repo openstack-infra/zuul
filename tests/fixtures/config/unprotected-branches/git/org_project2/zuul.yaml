@@ -1,2 +1,8 @@
 - job:
-    name: unused-job
+    name: used-job
+    run: playbooks/used-job.yaml
+
+- project:
+    check:
+      jobs:
+        - used-job
