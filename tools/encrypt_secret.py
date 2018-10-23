@@ -45,9 +45,12 @@ def main():
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument('url',
                         help="The base URL of the zuul server.  "
-                        "E.g., https://zuul.example.com/")
-    parser.add_argument('project',
-                        help="The name of the project.")
+                        "E.g., https://zuul.example.com/ or path"
+                        " to project public key file. E.g.,"
+                        " file:///path/to/key.pub")
+    parser.add_argument('project', default=None, nargs="?",
+                        help="The name of the project. Required when using"
+                        " the Zuul API to fetch the public key.")
     parser.add_argument('--tenant',
                         default=None,
                         help="The name of the Zuul tenant.  This may be "
@@ -75,21 +78,24 @@ def main():
                          "unencrypted connection. Your secret may get "
                          "compromised.\n")
 
-    # Check if tenant is white label
-    req = Request("%s/api/info" % (args.url.rstrip('/'),))
-    info = json.loads(urlopen(req).read().decode('utf8'))
-
-    api_tenant = info.get('info', {}).get('tenant')
-    if not api_tenant and not args.tenant:
-        print("Error: the --tenant argument is required")
-        exit(1)
-
-    if api_tenant:
-        req = Request("%s/api/key/%s.pub" % (
-            args.url.rstrip('/'), args.project))
+    if url.scheme == 'file':
+        req = Request(args.url)
     else:
-        req = Request("%s/api/tenant/%s/key/%s.pub" % (
-            args.url.rstrip('/'), args.tenant, args.project))
+        # Check if tenant is white label
+        req = Request("%s/api/info" % (args.url.rstrip('/'),))
+        info = json.loads(urlopen(req).read().decode('utf8'))
+
+        api_tenant = info.get('info', {}).get('tenant')
+        if not api_tenant and not args.tenant:
+            print("Error: the --tenant argument is required")
+            exit(1)
+
+        if api_tenant:
+            req = Request("%s/api/key/%s.pub" % (
+                args.url.rstrip('/'), args.project))
+        else:
+            req = Request("%s/api/tenant/%s/key/%s.pub" % (
+                args.url.rstrip('/'), args.tenant, args.project))
     pubkey = urlopen(req)
 
     if args.infile:

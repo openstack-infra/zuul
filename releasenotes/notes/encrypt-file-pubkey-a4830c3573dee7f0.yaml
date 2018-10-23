@@ -1,0 +1,5 @@
+---
+features:
+  - A local project key file URI (eg. ``file:///path/to/key.pub``) is now
+    supported by the encrypt_secret.py tool. This allows encrypting secrets
+    without directly accessing the Zuul web API to retrieve the project key.
