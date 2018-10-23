@@ -14,7 +14,7 @@
 # under the License.
 
 from contextlib import contextmanager
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit, urlunsplit, urlparse
 import logging
 import os
 import re
@@ -23,6 +23,7 @@ import time
 
 import git
 import gitdb
+import paramiko
 
 import zuul.model
 
@@ -82,6 +83,7 @@ class Repo(object):
             'GIT_HTTP_LOW_SPEED_TIME': speed_time,
         }
         self.git_timeout = git_timeout
+        self.sshkey = sshkey
         if sshkey:
             self.env['GIT_SSH_COMMAND'] = 'ssh -i %s' % (sshkey,)
 
@@ -94,11 +96,45 @@ class Repo(object):
         self.retry_attempts = retry_attempts
         self.retry_interval = retry_interval
         try:
+            self._setup_known_hosts()
+        except Exception:
+            self.log.exception("Unable to set up known_hosts for %s" % remote)
+        try:
             self._ensure_cloned()
             self._git_set_remote_url(
                 git.Repo(self.local_path), self.remote_url)
         except Exception:
             self.log.exception("Unable to initialize repo for %s" % remote)
+
+    def _setup_known_hosts(self):
+        url = urlparse(self.remote_url)
+        if 'ssh' not in url.scheme:
+            return
+
+        port = url.port or 22
+        username = url.username or self.username
+
+        path = os.path.expanduser('~/.ssh')
+        os.makedirs(path)
+        path = os.path.expanduser('~/.ssh/known_hosts')
+        if not os.path.exists(path):
+            with open(path, 'w'):
+                pass
+
+        client = paramiko.SSHClient()
+        client.load_system_host_keys()
+        client.load_host_keys(path)
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+        try:
+            client.connect(url.hostname,
+                           username=username,
+                           port=port,
+                           key_filename=self.sshkey)
+        finally:
+            # If we don't close on exceptions to connect we can leak the
+            # connection and DoS Gerrit.
+            client.close()
 
     def _ensure_cloned(self):
         repo_is_cloned = os.path.exists(os.path.join(self.local_path, '.git'))
