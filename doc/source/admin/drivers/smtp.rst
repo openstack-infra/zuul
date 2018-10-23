@@ -40,6 +40,22 @@ Connection Configuration
       Who the report should be emailed to by default.
       This can be overridden by individual pipelines.
 
+   .. attr:: user
+
+      Optional user name used to authenticate to the SMTP server. Used only in
+      conjunction with a password. If no password is present, this option is
+      ignored.
+
+   .. attr:: password
+
+      Optional password used to authenticate to the SMTP server.
+
+   .. attr:: use_starttls
+      :default: false
+
+      Issue a STARTTLS request to establish an encrypted channel after having
+      connected to the SMTP server.
+
 Reporter Configuration
 ----------------------
 
