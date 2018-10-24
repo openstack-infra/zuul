@@ -62,6 +62,7 @@
     name: zuul-quick-start
     description: Run the commands in the Zuul quick-start documentation.
     run: playbooks/quick-start/run.yaml
+    post-run: playbooks/quick-start/post.yaml
     roles:
       - zuul: openstack-infra/zuul-jobs
     required-projects:
