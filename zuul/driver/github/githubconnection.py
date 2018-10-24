@@ -1044,7 +1044,16 @@ class GithubConnection(BaseConnection):
         # Get the issue obj so we can get the labels (this is silly)
         issueobj = probj.issue()
         pr = probj.as_dict()
-        pr['files'] = [f.filename for f in probj.files()]
+        try:
+            pr['files'] = [f.filename for f in probj.files()]
+        except github3.exceptions.ServerError as exc:
+            # NOTE: For PRs with a lot of lines changed, Github will return
+            # an error (HTTP 500) because it can't generate the diff.
+            self.log.warning("Failed to get list of files from Github. "
+                             "Using empty file list to trigger update "
+                             "via the merger: %s", exc)
+            pr['files'] = []
+
         pr['labels'] = [l.name for l in issueobj.labels()]
         self.log.debug('Got PR %s#%s', project_name, number)
         self.log_rate_limit(self.log, github)
