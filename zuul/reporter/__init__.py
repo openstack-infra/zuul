@@ -82,6 +82,21 @@ class BaseReporter(object, metaclass=abc.ABCMeta):
                                               end_line=mark.end_line,
                                               end_character=mark.end_column)))
 
+    def filterComments(self, item, comments):
+        """Filter comments for files in change
+
+        Remove any comments for files which do not appear in the
+        item's change.  Leave warning messages if this happens.
+
+        :arg QueueItem item: The queue item
+        :arg dict comments: a file comments dictionary (modified in place)
+        """
+
+        for fn in list(comments.keys()):
+            if fn not in item.change.files:
+                del comments[fn]
+                item.warning("Comments left for invalid file %s" % (fn,))
+
     def _getFormatter(self):
         format_methods = {
             'start': self._formatItemReportStart,

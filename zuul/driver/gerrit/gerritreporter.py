@@ -50,8 +50,9 @@ class GerritReporter(BaseReporter):
                 self.connection.canonical_hostname:
             return
 
-        message = self._formatItemReport(item)
         comments = self._getFileComments(item)
+        self.filterComments(item, comments)
+        message = self._formatItemReport(item)
 
         self.log.debug("Report change %s, params %s,"
                        " message: %s, comments: %s" %
