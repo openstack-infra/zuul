@@ -12,12 +12,17 @@ projects from merging broken code.
 
 This tutorial is entirely self-contained and may safely be run on a
 workstation.  The only requirements are a network connection and the
-ability to run Docker containers.  For code review, it provides an
-instance of Gerrit, though the concepts you will learn apply equally
-to GitHub.  Even if you don't ultimately intend to use Gerrit, you are
-encouraged to follow this tutorial to learn how to set up Zuul and
-then consult further documentation to configure your Zuul to interact
-with GitHub.
+ability to run Docker containers.
+
+This tutorial supplies a working Gerrit for code review, though the
+concepts you will learn apply equally to GitHub.
+
+.. note:: Even if you don't ultimately intend to use Gerrit, you are
+	  encouraged to follow this tutorial to learn how to set up
+	  and use Zuul.
+
+At the end of the tutorial, you will find further information about
+how to configure your Zuul to interact with GitHub.
 
 Start Zuul Containers
 ---------------------
@@ -504,3 +509,16 @@ the change:
 Follow the link and you will be able to browse the console log for the
 job.  In the middle of the log, you should see the "Hello, world!"
 output from the job's playbook.
+
+Further Steps
+-------------
+
+If you would like to make further changes to Zuul, its configuration
+files are located in the ``zuul/doc/source/admin/examples`` directory
+and are bind-mounted into the running containers.  You may edit them
+and restart the Zuul containers to make changes.
+
+If you would like to connect your Zuul to GitHub, see
+:ref:`github_driver`.
+
+.. TODO: write an extension to this tutorial to connect to github
