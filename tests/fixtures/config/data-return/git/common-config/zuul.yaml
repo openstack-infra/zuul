@@ -37,9 +37,17 @@
     success-url: docs/index.html
     run: playbooks/data-return-relative.yaml
 
+# This child job will be skipped in the test case test_data_return_child_jobs.
+# In order to verify that this doesn't lead to node leaks attach a nodeset to
+# it. Each test case automatically verifies that there are no open node
+# requests and no locked nodes left behind.
 - job:
     name: child
     run: playbooks/child.yaml
+    nodeset:
+      nodes:
+        - name: node
+          label: test
 
 - job:
     name: several-zuul-return-parent
