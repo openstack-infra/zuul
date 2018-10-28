@@ -66,7 +66,7 @@ class WebServer(zuul.cmd.ZuulDaemonApp):
 
         try:
             self.web = zuul.web.ZuulWeb(**params)
-        except Exception as e:
+        except Exception:
             self.log.exception("Error creating ZuulWeb:")
             sys.exit(1)
 

@@ -67,8 +67,8 @@ def timeout_handler(path):
 
 
 class Repo(object):
-    commit_re = re.compile('^commit ([0-9a-f]{40})$')
-    diff_re = re.compile('^@@ -\d+,\d \+(\d+),\d @@$')
+    commit_re = re.compile(r'^commit ([0-9a-f]{40})$')
+    diff_re = re.compile(r'^@@ -\d+,\d \+(\d+),\d @@$')
 
     def __init__(self, remote, local, email, username, speed_limit, speed_time,
                  sshkey=None, cache_path=None, logger=None, git_timeout=300,
@@ -158,7 +158,7 @@ class Repo(object):
                     mygit.clone(git.cmd.Git.polish_url(url), self.local_path,
                                 kill_after_timeout=self.git_timeout)
                 break
-            except Exception as e:
+            except Exception:
                 if attempt < self.retry_attempts:
                     time.sleep(self.retry_interval)
                     self.log.warning("Retry %s: Clone %s" % (

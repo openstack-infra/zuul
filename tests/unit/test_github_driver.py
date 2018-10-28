@@ -54,10 +54,10 @@ class TestGithubDriver(ZuulTestCase):
         self.assertEqual(1, len(A.comments))
         self.assertThat(
             A.comments[0],
-            MatchesRegex('.*\[project-test1 \]\(.*\).*', re.DOTALL))
+            MatchesRegex(r'.*\[project-test1 \]\(.*\).*', re.DOTALL))
         self.assertThat(
             A.comments[0],
-            MatchesRegex('.*\[project-test2 \]\(.*\).*', re.DOTALL))
+            MatchesRegex(r'.*\[project-test2 \]\(.*\).*', re.DOTALL))
         self.assertEqual(2, len(self.history))
 
         # test_pull_unmatched_branch_event(self):
@@ -389,7 +389,7 @@ class TestGithubDriver(ZuulTestCase):
         self.assertEqual(check_url, check_status['url'])
         self.assertEqual(1, len(A.comments))
         self.assertThat(A.comments[0],
-                        MatchesRegex('.*Build succeeded.*', re.DOTALL))
+                        MatchesRegex(r'.*Build succeeded.*', re.DOTALL))
 
         # pipeline does not report any status but does comment
         self.executor_server.hold_jobs_in_build = True
@@ -401,7 +401,8 @@ class TestGithubDriver(ZuulTestCase):
         # comments increased by one for the start message
         self.assertEqual(2, len(A.comments))
         self.assertThat(A.comments[1],
-                        MatchesRegex('.*Starting reporting jobs.*', re.DOTALL))
+                        MatchesRegex(r'.*Starting reporting jobs.*',
+                                     re.DOTALL))
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
         self.waitUntilSettled()
@@ -427,7 +428,7 @@ class TestGithubDriver(ZuulTestCase):
 
         # The rest of the URL is a UUID and a trailing slash.
         self.assertThat(report_status['url'][len(base):],
-                        MatchesRegex('^[a-fA-F0-9]{32}\/$'))
+                        MatchesRegex(r'^[a-fA-F0-9]{32}\/$'))
 
     @simple_layout('layouts/reporting-github.yaml', driver='github')
     def test_truncated_status_description(self):
@@ -511,7 +512,7 @@ class TestGithubDriver(ZuulTestCase):
         self.waitUntilSettled()
         self.assertTrue(A.is_merged)
         self.assertThat(A.merge_message,
-                        MatchesRegex('.*PR title.*Reviewed-by.*', re.DOTALL))
+                        MatchesRegex(r'.*PR title.*Reviewed-by.*', re.DOTALL))
 
         # pipeline merges the pull request on success after failure
         self.fake_github.merge_failure = True
@@ -583,7 +584,7 @@ class TestGithubDriver(ZuulTestCase):
         self.assertEqual(check_url, check_status['url'])
         self.assertEqual(1, len(A.comments))
         self.assertThat(A.comments[0],
-                        MatchesRegex('.*Build succeeded.*', re.DOTALL))
+                        MatchesRegex(r'.*Build succeeded.*', re.DOTALL))
 
     @simple_layout('layouts/dependent-github.yaml', driver='github')
     def test_parallel_changes(self):
@@ -1126,10 +1127,10 @@ class TestGithubWebhook(ZuulTestCase):
         self.assertEqual(1, len(A.comments))
         self.assertThat(
             A.comments[0],
-            MatchesRegex('.*\[project-test1 \]\(.*\).*', re.DOTALL))
+            MatchesRegex(r'.*\[project-test1 \]\(.*\).*', re.DOTALL))
         self.assertThat(
             A.comments[0],
-            MatchesRegex('.*\[project-test2 \]\(.*\).*', re.DOTALL))
+            MatchesRegex(r'.*\[project-test2 \]\(.*\).*', re.DOTALL))
         self.assertEqual(2, len(self.history))
 
         # test_pull_unmatched_branch_event(self):

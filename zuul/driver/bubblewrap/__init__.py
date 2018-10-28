@@ -22,13 +22,12 @@ import os
 import psutil
 import pwd
 import shlex
-import subprocess
 import sys
 import threading
 import re
 import struct
 
-from typing import Dict, List  # flake8: noqa
+from typing import Dict, List  # noqa
 
 from zuul.driver import (Driver, WrapperInterface)
 from zuul.execution_context import BaseExecutionContext
@@ -171,7 +170,7 @@ class BubblewrapDriver(Driver, WrapperInterface):
     log = logging.getLogger("zuul.BubblewrapDriver")
     name = 'bubblewrap'
 
-    release_file_re = re.compile('^\W+-release$')
+    release_file_re = re.compile(r'^\W+-release$')
 
     def __init__(self):
         self.bwrap_command = self._bwrap_command()
@@ -258,7 +257,7 @@ def main(args=None):
     if cli_args.secret:
         for secret in cli_args.secret:
             fn, content = secret.split('=', 1)
-            secrets[fn]=content
+            secrets[fn] = content
 
     context = driver.getExecutionContext(
         cli_args.ro_paths, cli_args.rw_paths,

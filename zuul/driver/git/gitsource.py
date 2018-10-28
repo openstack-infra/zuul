@@ -27,13 +27,13 @@ class GitSource(BaseSource):
                                         hostname, config)
 
     def getRefSha(self, project, ref):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def isMerged(self, change, head=None):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def canMerge(self, change, allow_needs):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def getChange(self, event, refresh=False):
         return self.connection.getChange(event, refresh)
@@ -61,7 +61,7 @@ class GitSource(BaseSource):
         return self.connection.getGitUrl(project)
 
     def getProjectOpenChanges(self, project):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def getRequireFilters(self, config):
         return []
@@ -70,4 +70,4 @@ class GitSource(BaseSource):
         return []
 
     def getRefForChange(self, change):
-        raise NotImplemented()
+        raise NotImplementedError()

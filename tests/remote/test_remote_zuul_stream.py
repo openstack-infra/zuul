@@ -76,8 +76,8 @@ class TestZuulStream(AnsibleZuulTestCase):
             return f.read()
 
     def assertLogLine(self, line, log):
-        pattern = ('^\d\d\d\d-\d\d-\d\d \d\d:\d\d\:\d\d\.\d\d\d\d\d\d \| %s$' %
-                   line)
+        pattern = (r'^\d\d\d\d-\d\d-\d\d \d\d:\d\d\:\d\d\.\d\d\d\d\d\d \| %s$'
+                   % line)
         log_re = re.compile(pattern, re.MULTILINE)
         m = log_re.search(log)
         if m is None:
@@ -91,45 +91,45 @@ class TestZuulStream(AnsibleZuulTestCase):
 
             text = self._get_job_output(build)
             self.assertLogLine(
-                'RUN START: \[untrusted : review.example.com/org/project/'
-                'playbooks/command.yaml@master\]', text)
-            self.assertLogLine('PLAY \[all\]', text)
-            self.assertLogLine('TASK \[Show contents of first file\]', text)
-            self.assertLogLine('controller \| command test one', text)
+                r'RUN START: \[untrusted : review.example.com/org/project/'
+                r'playbooks/command.yaml@master\]', text)
+            self.assertLogLine(r'PLAY \[all\]', text)
+            self.assertLogLine(r'TASK \[Show contents of first file\]', text)
+            self.assertLogLine(r'controller \| command test one', text)
             self.assertLogLine(
-                'controller \| ok: Runtime: \d:\d\d:\d\d\.\d\d\d\d\d\d', text)
-            self.assertLogLine('TASK \[Show contents of second file\]', text)
-            self.assertLogLine('compute1 \| command test two', text)
-            self.assertLogLine('controller \| command test two', text)
-            self.assertLogLine('compute1 \| This is a rescue task', text)
-            self.assertLogLine('controller \| This is a rescue task', text)
-            self.assertLogLine('compute1 \| This is an always task', text)
-            self.assertLogLine('controller \| This is an always task', text)
-            self.assertLogLine('compute1 \| This is a handler', text)
-            self.assertLogLine('controller \| This is a handler', text)
-            self.assertLogLine('controller \| First free task', text)
-            self.assertLogLine('controller \| Second free task', text)
-            self.assertLogLine('controller \| This is a shell task after an '
+                r'controller \| ok: Runtime: \d:\d\d:\d\d\.\d\d\d\d\d\d', text)
+            self.assertLogLine(r'TASK \[Show contents of second file\]', text)
+            self.assertLogLine(r'compute1 \| command test two', text)
+            self.assertLogLine(r'controller \| command test two', text)
+            self.assertLogLine(r'compute1 \| This is a rescue task', text)
+            self.assertLogLine(r'controller \| This is a rescue task', text)
+            self.assertLogLine(r'compute1 \| This is an always task', text)
+            self.assertLogLine(r'controller \| This is an always task', text)
+            self.assertLogLine(r'compute1 \| This is a handler', text)
+            self.assertLogLine(r'controller \| This is a handler', text)
+            self.assertLogLine(r'controller \| First free task', text)
+            self.assertLogLine(r'controller \| Second free task', text)
+            self.assertLogLine(r'controller \| This is a shell task after an '
                                'included role', text)
-            self.assertLogLine('compute1 \| This is a shell task after an '
+            self.assertLogLine(r'compute1 \| This is a shell task after an '
                                'included role', text)
-            self.assertLogLine('controller \| This is a command task after an '
+            self.assertLogLine(r'controller \| This is a command task after '
+                               'an included role', text)
+            self.assertLogLine(r'compute1 \| This is a command task after an '
                                'included role', text)
-            self.assertLogLine('compute1 \| This is a command task after an '
-                               'included role', text)
-            self.assertLogLine('controller \| This is a shell task with '
+            self.assertLogLine(r'controller \| This is a shell task with '
                                'delegate compute1', text)
-            self.assertLogLine('controller \| This is a shell task with '
+            self.assertLogLine(r'controller \| This is a shell task with '
                                'delegate controller', text)
             self.assertLogLine(
-                'controller \| ok: Runtime: \d:\d\d:\d\d\.\d\d\d\d\d\d', text)
+                r'controller \| ok: Runtime: \d:\d\d:\d\d\.\d\d\d\d\d\d', text)
             self.assertLogLine('PLAY RECAP', text)
             self.assertLogLine(
-                'controller \| ok: \d+ changed: \d+ unreachable: 0 failed: 1',
+                r'controller \| ok: \d+ changed: \d+ unreachable: 0 failed: 1',
                 text)
             self.assertLogLine(
-                'RUN END RESULT_NORMAL: \[untrusted : review.example.com/'
-                'org/project/playbooks/command.yaml@master]', text)
+                r'RUN END RESULT_NORMAL: \[untrusted : review.example.com/'
+                r'org/project/playbooks/command.yaml@master]', text)
 
     def test_module_failure(self):
         job = self._run_job('module_failure')
@@ -138,6 +138,6 @@ class TestZuulStream(AnsibleZuulTestCase):
             self.assertEqual(build.result, 'FAILURE')
 
             text = self._get_job_output(build)
-            self.assertLogLine('TASK \[Module failure\]', text)
+            self.assertLogLine(r'TASK \[Module failure\]', text)
             self.assertLogLine(
-                'controller \| MODULE FAILURE: This module is broken', text)
+                r'controller \| MODULE FAILURE: This module is broken', text)

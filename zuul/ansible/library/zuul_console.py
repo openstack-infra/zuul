@@ -223,7 +223,7 @@ def get_pid_from_inode(inode):
         try:
             try:
                 int(d)
-            except Exception as e:
+            except Exception:
                 continue
             d_abs_path = os.path.join('/proc', d)
             if os.stat(d_abs_path).st_uid != my_euid:

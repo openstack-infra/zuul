@@ -36,7 +36,7 @@ class TestWebURLs(ZuulTestCase):
         req = urllib.request.Request(url)
         try:
             f = urllib.request.urlopen(req)
-        except urllib.error.HTTPError as e:
+        except urllib.error.HTTPError:
             raise Exception("Error on URL {}".format(url))
         return f.read()
 

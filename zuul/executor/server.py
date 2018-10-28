@@ -992,7 +992,7 @@ class AnsibleJob(object):
     def doMergeChanges(self, merger, items, repo_state):
         try:
             ret = merger.mergeChanges(items, repo_state=repo_state)
-        except ValueError as e:
+        except ValueError:
             # Return ABORTED so that we'll try again. At this point all of
             # the refs we're trying to merge should be valid refs. If we
             # can't fetch them, it should resolve itself.

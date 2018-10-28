@@ -29,11 +29,10 @@ import itertools
 import getopt
 import logging
 import os
-import operator
 import subprocess
 import tempfile
 import re
-from typing import Any, Dict, List, Optional  # flake8: noqa
+from typing import Any, Dict, List, Optional
 
 import jenkins_jobs.builder
 from jenkins_jobs.formatter import deep_format
@@ -47,7 +46,7 @@ TEMPLATES_TO_EXPAND = {}  # type: Dict[str, List]
 JOBS_FOR_EXPAND = collections.defaultdict(dict)  # type: ignore
 JOBS_BY_ORIG_TEMPLATE = {}  # type: ignore
 SUFFIXES = []  # type: ignore
-SKIP_MACROS = [] # type: ignore
+SKIP_MACROS = []  # type: ignore
 ENVIRONMENT = '{{ zuul | zuul_legacy_vars }}'
 DESCRIPTION = """Migrate zuul v2 and Jenkins Job Builder to Zuul v3.
 
@@ -56,6 +55,7 @@ Builder job definitions and transforms them into a Zuul v3 config. An
 optional mapping config can be given that defines how to map old jobs
 to new jobs.
 """
+
 
 def deal_with_shebang(data):
     # Ansible shell blocks do not honor shebang lines. That's fine - but
@@ -222,7 +222,7 @@ def normalize_project_expansions():
 
 
 # from :
-# http://stackoverflow.com/questions/8640959/how-can-i-control-what-scalar-form-pyyaml-uses-for-my-data  flake8: noqa
+# http://stackoverflow.com/questions/8640959/how-can-i-control-what-scalar-form-pyyaml-uses-for-my-data  # noqa
 def should_use_block(value):
     for c in u"\u000a\u000d\u001c\u001d\u001e\u0085\u2028\u2029":
         if c in value:
@@ -233,7 +233,7 @@ def should_use_block(value):
 def my_represent_scalar(self, tag, value, style=None):
     if style is None:
         if should_use_block(value):
-             style='|'
+            style = '|'
         else:
             style = self.default_style
 
@@ -241,6 +241,7 @@ def my_represent_scalar(self, tag, value, style=None):
     if self.alias_key is not None:
         self.represented_objects[self.alias_key] = node
     return node
+
 
 def project_representer(dumper, data):
     return dumper.represent_mapping('tag:yaml.org,2002:map',
@@ -438,6 +439,7 @@ def expandYamlForTemplateJob(self, project, template, jobs_glob=None):
         expanded['template_name'] = template_name
         self.jobs.append(expanded)
         JOBS_BY_ORIG_TEMPLATE[templated_job_name] = expanded
+
 
 jenkins_jobs.parser.YamlParser.expandYamlForTemplateJob = \
     expandYamlForTemplateJob
@@ -729,7 +731,7 @@ class Job:
             ensure_task['name'] = 'Ensure artifacts directory exists'
             ensure_task['file'] = collections.OrderedDict()
             ensure_task['file']['path'] = \
-                    "{{ zuul.executor.work_root }}/artifacts"
+                "{{ zuul.executor.work_root }}/artifacts"
             ensure_task['file']['state'] = 'directory'
             ensure_task['delegate_to'] = 'localhost'
             tasks.insert(0, ensure_task)

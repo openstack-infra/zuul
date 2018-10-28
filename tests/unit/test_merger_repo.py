@@ -118,7 +118,7 @@ class TestMergerRepo(ZuulTestCase):
         # exceptions, including this one on initialization.  For the
         # test, we try cloning again.
         with testtools.ExpectedException(git.exc.GitCommandError,
-                                         '.*exit code\(-9\)'):
+                                         r'.*exit code\(-9\)'):
             work_repo._ensure_cloned()
 
     def test_fetch_timeout(self):
@@ -130,7 +130,7 @@ class TestMergerRepo(ZuulTestCase):
         self.patch(git.Git, 'GIT_PYTHON_GIT_EXECUTABLE',
                    os.path.join(FIXTURE_DIR, 'fake_git.sh'))
         with testtools.ExpectedException(git.exc.GitCommandError,
-                                         '.*exit code\(-9\)'):
+                                         r'.*exit code\(-9\)'):
             work_repo.update()
 
     def test_fetch_retry(self):
