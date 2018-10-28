@@ -194,12 +194,10 @@ def merge_project_dict(project_dicts, name, project):
 
 def normalize_project_expansions():
     remove_from_job_matchers = []
-    template = None
     # First find the matchers that are the same for all jobs
     for job_name, project in copy.deepcopy(JOBS_FOR_EXPAND).items():
         JOB_MATCHERS[job_name] = None
         for project_name, expansion in project.items():
-            template = expansion['template']
             if not JOB_MATCHERS[job_name]:
                 JOB_MATCHERS[job_name] = copy.deepcopy(expansion['info'])
             else:
@@ -1270,7 +1268,6 @@ class ZuulMigrate:
         pass
 
     def setupDir(self):
-        zuul_yaml = os.path.join(self.outdir, 'zuul.yaml')
         zuul_d = os.path.join(self.outdir, 'zuul.d')
         job_outfile = os.path.join(zuul_d, 'zuul-legacy-jobs.yaml')
         project_outfile = os.path.join(zuul_d, 'projects.yaml')
