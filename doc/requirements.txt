@@ -1,0 +1,6 @@
+sphinx>=1.6.1
+sphinxcontrib-blockdiag>=1.1.0
+sphinxcontrib-programoutput
+sphinx-autodoc-typehints
+reno>=2.8.0 # Apache-2.0
+zuul-sphinx
