@@ -192,7 +192,11 @@ class TestFileComments(AnsibleZuulTestCase):
     tenant_config_file = 'config/gerrit-file-comments/main.yaml'
 
     def test_file_comments(self):
-        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A = self.fake_gerrit.addFakeChange(
+            'org/project', 'master', 'A',
+            files={'path/to/file.py': 'test1',
+                   'otherfile.txt': 'test2',
+                   })
         A.addApproval('Code-Review', 2)
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
@@ -229,3 +233,5 @@ class TestFileComments(AnsibleZuulTestCase):
         )
         self.assertIn('expected a dictionary', A.messages[0],
                       "A should have a validation error reported")
+        self.assertIn('invalid file missingfile.txt', A.messages[0],
+                      "A should have file error reported")

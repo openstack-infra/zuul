@@ -15,3 +15,6 @@
                     This is a much longer message.
 
                     With multiple paragraphs.
+              missingfile.txt:
+                - line: 89
+                  message: does not exist
