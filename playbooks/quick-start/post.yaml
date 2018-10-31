@@ -1,0 +1,26 @@
+- hosts: all
+  tasks:
+    - name: Create logs directory
+      file:
+        state: directory
+        path: "{{ ansible_user_dir }}/logs"
+        mode: 0755
+    - name: Save docker log files
+      become: true
+      shell: |
+        docker logs examples_gerrit_1 > {{ ansible_user_dir }}/logs/gerrit.log
+        docker logs examples_gerritconfig_1 > {{ ansible_user_dir }}/logs/gerritconfig.log
+        docker logs examples_zk_1 > {{ ansible_user_dir }}/logs/zk.log
+        docker logs examples_mysql_1 > {{ ansible_user_dir }}/logs/mysql.log
+        docker logs examples_scheduler_1 > {{ ansible_user_dir }}/logs/scheduler.log
+        docker logs examples_web_1 > {{ ansible_user_dir }}/logs/web.log
+        docker logs examples_executor_1 > {{ ansible_user_dir }}/logs/executor.log
+        docker logs examples_node_1 > {{ ansible_user_dir }}/logs/node.log
+        docker logs examples_launcher_1 > {{ ansible_user_dir }}/logs/launcher.log
+        docker logs examples_logs_1 > {{ ansible_user_dir }}/logs/logs.log
+    - name: Copy docker log files to executor
+      synchronize:
+        mode: pull
+        src: "{{ ansible_user_dir }}/logs/"
+        dest: "{{ zuul.executor.log_root }}/container_logs/"
+        verify_host: true
