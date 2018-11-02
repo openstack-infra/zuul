@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    A new scheduler option, :attr:`scheduler.relative_priority`, can
+    be used to instruct Nodepool to fulfull requests from less-busy
+    projects more quickly.

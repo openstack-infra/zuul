@@ -41,6 +41,7 @@ class ZooKeeper(object):
     log = logging.getLogger("zuul.zk.ZooKeeper")
 
     REQUEST_ROOT = '/nodepool/requests'
+    REQUEST_LOCK_ROOT = "/nodepool/requests-lock"
     NODE_ROOT = '/nodepool/nodes'
 
     # Log zookeeper retry every 10 seconds
@@ -162,8 +163,8 @@ class ZooKeeper(object):
             from ZooKeeper).  The watcher should return False when
             further updates are no longer necessary.
         '''
+        node_request.created_time = time.time()
         data = node_request.toDict()
-        data['created_time'] = time.time()
 
         path = '%s/%s-' % (self.REQUEST_ROOT, node_request.priority)
         path = self.client.create(path, self._dictToStr(data),
@@ -174,15 +175,7 @@ class ZooKeeper(object):
 
         def callback(data, stat):
             if data:
-                data = self._strToDict(data)
-                request_nodes = list(node_request.nodeset.getNodes())
-                for i, nodeid in enumerate(data.get('nodes', [])):
-                    node_path = '%s/%s' % (self.NODE_ROOT, nodeid)
-                    node_data, node_stat = self.client.get(node_path)
-                    node_data = self._strToDict(node_data)
-                    request_nodes[i].id = nodeid
-                    request_nodes[i].updateFromDict(node_data)
-                node_request.updateFromDict(data)
+                self.updateNodeRequest(node_request, data)
             deleted = (data is None)  # data *are* none
             return watcher(node_request, deleted)
 
@@ -215,6 +208,34 @@ class ZooKeeper(object):
             return True
         return False
 
+    def storeNodeRequest(self, node_request):
+        '''Store the node request.
+
+        The request is expected to already exist and is updated in its
+        entirety.
+
+        :param NodeRequest node_request: The request to update.
+        '''
+
+        path = '%s/%s' % (self.NODE_REQUEST_ROOT, node_request.id)
+        self.client.set(path, self._dictToStr(node_request.toDict()))
+
+    def updateNodeRequest(self, node_request, data=None):
+        '''Refresh an existing node request.
+
+        :param NodeRequest node_request: The request to update.
+        :param dict data: The data to use; query ZK if absent.
+        '''
+        if data is None:
+            path = '%s/%s' % (self.REQUEST_ROOT, node_request.id)
+            data, stat = self.client.get(path)
+        data = self._strToDict(data)
+        request_nodes = list(node_request.nodeset.getNodes())
+        for i, nodeid in enumerate(data.get('nodes', [])):
+            request_nodes[i].id = nodeid
+            self.updateNode(request_nodes[i], nodeid)
+        node_request.updateFromDict(data)
+
     def storeNode(self, node):
         '''Store the node.
 
@@ -226,6 +247,18 @@ class ZooKeeper(object):
 
         path = '%s/%s' % (self.NODE_ROOT, node.id)
         self.client.set(path, self._dictToStr(node.toDict()))
+
+    def updateNode(self, node, nodeid):
+        '''Refresh an existing node.
+
+        :param Node node: The node to update.
+        :param Node nodeid: The zookeeper node ID.
+        '''
+
+        node_path = '%s/%s' % (self.NODE_ROOT, nodeid)
+        node_data, node_stat = self.client.get(node_path)
+        node_data = self._strToDict(node_data)
+        node.updateFromDict(node_data)
 
     def lockNode(self, node, blocking=True, timeout=None):
         '''
@@ -267,6 +300,59 @@ class ZooKeeper(object):
             raise LockException("Node %s does not hold a lock" % (node,))
         node.lock.release()
         node.lock = None
+
+    def lockNodeRequest(self, request, blocking=True, timeout=None):
+        '''
+        Lock a node request.
+
+        This will set the `lock` attribute of the request object when the
+        lock is successfully acquired.
+
+        :param NodeRequest request: The request to lock.
+        :param bool blocking: Whether or not to block on trying to
+            acquire the lock
+        :param int timeout: When blocking, how long to wait for the lock
+            to get acquired. None, the default, waits forever.
+
+        :raises: TimeoutException if we failed to acquire the lock when
+            blocking with a timeout. ZKLockException if we are not blocking
+            and could not get the lock, or a lock is already held.
+        '''
+
+        path = "%s/%s" % (self.REQUEST_LOCK_ROOT, request.id)
+        try:
+            lock = Lock(self.client, path)
+            have_lock = lock.acquire(blocking, timeout)
+        except kze.LockTimeout:
+            raise LockException(
+                "Timeout trying to acquire lock %s" % path)
+        except kze.NoNodeError:
+            have_lock = False
+            self.log.error("Request not found for locking: %s", request)
+
+        # If we aren't blocking, it's possible we didn't get the lock
+        # because someone else has it.
+        if not have_lock:
+            raise LockException("Did not get lock on %s" % path)
+
+        request.lock = lock
+        self.updateNodeRequest(request)
+
+    def unlockNodeRequest(self, request):
+        '''
+        Unlock a node request.
+
+        The request must already have been locked.
+
+        :param NodeRequest request: The request to unlock.
+
+        :raises: ZKLockException if the request is not currently locked.
+        '''
+        if request.lock is None:
+            raise LockException(
+                "Request %s does not hold a lock" % request)
+        request.lock.release()
+        request.lock = None
 
     def heldNodeCount(self, autohold_key):
         '''

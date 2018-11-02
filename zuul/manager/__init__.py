@@ -85,6 +85,11 @@ class PipelineManager(object):
                 return True
         return False
 
+    def getNodePriority(self, item):
+        items = self.pipeline.getAllItems()
+        items = [i for i in items if i.change.project == item.change.project]
+        return items.index(item)
+
     def isChangeAlreadyInPipeline(self, change):
         # Checks live items in the pipeline
         for item in self.pipeline.getAllItems():
@@ -327,8 +332,12 @@ class PipelineManager(object):
             return False
         build_set = item.current_build_set
         self.log.debug("Requesting nodes for change %s" % item.change)
+        if self.sched.use_relative_priority:
+            priority = item.getNodePriority()
+        else:
+            priority = 0
         for job in jobs:
-            req = self.sched.nodepool.requestNodes(build_set, job)
+            req = self.sched.nodepool.requestNodes(build_set, job, priority)
             self.log.debug("Adding node request %s for job %s to item %s" %
                            (req, job, item))
             build_set.setJobNodeRequest(job.name, req)
@@ -687,6 +696,12 @@ class PipelineManager(object):
         if failing_reasons:
             self.log.debug("%s is a failing item because %s" %
                            (item, failing_reasons))
+        if not dequeued and self.sched.use_relative_priority:
+            priority = item.getNodePriority()
+            for node_request in item.current_build_set.node_requests.values():
+                if node_request.relative_priority != priority:
+                    self.sched.nodepool.reviseNodeRequest(
+                        node_request, priority)
         return (changed, nnfi)
 
     def processQueue(self):

@@ -13,6 +13,7 @@
 import logging
 
 from zuul import model
+from zuul.zk import LockException
 
 
 class Nodepool(object):
@@ -51,11 +52,12 @@ class Nodepool(object):
             statsd.timing(key + '.size.%s' % len(request.nodeset.nodes), dt)
         statsd.gauge('zuul.nodepool.current_requests', len(self.requests))
 
-    def requestNodes(self, build_set, job):
+    def requestNodes(self, build_set, job, relative_priority):
         # Create a copy of the nodeset to represent the actual nodes
         # returned by nodepool.
         nodeset = job.nodeset.copy()
-        req = model.NodeRequest(self.sched.hostname, build_set, job, nodeset)
+        req = model.NodeRequest(self.sched.hostname, build_set, job,
+                                nodeset, relative_priority)
         self.requests[req.uid] = req
 
         if nodeset.nodes:
@@ -78,6 +80,38 @@ class Nodepool(object):
                 self.sched.zk.deleteNodeRequest(request)
             except Exception:
                 self.log.exception("Error deleting node request:")
+
+    def reviseRequest(self, request, relative_priority=None):
+        '''Attempt to update the node request, if it is not currently being
+        processed.
+
+        :param: NodeRequest request: The request to update.
+        :param relative_priority int: If supplied, the new relative
+            priority to set on the request.
+
+        '''
+        if relative_priority is None:
+            return
+        try:
+            self.sched.zk.lockNodeRequest(request, blocking=False)
+        except LockException:
+            # It may be locked by nodepool, which is fine.
+            self.log.debug("Unable to revise locked node request %s", request)
+            return False
+        try:
+            old_priority = request.relative_priority
+            request.relative_priority = relative_priority
+            self.sched.zk.storeNodeRequest(request)
+            self.log.debug("Revised relative priority of "
+                           "node request %s from %s to %s",
+                           request, old_priority, relative_priority)
+        except Exception:
+            self.log.exception("Unable to update node request %s", request)
+        finally:
+            try:
+                self.sched.zk.unlockNodeRequest(request)
+            except Exception:
+                self.log.exception("Unable to unlock node request %s", request)
 
     def holdNodeSet(self, nodeset, autohold_key):
         '''
