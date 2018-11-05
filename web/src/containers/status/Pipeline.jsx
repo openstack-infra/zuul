@@ -40,6 +40,8 @@ class Pipeline extends React.Component {
           change._tree_position = changeIndex
         })
       })
+      // Generate a unique identifier for each queues
+      changeQueue.uuid = Object.keys(changes).join('-')
       changeQueue.heads.forEach(head => {
         head.forEach(change => {
           if (change.live === true) {
@@ -127,12 +129,12 @@ class Pipeline extends React.Component {
            filter.indexOf(pipeline.name) !== -1 ||
              this.filterQueue(item, filter)
          )))
-          .map((changeQueue, idx) => (
+          .map(changeQueue => (
             <ChangeQueue
               queue={changeQueue}
               expanded={expanded}
               pipeline={pipeline.name}
-              key={idx}
+              key={changeQueue.uuid}
               />
           ))}
       </div>
