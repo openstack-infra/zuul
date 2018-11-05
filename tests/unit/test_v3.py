@@ -4236,3 +4236,82 @@ class TestJobPause(AnsibleZuulTestCase):
         self.assertHistory([
             dict(name='just-pause', result='SUCCESS', changes='1,1'),
         ], ordered=False)
+
+    def test_job_pause_skipped_child(self):
+        """
+        Tests that a paused job is resumed with externally skipped jobs.
+
+        Tests that this situation won't lead to stuck buildsets.
+        Compile pauses before pre-test fails.
+
+        1. compile (pauses) --+
+                              |
+                              +--> test (skipped because of pre-test)
+                              |
+        2. pre-test (fails) --+
+        """
+        self.wait_timeout = 120
+        self.executor_server.hold_jobs_in_build = True
+
+        # Output extra ansible info so we might see errors.
+        self.executor_server.verbose = True
+        self.executor_server.keep_jobdir = True
+
+        A = self.fake_gerrit.addFakeChange('org/project3', 'master', 'A')
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.executor_server.release('compile')
+        self.waitUntilSettled()
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='pre-test', result='FAILURE', changes='1,1'),
+            dict(name='compile', result='SUCCESS', changes='1,1'),
+        ])
+
+        self.assertIn('test : SKIPPED', A.messages[0])
+
+    def test_job_pause_pre_skipped_child(self):
+        """
+        Tests that a paused job is resumed with pre-existing skipped jobs.
+
+        Tests that this situation won't lead to stuck buildsets.
+        The pre-test fails before compile pauses so test is already skipped
+        when compile pauses.
+
+        1. pre-test (fails) --+
+                              |
+                              +--> test (skipped because of pre-test)
+                              |
+        2. compile (pauses) --+
+        """
+        self.wait_timeout = 120
+        self.executor_server.hold_jobs_in_build = True
+
+        # Output extra ansible info so we might see errors.
+        self.executor_server.verbose = True
+        self.executor_server.keep_jobdir = True
+
+        A = self.fake_gerrit.addFakeChange('org/project3', 'master', 'A')
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.executor_server.release('pre-test')
+        self.waitUntilSettled()
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='pre-test', result='FAILURE', changes='1,1'),
+            dict(name='compile', result='SUCCESS', changes='1,1'),
+        ])
+
+        self.assertIn('test : SKIPPED', A.messages[0])

@@ -1502,6 +1502,9 @@ class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
         build = self.executor_server.job_builds[self.job.unique]
 
         if self.executor_server._run_ansible:
+            # Call run on the fake build omitting the result so we also can
+            # hold real ansible jobs.
+            build.run()
             result = super(RecordingAnsibleJob, self).runAnsible(
                 cmd, timeout, playbook, wrapped)
         else:

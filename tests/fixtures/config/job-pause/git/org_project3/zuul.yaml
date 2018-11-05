@@ -1,0 +1,22 @@
+- job:
+    name: compile
+    run: playbooks/compile.yaml
+
+- job:
+    name: test
+    run: playbooks/test.yaml
+
+- job:
+    name: pre-test
+    run: playbooks/pre-test.yaml
+
+
+- project:
+    check:
+      jobs:
+        - compile
+        - pre-test
+        - test:
+            dependencies:
+              - compile
+              - pre-test
