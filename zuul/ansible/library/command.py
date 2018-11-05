@@ -465,7 +465,6 @@ def zuul_run_command(self, args, zuul_log_id, check_rc=False, close_fds=True, ex
                 if t.isAlive():
                     console.addLine("[Zuul] standard output/error still open "
                                     "after child exited")
-                console.addLine("[Zuul] Task exit code: %s\n" % rc)
             # ZUUL: stdout and stderr are in the console log file
             # ZUUL: return the saved log lines so we can ship them back
             stdout = b('').join(_log_lines)

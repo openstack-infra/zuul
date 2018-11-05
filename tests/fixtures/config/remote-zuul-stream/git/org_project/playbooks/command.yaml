@@ -62,3 +62,23 @@
   strategy: linear
   roles:
     - include-a-role
+
+- hosts: compute1
+  tasks:
+    - name: Single command
+      command: "echo single"
+    # Test commands within loops
+    - name: Command with loop
+      shell: |
+        echo {{ item }}
+      with_items:
+        - item_in_loop1
+        - item_in_loop2
+    - name: Failing command with loop
+      shell: |
+        echo {{ item }}
+        exit 1
+      with_items:
+        - failed_in_loop1
+        - failed_in_loop2
+      ignore_errors: True
