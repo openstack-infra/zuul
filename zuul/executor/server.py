@@ -370,6 +370,8 @@ class JobDir(object):
         self.fact_cache = os.path.join(self.ansible_cache_root, 'fact-cache')
         os.makedirs(self.fact_cache)
         self.control_path = os.path.join(self.ansible_cache_root, 'cp')
+        self.job_unreachable_file = os.path.join(self.ansible_cache_root,
+                                                 'nodes.unreachable')
         os.makedirs(self.control_path)
         localhost_facts = os.path.join(self.fact_cache, 'localhost')
         # NOTE(pabelanger): We do not want to leak zuul-executor facts to other
@@ -1775,7 +1777,12 @@ class AnsibleJob(object):
 
         if timeout and watchdog.timed_out:
             return (self.RESULT_TIMED_OUT, None)
-        if ret == 3:
+        # Note: Unlike documented ansible currently wrongly returns 4 on
+        # unreachable so we have the zuul_unreachable callback module that
+        # creates the file job-output.unreachable in case there were
+        # unreachable nodes. This can be removed once ansible returns a
+        # distinct value for unreachable.
+        if ret == 3 or os.path.exists(self.jobdir.job_unreachable_file):
             # AnsibleHostUnreachable: We had a network issue connecting to
             # our zuul-worker.
             return (self.RESULT_UNREACHABLE, None)

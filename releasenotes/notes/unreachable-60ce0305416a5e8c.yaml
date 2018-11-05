@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Jobs that encountered unreachable nodes are now correctly detected and
+    retried.

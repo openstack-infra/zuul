@@ -4179,6 +4179,40 @@ class TestNoLog(AnsibleZuulTestCase):
         self.assertNotIn('my-very-secret-password-2', text_log)
 
 
+class TestUnreachable(AnsibleZuulTestCase):
+    tenant_config_file = 'config/ansible-unreachable/main.yaml'
+
+    def _get_file(self, build, path):
+        p = os.path.join(build.jobdir.root, path)
+        with open(p) as f:
+            return f.read()
+
+    def test_unreachable(self):
+        self.wait_timeout = 120
+
+        # Output extra ansible info so we might see errors.
+        self.executor_server.verbose = True
+        self.executor_server.keep_jobdir = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        # The result must be retry limit because jobs with unreachable nodes
+        # will be retried.
+        self.assertIn('RETRY_LIMIT', A.messages[0])
+        self.assertHistory([
+            dict(name='pre-unreachable', result=None, changes='1,1'),
+            dict(name='pre-unreachable', result=None, changes='1,1'),
+            dict(name='run-unreachable', result=None, changes='1,1'),
+            dict(name='run-unreachable', result=None, changes='1,1'),
+        ], ordered=False)
+        unreachable_log = self._get_file(self.history[0],
+                                         '.ansible/nodes.unreachable')
+        self.assertEqual('fake\n', unreachable_log)
+
+
 class TestJobPause(AnsibleZuulTestCase):
     tenant_config_file = 'config/job-pause/main.yaml'
 

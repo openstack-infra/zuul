@@ -17,11 +17,19 @@
     parent: null
 
 - job:
-    name: no-log-unreachable
-    attempts: 1
-    run: playbooks/no-log-unreachable.yaml
+    name: pre-unreachable
+    attempts: 2
+    pre-run:
+      - playbooks/unreachable.yaml
+    run: playbooks/run.yaml
+
+- job:
+    name: run-unreachable
+    attempts: 2
+    run: playbooks/unreachable.yaml
 
 - project:
     check:
       jobs:
-        - no-log-unreachable
+        - pre-unreachable
+        - run-unreachable
