@@ -28,8 +28,16 @@
     attempts: 2
     run: playbooks/unreachable.yaml
 
+- job:
+    name: post-unreachable
+    attempts: 2
+    run: playbooks/run.yaml
+    post-run:
+      - playbooks/unreachable.yaml
+
 - project:
     check:
       jobs:
         - pre-unreachable
         - run-unreachable
+        - post-unreachable

@@ -1137,6 +1137,7 @@ class AnsibleJob(object):
             self.pause()
 
         post_timeout = args['post_timeout']
+        unreachable = False
         for index, playbook in enumerate(self.jobdir.post_playbooks):
             # Post timeout operates a little differently to the main job
             # timeout. We give each post playbook the full post timeout to
@@ -1147,6 +1148,12 @@ class AnsibleJob(object):
                 playbook, post_timeout, success, phase='post', index=index)
             if post_status == self.RESULT_ABORTED:
                 return 'ABORTED'
+            if post_status == self.RESULT_UNREACHABLE:
+                # In case we encounter unreachable nodes we need to return None
+                # so the job can be retried. However in the case of post
+                # playbooks we should still try to run all playbooks to get a
+                # chance to upload logs.
+                unreachable = True
             if post_status != self.RESULT_NORMAL or post_code != 0:
                 success = False
                 # If we encountered a pre-failure, that takes
@@ -1155,6 +1162,9 @@ class AnsibleJob(object):
                     result = 'POST_FAILURE'
                 if (index + 1) == len(self.jobdir.post_playbooks):
                     self._logFinalPlaybookError()
+
+        if unreachable:
+            return None
 
         return result
 
