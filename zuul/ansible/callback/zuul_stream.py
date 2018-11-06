@@ -281,9 +281,13 @@ class CallbackModule(default.CallbackModule):
 
         if not is_localhost and is_task:
             self._stop_streamers()
-        if result._task.action in ('command', 'shell'):
+        if result._task.action in ('command', 'shell',
+                                   'win_command', 'win_shell'):
             stdout_lines = zuul_filter_result(result_dict)
-            if is_localhost:
+            # We don't have streaming for localhost and windows modules so get
+            # standard out after the fact.
+            if is_localhost or result._task.action in (
+                    'win_command', 'win_shell'):
                 for line in stdout_lines:
                     hostname = self._get_hostname(result)
                     self._log("%s | %s " % (hostname, line))
@@ -452,7 +456,8 @@ class CallbackModule(default.CallbackModule):
             self._log_message(
                 result, status='MODULE FAILURE',
                 msg="Item: {item}\n{module_stdout}".format(**result_dict))
-        elif result._task.action not in ('command', 'shell'):
+        elif result._task.action not in ('command', 'shell',
+                                         'win_command', 'win_shell'):
             if 'msg' in result_dict:
                 self._log_message(
                     result=result, msg=result_dict['msg'], status=status)
@@ -490,7 +495,8 @@ class CallbackModule(default.CallbackModule):
             self._log_message(
                 result, status='MODULE FAILURE',
                 msg="Item: {item}\n{module_stdout}".format(**result_dict))
-        elif result._task.action not in ('command', 'shell'):
+        elif result._task.action not in ('command', 'shell',
+                                         'win_command', 'win_shell'):
             self._log_message(
                 result=result,
                 msg="Item: {item}".format(item=result_dict['item']),
