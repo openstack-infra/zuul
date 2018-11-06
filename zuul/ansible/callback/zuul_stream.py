@@ -227,6 +227,10 @@ class CallbackModule(default.CallbackModule):
                 if ip in ('localhost', '127.0.0.1'):
                     # Don't try to stream from localhost
                     continue
+                if task.loop:
+                    # Don't try to stream from loops
+                    continue
+
                 log_id = "%s-%s" % (
                     task._uuid, paths._sanitize_filename(inventory_hostname))
                 streamer = threading.Thread(
@@ -459,6 +463,11 @@ class CallbackModule(default.CallbackModule):
                                    indent=2, sort_keys=True),
                     status=status)
         else:
+            stdout_lines = zuul_filter_result(result_dict)
+            for line in stdout_lines:
+                hostname = self._get_hostname(result)
+                self._log("%s | %s " % (hostname, line))
+
             if isinstance(result_dict['item'], str):
                 self._log_message(
                     result,
@@ -488,8 +497,14 @@ class CallbackModule(default.CallbackModule):
                 status='ERROR',
                 result_dict=result_dict)
         else:
+            stdout_lines = zuul_filter_result(result_dict)
+            for line in stdout_lines:
+                hostname = self._get_hostname(result)
+                self._log("%s | %s " % (hostname, line))
+
+            # self._log("Result: %s" % (result_dict))
             self._log_message(
-                result, "Item: {item} Result: {result}".format(**result_dict))
+                result, "Item: {item} Result: {rc}".format(**result_dict))
 
         if self._deferred_result:
             self._process_deferred(result)

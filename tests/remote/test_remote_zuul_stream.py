@@ -121,6 +121,18 @@ class TestZuulStream(AnsibleZuulTestCase):
                                'delegate compute1', text)
             self.assertLogLine(r'controller \| This is a shell task with '
                                'delegate controller', text)
+            self.assertLogLine(r'compute1 \| item_in_loop1', text)
+            self.assertLogLine(r'compute1 \| ok: Item: item_in_loop1 '
+                               r'Runtime: \d:\d\d:\d\d\.\d\d\d\d\d\d', text)
+            self.assertLogLine(r'compute1 \| item_in_loop2', text)
+            self.assertLogLine(r'compute1 \| ok: Item: item_in_loop2 '
+                               r'Runtime: \d:\d\d:\d\d\.\d\d\d\d\d\d', text)
+            self.assertLogLine(r'compute1 \| failed_in_loop1', text)
+            self.assertLogLine(r'compute1 \| ok: Item: failed_in_loop1 '
+                               r'Result: 1', text)
+            self.assertLogLine(r'compute1 \| failed_in_loop2', text)
+            self.assertLogLine(r'compute1 \| ok: Item: failed_in_loop2 '
+                               r'Result: 1', text)
             self.assertLogLine(
                 r'controller \| ok: Runtime: \d:\d\d:\d\d\.\d\d\d\d\d\d', text)
             self.assertLogLine('PLAY RECAP', text)
