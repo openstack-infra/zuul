@@ -1,5 +1,5 @@
-# The Zuul scheduler needs to be able to connect to the remote systems
-# in order to start.
+# Zuul needs to be able to connect to the remote systems in order to
+# start.
 
 - hosts: localhost
   gather_facts: false
