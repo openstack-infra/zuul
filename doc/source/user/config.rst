@@ -677,7 +677,7 @@ Here is an example of two job definitions:
                key: encrypted-secret-key-data
 
          - job:
-             name: amazing-job:
+             name: amazing-job
              secrets:
                - name: ssh_key
                  secret: important-secret
