@@ -4073,6 +4073,23 @@ class TestJobOutput(AnsibleZuulTestCase):
                       self._get_file(self.history[0],
                                      'work/logs/job-output.txt'))
 
+    def test_job_output_missing_role(self):
+        # Verify that ansible errors such as missing roles are part of the
+        # buildlog.
+
+        self.executor_server.keep_jobdir = True
+        A = self.fake_gerrit.addFakeChange('org/project3', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='job-output-missing-role', result='FAILURE',
+                 changes='1,1'),
+        ], ordered=False)
+
+        job_output = self._get_file(self.history[0],
+                                    'work/logs/job-output.txt')
+        self.assertIn('the role \'not_existing\' was not found', job_output)
+
     def test_job_output_failure_log(self):
         logger = logging.getLogger('zuul.AnsibleJob')
         output = io.StringIO()

@@ -26,6 +26,10 @@
     run: playbooks/job-output.yaml
     post-run: playbooks/job-output-failure-post.yaml
 
+- job:
+    name: job-output-missing-role
+    run: playbooks/job-output-missing-role.yaml
+
 - project:
     name: org/project
     check:
@@ -37,3 +41,9 @@
     check:
       jobs:
         - job-output-failure
+
+- project:
+    name: org/project3
+    check:
+      jobs:
+        - job-output-missing-role
