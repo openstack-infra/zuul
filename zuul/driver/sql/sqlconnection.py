@@ -47,6 +47,9 @@ class SQLConnection(BaseConnection):
 
         try:
             self.dburi = self.connection_config.get('dburi')
+            self.zuul_buildset_table, self.zuul_build_table \
+                = self._setup_models()
+
             # Recycle connections if they've been idle for more than 1 second.
             # MySQL connections are lightweight and thus keeping long-lived
             # connections around is not valuable.
@@ -55,8 +58,6 @@ class SQLConnection(BaseConnection):
                 poolclass=sqlalchemy.pool.QueuePool,
                 pool_recycle=self.connection_config.get('pool_recycle', 1))
             self._migrate()
-            self.zuul_buildset_table, self.zuul_build_table \
-                = self._setup_models()
             self.tables_established = True
         except sa.exc.NoSuchModuleError:
             self.log.exception(
