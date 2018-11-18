@@ -139,7 +139,7 @@
     post:
       jobs:
         - publish-zuul-docs
-        - publish-openstack-python-branch-tarball
+        - publish-zuul-python-branch-tarball
         - publish-openstack-javascript-content:
             vars:
               node_version: 8
