@@ -38,6 +38,7 @@
         password: secret
         body: "{{ lookup('file', '/var/ssh/admin.pub') }}"
         status_code: 201
+        HEADER_Content-Type: text/plain
 
     - name: Create temp dir for Gerrit config update
       shell: mktemp -d
