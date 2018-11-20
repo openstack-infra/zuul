@@ -629,7 +629,25 @@ Here is an example of two job definitions:
       The name of a :ref:`semaphore` which should be acquired and
       released when the job begins and ends.  If the semaphore is at
       maximum capacity, then Zuul will wait until it can be acquired
-      before starting the job.
+      before starting the job. The format is either a string or a
+      dictionary. If it's a string it references a semaphore using the
+      default value for :attr:`job.semaphore.resources-first`.
+
+      .. attr:: name
+         :required:
+
+         The name of the referenced semaphore
+
+      .. attr:: resources-first
+         :default: False
+
+         By default a semaphore is acquired before the resources are
+         requested. However in some cases the user wants to run cheap
+         jobs as quickly as possible in a consecutive manner. In this
+         case :attr:`job.semaphore.resources-first` can be enabled to
+         request the resources before locking the semaphore. This can
+         lead to some amount of blocked resources while waiting for the
+         semaphore so this should be used with caution.
 
    .. attr:: tags
 

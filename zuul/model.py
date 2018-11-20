@@ -1112,7 +1112,12 @@ class Job(ConfigObject):
         d['required_projects'] = []
         for project in self.required_projects.values():
             d['required_projects'].append(project.toDict())
-        d['semaphore'] = self.semaphore
+        if self.semaphore:
+            # For now just leave the semaphore name here until we really need
+            # more information in zuul-web about this
+            d['semaphore'] = self.semaphore.name
+        else:
+            d['semaphore'] = None
         d['variables'] = self.variables
         d['final'] = self.final
         d['abstract'] = self.abstract
@@ -1508,6 +1513,21 @@ class JobProject(ConfigObject):
         d['project_name'] = self.project_name
         d['override_branch'] = self.override_branch
         d['override_checkout'] = self.override_checkout
+        return d
+
+
+class JobSemaphore(ConfigObject):
+    """ A reference to a semaphore from a job. """
+
+    def __init__(self, semaphore_name, resources_first=False):
+        super().__init__()
+        self.name = semaphore_name
+        self.resources_first = resources_first
+
+    def toDict(self):
+        d = dict()
+        d['name'] = self.name
+        d['resources_first'] = self.resources_first
         return d
 
 
@@ -2135,13 +2155,13 @@ class QueueItem(object):
                     # The nodes for this job are not ready, skip
                     # it for now.
                     continue
-                if semaphore_handler.acquire(self, job):
+                if semaphore_handler.acquire(self, job, False):
                     # If this job needs a semaphore, either acquire it or
                     # make sure that we have it before running the job.
                     torun.append(job)
         return torun
 
-    def findJobsToRequest(self):
+    def findJobsToRequest(self, semaphore_handler):
         build_set = self.current_build_set
         toreq = []
         if not self.live:
@@ -2177,7 +2197,10 @@ class QueueItem(object):
                     all_parent_jobs_successful = False
                     break
             if all_parent_jobs_successful:
-                toreq.append(job)
+                if semaphore_handler.acquire(self, job, True):
+                    # If this job needs a semaphore, either acquire it or
+                    # make sure that we have it before requesting the nodes.
+                    toreq.append(job)
         return toreq
 
     def setResult(self, build):
@@ -3596,11 +3619,34 @@ class SemaphoreHandler(object):
     def __init__(self):
         self.semaphores = {}
 
-    def acquire(self, item, job):
+    def acquire(self, item, job, request_resources):
+        """
+        Aquires a semaphore for an item job combination. This gets called twice
+        during the lifecycle of a job. The first call is before requesting
+        build resources. The second call is before running the job. In which
+        call we really acquire the semaphore is defined by the job.
+
+        :param item: The item
+        :param job: The job
+        :param request_resources: True if we want to acquire for the request
+                                  resources phase, False if we want to acquire
+                                  for the run phase.
+        """
         if not job.semaphore:
             return True
 
-        semaphore_key = job.semaphore
+        if job.semaphore.resources_first and request_resources:
+            # We're currently in the resource request phase and want to get the
+            # resources before locking. So we don't need to do anything here.
+            return True
+        else:
+            # As a safety net we want to acuire the semaphore at least in the
+            # run phase so don't filter this here as re-acuiring the semaphore
+            # is not a problem here if it has been already acquired before in
+            # the resources phase.
+            pass
+
+        semaphore_key = job.semaphore.name
 
         m = self.semaphores.get(semaphore_key)
         if not m:
@@ -3612,7 +3658,7 @@ class SemaphoreHandler(object):
             return True
 
         # semaphore is there, check max
-        if len(m) < self._max_count(item, job.semaphore):
+        if len(m) < self._max_count(item, job.semaphore.name):
             self._acquire(semaphore_key, item, job.name)
             return True
 
@@ -3622,7 +3668,7 @@ class SemaphoreHandler(object):
         if not job.semaphore:
             return
 
-        semaphore_key = job.semaphore
+        semaphore_key = job.semaphore.name
 
         m = self.semaphores.get(semaphore_key)
         if not m:

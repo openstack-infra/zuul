@@ -509,6 +509,9 @@ class JobParser(object):
     secret = {vs.Required('name'): str,
               vs.Required('secret'): str}
 
+    semaphore = {vs.Required('name'): str,
+                 'resources-first': bool}
+
     # Attributes of a job that can also be used in Project and ProjectTemplate
     job_attributes = {'parent': vs.Any(str, None),
                       'final': bool,
@@ -520,7 +523,7 @@ class JobParser(object):
                       'success-url': str,
                       'hold-following-changes': bool,
                       'voting': bool,
-                      'semaphore': str,
+                      'semaphore': vs.Any(semaphore, str),
                       'tags': to_list(str),
                       'branches': to_list(str),
                       'files': to_list(str),
@@ -565,7 +568,6 @@ class JobParser(object):
         'workspace',
         'voting',
         'hold-following-changes',
-        'semaphore',
         'attempts',
         'failure-message',
         'success-message',
@@ -719,6 +721,15 @@ class JobParser(object):
                                                project_override_checkout)
                 new_projects[project.canonical_name] = job_project
             job.required_projects = new_projects
+
+        if 'semaphore' in conf:
+            semaphore = conf.get('semaphore')
+            if isinstance(semaphore, str):
+                job.semaphore = model.JobSemaphore(semaphore)
+            else:
+                job.semaphore = model.JobSemaphore(
+                    semaphore.get('name'),
+                    semaphore.get('resources-first', False))
 
         tags = conf.get('tags')
         if tags:

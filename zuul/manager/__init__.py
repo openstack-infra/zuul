@@ -322,7 +322,7 @@ class PipelineManager(object):
         change.commit_needs_changes = dependencies
 
     def provisionNodes(self, item):
-        jobs = item.findJobsToRequest()
+        jobs = item.findJobsToRequest(item.pipeline.tenant.semaphore_handler)
         if not jobs:
             return False
         build_set = item.current_build_set
