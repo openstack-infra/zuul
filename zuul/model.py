@@ -2325,6 +2325,10 @@ class QueueItem(object):
             ret['url'] = self.change.url
         else:
             ret['url'] = None
+        if hasattr(self.change, 'ref') and self.change.ref is not None:
+            ret['ref'] = self.change.ref
+        else:
+            ret['ref'] = None
         ret['id'] = self.change._id()
         if self.item_ahead:
             ret['item_ahead'] = self.item_ahead.change._id()

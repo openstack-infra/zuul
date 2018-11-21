@@ -94,6 +94,10 @@ class ChangePanel extends React.Component {
   renderChangeLink (change) {
     let changeId = change.id || 'NA'
     let changeTitle = changeId
+    // Fall back to display the ref if there is no change id
+    if (changeId === 'NA' && change.ref) {
+      changeTitle = change.ref
+    }
     let changeText = ''
     if (change.url !== null) {
       let githubId = changeId.match(/^([0-9]+),([0-9a-f]{40})$/)
