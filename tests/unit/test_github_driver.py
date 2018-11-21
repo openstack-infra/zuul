@@ -23,6 +23,8 @@ from unittest import mock, skip
 import git
 import github3.exceptions
 
+import zuul.rpcclient
+
 from tests.base import ZuulTestCase, simple_layout, random_sha1
 from tests.base import ZuulWebFixture
 
@@ -52,6 +54,8 @@ class TestGithubDriver(ZuulTestCase):
         self.assertEqual(str(A.number), zuulvars['change'])
         self.assertEqual(str(A.head_sha), zuulvars['patchset'])
         self.assertEqual('master', zuulvars['branch'])
+        self.assertEquals('https://github.com/org/project/pull/1',
+                          zuulvars['items'][0]['change_url'])
         self.assertEqual(1, len(A.comments))
         self.assertThat(
             A.comments[0],
@@ -934,6 +938,67 @@ class TestGithubDriver(ZuulTestCase):
                                           old_sha=old_sha,
                                           new_sha='0' * 40,
                                           modified_files=['README.md'])
+
+    @simple_layout('layouts/basic-github.yaml', driver='github')
+    def test_client_dequeue_change_github(self):
+        "Test that the RPC client can dequeue a github pull request"
+
+        client = zuul.rpcclient.RPCClient('127.0.0.1',
+                                          self.gearman_server.port)
+        self.addCleanup(client.shutdown)
+
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_github.openFakePullRequest('org/project', 'master', 'A')
+
+        self.fake_github.emitEvent(A.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+
+        client.dequeue(
+            tenant='tenant-one',
+            pipeline='check',
+            project='org/project',
+            change='{},{}'.format(A.number, A.head_sha),
+            ref=None)
+
+        self.waitUntilSettled()
+
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        check_pipeline = tenant.layout.pipelines['check']
+        self.assertEqual(check_pipeline.getAllItems(), [])
+        self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 2)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+    @simple_layout('layouts/basic-github.yaml', driver='github')
+    def test_client_enqueue_change_github(self):
+        "Test that the RPC client can enqueue a pull request"
+        A = self.fake_github.openFakePullRequest('org/project', 'master', 'A')
+
+        client = zuul.rpcclient.RPCClient('127.0.0.1',
+                                          self.gearman_server.port)
+        self.addCleanup(client.shutdown)
+        r = client.enqueue(tenant='tenant-one',
+                           pipeline='check',
+                           project='org/project',
+                           trigger='github',
+                           change='{},{}'.format(A.number, A.head_sha))
+        self.waitUntilSettled()
+
+        self.assertEqual(self.getJobFromHistory('project-test1').result,
+                         'SUCCESS')
+        self.assertEqual(self.getJobFromHistory('project-test2').result,
+                         'SUCCESS')
+        self.assertEqual(r, True)
+
+        # check that change_url is correct
+        job1_params = self.getJobFromHistory('project-test1').parameters
+        job2_params = self.getJobFromHistory('project-test2').parameters
+        self.assertEquals('https://github.com/org/project/pull/1',
+                          job1_params['zuul']['items'][0]['change_url'])
+        self.assertEquals('https://github.com/org/project/pull/1',
+                          job2_params['zuul']['items'][0]['change_url'])
 
 
 class TestGithubUnprotectedBranches(ZuulTestCase):
