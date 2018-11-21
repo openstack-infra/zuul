@@ -661,6 +661,14 @@ class AnsibleJob(object):
         self.winrm_pem_file = get_default(self.executor_server.config,
                                           'executor', 'winrm_cert_pem_file',
                                           '~/.winrm/winrm_client_cert.pem')
+        self.winrm_operation_timeout = get_default(
+            self.executor_server.config,
+            'executor',
+            'winrm_operation_timeout_sec')
+        self.winrm_read_timeout = get_default(
+            self.executor_server.config,
+            'executor',
+            'winrm_read_timeout_sec')
         self.ssh_agent = SshAgent()
 
         self.executor_variables_file = None
@@ -1243,6 +1251,12 @@ class AnsibleJob(object):
                         # now.
                         host_vars['ansible_winrm_server_cert_validation'] = \
                             'ignore'
+                        if self.winrm_operation_timeout is not None:
+                            host_vars['ansible_winrm_operation_timeout_sec'] =\
+                                self.winrm_operation_timeout
+                        if self.winrm_read_timeout is not None:
+                            host_vars['ansible_winrm_read_timeout_sec'] = \
+                                self.winrm_read_timeout
 
                 host_keys = []
                 for key in node.get('host_keys'):

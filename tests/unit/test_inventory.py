@@ -19,12 +19,12 @@ import yaml
 from tests.base import ZuulTestCase
 
 
-class TestInventory(ZuulTestCase):
+class TestInventoryBase(ZuulTestCase):
 
     tenant_config_file = 'config/inventory/main.yaml'
 
     def setUp(self):
-        super(TestInventory, self).setUp()
+        super(TestInventoryBase, self).setUp()
         self.executor_server.hold_jobs_in_build = True
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
@@ -40,6 +40,9 @@ class TestInventory(ZuulTestCase):
         setup_inv_path = os.path.join(build.jobdir.root, 'ansible',
                                       'setup-inventory.yaml')
         return yaml.safe_load(open(setup_inv_path, 'r'))
+
+
+class TestInventory(TestInventoryBase):
 
     def test_single_inventory(self):
 
@@ -154,6 +157,24 @@ class TestInventory(ZuulTestCase):
         self.assertIn('fakeuser', inventory['all']['hosts'])
         self.assertIn('windows', inventory['all']['hosts'])
         self.assertIn('network', inventory['all']['hosts'])
+
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+
+class TestWindowsInventory(TestInventoryBase):
+    config_file = 'zuul-winrm.conf'
+
+    def test_windows_inventory(self):
+        inventory = self._get_build_inventory('hostvars-inventory')
+        windows_host = inventory['all']['hosts']['windows']
+        self.assertEqual(windows_host['ansible_connection'], 'winrm')
+        self.assertEqual(
+            windows_host['ansible_winrm_operation_timeout_sec'],
+            '120')
+        self.assertEqual(
+            windows_host['ansible_winrm_read_timeout_sec'],
+            '180')
 
         self.executor_server.release()
         self.waitUntilSettled()

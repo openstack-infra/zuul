@@ -522,6 +522,17 @@ The following sections of ``zuul.conf`` are used by the executor:
       .. note:: Currently certificate verification is disabled when
                 connecting to Windows nodes via winrm.
 
+   .. attr:: winrm_operation_timeout_sec
+      :default: None. The Ansible default of 20 is used in this case.
+
+      The timeout for WinRM operations.
+
+   .. attr:: winrm_read_timeout_sec
+      :default: None. The Ansible default of 30 is used in this case.
+
+      The timeout for WinRM read. Increase this if there are intermittent
+      network issues and read timeout errors keep occurring.
+
    .. _admin_sitewide_variables:
 
    .. attr:: variables
