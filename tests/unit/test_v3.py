@@ -3176,6 +3176,65 @@ class TestMaxTimeout(ZuulTestCase):
                          "B should not fail because of timeout limit")
 
 
+class TestAllowedConnection(AnsibleZuulTestCase):
+    config_file = 'zuul-connections-gerrit-and-github.conf'
+    tenant_config_file = 'config/multi-tenant/main.yaml'
+
+    def test_allowed_triggers(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - pipeline:
+                name: test
+                manager: independent
+                trigger:
+                  github:
+                    - event: pull_request
+            """)
+        file_dict = {'zuul.d/test.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange(
+            'tenant-two-config', 'master', 'A', files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertIn(
+            'Unknown connection named "github"', A.messages[0],
+            "A should fail because of allowed-trigger")
+
+        B = self.fake_gerrit.addFakeChange(
+            'tenant-one-config', 'master', 'A', files=file_dict)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertNotIn(
+            'Unknown connection named "github"', B.messages[0],
+            "B should not fail because of allowed-trigger")
+
+    def test_allowed_reporters(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - pipeline:
+                name: test
+                manager: independent
+                success:
+                  outgoing_smtp:
+                    to: you@example.com
+            """)
+        file_dict = {'zuul.d/test.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange(
+            'tenant-one-config', 'master', 'A', files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertIn(
+            'Unknown connection named "outgoing_smtp"', A.messages[0],
+            "A should fail because of allowed-reporters")
+
+        B = self.fake_gerrit.addFakeChange(
+            'tenant-two-config', 'master', 'A', files=file_dict)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertNotIn(
+            'Unknown connection named "outgoing_smtp"', B.messages[0],
+            "B should not fail because of allowed-reporters")
+
+
 class TestPragma(ZuulTestCase):
     tenant_config_file = 'config/pragma/main.yaml'
 

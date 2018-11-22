@@ -1,7 +1,7 @@
 - pipeline:
-    name: tenant-one-gate
+    name: tenant-two-gate
     manager: dependent
-    success-message: Build succeeded (tenant-one-gate).
+    success-message: Build succeeded (tenant-two-gate).
     trigger:
       gerrit:
         - event: comment-added
@@ -26,16 +26,22 @@
         label: controller-label
 
 - job:
-    name: project1-test1
-    run: playbooks/project1-test1.yaml
+    name: project2-test1
+    run: playbooks/project2-test1.yaml
 
 - project:
-    name: org/project1
+    name: org/project2
     check:
       jobs:
         - python27
-        - project1-test1
-    tenant-one-gate:
+        - project2-test1
+    tenant-two-gate:
       jobs:
         - python27
-        - project1-test1
+        - project2-test1
+
+- project:
+    name: tenant-two-config
+    check:
+      jobs:
+        - noop

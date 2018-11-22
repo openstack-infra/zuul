@@ -1,6 +1,8 @@
 - tenant:
     name: tenant-one
     max-job-timeout: 1800
+    allowed-reporters:
+      - gerrit
     source:
       gerrit:
         config-projects:
@@ -12,6 +14,7 @@
 - tenant:
     name: tenant-two
     max-nodes-per-job: 10
+    allowed-triggers: gerrit
     source:
       gerrit:
         config-projects:

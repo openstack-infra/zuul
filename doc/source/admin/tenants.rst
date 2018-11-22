@@ -233,3 +233,17 @@ configuration. Some examples of tenant definitions are:
       This allows an administrator to configure a default base job to
       implement local policies such as node setup and artifact
       publishing.
+
+   .. attr:: allowed-triggers
+      :default: all connections
+
+      The list of connections a tenant can trigger from. When set, this setting
+      can be used to restrict what connections a tenant can use as trigger.
+      Without this setting, the tenant can use any connection as a trigger.
+
+   .. attr:: allowed-reporters
+      :default: all connections
+
+      The list of connections a tenant can report to. When set, this setting
+      can be used to restrict what connections a tenant can use as reporter.
+      Without this setting, the tenant can report to any connection.

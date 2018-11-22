@@ -71,6 +71,14 @@ class DuplicateNodeError(Exception):
         super(DuplicateNodeError, self).__init__(message)
 
 
+class UnknownConnection(Exception):
+    def __init__(self, connection_name):
+        message = textwrap.dedent("""\
+        Unknown connection named "{connection}".""")
+        message = textwrap.fill(message.format(connection=connection_name))
+        super(UnknownConnection, self).__init__(message)
+
+
 class MaxTimeoutError(Exception):
     def __init__(self, job, tenant):
         message = textwrap.dedent("""\
@@ -1085,9 +1093,13 @@ class PipelineParser(object):
 
         for conf_key, action in self.reporter_actions.items():
             reporter_set = []
+            allowed_reporters = self.pcontext.tenant.allowed_reporters
             if conf.get(conf_key):
                 for reporter_name, params \
                     in conf.get(conf_key).items():
+                    if allowed_reporters is not None and \
+                       reporter_name not in allowed_reporters:
+                        raise UnknownConnection(reporter_name)
                     reporter = self.pcontext.connections.getReporter(
                         reporter_name, pipeline, params)
                     reporter.setAction(conf_key)
@@ -1136,6 +1148,9 @@ class PipelineParser(object):
                 source.getRejectFilters(reject_config))
 
         for trigger_name, trigger_config in conf.get('trigger').items():
+            if self.pcontext.tenant.allowed_triggers is not None and \
+               trigger_name not in self.pcontext.tenant.allowed_triggers:
+                raise UnknownConnection(trigger_name)
             trigger = self.pcontext.connections.getTrigger(
                 trigger_name, trigger_config)
             pipeline.triggers.append(trigger)
@@ -1265,6 +1280,8 @@ class TenantParser(object):
                   'max-job-timeout': int,
                   'source': self.validateTenantSources(),
                   'exclude-unprotected-branches': bool,
+                  'allowed-triggers': to_list(str),
+                  'allowed-reporters': to_list(str),
                   'default-parent': str,
                   }
         return vs.Schema(tenant)
@@ -1279,6 +1296,8 @@ class TenantParser(object):
         if conf.get('exclude-unprotected-branches') is not None:
             tenant.exclude_unprotected_branches = \
                 conf['exclude-unprotected-branches']
+        tenant.allowed_triggers = conf.get('allowed-triggers')
+        tenant.allowed_reporters = conf.get('allowed-reporters')
         tenant.default_base_job = conf.get('default-parent', 'base')
 
         tenant.unparsed_config = conf
@@ -1736,7 +1755,9 @@ class TenantParser(object):
         # reference_exceptions has it; add tests if needed.
         if not skip_pipelines:
             for pipeline in parsed_config.pipelines:
-                layout.addPipeline(pipeline)
+                with reference_exceptions(
+                        'pipeline', pipeline, layout.loading_errors):
+                    layout.addPipeline(pipeline)
 
         for nodeset in parsed_config.nodesets:
             with reference_exceptions(

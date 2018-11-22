@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    New tenant options :attr:`tenant.allowed-triggers` and
+    :attr:`tenant.allowed-reporters` can be used to restrict
+    what connections a tenant has access to.
