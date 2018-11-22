@@ -1,0 +1,7 @@
+---
+security:
+  - |
+    The add_host module options are restricted to a hostname, port, user and
+    password. Previously, malicious options could be used to bypass protection
+    and execute tasks on the executor. Only ssh and kubectl connection
+    are authorized.
