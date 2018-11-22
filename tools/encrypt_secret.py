@@ -22,6 +22,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import ssl
 
 # we to import Request and urlopen differently for python 2 and 3
 try:
@@ -67,6 +68,8 @@ def main():
                         help="A filename to which the encrypted value will be "
                         "written.  If not supplied, the value will be written "
                         "to standard output.")
+    parser.add_argument('--insecure', action='store_true', default=False,
+                        help="Do not verify remote certificate")
     args = parser.parse_args()
 
     # We should not use unencrypted connections for retrieving the public key.
@@ -81,9 +84,16 @@ def main():
     if url.scheme == 'file':
         req = Request(args.url)
     else:
+        if args.insecure:
+            ssl_ctx = ssl.create_default_context()
+            ssl_ctx.check_hostname = False
+            ssl_ctx.verify_mode = ssl.CERT_NONE
+        else:
+            ssl_ctx = None
+
         # Check if tenant is white label
         req = Request("%s/api/info" % (args.url.rstrip('/'),))
-        info = json.loads(urlopen(req).read().decode('utf8'))
+        info = json.loads(urlopen(req, context=ssl_ctx).read().decode('utf8'))
 
         api_tenant = info.get('info', {}).get('tenant')
         if not api_tenant and not args.tenant:
@@ -96,7 +106,7 @@ def main():
         else:
             req = Request("%s/api/tenant/%s/key/%s.pub" % (
                 args.url.rstrip('/'), args.tenant, args.project))
-    pubkey = urlopen(req)
+    pubkey = urlopen(req, context=ssl_ctx)
 
     if args.infile:
         with open(args.infile) as f:
