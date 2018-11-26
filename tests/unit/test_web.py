@@ -22,8 +22,8 @@ import requests
 
 import zuul.web
 
-from tests.base import ZuulTestCase, ZuulDBTestCase, FIXTURE_DIR
-from tests.base import ZuulWebFixture
+from tests.base import ZuulTestCase, ZuulDBTestCase, AnsibleZuulTestCase
+from tests.base import ZuulWebFixture, FIXTURE_DIR
 
 
 class FakeConfig(object):
@@ -671,3 +671,26 @@ class TestBuildInfo(ZuulDBTestCase, BaseTestWeb):
 
         resp = self.get_url("api/tenant/non-tenant/builds")
         self.assertEqual(404, resp.status_code)
+
+
+class TestArtifacts(ZuulDBTestCase, BaseTestWeb, AnsibleZuulTestCase):
+    config_file = 'zuul-sql-driver.conf'
+    tenant_config_file = 'config/sql-driver/main.yaml'
+
+    def test_artifacts(self):
+        # Generate some build records in the db.
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        build_query = self.get_url("api/tenant/tenant-one/builds?"
+                                   "project=org/project&"
+                                   "job_name=project-test1").json()
+        self.assertEqual(len(build_query), 1)
+        self.assertEqual(len(build_query[0]['artifacts']), 2)
+        self.assertEqual(build_query[0]['artifacts'], [
+            {'url': 'http://example.com/tarball',
+             'name': 'tarball'},
+            {'url': 'http://example.com/docs',
+             'name': 'docs'},
+        ])
