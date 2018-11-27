@@ -264,7 +264,10 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
    .. stat:: current_requests
       :type: gauge
 
-      The number of outstanding nodepool requests from Zuul.
+      The number of outstanding nodepool requests from Zuul.  Ideally
+      this will be at zero, meaning all requests are fulfilled.
+      Persistently high values indicate more testing node resources
+      would be helpful.
 
 .. stat:: zuul.mergers
 
@@ -283,7 +286,9 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
    .. stat:: jobs_queued
       :type: gauge
 
-      The number of merge jobs queued.
+      The number of merge jobs waiting for a merger.  This should
+      ideally be zero; persistent higher values indicate more merger
+      resources would be useful.
 
 .. stat:: zuul.executors
 
@@ -307,8 +312,40 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
    .. stat:: jobs_queued
       :type: gauge
 
-      The number of executor jobs queued.
+      The number of jobs allocated nodes, but queued waiting for an
+      executor to run on.  This should ideally be at zero; persistent
+      higher values indicate more exectuor resources would be useful.
 
+.. stat:: zuul.geard
+
+   Gearman job distribution statistics.  Gearman jobs encompass the
+   wide variety of distributed jobs running within the scheduler and
+   across mergers and exectuors.  These stats are emitted by the `gear
+   <https://pypi.org/project/gear/>`__ library.
+
+   .. stat:: running
+      :type: gauge
+
+      Jobs that Gearman has actively running.  The longest running
+      jobs will usually relate to active job execution so you would
+      expect this to have a lower bound around there.  Note this may
+      be lower than active nodes, as a multiple-node job will only
+      have one active Gearman job.
+
+   .. stat:: waiting
+      :type: gauge
+
+      Jobs waiting in the gearman queue.  This would be expected to be
+      around zero; note that this is *not* related to the backlogged
+      queue of jobs waiting for a node allocation (node allocations
+      are via Zookeeper).  If this is unexpectedly high, see
+      :ref:`debug_gearman` for queue debugging tips to find out which
+      particular function calls are waiting.
+
+   .. stat:: total
+      :type: gauge
+
+      The sum of the `running` and `waiting` jobs.
 
 As an example, given a job named `myjob` in `mytenant` triggered by a
 change to `myproject` on the `master` branch in the `gate` pipeline
