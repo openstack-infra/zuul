@@ -3532,6 +3532,17 @@ class TestScheduler(ZuulTestCase):
         # second to settle.
         time.sleep(1)
         self.waitUntilSettled()
+
+        # Ensure that the status json has the ref so we can render it in the
+        # web ui.
+        data = json.loads(self.sched.formatStatusJSON('tenant-one'))
+        pipeline = [x for x in data['pipelines'] if x['name'] == 'periodic'][0]
+        first = pipeline['change_queues'][0]['heads'][0][0]
+        second = pipeline['change_queues'][1]['heads'][0][0]
+        self.assertIn(first['ref'], ['refs/heads/master', 'refs/heads/stable'])
+        self.assertIn(second['ref'],
+                      ['refs/heads/master', 'refs/heads/stable'])
+
         self.executor_server.release()
         self.waitUntilSettled()
 
