@@ -57,11 +57,9 @@ PRIORITY_MAP = {
 
 # Request states
 STATE_REQUESTED = 'requested'
-STATE_PENDING = 'pending'
 STATE_FULFILLED = 'fulfilled'
 STATE_FAILED = 'failed'
 REQUEST_STATES = set([STATE_REQUESTED,
-                      STATE_PENDING,
                       STATE_FULFILLED,
                       STATE_FAILED])
 
