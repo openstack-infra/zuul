@@ -1000,6 +1000,37 @@ class TestGithubDriver(ZuulTestCase):
         self.assertEquals('https://github.com/org/project/pull/1',
                           job2_params['zuul']['items'][0]['change_url'])
 
+    @simple_layout('layouts/basic-github.yaml', driver='github')
+    def test_pull_commit_race(self):
+        """Test graceful handling of delayed availability of commits"""
+
+        github = self.fake_github.getGithubClient('org/project')
+        repo = github.repo_from_project('org/project')
+        repo.fail_not_found = 1
+
+        A = self.fake_github.openFakePullRequest('org/project', 'master', 'A')
+        self.fake_github.emitEvent(A.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+
+        self.assertEqual('SUCCESS',
+                         self.getJobFromHistory('project-test1').result)
+        self.assertEqual('SUCCESS',
+                         self.getJobFromHistory('project-test2').result)
+
+        job = self.getJobFromHistory('project-test2')
+        zuulvars = job.parameters['zuul']
+        self.assertEqual(str(A.number), zuulvars['change'])
+        self.assertEqual(str(A.head_sha), zuulvars['patchset'])
+        self.assertEqual('master', zuulvars['branch'])
+        self.assertEqual(1, len(A.comments))
+        self.assertThat(
+            A.comments[0],
+            MatchesRegex(r'.*\[project-test1 \]\(.*\).*', re.DOTALL))
+        self.assertThat(
+            A.comments[0],
+            MatchesRegex(r'.*\[project-test2 \]\(.*\).*', re.DOTALL))
+        self.assertEqual(2, len(self.history))
+
 
 class TestGithubUnprotectedBranches(ZuulTestCase):
     config_file = 'zuul-github-driver.conf'

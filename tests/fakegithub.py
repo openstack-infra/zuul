@@ -14,6 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import github3.exceptions
 import re
 
 FAKE_BASE_URL = 'https://example.com/api/v3/'
@@ -82,6 +83,9 @@ class FakeRepository(object):
         self.data = data
         self.name = name
 
+        # fail the next commit requests with 404
+        self.fail_not_found = 0
+
     def branches(self, protected=False):
         if protected:
             # simulate there is no protected branch
@@ -121,6 +125,25 @@ class FakeRepository(object):
         commit.set_status(state, url, description, context, user)
 
     def commit(self, sha):
+
+        if self.fail_not_found > 0:
+            self.fail_not_found -= 1
+
+            class Response:
+                status_code = 0
+                message = ''
+
+                def json(self):
+                    return {
+                        'message': self.message
+                    }
+
+            resp = Response()
+            resp.status_code = 404
+            resp.message = 'Not Found'
+
+            raise github3.exceptions.NotFoundError(resp)
+
         commit = self._commits.get(sha, None)
         if commit is None:
             commit = FakeCommit(sha)

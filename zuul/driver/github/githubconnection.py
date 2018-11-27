@@ -1322,11 +1322,24 @@ class GithubConnection(BaseConnection):
         if not result:
             raise Exception('Pull request was not merged')
 
+    def _getCommit(self, repository, sha, retries=5):
+        try:
+            return repository.commit(sha)
+        except github3.exceptions.NotFoundError:
+            self.log.warning("Commit %s of project %s returned None",
+                             sha, repository.name)
+            if retries <= 0:
+                raise
+            time.sleep(1)
+            return self._getCommit(repository, sha, retries - 1)
+
     def getCommitStatuses(self, project, sha):
         github = self.getGithubClient(project)
         owner, proj = project.split('/')
         repository = github.repository(owner, proj)
-        commit = repository.commit(sha)
+
+        commit = self._getCommit(repository, sha, 5)
+
         # make a list out of the statuses so that we complete our
         # API transaction
         statuses = [status.as_dict() for status in commit.statuses()]
