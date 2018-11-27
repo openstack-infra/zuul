@@ -786,7 +786,12 @@ class GithubConnection(BaseConnection):
         if event.change_number:
             change = self._getChange(project, event.change_number,
                                      event.patch_number, refresh=refresh)
-            change.url = event.change_url
+            if hasattr(event, 'change_url') and event.change_url:
+                change.url = event.change_url
+            else:
+                # The event has no change url so just construct it
+                change.url = self.getPullUrl(
+                    event.project_name, event.change_number)
             change.uris = [
                 '%s/%s/pull/%s' % (self.server, project, change.number),
             ]

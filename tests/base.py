@@ -1228,7 +1228,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         self.getGithubClient(project).addProject(project)
 
     def _getPullReviews(self, owner, project, number):
-        pr = self.pull_requests[number]
+        pr = self.pull_requests[int(number)]
         return pr.reviews
 
     def getGitUrl(self, project):
@@ -1246,13 +1246,13 @@ class FakeGithubConnection(githubconnection.GithubConnection):
     def commentPull(self, project, pr_number, message):
         # record that this got reported
         self.reports.append((project, pr_number, 'comment'))
-        pull_request = self.pull_requests[pr_number]
+        pull_request = self.pull_requests[int(pr_number)]
         pull_request.addComment(message)
 
     def mergePull(self, project, pr_number, commit_message='', sha=None):
         # record that this got reported
         self.reports.append((project, pr_number, 'merge'))
-        pull_request = self.pull_requests[pr_number]
+        pull_request = self.pull_requests[int(pr_number)]
         if self.merge_failure:
             raise Exception('Pull request was not merged')
         if self.merge_not_allowed_count > 0:
@@ -1272,7 +1272,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
     def labelPull(self, project, pr_number, label):
         # record that this got reported
         self.reports.append((project, pr_number, 'label', label))
-        pull_request = self.pull_requests[pr_number]
+        pull_request = self.pull_requests[int(pr_number)]
         pull_request.addLabel(label)
 
     def unlabelPull(self, project, pr_number, label):

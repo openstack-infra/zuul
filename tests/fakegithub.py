@@ -379,7 +379,7 @@ class FakeGithubClient(object):
             project_name, self._data)
 
     def pull_request(self, owner, project, number):
-        fake_pr = self._data.pull_requests[number]
+        fake_pr = self._data.pull_requests[int(number)]
         return FakePull(fake_pr)
 
     def search_issues(self, query):
