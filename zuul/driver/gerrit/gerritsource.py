@@ -38,7 +38,7 @@ class GerritSource(BaseSource):
             prefix_ui += '/'
 
         self.change_re = re.compile(
-            r"/%s(\#\/c\/)?(\d+)[\w]*" % prefix_ui)
+            r"/%s(\#\/c\/|c\/.*\/\+\/)?(\d+)[\w]*" % prefix_ui)
 
     def getRefSha(self, project, ref):
         return self.connection.getRefSha(project, ref)
