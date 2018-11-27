@@ -1294,6 +1294,8 @@ class BuildHistory(object):
 
 
 class FakeStatsd(threading.Thread):
+    log = logging.getLogger("zuul.test.FakeStatsd")
+
     def __init__(self):
         threading.Thread.__init__(self)
         self.daemon = True
@@ -1314,6 +1316,7 @@ class FakeStatsd(threading.Thread):
                     data = self.sock.recvfrom(1024)
                     if not data:
                         return
+                    self.log.debug("Appending: %s" % data[0])
                     self.stats.append(data[0])
                 if fd == self.wake_read:
                     return

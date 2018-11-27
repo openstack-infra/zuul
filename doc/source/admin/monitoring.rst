@@ -188,78 +188,69 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
      The used RAM (excluding buffers and cache) on this executor, as
      a percentage multiplied by 100.
 
-.. stat:: zuul.nodepool
+.. stat:: zuul.nodepool.requests
 
-   Holds metrics related to Zuul requests from Nodepool.
+   Holds metrics related to Zuul requests and responses from Nodepool.
 
-   .. stat:: requested
+   States are one of:
+
+      *requested*
+        Node request submitted by Zuul to Nodepool
+      *canceled*
+        Node request was canceled by Zuul
+      *failed*
+        Nodepool failed to fulfill a node request
+      *fulfilled*
+        Nodes were assigned by Nodepool
+
+   .. stat:: <state>
+      :type: timer
+
+      Records the elapsed time from request to completion for states
+      `failed` and `fulfilled`.  For example,
+      ``zuul.nodepool.request.fulfilled.mean`` will give the average
+      time for all fulfilled requests within each ``statsd`` flush
+      interval.
+
+      A lower value for `fulfilled` requests is better.  Ideally,
+      there will be no `failed` requests.
+
+   .. stat:: <state>.total
       :type: counter
 
-      Incremented each time a node request is submitted to Nodepool.
+      Incremented when nodes are assigned or removed as described in
+      the states above.
 
-      .. stat:: label.<label>
-         :type: counter
-
-         Incremented each time a request for a specific label is
-         submitted to Nodepool.
-
-      .. stat:: size.<size>
-         :type: counter
-
-         Incremented each time a request of a specific size is submitted
-         to Nodepool.  For example, a request for 3 nodes would use the
-         key ``zuul.nodepool.requested.size.3``.
-
-   .. stat:: canceled
+   .. stat:: <state>.size.<size>
       :type: counter, timer
 
-      The counter is incremented each time a node request is canceled
-      by Zuul.  The timer records the elapsed time from request to
-      cancelation.
+      Increments for the node count of each request.  For example, a
+      request for 3 nodes would use the key
+      ``zuul.nodepool.requests.requested.size.3``; fulfillment of 3
+      node requests can be tracked with
+      ``zuul.nodepool.requests.fulfilled.size.3``.
 
-      .. stat:: label.<label>
-         :type: counter, timer
+      The timer is implemented for ``fulfilled`` and ``failed``
+      requests.  For example, the timer
+      ``zuul.nodepool.requests.failed.size.3.mean`` gives the average
+      time of 3-node failed requests within the ``statsd`` flush
+      interval.  A lower value for `fulfilled` requests is better.
+      Ideally, there will be no `failed` requests.
 
-         The same, for a specific label.
-
-      .. stat:: size.<size>
-         :type: counter, timer
-
-         The same, for a specific request size.
-
-   .. stat:: fulfilled
+   .. stat:: <state>.label.<label>
       :type: counter, timer
 
-      The counter is incremented each time a node request is fulfilled
-      by Nodepool.  The timer records the elapsed time from request to
-      fulfillment.
+      Increments for the label of each request.  For example, requests
+      for `centos7` nodes could be tracked with
+      ``zuul.nodepool.requests.requested.centos7``.
 
-      .. stat:: label.<label>
-         :type: counter, timer
-
-         The same, for a specific label.
-
-      .. stat:: size.<size>
-         :type: counter, timer
-
-         The same, for a specific request size.
-
-   .. stat:: failed
-      :type: counter, timer
-
-      The counter is incremented each time Nodepool fails to fulfill a
-      node request.  The timer records the elapsed time from request
-      to failure.
-
-      .. stat:: label.<label>
-         :type: counter, timer
-
-         The same, for a specific label.
-
-      .. stat:: size.<size>
-         :type: counter, timer
-
-         The same, for a specific request size.
+      The timer is implemented for ``fulfilled`` and ``failed``
+      requests.  For example, the timer
+      ``zuul.nodepool.requests.fulfilled.label.centos7.mean`` gives
+      the average time of ``centos7`` fulfilled requests within the
+      ``statsd`` flush interval.  A lower value for `fulfilled`
+      requests is better.  Ideally, there will be no `failed`
+      requests.
 
    .. stat:: current_requests
       :type: gauge

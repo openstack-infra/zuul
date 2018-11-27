@@ -1,0 +1,10 @@
+---
+upgrade:
+  - |
+    The `zuul.nodepool` statistics have been moved under
+    `zuul.nodepool.requests` to allow sub-stats to work correctly.
+    For example `zuul.nodepool.requested` has become
+    `zuul.nodepool.requests.requested.total`.  The previously missing
+    `label` and `size` counters are now available at
+    `zuul.nodepool.requests.<state>.<size|label>`.  For more info see
+    the monitoring documentation.

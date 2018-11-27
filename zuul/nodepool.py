@@ -23,33 +23,40 @@ class Nodepool(object):
         self.sched = scheduler
 
     def emitStats(self, request):
+        # Implements the following :
+        #  counter zuul.nodepool.requests.<state>.total
+        #  counter zuul.nodepool.requests.<state>.label.<label>
+        #  counter zuul.nodepool.requests.<state>.size.<size>
+        #  timer   zuul.nodepool.requests.(fulfilled|failed)
+        #  timer   zuul.nodepool.requests.(fulfilled|failed).<label>
+        #  timer   zuul.nodepool.requests.(fulfilled|failed).<size>
+        #  gauge   zuul.nodepool.current_requests
         if not self.sched.statsd:
             return
         statsd = self.sched.statsd
-        # counter zuul.nodepool.requested
-        # counter zuul.nodepool.requested.label.<label>
-        # counter zuul.nodepool.requested.size.<size>
-        # gauge zuul.nodepool.current_requests
+        pipe = statsd.pipeline()
         state = request.state
+        dt = None
+
         if request.canceled:
             state = 'canceled'
-            dt = None
         elif request.state in (model.STATE_FULFILLED, model.STATE_FAILED):
             dt = int((request.state_time - request.requested_time) * 1000)
-        else:
-            dt = None
-        key = 'zuul.nodepool.%s' % state
-        statsd.incr(key)
+
+        key = 'zuul.nodepool.requests.%s' % state
+        pipe.incr(key + ".total")
+
         if dt:
-            statsd.timing(key, dt)
+            pipe.timing(key, dt)
         for node in request.nodeset.getNodes():
-            statsd.incr(key + '.label.%s' % node.label)
+            pipe.incr(key + '.label.%s' % node.label)
             if dt:
-                statsd.timing(key + '.label.%s' % node.label, dt)
-        statsd.incr(key + '.size.%s' % len(request.nodeset.nodes))
+                pipe.timing(key + '.label.%s' % node.label, dt)
+        pipe.incr(key + '.size.%s' % len(request.nodeset.nodes))
         if dt:
-            statsd.timing(key + '.size.%s' % len(request.nodeset.nodes), dt)
-        statsd.gauge('zuul.nodepool.current_requests', len(self.requests))
+            pipe.timing(key + '.size.%s' % len(request.nodeset.nodes), dt)
+        pipe.gauge('zuul.nodepool.current_requests', len(self.requests))
+        pipe.send()
 
     def requestNodes(self, build_set, job):
         # Create a copy of the nodeset to represent the actual nodes
