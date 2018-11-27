@@ -32,42 +32,31 @@ class SQLReporter(BaseReporter):
             self.log.warn("SQL reporter (%s) is disabled " % self)
             return
 
-        with self.connection.engine.begin() as conn:
-            change = getattr(item.change, 'number', None)
-            patchset = getattr(item.change, 'patchset', None)
-            ref = getattr(item.change, 'ref', '')
-            oldrev = getattr(item.change, 'oldrev', '')
-            newrev = getattr(item.change, 'newrev', '')
-            branch = getattr(item.change, 'branch', '')
-            buildset_ins = self.connection.zuul_buildset_table.insert().values(
-                zuul_ref=item.current_build_set.ref,
+        with self.connection.getSession() as db:
+            db_buildset = db.createBuildSet(
+                tenant=item.pipeline.tenant.name,
                 pipeline=item.pipeline.name,
                 project=item.change.project.name,
-                change=change,
-                patchset=patchset,
-                ref=ref,
-                oldrev=oldrev,
-                newrev=newrev,
+                change=getattr(item.change, 'number', None),
+                patchset=getattr(item.change, 'patchset', None),
+                ref=getattr(item.change, 'ref', ''),
+                oldrev=getattr(item.change, 'oldrev', ''),
+                newrev=getattr(item.change, 'newrev', ''),
+                branch=getattr(item.change, 'branch', ''),
+                zuul_ref=item.current_build_set.ref,
                 ref_url=item.change.url,
                 result=item.current_build_set.result,
-                message=self._formatItemReport(
-                    item, with_jobs=False),
-                tenant=item.pipeline.tenant.name,
-                branch=branch,
+                message=self._formatItemReport(item, with_jobs=False),
             )
-            buildset_ins_result = conn.execute(buildset_ins)
-            build_inserts = []
-
             for job in item.getJobs():
                 build = item.current_build_set.getBuild(job.name)
                 if not build:
-                    # build hasn't began. The sql reporter can only send back
+                    # build hasn't begun. The sql reporter can only send back
                     # stats about builds. It doesn't understand how to store
                     # information about the change.
                     continue
 
                 (result, url) = item.formatJobResult(job)
-
                 start = end = None
                 if build.start_time:
                     start = datetime.datetime.fromtimestamp(
@@ -78,19 +67,16 @@ class SQLReporter(BaseReporter):
                         build.end_time,
                         tz=datetime.timezone.utc)
 
-                build_inserts.append({
-                    'buildset_id': buildset_ins_result.inserted_primary_key[0],
-                    'uuid': build.uuid,
-                    'job_name': build.job.name,
-                    'result': result,
-                    'start_time': start,
-                    'end_time': end,
-                    'voting': build.job.voting,
-                    'log_url': url,
-                    'node_name': build.node_name,
-                })
-            conn.execute(self.connection.zuul_build_table.insert(),
-                         build_inserts)
+                db_buildset.createBuild(
+                    uuid=build.uuid,
+                    job_name=build.job.name,
+                    result=result,
+                    start_time=start,
+                    end_time=end,
+                    voting=build.job.voting,
+                    log_url=url,
+                    node_name=build.node_name,
+                )
 
 
 def getSchema():
