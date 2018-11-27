@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    A job using a semaphore now can configure if it should acquire the it
+    before requesting resources or just before running.
+upgrade:
+  - |
+    The acquiring behavior of jobs with semaphores has been changed. Up to now
+    a job requested resources and aquired the semaphore just before it started
+    to run. However this could lead to a high amount of resource waste. Instead
+    jobs now acquire the semaphore before requesting the resources by default.
+    This behavior can be overridden by jobs using
+    :attr:`job.semaphore.resources-first` if some waste of resources is
+    acceptable.

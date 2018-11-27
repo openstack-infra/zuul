@@ -5849,6 +5849,10 @@ class TestSemaphore(ZuulTestCase):
 
         self.executor_server.hold_jobs_in_build = True
 
+        # Pause nodepool so we can check the ordering of getting the nodes
+        # and aquiring the semaphore.
+        self.fake_nodepool.paused = True
+
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
         self.assertFalse('test-semaphore' in
@@ -5856,6 +5860,13 @@ class TestSemaphore(ZuulTestCase):
 
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        # By default we first lock the semaphore and then get the nodes
+        # so at this point the semaphore needs to be aquired.
+        self.assertTrue('test-semaphore' in
+                        tenant.semaphore_handler.semaphores)
+        self.fake_nodepool.paused = False
         self.waitUntilSettled()
 
         self.assertEqual(len(self.builds), 3)
@@ -5992,6 +6003,53 @@ class TestSemaphore(ZuulTestCase):
 
         self.assertEqual(A.reported, 1)
         self.assertEqual(B.reported, 1)
+
+    def test_semaphore_resources_first(self):
+        "Test semaphores with max=1 (mutex) and get resources first"
+        tenant = self.sched.abide.tenants.get('tenant-one')
+
+        self.executor_server.hold_jobs_in_build = True
+
+        # Pause nodepool so we can check the ordering of getting the nodes
+        # and aquiring the semaphore.
+        self.fake_nodepool.paused = True
+
+        A = self.fake_gerrit.addFakeChange('org/project3', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project3', 'master', 'B')
+        self.assertFalse('test-semaphore' in
+                         tenant.semaphore_handler.semaphores)
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        # Here we first get the resources and then lock the semaphore
+        # so at this point the semaphore should not be aquired.
+        self.assertFalse('test-semaphore' in
+                         tenant.semaphore_handler.semaphores)
+        self.fake_nodepool.paused = False
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 3)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name,
+                         'semaphore-one-test1-resources-first')
+        self.assertEqual(self.builds[2].name, 'project-test1')
+
+        self.executor_server.release('semaphore-one-test1')
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 3)
+        self.assertEqual(self.builds[0].name, 'project-test1')
+        self.assertEqual(self.builds[1].name, 'project-test1')
+        self.assertEqual(self.builds[2].name,
+                         'semaphore-one-test2-resources-first')
+        self.assertTrue('test-semaphore' in
+                        tenant.semaphore_handler.semaphores)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
 
     def test_semaphore_zk_error(self):
         "Test semaphore release with zk error"
