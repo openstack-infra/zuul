@@ -374,6 +374,44 @@ class ZuulWebAPI(object):
         resp.headers['Content-Type'] = 'text/plain'
         return job.data[0] + '\n'
 
+    def buildToDict(self, build):
+        start_time = build.start_time
+        if build.start_time:
+            start_time = start_time.strftime(
+                '%Y-%m-%dT%H:%M:%S')
+        end_time = build.end_time
+        if build.end_time:
+            end_time = end_time.strftime(
+                '%Y-%m-%dT%H:%M:%S')
+        if build.start_time and build.end_time:
+            duration = (build.end_time -
+                        build.start_time).total_seconds()
+        else:
+            duration = None
+
+        buildset = build.buildset
+        ret = {
+            'uuid': build.uuid,
+            'job_name': build.job_name,
+            'result': build.result,
+            'start_time': start_time,
+            'end_time': end_time,
+            'duration': duration,
+            'voting': build.voting,
+            'log_url': build.log_url,
+            'node_name': build.node_name,
+
+            'project': buildset.project,
+            'branch': buildset.branch,
+            'pipeline': buildset.pipeline,
+            'change': buildset.change,
+            'patchset': buildset.patchset,
+            'ref': buildset.ref,
+            'newrev': buildset.newrev,
+            'ref_url': buildset.ref_url,
+        }
+        return ret
+
     @cherrypy.expose
     @cherrypy.tools.save_params()
     @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
@@ -391,31 +429,15 @@ class ZuulWebAPI(object):
 
         connection = self.zuulweb.connections.connections[connection_name]
 
-        args = {
-            'buildset_filters': {'tenant': [tenant]},
-            'build_filters': {},
-            'limit': limit,
-            'skip': skip,
-        }
+        builds = connection.getBuilds(
+            tenant=tenant, project=project, pipeline=pipeline, change=change,
+            branch=branch, patchset=patchset, ref=ref, newrev=newrev,
+            uuid=uuid, job_name=job_name, voting=voting, node_name=node_name,
+            result=result, limit=limit, offset=skip)
 
-        for k in ("project", "pipeline", "change", "branch",
-                  "patchset", "ref", "newrev"):
-            v = locals()[k]
-            if v:
-                if not isinstance(v, list):
-                    v = [v]
-                args['buildset_filters'].setdefault(k, []).extend(v)
-        for k in ("uuid", "job_name", "voting", "node_name",
-                  "result"):
-            v = locals()[k]
-            if v:
-                if not isinstance(v, list):
-                    v = [v]
-                args['build_filters'].setdefault(k, []).extend(v)
-        data = connection.get_builds(args)
         resp = cherrypy.response
         resp.headers['Access-Control-Allow-Origin'] = '*'
-        return data
+        return [self.buildToDict(b) for b in builds]
 
     @cherrypy.expose
     @cherrypy.tools.save_params()
@@ -431,16 +453,10 @@ class ZuulWebAPI(object):
 
         connection = self.zuulweb.connections.connections[connection_name]
 
-        args = {
-            'buildset_filters': {'tenant': [tenant]},
-            'build_filters': {'uuid': [uuid]},
-            'limit': 1,
-            'skip': 0,
-        }
-        data = connection.get_builds(args)
+        data = connection.getBuilds(tenant=tenant, uuid=uuid, limit=1)
         if not data:
             raise cherrypy.HTTPError(404, "Build not found")
-        data = data[0]
+        data = self.buildToDict(data[0])
         resp = cherrypy.response
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return data
