@@ -2519,12 +2519,22 @@ class TestScheduler(ZuulTestCase):
         # test key normalization
         statsd.extra_keys = {'hostname': '1_2_3_4'}
 
-        statsd.incr('test-incr.{hostname}.{fake}', fake='1:2')
-        statsd.timing('test-timing.{hostname}.{fake}', 3, fake='1:2')
-        statsd.gauge('test-gauge.{hostname}.{fake}', 12, fake='1:2')
-        self.assertReportedStat('test-incr.1_2_3_4.1_2', '1', 'c')
-        self.assertReportedStat('test-timing.1_2_3_4.1_2', '3', 'ms')
-        self.assertReportedStat('test-gauge.1_2_3_4.1_2', '12', 'g')
+        statsd.incr('hostname-incr.{hostname}.{fake}', fake='1:2')
+        statsd.timing('hostname-timing.{hostname}.{fake}', 3, fake='1:2')
+        statsd.gauge('hostname-gauge.{hostname}.{fake}', 12, fake='1:2')
+        self.assertReportedStat('hostname-incr.1_2_3_4.1_2', '1', 'c')
+        self.assertReportedStat('hostname-timing.1_2_3_4.1_2', '3', 'ms')
+        self.assertReportedStat('hostname-gauge.1_2_3_4.1_2', '12', 'g')
+
+    def test_statsd_conflict(self):
+        statsd = self.sched.statsd
+        statsd.gauge('test-gauge', 12)
+        # since test-gauge is already a value, we can't make
+        # subvalues.  Test the assert works.
+        statsd.gauge('test-gauge.1_2_3_4', 12)
+        self.assertReportedStat('test-gauge', '12', 'g')
+        self.assertRaises(Exception, self.assertReportedStat,
+                          'test-gauge.1_2_3_4', '12', 'g')
 
     def test_stuck_job_cleanup(self):
         "Test that pending jobs are cleaned up if removed from layout"
