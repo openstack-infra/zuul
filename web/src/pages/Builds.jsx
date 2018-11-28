@@ -74,7 +74,7 @@ class BuildsPage extends TableFilters {
     )
     const linkChangeFormat = (value, rowdata) => (
       <Table.Cell>
-        <a href={rowdata.rowData.ref_url}>{value ? rowdata.rowData.change+','+rowdata.rowData.patchset : rowdata.rowData.newrev ? rowdata.rowData.newrev.substring(7,1) : rowdata.rowData.branch}</a>
+        <a href={rowdata.rowData.ref_url}>{value ? rowdata.rowData.change+','+rowdata.rowData.patchset : rowdata.rowData.newrev ? rowdata.rowData.newrev.substr(0, 7) : rowdata.rowData.branch}</a>
       </Table.Cell>
     )
     this.columns = []
