@@ -22,6 +22,7 @@ import io
 import re
 import subprocess
 
+import re2
 import voluptuous as vs
 
 from zuul import model
@@ -77,6 +78,17 @@ class UnknownConnection(Exception):
         Unknown connection named "{connection}".""")
         message = textwrap.fill(message.format(connection=connection_name))
         super(UnknownConnection, self).__init__(message)
+
+
+class LabelForbiddenError(Exception):
+    def __init__(self, label, allowed_labels):
+        message = textwrap.dedent("""\
+        Label named "{label}" is not part of the allowed
+        labels ({allowed_labels}) for this tenant.""")
+        message = textwrap.fill(message.format(
+            label=label,
+            allowed_labels=", ".join(allowed_labels)))
+        super(LabelForbiddenError, self).__init__(message)
 
 
 class MaxTimeoutError(Exception):
@@ -452,7 +464,14 @@ class NodeSetParser(object):
         ns.start_mark = conf.get('_start_mark')
         node_names = set()
         group_names = set()
+        allowed_labels = self.pcontext.tenant.allowed_labels
         for conf_node in as_list(conf['nodes']):
+            if allowed_labels:
+                if not [True for allowed_label in allowed_labels if
+                        re2.match(allowed_label, conf_node['label'])]:
+                    raise LabelForbiddenError(
+                        label=conf_node['label'],
+                        allowed_labels=allowed_labels)
             for name in as_list(conf_node['name']):
                 if name in node_names:
                     raise DuplicateNodeError(name, conf_node['name'])
@@ -1293,6 +1312,7 @@ class TenantParser(object):
                   'exclude-unprotected-branches': bool,
                   'allowed-triggers': to_list(str),
                   'allowed-reporters': to_list(str),
+                  'allowed-labels': to_list(str),
                   'default-parent': str,
                   }
         return vs.Schema(tenant)
@@ -1309,6 +1329,7 @@ class TenantParser(object):
                 conf['exclude-unprotected-branches']
         tenant.allowed_triggers = conf.get('allowed-triggers')
         tenant.allowed_reporters = conf.get('allowed-reporters')
+        tenant.allowed_labels = conf.get('allowed-labels')
         tenant.default_base_job = conf.get('default-parent', 'base')
 
         tenant.unparsed_config = conf

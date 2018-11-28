@@ -3,6 +3,10 @@
     max-job-timeout: 1800
     allowed-reporters:
       - gerrit
+    allowed-labels:
+      - tenant-one-.*
+      - ubuntu-trusty
+      - fake
     source:
       gerrit:
         config-projects:
