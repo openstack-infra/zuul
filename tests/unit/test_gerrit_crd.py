@@ -18,6 +18,12 @@ from tests.base import (
     simple_layout,
 )
 
+URL_FORMATS = [
+    '{baseurl}/{change_no}',
+    '{baseurl}/#/c/{change_no}',
+    '{baseurl}/c/{project}/+/{change_no}/',
+]
+
 
 class TestGerritCRD(ZuulTestCase):
     tenant_config_file = 'config/single-tenant/main.yaml'
@@ -95,15 +101,14 @@ class TestGerritCRD(ZuulTestCase):
     # changes - repeat the simple test on each of the 3 to ensure they can be
     # parsed, the other tests just use the default URL schema provided in
     # FakeGerritChange.data['url'] .
+    def test_crd_gate_url_schema0(self):
+        self._test_crd_gate(URL_FORMATS[0])
 
     def test_crd_gate_url_schema1(self):
-        self._test_crd_gate('{baseurl}/{change_no}')
+        self._test_crd_gate(URL_FORMATS[1])
 
     def test_crd_gate_url_schema2(self):
-        self._test_crd_gate('{baseurl}/#/c/{change_no}')
-
-    def test_crd_gate_url_schema3(self):
-        self._test_crd_gate('{baseurl}/c/{project}/+/{change_no}/')
+        self._test_crd_gate(URL_FORMATS[2])
 
     def test_crd_gate_triangle(self):
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
@@ -260,7 +265,7 @@ class TestGerritCRD(ZuulTestCase):
         self.assertEqual(A.data['status'], 'MERGED')
         self.assertEqual(A.reported, 2)
 
-    def test_crd_gate_reverse(self):
+    def _test_crd_gate_reverse(self, url_fmt):
         "Test reverse cross-repo dependencies"
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
@@ -269,8 +274,11 @@ class TestGerritCRD(ZuulTestCase):
 
         # A Depends-On: B
 
+        url = url_fmt.format(baseurl=B.gerrit.baseurl.rstrip('/'),
+                             project=B.project,
+                             change_no=B.number)
         A.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
-            A.subject, B.data['url'])
+            A.subject, url)
 
         self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
         self.waitUntilSettled()
@@ -299,6 +307,15 @@ class TestGerritCRD(ZuulTestCase):
         changes = self.getJobFromHistory(
             'project-merge', 'org/project1').changes
         self.assertEqual(changes, '2,1 1,1')
+
+    def test_crd_gate_reverse_schema0(self):
+        self._test_crd_gate_reverse(URL_FORMATS[0])
+
+    def test_crd_gate_reverse_schema1(self):
+        self._test_crd_gate_reverse(URL_FORMATS[1])
+
+    def test_crd_gate_reverse_schema2(self):
+        self._test_crd_gate_reverse(URL_FORMATS[2])
 
     def test_crd_cycle(self):
         "Test cross-repo dependency cycles"
