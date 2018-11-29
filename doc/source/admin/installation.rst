@@ -169,11 +169,13 @@ repo and process any jobs defined therein.
 Web Deployment Options
 ----------------------
 
-The ``zuul-web`` service provides an web dashboard, a REST API and a websocket
+The ``zuul-web`` service provides a web dashboard, a REST API and a websocket
 log streaming service as a single holistic web application. For production use
 it is recommended to run it behind a reverse proxy, such as Apache or Nginx.
 
-More advanced users may desire to do one or more exciting things such as:
+The ``zuul-web`` service is entirely self-contained and can be run
+with minimal configuration, however, more advanced users may desire to
+do one or more of the following:
 
 White Label
   Serve the dashboard of an individual tenant at the root of its own domain.
@@ -182,7 +184,7 @@ White Label
 
 Static Offload
   Shift the duties of serving static files, such as HTML, Javascript, CSS or
-  images to the Reverse Proxy server.
+  images to the reverse proxy server.
 
 Static External
   Serve the static files from a completely separate location that does not
@@ -194,17 +196,17 @@ Sub-URL
   https://softwarefactory-project.io/zuul/ is an example of a Zuul dashboard
   that is being served from a Sub-URL.
 
-None of those make any sense for simple non-production oriented deployments, so
-all discussion will assume that the ``zuul-web`` service is exposed via a
-Reverse Proxy. Where rewrite rule examples are given, they will be given
-with Apache syntax, but any other Reverse Proxy should work just fine.
+Most deployments shouldn't need these, so the following discussion
+will assume that the ``zuul-web`` service is exposed via a reverse
+proxy. Where rewrite rule examples are given, they will be given with
+Apache syntax, but any other reverse proxy should work just fine.
 
-Basic Reverse Proxy
-~~~~~~~~~~~~~~~~~~~
+Reverse Proxy
+~~~~~~~~~~~~~
 
-Using Apache as the Reverse Proxy requires the ``mod_proxy``,
-``mod_proxy_http`` and ``mod_proxy_wstunnel`` modules to be installed and
-enabled. Static Offload and White Label additionally require ``mod_rewrite``.
+Using Apache as the reverse proxy requires the ``mod_proxy``,
+``mod_proxy_http`` and ``mod_proxy_wstunnel`` modules to be installed
+and enabled.
 
 All of the cases require a rewrite rule for the websocket streaming, so the
 simplest reverse-proxy case is::
@@ -213,13 +215,16 @@ simplest reverse-proxy case is::
   RewriteRule ^/api/tenant/(.*)/console-stream ws://localhost:9000/api/tenant/$1/console-stream [P]
   RewriteRule ^/(.*)$ http://localhost:9000/$1 [P]
 
+This is the recommended configuration unless one of the following
+features is required.
 
 Static Offload
 ~~~~~~~~~~~~~~
 
-To have the Reverse Proxy serve the static html/javascript assets instead of
-proxying them to the REST layer, register the location where you unpacked
-the web application as the document root and add rewrite rules::
+To have the reverse proxy serve the static html/javascript assets
+instead of proxying them to the REST layer, enable the ``mod_rewrite``
+Apache module, register the location where you unpacked the web
+application as the document root and add rewrite rules::
 
   <Directory /usr/share/zuul>
     Require all granted
@@ -244,7 +249,7 @@ the web application as the document root and add rewrite rules::
 Sub directory serving
 ~~~~~~~~~~~~~~~~~~~~~
 
-The web application needs to be rebuild to update the internal location of
+The web application needs to be rebuilt to update the internal location of
 the static files. Set the homepage setting in the package.json to an
 absolute path or url. For example, to deploy the web interface through a
 '/zuul/' sub directory:
@@ -257,11 +262,12 @@ absolute path or url. For example, to deploy the web interface through a
 
 .. code-block:: bash
 
-  sed -e 's#"homepage": "/"#"homepage": "/zuul/"#' -i package.json
-  yarn build
+   sed -e 's#"homepage": "/"#"homepage": "/zuul/"#' -i package.json
+   yarn build
 
 Then assuming the web application is unpacked in /usr/share/zuul,
-add the following rewrite rules::
+enable the ``mod_rewrite`` Apache module and add the following rewrite
+rules::
 
   <Directory /usr/share/zuul>
     Require all granted
@@ -291,10 +297,11 @@ rule to ensure connection webhooks don't try to get put into the tenant scope.
 
 .. note::
 
-  It's possible to do white-labelling without static offload, but it is more
-  complex with no benefit.
+   It's possible to do white-labeling without static offload, but it
+   is more complex with no benefit.
 
-Assuming the zuul tenant name is "example", the rewrite rules are::
+Enable the ``mod_rewrite`` Apache module, and assuming the Zuul tenant
+name is ``example``, the rewrite rules are::
 
   <Directory /usr/share/zuul>
     Require all granted
@@ -323,12 +330,13 @@ Static External
 
 .. note::
 
-  Hosting zuul dashboard on an external static location that does not support
-  dynamic url rewrite rules only works for white-labeled deployments.
+   Hosting the Zuul dashboard on an external static location that does
+   not support dynamic url rewrite rules only works for white-labeled
+   deployments.
 
 In order to serve the zuul dashboard code from an external static location,
 ``REACT_APP_ZUUl_API`` must be set at javascript build time:
 
 .. code-block:: bash
 
-  REACT_APP_ZUUL_API='http://zuul-web.example.com' yarn build
+   REACT_APP_ZUUL_API='http://zuul-web.example.com' yarn build
