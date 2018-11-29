@@ -495,8 +495,7 @@ class Merger(object):
             self.log = logger
         self.repos = {}
         self.working_root = working_root
-        if not os.path.exists(working_root):
-            os.makedirs(working_root)
+        os.makedirs(working_root, exist_ok=True)
         self.connections = connections
         self.email = email
         self.username = username
