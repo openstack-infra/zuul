@@ -276,6 +276,32 @@ The following sections of ``zuul.conf`` are used by the scheduler:
 
       Path to directory in which Zuul should save its state.
 
+   .. attr:: relative_priority
+      :default: False
+
+      A boolean which indicates whether the scheduler should supply
+      relative priority information for node requests.
+
+      In all cases, each pipeline may specify a precedence value which
+      is used by Nodepool to satisfy requests from higher-precedence
+      pipelines first.  If ``relative_priority`` is set to ``True``,
+      then Zuul will additionally group items in the same pipeline by
+      project and weight each request by its position in that
+      project's group.  A request for the first change of a given
+      project will have the highest relative priority, and the second
+      change a lower relative priority.  The first change of each
+      project in a pipeline has the same relative priority, regardless
+      of the order of submission or how many other changes are in the
+      pipeline.  This can be used to make node allocations complete
+      faster for projects with fewer changes in a system dominated by
+      projects with more changes.
+
+      If this value is ``False`` (the default), then node requests are
+      sorted by pipeline precedence followed by the order in which
+      they were submitted.  If this is ``True``, they are sorted by
+      pipeline precedence, followed by relative priority, and finally
+      the order in which they were submitted.
+
 Operation
 ~~~~~~~~~
 

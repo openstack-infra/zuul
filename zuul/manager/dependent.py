@@ -93,6 +93,11 @@ class DependentPipelineManager(PipelineManager):
             self.log.debug("Dynamically created queue %s", change_queue)
             return DynamicChangeQueueContextManager(change_queue)
 
+    def getNodePriority(self, item):
+        with self.getChangeQueue(item.change) as change_queue:
+            items = change_queue.queue
+            return items.index(item)
+
     def isChangeReadyToBeEnqueued(self, change):
         source = change.project.source
         if not source.canMerge(change, self.getSubmitAllowNeeds()):

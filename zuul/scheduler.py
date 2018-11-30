@@ -306,6 +306,10 @@ class Scheduler(threading.Thread):
         self.last_reconfigured = None
         self.tenant_last_reconfigured = {}
         self.autohold_requests = {}
+        self.use_relative_priority = False
+        if self.config.has_option('scheduler', 'relative_priority'):
+            if self.config.getboolean('scheduler', 'relative_priority'):
+                self.use_relative_priority = True
 
     def start(self):
         super(Scheduler, self).start()

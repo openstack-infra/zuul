@@ -58,7 +58,7 @@ class TestNodepoolIntegration(BaseTestCase):
         nodeset.addNode(model.Node(['controller'], 'fake-label'))
         job = model.Job('testjob')
         job.nodeset = nodeset
-        request = self.nodepool.requestNodes(None, job)
+        request = self.nodepool.requestNodes(None, job, 0)
         self.waitForRequests()
         self.assertEqual(len(self.provisioned_requests), 1)
         self.assertEqual(request.state, model.STATE_FULFILLED)
@@ -88,7 +88,7 @@ class TestNodepoolIntegration(BaseTestCase):
         nodeset.addNode(model.Node(['controller'], 'invalid-label'))
         job = model.Job('testjob')
         job.nodeset = nodeset
-        request = self.nodepool.requestNodes(None, job)
+        request = self.nodepool.requestNodes(None, job, 0)
         self.waitForRequests()
         self.assertEqual(len(self.provisioned_requests), 1)
         self.assertEqual(request.state, model.STATE_FAILED)
@@ -103,7 +103,7 @@ class TestNodepoolIntegration(BaseTestCase):
         job = model.Job('testjob')
         job.nodeset = nodeset
         self.fake_nodepool.paused = True
-        request = self.nodepool.requestNodes(None, job)
+        request = self.nodepool.requestNodes(None, job, 0)
         self.zk.client.stop()
         self.zk.client.start()
         self.fake_nodepool.paused = False
@@ -121,7 +121,7 @@ class TestNodepoolIntegration(BaseTestCase):
         job = model.Job('testjob')
         job.nodeset = nodeset
         self.fake_nodepool.paused = True
-        request = self.nodepool.requestNodes(None, job)
+        request = self.nodepool.requestNodes(None, job, 0)
         self.nodepool.cancelRequest(request)
 
         self.waitForRequests()

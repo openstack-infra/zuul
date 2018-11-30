@@ -5025,7 +5025,7 @@ For CI problems and help debugging, contact ci@example.org"""
     def test_zookeeper_disconnect(self):
         "Test that jobs are executed after a zookeeper disconnect"
 
-        self.fake_nodepool.paused = True
+        self.fake_nodepool.pause()
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('Code-Review', 2)
         self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
@@ -5033,7 +5033,7 @@ For CI problems and help debugging, contact ci@example.org"""
 
         self.zk.client.stop()
         self.zk.client.start()
-        self.fake_nodepool.paused = False
+        self.fake_nodepool.unpause()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')
@@ -5044,7 +5044,7 @@ For CI problems and help debugging, contact ci@example.org"""
 
         # This tests receiving a ZK disconnect between the arrival of
         # a fulfilled request and when we accept its nodes.
-        self.fake_nodepool.paused = True
+        self.fake_nodepool.pause()
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('Code-Review', 2)
         self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
@@ -5056,7 +5056,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.sched.run_handler_lock.acquire()
 
         # Fulfill the nodepool request.
-        self.fake_nodepool.paused = False
+        self.fake_nodepool.unpause()
         requests = list(self.sched.nodepool.requests.values())
         self.assertEqual(1, len(requests))
         request = requests[0]
@@ -5090,7 +5090,7 @@ For CI problems and help debugging, contact ci@example.org"""
     def test_nodepool_failure(self):
         "Test that jobs are reported after a nodepool failure"
 
-        self.fake_nodepool.paused = True
+        self.fake_nodepool.pause()
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('Code-Review', 2)
         self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
@@ -5099,7 +5099,7 @@ For CI problems and help debugging, contact ci@example.org"""
         req = self.fake_nodepool.getNodeRequests()[0]
         self.fake_nodepool.addFailRequest(req)
 
-        self.fake_nodepool.paused = False
+        self.fake_nodepool.unpause()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'NEW')
@@ -5108,10 +5108,10 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertIn('project-test1 : SKIPPED', A.messages[1])
         self.assertIn('project-test2 : SKIPPED', A.messages[1])
 
-    def test_nodepool_priority(self):
-        "Test that nodes are requested at the correct priority"
+    def test_nodepool_pipeline_priority(self):
+        "Test that nodes are requested at the correct pipeline priority"
 
-        self.fake_nodepool.paused = True
+        self.fake_nodepool.pause()
 
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         self.fake_gerrit.addEvent(A.getRefUpdatedEvent())
@@ -5128,10 +5128,11 @@ For CI problems and help debugging, contact ci@example.org"""
 
         reqs = self.fake_nodepool.getNodeRequests()
 
-        # The requests come back sorted by oid. Since we have three requests
-        # for the three changes each with a different priority.
-        # Also they get a serial number based on order they were received
-        # so the number on the endof the oid should map to order submitted.
+        # The requests come back sorted by priority. Since we have
+        # three requests for the three changes each with a different
+        # priority.  Also they get a serial number based on order they
+        # were received so the number on the endof the oid should map
+        # to order submitted.
 
         # * gate first - high priority - change C
         self.assertEqual(reqs[0]['_oid'], '100-0000000002')
@@ -5145,13 +5146,93 @@ For CI problems and help debugging, contact ci@example.org"""
         self.assertEqual(reqs[2]['_oid'], '300-0000000000')
         self.assertEqual(reqs[2]['node_types'], ['ubuntu-xenial'])
 
-        self.fake_nodepool.paused = False
+        self.fake_nodepool.unpause()
+        self.waitUntilSettled()
+
+    def test_nodepool_relative_priority_check(self):
+        "Test that nodes are requested at the relative priority"
+
+        self.fake_nodepool.pause()
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        C = self.fake_gerrit.addFakeChange('org/project1', 'master', 'C')
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        reqs = self.fake_nodepool.getNodeRequests()
+
+        # The requests come back sorted by priority.
+
+        # Change A, first change for project, high relative priority.
+        self.assertEqual(reqs[0]['_oid'], '200-0000000000')
+        self.assertEqual(reqs[0]['relative_priority'], 0)
+
+        # Change C, first change for project1, high relative priority.
+        self.assertEqual(reqs[1]['_oid'], '200-0000000002')
+        self.assertEqual(reqs[1]['relative_priority'], 0)
+
+        # Change B, second change for project, lower relative priority.
+        self.assertEqual(reqs[2]['_oid'], '200-0000000001')
+        self.assertEqual(reqs[2]['relative_priority'], 1)
+
+        self.fake_nodepool.unpause()
+        self.waitUntilSettled()
+
+    @simple_layout('layouts/two-projects-integrated.yaml')
+    def test_nodepool_relative_priority_gate(self):
+        "Test that nodes are requested at the relative priority"
+
+        self.fake_nodepool.pause()
+
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        B.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        # project does not share a queue with project1 and project2.
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        C.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(C.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        reqs = self.fake_nodepool.getNodeRequests()
+
+        # The requests come back sorted by priority.
+
+        # Change A, first change for shared queue, high relative
+        # priority.
+        self.assertEqual(reqs[0]['_oid'], '100-0000000000')
+        self.assertEqual(reqs[0]['relative_priority'], 0)
+
+        # Change C, first change for independent project, high
+        # relative priority.
+        self.assertEqual(reqs[1]['_oid'], '100-0000000002')
+        self.assertEqual(reqs[1]['relative_priority'], 0)
+
+        # Change B, second change for shared queue, lower relative
+        # priority.
+        self.assertEqual(reqs[2]['_oid'], '100-0000000001')
+        self.assertEqual(reqs[2]['relative_priority'], 1)
+
+        self.fake_nodepool.unpause()
         self.waitUntilSettled()
 
     def test_nodepool_job_removal(self):
         "Test that nodes are returned unused after job removal"
 
-        self.fake_nodepool.paused = True
+        self.fake_nodepool.pause()
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
         A.addApproval('Code-Review', 2)
         self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
@@ -5161,7 +5242,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.sched.reconfigure(self.config)
         self.waitUntilSettled()
 
-        self.fake_nodepool.paused = False
+        self.fake_nodepool.unpause()
         self.waitUntilSettled()
 
         self.assertEqual(A.data['status'], 'MERGED')

@@ -1737,6 +1737,7 @@ class FakeNodepool(object):
     log = logging.getLogger("zuul.test.FakeNodepool")
 
     def __init__(self, host, port, chroot):
+        self.complete_event = threading.Event()
         self.host_keys = None
         self.client = kazoo.client.KazooClient(
             hosts='%s:%s%s' % (host, port, chroot))
@@ -1756,12 +1757,21 @@ class FakeNodepool(object):
         self.client.stop()
         self.client.close()
 
+    def pause(self):
+        self.complete_event.wait()
+        self.paused = True
+
+    def unpause(self):
+        self.paused = False
+
     def run(self):
         while self._running:
+            self.complete_event.clear()
             try:
                 self._run()
             except Exception:
                 self.log.exception("Error in fake nodepool:")
+            self.complete_event.set()
             time.sleep(0.1)
 
     def _run(self):
@@ -1776,7 +1786,7 @@ class FakeNodepool(object):
         except kazoo.exceptions.NoNodeError:
             return []
         reqs = []
-        for oid in sorted(reqids):
+        for oid in reqids:
             path = self.REQUEST_ROOT + '/' + oid
             try:
                 data, stat = self.client.get(path)
@@ -1785,6 +1795,9 @@ class FakeNodepool(object):
                 reqs.append(data)
             except kazoo.exceptions.NoNodeError:
                 pass
+        reqs.sort(key=lambda r: (r['_oid'].split('-')[0],
+                                 r['relative_priority'],
+                                 r['_oid'].split('-')[1]))
         return reqs
 
     def getNodes(self):

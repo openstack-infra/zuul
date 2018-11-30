@@ -688,7 +688,7 @@ class NodeSet(ConfigObject):
 class NodeRequest(object):
     """A request for a set of nodes."""
 
-    def __init__(self, requestor, build_set, job, nodeset):
+    def __init__(self, requestor, build_set, job, nodeset, relative_priority):
         self.requestor = requestor
         self.build_set = build_set
         self.job = job
@@ -696,9 +696,12 @@ class NodeRequest(object):
         self._state = STATE_REQUESTED
         self.requested_time = time.time()
         self.state_time = time.time()
+        self.created_time = None
         self.stat = None
         self.uid = uuid4().hex
+        self.relative_priority = relative_priority
         self.id = None
+        self._zk_data = {}  # Data that we read back from ZK
         # Zuul internal flags (not stored in ZK so they are not
         # overwritten).
         self.failed = False
@@ -731,17 +734,24 @@ class NodeRequest(object):
         return '<NodeRequest %s %s>' % (self.id, self.nodeset)
 
     def toDict(self):
-        d = {}
+        # Start with any previously read data
+        d = self._zk_data.copy()
         nodes = [n.label for n in self.nodeset.getNodes()]
-        d['node_types'] = nodes
-        d['requestor'] = self.requestor
+        # These are immutable once set
+        d.setdefault('node_types', nodes)
+        d.setdefault('requestor', self.requestor)
+        d.setdefault('created_time', self.created_time)
+        # We might change these
         d['state'] = self.state
         d['state_time'] = self.state_time
+        d['relative_priority'] = self.relative_priority
         return d
 
     def updateFromDict(self, data):
+        self._zk_data = data
         self._state = data['state']
         self.state_time = data['state_time']
+        self.relative_priority = data['relative_priority']
 
 
 class Secret(ConfigObject):
@@ -2267,6 +2277,9 @@ class QueueItem(object):
             fakebuild = Build(job, None)
             fakebuild.result = 'SKIPPED'
             self.addBuild(fakebuild)
+
+    def getNodePriority(self):
+        return self.pipeline.manager.getNodePriority(self)
 
     def formatUrlPattern(self, url_pattern, job=None, build=None):
         url = None

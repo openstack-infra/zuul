@@ -71,7 +71,7 @@ class TestNodepool(BaseTestCase):
         nodeset.addNode(model.Node(['compute'], 'ubuntu-xenial'))
         job = model.Job('testjob')
         job.nodeset = nodeset
-        request = self.nodepool.requestNodes(None, job)
+        request = self.nodepool.requestNodes(None, job, 0)
         self.waitForRequests()
         self.assertEqual(len(self.provisioned_requests), 1)
         self.assertEqual(request.state, 'fulfilled')
@@ -103,11 +103,11 @@ class TestNodepool(BaseTestCase):
         nodeset.addNode(model.Node(['compute'], 'ubuntu-xenial'))
         job = model.Job('testjob')
         job.nodeset = nodeset
-        self.fake_nodepool.paused = True
-        request = self.nodepool.requestNodes(None, job)
+        self.fake_nodepool.pause()
+        request = self.nodepool.requestNodes(None, job, 0)
         self.zk.client.stop()
         self.zk.client.start()
-        self.fake_nodepool.paused = False
+        self.fake_nodepool.unpause()
         self.waitForRequests()
         self.assertEqual(len(self.provisioned_requests), 1)
         self.assertEqual(request.state, 'fulfilled')
@@ -120,8 +120,8 @@ class TestNodepool(BaseTestCase):
         nodeset.addNode(model.Node(['compute'], 'ubuntu-xenial'))
         job = model.Job('testjob')
         job.nodeset = nodeset
-        self.fake_nodepool.paused = True
-        request = self.nodepool.requestNodes(None, job)
+        self.fake_nodepool.pause()
+        request = self.nodepool.requestNodes(None, job, 0)
         self.nodepool.cancelRequest(request)
 
         self.waitForRequests()
@@ -135,7 +135,7 @@ class TestNodepool(BaseTestCase):
         nodeset.addNode(model.Node(['compute'], 'ubuntu-xenial'))
         job = model.Job('testjob')
         job.nodeset = nodeset
-        request = self.nodepool.requestNodes(None, job)
+        request = self.nodepool.requestNodes(None, job, 0)
         self.waitForRequests()
         self.assertEqual(len(self.provisioned_requests), 1)
         self.assertEqual(request.state, 'fulfilled')
@@ -156,7 +156,7 @@ class TestNodepool(BaseTestCase):
         nodeset.addNode(model.Node(['compute'], 'ubuntu-xenial'))
         job = model.Job('testjob')
         job.nodeset = nodeset
-        request = self.nodepool.requestNodes(None, job)
+        request = self.nodepool.requestNodes(None, job, 0)
         self.waitForRequests()
         self.assertEqual(len(self.provisioned_requests), 1)
         self.assertEqual(request.state, 'fulfilled')
@@ -170,3 +170,21 @@ class TestNodepool(BaseTestCase):
         for node in nodeset.getNodes():
             self.assertIsNone(node.lock)
             self.assertEqual(node.state, 'ready')
+
+    def test_node_request_priority(self):
+        # Test that requests are satisfied in priority order
+
+        nodeset = model.NodeSet()
+        nodeset.addNode(model.Node(['controller', 'foo'], 'ubuntu-xenial'))
+        nodeset.addNode(model.Node(['compute'], 'ubuntu-xenial'))
+        job = model.Job('testjob')
+        job.nodeset = nodeset
+        self.fake_nodepool.pause()
+        request1 = self.nodepool.requestNodes(None, job, 1)
+        request2 = self.nodepool.requestNodes(None, job, 0)
+        self.fake_nodepool.unpause()
+        self.waitForRequests()
+        self.assertEqual(len(self.provisioned_requests), 2)
+        self.assertEqual(request1.state, 'fulfilled')
+        self.assertEqual(request2.state, 'fulfilled')
+        self.assertTrue(request2.state_time < request1.state_time)
