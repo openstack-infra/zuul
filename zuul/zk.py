@@ -233,7 +233,7 @@ class ZooKeeper(object):
         request_nodes = list(node_request.nodeset.getNodes())
         for i, nodeid in enumerate(data.get('nodes', [])):
             request_nodes[i].id = nodeid
-            self.updateNode(request_nodes[i], nodeid)
+            self.updateNode(request_nodes[i])
         node_request.updateFromDict(data)
 
     def storeNode(self, node):
@@ -248,14 +248,13 @@ class ZooKeeper(object):
         path = '%s/%s' % (self.NODE_ROOT, node.id)
         self.client.set(path, self._dictToStr(node.toDict()))
 
-    def updateNode(self, node, nodeid):
+    def updateNode(self, node):
         '''Refresh an existing node.
 
         :param Node node: The node to update.
-        :param Node nodeid: The zookeeper node ID.
         '''
 
-        node_path = '%s/%s' % (self.NODE_ROOT, nodeid)
+        node_path = '%s/%s' % (self.NODE_ROOT, node.id)
         node_data, node_stat = self.client.get(node_path)
         node_data = self._strToDict(node_data)
         node.updateFromDict(node_data)
