@@ -652,10 +652,10 @@ The following sections of ``zuul.conf`` are used by the executor:
       :default: None
 
       Name of the nodepool executor-zone to exclusively execute all jobs that
-      have nodes of the specified provider.  As an example, it is possible for
-      nodepool nodes to exist in a cloud with out public accessable IP
-      IP address. By adding an executor to a zone nodepool nodes could be
-      configured to use private ip addresses.
+      have nodes with the specified executor-zone attribute.  As an example,
+      it is possible for nodepool nodes to exist in a cloud with out public
+      accessable IP address. By adding an executor to a zone nodepool nodes
+      could be configured to use private ip addresses.
 
       To enable this in nodepool, you'll use the node-attributes setting in a
       provider pool. For example:
