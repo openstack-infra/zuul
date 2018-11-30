@@ -622,6 +622,25 @@ The following sections of ``zuul.conf`` are used by the executor:
       where it cannot determine its hostname correctly this can be overridden
       here.
 
+   .. attr:: zone
+      :default: None
+
+      Name of the nodepool executor-zone to exclusively execute all jobs that
+      have nodes of the specified provider.  As an example, it is possible for
+      nodepool nodes to exist in a cloud with out public accessable IP
+      IP address. By adding an executor to a zone nodepool nodes could be
+      configured to use private ip addresses.
+
+      To enable this in nodepool, you'll use the node-attributes setting in a
+      provider pool. For example:
+
+      .. code-block:: yaml
+
+        pools:
+          - name: main
+            node-attributes:
+              executor-zone: vpn
+
 .. attr:: merger
 
    .. attr:: git_user_email

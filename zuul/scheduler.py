@@ -33,6 +33,7 @@ from zuul import version as zuul_version
 from zuul import rpclistener
 from zuul.lib import commandsocket
 from zuul.lib.config import get_default
+from zuul.lib.gear_utils import getGearmanFunctions
 from zuul.lib.statsd import get_statsd
 import zuul.lib.queue
 
@@ -373,7 +374,7 @@ class Scheduler(threading.Thread):
     def _runStats(self):
         if not self.statsd:
             return
-        functions = self.rpc.getFunctions()
+        functions = getGearmanFunctions(self.rpc.worker)
         executors_accepting = 0
         executors_online = 0
         execute_queue = 0
@@ -382,7 +383,7 @@ class Scheduler(threading.Thread):
         merge_queue = 0
         merge_running = 0
         for (name, (queued, running, registered)) in functions.items():
-            if name == 'executor:execute':
+            if name.startswith('executor:execute'):
                 executors_accepting = registered
                 execute_queue = queued - running
                 execute_running = running

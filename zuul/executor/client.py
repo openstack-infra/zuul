@@ -22,6 +22,7 @@ from uuid import uuid4
 
 import zuul.model
 from zuul.lib.config import get_default
+from zuul.lib.gear_utils import getGearmanFunctions
 from zuul.lib.jsonutil import json_dumps
 from zuul.model import Build
 
@@ -306,8 +307,30 @@ class ExecutorClient(object):
             self.sched.onBuildCompleted(build, 'SUCCESS', {}, [])
             return build
 
-        gearman_job = gear.TextJob('executor:execute', json_dumps(params),
-                                   unique=uuid)
+        functions = getGearmanFunctions(self.gearman)
+        function_name = 'executor:execute'
+        # Because all nodes belong to the same provider, region and
+        # availability zone we can get executor_zone from only the first
+        # node.
+        executor_zone = None
+        if nodes and nodes[0].get('attributes'):
+            executor_zone = nodes[0]['attributes'].get('executor-zone')
+
+        if executor_zone:
+            _fname = '%s:%s' % (
+                function_name,
+                executor_zone)
+            if _fname in functions.keys():
+                function_name = _fname
+            else:
+                self.log.warning(
+                    "Job requested '%s' zuul-executor zone, but no "
+                    "zuul-executors found for this zone; ignoring zone "
+                    "request" % executor_zone)
+
+        gearman_job = gear.TextJob(
+            function_name, json_dumps(params), unique=uuid)
+
         build.__gearman_job = gearman_job
         build.__gearman_worker = None
         self.builds[uuid] = build
