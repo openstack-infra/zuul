@@ -87,7 +87,9 @@ class PipelineManager(object):
 
     def getNodePriority(self, item):
         items = self.pipeline.getAllItems()
-        items = [i for i in items if i.change.project == item.change.project]
+        items = [i for i in items
+                 if i.change.project == item.change.project and
+                 i.live]
         for idx, val in enumerate(items):
             if item == val:
                 return idx
