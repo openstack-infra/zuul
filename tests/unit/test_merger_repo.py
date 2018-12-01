@@ -179,6 +179,14 @@ class TestMergerRepo(ZuulTestCase):
         # And now reset the repo again. This should not crash
         work_repo.reset()
 
+        # Now open a cache repo and break it in a way that git.Repo is happy
+        # at first but git won't be.
+        merger = self.executor_server.merger
+        cache_repo = merger.getRepo('gerrit', 'org/project')
+        with open(os.path.join(cache_repo.local_path, '.git/HEAD'), 'w'):
+            pass
+        cache_repo.update()
+
     def test_broken_gitmodules(self):
         parent_path = os.path.join(self.upstream_root, 'org/project1')
         work_repo = Repo(parent_path, self.workspace_root,
