@@ -217,7 +217,7 @@ class ZooKeeper(object):
         :param NodeRequest node_request: The request to update.
         '''
 
-        path = '%s/%s' % (self.NODE_REQUEST_ROOT, node_request.id)
+        path = '%s/%s' % (self.REQUEST_ROOT, node_request.id)
         self.client.set(path, self._dictToStr(node_request.toDict()))
 
     def updateNodeRequest(self, node_request, data=None):

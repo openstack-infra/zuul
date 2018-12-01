@@ -5149,6 +5149,7 @@ For CI problems and help debugging, contact ci@example.org"""
         self.fake_nodepool.unpause()
         self.waitUntilSettled()
 
+    @simple_layout('layouts/two-projects-integrated.yaml')
     def test_nodepool_relative_priority_check(self):
         "Test that nodes are requested at the relative priority"
 
@@ -5181,6 +5182,24 @@ For CI problems and help debugging, contact ci@example.org"""
         # Change B, second change for project, lower relative priority.
         self.assertEqual(reqs[2]['_oid'], '200-0000000001')
         self.assertEqual(reqs[2]['relative_priority'], 1)
+
+        # Fulfill only the first request
+        self.fake_nodepool.fulfillRequest(reqs[0])
+        for x in iterate_timeout(30, 'fulfill request'):
+            self.log.debug(len(self.sched.nodepool.requests))
+            if len(self.sched.nodepool.requests) < 3:
+                break
+        self.waitUntilSettled()
+
+        reqs = self.fake_nodepool.getNodeRequests()
+
+        # Change B, now first change for project, equal priority.
+        self.assertEqual(reqs[0]['_oid'], '200-0000000001')
+        self.assertEqual(reqs[0]['relative_priority'], 0)
+
+        # Change C, now first change for project1, equal priority.
+        self.assertEqual(reqs[1]['_oid'], '200-0000000002')
+        self.assertEqual(reqs[1]['relative_priority'], 0)
 
         self.fake_nodepool.unpause()
         self.waitUntilSettled()
