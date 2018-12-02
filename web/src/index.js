@@ -25,14 +25,14 @@ import './index.css'
 
 import { getHomepageUrl } from './api'
 import registerServiceWorker from './registerServiceWorker'
-import { fetchInfoAction } from './actions/info'
+import { fetchInfoIfNeeded } from './actions/info'
 import createZuulStore from './store'
 import App from './App'
 
 const store = createZuulStore()
 
 // Load info endpoint
-store.dispatch(fetchInfoAction())
+store.dispatch(fetchInfoIfNeeded())
 
 ReactDOM.render(
   <Provider store={store}>

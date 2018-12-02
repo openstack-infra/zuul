@@ -12,10 +12,29 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
-export default (state = {}, action) => {
+import {
+  INFO_FETCH_REQUEST,
+  INFO_FETCH_SUCCESS,
+  INFO_FETCH_FAIL,
+} from '../actions/info'
+
+export default (state = {
+  isFetching: false,
+  tenant: null,
+}, action) => {
   switch (action.type) {
-    case 'FETCH_INFO_SUCCESS':
-      return action.info
+    case INFO_FETCH_REQUEST:
+    case INFO_FETCH_FAIL:
+      return {
+        isFetching: true,
+        tenant: null,
+      }
+    case INFO_FETCH_SUCCESS:
+      return {
+        isFetching: false,
+        tenant: action.tenant,
+        ready: true
+      }
     default:
       return state
   }
