@@ -29,7 +29,8 @@ import {
 
 import logo from './images/logo.png'
 import { routes } from './routes'
-import { fetchConfigErrorsAction, setTenantAction } from './reducers'
+import { fetchConfigErrorsAction } from './actions/configErrors'
+import { setTenantAction } from './actions/tenant'
 
 
 class App extends React.Component {

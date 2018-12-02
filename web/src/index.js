@@ -25,12 +25,13 @@ import './index.css'
 
 import { getHomepageUrl } from './api'
 import registerServiceWorker from './registerServiceWorker'
-import { createZuulStore, fetchInfoAction } from './reducers'
+import { fetchInfoAction } from './actions/info'
+import createZuulStore from './store'
 import App from './App'
 
-// This calls the /api/info endpoint asynchronously, the App is connected
-// with redux and it will update the info prop when fetch succeed.
 const store = createZuulStore()
+
+// Load info endpoint
 store.dispatch(fetchInfoAction())
 
 ReactDOM.render(
