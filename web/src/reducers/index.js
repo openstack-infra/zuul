@@ -17,11 +17,13 @@ import { combineReducers } from 'redux'
 import configErrors from './configErrors'
 import errors from './errors'
 import info from './info'
+import jobs from './jobs'
 import status from './status'
 import tenant from './tenant'
 
 const reducers = {
   info,
+  jobs,
   configErrors,
   errors,
   status,

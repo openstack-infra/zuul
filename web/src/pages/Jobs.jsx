@@ -15,94 +15,45 @@
 import * as React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Link } from 'react-router-dom'
-import { Table } from 'patternfly-react'
 
-import { fetchJobs } from '../api'
+import { fetchJobsIfNeeded } from '../actions/jobs'
+import Refreshable from '../containers/Refreshable'
+import Jobs from '../containers/jobs/Jobs'
 
 
-class JobsPage extends React.Component {
+class JobsPage extends Refreshable {
   static propTypes = {
-    tenant: PropTypes.object
+    tenant: PropTypes.object,
+    remoteData: PropTypes.object,
+    dispatch: PropTypes.func
   }
 
-  state = {
-    jobs: null
-  }
-
-  updateData () {
-    fetchJobs(this.props.tenant.apiPrefix).then(response => {
-      this.setState({jobs: response.data})
-    })
+  updateData (force) {
+    this.props.dispatch(fetchJobsIfNeeded(this.props.tenant, force))
   }
 
   componentDidMount () {
     document.title = 'Zuul Jobs'
-    if (this.props.tenant.name) {
-      this.updateData()
-    }
-  }
-
-  componentDidUpdate (prevProps) {
-    if (this.props.tenant.name !== prevProps.tenant.name) {
-      this.updateData()
-    }
+    super.componentDidMount()
   }
 
   render () {
-    const { jobs } = this.state
-    if (!jobs) {
-      return (<p>Loading...</p>)
-    }
-
-    const headerFormat = value => <Table.Heading>{value}</Table.Heading>
-    const cellFormat = (value) => (
-      <Table.Cell>{value}</Table.Cell>)
-    const cellJobFormat = (value) => (
-      <Table.Cell>
-        <Link to={this.props.tenant.linkPrefix + '/job/' + value}>
-          {value}
-        </Link>
-      </Table.Cell>)
-    const cellBuildFormat = (value) => (
-      <Table.Cell>
-        <Link to={this.props.tenant.linkPrefix + '/builds?job_name=' + value}>
-          builds
-        </Link>
-      </Table.Cell>)
-    const columns = []
-    const myColumns = ['name', 'description', 'Last builds']
-    myColumns.forEach(column => {
-      let formatter = cellFormat
-      let prop = column
-      if (column === 'name') {
-        formatter = cellJobFormat
-      }
-      if (column === 'Last builds') {
-        prop = 'name'
-        formatter = cellBuildFormat
-      }
-      columns.push({
-        header: {label: column,
-          formatters: [headerFormat]},
-        property: prop,
-        cell: {formatters: [formatter]}
-      })
-    })
+    const { remoteData } = this.props
+    const jobs = remoteData.jobs[this.props.tenant.name]
     return (
-      <Table.PfProvider
-        striped
-        bordered
-        hover
-        columns={columns}
-      >
-        <Table.Header/>
-        <Table.Body
-          rows={jobs}
-          rowKey="name"
-        />
-      </Table.PfProvider>)
+      <React.Fragment>
+        <div className="pull-right" style={{display: 'flex'}}>
+          {this.renderSpinner()}
+        </div>
+        {jobs && jobs.length > 0 &&
+          <Jobs
+              jobs={jobs}
+              />}
+      </React.Fragment>)
   }
 }
 
-export default connect(state => ({tenant: state.tenant}))(JobsPage)
+export default connect(state => ({
+  tenant: state.tenant,
+  remoteData: state.jobs,
+}))(JobsPage)
