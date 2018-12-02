@@ -12,20 +12,33 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
-import { combineReducers } from 'redux'
+import {
+  STATUS_FETCH_FAIL,
+  STATUS_FETCH_REQUEST,
+  STATUS_FETCH_SUCCESS
+} from '../actions/status'
 
-import configErrors from './configErrors'
-import errors from './errors'
-import info from './info'
-import status from './status'
-import tenant from './tenant'
-
-const reducers = {
-  info,
-  configErrors,
-  errors,
-  status,
-  tenant,
+export default (state = {
+  isFetching: false,
+  status: null
+}, action) => {
+  switch (action.type) {
+    case STATUS_FETCH_REQUEST:
+      return {
+        isFetching: true,
+        status: state.status
+      }
+    case STATUS_FETCH_SUCCESS:
+      return {
+        isFetching: false,
+        status: action.status,
+      }
+    case STATUS_FETCH_FAIL:
+      return {
+        isFetching: false,
+        status: state.status,
+      }
+    default:
+      return state
+  }
 }
-
-export default combineReducers(reducers)
