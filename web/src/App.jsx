@@ -25,16 +25,21 @@ import {
   Masthead,
   Notification,
   NotificationDrawer,
+  TimedToastNotification,
+  ToastNotificationList,
 } from 'patternfly-react'
+import * as moment from 'moment'
 
 import logo from './images/logo.png'
 import { routes } from './routes'
 import { fetchConfigErrorsAction } from './actions/configErrors'
 import { setTenantAction } from './actions/tenant'
+import { clearError } from './actions/errors'
 
 
 class App extends React.Component {
   static propTypes = {
+    errors: PropTypes.array,
     configErrors: PropTypes.array,
     info: PropTypes.object,
     tenant: PropTypes.object,
@@ -149,6 +154,25 @@ class App extends React.Component {
     }
   }
 
+  renderErrors = (errors) => {
+    return (
+      <ToastNotificationList>
+        {errors.map(error => (
+         <TimedToastNotification
+             key={error.id}
+             type='error'
+             onDismiss={() => {this.props.dispatch(clearError(error.id))}}
+             >
+           <span title={moment(error.date).format()}>
+               <strong>{error.text}</strong> ({error.status})&nbsp;
+                   {error.url}
+             </span>
+         </TimedToastNotification>
+        ))}
+      </ToastNotificationList>
+    )
+  }
+
   renderConfigErrors = (configErrors) => {
     const { history } = this.props
     const errors = []
@@ -207,7 +231,7 @@ class App extends React.Component {
 
   render() {
     const { menuCollapsed, showErrors } = this.state
-    const { tenant, configErrors } = this.props
+    const { errors, configErrors, tenant } = this.props
 
     return (
       <React.Fragment>
@@ -252,6 +276,7 @@ class App extends React.Component {
             </div>
           )}
         </Masthead>
+        {errors.length > 0 && this.renderErrors(errors)}
         <div className='container-fluid container-cards-pf'>
           {this.renderContent()}
         </div>
@@ -263,6 +288,7 @@ class App extends React.Component {
 // This connect the info state from the store to the info property of the App.
 export default withRouter(connect(
   state => ({
+    errors: state.errors,
     configErrors: state.configErrors,
     info: state.info,
     tenant: state.tenant
