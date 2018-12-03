@@ -182,7 +182,7 @@ def merge_project_dict(project_dicts, name, project):
         return
 
     old = project_dicts[name]
-    for key in project.keys():
+    for key in project:
         if key not in old:
             old[key] = project[key]
         elif isinstance(old[key], list):
@@ -212,7 +212,7 @@ def normalize_project_expansions():
     # Second, find out which projects need to expand a given template
     for job_name, project in copy.deepcopy(JOBS_FOR_EXPAND).items():
         # There is a job-level expansion for this one
-        if job_name in JOB_MATCHERS.keys():
+        if job_name in JOB_MATCHERS:
             continue
         for project_name, expansion in project.items():
             TEMPLATES_TO_EXPAND[project_name] = []
@@ -416,7 +416,7 @@ def expandYamlForTemplateJob(self, project, template, jobs_glob=None):
             and self.config.getboolean(
                 'job_builder', 'allow_empty_variables')
 
-        for key in template.keys():
+        for key in template:
             if key not in params:
                 params[key] = template[key]
 
@@ -1054,7 +1054,7 @@ class JobMapping:
 
     def _expandVars(self, info, match_dict):
         job_vars = info['vars'].copy()
-        for key in job_vars.keys():
+        for key in job_vars:
             job_vars[key] = job_vars[key].format(**match_dict)
         return job_vars
 

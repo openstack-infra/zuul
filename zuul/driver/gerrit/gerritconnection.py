@@ -797,7 +797,7 @@ class GerritConnection(BaseConnection):
             return branches
 
         refs = self.getInfoRefs(project)
-        heads = [str(k[len('refs/heads/'):]) for k in refs.keys()
+        heads = [str(k[len('refs/heads/'):]) for k in refs
                  if k.startswith('refs/heads/') and
                  GerritConnection._checkRefFormat(k)]
         self._project_branch_cache[project.name] = heads

@@ -50,7 +50,7 @@ def get_statsd(config, extra_keys=None):
             format_keys = copy.copy(keys)
 
             # we need to normalize all keys which go into the metric name
-            for key in format_keys.keys():
+            for key in format_keys:
                 normalized_value = normalize_statsd_name(format_keys[key])
                 format_keys[key] = normalized_value
 

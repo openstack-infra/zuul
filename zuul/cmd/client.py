@@ -308,7 +308,7 @@ class Client(zuul.cmd.ZuulApp):
             fields = all_fields.keys()
         else:
             fields = [f.strip().lower() for f in self.args.columns.split(',')
-                      if f.strip().lower() in all_fields.keys()]
+                      if f.strip().lower() in all_fields]
 
         table = prettytable.PrettyTable(
             field_names=[all_fields[f]['title'] for f in fields])
