@@ -90,10 +90,7 @@ class PipelineManager(object):
         items = [i for i in items
                  if i.change.project == item.change.project and
                  i.live]
-        for idx, val in enumerate(items):
-            if item == val:
-                return idx
-        return len(items)
+        return items.index(item)
 
     def isChangeAlreadyInPipeline(self, change):
         # Checks live items in the pipeline
@@ -701,7 +698,7 @@ class PipelineManager(object):
         if failing_reasons:
             self.log.debug("%s is a failing item because %s" %
                            (item, failing_reasons))
-        if not dequeued and self.sched.use_relative_priority:
+        if item.live and not dequeued and self.sched.use_relative_priority:
             priority = item.getNodePriority()
             for node_request in item.current_build_set.node_requests.values():
                 if node_request.relative_priority != priority:
