@@ -31,6 +31,11 @@ Contents:
    releasenotes
 
 .. toctree::
+   :maxdepth: 1
+
+   governance
+
+.. toctree::
    :hidden:
 
    glossary
