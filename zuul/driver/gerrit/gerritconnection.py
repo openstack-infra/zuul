@@ -558,6 +558,7 @@ class GerritConnection(BaseConnection):
         change.uris = [
             '%s/%s' % (baseurl, change.number),
             '%s/#/c/%s' % (baseurl, change.number),
+            '%s/c/%s/+/%s' % (baseurl, change.project.name, change.number),
         ]
 
         max_ps = 0
