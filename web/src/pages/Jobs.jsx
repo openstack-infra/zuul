@@ -42,7 +42,7 @@ class JobsPage extends Refreshable {
     const jobs = remoteData.jobs[this.props.tenant.name]
     return (
       <React.Fragment>
-        <div className="pull-right" style={{display: 'flex'}}>
+        <div style={{float: 'right'}}>
           {this.renderSpinner()}
         </div>
         {jobs && jobs.length > 0 &&
