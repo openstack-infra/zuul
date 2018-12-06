@@ -86,8 +86,12 @@ class App extends React.Component {
   }
 
   renderContent = () => {
-    const { tenant } = this.props
+    const { info, tenant } = this.props
     const allRoutes = []
+
+    if (info.isFetching) {
+      return (<h2>Fetching info...</h2>)
+    }
     this.menu
       // Do not include '/tenants' route in white-label setup
       .filter(item =>
@@ -102,10 +106,13 @@ class App extends React.Component {
             />
         )
     })
+    if (tenant.defaultRoute)
+      allRoutes.push(
+        <Redirect from='*' to={tenant.defaultRoute} key='default-route' />
+      )
     return (
       <Switch>
         {allRoutes}
-        <Redirect from='*' to={tenant.defaultRoute} key='default-route' />
       </Switch>
     )
   }
@@ -113,7 +120,7 @@ class App extends React.Component {
   componentDidUpdate() {
     // This method is called when info property is updated
     const { tenant, info } = this.props
-    if (info.capabilities) {
+    if (info.ready) {
       let tenantName, whiteLabel
 
       if (info.tenant) {
@@ -129,12 +136,10 @@ class App extends React.Component {
 
         if (match) {
           tenantName = match.params.tenant
-        } else {
-          tenantName = ''
         }
       }
       // Set tenant only if it changed to prevent DidUpdate loop
-      if (typeof tenant.name === 'undefined' || tenant.name !== tenantName) {
+      if (tenant.name !== tenantName) {
         const tenantAction = setTenantAction(tenantName, whiteLabel)
         this.props.dispatch(tenantAction)
         if (tenantName) {
@@ -203,10 +208,6 @@ class App extends React.Component {
   render() {
     const { menuCollapsed, showErrors } = this.state
     const { tenant, configErrors } = this.props
-
-    if (typeof tenant.name === 'undefined') {
-      return (<h2>Loading...</h2>)
-    }
 
     return (
       <React.Fragment>
