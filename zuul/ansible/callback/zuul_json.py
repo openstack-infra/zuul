@@ -55,7 +55,6 @@ class CallbackModule(CallbackBase):
     def __init__(self, display=None):
         super(CallbackModule, self).__init__(display)
         self.results = []
-        self.output = []
         self.playbook = {}
         logging_config = logconfig.load_job_config(
             os.environ['ZUUL_JOB_LOG_CONFIG'])
@@ -63,11 +62,6 @@ class CallbackModule(CallbackBase):
         self.output_path = os.path.splitext(
             logging_config.job_output_file)[0] + '.json'
 
-        # For now, just read in the old file and write it all out again
-        # This may well not scale from a memory perspective- but let's see how
-        # it goes.
-        if os.path.exists(self.output_path):
-            self.output = json.load(open(self.output_path, 'r'))
         self._playbook_name = None
 
     def _new_playbook(self, play):
@@ -173,9 +167,16 @@ class CallbackModule(CallbackBase):
 
         self.playbook['plays'] = self.results
         self.playbook['stats'] = summary
-        self.output.append(self.playbook)
 
-        json.dump(self.output, open(self.output_path, 'w'),
+        # For now, just read in the old file and write it all out again
+        # This may well not scale from a memory perspective- but let's see how
+        # it goes.
+        output = []
+        if os.path.exists(self.output_path):
+            output = json.load(open(self.output_path, 'r'))
+        output.append(self.playbook)
+
+        json.dump(output, open(self.output_path, 'w'),
                   indent=4, sort_keys=True, separators=(',', ': '))
 
     v2_runner_on_failed = v2_runner_on_ok
