@@ -18,7 +18,8 @@ import ReactTestUtils from 'react-dom/test-utils'
 import { Link, BrowserRouter as Router } from 'react-router-dom'
 import { Provider } from 'react-redux'
 
-import { createZuulStore, setTenantAction } from '../../reducers'
+import { setTenantAction } from '../../actions/tenant'
+import createZuulStore from '../../store'
 import ChangePanel from './ChangePanel'
 
 

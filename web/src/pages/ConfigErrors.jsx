@@ -19,7 +19,7 @@ import {
   Icon
 } from 'patternfly-react'
 
-import { fetchConfigErrorsAction } from '../reducers'
+import { fetchConfigErrorsAction } from '../actions/configErrors'
 
 class ConfigErrorsPage extends React.Component {
   static propTypes = {
