@@ -8,7 +8,9 @@
   "private": true,
   "dependencies": {
     "axios": "^0.18.0",
+    "immutability-helper": "^2.8.1",
     "lodash": "^4.17.10",
+    "moment": "^2.22.2",
     "patternfly-react": "^2.13.1",
     "prop-types": "^15.6.2",
     "react": "^16.4.2",

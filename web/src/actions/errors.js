@@ -12,18 +12,31 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
-import { combineReducers } from 'redux'
+export const ADD_ERROR = 'ADD_ERROR'
+export const CLEAR_ERROR = 'CLEAR_ERROR'
+export const CLEAR_ERRORS = 'CLEAR_ERRORS'
 
-import configErrors from './configErrors'
-import errors from './errors'
-import info from './info'
-import tenant from './tenant'
+let errorId = 0
 
-const reducers = {
-  info,
-  configErrors,
-  errors,
-  tenant,
-}
+export const addError = error => ({
+  type: ADD_ERROR,
+  id: errorId++,
+  error
+})
 
-export default combineReducers(reducers)
+export const addApiError = error => (
+  addError({
+    url: error.request.responseURL,
+    status: error.response.status,
+    text: error.response.statusText,
+  })
+)
+
+export const clearError = id => ({
+  type: CLEAR_ERROR,
+  id
+})
+
+export const clearErrors = () => ({
+  type: CLEAR_ERRORS
+})
