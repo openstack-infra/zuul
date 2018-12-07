@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    The Ansible inventory file now includes nodepool.host_id variable if the
+    node was launched using the OpenStack Nodepool driver.
