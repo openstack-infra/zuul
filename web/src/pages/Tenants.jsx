@@ -13,32 +13,36 @@
 // under the License.
 
 import * as React from 'react'
+import { connect } from 'react-redux'
+import PropTypes from 'prop-types'
 import { Link } from 'react-router-dom'
 import { Table } from 'patternfly-react'
 
-import { fetchTenants } from '../api'
+import Refreshable from '../containers/Refreshable'
+import { fetchTenantsIfNeeded } from '../actions/tenants'
 
-class TenantsPage extends React.Component {
-  constructor () {
-    super()
 
-    this.state = {
-      tenants: []
-    }
+class TenantsPage extends Refreshable {
+  static propTypes = {
+    remoteData: PropTypes.object,
+    dispatch: PropTypes.func
+  }
+
+  updateData = (force) => {
+    this.props.dispatch(fetchTenantsIfNeeded(force))
   }
 
   componentDidMount () {
     document.title = 'Zuul Tenants'
-    fetchTenants().then(response => {
-      this.setState({tenants: response.data})
-    })
+    this.updateData()
   }
 
+  // TODO: fix Refreshable class to work with tenant less page.
+  componentDidUpdate () { }
+
   render () {
-    const { tenants } = this.state
-    if (tenants.length === 0) {
-      return (<p>Loading...</p>)
-    }
+    const { remoteData } = this.props
+    const tenants = remoteData.tenants
     const headerFormat = value => <Table.Heading>{value}</Table.Heading>
     const cellFormat = (value) => (
       <Table.Cell>{value}</Table.Cell>)
@@ -61,19 +65,25 @@ class TenantsPage extends React.Component {
         <Link to={'/t/' + tenant.name + '/builds'}>Builds</Link>)
     })
     return (
-      <Table.PfProvider
-        striped
-        bordered
-        hover
-        columns={columns}
-      >
-        <Table.Header/>
-        <Table.Body
-          rows={tenants}
-          rowKey="name"
-        />
-      </Table.PfProvider>)
+      <React.Fragment>
+        <div style={{float: 'right'}}>
+          {this.renderSpinner()}
+        </div>
+        <Table.PfProvider
+          striped
+          bordered
+          hover
+          columns={columns}
+          >
+          <Table.Header/>
+          <Table.Body
+            rows={tenants}
+            rowKey="name"
+            />
+        </Table.PfProvider>
+      </React.Fragment>
+    )
   }
 }
 
-export default TenantsPage
+export default connect(state => ({remoteData: state.tenants}))(TenantsPage)
