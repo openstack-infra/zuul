@@ -749,7 +749,7 @@ class NodeRequest(object):
         self._zk_data = data
         self._state = data['state']
         self.state_time = data['state_time']
-        self.relative_priority = data['relative_priority']
+        self.relative_priority = data.get('relative_priority', 0)
 
 
 class Secret(ConfigObject):
