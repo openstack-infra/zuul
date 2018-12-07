@@ -17,31 +17,29 @@ import * as React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import {
-  Alert,
   Checkbox,
   Icon,
   Form,
   FormGroup,
   FormControl,
-  Spinner
 } from 'patternfly-react'
 
-import { fetchStatus } from '../api'
+import { fetchStatusIfNeeded } from '../actions/status'
 import Pipeline from '../containers/status/Pipeline'
+import Refreshable from '../containers/Refreshable'
 
 
-class StatusPage extends React.Component {
+class StatusPage extends Refreshable {
   static propTypes = {
     location: PropTypes.object,
-    tenant: PropTypes.object
+    tenant: PropTypes.object,
+    remoteData: PropTypes.object,
+    dispatch: PropTypes.func
   }
 
   state = {
-    status: null,
     filter: null,
     expanded: false,
-    error: null,
-    loading: false,
     autoReload: true
   }
 
@@ -84,29 +82,11 @@ class StatusPage extends React.Component {
   }
 
   updateData = (force) => {
-    /* // Create fake delay
-    function sleeper(ms) {
-      return function(x) {
-        return new Promise(resolve => setTimeout(() => resolve(x), ms));
-      };
-    }
-    */
-
     if (force || (this.visible && this.state.autoReload)) {
-      this.setState({error: null, loading: true})
-      fetchStatus(this.props.tenant.apiPrefix)
-        // .then(sleeper(2000))
-        .then(response => {
-          this.setState({status: response.data, loading: false})
-          if (this.state.autoReload) {
-            this.timer = setTimeout(this.updateData, 5000)
-          }
-        }).catch(error => {
-          this.setState({error: error.message, status: null})
-          if (this.state.autoReload) {
-            this.timer = setTimeout(this.updateData, 5000)
-          }
-        })
+      this.props.dispatch(fetchStatusIfNeeded(this.props.tenant))
+        .then(() => {if (this.state.autoReload) {
+          this.timer = setTimeout(this.updateData, 5000)
+        }})
     }
     // Clear any running timer
     if (this.timer) {
@@ -118,18 +98,7 @@ class StatusPage extends React.Component {
   componentDidMount () {
     document.title = 'Zuul Status'
     this.loadState()
-    if (this.props.tenant.name) {
-      this.updateData()
-    }
-  }
-
-  componentDidUpdate (prevProps, prevState) {
-    // When autoReload is set, also call updateData to retrigger the setTimeout
-    if (this.props.tenant.name !== prevProps.tenant.name || (
-        this.state.autoReload &&
-       this.state.autoReload !== prevState.autoReload)) {
-      this.updateData()
-    }
+    super.componentDidMount()
   }
 
   componentWillUnmount () {
@@ -221,10 +190,9 @@ class StatusPage extends React.Component {
   }
 
   render () {
-    const { autoReload, error, status, filter, expanded, loading } = this.state
-    if (error) {
-      return (<Alert>{this.state.error}</Alert>)
-    }
+    const { remoteData } = this.props
+    const { autoReload, filter, expanded } = this.state
+    const status = remoteData.status
     if (this.filter && !this.filterLoaded && filter) {
       this.filterLoaded = true
       this.filter.value = filter
@@ -261,11 +229,7 @@ class StatusPage extends React.Component {
     return (
       <React.Fragment>
         <div className="pull-right" style={{display: 'flex'}}>
-          <Spinner loading={loading}>
-            <a className="refresh" onClick={() => {this.updateData(true)}}>
-              <Icon type="fa" name="refresh" /> refresh&nbsp;&nbsp;
-            </a>
-          </Spinner>
+          {this.renderSpinner()}
           <Checkbox
             defaultChecked={autoReload}
             onChange={(e) => {this.setState({autoReload: e.target.checked})}}
@@ -291,4 +255,7 @@ class StatusPage extends React.Component {
   }
 }
 
-export default connect(state => ({tenant: state.tenant}))(StatusPage)
+export default connect(state => ({
+  tenant: state.tenant,
+  remoteData: state.status,
+}))(StatusPage)
