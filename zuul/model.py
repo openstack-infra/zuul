@@ -517,6 +517,7 @@ class Node(ConfigObject):
         # Attributes from Nodepool
         self._state = 'unknown'
         self.state_time = time.time()
+        self.host_id = None
         self.interface_ip = None
         self.public_ipv4 = None
         self.private_ipv4 = None

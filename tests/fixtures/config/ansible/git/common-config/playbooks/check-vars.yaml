@@ -5,6 +5,7 @@
         that:
           - nodepool.az == 'test-az'
           - nodepool.cloud == 'test-cloud'
+          - nodepool.host_id == 'test-host-id'
           - nodepool.region == 'test-region'
           - nodepool.provider == 'test-provider'
 

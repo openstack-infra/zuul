@@ -1835,6 +1835,7 @@ class FakeNodepool(object):
                     region='test-region',
                     az='test-az',
                     attributes=self.attributes,
+                    host_id='test-host-id',
                     interface_ip=remote_ip,
                     public_ipv4=remote_ip,
                     private_ipv4=None,
