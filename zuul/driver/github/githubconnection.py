@@ -1245,8 +1245,8 @@ class GithubConnection(BaseConnection):
                 break
 
         # Get successful statuses
-        successful = set(
-            [s.context for s in commit.statuses() if s.state == 'success'])
+        successful = set([s.context for s in commit.status().statuses
+                          if s.state == 'success'])
 
         # Required contexts must be a subset of the successful contexts as
         # we allow additional successful status contexts we don't care about.

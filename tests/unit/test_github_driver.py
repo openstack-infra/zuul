@@ -896,8 +896,25 @@ class TestGithubDriver(ZuulTestCase):
         # job is expected
         self.assertEqual(0, len(self.history))
 
-        # now set the required status 'tenant-one/check'
+        # now set a failing status 'tenant-one/check'
         repo = github.repo_from_project('org/project')
+        repo.create_status(A.head_sha, 'failed', 'example.com', 'description',
+                           'tenant-one/check')
+        self.fake_github.emitEvent(A.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+        self.assertEqual(0, len(self.history))
+
+        # now set a successful status followed by a failing status to check
+        # that the later failed status wins
+        repo.create_status(A.head_sha, 'success', 'example.com', 'description',
+                           'tenant-one/check')
+        repo.create_status(A.head_sha, 'failed', 'example.com', 'description',
+                           'tenant-one/check')
+        self.fake_github.emitEvent(A.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+        self.assertEqual(0, len(self.history))
+
+        # now set the required status 'tenant-one/check'
         repo.create_status(A.head_sha, 'success', 'example.com', 'description',
                            'tenant-one/check')
 
