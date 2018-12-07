@@ -61,6 +61,7 @@
 - project:
     name: org/project1
     check:
+      queue: integrated
       jobs:
         - integration
     gate:
@@ -71,6 +72,7 @@
 - project:
     name: org/project2
     check:
+      queue: integrated
       jobs:
         - integration
     gate:

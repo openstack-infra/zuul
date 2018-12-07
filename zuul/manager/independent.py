@@ -23,7 +23,8 @@ class IndependentPipelineManager(PipelineManager):
         super(IndependentPipelineManager, self)._postConfig(layout)
 
     def getChangeQueue(self, change, existing=None):
-        # creates a new change queue for every change
+        # We ignore any shared change queues on the pipeline and
+        # instead create a new change queue for every change.
         if existing:
             return DynamicChangeQueueContextManager(existing)
         change_queue = model.ChangeQueue(self.pipeline)

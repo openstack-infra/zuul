@@ -250,6 +250,7 @@ class Pipeline(object):
         self.ignore_dependencies = False
         self.manager = None
         self.queues = []
+        self.relative_priority_queues = {}
         self.precedence = PRECEDENCE_NORMAL
         self.triggers = []
         self.start_actions = []
@@ -294,6 +295,12 @@ class Pipeline(object):
             if project in queue.projects:
                 return queue
         return None
+
+    def getRelativePriorityQueue(self, project):
+        for queue in self.relative_priority_queues.values():
+            if project in queue:
+                return queue
+        return [project]
 
     def removeQueue(self, queue):
         if queue in self.queues:

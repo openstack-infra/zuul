@@ -28,10 +28,6 @@ class DependentPipelineManager(PipelineManager):
     def __init__(self, *args, **kwargs):
         super(DependentPipelineManager, self).__init__(*args, **kwargs)
 
-    def _postConfig(self, layout):
-        super(DependentPipelineManager, self)._postConfig(layout)
-        self.buildChangeQueues(layout)
-
     def buildChangeQueues(self, layout):
         self.log.debug("Building shared change queues")
         change_queues = {}

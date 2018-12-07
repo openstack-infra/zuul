@@ -58,7 +58,43 @@ class PipelineManager(object):
         return "<%s %s>" % (self.__class__.__name__, self.pipeline.name)
 
     def _postConfig(self, layout):
-        pass
+        # All pipelines support shared queues for setting
+        # relative_priority; only the dependent pipeline uses them for
+        # pipeline queing.
+        self.buildChangeQueues(layout)
+
+    def buildChangeQueues(self, layout):
+        self.log.debug("Building relative_priority queues")
+        change_queues = self.pipeline.relative_priority_queues
+        tenant = self.pipeline.tenant
+        layout_project_configs = layout.project_configs
+
+        for project_name, project_configs in layout_project_configs.items():
+            (trusted, project) = tenant.getProject(project_name)
+            queue_name = None
+            project_in_pipeline = False
+            for project_config in layout.getAllProjectConfigs(project_name):
+                project_pipeline_config = project_config.pipelines.get(
+                    self.pipeline.name)
+                if project_pipeline_config is None:
+                    continue
+                project_in_pipeline = True
+                queue_name = project_pipeline_config.queue_name
+                if queue_name:
+                    break
+            if not project_in_pipeline:
+                continue
+            if not queue_name:
+                continue
+            if queue_name in change_queues:
+                change_queue = change_queues[queue_name]
+            else:
+                change_queue = []
+                change_queues[queue_name] = change_queue
+                self.log.debug("Created queue: %s" % queue_name)
+            change_queue.append(project)
+            self.log.debug("Added project %s to queue: %s" %
+                           (project, queue_name))
 
     def getSubmitAllowNeeds(self):
         # Get a list of code review labels that are allowed to be
@@ -86,9 +122,10 @@ class PipelineManager(object):
         return False
 
     def getNodePriority(self, item):
+        queue = self.pipeline.getRelativePriorityQueue(item.change.project)
         items = self.pipeline.getAllItems()
         items = [i for i in items
-                 if i.change.project == item.change.project and
+                 if i.change.project in queue and
                  i.live]
         return items.index(item)
 

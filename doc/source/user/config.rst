@@ -1262,6 +1262,10 @@ pipeline.
          stanza; it may appear in secondary instances or even in a
          :ref:`project-template` definition.
 
+         Pipeline managers other than `dependent` do not use this
+         attribute, however, it may still be used if
+         :attr:`scheduler.relative_priority` is enabled.
+
       .. attr:: debug
 
          If this is set to `true`, Zuul will include debugging
