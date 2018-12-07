@@ -17,31 +17,26 @@ import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 
 import Job from '../containers/job/Job'
-import { fetchJob } from '../api'
+import Refreshable from '../containers/Refreshable'
+import { fetchJobIfNeeded } from '../actions/job'
 
 
-class JobPage extends React.Component {
+class JobPage extends Refreshable {
   static propTypes = {
     match: PropTypes.object.isRequired,
-    tenant: PropTypes.object
+    tenant: PropTypes.object,
+    remoteData: PropTypes.object,
+    dispatch: PropTypes.func
   }
 
-  state = {
-    job: null
-  }
-
-  updateData = () => {
-    fetchJob(this.props.tenant.apiPrefix, this.props.match.params.jobName)
-      .then(response => {
-        this.setState({job: response.data})
-      })
+  updateData = (force) => {
+    this.props.dispatch(fetchJobIfNeeded(
+      this.props.tenant, this.props.match.params.jobName, force))
   }
 
   componentDidMount () {
     document.title = 'Zuul Job | ' + this.props.match.params.jobName
-    if (this.props.tenant.name) {
-      this.updateData()
-    }
+    super.componentDidMount()
   }
 
   componentDidUpdate (prevProps) {
@@ -52,14 +47,21 @@ class JobPage extends React.Component {
   }
 
   render () {
-    const { job } = this.state
-    if (!job) {
-      return (<p>Loading...</p>)
-    }
+    const { remoteData } = this.props
+    const tenantJobs = remoteData.jobs[this.props.tenant.name]
+    const jobName = this.props.match.params.jobName
     return (
-      <Job job={job} />
+      <React.Fragment>
+        <div style={{float: 'right'}}>
+          {this.renderSpinner()}
+        </div>
+        {tenantJobs && tenantJobs[jobName] && <Job job={tenantJobs[jobName]} />}
+      </React.Fragment>
     )
   }
 }
 
-export default connect(state => ({tenant: state.tenant}))(JobPage)
+export default connect(state => ({
+  tenant: state.tenant,
+  remoteData: state.job,
+}))(JobPage)
