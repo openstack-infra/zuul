@@ -130,9 +130,6 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(self.getJobFromHistory('project-test2').node,
                          'label1')
 
-        for stat in self.statsd.stats:
-            k, v = stat.decode('utf-8').split(':')
-            self.log.debug('stat %s:%s', k, v)
         # TODOv3(jeblair): we may want to report stats by tenant (also?).
         # Per-driver
         self.assertReportedStat('zuul.event.gerrit.comment-added', value='1',
@@ -164,23 +161,26 @@ class TestScheduler(ZuulTestCase):
         exec_key = 'zuul.executor.%s' % self.executor_server.hostname.replace(
             '.', '_')
         self.assertReportedStat(exec_key + '.builds', value='1', kind='c')
-        self.assertReportedStat('zuul.nodepool.requested', value='1', kind='c')
-        self.assertReportedStat('zuul.nodepool.requested.label.label1',
-                                value='1', kind='c')
-        self.assertReportedStat('zuul.nodepool.fulfilled.label.label1',
-                                value='1', kind='c')
-        self.assertReportedStat('zuul.nodepool.requested.size.1', value='1',
-                                kind='c')
-        self.assertReportedStat('zuul.nodepool.fulfilled.size.1', value='1',
-                                kind='c')
-        self.assertReportedStat('zuul.nodepool.current_requests', value='1',
-                                kind='g')
-        self.assertReportedStat('zuul.executors.online', value='1',
-                                kind='g')
-        self.assertReportedStat('zuul.executors.accepting', value='1',
-                                kind='g')
-        self.assertReportedStat('zuul.mergers.online', value='1',
-                                kind='g')
+        self.assertReportedStat(
+            'zuul.nodepool.requests.requested.total', value='1', kind='c')
+        self.assertReportedStat(
+            'zuul.nodepool.requests.requested.label.label1',
+            value='1', kind='c')
+        self.assertReportedStat(
+            'zuul.nodepool.requests.fulfilled.label.label1',
+            value='1', kind='c')
+        self.assertReportedStat(
+            'zuul.nodepool.requests.requested.size.1', value='1', kind='c')
+        self.assertReportedStat(
+            'zuul.nodepool.requests.fulfilled.size.1', value='1', kind='c')
+        self.assertReportedStat(
+            'zuul.nodepool.current_requests', value='1', kind='g')
+        self.assertReportedStat(
+            'zuul.executors.online', value='1', kind='g')
+        self.assertReportedStat(
+            'zuul.executors.accepting', value='1', kind='g')
+        self.assertReportedStat(
+            'zuul.mergers.online', value='1', kind='g')
 
         for build in self.history:
             self.assertTrue(build.parameters['zuul']['voting'])
