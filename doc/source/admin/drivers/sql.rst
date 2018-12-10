@@ -29,7 +29,7 @@ The connection options for the SQL driver are:
       for more information.
 
       The driver will automatically set up the database creating and managing
-      the necesssary tables. Therefore the provided user should have sufficient
+      the necessary tables. Therefore the provided user should have sufficient
       permissions to manage the database. For example:
 
       .. code-block:: sql
