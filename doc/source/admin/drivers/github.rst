@@ -353,7 +353,7 @@ As described in :attr:`pipeline.require` and :attr:`pipeline.reject`,
 pipelines may specify that items meet certain conditions in order to
 be enqueued into the pipeline.  These conditions vary according to the
 source of the project in question.  To supply requirements for changes
-from a GitHub source named ``my-github``, create a congfiguration such
+from a GitHub source named ``my-github``, create a configuration such
 as the following::
 
   pipeline:
