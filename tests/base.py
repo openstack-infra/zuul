@@ -3144,16 +3144,41 @@ class ZuulTestCase(BaseTestCase):
             # large single packets are sent with stats separated by
             # newlines; thus we first flatten the stats out into
             # single entries.
-            stats = itertools.chain.from_iterable(
-                [s.decode('utf-8').split('\n') for s in self.statsd.stats])
+            stats = list(itertools.chain.from_iterable(
+                [s.decode('utf-8').split('\n') for s in self.statsd.stats]))
+
+            # Check that we don't have already have a counter value
+            # that we then try to extend a sub-key under; this doesn't
+            # work on the server.  e.g.
+            #  zuul.new.stat            is already a counter
+            #  zuul.new.stat.sub.value  will silently not work
+            #
+            # note only valid for gauges and counters; timers are
+            # slightly different because statsd flushes them out but
+            # actually writes a bunch of different keys like "mean,
+            # std, count", so the "key" isn't so much a key, but a
+            # path to the folder where the actual values will be kept.
+            # Thus you can extend timer keys OK.
+            already_set_keys = set()
             for stat in stats:
                 k, v = stat.split(':')
+                s_value, s_kind = v.split('|')
+                if s_kind == 'c' or s_kind == 'g':
+                    already_set_keys.update([k])
+            for k in already_set_keys:
+                if key != k and key.startswith(k):
+                    raise Exception(
+                        "Key %s is a gauge/counter and "
+                        "we are trying to set subkey %s" % (k, key))
+
+            for stat in stats:
+                k, v = stat.split(':')
+                s_value, s_kind = v.split('|')
+
                 if key == k:
                     if kind is None:
                         # key with no qualifiers is found
                         return True
-
-                    s_value, s_kind = v.split('|')
 
                     # if no kind match, look for other keys
                     if kind != s_kind:
