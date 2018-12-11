@@ -476,7 +476,7 @@ These may have different selection criteria which indicate to Zuul
 that, for instance, the job should behave differently on a different
 git branch.  Unlike inheritance, all job variants must be defined in
 the same project.  Some attributes of jobs marked :attr:`job.final`
-may not be overidden
+may not be overridden.
 
 When Zuul decides to run a job, it performs a process known as
 freezing the job.  Because any number of job variants may be

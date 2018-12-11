@@ -305,13 +305,13 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
 
       The number of jobs allocated nodes, but queued waiting for an
       executor to run on.  This should ideally be at zero; persistent
-      higher values indicate more exectuor resources would be useful.
+      higher values indicate more executor resources would be useful.
 
 .. stat:: zuul.geard
 
    Gearman job distribution statistics.  Gearman jobs encompass the
    wide variety of distributed jobs running within the scheduler and
-   across mergers and exectuors.  These stats are emitted by the `gear
+   across mergers and executors.  These stats are emitted by the `gear
    <https://pypi.org/project/gear/>`__ library.
 
    .. stat:: running
