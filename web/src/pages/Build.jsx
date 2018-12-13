@@ -18,41 +18,30 @@ import PropTypes from 'prop-types'
 import { Link } from 'react-router-dom'
 import { Panel } from 'react-bootstrap'
 
-import { fetchBuild } from '../api'
+import { fetchBuildIfNeeded } from '../actions/build'
+import Refreshable from '../containers/Refreshable'
 
 
-class BuildPage extends React.Component {
+class BuildPage extends Refreshable {
   static propTypes = {
     match: PropTypes.object.isRequired,
+    remoteData: PropTypes.object,
     tenant: PropTypes.object
   }
 
-  state = {
-    build: null
-  }
-
-  updateData = () => {
-    fetchBuild(this.props.tenant.apiPrefix, this.props.match.params.buildId)
-      .then(response => {
-        this.setState({build: response.data})
-      })
+  updateData = (force) => {
+    this.props.dispatch(fetchBuildIfNeeded(
+      this.props.tenant, this.props.match.params.buildId, force))
   }
 
   componentDidMount () {
     document.title = 'Zuul Build'
-    if (this.props.tenant.name) {
-      this.updateData()
-    }
-  }
-
-  componentDidUpdate (prevProps) {
-    if (this.props.tenant.name !== prevProps.tenant.name) {
-      this.updateData()
-    }
+    super.componentDidMount()
   }
 
   render () {
-    const { build } = this.state
+    const { remoteData } = this.props
+    const build = remoteData.builds[this.props.match.params.buildId]
     if (!build) {
       return (<p>Loading...</p>)
     }
@@ -95,23 +84,31 @@ class BuildPage extends React.Component {
       }
     })
     return (
-      <Panel>
-        <Panel.Heading>Build result {build.uuid}</Panel.Heading>
-        <Panel.Body>
-          <table className="table table-striped table-bordered">
-            <tbody>
-              {rows.map(item => (
-                <tr key={item.key}>
-                  <td>{item.key}</td>
-                  <td>{item.value}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Panel.Body>
-      </Panel>
+      <React.Fragment>
+        <div style={{float: 'right'}}>
+          {this.renderSpinner()}
+        </div>
+        <Panel>
+          <Panel.Heading>Build result {build.uuid}</Panel.Heading>
+          <Panel.Body>
+            <table className="table table-striped table-bordered">
+              <tbody>
+                {rows.map(item => (
+                  <tr key={item.key}>
+                    <td>{item.key}</td>
+                    <td>{item.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Panel.Body>
+        </Panel>
+      </React.Fragment>
     )
   }
 }
 
-export default connect(state => ({tenant: state.tenant}))(BuildPage)
+export default connect(state => ({
+  tenant: state.tenant,
+  remoteData: state.build,
+}))(BuildPage)
