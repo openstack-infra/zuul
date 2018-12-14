@@ -17,39 +17,30 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Table } from 'patternfly-react'
 
-import { fetchLabels } from '../api'
+import { fetchLabelsIfNeeded } from '../actions/labels'
+import Refreshable from '../containers/Refreshable'
 
 
-class LabelsPage extends React.Component {
+class LabelsPage extends Refreshable {
   static propTypes = {
-    tenant: PropTypes.object
+    tenant: PropTypes.object,
+    remoteData: PropTypes.object,
+    dispatch: PropTypes.func
   }
 
-  state = {
-    labels: null
-  }
-
-  updateData () {
-    fetchLabels(this.props.tenant.apiPrefix).then(response => {
-      this.setState({labels: response.data})
-    })
+  updateData (force) {
+    this.props.dispatch(fetchLabelsIfNeeded(this.props.tenant, force))
   }
 
   componentDidMount () {
     document.title = 'Zuul Labels'
-    if (this.props.tenant.name) {
-      this.updateData()
-    }
-  }
-
-  componentDidUpdate (prevProps) {
-    if (this.props.tenant.name !== prevProps.tenant.name) {
-      this.updateData()
-    }
+    super.componentDidMount()
   }
 
   render () {
-    const { labels } = this.state
+    const { remoteData } = this.props
+    const labels = remoteData.labels[this.props.tenant.name]
+
     if (!labels) {
       return (<p>Loading...</p>)
     }
@@ -68,19 +59,27 @@ class LabelsPage extends React.Component {
       })
     })
     return (
-      <Table.PfProvider
-        striped
-        bordered
-        hover
-        columns={columns}
-      >
-        <Table.Header/>
-        <Table.Body
-          rows={labels}
-          rowKey="name"
-        />
-      </Table.PfProvider>)
+      <React.Fragment>
+        <div style={{float: 'right'}}>
+          {this.renderSpinner()}
+        </div>
+        <Table.PfProvider
+          striped
+          bordered
+          hover
+          columns={columns}
+        >
+          <Table.Header/>
+          <Table.Body
+            rows={labels}
+            rowKey="name"
+          />
+        </Table.PfProvider>
+      </React.Fragment>)
   }
 }
 
-export default connect(state => ({tenant: state.tenant}))(LabelsPage)
+export default connect(state => ({
+  tenant: state.tenant,
+  remoteData: state.labels,
+}))(LabelsPage)
