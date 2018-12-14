@@ -16,53 +16,34 @@
 import * as React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import {
-  Alert,
-} from 'patternfly-react'
 
-import { fetchChangeStatus } from '../api'
+import { fetchChangeIfNeeded } from '../actions/change'
 import ChangePanel from '../containers/status/ChangePanel'
+import Refreshable from '../containers/Refreshable'
 
 
-class ChangeStatusPage extends React.Component {
+class ChangeStatusPage extends Refreshable {
   static propTypes = {
     match: PropTypes.object.isRequired,
-    tenant: PropTypes.object
+    tenant: PropTypes.object,
+    remoteData: PropTypes.object,
+    dispatch: PropTypes.func
   }
 
-  state = {
-    change: null,
-    error: null,
-  }
-
-  updateData = () => {
+  updateData = (force) => {
+    this.props.dispatch(fetchChangeIfNeeded(
+      this.props.tenant, this.props.match.params.changeId, force))
+      .then(() => {this.timer = setTimeout(this.updateData, 5000)})
     // Clear any running timer
     if (this.timer) {
       clearTimeout(this.timer)
       this.timer = null
     }
-    this.setState({error: null})
-    fetchChangeStatus(
-      this.props.tenant.apiPrefix, this.props.match.params.changeId)
-      .then(response => {
-        this.setState({change: response.data})
-      }).catch(error => {
-        this.setState({error: error.message, change: null})
-      })
-    this.timer = setTimeout(this.updateData, 5000)
   }
 
   componentDidMount () {
     document.title = this.props.match.params.changeId + ' | Zuul Status'
-    if (this.props.tenant.name) {
-      this.updateData()
-    }
-  }
-
-  componentDidUpdate (prevProps) {
-    if (this.props.tenant.name !== prevProps.tenant.name) {
-      this.updateData()
-    }
+    super.componentDidMount()
   }
 
   componentWillUnmount () {
@@ -73,12 +54,13 @@ class ChangeStatusPage extends React.Component {
   }
 
   render () {
-    const { error, change } = this.state
-    if (error) {
-      return (<Alert>{this.state.error}</Alert>)
-    }
+    const { remoteData } = this.props
+    const change = remoteData.change
     return (
       <React.Fragment>
+        <div style={{float: 'right'}}>
+          {this.renderSpinner()}
+        </div><br />
         {change && change.map((item, idx) => (
           <div className='row' key={idx}>
             <ChangePanel
@@ -91,4 +73,7 @@ class ChangeStatusPage extends React.Component {
   }
 }
 
-export default connect(state => ({tenant: state.tenant}))(ChangeStatusPage)
+export default connect(state => ({
+  tenant: state.tenant,
+  remoteData: state.change
+}))(ChangeStatusPage)
