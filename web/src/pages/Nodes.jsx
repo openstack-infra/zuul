@@ -18,42 +18,29 @@ import { connect } from 'react-redux'
 import { Table } from 'patternfly-react'
 import * as moment from 'moment'
 
-import { fetchNodes } from '../api'
+import { fetchNodesIfNeeded } from '../actions/nodes'
+import Refreshable from '../containers/Refreshable'
 
 
-class NodesPage extends React.Component {
+class NodesPage extends Refreshable {
   static propTypes = {
-    tenant: PropTypes.object
+    tenant: PropTypes.object,
+    remoteData: PropTypes.object,
+    dispatch: PropTypes.func
   }
 
-  state = {
-    nodes: null
-  }
-
-  updateData () {
-    fetchNodes(this.props.tenant.apiPrefix).then(response => {
-      this.setState({nodes: response.data})
-    })
+  updateData (force) {
+    this.props.dispatch(fetchNodesIfNeeded(this.props.tenant, force))
   }
 
   componentDidMount () {
     document.title = 'Zuul Nodes'
-    if (this.props.tenant.name) {
-      this.updateData()
-    }
-  }
-
-  componentDidUpdate (prevProps) {
-    if (this.props.tenant.name !== prevProps.tenant.name) {
-      this.updateData()
-    }
+    super.componentDidMount()
   }
 
   render () {
-    const { nodes } = this.state
-    if (!nodes) {
-      return (<p>Loading...</p>)
-    }
+    const { remoteData } = this.props
+    const nodes = remoteData.nodes
 
     const headerFormat = value => <Table.Heading>{value}</Table.Heading>
     const cellFormat = value => <Table.Cell>{value}</Table.Cell>
@@ -92,19 +79,28 @@ class NodesPage extends React.Component {
       })
     })
     return (
-      <Table.PfProvider
-        striped
-        bordered
-        hover
-        columns={columns}
-      >
-        <Table.Header/>
-        <Table.Body
-          rows={nodes}
-          rowKey="id"
-        />
-      </Table.PfProvider>)
+      <React.Fragment>
+        <div style={{float: 'right'}}>
+          {this.renderSpinner()}
+        </div>
+        <Table.PfProvider
+          striped
+          bordered
+          hover
+          columns={columns}
+        >
+          <Table.Header/>
+          <Table.Body
+            rows={nodes}
+            rowKey="id"
+          />
+        </Table.PfProvider>
+      </React.Fragment>
+    )
   }
 }
 
-export default connect(state => ({tenant: state.tenant}))(NodesPage)
+export default connect(state => ({
+  tenant: state.tenant,
+  remoteData: state.nodes,
+}))(NodesPage)
