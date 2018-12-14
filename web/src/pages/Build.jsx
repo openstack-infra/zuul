@@ -15,11 +15,10 @@
 import * as React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
-import { Link } from 'react-router-dom'
-import { Panel } from 'react-bootstrap'
 
 import { fetchBuildIfNeeded } from '../actions/build'
 import Refreshable from '../containers/Refreshable'
+import Build from '../containers/build/Build'
 
 
 class BuildPage extends Refreshable {
@@ -42,67 +41,12 @@ class BuildPage extends Refreshable {
   render () {
     const { remoteData } = this.props
     const build = remoteData.builds[this.props.match.params.buildId]
-    if (!build) {
-      return (<p>Loading...</p>)
-    }
-    const rows = []
-    const myColumns = [
-      'job_name', 'result', 'voting',
-      'pipeline', 'start_time', 'end_time', 'duration',
-      'project', 'branch', 'change', 'patchset', 'oldrev', 'newrev',
-      'ref', 'new_rev', 'ref_url', 'log_url']
-
-    myColumns.forEach(column => {
-      let label = column
-      let value = build[column]
-      if (column === 'job_name') {
-        label = 'job'
-        value = (
-          <Link to={this.props.tenant.linkPrefix + '/job/' + value}>
-            {value}
-          </Link>
-        )
-      }
-      if (column === 'voting') {
-        if (value) {
-          value = 'true'
-        } else {
-          value = 'false'
-        }
-      }
-      if (value && (column === 'log_url' || column === 'ref_url')) {
-        value = <a href={value}>{value}</a>
-      }
-      if (column === 'log_url') {
-        label = 'log url'
-      }
-      if (column === 'ref_url') {
-        label = 'ref url'
-      }
-      if (value) {
-        rows.push({key: label, value: value})
-      }
-    })
     return (
       <React.Fragment>
         <div style={{float: 'right'}}>
           {this.renderSpinner()}
         </div>
-        <Panel>
-          <Panel.Heading>Build result {build.uuid}</Panel.Heading>
-          <Panel.Body>
-            <table className="table table-striped table-bordered">
-              <tbody>
-                {rows.map(item => (
-                  <tr key={item.key}>
-                    <td>{item.key}</td>
-                    <td>{item.value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Panel.Body>
-        </Panel>
+        {build && <Build build={build}/>}
       </React.Fragment>
     )
   }
