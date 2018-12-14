@@ -12,11 +12,14 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
+import Axios from 'axios'
+
 import * as API from '../api'
 
 export const BUILD_FETCH_REQUEST = 'BUILD_FETCH_REQUEST'
 export const BUILD_FETCH_SUCCESS = 'BUILD_FETCH_SUCCESS'
 export const BUILD_FETCH_FAIL = 'BUILD_FETCH_FAIL'
+export const BUILD_OUTPUT_FETCH_SUCCESS = 'BUILD_OUTPUT_FETCH_SUCCESS'
 
 export const requestBuild = () => ({
   type: BUILD_FETCH_REQUEST
@@ -29,6 +32,51 @@ export const receiveBuild = (buildId, build) => ({
   receivedAt: Date.now()
 })
 
+const receiveBuildOutput = (buildId, output) => {
+  const hosts = {}
+  // Compute stats
+  output.forEach(phase => {
+    Object.entries(phase.stats).forEach(([host, stats]) => {
+      if (!hosts[host]) {
+        hosts[host] = stats
+        hosts[host].failed = []
+      } else {
+        hosts[host].changed += stats.changed
+        hosts[host].failures += stats.failures
+        hosts[host].ok += stats.ok
+      }
+      if (stats.failures > 0) {
+        // Look for failed tasks
+        phase.plays.forEach(play => {
+          play.tasks.forEach(task => {
+            if (task.hosts[host]) {
+              if (task.hosts[host].results &&
+                  task.hosts[host].results.length > 0) {
+                task.hosts[host].results.forEach(result => {
+                  if (result.failed) {
+                    result.name = task.task.name
+                    hosts[host].failed.push(result)
+                  }
+                })
+              } else if (task.hosts[host].rc || task.hosts[host].failed) {
+                let result = task.hosts[host]
+                result.name = task.task.name
+                hosts[host].failed.push(result)
+              }
+            }
+          })
+        })
+      }
+    })
+  })
+  return {
+    type: BUILD_OUTPUT_FETCH_SUCCESS,
+    buildId: buildId,
+    output: hosts,
+    receivedAt: Date.now()
+  }
+}
+
 const failedBuild = error => ({
   type: BUILD_FETCH_FAIL,
   error
@@ -37,7 +85,26 @@ const failedBuild = error => ({
 const fetchBuild = (tenant, build) => dispatch => {
   dispatch(requestBuild())
   return API.fetchBuild(tenant.apiPrefix, build)
-    .then(response => dispatch(receiveBuild(build, response.data)))
+    .then(response => {
+      dispatch(receiveBuild(build, response.data))
+      if (response.data.log_url) {
+        const url = response.data.log_url.substr(
+          0, response.data.log_url.lastIndexOf('/') + 1)
+        Axios.get(url + 'job-output.json.gz')
+          .then(response => dispatch(receiveBuildOutput(build, response.data)))
+          .catch(error => {
+            if (!error.request) {
+              throw error
+            }
+            // Try without compression
+            Axios.get(url + 'job-output.json')
+              .then(response => dispatch(receiveBuildOutput(
+                build, response.data)))
+          })
+          .catch(error => console.error(
+            'Couldn\'t decode job-output...', error))
+      }
+    })
     .catch(error => dispatch(failedBuild(error)))
 }
 

@@ -12,13 +12,15 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
+import update from 'immutability-helper'
+
 import {
   BUILD_FETCH_FAIL,
   BUILD_FETCH_REQUEST,
-  BUILD_FETCH_SUCCESS
+  BUILD_FETCH_SUCCESS,
+  BUILD_OUTPUT_FETCH_SUCCESS
 } from '../actions/build'
 
-import update from 'immutability-helper'
 
 export default (state = {
   isFetching: false,
@@ -33,6 +35,9 @@ export default (state = {
       return update(state, {$merge: {isFetching: false}})
     case BUILD_FETCH_FAIL:
       return update(state, {$merge: {isFetching: false}})
+    case BUILD_OUTPUT_FETCH_SUCCESS:
+      return update(
+        state, {builds: {[action.buildId]: {$merge: {output: action.output}}}})
     default:
       return state
   }
