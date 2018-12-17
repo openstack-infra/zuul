@@ -59,6 +59,12 @@ class FakeStatus(object):
         }
 
 
+class FakeCombinedStatus(object):
+    def __init__(self, sha, statuses):
+        self.sha = sha
+        self.statuses = statuses
+
+
 class FakeCommit(object):
     def __init__(self, sha):
         self._statuses = []
@@ -73,6 +79,19 @@ class FakeCommit(object):
 
     def statuses(self):
         return self._statuses
+
+    def status(self):
+        '''
+        Returns the combined status wich only contains the latest statuses of
+        the commit together with some other information that we don't need
+        here.
+        '''
+        latest_statuses_by_context = {}
+        for status in self._statuses:
+            if status.context not in latest_statuses_by_context:
+                latest_statuses_by_context[status.context] = status
+        combined_statuses = latest_statuses_by_context.values()
+        return FakeCombinedStatus(self.sha, combined_statuses)
 
 
 class FakeRepository(object):
