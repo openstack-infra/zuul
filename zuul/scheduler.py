@@ -215,6 +215,18 @@ class MergeCompletedEvent(ResultEvent):
         self.repo_state = repo_state
 
 
+class FilesChangesCompletedEvent(ResultEvent):
+    """A remote fileschanges operation has completed
+
+    :arg BuildSet build_set: The build_set which is ready.
+    :arg list files: List of files changed.
+    """
+
+    def __init__(self, build_set, files):
+        self.build_set = build_set
+        self.files = files
+
+
 class NodesProvisionedEvent(ResultEvent):
     """Nodes have been provisioned for a build_set
 
@@ -472,6 +484,11 @@ class Scheduler(threading.Thread):
                          commit, files, repo_state):
         event = MergeCompletedEvent(build_set, merged,
                                     updated, commit, files, repo_state)
+        self.result_event_queue.put(event)
+        self.wake_event.set()
+
+    def onFilesChangesCompleted(self, build_set, files):
+        event = FilesChangesCompletedEvent(build_set, files)
         self.result_event_queue.put(event)
         self.wake_event.set()
 
@@ -1107,6 +1124,8 @@ class Scheduler(threading.Thread):
                 self._doBuildCompletedEvent(event)
             elif isinstance(event, MergeCompletedEvent):
                 self._doMergeCompletedEvent(event)
+            elif isinstance(event, FilesChangesCompletedEvent):
+                self._doFilesChangesCompletedEvent(event)
             elif isinstance(event, NodesProvisionedEvent):
                 self._doNodesProvisionedEvent(event)
             else:
@@ -1263,6 +1282,18 @@ class Scheduler(threading.Thread):
                              (build_set,))
             return
         pipeline.manager.onMergeCompleted(event)
+
+    def _doFilesChangesCompletedEvent(self, event):
+        build_set = event.build_set
+        if build_set is not build_set.item.current_build_set:
+            self.log.warning("Build set %s is not current", build_set)
+            return
+        pipeline = build_set.item.pipeline
+        if not pipeline:
+            self.log.warning("Build set %s is not associated with a pipeline",
+                             build_set)
+            return
+        pipeline.manager.onFilesChangesCompleted(event)
 
     def _doNodesProvisionedEvent(self, event):
         request = event.request

@@ -1784,6 +1784,10 @@ class BuildSet(object):
         self.files = RepoFiles()
         self.repo_state = {}
         self.tries = {}
+        if item.change.files is not None:
+            self.files_state = self.COMPLETE
+        else:
+            self.files_state = self.NEW
 
     @property
     def ref(self):
@@ -2582,6 +2586,11 @@ class Ref(object):
         return set()
 
     def updatesConfig(self):
+        if self.files is None:
+            # If self.files is None we don't know if this change updates the
+            # config so assume it does as this is a safe default if we don't
+            # know.
+            return True
         if 'zuul.yaml' in self.files or '.zuul.yaml' in self.files or \
            [True for fn in self.files if fn.startswith("zuul.d/") or
             fn.startswith(".zuul.d/")]:

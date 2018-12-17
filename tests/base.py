@@ -1001,7 +1001,6 @@ class FakeGithubPullRequest(object):
         msg = self.subject + '-' + str(self.number_of_commits)
         for fn, content in self.files.items():
             fn = os.path.join(repo.working_dir, fn)
-            f = open(fn, 'w')
             with open(fn, 'w') as f:
                 f.write(content)
             repo.index.add([fn])

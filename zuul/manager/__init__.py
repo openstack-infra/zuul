@@ -578,8 +578,6 @@ class PipelineManager(object):
             return self._loadDynamicLayout(item)
 
     def scheduleMerge(self, item, files=None, dirs=None):
-        build_set = item.current_build_set
-
         self.log.debug("Scheduling merge for item %s (files: %s, dirs: %s)" %
                        (item, files, dirs))
         build_set = item.current_build_set
@@ -594,23 +592,38 @@ class PipelineManager(object):
                                            precedence=self.pipeline.precedence)
         return False
 
+    def scheduleFilesChanges(self, item):
+        self.log.debug("Scheduling fileschanged for item %s", item)
+        build_set = item.current_build_set
+        build_set.files_state = build_set.PENDING
+
+        self.sched.merger.getFilesChanges(
+            item.change.project.connection_name, item.change.project.name,
+            item.change.ref, item.change.branch, build_set=build_set)
+        return False
+
     def prepareItem(self, item):
         # This runs on every iteration of _processOneItem
         # Returns True if the item is ready, false otherwise
+        ready = True
         build_set = item.current_build_set
         if not build_set.ref:
             build_set.setConfiguration()
         if build_set.merge_state == build_set.NEW:
-            return self.scheduleMerge(item,
-                                      files=['zuul.yaml', '.zuul.yaml'],
-                                      dirs=['zuul.d', '.zuul.d'])
+            ready = self.scheduleMerge(item,
+                                       files=['zuul.yaml', '.zuul.yaml'],
+                                       dirs=['zuul.d', '.zuul.d'])
+        if build_set.files_state == build_set.NEW:
+            ready = self.scheduleFilesChanges(item)
+        if build_set.files_state == build_set.PENDING:
+            ready = False
         if build_set.merge_state == build_set.PENDING:
-            return False
+            ready = False
         if build_set.unable_to_merge:
-            return False
+            ready = False
         if build_set.config_errors:
-            return False
-        return True
+            ready = False
+        return ready
 
     def prepareJobs(self, item):
         # This only runs once the item is in the pipeline's action window
@@ -819,6 +832,12 @@ class PipelineManager(object):
 
         self._resumeBuilds(build.build_set)
         return True
+
+    def onFilesChangesCompleted(self, event):
+        build_set = event.build_set
+        item = build_set.item
+        item.change.files = event.files
+        build_set.files_state = build_set.COMPLETE
 
     def onMergeCompleted(self, event):
         build_set = event.build_set
