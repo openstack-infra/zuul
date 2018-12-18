@@ -3039,9 +3039,29 @@ class TestDataReturn(AnsibleZuulTestCase):
                       A.messages[-1])
 
     def test_data_return_child_jobs(self):
+        self.wait_timeout = 120
+        self.executor_server.hold_jobs_in_build = True
+
         A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
+
+        self.executor_server.release('data-return-child-jobs')
+        self.waitUntilSettled()
+
+        self.executor_server.release('data-return-child-jobs')
+        self.waitUntilSettled()
+
+        # Make sure skipped jobs are not reported as failing
+        tenant = self.sched.abide.tenants.get("tenant-one")
+        status = tenant.layout.pipelines["check"].formatStatusJSON()
+        self.assertEqual(
+            status["change_queues"][0]["heads"][0][0]["failing_reasons"], [])
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
         self.assertHistory([
             dict(name='data-return-child-jobs', result='SUCCESS',
                  changes='1,1'),

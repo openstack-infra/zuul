@@ -2057,8 +2057,8 @@ class QueueItem(object):
         """Check if any jobs have finished with a non-success result.
 
         Return True if any job in the job graph has returned with a
-        status not equal to SUCCESS, else return False.  Non-voting
-        and in-flight jobs are ignored.
+        status not equal to SUCCESS or SKIPPED, else return False.
+        Non-voting and in-flight jobs are ignored.
 
         """
         if not self.hasJobGraph():
@@ -2067,7 +2067,8 @@ class QueueItem(object):
             if not job.voting:
                 continue
             build = self.current_build_set.getBuild(job.name)
-            if build and build.result and (build.result != 'SUCCESS'):
+            if (build and build.result and
+                    build.result not in ['SUCCESS', 'SKIPPED']):
                 return True
         return False
 
