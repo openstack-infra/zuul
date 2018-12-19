@@ -1,6 +1,6 @@
 - hosts: localhost
   tasks:
-    # We except a namespace, a context and a pod name
+    # We expect a namespace, a context and a pod name
     - assert:
         that:
           - zuul.resources.container.namespace == 'zuul-ci-abcdefg'
