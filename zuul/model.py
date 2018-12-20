@@ -2258,6 +2258,8 @@ class QueueItem(object):
 
     def setNodeRequestFailure(self, job):
         fakebuild = Build(job, None)
+        fakebuild.start_time = time.time()
+        fakebuild.end_time = time.time()
         self.addBuild(fakebuild)
         fakebuild.result = 'NODE_FAILURE'
         self.setResult(fakebuild)
