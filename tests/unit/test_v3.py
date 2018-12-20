@@ -4452,3 +4452,17 @@ class TestJobPause(AnsibleZuulTestCase):
         ])
 
         self.assertIn('test : SKIPPED', A.messages[0])
+
+
+class TestContainerJobs(AnsibleZuulTestCase):
+    tenant_config_file = "config/container-build-resources/main.yaml"
+
+    def test_container_jobs(self):
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='container-machine', result='SUCCESS', changes='1,1'),
+            dict(name='container-native', result='SUCCESS', changes='1,1'),
+        ])

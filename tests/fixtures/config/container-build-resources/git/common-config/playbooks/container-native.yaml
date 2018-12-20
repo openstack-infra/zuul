@@ -1,0 +1,7 @@
+- hosts: localhost
+  tasks:
+    # We except a namespace and a context
+    - assert:
+        that:
+          - zuul.resources.cluster1.namespace == 'zuul-ci-abcdefg'
+          - zuul.resources.cluster1.context == 'zuul-ci-abcdefg:zuul-worker/'

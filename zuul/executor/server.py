@@ -27,6 +27,7 @@ import threading
 import time
 import traceback
 import git
+from urllib.parse import urlsplit
 
 from zuul.lib.yamlutil import yaml
 from zuul.lib.config import get_default
@@ -52,7 +53,8 @@ BUFFER_LINES_FOR_SYNTAX = 200
 COMMANDS = ['stop', 'pause', 'unpause', 'graceful', 'verbose',
             'unverbose', 'keep', 'nokeep']
 DEFAULT_FINGER_PORT = 7900
-BLACKLISTED_ANSIBLE_CONNECTION_TYPES = ['network_cli']
+BLACKLISTED_ANSIBLE_CONNECTION_TYPES = [
+    'network_cli', 'kubectl', 'project', 'namespace']
 
 
 class StopException(Exception):
@@ -1544,6 +1546,60 @@ class AnsibleJob(object):
         self.log.debug("Adding role path %s", role_path)
         jobdir_playbook.roles_path.append(role_path)
 
+    def prepareKubeConfig(self, data):
+        kube_cfg_path = os.path.join(self.jobdir.work_root, ".kube", "config")
+        if os.path.exists(kube_cfg_path):
+            kube_cfg = yaml.safe_load(open(kube_cfg_path))
+        else:
+            os.makedirs(os.path.dirname(kube_cfg_path), exist_ok=True)
+            kube_cfg = {
+                'apiVersion': 'v1',
+                'kind': 'Config',
+                'preferences': {},
+                'users': [],
+                'clusters': [],
+                'contexts': [],
+                'current-context': None,
+            }
+        # Add cluster
+        cluster_name = urlsplit(data['host']).netloc.replace('.', '-')
+        cluster = {
+            'server': data['host'],
+        }
+        if data.get('ca_crt'):
+            cluster['certificate-authority-data'] = data['ca_crt']
+        if data['skiptls']:
+            cluster['insecure-skip-tls-verify'] = True
+        kube_cfg['clusters'].append({
+            'name': cluster_name,
+            'cluster': cluster,
+        })
+
+        # Add user
+        user_name = "%s:%s" % (data['namespace'], data['user'])
+        kube_cfg['users'].append({
+            'name': user_name,
+            'user': {
+                'token': data['token'],
+            },
+        })
+
+        # Add context
+        data['context_name'] = "%s/%s" % (user_name, cluster_name)
+        kube_cfg['contexts'].append({
+            'name': data['context_name'],
+            'context': {
+                'user': user_name,
+                'cluster': cluster_name,
+                'namespace': data['namespace']
+            }
+        })
+        if not kube_cfg['current-context']:
+            kube_cfg['current-context'] = data['context_name']
+
+        with open(kube_cfg_path, "w") as of:
+            of.write(yaml.safe_dump(kube_cfg, default_flow_style=False))
+
     def prepareAnsibleFiles(self, args):
         all_vars = args['vars'].copy()
         check_varnames(all_vars)
@@ -1557,6 +1613,35 @@ class AnsibleJob(object):
             work_root=self.jobdir.work_root,
             result_data_file=self.jobdir.result_data_file,
             inventory_file=self.jobdir.inventory)
+
+        resources_nodes = []
+        all_vars['zuul']['resources'] = {}
+        for node in args['nodes']:
+            if node.get('connection_type') in (
+                    'namespace', 'project', 'kubectl'):
+                # TODO: decrypt resource data using scheduler key
+                data = node['connection_port']
+                # Setup kube/config file
+                self.prepareKubeConfig(data)
+                # Convert connection_port in kubectl connection parameters
+                node['connection_port'] = None
+                node['kubectl_namespace'] = data['namespace']
+                node['kubectl_context'] = data['context_name']
+                # Add node information to zuul_resources
+                all_vars['zuul']['resources'][node['name'][0]] = {
+                    'namespace': data['namespace'],
+                    'context': data['context_name'],
+                }
+                if node['connection_type'] in ('project', 'namespace'):
+                    # Project are special nodes that are not the inventory
+                    resources_nodes.append(node)
+                else:
+                    # Add the real pod name to the resources_var
+                    all_vars['zuul']['resources'][
+                        node['name'][0]]['pod'] = data['pod']
+        # Remove resource node from nodes list
+        for node in resources_nodes:
+            args['nodes'].remove(node)
 
         nodes = self.getHostList(args)
         setup_inventory = make_setup_inventory_dict(nodes)
