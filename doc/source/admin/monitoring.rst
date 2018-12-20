@@ -156,37 +156,47 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
       The number of builds currently running on this executor.  This
       includes starting builds.
 
-  .. stat:: phase
+   .. stat:: paused_builds
+      :type: gauge
 
-     Subtree detailing per-phase execution statistics:
+      The number of currently paused builds on this executor.
 
-     .. stat:: <phase>
+   .. stat:: phase
 
-        ``<phase>`` represents a phase in the execution of a job.
-        This can be an *internal* phase (such as ``setup`` or ``cleanup``) as
-        well as *job* phases such as ``pre``, ``run`` or ``post``.
+      Subtree detailing per-phase execution statistics:
 
-        .. stat:: <result>
-           :type: counter
+      .. stat:: <phase>
 
-           A counter for each type of result.
-           These results do not, by themselves, determine the status of a build
-           but are indicators of the exit status provided by Ansible for the
-           execution of a particular phase.
+         ``<phase>`` represents a phase in the execution of a job.
+         This can be an *internal* phase (such as ``setup`` or ``cleanup``) as
+         well as *job* phases such as ``pre``, ``run`` or ``post``.
 
-           Example of possible counters for each phase are: ``RESULT_NORMAL``,
-           ``RESULT_TIMED_OUT``, ``RESULT_UNREACHABLE``, ``RESULT_ABORTED``.
+         .. stat:: <result>
+            :type: counter
 
-  .. stat:: load_average
-     :type: gauge
+            A counter for each type of result.
+            These results do not, by themselves, determine the status of a build
+            but are indicators of the exit status provided by Ansible for the
+            execution of a particular phase.
 
-     The one-minute load average of this executor, multiplied by 100.
+            Example of possible counters for each phase are: ``RESULT_NORMAL``,
+            ``RESULT_TIMED_OUT``, ``RESULT_UNREACHABLE``, ``RESULT_ABORTED``.
 
-  .. stat:: pct_used_ram
-     :type: gauge
+   .. stat:: load_average
+      :type: gauge
 
-     The used RAM (excluding buffers and cache) on this executor, as
-     a percentage multiplied by 100.
+      The one-minute load average of this executor, multiplied by 100.
+
+   .. stat:: pause
+      :type: gauge
+
+      Indicates if the executor is paused. 1 means paused else 0.
+
+   .. stat:: pct_used_ram
+      :type: gauge
+
+      The used RAM (excluding buffers and cache) on this executor, as
+      a percentage multiplied by 100.
 
 .. stat:: zuul.nodepool.requests
 
