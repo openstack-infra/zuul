@@ -904,24 +904,17 @@ class GithubConnection(BaseConnection):
 
         return changes
 
-    def getFilesChanges(self, project_name, head, base):
-        job = self.sched.merger.getFilesChanges(self.connection_name,
-                                                project_name,
-                                                head, base)
-        self.log.debug("Waiting for fileschanges job %s", job)
-        job.wait()
-        if not job.updated:
-            raise Exception("Fileschanges job {} failed".format(job))
-        self.log.debug("Fileschanges job %s got changes on files %s",
-                       job, job.files)
-        return job.files
-
     def _updateChange(self, change):
         self.log.info("Updating %s" % (change,))
         change.pr = self.getPull(change.project.name, change.number)
         change.ref = "refs/pull/%s/head" % change.number
         change.branch = change.pr.get('base').get('ref')
-        change.files = change.pr.get('files')
+
+        # Don't overwrite the files list. The change object is bound to a
+        # specific revision and thus the changed files won't change. This is
+        # important if we got the files later because of the 300 files limit.
+        if not change.files:
+            change.files = change.pr.get('files')
         # Github's pull requests files API only returns at max
         # the first 300 changed files of a PR in alphabetical order.
         # https://developer.github.com/v3/pulls/#list-pull-requests-files
@@ -929,10 +922,11 @@ class GithubConnection(BaseConnection):
             self.log.warning("Got only %s files but PR has %s files.",
                              len(change.files),
                              change.pr.get('changed_files', 0))
-            change.files = self.getFilesChanges(
-                change.project.name,
-                change.ref,
-                change.branch)
+            # In this case explicitly set change.files to None to signalize
+            # that we need to ask the mergers later in pipeline processing.
+            # We cannot query the files here using the mergers because this
+            # can slow down the github event queue considerably.
+            change.files = None
         change.title = change.pr.get('title')
         change.open = change.pr.get('state') == 'open'
         change.is_merged = change.pr.get('merged')

@@ -132,12 +132,14 @@ class MergeClient(object):
         return job
 
     def getFilesChanges(self, connection_name, project_name, branch,
-                        tosha=None, precedence=zuul.model.PRECEDENCE_HIGH):
+                        tosha=None, precedence=zuul.model.PRECEDENCE_HIGH,
+                        build_set=None):
         data = dict(connection=connection_name,
                     project=project_name,
                     branch=branch,
                     tosha=tosha)
-        job = self.submitJob('merger:fileschanges', data, None, precedence)
+        job = self.submitJob('merger:fileschanges', data, build_set,
+                             precedence)
         return job
 
     def onBuildCompleted(self, job):
@@ -153,9 +155,13 @@ class MergeClient(object):
                       (job, merged, job.updated, commit))
         job.setComplete()
         if job.build_set:
-            self.sched.onMergeCompleted(job.build_set,
-                                        merged, job.updated, commit, files,
-                                        repo_state)
+            if job.name == 'merger:fileschanges':
+                self.sched.onFilesChangesCompleted(job.build_set, files)
+            else:
+                self.sched.onMergeCompleted(job.build_set,
+                                            merged, job.updated, commit, files,
+                                            repo_state)
+
         # The test suite expects the job to be removed from the
         # internal account after the wake flag is set.
         self.jobs.remove(job)

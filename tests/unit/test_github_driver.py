@@ -119,6 +119,42 @@ class TestGithubDriver(ZuulTestCase):
         self.waitUntilSettled()
         self.assertEqual(1, len(self.history))
 
+    @simple_layout('layouts/files-github.yaml', driver='github')
+    def test_pull_changed_files_length_mismatch_reenqueue(self):
+        # Hold jobs so we can trigger a reconfiguration while the item is in
+        # the pipeline
+        self.executor_server.hold_jobs_in_build = True
+
+        files = {'{:03d}.txt'.format(n): 'test' for n in range(300)}
+        # File 301 which is not included in the list of files of the PR,
+        # since Github only returns max. 300 files in alphabetical order
+        files["foobar-requires"] = "test"
+        A = self.fake_github.openFakePullRequest(
+            'org/project', 'master', 'A', files=files)
+
+        self.fake_github.emitEvent(A.getPullRequestOpenedEvent())
+        self.waitUntilSettled()
+
+        # Comment on the pull request to trigger updateChange
+        self.fake_github.emitEvent(A.getCommentAddedEvent('casual comment'))
+        self.waitUntilSettled()
+
+        # Trigger reconfig to enforce a reenqueue of the item
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        # Now we can release all jobs
+        self.executor_server.hold_jobs_in_build = True
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        # There must be exactly one successful job in the history. If there is
+        # an aborted job in the history the reenqueue failed.
+        self.assertHistory([
+            dict(name='project-test1', result='SUCCESS',
+                 changes="%s,%s" % (A.number, A.head_sha)),
+        ])
+
     @simple_layout('layouts/basic-github.yaml', driver='github')
     def test_pull_github_files_error(self):
         A = self.fake_github.openFakePullRequest(
