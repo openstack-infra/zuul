@@ -439,7 +439,14 @@ class ZuulWebAPI(object):
             'ref': buildset.ref,
             'newrev': buildset.newrev,
             'ref_url': buildset.ref_url,
+            'artifacts': [],
         }
+
+        for artifact in build.artifacts:
+            ret['artifacts'].append({
+                'name': artifact.name,
+                'url': artifact.url,
+            })
         return ret
 
     @cherrypy.expose

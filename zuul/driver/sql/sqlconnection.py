@@ -27,6 +27,7 @@ from zuul.connection import BaseConnection
 
 BUILDSET_TABLE = 'zuul_buildset'
 BUILD_TABLE = 'zuul_build'
+ARTIFACT_TABLE = 'zuul_artifact'
 
 
 class DatabaseSession(object):
@@ -65,7 +66,8 @@ class DatabaseSession(object):
         # joinedload).
         q = self.session().query(self.connection.buildModel).\
             join(self.connection.buildSetModel).\
-            options(orm.contains_eager(self.connection.buildModel.buildset)).\
+            options(orm.contains_eager(self.connection.buildModel.buildset),
+                    orm.selectinload(self.connection.buildModel.artifacts)).\
             with_hint(build_table, 'USE INDEX (PRIMARY)', 'mysql')
 
         q = self.listFilter(q, buildset_table.c.tenant, tenant)
@@ -115,8 +117,7 @@ class SQLConnection(BaseConnection):
 
         try:
             self.dburi = self.connection_config.get('dburi')
-            self.zuul_buildset_table, self.zuul_build_table \
-                = self._setup_models()
+            self._setup_models()
 
             # Recycle connections if they've been idle for more than 1 second.
             # MySQL connections are lightweight and thus keeping long-lived
@@ -213,9 +214,32 @@ class SQLConnection(BaseConnection):
             node_name = sa.Column(sa.String(255))
             buildset = orm.relationship(BuildSetModel, backref="builds")
 
+            def createArtifact(self, *args, **kw):
+                session = orm.session.Session.object_session(self)
+                a = ArtifactModel(*args, **kw)
+                a.build_id = self.id
+                self.artifacts.append(a)
+                session.add(a)
+                session.flush()
+                return a
+
+        class ArtifactModel(Base):
+            __tablename__ = self.table_prefix + ARTIFACT_TABLE
+            id = sa.Column(sa.Integer, primary_key=True)
+            build_id = sa.Column(sa.Integer, sa.ForeignKey(
+                self.table_prefix + BUILD_TABLE + ".id"))
+            name = sa.Column(sa.String(255))
+            url = sa.Column(sa.TEXT())
+            build = orm.relationship(BuildModel, backref="artifacts")
+
+        self.artifactModel = ArtifactModel
+        self.zuul_artifact_table = self.artifactModel.__table__
+
         self.buildModel = BuildModel
+        self.zuul_build_table = self.buildModel.__table__
+
         self.buildSetModel = BuildSetModel
-        return self.buildSetModel.__table__, self.buildModel.__table__
+        self.zuul_buildset_table = self.buildSetModel.__table__
 
     def onStop(self):
         self.log.debug("Stopping SQL connection %s" % self.connection_name)

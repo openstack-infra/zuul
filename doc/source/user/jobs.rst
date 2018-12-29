@@ -733,6 +733,29 @@ To set the log URL for a build, use *zuul_return* to set the
           zuul:
             log_url: http://logs.example.com/path/to/build/logs
 
+.. _return_artifacts:
+
+Returning artifact URLs
+~~~~~~~~~~~~~~~~~~~~~~~
+
+If a build produces artifacts, any number of URLs may be returned to
+Zuul and stored in the SQL database.  These will then be available via
+the web interface.
+
+To provide artifact URLs for a build, use *zuul_return* to set keys
+under the **zuul.artifacts** dictionary.  For example:
+
+.. code-block:: yaml
+
+  tasks:
+    - zuul_return:
+        data:
+          zuul:
+            artifacts:
+              - name: tarball
+                url: http://example.com/path/to/package.tar.gz
+              - name: docs
+                url: http://example.com/path/to/docs
 
 Skipping child jobs
 ~~~~~~~~~~~~~~~~~~~

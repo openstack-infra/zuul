@@ -1,2 +1,11 @@
 - hosts: all
-  tasks: []
+  tasks:
+    - name: Return artifact data
+      zuul_return:
+        data:
+          zuul:
+            artifacts:
+              - name: tarball
+                url: http://example.com/tarball
+              - name: docs
+                url: http://example.com/docs

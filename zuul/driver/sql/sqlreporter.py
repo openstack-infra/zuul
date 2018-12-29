@@ -26,6 +26,24 @@ class SQLReporter(BaseReporter):
     name = 'sql'
     log = logging.getLogger("zuul.SQLReporter")
 
+    artifact = {
+        'name': str,
+        'url': str,
+    }
+    zuul_data = {
+        'zuul': {
+            'artifacts': [artifact]
+        }
+    }
+    artifact_schema = v.Schema(zuul_data)
+
+    def validateArtifactSchema(self, data):
+        try:
+            self.artifact_schema(data)
+        except Exception:
+            return False
+        return True
+
     def report(self, item):
         """Create an entry into a database."""
 
@@ -71,7 +89,7 @@ class SQLReporter(BaseReporter):
                         build.end_time,
                         tz=datetime.timezone.utc)
 
-                db_buildset.createBuild(
+                db_build = db_buildset.createBuild(
                     uuid=build.uuid,
                     job_name=build.job.name,
                     result=result,
@@ -81,6 +99,15 @@ class SQLReporter(BaseReporter):
                     log_url=url,
                     node_name=build.node_name,
                 )
+
+                if self.validateArtifactSchema(build.result_data):
+                    artifacts = build.result_data.get('zuul', {}).get(
+                        'artifacts', [])
+                    for artifact in artifacts:
+                        db_build.createArtifact(
+                            name=artifact['name'],
+                            url=artifact['url'],
+                        )
 
 
 def getSchema():
