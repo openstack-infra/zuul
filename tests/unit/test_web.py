@@ -373,6 +373,13 @@ class TestWeb(BaseTestWeb):
                 'voting': True
             }], data)
 
+    def test_web_nodes_list(self):
+        # can we fetch the nodes list
+        data = self.get_url('api/tenant/tenant-one/nodes').json()
+        self.assertGreater(len(data), 0)
+        self.assertEqual("test-provider", data[0]["provider"])
+        self.assertEqual("label1", data[0]["type"])
+
     def test_web_labels_list(self):
         # can we fetch the labels list
         data = self.get_url('api/tenant/tenant-one/labels').json()
