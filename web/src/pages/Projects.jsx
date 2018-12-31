@@ -51,7 +51,9 @@ class ProjectsPage extends Refreshable {
       <Table.Cell>{value}</Table.Cell>)
     const cellProjectFormat = (value) => (
       <Table.Cell>
-        {value}
+        <Link to={this.props.tenant.linkPrefix + '/project/' + value}>
+          {value}
+        </Link>
       </Table.Cell>)
     const cellBuildFormat = (value) => (
       <Table.Cell>
