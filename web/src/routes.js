@@ -14,6 +14,7 @@
 
 import StatusPage from './pages/Status'
 import ChangeStatusPage from './pages/ChangeStatus'
+import ProjectsPage from './pages/Projects'
 import JobPage from './pages/Job'
 import JobsPage from './pages/Jobs'
 import BuildPage from './pages/Build'
@@ -31,6 +32,11 @@ const routes = () => [
     title: 'Status',
     to: '/status',
     component: StatusPage
+  },
+  {
+    title: 'Projects',
+    to: '/projects',
+    component: ProjectsPage
   },
   {
     title: 'Jobs',

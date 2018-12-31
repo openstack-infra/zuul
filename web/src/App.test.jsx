@@ -59,7 +59,7 @@ it('renders multi tenant', () => {
     const topMenuLinks = ReactTestUtils.scryRenderedComponentsWithType(
       application, Link)
     expect(topMenuLinks[0].props.to).toEqual('/t/openstack/status')
-    expect(topMenuLinks[1].props.to).toEqual('/t/openstack/jobs')
+    expect(topMenuLinks[1].props.to).toEqual('/t/openstack/projects')
     // Location should be /tenants
     expect(location.pathname).toEqual('/tenants')
     // Info should tell multi tenants
@@ -91,7 +91,7 @@ it('renders single tenant', () => {
     const topMenuLinks = ReactTestUtils.scryRenderedComponentsWithType(
       application, Link)
     expect(topMenuLinks[0].props.to).toEqual('/status')
-    expect(topMenuLinks[1].props.to).toEqual('/jobs')
+    expect(topMenuLinks[1].props.to).toEqual('/projects')
     // Location should be /status
     expect(location.pathname).toEqual('/status')
     // Info should tell white label tenant openstack
