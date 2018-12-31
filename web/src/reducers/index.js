@@ -20,6 +20,7 @@ import errors from './errors'
 import info from './info'
 import job from './job'
 import jobs from './jobs'
+import projects from './projects'
 import status from './status'
 import tenant from './tenant'
 import tenants from './tenants'
@@ -29,6 +30,7 @@ const reducers = {
   info,
   job,
   jobs,
+  projects,
   configErrors,
   errors,
   status,

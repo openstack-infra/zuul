@@ -18,39 +18,30 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Table } from 'patternfly-react'
 
-import { fetchProjects } from '../api'
+import { fetchProjectsIfNeeded } from '../actions/projects'
+import Refreshable from '../containers/Refreshable'
 
 
-class ProjectsPage extends React.Component {
+class ProjectsPage extends Refreshable {
   static propTypes = {
-    tenant: PropTypes.object
+    tenant: PropTypes.object,
+    remoteData: PropTypes.object,
+    dispatch: PropTypes.func
   }
 
-  state = {
-    projects: null
-  }
-
-  updateData () {
-    fetchProjects(this.props.tenant.apiPrefix).then(response => {
-      this.setState({projects: response.data})
-    })
+  updateData (force) {
+    this.props.dispatch(fetchProjectsIfNeeded(this.props.tenant, force))
   }
 
   componentDidMount () {
     document.title = 'Zuul Projects'
-    if (this.props.tenant.name) {
-      this.updateData()
-    }
-  }
-
-  componentDidUpdate (prevProps) {
-    if (this.props.tenant.name !== prevProps.tenant.name) {
-      this.updateData()
-    }
+    super.componentDidMount()
   }
 
   render () {
-    const { projects } = this.state
+    const { remoteData } = this.props
+    const projects = remoteData.projects[this.props.tenant.name]
+
     if (!projects) {
       return (<p>Loading...</p>)
     }
@@ -91,19 +82,28 @@ class ProjectsPage extends React.Component {
       })
     })
     return (
-      <Table.PfProvider
-        striped
-        bordered
-        hover
-        columns={columns}
-      >
-        <Table.Header/>
-        <Table.Body
-          rows={projects}
-          rowKey="name"
-        />
-      </Table.PfProvider>)
+      <React.Fragment>
+        <div style={{float: 'right'}}>
+          {this.renderSpinner()}
+        </div>
+        <Table.PfProvider
+          striped
+          bordered
+          hover
+          columns={columns}
+        >
+          <Table.Header/>
+          <Table.Body
+            rows={projects}
+            rowKey="name"
+          />
+        </Table.PfProvider>
+      </React.Fragment>
+    )
   }
 }
 
-export default connect(state => ({tenant: state.tenant}))(ProjectsPage)
+export default connect(state => ({
+  tenant: state.tenant,
+  remoteData: state.projects,
+}))(ProjectsPage)
