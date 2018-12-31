@@ -17,6 +17,7 @@ import { combineReducers } from 'redux'
 import configErrors from './configErrors'
 import change from './change'
 import errors from './errors'
+import build from './build'
 import info from './info'
 import job from './job'
 import jobs from './jobs'
@@ -30,6 +31,7 @@ import tenants from './tenants'
 
 const reducers = {
   change,
+  build,
   info,
   job,
   jobs,
