@@ -18,6 +18,8 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Panel } from 'react-bootstrap'
 
+import BuildOutput from './BuildOutput'
+
 
 class Build extends React.Component {
   static propTypes = {
@@ -79,6 +81,7 @@ class Build extends React.Component {
               ))}
             </tbody>
           </table>
+          {build.output && <BuildOutput output={build.output}/>}
         </Panel.Body>
       </Panel>
     )
