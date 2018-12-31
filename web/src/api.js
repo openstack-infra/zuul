@@ -52,6 +52,7 @@ function getHomepageUrl (url) {
     '/job/',
     '/project/',
     '/stream/',
+    '/status/',
   ]
   subDir.forEach(path => {
     if (baseUrl.includes(path)) {
@@ -114,6 +115,9 @@ function fetchConfigErrors (apiPrefix) {
 function fetchStatus (apiPrefix) {
   return Axios.get(apiUrl + apiPrefix + 'status')
 }
+function fetchChangeStatus (apiPrefix, changeId) {
+  return Axios.get(apiUrl + apiPrefix + 'status/change/' + changeId)
+}
 function fetchBuild (apiPrefix, buildId) {
   return Axios.get(apiUrl + apiPrefix + 'build/' + buildId)
 }
@@ -134,6 +138,7 @@ function fetchJobs (apiPrefix) {
 export {
   getHomepageUrl,
   getStreamUrl,
+  fetchChangeStatus,
   fetchConfigErrors,
   fetchStatus,
   fetchBuild,

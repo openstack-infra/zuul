@@ -13,6 +13,7 @@
 // under the License.
 
 import StatusPage from './pages/Status'
+import ChangeStatusPage from './pages/ChangeStatus'
 import JobPage from './pages/Job'
 import JobsPage from './pages/Jobs'
 import BuildPage from './pages/Build'
@@ -40,6 +41,10 @@ const routes = () => [
     title: 'Builds',
     to: '/builds',
     component: BuildsPage
+  },
+  {
+    to: '/status/change/:changeId',
+    component: ChangeStatusPage
   },
   {
     to: '/stream/:buildId',

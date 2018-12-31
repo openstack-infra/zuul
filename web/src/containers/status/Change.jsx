@@ -14,6 +14,8 @@
 
 import * as React from 'react'
 import PropTypes from 'prop-types'
+import { connect } from 'react-redux'
+import { Link } from 'react-router-dom'
 
 import LineAngleImage from '../../images/line-angle.png'
 import LineTImage from '../../images/line-t.png'
@@ -24,7 +26,8 @@ class Change extends React.Component {
   static propTypes = {
     change: PropTypes.object.isRequired,
     queue: PropTypes.object.isRequired,
-    expanded: PropTypes.bool.isRequired
+    expanded: PropTypes.bool.isRequired,
+    tenant: PropTypes.object
   }
 
   renderStatusIcon (change) {
@@ -47,10 +50,20 @@ class Change extends React.Component {
         iconGlyph = 'pficon pficon-error-circle-o'
       }
     }
-    return (
-      <span className={'zuul-build-status ' + iconGlyph}
-        title={iconTitle} />
+    const icon = (
+        <span
+          className={'zuul-build-status ' + iconGlyph}
+          title={iconTitle} />
     )
+    if (change.live) {
+      return (
+        <Link to={this.props.tenant.linkPrefix + '/status/change/' + change.id}>
+          {icon}
+        </Link>
+      )
+    } else {
+      return icon
+    }
   }
 
   renderLineImg (change, i) {
@@ -96,4 +109,4 @@ class Change extends React.Component {
   }
 }
 
-export default Change
+export default connect(state => ({tenant: state.tenant}))(Change)
