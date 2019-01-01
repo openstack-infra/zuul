@@ -463,7 +463,7 @@ of item.
             - hosts: localhost
                 tasks:
                 - name: Create a k8s resource
-                    k8s_raw:
+                  k8s_raw:
                     state: present
                     context: "{{ zuul.resources['node-name'].context }}"
                     namespace: "{{ zuul.resources['node-name'].namespace }}"
@@ -475,7 +475,7 @@ of item.
             - hosts: localhost
                 tasks:
                 - name: Copy src repos to the pod
-                    command: >
+                  command: >
                     oc rsync -q --progress=false
                         {{ zuul.executor.src_root }}/
                         {{ zuul.resources['node-name'].pod }}:src/
