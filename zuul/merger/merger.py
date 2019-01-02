@@ -268,8 +268,6 @@ class Repo(object):
                 head = ref.remote_head
         self.log.debug("Reset to %s", head)
         repo.head.reference = head
-        reset_repo_to_head(repo)
-        repo.git.clean('-x', '-f', '-d')
         for ref in stale_refs:
             self.log.debug("Delete stale ref %s", ref.remote_head)
             # A stale ref means the upstream branch (e.g. foobar) was deleted
@@ -360,9 +358,12 @@ class Repo(object):
     def checkout(self, ref):
         repo = self.createRepoObject()
         self.log.debug("Checking out %s" % ref)
-        # Perform a hard reset before checking out so that we clean up
-        # anything that might be left over from a merge.
+        # Perform a hard reset to the correct ref before checking out so that
+        # we clean up anything that might be left over from a merge while still
+        # only preparing the working copy once.
+        repo.head.reference = ref
         reset_repo_to_head(repo)
+        repo.git.clean('-x', '-f', '-d')
         repo.git.checkout(ref)
         return repo.head.commit
 
