@@ -755,7 +755,10 @@ under the **zuul.artifacts** dictionary.  For example:
               - name: tarball
                 url: http://example.com/path/to/package.tar.gz
               - name: docs
-                url: http://example.com/path/to/docs
+                url: build/docs/
+
+If the value of **url** is a relative URL, it will be combined with
+the **zuul.log_url** value if set to create an absolute URL.
 
 Skipping child jobs
 ~~~~~~~~~~~~~~~~~~~
