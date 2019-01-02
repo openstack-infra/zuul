@@ -116,7 +116,7 @@ class Pipeline extends React.Component {
     const { pipeline, filter, expanded } = this.props
     const count = this.createTree(pipeline)
     return (
-      <div className="zuul-pipeline col-sm-6 col-md-4 col-lg-3">
+      <div className="zuul-pipeline col-sm-6 col-md-4">
         <div className="zuul-pipeline-header">
           <h3>{pipeline.name} <Badge>{count}</Badge></h3>
           {pipeline.description ? (
