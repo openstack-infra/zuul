@@ -437,10 +437,9 @@ class PipelineManager(object):
             except Exception:
                 self.log.exception("Exception while canceling build %s "
                                    "for change %s" % (build, item.change))
-            finally:
-                tenant = old_build_set.item.pipeline.tenant
-                tenant.semaphore_handler.release(
-                    old_build_set.item, build.job)
+            tenant = old_build_set.item.pipeline.tenant
+            tenant.semaphore_handler.release(
+                old_build_set.item, build.job)
 
             if not was_running:
                 nodeset = build.build_set.getJobNodeSet(build.job.name)

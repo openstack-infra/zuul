@@ -837,9 +837,8 @@ class Scheduler(threading.Thread):
                     self.log.exception(
                         "Exception while removing nodeset from build %s "
                         "for change %s" % (build, build.build_set.item.change))
-                finally:
-                    tenant.semaphore_handler.release(
-                        build.build_set.item, build.job)
+                tenant.semaphore_handler.release(
+                    build.build_set.item, build.job)
 
     def _reconfigureTenant(self, tenant):
         # This is called from _doReconfigureEvent while holding the
