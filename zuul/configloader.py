@@ -1542,10 +1542,6 @@ class TenantParser(object):
         for project in itertools.chain(
                 tenant.config_projects, tenant.untrusted_projects):
             tpc = tenant.project_configs[project.canonical_name]
-            # If all config classes are excluded then do not request
-            # any getFiles jobs.
-            if not tpc.load_classes:
-                continue
             # For each branch in the repo, get the zuul.yaml for that
             # branch.  Remember the branch and then implicitly add a
             # branch selector to each job there.  This makes the
@@ -1555,6 +1551,14 @@ class TenantParser(object):
                 if abide.getUnparsedConfig(project.canonical_name,
                                            branch):
                     # We already have this branch cached.
+                    continue
+                if not tpc.load_classes:
+                    # If all config classes are excluded then do not
+                    # request any getFiles jobs, but cache the lack of
+                    # data so we know we've looked at this branch.
+                    abide.cacheUnparsedConfig(
+                        project.canonical_name,
+                        branch, model.UnparsedConfig())
                     continue
                 job = self.merger.getFiles(
                     project.source.connection.connection_name,
