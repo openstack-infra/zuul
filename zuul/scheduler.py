@@ -1313,6 +1313,12 @@ class Scheduler(threading.Thread):
             self.log.warning("Item %s does not contain job %s "
                              "for node request %s",
                              build_set.item, request.job.name, request)
+            try:
+                build_set.removeJobNodeRequest(request.job.name)
+            except Exception:
+                self.log.exception("Unable to remove obsolete node request "
+                                   "%s for %s job %s",
+                                   request, build_set.item, request.job.name)
             if request.fulfilled:
                 self.nodepool.returnNodeSet(request.nodeset)
             return
