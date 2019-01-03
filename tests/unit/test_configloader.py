@@ -244,6 +244,18 @@ class TestTenantGroups4(TenantParserTestCase):
         cat_jobs = [job for job in self.gearman_server.jobs_history
                     if job.name == b'merger:cat']
         self.assertEqual(1, len(cat_jobs))
+        old_layout = tenant.layout
+
+        # Check that creating a change in project1 doesn't cause a
+        # reconfiguration (due to a mistaken belief that we need to
+        # load config from it since there is none in memory).
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        new_layout = tenant.layout
+
+        self.assertEqual(old_layout, new_layout)
 
 
 class TestTenantGroups5(TenantParserTestCase):
