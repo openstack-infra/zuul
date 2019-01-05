@@ -701,10 +701,12 @@ class TestArtifacts(ZuulDBTestCase, BaseTestWeb, AnsibleZuulTestCase):
                                    "project=org/project&"
                                    "job_name=project-test1").json()
         self.assertEqual(len(build_query), 1)
-        self.assertEqual(len(build_query[0]['artifacts']), 2)
+        self.assertEqual(len(build_query[0]['artifacts']), 3)
         self.assertEqual(build_query[0]['artifacts'], [
             {'url': 'http://example.com/tarball',
              'name': 'tarball'},
             {'url': 'http://example.com/docs',
              'name': 'docs'},
+            {'url': 'http://logs.example.com/build/relative/docs',
+             'name': 'relative'},
         ])

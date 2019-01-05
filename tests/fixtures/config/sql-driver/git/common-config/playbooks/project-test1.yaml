@@ -4,8 +4,12 @@
       zuul_return:
         data:
           zuul:
+            log_url: http://logs.example.com/build
+            foo: bar
             artifacts:
               - name: tarball
                 url: http://example.com/tarball
               - name: docs
                 url: http://example.com/docs
+              - name: relative
+                url: relative/docs
