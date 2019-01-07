@@ -257,7 +257,7 @@ class FakeGerritChange(object):
                      'type': 'ADDED'},
                     {'file': 'README',
                      'type': 'MODIFIED'}]
-        for f in files.keys():
+        for f in files:
             ps_files.append({'file': f, 'type': 'ADDED'})
         d = {'approvals': [],
              'createdOn': time.time(),
@@ -416,7 +416,7 @@ class FakeGerritChange(object):
 
     def getSubmitRecords(self):
         status = {}
-        for cat in self.categories.keys():
+        for cat in self.categories:
             status[cat] = 0
 
         for a in self.patchsets[-1]['approvals']:
@@ -695,7 +695,7 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
         # happens they can add their own verified event into the queue.
         # Nevertheless, we can update change with the new review in gerrit.
 
-        for cat in action.keys():
+        for cat in action:
             if cat != 'submit':
                 change.addApproval(cat, action[cat], username=self.user)
 
@@ -1155,7 +1155,7 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         # simulate one installation per org
         orgs = {}
         latest_inst_id = 0
-        for repo in self.github_data.repos.keys():
+        for repo in self.github_data.repos:
             inst_id = orgs.get(repo[0])
             if not inst_id:
                 latest_inst_id += 1

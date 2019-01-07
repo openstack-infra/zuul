@@ -320,7 +320,7 @@ class ExecutorClient(object):
             _fname = '%s:%s' % (
                 function_name,
                 executor_zone)
-            if _fname in functions.keys():
+            if _fname in functions:
                 function_name = _fname
             else:
                 self.log.warning(

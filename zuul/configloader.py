@@ -1871,7 +1871,7 @@ class TenantParser(object):
                     layout.getJob(job.name)
                     job.validateReferences(layout)
 
-        for project_name in layout.project_configs.keys():
+        for project_name in layout.project_configs:
             for project_config in layout.project_configs[project_name]:
                 with reference_exceptions(
                         'project', project_config, layout.loading_errors):

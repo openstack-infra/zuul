@@ -402,10 +402,10 @@ class CallbackModule(default.CallbackModule):
                     msg=result_dict['module_stderr'])
         elif result._task.action == 'debug':
             # this is a debug statement, handle it special
-            for key in [k for k in result_dict.keys()
+            for key in [k for k in result_dict
                         if k.startswith('_ansible')]:
                 del result_dict[key]
-            if 'changed' in result_dict.keys():
+            if 'changed' in result_dict:
                 del result_dict['changed']
             keyname = next(iter(result_dict.keys()))
             # If it has msg, that means it was like:
