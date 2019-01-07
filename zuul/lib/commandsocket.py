@@ -55,6 +55,9 @@ class CommandSocket(object):
         # re-entering their loop.
         self.queue.put(b'_stop')
         self.socket_thread.join()
+        self.socket.close()
+        if os.path.exists(self.path):
+            os.unlink(self.path)
 
     def _socketListener(self):
         while self.running:
