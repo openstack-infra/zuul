@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    The executors emit a new timer
+    :stat:`zuul.executor.<executor>.starting_builds` with the time jobs spent
+    during starting.

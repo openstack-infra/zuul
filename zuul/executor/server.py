@@ -648,6 +648,7 @@ class AnsibleJob(object):
         self.proc_lock = threading.Lock()
         self.running = False
         self.started = False  # Whether playbooks have started running
+        self.time_starting_build = None
         self.paused = False
         self.aborted = False
         self.aborted_reason = None
@@ -736,6 +737,7 @@ class AnsibleJob(object):
 
     def execute(self):
         try:
+            self.time_starting_build = time.monotonic()
             self.ssh_agent.start()
             self.ssh_agent.add(self.private_key_file)
             for key in self.arguments.get('ssh_keys', []):
@@ -1093,6 +1095,11 @@ class AnsibleJob(object):
 
         pre_failed = False
         success = False
+        if self.executor_server.statsd:
+            key = "zuul.executor.{hostname}.starting_builds"
+            self.executor_server.statsd.timing(
+                key, (time.monotonic() - self.time_starting_build) * 1000)
+
         self.started = True
         time_started = time.time()
         # timeout value is "total" job timeout which accounts for

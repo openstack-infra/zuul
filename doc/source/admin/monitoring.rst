@@ -145,10 +145,22 @@ These metrics are emitted by the Zuul :ref:`scheduler`:
       Incremented each time the executor starts a build.
 
    .. stat:: starting_builds
-      :type: gauge
+      :type: gauge, timer
 
-      The number of builds starting on this executor.  These are
-      builds which have not yet begun their first pre-playbook.
+      The number of builds starting on this executor and a timer containing
+      how long jobs were in this state. These are builds which have not yet
+      begun their first pre-playbook.
+
+      The timer needs special thoughts when interpreting it because it
+      aggregates all jobs. It can be useful when aggregating it over a longer
+      period of time (maybe a day) where fast rising graphs could indicate e.g.
+      IO problems of the machines the executors are running on. But it has to
+      be noted that a rising graph also can indicate a higher usage of complex
+      jobs using more required projects. Also comparing several executors might
+      give insight if the graphs differ a lot from each other. Typically the
+      jobs are equally distributed over all executors (in the same zone when
+      using the zone feature) and as such the starting jobs timers (aggregated
+      over a large enough interval) should not differ much.
 
    .. stat:: running_builds
       :type: gauge
