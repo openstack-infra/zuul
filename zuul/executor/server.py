@@ -2313,7 +2313,6 @@ class ExecutorServer(object):
             self._running = False
             self._command_running = False
             workers = list(self.job_workers.values())
-        self.command_socket.stop()
 
         for job_worker in workers:
             try:
@@ -2344,6 +2343,7 @@ class ExecutorServer(object):
             self.statsd.gauge(base_key + '.pct_used_ram', 0)
             self.statsd.gauge(base_key + '.running_builds', 0)
 
+        self.command_socket.stop()
         self.log.debug("Stopped")
 
     def join(self):
