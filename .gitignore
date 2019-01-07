@@ -19,7 +19,7 @@ zuul/versioninfo
 dist/
 cover/
 htmlcov/
-zuul/web/static
+zuul/web/static/*
 !.keep
 node_modules
 yarn-error.log
