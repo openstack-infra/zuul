@@ -1269,7 +1269,7 @@ class AnsibleJob(object):
                                 self.winrm_read_timeout
 
                 host_keys = []
-                for key in node.get('host_keys'):
+                for key in node.get('host_keys', []):
                     if port != 22:
                         host_keys.append("[%s]:%s %s" % (ip, port, key))
                     else:
