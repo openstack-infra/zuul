@@ -87,8 +87,8 @@ class MergeServer(object):
         self.log.debug("Stopping")
         self._running = False
         self._command_running = False
-        self.command_socket.stop()
         self.worker.shutdown()
+        self.command_socket.stop()
         self.log.debug("Stopped")
 
     def join(self):

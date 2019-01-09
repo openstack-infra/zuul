@@ -184,13 +184,6 @@ class FingerGateway(object):
         self.log.info("Finger gateway is started")
 
     def stop(self):
-        if self.command_socket:
-            self.command_running = False
-            try:
-                self.command_socket.stop()
-            except Exception:
-                self.log.exception("Error stopping command socket:")
-
         if self.server:
             try:
                 self.server.shutdown()
@@ -205,6 +198,14 @@ class FingerGateway(object):
                 self.rpc = None
             except Exception:
                 self.log.exception("Error stopping RCP client:")
+
+        if self.command_socket:
+            self.command_running = False
+
+            try:
+                self.command_socket.stop()
+            except Exception:
+                self.log.exception("Error stopping command socket:")
 
         self.log.info("Finger gateway is stopped")
 
