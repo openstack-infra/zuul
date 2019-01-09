@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    The :attr:`executor.min_avail_mem` setting now takes cgroup limits
+    into account. There is also a new metric
+    `zuul.executor.<executor>.pct_used_ram_cgroup` available.

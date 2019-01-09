@@ -31,6 +31,7 @@ from tests.base import (
 )
 
 from zuul.executor.sensors.startingbuilds import StartingBuildsSensor
+from zuul.executor.sensors.ram import RAMSensor
 
 
 class TestExecutorRepos(ZuulTestCase):
@@ -466,12 +467,59 @@ class TestGovernor(ZuulTestCase):
             pass
         ram = Dummy()
         ram.percent = 20.0  # 20% used
+        ram.total = 8 * 1024 * 1024 * 1024  # 8GiB
+        vm_mock.return_value = ram
+        loadavg_mock.return_value = (0.0, 0.0, 0.0)
+        self.executor_server.manageLoad()
+        self.assertTrue(self.executor_server.accepting_work)
+        loadavg_mock.return_value = (100.0, 100.0, 100.0)
+        self.executor_server.manageLoad()
+        self.assertFalse(self.executor_server.accepting_work)
+
+    @mock.patch('os.getloadavg')
+    @mock.patch('psutil.virtual_memory')
+    def test_ram_governor(self, vm_mock, loadavg_mock):
+        class Dummy(object):
+            pass
+        ram = Dummy()
+        ram.percent = 20.0  # 20% used
+        ram.total = 8 * 1024 * 1024 * 1024  # 8GiB
         vm_mock.return_value = ram
         loadavg_mock.return_value = (0.0, 0.0, 0.0)
         self.executor_server.manageLoad()
         self.assertTrue(self.executor_server.accepting_work)
         ram.percent = 99.0  # 99% used
-        loadavg_mock.return_value = (100.0, 100.0, 100.0)
+        self.executor_server.manageLoad()
+        self.assertFalse(self.executor_server.accepting_work)
+
+    @mock.patch('os.getloadavg')
+    @mock.patch('psutil.virtual_memory')
+    def test_ram_cgroup_governor(self, vm_mock, loadavg_mock):
+        class Dummy(object):
+            pass
+        ram = Dummy()
+        ram.percent = 20.0  # 20% used
+        ram.total = 8 * 1024 * 1024 * 1024  # 8GiB
+        vm_mock.return_value = ram
+        loadavg_mock.return_value = (0.0, 0.0, 0.0)
+
+        # Set no cgroup limit
+        ram_sensor = [x for x in self.executor_server.sensors
+                      if isinstance(x, RAMSensor)][0]
+        ram_sensor.cgroup_stats_file = os.path.join(
+            FIXTURE_DIR, 'cgroup', 'memory.stat.nolimit')
+        self.executor_server.manageLoad()
+        self.assertTrue(self.executor_server.accepting_work)
+
+        # Set cgroup limit 5GiB and ram usage 20%
+        ram_sensor.cgroup_stats_file = os.path.join(
+            FIXTURE_DIR, 'cgroup', 'memory.stat.ok')
+        self.executor_server.manageLoad()
+        self.assertTrue(self.executor_server.accepting_work)
+
+        # Set cgroup limit 5GiB and ram usage 96%
+        ram_sensor.cgroup_stats_file = os.path.join(
+            FIXTURE_DIR, 'cgroup', 'memory.stat.bad')
         self.executor_server.manageLoad()
         self.assertFalse(self.executor_server.accepting_work)
 
