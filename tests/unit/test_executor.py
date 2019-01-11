@@ -14,6 +14,7 @@
 # under the License.
 
 import logging
+import multiprocessing
 import os
 import time
 from unittest import mock
@@ -472,7 +473,10 @@ class TestGovernor(ZuulTestCase):
         loadavg_mock.return_value = (0.0, 0.0, 0.0)
         self.executor_server.manageLoad()
         self.assertTrue(self.executor_server.accepting_work)
-        loadavg_mock.return_value = (100.0, 100.0, 100.0)
+
+        # fake the load to be higher than permitted
+        fake_load = multiprocessing.cpu_count() * 2.6
+        loadavg_mock.return_value = (fake_load, fake_load, fake_load)
         self.executor_server.manageLoad()
         self.assertFalse(self.executor_server.accepting_work)
 
