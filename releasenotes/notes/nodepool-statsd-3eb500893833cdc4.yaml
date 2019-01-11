@@ -8,3 +8,9 @@ upgrade:
     `label` and `size` counters are now available at
     `zuul.nodepool.requests.<state>.<size|label>`.  For more info see
     the monitoring documentation.
+  # NOTE(pabelanger): We are adding this here, so reno properly updates in the
+  # 3.4.0 section.
+  - |
+    The zuul-web service now requires access to ZooKeeper, as a result you may
+    need to update your firewall allow access from the service. Additionally,
+    zuul.conf should now contain a :attr:`zookeeper` configuration section.

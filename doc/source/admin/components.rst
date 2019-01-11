@@ -22,6 +22,7 @@ which is described below.
       Merger -- Gearman
       Executor -- Gearman
       Web -- Gearman
+      Web -- Zookeeper
       Finger -- Gearman
 
       Gearman -- Scheduler;
