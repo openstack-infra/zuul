@@ -176,6 +176,7 @@ class SQLConnection(BaseConnection):
         class BuildSetModel(Base):
             __tablename__ = self.table_prefix + BUILDSET_TABLE
             id = sa.Column(sa.Integer, primary_key=True)
+            uuid = sa.Column(sa.String(36))
             zuul_ref = sa.Column(sa.String(255))
             pipeline = sa.Column(sa.String(255))
             project = sa.Column(sa.String(255))
