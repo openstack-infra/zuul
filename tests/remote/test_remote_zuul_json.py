@@ -81,6 +81,22 @@ class TestZuulJSON(AnsibleZuulTestCase):
             self.assertIn('rosebud', text)
             self.assertNotIn('setec', text)
 
+    def test_json_task_action(self):
+        job = self._run_job('no-log')
+        with self.jobLog(job):
+            build = self.history[-1]
+            self.assertEqual(build.result, 'SUCCESS')
+
+            text = self._get_json_as_text(build)
+            json_result = json.loads(text)
+            tasks = json_result[0]['plays'][0]['tasks']
+            expected_actions = [
+                'debug', 'debug', 'debug', 'copy', 'find', 'stat', 'debug'
+            ]
+            for i, expected in enumerate(expected_actions):
+                host_result = tasks[i]['hosts']['controller']
+                self.assertEquals(expected, host_result['action'])
+
     def test_json_role_log(self):
         job = self._run_job('json-role')
         with self.jobLog(job):

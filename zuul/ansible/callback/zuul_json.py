@@ -132,6 +132,7 @@ class CallbackModule(CallbackBase):
 
     def v2_runner_on_ok(self, result, **kwargs):
         host = result._host
+        action = result._task.action
         if result._result.get('_ansible_no_log', False) or result._task.no_log:
             self.results[-1]['tasks'][-1]['hosts'][host.name] = dict(
                 censored="the output has been hidden due to the fact that"
@@ -155,6 +156,7 @@ class CallbackModule(CallbackBase):
         end_time = current_time()
         self.results[-1]['tasks'][-1]['task']['duration']['end'] = end_time
         self.results[-1]['play']['duration']['end'] = end_time
+        self.results[-1]['tasks'][-1]['hosts'][host.name]['action'] = action
 
     def v2_playbook_on_stats(self, stats):
         """Display info about playbook statistics"""
