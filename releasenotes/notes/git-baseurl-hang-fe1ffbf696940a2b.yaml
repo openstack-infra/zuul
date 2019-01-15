@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Fixed an issue where a trailing slash on the baseurl of a git driver
+    connection config could cause an indefinite job hang.
