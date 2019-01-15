@@ -1,0 +1,7 @@
+- hosts: all
+  tasks:
+    - name: Add fake known_hosts entry
+      delegate_to: localhost
+      known_hosts:
+        name: fake
+        key: fake ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOOaqWfpmnMiCYaLUq0ugyQ6OUIvtPzkOqLTG03HXxU9

@@ -79,6 +79,21 @@ class ActionModule(normal.ActionModule):
             if dest:
                 paths._fail_if_unsafe(dest)
 
+    def handle_known_hosts(self):
+        '''Allow known_hosts on localhost
+
+        The :ansible:module:`known_hosts` can be used to add SSH host keys of
+        a remote system. When run from a executor it can be used with the
+        add_host task to access remote servers. This is needed because ansible
+        on the executor is configured to check host keys by default.
+
+        Block any access of files outside the zuul work dir.
+        '''
+        if paths._is_localhost_task(self):
+            path = self._task.args.get('path')
+            if path:
+                paths._fail_if_unsafe(path)
+
     def handle_uri(self):
         '''Allow uri module on localhost if it doesn't touch unsafe files.
 
