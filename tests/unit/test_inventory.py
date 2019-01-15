@@ -60,6 +60,7 @@ class TestInventory(TestInventoryBase):
         self.assertIn('src_root', z_vars['executor'])
         self.assertIn('job', z_vars)
         self.assertEqual(z_vars['job'], 'single-inventory')
+        self.assertEqual(z_vars['message'], 'A')
 
         self.executor_server.release()
         self.waitUntilSettled()
