@@ -92,11 +92,10 @@ class WebServer(zuul.cmd.ZuulDaemonApp):
         self.setup_logging('web', 'log_config')
         self.log = logging.getLogger("zuul.WebServer")
 
-        self.configure_connections(
-            include_drivers=[zuul.driver.sql.SQLDriver,
-                             zuul.driver.github.GithubDriver])
-
         try:
+            self.configure_connections(
+                include_drivers=[zuul.driver.sql.SQLDriver,
+                                 zuul.driver.github.GithubDriver])
             self._run()
         except Exception:
             self.log.exception("Exception from WebServer:")
