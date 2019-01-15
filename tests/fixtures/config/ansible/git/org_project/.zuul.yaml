@@ -1,4 +1,8 @@
 - job:
+    name: add-host
+    run: playbooks/add-host.yaml
+
+- job:
     parent: python27
     name: faillocal
     run: playbooks/faillocal.yaml
@@ -12,6 +16,7 @@
     name: org/project
     check:
       jobs:
+        - add-host
         - python27
         - faillocal
         - check-vars

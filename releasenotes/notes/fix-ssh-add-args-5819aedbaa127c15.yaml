@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Untrusted playbooks no longer see
+    'Adding hosts ssh with ansible_user to the inventory is prohibited' when
+    using the add_host Ansible task on localhost.

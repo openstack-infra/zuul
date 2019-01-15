@@ -2238,6 +2238,9 @@ class TestAnsible(AnsibleZuulTestCase):
         build_hello = self.getJobFromHistory('hello-world')
         with self.jobLog(build_hello):
             self.assertEqual(build_hello.result, 'SUCCESS')
+        build_add_host = self.getJobFromHistory('add-host')
+        with self.jobLog(build_add_host):
+            self.assertEqual(build_add_host.result, 'SUCCESS')
         build_python27 = self.getJobFromHistory('python27')
         with self.jobLog(build_python27):
             self.assertEqual(build_python27.result, 'SUCCESS')

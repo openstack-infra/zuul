@@ -1,0 +1,10 @@
+- hosts: all
+  tasks:
+    - name: Add fake host to inventory
+      add_host:
+        name: fake
+        ansible_connection: ssh
+        ansible_host: fake.example.org
+        ansible_port: 22
+        ansible_user: zuul
+        ansible_password: passw0rd1
