@@ -2115,13 +2115,17 @@ class MySQLSchemaFixture(fixtures.Fixture):
                              user="openstack_citest",
                              passwd="openstack_citest",
                              db="openstack_citest")
-        cur = db.cursor()
-        cur.execute("create database %s" % self.name)
-        cur.execute("create user '{user}'@'' identified by '{passwd}'".format(
-            user=self.name, passwd=self.passwd))
-        cur.execute("grant all on {name}.* to '{name}'@''".format(
-            name=self.name))
-        cur.execute("flush privileges")
+        try:
+            with db.cursor() as cur:
+                cur.execute("create database %s" % self.name)
+                cur.execute(
+                    "create user '{user}'@'' identified by '{passwd}'".format(
+                        user=self.name, passwd=self.passwd))
+                cur.execute("grant all on {name}.* to '{name}'@''".format(
+                    name=self.name))
+                cur.execute("flush privileges")
+        finally:
+            db.close()
 
         self.dburi = 'mysql+pymysql://{name}:{passwd}@{host}/{name}'.format(
             name=self.name, passwd=self.passwd, host=self.host)
@@ -2133,10 +2137,13 @@ class MySQLSchemaFixture(fixtures.Fixture):
                              user="openstack_citest",
                              passwd="openstack_citest",
                              db="openstack_citest")
-        cur = db.cursor()
-        cur.execute("drop database %s" % self.name)
-        cur.execute("drop user '%s'@''" % self.name)
-        cur.execute("flush privileges")
+        try:
+            with db.cursor() as cur:
+                cur.execute("drop database %s" % self.name)
+                cur.execute("drop user '%s'@''" % self.name)
+                cur.execute("flush privileges")
+        finally:
+            db.close()
 
 
 class PostgresqlSchemaFixture(fixtures.Fixture):
