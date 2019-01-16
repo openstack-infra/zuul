@@ -936,7 +936,13 @@ class GithubConnection(BaseConnection):
                                              change.number)
         change.labels = change.pr.get('labels')
         # ensure message is at least an empty string
-        change.message = change.pr.get('body') or ''
+        message = change.pr.get("body") or ""
+        if change.title:
+            if message:
+                message = "{}\n\n{}".format(change.title, message)
+            else:
+                message = change.title
+        change.message = message
 
         # Note(tobiash): The updated_at timestamp is a moving target that is
         # not bound to the pull request 'version' we can solve that by just not

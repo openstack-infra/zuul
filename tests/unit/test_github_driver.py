@@ -36,7 +36,9 @@ class TestGithubDriver(ZuulTestCase):
     def test_pull_event(self):
         self.executor_server.hold_jobs_in_build = True
 
-        A = self.fake_github.openFakePullRequest('org/project', 'master', 'A')
+        body = "This is the\nPR body."
+        A = self.fake_github.openFakePullRequest('org/project', 'master', 'A',
+                                                 body=body)
         self.fake_github.emitEvent(A.getPullRequestOpenedEvent())
         self.waitUntilSettled()
 
@@ -56,6 +58,7 @@ class TestGithubDriver(ZuulTestCase):
         self.assertEqual('master', zuulvars['branch'])
         self.assertEquals('https://github.com/org/project/pull/1',
                           zuulvars['items'][0]['change_url'])
+        self.assertEqual(zuulvars["message"], "A\n\n{}".format(body))
         self.assertEqual(1, len(A.comments))
         self.assertThat(
             A.comments[0],
