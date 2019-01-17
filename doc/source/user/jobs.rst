@@ -525,6 +525,10 @@ are available:
       E.g., `https://review.example.org/#/c/123456/` or
       `https://github.com/example/example/pull/1234`.
 
+   .. var:: message
+
+      The commit or pull request message of the change.
+
 Branch Items
 ~~~~~~~~~~~~
 
