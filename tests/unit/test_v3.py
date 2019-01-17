@@ -3785,6 +3785,166 @@ class TestSecretInheritance(ZuulTestCase):
         self.assertHistory([])
 
 
+class TestSecretPassToParent(ZuulTestCase):
+    tenant_config_file = 'config/pass-to-parent/main.yaml'
+
+    def _getSecrets(self, job, pbtype):
+        secrets = []
+        build = self.getJobFromHistory(job)
+        for pb in build.parameters[pbtype]:
+            secrets.append(pb['secrets'])
+        return secrets
+
+    def test_secret_no_pass_to_parent(self):
+        # Test that secrets are not available in the parent if
+        # pass-to-parent is not set.
+        file_dict = {'no-pass.txt': ''}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertHistory([
+            dict(name='no-pass', result='SUCCESS', changes='1,1'),
+        ])
+
+        self.assertEqual(
+            self._getSecrets('no-pass', 'playbooks'),
+            [{'parent_secret': {'password': 'password3'}}])
+        self.assertEqual(
+            self._getSecrets('no-pass', 'pre_playbooks'),
+            [{'parent_secret': {'password': 'password3'}}])
+        self.assertEqual(
+            self._getSecrets('no-pass', 'post_playbooks'),
+            [{'parent_secret': {'password': 'password3'}}])
+
+    def test_secret_pass_to_parent(self):
+        # Test that secrets are available in the parent if
+        # pass-to-parent is set.
+        file_dict = {'pass.txt': ''}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertHistory([
+            dict(name='pass', result='SUCCESS', changes='1,1'),
+        ])
+
+        self.assertEqual(
+            self._getSecrets('pass', 'playbooks'),
+            [{'parent_secret': {'password': 'password3'},
+              'secret': {'password': 'password1'}}])
+        self.assertEqual(
+            self._getSecrets('pass', 'pre_playbooks'),
+            [{'parent_secret': {'password': 'password3'},
+              'secret': {'password': 'password1'}}])
+        self.assertEqual(
+            self._getSecrets('pass', 'post_playbooks'),
+            [{'parent_secret': {'password': 'password3'},
+              'secret': {'password': 'password1'}}])
+
+    def test_secret_override(self):
+        # Test that secrets passed to parents don't override existing
+        # secrets.
+        file_dict = {'override.txt': ''}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertHistory([
+            dict(name='override', result='SUCCESS', changes='1,1'),
+        ])
+
+        self.assertEqual(
+            self._getSecrets('override', 'playbooks'),
+            [{'parent_secret': {'password': 'password3'},
+              'secret': {'password': 'password1'}}])
+        self.assertEqual(
+            self._getSecrets('override', 'pre_playbooks'),
+            [{'parent_secret': {'password': 'password3'},
+              'secret': {'password': 'password1'}}])
+        self.assertEqual(
+            self._getSecrets('override', 'post_playbooks'),
+            [{'parent_secret': {'password': 'password3'},
+              'secret': {'password': 'password1'}}])
+
+    def test_secret_ptp_trusted_untrusted(self):
+        # Test if we pass a secret to a parent and one of the parents
+        # is untrusted, the job becomes post-review.
+        file_dict = {'trusted-under-untrusted.txt': ''}
+        A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertHistory([
+            dict(name='trusted-under-untrusted',
+                 result='SUCCESS', changes='1,1'),
+        ])
+
+        self.assertEqual(
+            self._getSecrets('trusted-under-untrusted', 'playbooks'),
+            [{'secret': {'password': 'trustedpassword1'}}])
+        self.assertEqual(
+            self._getSecrets('trusted-under-untrusted', 'pre_playbooks'),
+            [{'secret': {'password': 'trustedpassword1'}}])
+        self.assertEqual(
+            self._getSecrets('trusted-under-untrusted', 'post_playbooks'),
+            [{'secret': {'password': 'trustedpassword1'}}])
+
+        B = self.fake_gerrit.addFakeChange('common-config', 'master', 'B',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='trusted-under-untrusted',
+                 result='SUCCESS', changes='1,1'),
+        ])
+        self.assertIn('does not allow post-review', B.messages[0])
+
+    def test_secret_ptp_trusted_trusted(self):
+        # Test if we pass a secret to a parent and all of the parents
+        # are trusted, the job does not become post-review.
+        file_dict = {'trusted-under-trusted.txt': ''}
+        A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A',
+                                           files=file_dict)
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+        self.assertEqual(A.data['status'], 'MERGED')
+        self.assertHistory([
+            dict(name='trusted-under-trusted',
+                 result='SUCCESS', changes='1,1'),
+        ])
+
+        self.assertEqual(
+            self._getSecrets('trusted-under-trusted', 'playbooks'),
+            [{'secret': {'password': 'trustedpassword1'}}])
+        self.assertEqual(
+            self._getSecrets('trusted-under-trusted', 'pre_playbooks'),
+            [{'secret': {'password': 'trustedpassword1'}}])
+        self.assertEqual(
+            self._getSecrets('trusted-under-trusted', 'post_playbooks'),
+            [{'secret': {'password': 'trustedpassword1'}}])
+
+        B = self.fake_gerrit.addFakeChange('common-config', 'master', 'B',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='trusted-under-trusted',
+                 result='SUCCESS', changes='1,1'),
+            dict(name='trusted-under-trusted',
+                 result='SUCCESS', changes='2,1'),
+        ])
+
+
 class TestSecretLeaks(AnsibleZuulTestCase):
     tenant_config_file = 'config/secret-leaks/main.yaml'
 

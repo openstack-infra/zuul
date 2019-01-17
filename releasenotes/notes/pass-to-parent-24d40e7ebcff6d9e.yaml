@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    The :attr:`job.secrets.pass-to-parent` attribute has been added to
+    allow secrets to be made available to playbooks in parent jobs
+    (for example, to allow for jobs which are designed to use secrets,
+    but leave it to child jobs to actually supply them).  See also the
+    :ref:`secret` documentation.
