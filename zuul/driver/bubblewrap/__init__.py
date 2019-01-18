@@ -193,6 +193,7 @@ class BubblewrapDriver(Driver, WrapperInterface):
             '--ro-bind', '/lib', '/lib',
             '--ro-bind', '/bin', '/bin',
             '--ro-bind', '/sbin', '/sbin',
+            '--ro-bind', '/etc/ld.so.cache', '/etc/ld.so.cache',
             '--ro-bind', '/etc/resolv.conf', '/etc/resolv.conf',
             '--ro-bind', '/etc/hosts', '/etc/hosts',
             '--ro-bind', '/etc/localtime', '/etc/localtime',
