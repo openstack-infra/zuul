@@ -353,6 +353,16 @@ class GerritConnection(BaseConnection):
             self.auth = authclass(
                 self.user, self.password)
 
+    def toDict(self):
+        d = super().toDict()
+        d.update({
+            "baseurl": self.baseurl,
+            "canonical_hostname": self.canonical_hostname,
+            "server": self.server,
+            "port": self.port,
+        })
+        return d
+
     def url(self, path):
         return self.baseurl + '/a/' + path
 

@@ -108,3 +108,11 @@ class BaseConnection(object, metaclass=abc.ABCMeta):
            Registry of all configured connections.
         """
         return False
+
+    def toDict(self):
+        """Return public information about the connection
+        """
+        return {
+            "name": self.connection_name,
+            "driver": self.driver.name,
+        }
