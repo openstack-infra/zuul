@@ -3846,6 +3846,15 @@ class TestSecretPassToParent(ZuulTestCase):
             [{'parent_secret': {'password': 'password3'},
               'secret': {'password': 'password1'}}])
 
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='pass', result='SUCCESS', changes='1,1'),
+        ])
+        self.assertIn('does not allow post-review', B.messages[0])
+
     def test_secret_override(self):
         # Test that secrets passed to parents don't override existing
         # secrets.

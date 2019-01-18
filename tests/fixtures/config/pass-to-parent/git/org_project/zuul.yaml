@@ -58,6 +58,11 @@
     files: override.txt
 
 - project:
+    check:
+      jobs:
+        - no-pass
+        - pass
+        - override
     gate:
       jobs:
         - no-pass
