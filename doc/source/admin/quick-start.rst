@@ -64,6 +64,9 @@ docker-compose in order to start Zuul, Nodepool and Gerrit.
    cd zuul/doc/source/admin/examples
    sudo -E docker-compose up
 
+For reference, the files in that directory are also `browsable on the web
+<http://git.zuul-ci.org/cgit/zuul/tree/doc/source/admin/examples>`_.
+
 All of the services will be started with debug-level logging sent to
 the standard output of the terminal where docker-compose is running.
 You will see a considerable amount of information scroll by, including
