@@ -864,6 +864,9 @@ class PipelineManager(object):
                           (request, request.job.name,))
             build_set.item.setNodeRequestFailure(request.job)
             self._resumeBuilds(request.build_set)
+            tenant = build_set.item.pipeline.tenant
+            tenant.semaphore_handler.release(build_set.item, request.job)
+
         self.log.info("Completed node request %s for job %s of item %s "
                       "with nodes %s" %
                       (request, request.job, build_set.item,
