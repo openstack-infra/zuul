@@ -1,0 +1,65 @@
+- secret:
+    name: secret1
+    data:
+      password: !encrypted/pkcs1-oaep
+        - chZJKMXgc2Ns2QMcg0tygOMvsUGO/uOleF0tYJg/QIYGC7DvZpA6kd352ZcR/9vysrQ10gSFc7k83jV5bEOmazAFP4M9loJBHrONVJOFa0pdH9iPnB7hj1blpul4ciUQlkzjTmXPh03og66I9LST3M2lp1utFJGjVF/ugpabJH7vXDKdT/x8MhftDuDUL4e30bqDSyGbQiHMsqKdNcTry0fYXoepopcUnr+K8BJK6Pi3tXRfb2L/0vS82Q11h4HTFkiWg0bAG8ZDiLjmSrXRL8baEgUdCJsj+c5d58vNnu6Hw+yYbU+2ofiv4EUENALGirnutpkRdfNqG9mTP8u0YyaKf41R1v7NwyIGKC5RRn9t/m5mJp0cYBKVfPsQfczV24R5y5v761hm1VvEDBWD4cWZebE5xEh+AqjmU08aqJGmaBzvHWIDt6rNbM7eiyvT5zHtxUjd8fMRLgZTrnMRfPkdDqhkSIcefpGO6TJfZqb//68vOVOAKqWbOFbXG+/HUCVmNiq/8cKjjnZZPKiOaBOpxqziebJt9jpYUmycNeRrIC1CdWH8ISoB0KTJusOtR4UeIAvUgMVKEzq1zmwO4ikDTKJqVWfhpNnxVO6qTShYsIyjoiz2lAsM4jFi719nZsrqlUhkpretY/is/DLKPetTyG55nmA1f0ooFy07rX4=
+
+- secret:
+    name: secret2
+    data:
+      password: !encrypted/pkcs1-oaep
+        - mzrD4LENlK6n6kHQRJuokjxcOS6zNPQnCfuMtcNikmxAB9mFZ/MwAZonSU5ZwdOifC6maoalthhV88uya9S15HK9EXdZ4d1QCb1QmpwFh9edSei45+LH1UHYPoTS49RTl2HXN0hrIi+9mWMczAFnB3vkKrwSbuhblrd6wQna3gJi3Ny+7XUraqksS8xspy8Ft88U4fNF1a8IGv4ThoVnp7iyHwUeA614gwMn3drSHAKVBdgxREPVB11hQNXhcIw8PXKL8CC1mCLzabFz++MF6QLRlDT5X7b7YWyFESvgWBkw1DDeCS8nmZ7v+fbr8R+gH/J3VTqxY2pFzr+maEPW674Bs/tTfGkjqWi8I5jTPdLoNqJZl8JtlWhGFVGbHd9EdoZ+zmtOvqV2cKgTktgIp+5cUfRDBJHMcq8kfXQabpqkSCTYQQYx7Vhpu9WHclnodHxnDnivBGBhP/BVSij7nAy86nqtInykOrkkJekN9NbELpSHhL4F7xmTgrMonqZd79Btr5wshD9xPZ7I0JvEQi2nOPBkyxhrpHONEdQH6pmQMEOB1lWAm7rKw532AB9fuY4c7BLXBlXuqJQgflIziLkoMExiD5iKBNc/xHTC19mzYalw3OrnCfyWeeAIXeIdMxbLUFVSOOKcWl56LAv9hSelDI2M+IeOYPRWGgCy5Cs=
+
+- secret:
+    name: secret3
+    data:
+      password: !encrypted/pkcs1-oaep
+        - d4lPbjytcB7Gw5/Jy5hmIQ4bnCeOznnRMUTbXoEckFVv5OUf8A0TwaAPdwgLqPNCJtX5AsYhvPRcf4zS9jlUs4PJpxM/zxopCzROO35kGoFdU4/gut0AWw+0PkHk6WElFmFiXxhn/BOsVOXvUJ72YiAcRsZeIXyLwG424nRq2LYn2PZXpcN9jF3Ag1Dj5ACDEPAuevfjwqYA26oqhG1tByQe1g3Sa6pvNuskrL5yO3Au1ACgyDFvfqfw71KVIRNt2n1ta3xCY8MuCUn18JR+SGRERR/14nfnW7QULBKr3ObTrGXGohKTWr1JdENXHXyPIrrsTnxaZcb3rnOUz3B+rSjMMGFw/PjsN5j9UHtAtsQStq+LLYgeV2U/zDCX7eOBNLqgWXBnRvRwwgDFToazCqOJT4I7yI4BdL2cbG20g4xrW9SZ22VPlV76LlcLQxZ61j6YNNmG3XVPHNPA0zt6RG3JWF97NdoJrX5Z3Jzm767ffaQzUfpkAWZKfjI06Mi6lEYmKpxh2saY9KozuOnik+ULgc4QWrWBM3lILvkhyhfWw4oaUuT3dDwaIAozWe6KoGY5hpJLwf4J1dtrXqjndolKJSleYBXLHjaTz6qxrA/DO/r3aQL5I3dBL5uyb3iJtORtziN/s4TgnIDhi9ca4IHWxsejKjLPrJ1kmtL2bUk=
+
+- job:
+    name: parent-job-without-secret
+    pre-run: playbooks/pre.yaml
+    run: playbooks/run.yaml
+    post-run: playbooks/post.yaml
+
+- job:
+    name: parent-job
+    pre-run: playbooks/pre.yaml
+    run: playbooks/run.yaml
+    post-run: playbooks/post.yaml
+    secrets:
+      name: parent_secret
+      secret: secret3
+
+- job:
+    name: no-pass
+    parent: parent-job
+    secrets:
+      name: secret
+      secret: secret1
+    files: no-pass.txt
+
+- job:
+    name: pass
+    parent: parent-job
+    secrets:
+      name: secret
+      secret: secret1
+      pass-to-parent: true
+    files: pass.txt
+
+- job:
+    name: override
+    parent: pass
+    secrets:
+      name: secret
+      secret: secret2
+      pass-to-parent: true
+    files: override.txt
+
+- project:
+    gate:
+      jobs:
+        - no-pass
+        - pass
+        - override

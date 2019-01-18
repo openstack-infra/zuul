@@ -674,16 +674,29 @@ Here is an example of two job definitions:
       Each item in the list may may be supplied either as a string,
       in which case it references the name of a :ref:`secret` definition,
       or as a dict. If an element in this list is given as a dict, it
-      must have the following fields.
+      may have the following fields:
 
       .. attr:: name
+         :required:
 
          The name to use for the Ansible variable into which the secret
          content will be placed.
 
       .. attr:: secret
+         :required:
 
-         The name to use to find the secret's definition in the configuration.
+         The name to use to find the secret's definition in the
+         configuration.
+
+      .. attr:: pass-to-parent
+         :default: false
+
+         A boolean indicating that this secret should be made
+         available to playbooks in parent jobs.  Use caution when
+         setting this value -- parent jobs may be in different
+         projects with different security standards.  Setting this to
+         true makes the secret available to those playbooks and
+         therefore subject to intentional or accidental exposure.
 
       For example:
 
@@ -1311,13 +1324,26 @@ project's branches have different access controls, consider whether
 all branches of that project are equally trusted before using secrets.
 
 To use a secret, a :ref:`job` must specify the secret in
-:attr:`job.secrets`.  Secrets are bound to the playbooks associated
-with the specific job definition where they were declared.  Additional
-pre or post playbooks which appear in child jobs will not have access
-to the secrets, nor will playbooks which override the main playbook
-(if any) of the job which declared the secret.  This protects against
-jobs in other repositories declaring a job with a secret as a parent
-and then exposing that secret.
+:attr:`job.secrets`.  With one exception, secrets are bound to the
+playbooks associated with the specific job definition where they were
+declared.  Additional pre or post playbooks which appear in child jobs
+will not have access to the secrets, nor will playbooks which override
+the main playbook (if any) of the job which declared the secret.  This
+protects against jobs in other repositories declaring a job with a
+secret as a parent and then exposing that secret.
+
+The exception to the above is if the
+:attr:`job.secrets.pass-to-parent` attribute is set to true.  In that
+case, the secret is made available not only to the playbooks in the
+current job definition, but to all playbooks in all parent jobs as
+well.  This allows for jobs which are designed to work with secrets
+while leaving it up to child jobs to actually supply the secret.  Use
+this option with care, as it may allow the authors of parent jobs to
+accidentially or intentionally expose secrets.  If a secret with
+`pass-to-parent` set in a child job has the same name as a secret
+available to a parent job's playbook, the secret in the child job will
+not override the parent, instead it will simply not be available to
+that playbook (but will remain available to others).
 
 It is possible to use secrets for jobs defined in :term:`config
 projects <config-project>` as well as :term:`untrusted projects
@@ -1331,10 +1357,11 @@ where proposed changes are used in job execution, it is dangerous to
 allow those secrets to be used in pipelines which are used to execute
 proposed but unreviewed changes.  By default, pipelines are considered
 `pre-review` and will refuse to run jobs which have playbooks that use
-secrets in the untrusted execution context to protect against someone
-proposing a change which exposes a secret.  To permit this (for
-instance, in a pipeline which only runs after code review), the
-:attr:`pipeline.post-review` attribute may be explicitly set to
+secrets in the untrusted execution context (including those subject to
+:attr:`job.secrets.pass-to-parent` secrets) in order to protect
+against someone proposing a change which exposes a secret.  To permit
+this (for instance, in a pipeline which only runs after code review),
+the :attr:`pipeline.post-review` attribute may be explicitly set to
 ``true``.
 
 In some cases, it may be desirable to prevent a job which is defined

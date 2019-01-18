@@ -534,7 +534,8 @@ class JobParser(object):
                    'override-checkout': str}
 
     secret = {vs.Required('name'): str,
-              vs.Required('secret'): str}
+              vs.Required('secret'): str,
+              'pass-to-parent': bool}
 
     semaphore = {vs.Required('name'): str,
                  'resources-first': bool}
@@ -648,10 +649,15 @@ class JobParser(object):
             if isinstance(secret_config, str):
                 secret_name = secret_config
                 secret_alias = secret_config
+                secret_ptp = False
             else:
                 secret_name = secret_config['secret']
                 secret_alias = secret_config['name']
-            secrets.append((secret_name, secret_alias))
+                secret_ptp = secret_config.get('pass-to-parent', False)
+            secret_use = model.SecretUse(secret_name, secret_alias)
+            secret_use.pass_to_parent = secret_ptp
+            secrets.append(secret_use)
+        job.secrets = tuple(secrets)
 
         # A job in an untrusted repo that uses secrets requires
         # special care.  We must note this, and carry this flag

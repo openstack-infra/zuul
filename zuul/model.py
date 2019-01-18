@@ -24,6 +24,7 @@ from uuid import uuid4
 import urllib.parse
 import textwrap
 import types
+import itertools
 
 from zuul import change_matcher
 from zuul.lib.config import get_default
@@ -822,6 +823,16 @@ class Secret(ConfigObject):
         return r
 
 
+class SecretUse(ConfigObject):
+    """A use of a secret in a Job"""
+
+    def __init__(self, name, alias):
+        super(SecretUse, self).__init__()
+        self.name = name
+        self.alias = alias
+        self.pass_to_parent = False
+
+
 class SourceContext(ConfigObject):
     """A reference to the branch of a project in configuration.
 
@@ -921,13 +932,13 @@ class PlaybookContext(ConfigObject):
     def validateReferences(self, layout):
         # Verify that references to other objects in the layout are
         # valid.
-        for (secret_name, secret_alias) in self.secrets:
-            secret = layout.secrets.get(secret_name)
+        for secret_use in self.secrets:
+            secret = layout.secrets.get(secret_use.name)
             if secret is None:
                 raise Exception(
                     'The secret "{name}" was not found.'.format(
-                        name=secret_name))
-            if secret_alias == 'zuul' or secret_alias == 'nodepool':
+                        name=secret_use.name))
+            if secret_use.alias == 'zuul' or secret_use.alias == 'nodepool':
                 raise Exception('Secrets named "zuul" or "nodepool" '
                                 'are not allowed.')
             if not secret.source_context.isSameProject(self.source_context):
@@ -935,19 +946,25 @@ class PlaybookContext(ConfigObject):
                     "Unable to use secret {name}.  Secrets must be "
                     "defined in the same project in which they "
                     "are used".format(
-                        name=secret_name))
+                        name=secret_use.name))
             # Decrypt a copy of the secret to verify it can be done
             secret.decrypt(self.source_context.project.private_secrets_key)
 
     def freezeSecrets(self, layout):
         secrets = []
-        for (secret_name, secret_alias) in self.secrets:
-            secret = layout.secrets.get(secret_name)
+        for secret_use in self.secrets:
+            secret = layout.secrets.get(secret_use.name)
             decrypted_secret = secret.decrypt(
                 self.source_context.project.private_secrets_key)
-            decrypted_secret.name = secret_alias
+            decrypted_secret.name = secret_use.alias
             secrets.append(decrypted_secret)
         self.decrypted_secrets = tuple(secrets)
+
+    def addSecrets(self, decrypted_secrets):
+        current_names = set([s.name for s in self.decrypted_secrets])
+        new_secrets = [s for s in decrypted_secrets
+                       if s.name not in current_names]
+        self.decrypted_secrets = self.decrypted_secrets + tuple(new_secrets)
 
     def toDict(self):
         # Render to a dict to use in passing json to the executor
@@ -1101,6 +1118,7 @@ class Job(ConfigObject):
             _implied_branch=None,
             _files=(),
             _irrelevant_files=(),
+            secrets=(),  # secrets aren't inheritable
         )
 
         self.inheritable_attributes = {}
@@ -1455,6 +1473,28 @@ class Job(ConfigObject):
 
         # Freeze the nodeset
         self.nodeset = self.getNodeSet(layout)
+
+        # Pass secrets to parents
+        secrets_for_parents = [s for s in other.secrets if s.pass_to_parent]
+        if secrets_for_parents:
+            decrypted_secrets = []
+            for secret_use in secrets_for_parents:
+                secret = layout.secrets.get(secret_use.name)
+                decrypted_secret = secret.decrypt(
+                    other.source_context.project.private_secrets_key)
+            decrypted_secret.name = secret_use.alias
+            decrypted_secrets.append(decrypted_secret)
+            # Add the secrets to any existing playbooks.  If any of
+            # them are in an untrusted project, then we've just given
+            # a secret to a playbook which can run in dynamic config,
+            # therefore it's no longer safe to run this job
+            # pre-review.  The only way pass-to-parent can work with
+            # pre-review pipeline is if all playbooks are in the
+            # trusted context.
+            for pb in itertools.chain(self.pre_run, self.run, self.post_run):
+                pb.addSecrets(decrypted_secrets)
+                if not pb.source_context.trusted:
+                    self.post_review = True
 
         if other._get('run') is not None:
             other_run = self.freezePlaybooks(other.run, layout)
