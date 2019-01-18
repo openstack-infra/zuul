@@ -19,6 +19,10 @@ import os
 import json
 import tempfile
 
+from ansible.plugins.action import ActionBase
+
+from zuul.ansible import paths
+
 
 def merge_dict(dict_a, dict_b):
     """
@@ -64,25 +68,22 @@ def set_value(path, new_data, new_file):
         raise
 
 
-def main():
-    module = AnsibleModule(
-        argument_spec=dict(
-            path=dict(required=False, type='str'),
-            data=dict(required=False, type='dict'),
-            file=dict(required=False, type='str'),
-        )
-    )
+class ActionModule(ActionBase):
+    def run(self, tmp=None, task_vars=None):
+        if task_vars is None:
+            task_vars = dict()
+        results = super(ActionModule, self).run(tmp, task_vars)
+        del tmp  # tmp no longer has any effect
 
-    p = module.params
-    path = p['path']
-    if not path:
-        path = os.path.join(os.environ['ZUUL_JOBDIR'], 'work',
-                            'results.json')
-    set_value(path, p['data'], p['file'])
-    module.exit_json(changed=True, e=os.environ.copy())
+        path = self._task.args.get('path')
+        if not path:
+            path = os.path.join(os.environ['ZUUL_JOBDIR'], 'work',
+                                'results.json')
 
-from ansible.module_utils.basic import *  # noqa
-from ansible.module_utils.basic import AnsibleModule
+        if not paths._is_safe_path(path, allow_trusted=False):
+            return paths._fail_dict(path)
 
-if __name__ == '__main__':
-    main()
+        set_value(
+            path, self._task.args.get('data'), self._task.args.get('file'))
+
+        return results
