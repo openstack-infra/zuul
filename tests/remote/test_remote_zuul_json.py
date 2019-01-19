@@ -146,3 +146,7 @@ class TestZuulJSON25(AnsibleZuulTestCase):
 
 class TestZuulJSON26(TestZuulJSON25):
     ansible_version = '2.6'
+
+
+class TestZuulJSON27(TestZuulJSON25):
+    ansible_version = '2.7'

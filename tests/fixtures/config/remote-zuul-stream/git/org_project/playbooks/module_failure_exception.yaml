@@ -3,4 +3,4 @@
     - name: Start zuul_console daemon
       zuul_console:
     - name: Module failure
-      broken_module:
+      broken_module_exception:

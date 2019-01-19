@@ -156,8 +156,8 @@ class TestZuulStream25(AnsibleZuulTestCase):
                 r'RUN END RESULT_NORMAL: \[untrusted : review.example.com/'
                 r'org/project/playbooks/command.yaml@master]', text)
 
-    def test_module_failure(self):
-        job = self._run_job('module_failure')
+    def test_module_exception(self):
+        job = self._run_job('module_failure_exception')
         with self.jobLog(job):
             build = self.history[-1]
             self.assertEqual(build.result, 'FAILURE')
@@ -165,8 +165,33 @@ class TestZuulStream25(AnsibleZuulTestCase):
             text = self._get_job_output(build)
             self.assertLogLine(r'TASK \[Module failure\]', text)
             self.assertLogLine(
-                r'controller \| MODULE FAILURE: This module is broken', text)
+                r'controller \| MODULE FAILURE:', text)
+            self.assertLogLine(
+                r'controller \| Exception: This module is broken', text)
+
+    def test_module_no_result(self):
+        job = self._run_job('module_failure_no_result')
+        with self.jobLog(job):
+            build = self.history[-1]
+            self.assertEqual(build.result, 'FAILURE')
+
+            text = self._get_job_output(build)
+            self.assertLogLine(r'TASK \[Module failure\]', text)
+
+            if self.ansible_version in ('2.5', '2.6'):
+                regex = r'controller \| MODULE FAILURE: This module is broken'
+            else:
+                # Ansible starting with 2.7 emits a different error message
+                # if a module exits without an exception or the ansible
+                # supplied methods.
+                regex = r'controller \|   "msg": "New-style module did not ' \
+                        r'handle its own exit"'
+            self.assertLogLine(regex, text)
 
 
 class TestZuulStream26(TestZuulStream25):
     ansible_version = '2.6'
+
+
+class TestZuulStream27(TestZuulStream25):
+    ansible_version = '2.7'
