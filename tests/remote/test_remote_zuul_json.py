@@ -142,3 +142,7 @@ class TestZuulJSON25(AnsibleZuulTestCase):
             dateutil.parser.parse(task_end_time)
             dateutil.parser.parse(play_start_time)
             dateutil.parser.parse(play_end_time)
+
+
+class TestZuulJSON26(TestZuulJSON25):
+    ansible_version = '2.6'
