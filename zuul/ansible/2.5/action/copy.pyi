@@ -1,0 +1,1 @@
+../../base/action/copy.pyi

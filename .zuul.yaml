@@ -22,12 +22,16 @@
     post-run:
       - playbooks/zuul-stream/post.yaml
       - playbooks/zuul-stream/post-ara.yaml
-    required-projects:
-      - openstack/ara
     files:
       - zuul/ansible/.*
+      - zuul/lib/ansible*
       - playbooks/zuul-stream/.*
-      - requirements.txt
+
+- job:
+    name: zuul-stream-functional-2.5
+    parent: zuul-stream-functional
+    vars:
+      zuul_ansible_version: 2.5
 
 - job:
     name: zuul-tox-remote
@@ -192,7 +196,7 @@
             success-url: 'npm/reports/bundle.html'
             files:
               - web/.*
-        - zuul-stream-functional
+        - zuul-stream-functional-2.5
         - zuul-tox-remote
         - zuul-quick-start
         - nodepool-zuul-functional:
@@ -223,7 +227,7 @@
             success-url: 'npm/reports/bundle.html'
             files:
               - web/.*
-        - zuul-stream-functional
+        - zuul-stream-functional-2.5
         - zuul-tox-remote
         - zuul-quick-start
         - zuul-upload-image

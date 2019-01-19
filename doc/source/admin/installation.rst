@@ -20,6 +20,9 @@ Zuul has several system-level dependencies as well.  You can find a
 list of operating system packages in ``bindep.txt`` in Zuul's source
 directory.
 
+It is further required to run ``zuul-manage-ansible`` on the zuul-executor
+in order to install all supported ansible versions so zuul can use them.
+
 Zuul Components
 ---------------
 

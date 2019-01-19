@@ -2,7 +2,7 @@
   tasks:
 
     - name: Generate ARA html
-      command: ara generate html ara-output
+      command: /usr/lib/zuul/ansible/{{ zuul_ansible_version }}/bin/ara generate html ara-output
 
     - name: Compress ARA html
       command: gzip --recursive --best ara-output

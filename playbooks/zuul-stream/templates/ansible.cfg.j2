@@ -2,10 +2,9 @@
 inventory = {{ ansible_user_dir }}/inventory.yaml
 gathering = smart
 gather_subset = !all
-lookup_plugins = {{ ansible_user_dir }}/src/git.openstack.org/openstack-infra/zuul/zuul/ansible/lookup
-action_plugins = {{ ansible_user_dir }}/src/git.openstack.org/openstack-infra/zuul/zuul/ansible/actiongeneral:{{ ansible_user_dir }}/src/git.openstack.org/openstack-infra/zuul/zuul/ansible/action
-callback_plugins = {{ ansible_user_dir }}/src/git.openstack.org/openstack-infra/zuul/zuul/ansible/callback:{{ ansible_user_dir }}/src/git.openstack.org/openstack/ara/ara/plugins/callbacks
-module_utils = {{ ansible_user_dir }}/src/git.openstack.org/openstack-infra/zuul/zuul/ansible/module_utils
+lookup_plugins = {{ ansible_user_dir }}/src/git.openstack.org/openstack-infra/zuul/zuul/ansible/{{ zuul_ansible_version }}/lookup
+action_plugins = {{ ansible_user_dir }}/src/git.openstack.org/openstack-infra/zuul/zuul/ansible/{{ zuul_ansible_version }}/actiongeneral:{{ ansible_user_dir }}/src/git.openstack.org/openstack-infra/zuul/zuul/ansible/action
+callback_plugins = {{ ansible_user_dir }}/src/git.openstack.org/openstack-infra/zuul/zuul/ansible/{{ zuul_ansible_version }}/callback:/usr/lib/zuul/ansible/{{ zuul_ansible_version }}/lib/python3.5/site-packages/ara/plugins/callbacks
 stdout_callback = zuul_stream
-library = {{ ansible_user_dir }}/src/git.openstack.org/openstack-infra/zuul/zuul/ansible/library
+library = {{ ansible_user_dir }}/src/git.openstack.org/openstack-infra/zuul/zuul/ansible/{{ zuul_ansible_version }}/library
 retry_files_enabled = False
