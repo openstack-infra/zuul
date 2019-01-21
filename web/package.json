@@ -1,7 +1,7 @@
 {
   "name": "@zuul-ci/dashboard",
   "version": "1.0.0",
-  "description": "Web Dashboard for Zuul",
+  "description": "Zuul Web Dashboard",
   "repository": "https://git.zuul-ci.org/zuul",
   "author": "Zuul Developers",
   "license": "Apache-2.0",
