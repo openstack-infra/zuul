@@ -81,7 +81,9 @@ class RequestHandler(streamer_utils.BaseFingerRequestHandler):
         except BrokenPipeError:   # Client disconnect
             return
         except Exception:
-            self.log.exception('Finger request handling exception:')
+            self.log.exception(
+                'Finger request handling exception (%s:%s):',
+                port_location['server'], port_location['port'])
             msg = 'Internal streaming error'
             self.request.sendall(msg.encode('utf-8'))
             return
