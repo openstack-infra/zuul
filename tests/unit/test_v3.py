@@ -2496,6 +2496,17 @@ class TestBrokenConfig(ZuulTestCase):
             "Zuul encountered a syntax error",
             str(tenant.layout.loading_errors[0].error))
 
+    @simple_layout('layouts/broken-double-gate.yaml')
+    def test_broken_config_on_startup_double_gate(self):
+        # Verify that duplicated pipeline definitions raise config errors
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        self.assertEquals(
+            len(tenant.layout.loading_errors), 1,
+            "An error should have been stored")
+        self.assertIn(
+            "Zuul encountered a syntax error",
+            str(tenant.layout.loading_errors[0].error))
+
     def test_dynamic_ignore(self):
         # Verify dynamic config behaviors inside a tenant broken config
         tenant = self.sched.abide.tenants.get('tenant-one')

@@ -1,0 +1,47 @@
+- pipeline:
+    name: gate
+    manager: dependent
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - Approved: 1
+    success:
+      gerrit:
+        Verified: 2
+        submit: true
+    failure:
+      gerrit:
+        Verified: -2
+    start:
+      gerrit:
+        Verified: 0
+
+- pipeline:
+    name: gate
+    manager: dependent
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - Approved: 1
+    success:
+      gerrit:
+        Verified: 2
+        submit: true
+    failure:
+      gerrit:
+        Verified: -2
+    start:
+      gerrit:
+        Verified: 0
+
+- job:
+    name: base
+    parent: null
+
+- project:
+    name: org/project
+    gate:
+      jobs:
+        - base

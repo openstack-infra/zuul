@@ -240,6 +240,7 @@ class Pipeline(object):
         # reach the currently active layout for that tenant.
         self.tenant = tenant
         self.source_context = None
+        self.start_mark = None
         self.description = None
         self.failure_message = None
         self.merge_failure_message = None
@@ -3372,6 +3373,11 @@ class Layout(object):
                             "may not be added to %s" % (
                                 pipeline.tenant,
                                 self.tenant))
+
+        if pipeline.name in self.pipelines:
+            raise Exception(
+                "Pipeline %s is already defined" % pipeline.name)
+
         self.pipelines[pipeline.name] = pipeline
 
     def addProjectTemplate(self, project_template):

@@ -154,10 +154,7 @@ class TestJob(BaseTestCase):
             job.applyVariant(bad_final, self.layout)
 
     def test_job_inheritance_job_tree(self):
-        pipeline = model.Pipeline('gate', self.tenant)
-        pipeline.source_context = self.context
-        self.layout.addPipeline(pipeline)
-        queue = model.ChangeQueue(pipeline)
+        queue = model.ChangeQueue(self.pipeline)
 
         base = self.pcontext.job_parser.fromYaml({
             '_source_context': self.context,
@@ -229,10 +226,7 @@ class TestJob(BaseTestCase):
         self.assertEqual(job.timeout, 70)
 
     def test_inheritance_keeps_matchers(self):
-        pipeline = model.Pipeline('gate', self.tenant)
-        pipeline.source_context = self.context
-        self.layout.addPipeline(pipeline)
-        queue = model.ChangeQueue(pipeline)
+        queue = model.ChangeQueue(self.pipeline)
 
         base = self.pcontext.job_parser.fromYaml({
             '_source_context': self.context,
