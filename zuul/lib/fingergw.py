@@ -64,6 +64,8 @@ class RequestHandler(streamer_utils.BaseFingerRequestHandler):
         This method is called by the socketserver framework to handle an
         incoming request.
         '''
+        server = None
+        port = None
         try:
             build_uuid = self.getCommand()
             port_location = self.rpc.get_job_log_stream_address(build_uuid)
@@ -73,17 +75,15 @@ class RequestHandler(streamer_utils.BaseFingerRequestHandler):
                 self.request.sendall(msg.encode('utf-8'))
                 return
 
-            self._fingerClient(
-                port_location['server'],
-                port_location['port'],
-                build_uuid,
-            )
+            server = port_location['server']
+            port = port_location['port']
+            self._fingerClient(server, port, build_uuid)
         except BrokenPipeError:   # Client disconnect
             return
         except Exception:
             self.log.exception(
                 'Finger request handling exception (%s:%s):',
-                port_location['server'], port_location['port'])
+                server, port)
             msg = 'Internal streaming error'
             self.request.sendall(msg.encode('utf-8'))
             return
