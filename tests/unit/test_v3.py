@@ -728,6 +728,77 @@ class TestAllowedProjects(ZuulTestCase):
             dict(name='restricted-job', result='SUCCESS', changes='1,1'),
         ], ordered=False)
 
+    def test_allowed_projects_dynamic_config(self):
+        # It is possible to circumvent allowed-projects with a
+        # depends-on.
+        in_repo_conf2 = textwrap.dedent(
+            """
+            - job:
+                name: test-project2b
+                parent: restricted-job
+                allowed-projects:
+                  - org/project1
+            """)
+        in_repo_conf1 = textwrap.dedent(
+            """
+            - project:
+                check:
+                  jobs:
+                    - test-project2b
+            """)
+
+        file_dict = {'zuul.yaml': in_repo_conf2}
+        A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A',
+                                           files=file_dict)
+        file_dict = {'zuul.yaml': in_repo_conf1}
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B',
+                                           files=file_dict)
+        B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            B.subject, A.data['id'])
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='test-project2b', result='SUCCESS', changes='1,1 2,1'),
+        ], ordered=False)
+
+    def test_allowed_projects_dynamic_config_secret(self):
+        # It is not possible to circumvent allowed-projects with a
+        # depends-on if there is a secret involved.
+        in_repo_conf2 = textwrap.dedent(
+            """
+            - secret:
+                name: project2_secret
+                data: {}
+            - job:
+                name: test-project2b
+                parent: restricted-job
+                secrets: project2_secret
+                allowed-projects:
+                  - org/project1
+            """)
+        in_repo_conf1 = textwrap.dedent(
+            """
+            - project:
+                check:
+                  jobs:
+                    - test-project2b
+            """)
+
+        file_dict = {'zuul.yaml': in_repo_conf2}
+        A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A',
+                                           files=file_dict)
+        file_dict = {'zuul.yaml': in_repo_conf1}
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B',
+                                           files=file_dict)
+        B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            B.subject, A.data['id'])
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([])
+        self.assertEqual(B.reported, 1)
+        self.assertIn('Project org/project1 is not allowed '
+                      'to run job test-project2b', B.messages[0])
+
 
 class TestCentralJobs(ZuulTestCase):
     tenant_config_file = 'config/central-jobs/main.yaml'
@@ -3763,21 +3834,6 @@ class TestSecretInheritance(ZuulTestCase):
         ], ordered=False)
 
         self._checkTrustedSecrets()
-
-    def test_untrusted_secret_inheritance_gate(self):
-        A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A')
-        A.addApproval('Code-Review', 2)
-        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
-        self.waitUntilSettled()
-        self.assertHistory([
-            dict(name='untrusted-secrets', result='SUCCESS', changes='1,1'),
-            dict(name='untrusted-secrets-trusted-child',
-                 result='SUCCESS', changes='1,1'),
-            dict(name='untrusted-secrets-untrusted-child',
-                 result='SUCCESS', changes='1,1'),
-        ], ordered=False)
-
-        self._checkUntrustedSecrets()
 
     def test_untrusted_secret_inheritance_check(self):
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')

@@ -562,6 +562,13 @@ Here is an example of two job definitions:
       specified in a project's pipeline, set this attribute to
       ``true``.
 
+      .. warning::
+
+         It is possible to circumvent the use of `final` in an
+         :term:`untrusted-project` by creating a change which
+         `Depends-On` a change which alters `final`.  This limitation
+         does not apply to jobs in a :term:`config-project`.
+
    .. attr:: protected
       :default: false
 
@@ -569,11 +576,27 @@ Here is an example of two job definitions:
       from this job. Once this is set to ``true`` it cannot be reset to
       ``false``.
 
+      .. warning::
+
+         It is possible to circumvent the use of `protected` in an
+         :term:`untrusted-project` by creating a change which
+         `Depends-On` a change which alters `protected`.  This
+         limitation does not apply to jobs in a
+         :term:`config-project`.
+
    .. attr:: abstract
       :default: false
 
       To indicate a job is not intended to be run directly, but
       instead must be inherited from, set this attribute to ``true``.
+
+      .. warning::
+
+         It is possible to circumvent the use of `abstract` in an
+         :term:`untrusted-project` by creating a change which
+         `Depends-On` a change which alters `abstract`.  This
+         limitation does not apply to jobs in a
+         :term:`config-project`.
 
    .. attr:: success-message
       :default: SUCCESS
@@ -1009,6 +1032,19 @@ Here is an example of two job definitions:
       it should be able to run this job, then it must be explicitly
       listed.  By default, all projects may use the job.
 
+      If a :attr:`job.secrets` is used in a job definition in an
+      :term:`untrusted-project`, `allowed-projects` is automatically
+      set to the current project only, and can not be overridden.
+
+      .. warning::
+
+         It is possible to circumvent the use of `allowed-projects` in
+         an :term:`untrusted-project` by creating a change which
+         `Depends-On` a change which alters `allowed-projects`.  This
+         limitation does not apply to jobs in a
+         :term:`config-project`, or jobs in an `untrusted-project`
+         which use a secret.
+
    .. attr:: post-review
       :default: false
 
@@ -1021,6 +1057,15 @@ Here is an example of two job definitions:
       is set to ``true`` anywhere in the inheritance hierarchy for a job,
       it will remain set for all child jobs and variants (it can not be
       set to ``false``).
+
+      .. warning::
+
+         It is possible to circumvent the use of `post-review` in an
+         :term:`untrusted-project` by creating a change which
+         `Depends-On` a change which alters `post-review`.  This
+         limitation does not apply to jobs in a
+         :term:`config-project`, or jobs in an `untrusted-project`
+         which use a secret.
 
    .. attr:: branches
 
@@ -1372,7 +1417,9 @@ indicate the job should only run in post-review pipelines.
 
 If a job with secrets is unsafe to be used by other projects, the
 :attr:`job.allowed-projects` attribute can be used to restrict the
-projects which can invoke that job.
+projects which can invoke that job.  If a job with secrets is defined
+in an `untrusted-project`, `allowed-projects` is automatically set to
+that project only, and can not be overridden.
 
 Secrets, like most configuration items, are unique within a tenant,
 though a secret may be defined on multiple branches of the same

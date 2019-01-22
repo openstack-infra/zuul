@@ -62,11 +62,6 @@
         - trusted-secrets
         - trusted-secrets-trusted-child
         - trusted-secrets-untrusted-child
-    gate:
-      jobs:
-        - untrusted-secrets
-        - untrusted-secrets-trusted-child
-        - untrusted-secrets-untrusted-child
 
 - secret:
     name: trusted-secret
