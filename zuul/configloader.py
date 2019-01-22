@@ -662,9 +662,14 @@ class JobParser(object):
         # A job in an untrusted repo that uses secrets requires
         # special care.  We must note this, and carry this flag
         # through inheritance to ensure that we don't run this job in
-        # an unsafe check pipeline.
+        # an unsafe check pipeline.  We must also set allowed-projects
+        # to only the current project, as otherwise, other projects
+        # might be able to cause something to happen with the secret
+        # by using a depends-on header.
         if secrets and not conf['_source_context'].trusted:
             job.post_review = True
+            job.allowed_projects = frozenset((
+                conf['_source_context'].project.name,))
 
         if (conf.get('timeout') and
             self.pcontext.tenant.max_job_timeout != -1 and
@@ -798,7 +803,8 @@ class JobParser(object):
             job.group_variables = group_variables
 
         allowed_projects = conf.get('allowed-projects', None)
-        if allowed_projects:
+        # See note above at "post-review".
+        if allowed_projects and not job.allowed_projects:
             allowed = []
             for p in as_list(allowed_projects):
                 (trusted, project) = self.pcontext.tenant.getProject(p)

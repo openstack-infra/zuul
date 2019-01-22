@@ -1,0 +1,23 @@
+---
+security:
+  - |
+    Jobs with secrets in untrusted projects now automatically set
+    `allowed-projects`.
+
+    It is possible to circumvent the use of `allowed-projects` in
+    untrusted projects by creating a change which `Depends-On` a
+    change which alters a project definition.  This behavior may be
+    unexpected, so documentation has been updated with warnings to
+    avoid relying on it in sensitive cases.
+
+    It may have been possible to expose a secret, or use resources
+    protected by a secret, if a job using a secret was defined in an
+    untrusted project on a system with an independent pre-merge
+    post-review pipeline -- that is, a pipeline with `post-review` set
+    to true, `manager` set to `independent`, and which operated on
+    changes before they merged.
+
+    To prevent disclosure or use in this situation, `allowed-projects`
+    is now automatically set to the current project when a secret is
+    used in a job defined in an untrusted project, and it can not be
+    overridden.
