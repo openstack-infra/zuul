@@ -575,6 +575,12 @@ The following sections of ``zuul.conf`` are used by the executor:
       add any site-wide variables.  See the :ref:`User's Guide
       <user_jobs_sitewide_variables>` for more information.
 
+   .. attr:: ansible_setup_timeout
+      :default: 60
+
+      Timeout of the ansible setup playbook in seconds that runs before
+      the first playbook of the job.
+
    .. attr:: disk_limit_per_job
       :default: 250
 
