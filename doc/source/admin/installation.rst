@@ -84,11 +84,14 @@ ensure you have Nodepool installed and any images you require built.
 Zuul only makes one requirement of these nodes: that it be able to log
 in given a username and ssh private key.
 
+ZooKeeper
+~~~~~~~~~
+
 .. TODO: SpamapS any zookeeper config recommendations?
 
-Nodepool uses Zookeeper to communicate internally among its
+Nodepool uses ZooKeeper to communicate internally among its
 components, and also to communicate with Zuul.  You can run a simple
-single-node Zookeeper instance, or a multi-node cluster.  Ensure that
+single-node ZooKeeper instance, or a multi-node cluster.  Ensure that
 the host running the Zuul scheduler has access to the cluster.
 
 Ansible
