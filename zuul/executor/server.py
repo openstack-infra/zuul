@@ -1537,7 +1537,7 @@ class AnsibleJob(object):
         link = os.path.join(root, name)
         link = os.path.realpath(link)
         if not link.startswith(os.path.realpath(root)):
-            raise ExecutorError("Invalid role name %s", name)
+            raise ExecutorError("Invalid role name %s" % name)
         os.symlink(path, link)
 
         try:
