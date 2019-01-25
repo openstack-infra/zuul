@@ -16,6 +16,8 @@ the following requirements:
 * Must be reachable by Zuul executors and have SSH access enabled.
 * Must have a user that Zuul can use for SSH.
 * Must have Python 2 installed for Ansible.
+* Must be reachable by Zuul executors over TCP port 19885 (console log
+  streaming).
 
 When setting up your nodepool.yaml file, you will need the host keys
 for each node for the ``host-key`` value. This can be obtained with
