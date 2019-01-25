@@ -1963,8 +1963,8 @@ class AnsibleJob(object):
             cmd.extend(['-e@%s' % self.executor_variables_file])
 
         result, code = self.runAnsible(
-            cmd=cmd, timeout=60, playbook=playbook,
-            wrapped=False)
+            cmd=cmd, timeout=self.executor_server.setup_timeout,
+            playbook=playbook, wrapped=False)
         self.log.debug("Ansible complete, result %s code %s" % (
             self.RESULT_MAP[result], code))
         if self.executor_server.statsd:
@@ -2143,6 +2143,8 @@ class ExecutorServer(object):
                                             'default_username', 'zuul')
         self.disk_limit_per_job = int(get_default(self.config, 'executor',
                                                   'disk_limit_per_job', 250))
+        self.setup_timeout = int(get_default(self.config, 'executor',
+                                             'ansible_setup_timeout', 60))
         self.zone = get_default(self.config, 'executor', 'zone')
         self.merge_email = get_default(self.config, 'merger', 'git_user_email')
         self.merge_name = get_default(self.config, 'merger', 'git_user_name')
