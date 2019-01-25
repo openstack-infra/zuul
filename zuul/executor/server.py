@@ -1854,7 +1854,7 @@ class AnsibleJob(object):
         ret = None
         if timeout:
             watchdog = Watchdog(timeout, self._ansibleTimeout,
-                                ("Ansible timeout exceeded",))
+                                ("Ansible timeout exceeded: %s" % timeout,))
             watchdog.start()
         try:
             # Use manual idx instead of enumerate so that RESULT lines
