@@ -1141,7 +1141,10 @@ class Job(ConfigObject):
         d['irrelevant_files'] = self._irrelevant_files
         d['variant_description'] = self.variant_description
         d['implied_branch'] = self._implied_branch
-        d['source_context'] = self.source_context.toDict()
+        if self.source_context:
+            d['source_context'] = self.source_context.toDict()
+        else:
+            d['source_context'] = None
         d['description'] = self.description
         d['required_projects'] = []
         for project in self.required_projects.values():
