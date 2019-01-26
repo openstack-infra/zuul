@@ -1018,8 +1018,9 @@ class GithubConnection(BaseConnection):
                                        'branches')
 
         headers = {'Accept': 'application/vnd.github.loki-preview+json'}
-        protected = 1 if exclude_unprotected else 0
-        params = {'per_page': 100, 'protected': protected}
+        params = {'per_page': 100}
+        if exclude_unprotected:
+            params['protected'] = 1
 
         branches = []
         while url:
