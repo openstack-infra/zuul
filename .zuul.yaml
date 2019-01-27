@@ -123,9 +123,6 @@
     vars: &zuul_image_vars
       docker_images:
         - context: .
-          repository: zuul/zuul-base
-          target: zuul-base
-        - context: .
           repository: zuul/zuul
           target: zuul
         - context: .

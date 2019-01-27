@@ -19,7 +19,7 @@ COPY . /tmp/src
 RUN /tmp/src/tools/install-js-tools.sh
 RUN assemble
 
-FROM opendevorg/python-base as zuul-base
+FROM opendevorg/python-base as zuul
 
 COPY --from=builder /output/ /output
 RUN echo "deb http://ftp.debian.org/debian stretch-backports main" >> /etc/apt/sources.list \
@@ -30,24 +30,22 @@ RUN echo "deb http://ftp.debian.org/debian stretch-backports main" >> /etc/apt/s
 RUN /output/install-from-bindep \
   && pip install --cache-dir=/output/wheels -r /output/zuul_base/requirements.txt \
   && rm -rf /output
-
-FROM zuul-base as zuul
 CMD ["/usr/local/bin/zuul"]
 
-FROM zuul-base as zuul-executor
+FROM zuul as zuul-executor
 COPY --from=builder /output/ /output
 RUN pip install --cache-dir=/output/wheels -r /output/zuul_executor/requirements.txt \
   && rm -rf /output
 CMD ["/usr/local/bin/zuul-executor"]
 
-FROM zuul-base as zuul-fingergw
+FROM zuul as zuul-fingergw
 CMD ["/usr/local/bin/zuul-fingergw"]
 
-FROM zuul-base as zuul-merger
+FROM zuul as zuul-merger
 CMD ["/usr/local/bin/zuul-merger"]
 
-FROM zuul-base as zuul-scheduler
+FROM zuul as zuul-scheduler
 CMD ["/usr/local/bin/zuul-scheduler"]
 
-FROM zuul-base as zuul-web
+FROM zuul as zuul-web
 CMD ["/usr/local/bin/zuul-web"]
