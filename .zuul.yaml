@@ -65,10 +65,108 @@
     post-run: playbooks/quick-start/post.yaml
     roles:
       - zuul: openstack-infra/zuul-jobs
+    vars:
+      docker_images:
+        - context: .
+          repository: zuul/zuul
+          target: zuul
+        - context: .
+          repository: zuul/zuul-executor
+          target: zuul-executor
+        - context: .
+          repository: zuul/zuul-fingergw
+          target: zuul-fingergw
+        - context: .
+          repository: zuul/zuul-merger
+          target: zuul-merger
+        - context: .
+          repository: zuul/zuul-scheduler
+          target: zuul-scheduler
+        - context: .
+          repository: zuul/zuul-web
+          target: zuul-web
+        - context: ../nodepool
+          repository: zuul/nodepool
+          target: nodepool
+        - context: ../nodepool
+          repository: zuul/nodepool-launcher
+          target: nodepool-launcher
+        - context: ../nodepool
+          repository: zuul/nodepool-builder
+          target: nodepool-builder
     required-projects:
-      - openstack/pbrx
       - openstack-infra/nodepool
       - openstack-infra/zuul
+
+# Image building jobs
+- secret:
+    name: zuul-dockerhub
+    data:
+      username: zuulzuul
+      password: !encrypted/pkcs1-oaep
+        - DFlbrDM5eUMptMGIVMXV1g455xOJLi92UYF08Z2/JlIGu3t6v052o9FKlVyj1ZmpXs5+2
+          JTa5jHkLTvTsYs9fCaNcQc2nmViCyWNlbOMzjB17uiZOaYFNs1sMqZcUZbGEz7Y8ds6Qq
+          NBXI10jWFPTah4QxUuBvUbT3vmjnUToCzexl5ZGhKgijcnROWfUsnlCdugpgoNIcPsUki
+          zty5FotDihnrC8n8vIomVK6EClY38ty97pLrADzFDd+Cos/OUlvi2xooUhzx8Bn020rJA
+          lqEU5v8LGXp5QkHx0MSDx6JY6KppJ/4p/yM+4By6l+A20zdcimxmgiNc9rMWPwDj7xsao
+          m7NAZWmWqOO0Xkhgt6WOfugwgt9X46sgs2+yDEfbnI5ok8uRbAB/4FWj/KdpyXwhcf+O2
+          wEfhxLwDbAoGONQPjb4YcZmCXtmR7Qe5t+n2jyczWXvrbaBDUQP5a+YtVNN/xhmQ7D740
+          POlxv7bLxJAixzqaQ3d8Rz9ZEv6zzRuhWph32UQtZ1JxSNww+EvmXm2eEi2Q2z6pT1Cx/
+          j2OrFyA2GL/UJOVb15VHKF6bgHPHWJtpjPFhqdcvBhVute4BWB+KPcWH+y+apHN1enK3H
+          tNJO9iqm34nKwSuj5ExmFw50LtwR5/9FyRuRPq/vBL+8y82v8FDmeYsBeobn5M=
+
+- job:
+    name: zuul-build-image
+    parent: build-docker-image
+    description: Build Docker images.
+    allowed-projects: openstack-infra/zuul
+    vars: &zuul_image_vars
+      docker_images:
+        - context: .
+          repository: zuul/zuul-base
+          target: zuul-base
+        - context: .
+          repository: zuul/zuul
+          target: zuul
+        - context: .
+          repository: zuul/zuul-executor
+          target: zuul-executor
+        - context: .
+          repository: zuul/zuul-fingergw
+          target: zuul-fingergw
+        - context: .
+          repository: zuul/zuul-merger
+          target: zuul-merger
+        - context: .
+          repository: zuul/zuul-scheduler
+          target: zuul-scheduler
+        - context: .
+          repository: zuul/zuul-web
+          target: zuul-web
+
+- job:
+    name: zuul-upload-image
+    parent: upload-docker-image
+    description: Build Docker images and upload to Docker Hub.
+    allowed-projects: openstack-infra/zuul
+    secrets: 
+      name: docker_credentials
+      secret: zuul-dockerhub
+      pass-to-parent: true
+    vars: *zuul_image_vars
+
+- job:
+    name: zuul-promote-image
+    parent: promote-docker-image
+    description: Promote previously uploaded Docker images.
+    allowed-projects: openstack-infra/zuul
+    secrets:
+      name: docker_credentials
+      secret: zuul-dockerhub
+      pass-to-parent: true
+    nodeset:
+      nodes: []
+    vars: *zuul_image_vars
 
 - project:
     check:
@@ -100,11 +198,9 @@
         - zuul-stream-functional
         - zuul-tox-remote
         - zuul-quick-start
-        - pbrx-build-container-images:
-            vars:
-              pbrx_prefix: zuul
         - nodepool-zuul-functional:
             voting: false
+        - zuul-build-image
     gate:
       jobs:
         - tox-docs
@@ -133,9 +229,7 @@
         - zuul-stream-functional
         - zuul-tox-remote
         - zuul-quick-start
-        - pbrx-build-container-images:
-            vars:
-              pbrx_prefix: zuul
+        - zuul-upload-image
     post:
       jobs:
         - publish-zuul-docs
@@ -145,10 +239,9 @@
               node_version: 8
               zuul_work_dir: "{{ zuul.project.src_dir }}/web"
               create_tarball_directory: build
-        - openstackzuul-pbrx-push-container-images:
-            vars:
-              pbrx_prefix: zuul
-
+    promote:
+      jobs:
+        - zuul-promote-image
     release:
       jobs:
         - release-zuul-python
