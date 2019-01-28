@@ -82,7 +82,9 @@ class MergeClient(object):
         ssl_ca = get_default(self.config, 'gearman', 'ssl_ca')
         self.log.debug("Connecting to gearman at %s:%s" % (server, port))
         self.gearman = MergeGearmanClient(self)
-        self.gearman.addServer(server, port, ssl_key, ssl_cert, ssl_ca)
+        self.gearman.addServer(server, port, ssl_key, ssl_cert, ssl_ca,
+                               keepalive=True, tcp_keepidle=60,
+                               tcp_keepintvl=30, tcp_keepcnt=5)
         self.log.debug("Waiting for gearman")
         self.gearman.waitForServer()
         self.jobs = set()

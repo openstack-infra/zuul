@@ -48,7 +48,9 @@ class RPCListener(object):
         ssl_cert = get_default(self.config, 'gearman', 'ssl_cert')
         ssl_ca = get_default(self.config, 'gearman', 'ssl_ca')
         self.worker = gear.TextWorker('Zuul RPC Listener')
-        self.worker.addServer(server, port, ssl_key, ssl_cert, ssl_ca)
+        self.worker.addServer(server, port, ssl_key, ssl_cert, ssl_ca,
+                              keepalive=True, tcp_keepidle=60,
+                              tcp_keepintvl=30, tcp_keepcnt=5)
         self.log.debug("Waiting for server")
         self.worker.waitForServer()
         self.log.debug("Registering")
