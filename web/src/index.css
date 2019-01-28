@@ -130,3 +130,8 @@ p.zuulstreamline {
     margin: 0px 0px;
     line-height: 1.4;
 }
+
+/* Job Tree View group gap */
+div.tree-view-container ul.list-group {
+  margin: 0px 0px;
+}

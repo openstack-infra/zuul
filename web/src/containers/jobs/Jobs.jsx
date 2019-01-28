@@ -16,7 +16,7 @@ import * as React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Table } from 'patternfly-react'
+import { TreeView } from 'patternfly-react'
 
 
 class JobsList extends React.Component {
@@ -28,53 +28,78 @@ class JobsList extends React.Component {
   render () {
     const { jobs } = this.props
 
-    const headerFormat = value => <Table.Heading>{value}</Table.Heading>
-    const cellFormat = (value) => (
-      <Table.Cell>{value}</Table.Cell>)
-    const cellJobFormat = (value) => (
-      <Table.Cell>
-        <Link to={this.props.tenant.linkPrefix + '/job/' + value}>
-          {value}
-        </Link>
-      </Table.Cell>)
-    const cellBuildFormat = (value) => (
-      <Table.Cell>
-        <Link to={this.props.tenant.linkPrefix + '/builds?job_name=' + value}>
-          builds
-        </Link>
-      </Table.Cell>)
-    const columns = []
-    const myColumns = ['name', 'description', 'Last builds']
-    myColumns.forEach(column => {
-      let formatter = cellFormat
-      let prop = column
-      if (column === 'name') {
-        formatter = cellJobFormat
+    const linkPrefix = this.props.tenant.linkPrefix + '/job/'
+
+    // job index map
+    const jobMap = {}
+    // nodes contains the tree data
+    const nodes = []
+    // visited contains individual node
+    const visited = {}
+    // getNode returns the tree node and visit each parents
+    const getNode = function (job) {
+      if (!visited[job.name]) {
+        // Collect parents
+        let parents = []
+        if (job.variants) {
+          for (let jobVariant of job.variants) {
+            if (jobVariant.parent &&
+                parents.indexOf(jobVariant.parent) === -1) {
+              parents.push(jobVariant.parent)
+            }
+          }
+        }
+        visited[job.name] = {
+          text: (
+            <React.Fragment>
+              <Link to={linkPrefix + job.name}>{job.name}</Link>
+              {job.description && (
+                <span style={{marginLeft: '10px'}}>{job.description}</span>
+              )}
+            </React.Fragment>),
+          icon: 'fa fa-cube',
+          state: {
+            expanded: true,
+          },
+          parents: parents,
+        }
+        // Visit parent recursively
+        for (let parent of parents) {
+          getNode(jobMap[parent])
+        }
       }
-      if (column === 'Last builds') {
-        prop = 'name'
-        formatter = cellBuildFormat
+      return visited[job.name]
+    }
+    // index job list
+    for (let job of jobs) {
+      jobMap[job.name] = job
+    }
+    // process job list
+    for (let job of jobs) {
+      const jobNode = getNode(job)
+      let attached = false
+      // add tree node to each parent and expand the parent
+      for (let parent of jobNode.parents) {
+        const parentNode = visited[parent]
+        if (!parentNode) {
+          console.log('Job ', job.name, ' parent ', parent, ' does not exist!')
+          continue
+        }
+        if (!parentNode.nodes) {
+          parentNode.nodes = []
+        }
+        parentNode.nodes.push(jobNode)
+        attached = true
       }
-      columns.push({
-        header: {label: column,
-          formatters: [headerFormat]},
-        property: prop,
-        cell: {formatters: [formatter]}
-      })
-    })
+      // else add node at the tree root
+      if (!attached || jobNode.parents.length === 0) {
+        nodes.push(jobNode)
+      }
+    }
     return (
-      <Table.PfProvider
-        striped
-        bordered
-        hover
-        columns={columns}
-        >
-        <Table.Header/>
-        <Table.Body
-          rows={jobs}
-          rowKey="name"
-          />
-      </Table.PfProvider>
+      <div className='tree-view-container'>
+        <TreeView nodes={nodes} />
+      </div>
     )
   }
 }
