@@ -912,7 +912,12 @@ class PipelineManager(object):
         layout = (item.layout or self.pipeline.tenant.layout)
 
         project_in_pipeline = True
-        if not layout.getProjectPipelineConfig(item):
+        ppc = None
+        try:
+            ppc = layout.getProjectPipelineConfig(item)
+        except Exception:
+            self.log.exception("Invalid config for change %s" % item.change)
+        if not ppc:
             self.log.debug("Project %s not in pipeline %s for change %s" % (
                 item.change.project, self.pipeline, item.change))
             project_in_pipeline = False

@@ -1,0 +1,7 @@
+- project:
+    check:
+      jobs:
+        - noop
+    post:
+      jobs:
+        - post-job
