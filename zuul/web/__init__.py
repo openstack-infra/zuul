@@ -440,12 +440,17 @@ class ZuulWebAPI(object):
             'newrev': buildset.newrev,
             'ref_url': buildset.ref_url,
             'artifacts': [],
+            'provides': [],
         }
 
         for artifact in build.artifacts:
             ret['artifacts'].append({
                 'name': artifact.name,
                 'url': artifact.url,
+            })
+        for provides in build.provides:
+            ret['provides'].append({
+                'name': artifact.name,
             })
         return ret
 

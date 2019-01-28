@@ -165,6 +165,8 @@ class ExecutorClient(object):
                            timeout=job.timeout,
                            jobtags=sorted(job.tags),
                            _inheritance_path=list(job.inheritance_path))
+        if job.artifact_data:
+            zuul_params['artifacts'] = job.artifact_data
         if job.override_checkout:
             zuul_params['override_checkout'] = job.override_checkout
         if hasattr(item.change, 'branch'):

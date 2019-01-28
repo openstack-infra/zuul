@@ -1,0 +1,26 @@
+- job:
+    name: image-builder
+    provides:
+      - image
+    run: playbooks/image-builder.yaml
+
+- job:
+    name: image-user
+    requires:
+      - image
+    run: playbooks/image-user.yaml
+
+- project:
+    check:
+      jobs:
+        - image-builder
+        - image-user:
+            dependencies:
+              - image-builder
+    gate:
+      queue: integrated
+      jobs:
+        - image-builder
+        - image-user:
+            dependencies:
+              - image-builder

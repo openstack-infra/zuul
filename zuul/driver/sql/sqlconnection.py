@@ -28,6 +28,7 @@ from zuul.connection import BaseConnection
 BUILDSET_TABLE = 'zuul_buildset'
 BUILD_TABLE = 'zuul_build'
 ARTIFACT_TABLE = 'zuul_artifact'
+PROVIDES_TABLE = 'zuul_provides'
 
 
 class DatabaseSession(object):
@@ -56,17 +57,21 @@ class DatabaseSession(object):
     def getBuilds(self, tenant=None, project=None, pipeline=None,
                   change=None, branch=None, patchset=None, ref=None,
                   newrev=None, uuid=None, job_name=None, voting=None,
-                  node_name=None, result=None, limit=50, offset=0):
+                  node_name=None, result=None, provides=None,
+                  limit=50, offset=0):
 
         build_table = self.connection.zuul_build_table
         buildset_table = self.connection.zuul_buildset_table
+        provides_table = self.connection.zuul_provides_table
 
         # contains_eager allows us to perform eager loading on the
         # buildset *and* use that table in filters (unlike
         # joinedload).
         q = self.session().query(self.connection.buildModel).\
             join(self.connection.buildSetModel).\
+            outerjoin(self.connection.providesModel).\
             options(orm.contains_eager(self.connection.buildModel.buildset),
+                    orm.selectinload(self.connection.buildModel.provides),
                     orm.selectinload(self.connection.buildModel.artifacts)).\
             with_hint(build_table, 'USE INDEX (PRIMARY)', 'mysql')
 
@@ -83,6 +88,7 @@ class DatabaseSession(object):
         q = self.listFilter(q, build_table.c.voting, voting)
         q = self.listFilter(q, build_table.c.node_name, node_name)
         q = self.listFilter(q, build_table.c.result, result)
+        q = self.listFilter(q, provides_table.c.name, provides)
 
         q = q.order_by(build_table.c.id.desc()).\
             limit(limit).\
@@ -224,6 +230,15 @@ class SQLConnection(BaseConnection):
                 session.flush()
                 return a
 
+            def createProvides(self, *args, **kw):
+                session = orm.session.Session.object_session(self)
+                p = ProvidesModel(*args, **kw)
+                p.build_id = self.id
+                self.provides.append(p)
+                session.add(p)
+                session.flush()
+                return p
+
         class ArtifactModel(Base):
             __tablename__ = self.table_prefix + ARTIFACT_TABLE
             id = sa.Column(sa.Integer, primary_key=True)
@@ -232,6 +247,17 @@ class SQLConnection(BaseConnection):
             name = sa.Column(sa.String(255))
             url = sa.Column(sa.TEXT())
             build = orm.relationship(BuildModel, backref="artifacts")
+
+        class ProvidesModel(Base):
+            __tablename__ = self.table_prefix + PROVIDES_TABLE
+            id = sa.Column(sa.Integer, primary_key=True)
+            build_id = sa.Column(sa.Integer, sa.ForeignKey(
+                self.table_prefix + BUILD_TABLE + ".id"))
+            name = sa.Column(sa.String(255))
+            build = orm.relationship(BuildModel, backref="provides")
+
+        self.providesModel = ProvidesModel
+        self.zuul_provides_table = self.providesModel.__table__
 
         self.artifactModel = ArtifactModel
         self.zuul_artifact_table = self.artifactModel.__table__

@@ -686,6 +686,57 @@ Here is an example of two job definitions:
       tags from all the jobs and variants used in constructing the
       frozen job, with no duplication.
 
+   .. attr:: provides
+
+      A list of free-form strings which identifies resources provided
+      by this job which may be used by other jobs for other changes
+      using the :attr:`job.requires` attribute.
+
+   .. attr:: requires
+
+      A list of free-form strings which identify resources which may
+      be provided by other jobs for other changes (via the
+      :attr:`job.provides` attribute) that are used by this job.
+
+      When Zuul encounters a job with a `requires` attribute, it
+      searches for those values in the `provides` attributes of any
+      jobs associated with any queue items ahead of the current
+      change.  In this way, if a change uses either git dependencies
+      or a `Depends-On` header to indicate a dependency on another
+      change, Zuul will be able to determine that the parent change
+      affects the run-time environment of the child change.  If such a
+      relationship is found, the job with `requires` will not start
+      until all of the jobs with matching `provides` have completed or
+      paused.  Additionally, the :ref:`artifacts <return_artifacts>`
+      returned by the `provides` jobs will be made available to the
+      `requires` job.
+
+      For example, a job which produces a builder container image in
+      one project that is then consumed by a container image build job
+      in another project might look like this:
+
+      .. code-block:: yaml
+
+         - job:
+             name: build-builder-image
+             provides: images
+
+         - job:
+             name: build-final-image
+             requires: images
+
+         - project:
+             name: builder-project
+             check:
+               jobs:
+                 - build-builder-image
+
+         - project:
+             name: final-project
+             check:
+               jobs:
+                 - build-final-image
+
    .. attr:: secrets
 
       A list of secrets which may be used by the job.  A

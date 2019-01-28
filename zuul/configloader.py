@@ -545,6 +545,8 @@ class JobParser(object):
                       'final': bool,
                       'abstract': bool,
                       'protected': bool,
+                      'requires': to_list(str),
+                      'provides': to_list(str),
                       'failure-message': str,
                       'success-message': str,
                       'failure-url': str,
@@ -769,11 +771,10 @@ class JobParser(object):
                     semaphore.get('name'),
                     semaphore.get('resources-first', False))
 
-        tags = conf.get('tags')
-        if tags:
-            job.tags = set(tags)
-
-        job.dependencies = frozenset(as_list(conf.get('dependencies')))
+        for k in ('tags', 'requires', 'provides', 'dependencies'):
+            v = frozenset(as_list(conf.get(k)))
+            if v:
+                setattr(job, k, v)
 
         variables = conf.get('vars', None)
         if variables:

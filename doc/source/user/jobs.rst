@@ -228,6 +228,41 @@ of item.
    All items provide the following information as Ansible variables
    under the ``zuul`` key:
 
+   .. var:: artifacts
+      :type: list
+
+      If the job has a :attr:`job.requires` attribute, and Zuul has
+      found changes ahead of this change in the pipeline with matching
+      :attr:`job.provides` attributes, then information about any
+      :ref:`artifacts returned <return_artifacts>` from those jobs
+      will appear here.
+
+      This value is a list of dictionaries with the following format:
+
+      .. var:: project
+
+         The name of the project which supplied this artifact.
+
+      .. var:: change
+
+         The change number which supplied this artifact.
+
+      .. var:: patchset
+
+         The patchset of the change.
+
+      .. var:: job
+
+         The name of the job which produced the artifact.
+
+      .. var:: name
+
+         The name of the artifact (as supplied to :ref:`return_artifacts`).
+
+      .. var:: url
+
+         The URL of the artifact (as supplied to :ref:`return_artifacts`).
+
    .. var:: build
 
       The UUID of the build.  A build is a single execution of a job.
