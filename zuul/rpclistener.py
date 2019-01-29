@@ -367,10 +367,13 @@ class RPCListener(object):
             job.sendWorkComplete(json.dumps(None))
         for job_name in sorted(tenant.layout.jobs):
             desc = None
+            tags = set()
             variants = []
             for variant in tenant.layout.jobs[job_name]:
                 if not desc and variant.description:
                     desc = variant.description.split('\n')[0]
+                if variant.tags:
+                    tags.update(list(variant.tags))
                 job_variant = {}
                 if not variant.isBase():
                     if variant.parent:
@@ -390,6 +393,8 @@ class RPCListener(object):
                 job_output["description"] = desc
             if variants:
                 job_output["variants"] = variants
+            if tags:
+                job_output["tags"] = list(tags)
             output.append(job_output)
         job.sendWorkComplete(json.dumps(output))
 
