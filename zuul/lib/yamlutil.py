@@ -25,6 +25,31 @@ except ImportError:
     Mark = yaml.Mark
 
 
+class UnsafeTag(yaml.YAMLObject):
+    yaml_tag = u'!unsafe'
+
+    def __init__(self, unsafe_var):
+        self.unsafe_var = unsafe_var
+
+    @classmethod
+    def from_yaml(cls, loader, node):
+        return UnsafeTag(node.value)
+
+    @classmethod
+    def to_yaml(cls, dumper, data):
+        return dumper.represent_scalar(cls.yaml_tag, data.unsafe_var)
+
+    def __str__(self):
+        return self.unsafe_var
+
+
+# Just calling SafeLoader and SafeDumper without yaml module prefix
+# does not work and cyaml is using yaml.SafeConstructor yaml.SafeRepresenter
+# underneath so this just fine for both
+yaml.SafeLoader.add_constructor(UnsafeTag.yaml_tag, UnsafeTag.from_yaml)
+yaml.SafeDumper.add_multi_representer(UnsafeTag, UnsafeTag.to_yaml)
+
+
 def safe_load(stream, *args, **kwargs):
     return yaml.load(stream, *args, Loader=SafeLoader, **kwargs)
 

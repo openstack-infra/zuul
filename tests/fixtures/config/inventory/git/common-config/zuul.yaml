@@ -74,3 +74,13 @@
     name: hostvars-inventory
     run: playbooks/hostvars-inventory.yaml
     nodeset: nodeset2
+
+- job:
+    name: jinja2-message
+    nodeset:
+      nodes:
+        - name: ubuntu-xenial
+          label: ubuntu-xenial
+    run: playbooks/jinja2-message.yaml
+
+
