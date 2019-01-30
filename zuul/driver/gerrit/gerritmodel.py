@@ -88,14 +88,14 @@ class GerritApprovalFilter(object):
         for k, v in rapproval.items():
             if k == 'username':
                 if (not v.search(by.get('username', ''))):
-                        return False
+                    return False
             elif k == 'email':
                 if (not v.search(by.get('email', ''))):
-                        return False
+                    return False
             elif k == 'newer-than':
                 t = now - v
                 if (approval['grantedOn'] < t):
-                        return False
+                    return False
             elif k == 'older-than':
                 t = now - v
                 if (approval['grantedOn'] >= t):

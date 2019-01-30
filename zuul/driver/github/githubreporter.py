@@ -157,12 +157,12 @@ class GithubReporter(BaseReporter):
             self.log.debug('Reporting change %s, params %s, labels:\n%s' %
                            (item.change, self.config, self._labels))
         for label in self._labels:
-                self.connection.labelPull(project, pr_number, label)
+            self.connection.labelPull(project, pr_number, label)
         if self._unlabels:
             self.log.debug('Reporting change %s, params %s, unlabels:\n%s' %
                            (item.change, self.config, self._unlabels))
         for label in self._unlabels:
-                self.connection.unlabelPull(project, pr_number, label)
+            self.connection.unlabelPull(project, pr_number, label)
 
     def _formatMergeMessage(self, change):
         message = ''

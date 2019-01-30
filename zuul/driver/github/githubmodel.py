@@ -108,14 +108,14 @@ class GithubCommonFilter(object):
         for k, v in rreview.items():
             if k == 'username':
                 if (not v.search(by.get('username', ''))):
-                        return False
+                    return False
             elif k == 'email':
                 if (not v.search(by.get('email', ''))):
-                        return False
+                    return False
             elif k == 'newer-than':
                 t = now - v
                 if (review['grantedOn'] < t):
-                        return False
+                    return False
             elif k == 'older-than':
                 t = now - v
                 if (review['grantedOn'] >= t):
