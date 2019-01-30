@@ -2152,6 +2152,7 @@ class ExecutorServer(object):
             config, 'merger', 'git_http_low_speed_limit', '1000')
         self.merge_speed_time = get_default(
             config, 'merger', 'git_http_low_speed_time', '30')
+        self.git_timeout = get_default(config, 'merger', 'git_timeout', 300)
         # If the execution driver ever becomes configurable again,
         # this is where it would happen.
         execution_wrapper_name = 'bubblewrap'
@@ -2228,7 +2229,7 @@ class ExecutorServer(object):
         return zuul.merger.merger.Merger(
             root, self.connections, self.merge_email, self.merge_name,
             self.merge_speed_limit, self.merge_speed_time, cache_root, logger,
-            execution_context=True)
+            execution_context=True, git_timeout=self.git_timeout)
 
     def start(self):
         self._running = True

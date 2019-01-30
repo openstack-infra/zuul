@@ -373,6 +373,16 @@ The following section of ``zuul.conf`` is used by the merger:
 
       Value in seconds, setting to 0 will disable.
 
+   .. attr:: git_timeout
+      :default: 300
+
+      Timeout for git clone and fetch operations. This can be useful when
+      dealing with large repos. Note that large timeouts can increase startup
+      and reconfiguration times if repos are not cached so be cautious when
+      increasing this value.
+
+      Value in seconds.
+
    .. attr:: git_user_email
 
       Value to pass to `git config user.email

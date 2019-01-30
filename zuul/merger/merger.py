@@ -496,7 +496,7 @@ class Repo(object):
 class Merger(object):
     def __init__(self, working_root, connections, email, username,
                  speed_limit, speed_time, cache_root=None, logger=None,
-                 execution_context=False):
+                 execution_context=False, git_timeout=300):
         self.logger = logger
         if logger is None:
             self.log = logging.getLogger("zuul.Merger")
@@ -510,6 +510,7 @@ class Merger(object):
         self.username = username
         self.speed_limit = speed_limit
         self.speed_time = speed_time
+        self.git_timeout = git_timeout
         self.cache_root = cache_root
         # Flag to determine if the merger is used for preparing repositories
         # for job execution. This flag can be used to enable executor specific
@@ -528,7 +529,8 @@ class Merger(object):
                 cache_path = None
             repo = Repo(
                 url, path, self.email, self.username, self.speed_limit,
-                self.speed_time, sshkey, cache_path, self.logger)
+                self.speed_time, sshkey=sshkey, cache_path=cache_path,
+                logger=self.logger, git_timeout=self.git_timeout)
 
             self.repos[key] = repo
         except Exception:
