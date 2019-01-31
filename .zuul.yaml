@@ -67,22 +67,22 @@
       - zuul: openstack-infra/zuul-jobs
     vars:
       docker_images:
-        - context: .
+        - context: ../zuul
           repository: zuul/zuul
           target: zuul
-        - context: .
+        - context: ../zuul
           repository: zuul/zuul-executor
           target: zuul-executor
-        - context: .
+        - context: ../zuul
           repository: zuul/zuul-fingergw
           target: zuul-fingergw
-        - context: .
+        - context: ../zuul
           repository: zuul/zuul-merger
           target: zuul-merger
-        - context: .
+        - context: ../zuul
           repository: zuul/zuul-scheduler
           target: zuul-scheduler
-        - context: .
+        - context: ../zuul
           repository: zuul/zuul-web
           target: zuul-web
         - context: ../nodepool
