@@ -2079,7 +2079,7 @@ class QueueItem(object):
     def warning(self, msg):
         self.current_build_set.warning_messages.append(msg)
 
-    def freezeJobGraph(self):
+    def freezeJobGraph(self, skip_file_matcher=False):
         """Find or create actual matching jobs for this item's change and
         store the resulting job tree."""
 
@@ -2091,7 +2091,8 @@ class QueueItem(object):
             if ppc:
                 for msg in ppc.debug_messages:
                     self.debug(msg)
-            job_graph = self.layout.createJobGraph(self, ppc)
+            job_graph = self.layout.createJobGraph(
+                self, ppc, skip_file_matcher)
             for job in job_graph.getJobs():
                 # Ensure that each jobs's dependencies are fully
                 # accessible.  This will raise an exception if not.
@@ -3782,7 +3783,7 @@ class Layout(object):
             raise NoMatchingParentError()
         return jobs
 
-    def _createJobGraph(self, item, ppc, job_graph):
+    def _createJobGraph(self, item, ppc, job_graph, skip_file_matcher):
         job_list = ppc.job_list
         change = item.change
         pipeline = item.pipeline
@@ -3845,7 +3846,8 @@ class Layout(object):
                 item.debug("No matching pipeline variants for {jobname}".
                            format(jobname=jobname), indent=2)
                 continue
-            if not frozen_job.changeMatchesFiles(change):
+            if not skip_file_matcher and \
+               not frozen_job.changeMatchesFiles(change):
                 self.log.debug("Job %s did not match files in %s",
                                repr(frozen_job), change)
                 item.debug("Job {jobname} did not match files".
@@ -3879,12 +3881,12 @@ class Layout(object):
 
             job_graph.addJob(frozen_job)
 
-    def createJobGraph(self, item, ppc):
+    def createJobGraph(self, item, ppc, skip_file_matcher=False):
         # NOTE(pabelanger): It is possible for a foreign project not to have a
         # configured pipeline, if so return an empty JobGraph.
         ret = JobGraph()
         if ppc:
-            self._createJobGraph(item, ppc, ret)
+            self._createJobGraph(item, ppc, ret, skip_file_matcher)
         return ret
 
 

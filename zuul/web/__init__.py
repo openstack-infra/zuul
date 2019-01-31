@@ -563,6 +563,26 @@ class ZuulWebAPI(object):
     def console_stream(self, tenant):
         cherrypy.request.ws_handler.zuulweb = self.zuulweb
 
+    @cherrypy.expose
+    @cherrypy.tools.save_params()
+    @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
+    def project_freeze_jobs(self, tenant, pipeline, project, branch):
+        job = self.rpc.submitJob(
+            'zuul:project_freeze_jobs',
+            {
+                'tenant': tenant,
+                'project': project,
+                'pipeline': pipeline,
+                'branch': branch
+            }
+        )
+        ret = json.loads(job.data[0])
+        if not ret:
+            raise cherrypy.HTTPError(404)
+        resp = cherrypy.response
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return ret
+
 
 class StaticHandler(object):
     def __init__(self, root):
@@ -696,6 +716,12 @@ class ZuulWeb(object):
                           controller=api, action='projects')
         route_map.connect('api', '/api/tenant/{tenant}/project/{project:.*}',
                           controller=api, action='project')
+        route_map.connect(
+            'api',
+            '/api/tenant/{tenant}/pipeline/{pipeline}'
+            '/project/{project:.*}/branch/{branch:.*}/freeze-jobs',
+            controller=api, action='project_freeze_jobs'
+        )
         route_map.connect('api', '/api/tenant/{tenant}/pipelines',
                           controller=api, action='pipelines')
         route_map.connect('api', '/api/tenant/{tenant}/labels',
