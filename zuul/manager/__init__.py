@@ -277,11 +277,6 @@ class PipelineManager(object):
                            "ignoring" % change)
             return True
 
-        if not self.isChangeReadyToBeEnqueued(change):
-            self.log.debug("Change %s is not ready to be enqueued, ignoring" %
-                           change)
-            return False
-
         if not ignore_requirements:
             for f in self.ref_filters:
                 if f.connection_name != change.project.connection_name:
@@ -292,6 +287,11 @@ class PipelineManager(object):
                     self.log.debug("Change %s does not match pipeline "
                                    "requirement %s" % (change, f))
                     return False
+
+        if not self.isChangeReadyToBeEnqueued(change):
+            self.log.debug("Change %s is not ready to be enqueued, ignoring" %
+                           change)
+            return False
 
         with self.getChangeQueue(change, change_queue) as change_queue:
             if not change_queue:
