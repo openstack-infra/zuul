@@ -28,6 +28,7 @@ from zuul.lib import encryption
 from tests.base import (
     AnsibleZuulTestCase,
     ZuulTestCase,
+    ZuulDBTestCase,
     FIXTURE_DIR,
     simple_layout,
 )
@@ -4714,3 +4715,290 @@ class TestContainerJobs(AnsibleZuulTestCase):
             dict(name='container-machine', result='SUCCESS', changes='1,1'),
             dict(name='container-native', result='SUCCESS', changes='1,1'),
         ])
+
+
+class TestProvidesRequiresPause(AnsibleZuulTestCase):
+    tenant_config_file = "config/provides-requires-pause/main.yaml"
+
+    def test_provides_requires_pause(self):
+        # Changes share a queue, with both running at the same time.
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 1)
+
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        B.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 1)
+
+        # Release image-build, it should cause both instances of
+        # image-user to run.
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='image-builder', result='SUCCESS', changes='1,1'),
+            dict(name='image-user', result='SUCCESS', changes='1,1'),
+            dict(name='image-user', result='SUCCESS', changes='1,1 2,1'),
+        ], ordered=False)
+        build = self.getJobFromHistory('image-user', project='org/project2')
+        self.assertEqual(
+            build.parameters['zuul']['artifacts'],
+            [{
+                'project': 'org/project1',
+                'change': '1',
+                'patchset': '1',
+                'job': 'image-builder',
+                'url': 'http://example.com/image',
+                'name': 'image',
+            }])
+
+
+class TestProvidesRequires(ZuulDBTestCase):
+    config_file = "zuul-sql-driver.conf"
+
+    @simple_layout('layouts/provides-requires.yaml')
+    def test_provides_requires_shared_queue_fast(self):
+        # Changes share a queue, but with only one job, the first
+        # merges before the second starts.
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        self.executor_server.returnData(
+            'image-builder', A,
+            {'zuul':
+             {'artifacts': [
+                 {'name': 'image', 'url': 'http://example.com/image'},
+             ]}}
+        )
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 1)
+
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        B.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 1)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='image-builder', result='SUCCESS', changes='1,1'),
+            dict(name='image-user', result='SUCCESS', changes='1,1 2,1'),
+        ])
+        # Data are not passed in this instance because the builder
+        # change merges before the user job runs.
+        self.assertFalse('artifacts' in self.history[-1].parameters['zuul'])
+
+    @simple_layout('layouts/provides-requires-two-jobs.yaml')
+    def test_provides_requires_shared_queue_slow(self):
+        # Changes share a queue, with both running at the same time.
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        self.executor_server.returnData(
+            'image-builder', A,
+            {'zuul':
+             {'artifacts': [
+                 {'name': 'image', 'url': 'http://example.com/image'},
+             ]}}
+        )
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 1)
+
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        B.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 1)
+
+        # Release image-build, it should cause both instances of
+        # image-user to run.
+        self.executor_server.release()
+        self.waitUntilSettled()
+        self.assertEqual(len(self.builds), 2)
+        self.assertHistory([
+            dict(name='image-builder', result='SUCCESS', changes='1,1'),
+        ])
+
+        self.orderedRelease()
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='image-builder', result='SUCCESS', changes='1,1'),
+            dict(name='image-user', result='SUCCESS', changes='1,1'),
+            dict(name='image-user', result='SUCCESS', changes='1,1 2,1'),
+        ])
+        self.assertEqual(
+            self.history[-1].parameters['zuul']['artifacts'],
+            [{
+                'project': 'org/project1',
+                'change': '1',
+                'patchset': '1',
+                'job': 'image-builder',
+                'url': 'http://example.com/image',
+                'name': 'image',
+            }])
+
+    @simple_layout('layouts/provides-requires-unshared.yaml')
+    def test_provides_requires_unshared_queue(self):
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        self.executor_server.returnData(
+            'image-builder', A,
+            {'zuul':
+             {'artifacts': [
+                 {'name': 'image', 'url': 'http://example.com/image'},
+             ]}}
+        )
+        A.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(A.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 1)
+
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            B.subject, A.data['id'])
+        B.addApproval('Code-Review', 2)
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 1)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='image-builder', result='SUCCESS', changes='1,1'),
+        ])
+
+        self.fake_gerrit.addEvent(B.addApproval('Approved', 1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='image-builder', result='SUCCESS', changes='1,1'),
+            dict(name='image-user', result='SUCCESS', changes='2,1'),
+        ])
+        # Data are not passed in this instance because the builder
+        # change merges before the user job runs.
+        self.assertFalse('artifacts' in self.history[-1].parameters['zuul'])
+
+    @simple_layout('layouts/provides-requires.yaml')
+    def test_provides_requires_check_current(self):
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        self.executor_server.returnData(
+            'image-builder', A,
+            {'zuul':
+             {'artifacts': [
+                 {'name': 'image', 'url': 'http://example.com/image'},
+             ]}}
+        )
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 1)
+
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            B.subject, A.data['id'])
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 1)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='image-builder', result='SUCCESS', changes='1,1'),
+            dict(name='image-user', result='SUCCESS', changes='1,1 2,1'),
+        ])
+        self.assertEqual(
+            self.history[-1].parameters['zuul']['artifacts'],
+            [{
+                'project': 'org/project1',
+                'change': '1',
+                'patchset': '1',
+                'job': 'image-builder',
+                'url': 'http://example.com/image',
+                'name': 'image',
+            }])
+
+    @simple_layout('layouts/provides-requires.yaml')
+    def test_provides_requires_check_old_success(self):
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        self.executor_server.returnData(
+            'image-builder', A,
+            {'zuul':
+             {'artifacts': [
+                 {'name': 'image', 'url': 'http://example.com/image'},
+             ]}}
+        )
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='image-builder', result='SUCCESS', changes='1,1'),
+        ])
+
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            B.subject, A.data['id'])
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='image-builder', result='SUCCESS', changes='1,1'),
+            dict(name='image-user', result='SUCCESS', changes='1,1 2,1'),
+        ])
+        self.assertEqual(
+            self.history[-1].parameters['zuul']['artifacts'],
+            [{
+                'project': 'org/project1',
+                'change': '1',
+                'patchset': '1',
+                'job': 'image-builder',
+                'url': 'http://example.com/image',
+                'name': 'image',
+            }])
+
+    @simple_layout('layouts/provides-requires.yaml')
+    def test_provides_requires_check_old_failure(self):
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        self.executor_server.failJob('image-builder', A)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='image-builder', result='FAILURE', changes='1,1'),
+        ])
+
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            B.subject, A.data['id'])
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='image-builder', result='FAILURE', changes='1,1'),
+        ])
+        self.assertIn('image-user : SKIPPED', B.messages[0])
+        self.assertIn('not met by build', B.messages[0])

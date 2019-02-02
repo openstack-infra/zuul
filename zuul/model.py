@@ -28,6 +28,7 @@ import itertools
 
 from zuul import change_matcher
 from zuul.lib.config import get_default
+from zuul.lib.artifacts import get_artifacts_from_result_data
 
 MERGER_MERGE = 1          # "git merge"
 MERGER_MERGE_RESOLVE = 2  # "git merge -s resolve"
@@ -161,6 +162,11 @@ class NoMatchingParentError(Exception):
 
 class TemplateNotFoundError(Exception):
     """A project referenced a template that does not exist."""
+    pass
+
+
+class RequirementsError(Exception):
+    """A job's requirements were not met."""
     pass
 
 
@@ -1070,6 +1076,8 @@ class Job(ConfigObject):
             file_matcher=None,
             irrelevant_file_matcher=None,  # skip-if
             tags=frozenset(),
+            provides=frozenset(),
+            requires=frozenset(),
             dependencies=frozenset(),
         )
 
@@ -1111,6 +1119,7 @@ class Job(ConfigObject):
             start_mark=None,
             inheritance_path=(),
             parent_data=None,
+            artifact_data=None,
             description=None,
             variant_description=None,
             protected_origin=None,
@@ -1161,6 +1170,10 @@ class Job(ConfigObject):
         d['protected'] = self.protected
         d['voting'] = self.voting
         d['timeout'] = self.timeout
+        d['tags'] = list(self.tags)
+        d['provides'] = list(self.provides)
+        d['requires'] = list(self.requires)
+        d['dependencies'] = list(self.dependencies)
         d['attempts'] = self.attempts
         d['roles'] = list(map(lambda x: x.toDict(), self.roles))
         d['post_review'] = self.post_review
@@ -1170,9 +1183,6 @@ class Job(ConfigObject):
             d['parent'] = self.parent
         else:
             d['parent'] = tenant.default_base_job
-        d['dependencies'] = []
-        for dependency in self.dependencies:
-            d['dependencies'].append(dependency)
         if isinstance(self.nodeset, str):
             ns = tenant.layout.nodesets.get(self.nodeset)
         else:
@@ -1343,6 +1353,9 @@ class Job(ConfigObject):
         self.parent_data = v
         self.variables = Job._deepUpdate(self.parent_data, self.variables)
 
+    def updateArtifactData(self, artifact_data):
+        self.artifact_data = artifact_data
+
     def updateProjectVariables(self, project_vars):
         # Merge project/template variables directly into the job
         # variables.  Job variables override project variables.
@@ -1499,11 +1512,12 @@ class Job(ConfigObject):
 
         for k in self.context_attributes:
             if (other._get(k) is not None and
-                k not in set(['tags'])):
+                k not in set(['tags', 'requires', 'provides'])):
                 setattr(self, k, other._get(k))
 
-        if other._get('tags') is not None:
-            self.tags = frozenset(self.tags.union(other.tags))
+        for k in ('tags', 'requires', 'provides'):
+            if other._get(k) is not None:
+                setattr(self, k, getattr(self, k).union(other._get(k)))
 
         self.inheritance_path = self.inheritance_path + (repr(other),)
 
@@ -1924,6 +1938,7 @@ class BuildSet(object):
 
 
 class QueueItem(object):
+
     """Represents the position of a Change in a ChangeQueue.
 
     All Changes are enqueued into ChangeQueue in a QueueItem. The QueueItem
@@ -1950,6 +1965,7 @@ class QueueItem(object):
         self.layout = None
         self.project_pipeline_config = None
         self.job_graph = None
+        self._cached_sql_results = None
 
     def __repr__(self):
         if self.pipeline:
@@ -2146,6 +2162,110 @@ class QueueItem(object):
             return False
         return self.item_ahead.isHoldingFollowingChanges()
 
+    def _getRequirementsResultFromSQL(self, requirements):
+        # This either returns data or raises an exception
+        if self._cached_sql_results is None:
+            sql_driver = self.pipeline.manager.sched.connections.drivers['sql']
+            conn = sql_driver.tenant_connections.get(self.pipeline.tenant.name)
+            if conn:
+                builds = conn.getBuilds(
+                    tenant=self.pipeline.tenant.name,
+                    project=self.change.project.name,
+                    pipeline=self.pipeline.name,
+                    change=self.change.number,
+                    branch=self.change.branch,
+                    patchset=self.change.patchset,
+                    provides=list(requirements))
+            else:
+                builds = []
+            # Just look at the most recent buildset.
+            # TODO: query for a buildset instead of filtering.
+            builds = [b for b in builds
+                      if b.buildset.uuid == builds[0].buildset.uuid]
+            self._cached_sql_results = builds
+
+        builds = self._cached_sql_results
+        data = []
+        if not builds:
+            return data
+
+        for build in builds:
+            if build.result != 'SUCCESS':
+                provides = [x.name for x in build.provides]
+                requirement = list(requirements.intersection(set(provides)))
+                raise RequirementsError(
+                    "Requirements %s not met by build %s" % (
+                        requirement, build.uuid))
+            else:
+                artifacts = [{'name': a.name,
+                              'url': a.url,
+                              'project': build.buildset.project,
+                              'change': str(build.buildset.change),
+                              'patchset': build.buildset.patchset,
+                              'job': build.job_name}
+                             for a in build.artifacts]
+                data += artifacts
+        return data
+
+    def providesRequirements(self, requirements, data):
+        # Mutates data and returns true/false if requirements
+        # satisfied.
+        if not requirements:
+            return True
+        if not self.live:
+            # Look for this item in other queues in the pipeline.
+            item = None
+            found = False
+            for item in self.pipeline.getAllItems():
+                if item.live and item.change == self.change:
+                    found = True
+                    break
+            if found:
+                if not item.providesRequirements(requirements, data):
+                    return False
+            else:
+                # Look for this item in the SQL DB.
+                data += self._getRequirementsResultFromSQL(requirements)
+        if self.hasJobGraph():
+            for job in self.getJobs():
+                if job.provides.intersection(requirements):
+                    build = self.current_build_set.getBuild(job.name)
+                    if not build:
+                        return False
+                    if build.result and build.result != 'SUCCESS':
+                        return False
+                    if not build.result and not build.paused:
+                        return False
+                    artifacts = get_artifacts_from_result_data(
+                        build.result_data,
+                        logger=self.log)
+                    artifacts = [{'name': a['name'],
+                                  'url': a['url'],
+                                  'project': self.change.project.name,
+                                  'change': self.change.number,
+                                  'patchset': self.change.patchset,
+                                  'job': build.job.name}
+                                 for a in artifacts]
+                    data += artifacts
+        if not self.item_ahead:
+            return True
+        return self.item_ahead.providesRequirements(requirements, data)
+
+    def jobRequirementsReady(self, job):
+        if not self.item_ahead:
+            return True
+        try:
+            data = []
+            ret = self.item_ahead.providesRequirements(job.requires, data)
+            job.updateArtifactData(data)
+        except RequirementsError as e:
+            self.warning(str(e))
+            fakebuild = Build(job, None)
+            fakebuild.result = 'SKIPPED'
+            self.addBuild(fakebuild)
+            ret = True
+        return ret
+
     def findJobsToRun(self, semaphore_handler):
         torun = []
         if not self.live:
@@ -2172,6 +2292,8 @@ class QueueItem(object):
         # configuration.
         for job in self.job_graph.getJobs():
             if job not in jobs_not_started:
+                continue
+            if not self.jobRequirementsReady(job):
                 continue
             all_parent_jobs_successful = True
             parent_builds_with_data = {}
@@ -2236,6 +2358,8 @@ class QueueItem(object):
         # in configuration.
         for job in self.job_graph.getJobs():
             if job not in jobs_not_requested:
+                continue
+            if not self.jobRequirementsReady(job):
                 continue
             all_parent_jobs_successful = True
             for parent_job in self.job_graph.getParentJobsRecursively(

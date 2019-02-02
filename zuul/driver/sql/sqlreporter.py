@@ -16,9 +16,9 @@ import datetime
 import logging
 import time
 import voluptuous as v
-import urllib.parse
 
 from zuul.reporter import BaseReporter
+from zuul.lib.artifacts import get_artifacts_from_result_data
 
 
 class SQLReporter(BaseReporter):
@@ -26,26 +26,6 @@ class SQLReporter(BaseReporter):
 
     name = 'sql'
     log = logging.getLogger("zuul.SQLReporter")
-
-    artifact = {
-        'name': str,
-        'url': str,
-    }
-    zuul_data = {
-        'zuul': {
-            'log_url': str,
-            'artifacts': [artifact],
-            v.Extra: object,
-        }
-    }
-    artifact_schema = v.Schema(zuul_data)
-
-    def validateArtifactSchema(self, data):
-        try:
-            self.artifact_schema(data)
-        except Exception:
-            return False
-        return True
 
     def report(self, item):
         """Create an entry into a database."""
@@ -104,32 +84,13 @@ class SQLReporter(BaseReporter):
                     node_name=build.node_name,
                 )
 
-                if self.validateArtifactSchema(build.result_data):
-                    artifacts = build.result_data.get('zuul', {}).get(
-                        'artifacts', [])
-                    default_url = build.result_data.get('zuul', {}).get(
-                        'log_url')
-                    if default_url:
-                        if default_url[-1] != '/':
-                            default_url += '/'
-                    for artifact in artifacts:
-                        url = artifact['url']
-                        if default_url:
-                            # If the artifact url is relative, it will
-                            # be combined with the log_url; if it is
-                            # absolute, it will replace it.
-                            try:
-                                url = urllib.parse.urljoin(default_url, url)
-                            except Exception:
-                                self.log.debug("Error parsing URL:",
-                                               exc_info=1)
-                        db_build.createArtifact(
-                            name=artifact['name'],
-                            url=url,
-                        )
-                else:
-                    self.log.debug("Result data did not pass artifact schema "
-                                   "validation: %s", build.result_data)
+                for provides in job.provides:
+                    db_build.createProvides(name=provides)
+
+                for artifact in get_artifacts_from_result_data(
+                    build.result_data,
+                    logger=self.log):
+                    db_build.createArtifact(**artifact)
 
 
 def getSchema():

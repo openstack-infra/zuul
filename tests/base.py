@@ -1355,6 +1355,11 @@ class FakeBuild(object):
         items = self.parameters['zuul']['items']
         self.changes = ' '.join(['%s,%s' % (x['change'], x['patchset'])
                                 for x in items if 'change' in x])
+        if 'change' in items[-1]:
+            self.change = ' '.join((items[-1]['change'],
+                                    items[-1]['patchset']))
+        else:
+            self.change = None
 
     def __repr__(self):
         waiting = ''
@@ -1401,6 +1406,8 @@ class FakeBuild(object):
             self._wait()
         self.log.debug("Build %s continuing" % self.unique)
 
+        self.writeReturnData()
+
         result = (RecordingAnsibleJob.RESULT_NORMAL, 0)  # Success
         if self.shouldFail():
             result = (RecordingAnsibleJob.RESULT_NORMAL, 1)  # Failure
@@ -1417,6 +1424,14 @@ class FakeBuild(object):
             if self.hasChanges(change):
                 return True
         return False
+
+    def writeReturnData(self):
+        changes = self.executor_server.return_data.get(self.name, {})
+        data = changes.get(self.change)
+        if data is None:
+            return
+        with open(self.jobdir.result_data_file, 'w') as f:
+            f.write(json.dumps(data))
 
     def hasChanges(self, *changes):
         """Return whether this build has certain changes in its git repos.
@@ -1554,6 +1569,7 @@ class RecordingExecutorServer(zuul.executor.server.ExecutorServer):
         self.running_builds = []
         self.build_history = []
         self.fail_tests = {}
+        self.return_data = {}
         self.job_builds = {}
 
     def failJob(self, name, change):
@@ -1568,6 +1584,19 @@ class RecordingExecutorServer(zuul.executor.server.ExecutorServer):
         l = self.fail_tests.get(name, [])
         l.append(change)
         self.fail_tests[name] = l
+
+    def returnData(self, name, change, data):
+        """Instruct the executor to return data for this build.
+
+        :arg str name: The name of the job to return data.
+        :arg Change change: The :py:class:`~tests.base.FakeChange`
+            instance which should cause the job to return data.
+        :arg dict data: The data to return
+
+        """
+        changes = self.return_data.setdefault(name, {})
+        cid = ' '.join((str(change.number), str(change.latest_patchset)))
+        changes[cid] = data
 
     def release(self, regex=None):
         """Release a held build.

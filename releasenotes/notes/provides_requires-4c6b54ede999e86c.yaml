@@ -1,0 +1,7 @@
+---
+features:
+  - Support for expressing artifact or other resource dependencies
+    between jobs running on different changes with a dependency
+    relationship (e.g., a container image built in one project and
+    consumed in a second project) has been added via the
+    :attr:`job.provides` and :attr:`job.requires` job attributes.
