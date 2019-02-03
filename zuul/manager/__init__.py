@@ -794,6 +794,15 @@ class PipelineManager(object):
                 self.sched.executor.resumeBuild(build)
                 build.paused = False
 
+    def _resetDependentBuilds(self, build_set, build):
+        jobgraph = build_set.item.job_graph
+
+        for job in jobgraph.getDependentJobsRecursively(build.job.name):
+            self.sched.cancelJob(build_set, job)
+            build = build_set.getBuild(job.name)
+            if build:
+                build_set.removeBuild(build)
+
     def onBuildCompleted(self, build):
         item = build.build_set.item
 
@@ -804,8 +813,12 @@ class PipelineManager(object):
         self.log.debug("Item %s status is now:\n %s" %
                        (item, item.formatStatus()))
 
-        if build.retry and build.build_set.getJobNodeSet(build.job.name):
-            build.build_set.removeJobNodeSet(build.job.name)
+        if build.retry:
+            if build.build_set.getJobNodeSet(build.job.name):
+                build.build_set.removeJobNodeSet(build.job.name)
+
+            # in case this was a paused build we need to retry all child jobs
+            self._resetDependentBuilds(build.build_set, build)
 
         self._resumeBuilds(build.build_set)
         return True

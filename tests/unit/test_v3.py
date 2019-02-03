@@ -4631,6 +4631,117 @@ class TestJobPause(AnsibleZuulTestCase):
         self.assertEqual('compile1', history_compile1.name)
         self.assertEqual('compile2', history_compile2.name)
 
+    def test_job_pause_retry(self):
+        """
+        Tests that a paused job that gets lost due to an executor restart is
+        retried together with all child jobs.
+
+        This test will wait until compile1 is paused and then fails it. The
+        expectation is that all child jobs are retried even if they already
+        were successful.
+
+        compile1 --+
+                   +--> test1-after-compile1
+                   +--> test2-after-compile1
+                   +--> compile2 --+
+                                   +--> test-after-compile2
+        test-good
+        test-fail
+        """
+        self.wait_timeout = 120
+
+        self.executor_server.hold_jobs_in_build = True
+
+        # Output extra ansible info so we might see errors.
+        self.executor_server.verbose = True
+        self.executor_server.keep_jobdir = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.executor_server.release('test-.*')
+        self.executor_server.release('compile1')
+        self.waitUntilSettled()
+
+        # test-fail and test-good must be finished by now
+        self.assertHistory([
+            dict(name='test-fail', result='FAILURE', changes='1,1'),
+            dict(name='test-good', result='SUCCESS', changes='1,1'),
+        ], ordered=False)
+
+        # Further compile1 must be in paused state and its three children in
+        # the queue. waitUltilSettled can return either directly after the job
+        # pause or after the child jobs are enqueued. So to make this
+        # deterministic we wait for the child jobs here
+        for _ in iterate_timeout(30, 'waiting for child jobs'):
+            if len(self.builds) == 4:
+                break
+        self.waitUntilSettled()
+
+        compile1 = self.builds[0]
+        self.assertTrue(compile1.paused)
+
+        # Now resume resume the compile2 sub tree so we can later check if all
+        # children restarted
+        self.executor_server.release('compile2')
+        for _ in iterate_timeout(30, 'waiting for child jobs'):
+            if len(self.builds) == 5:
+                break
+        self.waitUntilSettled()
+        self.executor_server.release('test-after-compile2')
+        self.waitUntilSettled()
+        self.executor_server.release('compile2')
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='test-fail', result='FAILURE', changes='1,1'),
+            dict(name='test-good', result='SUCCESS', changes='1,1'),
+            dict(name='compile2', result='SUCCESS', changes='1,1'),
+            dict(name='test-after-compile2', result='SUCCESS', changes='1,1'),
+        ], ordered=False)
+
+        # Stop the job worker of compile1 to simulate an executor restart
+        for job_worker in self.executor_server.job_workers.values():
+            if job_worker.job.unique == compile1.unique:
+                job_worker.stop()
+        self.waitUntilSettled()
+
+        # All still running child jobs must be aborted
+        self.assertHistory([
+            dict(name='test-fail', result='FAILURE', changes='1,1'),
+            dict(name='test-good', result='SUCCESS', changes='1,1'),
+            dict(name='compile2', result='SUCCESS', changes='1,1'),
+            dict(name='test-after-compile2', result='SUCCESS', changes='1,1'),
+            dict(name='compile1', result='ABORTED', changes='1,1'),
+            dict(name='test1-after-compile1', result='ABORTED', changes='1,1'),
+            dict(name='test2-after-compile1', result='ABORTED', changes='1,1'),
+        ], ordered=False)
+
+        # Only compile1 must be waiting
+        for _ in iterate_timeout(30, 'waiting for compile1 job'):
+            if len(self.builds) == 1:
+                break
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='test-fail', result='FAILURE', changes='1,1'),
+            dict(name='test-good', result='SUCCESS', changes='1,1'),
+            dict(name='compile2', result='SUCCESS', changes='1,1'),
+            dict(name='compile2', result='SUCCESS', changes='1,1'),
+            dict(name='test-after-compile2', result='SUCCESS', changes='1,1'),
+            dict(name='test-after-compile2', result='SUCCESS', changes='1,1'),
+            dict(name='compile1', result='ABORTED', changes='1,1'),
+            dict(name='compile1', result='SUCCESS', changes='1,1'),
+            dict(name='test1-after-compile1', result='ABORTED', changes='1,1'),
+            dict(name='test2-after-compile1', result='ABORTED', changes='1,1'),
+            dict(name='test1-after-compile1', result='SUCCESS', changes='1,1'),
+            dict(name='test2-after-compile1', result='SUCCESS', changes='1,1'),
+        ], ordered=False)
+
     def test_job_node_failure_resume(self):
         self.wait_timeout = 120
 

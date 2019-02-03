@@ -1172,6 +1172,8 @@ class AnsibleJob(object):
         pause = result_data.get('zuul', {}).get('pause')
         if pause:
             self.pause()
+        if self.aborted:
+            return 'ABORTED'
 
         post_timeout = args['post_timeout']
         unreachable = False
