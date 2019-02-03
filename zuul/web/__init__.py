@@ -185,9 +185,11 @@ class LogStreamer(object):
                 if data:
                     self.websocket.send(data, False)
                 self.zuulweb.stream_manager.unregisterStreamer(self)
+                self.finger_socket.close()
                 return self.websocket.logClose(1000, "No more data")
         else:
             self.zuulweb.stream_manager.unregisterStreamer(self)
+            self.finger_socket.close()
             return self.websocket.logClose(1000, "Remote error")
 
 

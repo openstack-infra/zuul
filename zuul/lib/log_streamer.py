@@ -98,6 +98,11 @@ class RequestHandler(streamer_utils.BaseFingerRequestHandler):
                 if self.follow_log(log):
                     break
                 else:
+                    if log is not None:
+                        try:
+                            log.file.close()
+                        except Exception:
+                            pass
                     return
 
     def chunk_log(self, log_file):
