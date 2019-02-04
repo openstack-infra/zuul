@@ -15,6 +15,7 @@
 import abc
 from collections import OrderedDict
 import copy
+import json
 import logging
 import os
 import re2
@@ -2197,14 +2198,16 @@ class QueueItem(object):
                     "Requirements %s not met by build %s" % (
                         requirement, build.uuid))
             else:
-                artifacts = [{'name': a.name,
-                              'url': a.url,
-                              'project': build.buildset.project,
-                              'change': str(build.buildset.change),
-                              'patchset': build.buildset.patchset,
-                              'job': build.job_name}
-                             for a in build.artifacts]
-                data += artifacts
+                for a in build.artifacts:
+                    artifact = {'name': a.name,
+                                'url': a.url,
+                                'project': build.buildset.project,
+                                'change': str(build.buildset.change),
+                                'patchset': build.buildset.patchset,
+                                'job': build.job_name}
+                    if a.meta:
+                        artifact['metadata'] = json.loads(a.meta)
+                    data.append(artifact)
         return data
 
     def providesRequirements(self, requirements, data):
