@@ -85,6 +85,8 @@ class MergeClient(object):
         self.gearman.addServer(server, port, ssl_key, ssl_cert, ssl_ca,
                                keepalive=True, tcp_keepidle=60,
                                tcp_keepintvl=30, tcp_keepcnt=5)
+        self.git_timeout = get_default(
+            self.config, 'merger', 'git_timeout', 300)
         self.log.debug("Waiting for gearman")
         self.gearman.waitForServer()
         self.jobs = set()

@@ -41,9 +41,10 @@ class MergeServer(object):
             config, 'merger', 'git_http_low_speed_limit', '1000')
         speed_time = get_default(
             config, 'merger', 'git_http_low_speed_time', '30')
+        git_timeout = get_default(config, 'merger', 'git_timeout', 300)
         self.merger = merger.Merger(
             merge_root, connections, merge_email, merge_name, speed_limit,
-            speed_time)
+            speed_time, git_timeout=git_timeout)
         self.command_map = dict(
             stop=self.stop)
         command_socket = get_default(
