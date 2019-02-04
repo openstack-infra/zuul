@@ -9,3 +9,5 @@
               exclude: project
           - org/project2:
               include: job
+          - org/project4:
+              exclude: pipeline
