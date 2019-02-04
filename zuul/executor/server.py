@@ -141,6 +141,7 @@ class DiskAccountant(object):
                         .format(size=size, job=dirname, limit=self.limit))
                     self.usage_func(dirname, size)
             du.wait()
+            du.stdout.close()
             after = time.time()
             # Sleep half as long as that took, or 1s, whichever is longer
             delay_time = max((after - before) / 2, 1.0)
@@ -1891,6 +1892,7 @@ class AnsibleJob(object):
             self.log.debug("Stopped disk job killer")
 
         with self.proc_lock:
+            self.proc.stdout.close()
             self.proc = None
 
         if timeout and watchdog.timed_out:

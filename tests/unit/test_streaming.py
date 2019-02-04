@@ -55,6 +55,7 @@ class WSClient(WebSocketBaseClient):
         self.send(json.dumps(req))
         self.event.set()
         super(WSClient, self).run()
+        self.close()
 
 
 class TestLogStreamer(tests.base.BaseTestCase):
