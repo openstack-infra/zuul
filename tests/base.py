@@ -561,6 +561,9 @@ class GerritWebServer(object):
                 self.send_response(200)
                 self.end_headers()
 
+            def log_message(self, fmt, *args):
+                self.log.debug(fmt, *args)
+
         self.httpd = socketserver.ThreadingTCPServer(('', 0), Server)
         self.port = self.httpd.socket.getsockname()[1]
         self.thread = threading.Thread(name='GerritWebServer',
@@ -2064,6 +2067,8 @@ class WebProxyFixture(fixtures.Fixture):
         rules = self.rules
 
         class Proxy(http.server.SimpleHTTPRequestHandler):
+            log = logging.getLogger('zuul.WebProxyFixture.Proxy')
+
             def do_GET(self):
                 path = self.path
                 for (pattern, replace) in rules:
@@ -2077,6 +2082,9 @@ class WebProxyFixture(fixtures.Fixture):
                     self.send_header(key, val)
                 self.end_headers()
                 self.wfile.write(resp.content)
+
+            def log_message(self, fmt, *args):
+                self.log.debug(fmt, *args)
 
         self.httpd = socketserver.ThreadingTCPServer(('', 0), Proxy)
         self.port = self.httpd.socket.getsockname()[1]
