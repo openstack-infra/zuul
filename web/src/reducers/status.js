@@ -12,6 +12,7 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
+import { TENANT_SET } from '../actions/tenant'
 import {
   STATUS_FETCH_FAIL,
   STATUS_FETCH_REQUEST,
@@ -23,6 +24,11 @@ export default (state = {
   status: null
 }, action) => {
   switch (action.type) {
+    case TENANT_SET:
+      return {
+        isFetching: false,
+        status: null,
+      }
     case STATUS_FETCH_REQUEST:
       return {
         isFetching: true,
