@@ -495,6 +495,7 @@ class UpdateTask(object):
         self.branches = None
         self.refs = None
         self.event = threading.Event()
+        self.success = False
 
     def __eq__(self, other):
         if (other and other.connection_name == self.connection_name and
@@ -807,6 +808,11 @@ class AnsibleJob(object):
 
         for task in tasks:
             task.wait()
+
+            if not task.success:
+                raise ExecutorError(
+                    'Failed to update project %s' % task.canonical_name)
+
             self.project_info[task.canonical_name] = {
                 'refs': task.refs,
                 'branches': task.branches,
@@ -2414,19 +2420,26 @@ class ExecutorServer(object):
         if task is None:
             # We are asked to stop
             raise StopException()
-        with self.merger_lock:
-            self.log.info("Updating repo %s/%s" % (
-                task.connection_name, task.project_name))
-            self.merger.updateRepo(task.connection_name, task.project_name)
-            repo = self.merger.getRepo(task.connection_name, task.project_name)
-            source = self.connections.getSource(task.connection_name)
-            project = source.getProject(task.project_name)
-            task.canonical_name = project.canonical_name
-            task.branches = repo.getBranches()
-            task.refs = [r.name for r in repo.getRefs()]
-            self.log.debug("Finished updating repo %s/%s" %
-                           (task.connection_name, task.project_name))
-        task.setComplete()
+        try:
+            with self.merger_lock:
+                self.log.info("Updating repo %s/%s",
+                              task.connection_name, task.project_name)
+                self.merger.updateRepo(task.connection_name, task.project_name)
+                repo = self.merger.getRepo(
+                    task.connection_name, task.project_name)
+                source = self.connections.getSource(task.connection_name)
+                project = source.getProject(task.project_name)
+                task.canonical_name = project.canonical_name
+                task.branches = repo.getBranches()
+                task.refs = [r.name for r in repo.getRefs()]
+                self.log.debug("Finished updating repo %s/%s",
+                               task.connection_name, task.project_name)
+                task.success = True
+        except Exception:
+            self.log.exception('Got exception while updating repo %s/%s',
+                               task.connection_name, task.project_name)
+        finally:
+            task.setComplete()
 
     def update(self, connection_name, project_name):
         # Update a repository in the main merger
