@@ -269,7 +269,8 @@ class GerritWatcher(threading.Thread):
             if ret and ret not in [-1, 130]:
                 raise Exception("Gerrit error executing stream-events")
         except Exception:
-            self.log.exception("Exception on ssh event stream:")
+            self.log.exception("Exception on ssh event stream with %s:",
+                               self.gerrit_connection.connection_name)
             time.sleep(5)
         finally:
             # If we don't close on exceptions to connect we can leak the
