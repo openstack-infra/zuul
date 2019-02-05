@@ -103,3 +103,9 @@
         - project-test1
         - semaphore-one-test1-resources-first
         - semaphore-one-test2-resources-first
+
+- project:
+    name: org/project4
+    check:
+      jobs:
+        - semaphore-one-test1-resources-first
