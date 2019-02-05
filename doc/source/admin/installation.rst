@@ -338,7 +338,7 @@ Static External
    deployments.
 
 In order to serve the zuul dashboard code from an external static location,
-``REACT_APP_ZUUl_API`` must be set at javascript build time:
+``REACT_APP_ZUUL_API`` must be set at javascript build time:
 
 .. code-block:: bash
 
