@@ -21,8 +21,9 @@ const isLocalhost = Boolean(
 )
 
 export default function register () {
-  if (process.env.REACT_APP_DISABLE_SERVICE_WORKER === 'true') {
+  if (process.env.REACT_APP_ENABLE_SERVICE_WORKER !== 'true') {
     console.log('Disabled service worker')
+    unregister()
     return
   }
 

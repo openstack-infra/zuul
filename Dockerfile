@@ -17,8 +17,8 @@ FROM opendevorg/python-builder as builder
 
 # Optional location of Zuul API endpoint.
 ARG REACT_APP_ZUUL_API
-# Optional flag to disable React Service Worker. (set to true to disable)
-ARG REACT_APP_DISABLE_SERVICE_WORKER
+# Optional flag to enable React Service Worker. (set to true to enable)
+ARG REACT_APP_ENABLE_SERVICE_WORKER
 
 COPY . /tmp/src
 RUN /tmp/src/tools/install-js-tools.sh

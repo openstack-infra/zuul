@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    Service Workers are now disabled by default in the Javascript
+    dashboard. Deployers who wish to enable them need to set
+    ``REACT_APP_ENABLE_SERVICE_WORKER``
