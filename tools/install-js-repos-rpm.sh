@@ -22,23 +22,60 @@
 
 # The above license is inferred from the
 # https://github.com/nodesource/distributions source repository.
-
 # Discussion, issues and change requests at:
 #   https://github.com/nodesource/distributions
 #
-# Script to install the NodeSource Node.js 8.x repo onto an
+# Script to install the NodeSource Node.js 10.x repo onto an
 # Enterprise Linux or Fedora Core based system.
 #
-# Run as root or insert `sudo -E` before `bash`:
-#
-# This was downloaded from https://rpm.nodesource.com/setup_8.x
+# This was downloaded from https://rpm.nodesource.com/setup_10.x
 # A few modifications have been made.
 
+SCRSUFFIX="_10.x"
+NODENAME="Node.js 10.x"
+NODEREPO="pub_10.x"
+NODEPKG="nodejs"
+
 print_status() {
-  local outp=$(echo "$1" | sed -r 's/\\n/\\n## /mg')
+  local outp=$(echo "$1") # | sed -r 's/\\n/\\n## /mg')
   echo
   echo -e "## ${outp}"
   echo
+}
+
+if test -t 1; then # if terminal
+    ncolors=$(which tput > /dev/null && tput colors) # supports color
+    if test -n "$ncolors" && test $ncolors -ge 8; then
+        termcols=$(tput cols)
+        bold="$(tput bold)"
+        underline="$(tput smul)"
+        standout="$(tput smso)"
+        normal="$(tput sgr0)"
+        black="$(tput setaf 0)"
+        red="$(tput setaf 1)"
+        green="$(tput setaf 2)"
+        yellow="$(tput setaf 3)"
+        blue="$(tput setaf 4)"
+        magenta="$(tput setaf 5)"
+        cyan="$(tput setaf 6)"
+        white="$(tput setaf 7)"
+    fi
+fi
+
+print_bold() {
+    title="$1"
+    text="$2"
+
+    echo
+    echo "${red}================================================================================${normal}"
+    echo "${red}================================================================================${normal}"
+    echo
+    echo -e "  ${bold}${yellow}${title}${normal}"
+    echo
+    echo -en "  ${text}"
+    echo
+    echo "${red}================================================================================${normal}"
+    echo "${red}================================================================================${normal}"
 }
 
 bail() {
@@ -55,18 +92,88 @@ exec_cmd() {
   exec_cmd_nobail "$1" || bail
 }
 
-print_status "Installing the NodeSource Node.js 8.x repo..."
+node_deprecation_warning() {
+    if [[ "X${NODENAME}" == "Xio.js 1.x" ||
+          "X${NODENAME}" == "Xio.js 2.x" ||
+          "X${NODENAME}" == "Xio.js 3.x" ||
+          "X${NODENAME}" == "XNode.js 0.10" ||
+          "X${NODENAME}" == "XNode.js 0.12" ||
+          "X${NODENAME}" == "XNode.js 4.x LTS Argon" ||
+          "X${NODENAME}" == "XNode.js 5.x" ||
+          "X${NODENAME}" == "XNode.js 7.x" ]]; then
+
+        print_bold \
+"                            DEPRECATION WARNING                            " "\
+${bold}${NODENAME} is no longer actively supported!${normal}
+
+  ${bold}You will not receive security or critical stability updates${normal} for this version.
+
+  You should migrate to a supported version of Node.js as soon as possible.
+  Use the installation script that corresponds to the version of Node.js you
+  wish to install. e.g.
+
+   * ${green}https://deb.nodesource.com/setup_8.x — Node.js v8 LTS \"Carbon\"${normal} (recommended)
+   * ${green}https://deb.nodesource.com/setup_10.x — Node.js v10 Current${normal}
+
+  Please see ${bold}https://github.com/nodejs/Release${normal} for details about which
+  version may be appropriate for you.
+
+  The ${bold}NodeSource${normal} Node.js distributions repository contains
+  information both about supported versions of Node.js and supported Linux
+  distributions. To learn more about usage, see the repository:
+    ${bold}https://github.com/nodesource/distributions${normal}
+"
+        echo
+        echo "Continuing in 20 seconds ..."
+        echo
+        sleep 20
+    fi
+}
+
+script_deprecation_warning() {
+    if [ "X${SCRSUFFIX}" == "X" ]; then
+        print_bold \
+"                         SCRIPT DEPRECATION WARNING                         " "\
+This script, located at ${bold}https://rpm.nodesource.com/setup${normal}, used to
+  install Node.js v0.10, is deprecated and will eventually be made inactive.
+
+  You should use the script that corresponds to the version of Node.js you
+  wish to install. e.g.
+
+   * ${green}https://deb.nodesource.com/setup_8.x — Node.js v8 LTS \"Carbon\"${normal} (recommended)
+   * ${green}https://deb.nodesource.com/setup_10.x — Node.js v10 Current${normal}
+
+  Please see ${bold}https://github.com/nodejs/Release${normal} for details about which
+  version may be appropriate for you.
+
+  The ${bold}NodeSource${normal} Node.js Linux distributions GitHub repository contains
+  information about which versions of Node.js and which Linux distributions
+  are supported and how to use the install scripts.
+    ${bold}https://github.com/nodesource/distributions${normal}
+"
+
+        echo
+        echo "Continuing in 20 seconds (press Ctrl-C to abort) ..."
+        echo
+        sleep 20
+    fi
+}
+
+setup() {
+
+script_deprecation_warning
+node_deprecation_warning
+
+print_status "Installing the NodeSource ${NODENAME} repo..."
 
 print_status "Inspecting system..."
 
 if [ ! -x /bin/rpm ]; then
-  print_status "\
-You don't appear to be running an Enterprise Linux based \
-system, please contact NodeSource at \
-https://github.com/nodesource/distributions/issues if you think this \
-is incorrect or would like your distribution to be considered for \
-support.\
-"
+  print_status """You don't appear to be running an Enterprise Linux based system,
+please contact NodeSource at https://github.com/nodesource/distributions/issues
+if you think this is incorrect or would like your distribution to be considered
+for support.
+"""
   exit 1
 fi
 
@@ -98,7 +205,7 @@ fi
 
 if [[ $DISTRO_PKG =~ ^(redhat|centos|cloudlinux|sl)- ]]; then
     DIST_TYPE=el
-elif [[ $DISTRO_PKG =~ ^system-release- ]]; then # Amazon Linux
+elif [[ $DISTRO_PKG =~ ^(enterprise|system)-release- ]]; then # Oracle Linux & Amazon Linux
     DIST_TYPE=el
 elif [[ $DISTRO_PKG =~ ^(fedora|korora)- ]]; then
     DIST_TYPE=fc
@@ -115,7 +222,7 @@ Include your 'distribution package' name: ${DISTRO_PKG}. \
 
 fi
 
-if [[ $DISTRO_PKG =~ ^system-release-201[4-9]\. ]]; then  #NOTE: not really future-proof
+if [[ $DISTRO_PKG =~ ^system-release ]]; then
 
   # Amazon Linux, for 2014.* use el7, older versions are unknown, perhaps el6
   DIST_VERSION=7
@@ -124,7 +231,7 @@ else
 
   ## Using the redhat-release-server-X, centos-release-X, etc. pattern
   ## extract the major version number of the distro
-  DIST_VERSION=$(echo $DISTRO_PKG | sed -r 's/^[[:alpha:]]+-release(-server|-workstation)?-([0-9]+).*$/\2/')
+  DIST_VERSION=$(echo $DISTRO_PKG | sed -r 's/^[[:alpha:]]+-release(-server|-workstation|-client)?-([0-9]+).*$/\2/')
 
   if ! [[ $DIST_VERSION =~ ^[0-9][0-9]?$ ]]; then
 
@@ -147,7 +254,7 @@ fi
 ## we include the arch in the directory tree anyway)
 RELEASE_URL_VERSION_STRING="${DIST_TYPE}${DIST_VERSION}"
 RELEASE_URL="\
-https://rpm.nodesource.com/pub_8.x/\
+https://rpm.nodesource.com/${NODEREPO}/\
 ${DIST_TYPE}/\
 ${DIST_VERSION}/\
 ${DIST_ARCH}/\
@@ -193,15 +300,14 @@ if [ "$DIST_TYPE" == "el" ] && [ "$DIST_VERSION" == "5" ]; then
       exit 1
     fi
 
-    print_status "\
-The EPEL (Extra Packages for Enterprise Linux) repository is a\n\
-prerequisite for installing Node.js on your operating system. Please\n\
-add it and re-run this setup script.\n\
-\n\
-The EPEL repository RPM is available at:\n\
-  ${epel_url}${epel}\n\
-You can try installing with: \`rpm -ivh <url>\`\
-"
+    print_status """The EPEL (Extra Packages for Enterprise Linux) repository is a
+prerequisite for installing Node.js on your operating system. Please
+add it and re-run this setup script.
+
+The EPEL repository RPM is available at:
+  ${epel_url}${epel}
+You can try installing with: \`rpm -ivh <url>\`
+"""
 
     exit 1
   fi
@@ -236,21 +342,23 @@ EXISTING_NODE=$(rpm -qa 'node|npm|iojs' | grep -v nodesource)
 
 if [ "X${EXISTING_NODE}" != "X" ]; then
 
-  # NOTE(mordred) Removed -y from the yum command below.
-  print_status "\
-Your system appears to already have Node.js installed from an alternative source.\n\
-Run \`\033[1myum remove nodejs npm\033[22m\` (as root) to remove these first.\
-"
+  print_status """Your system appears to already have Node.js installed from an alternative source.
+Run \`${bold}sudo yum remove -y ${NODEPKG} npm${normal}\` to remove these first.
+"""
 
 fi
 
-# NOTE(mordred) Removed -y from the yum commands below.
-print_status "\
-Run \`\033[1myum install nodejs\033[22m\` (as root) to install Node.js 8.x and npm.\n\
-You may also need development tools to build native addons:\n\
-  \`yum install gcc-c++ make\`\
-"
-
-## Alternative to install dev tools: `yum groupinstall 'Development Tools'
+print_status """Run \`${bold}sudo yum install -y ${NODEPKG}${normal}\` to install ${NODENAME} and npm.
+## You may also need development tools to build native addons:
+     sudo yum install gcc-c++ make
+## To install the Yarn package manager, run:
+     curl -sL https://dl.yarnpkg.com/rpm/yarn.repo | sudo tee /etc/yum.repos.d/yarn.repo
+     sudo yum install yarn
+"""
 
 exit 0
+
+}
+
+## Defer setup until we have the complete script
+setup

@@ -183,11 +183,11 @@
         - zuul-build-dashboard-multi-tenant
         - nodejs-npm-run-lint:
             vars:
-              node_version: 8
+              node_version: 10
               zuul_work_dir: "{{ zuul.project.src_dir }}/web"
         - nodejs-npm-run-test:
             vars:
-              node_version: 8
+              node_version: 10
               zuul_work_dir: "{{ zuul.project.src_dir }}/web"
             success-url: 'npm/reports/bundle.html'
             files:
@@ -214,11 +214,11 @@
         - zuul-build-dashboard
         - nodejs-npm-run-lint:
             vars:
-              node_version: 8
+              node_version: 10
               zuul_work_dir: "{{ zuul.project.src_dir }}/web"
         - nodejs-npm-run-test:
             vars:
-              node_version: 8
+              node_version: 10
               zuul_work_dir: "{{ zuul.project.src_dir }}/web"
             success-url: 'npm/reports/bundle.html'
             files:
@@ -233,7 +233,7 @@
         - publish-zuul-python-branch-tarball
         - publish-openstack-javascript-content:
             vars:
-              node_version: 8
+              node_version: 10
               zuul_work_dir: "{{ zuul.project.src_dir }}/web"
               create_tarball_directory: build
     promote:
