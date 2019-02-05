@@ -156,7 +156,7 @@ api response needs to be set in the ``web/public/api`` directory.
   curl -o public/api/${route} https://zuul.openstack.org/api/${route}
   done
 
-To use an existing zuul api, uses the REACT_APP_ZUUl_API environment
+To use an existing zuul api, uses the REACT_APP_ZUUL_API environment
 variable:
 
 .. code-block:: bash
