@@ -25,7 +25,7 @@ The connection options for the SQL driver are:
 
       Database connection information in the form of a URI understood
       by SQLAlchemy.  See `The SQLAlchemy manual
-      <http://docs.sqlalchemy.org/en/rel_1_0/core/engines.html#database-urls>`_
+      <https://docs.sqlalchemy.org/en/latest/core/engines.html#database-urls>`_
       for more information.
 
       The driver will automatically set up the database creating and managing
