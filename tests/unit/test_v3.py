@@ -4360,11 +4360,15 @@ class TestJobOutput(AnsibleZuulTestCase):
         self.assertHistory([
             dict(name='job-output-missing-role', result='FAILURE',
                  changes='1,1'),
+            dict(name='job-output-missing-role-include', result='FAILURE',
+                 changes='1,1'),
         ], ordered=False)
 
-        job_output = self._get_file(self.history[0],
-                                    'work/logs/job-output.txt')
-        self.assertIn('the role \'not_existing\' was not found', job_output)
+        for history in self.history:
+            job_output = self._get_file(history,
+                                        'work/logs/job-output.txt')
+            self.assertIn('the role \'not_existing\' was not found',
+                          job_output)
 
     def test_job_output_failure_log(self):
         logger = logging.getLogger('zuul.AnsibleJob')
