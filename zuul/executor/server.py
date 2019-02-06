@@ -1959,6 +1959,15 @@ class AnsibleJob(object):
                     job_output.write("{now} | {line}\n".format(
                         now=datetime.datetime.now(),
                         line=line.decode('utf-8').rstrip()))
+        elif ret == 2:
+            # This is a workaround to detect winrm connection failures that are
+            # not detected by ansible. These can be detected if the string
+            # 'FATAL ERROR DURING FILE TRANSFER' is in the ansible output.
+            # In this case we should treat the host as unreachable and retry
+            # the job.
+            for line in syntax_buffer:
+                if b'FATAL ERROR DURING FILE TRANSFER' in line:
+                    return self.RESULT_UNREACHABLE, None
 
         return (self.RESULT_NORMAL, ret)
 
