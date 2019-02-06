@@ -29,7 +29,9 @@ class GitTriggerEvent(TriggerEvent):
                                           self.project_name)
 
         if self.branch:
-            ret += " %s" % self.branch
+            ret += " branch:%s" % self.branch
+        if self.ref:
+            ret += " ref:%s" % self.ref
         ret += " oldrev:%s" % self.oldrev
         ret += " newrev:%s" % self.newrev
         ret += '>'

@@ -28,7 +28,7 @@ from zuul.model import Ref, Branch
 
 
 class GitWatcher(threading.Thread):
-    log = logging.getLogger("connection.git.GitWatcher")
+    log = logging.getLogger("zuul.connection.git.watcher")
 
     def __init__(self, git_connection, baseurl, poll_delay):
         threading.Thread.__init__(self)
@@ -133,7 +133,7 @@ class GitWatcher(threading.Thread):
 
 class GitConnection(BaseConnection):
     driver_name = 'git'
-    log = logging.getLogger("connection.git")
+    log = logging.getLogger("zuul.connection.git")
 
     def __init__(self, driver, connection_name, connection_config):
         super(GitConnection, self).__init__(driver, connection_name,
