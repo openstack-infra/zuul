@@ -30,6 +30,10 @@
     name: job-output-missing-role
     run: playbooks/job-output-missing-role.yaml
 
+- job:
+    name: job-output-missing-role-include
+    run: playbooks/job-output-missing-role-include.yaml
+
 - project:
     name: org/project
     check:
@@ -47,3 +51,4 @@
     check:
       jobs:
         - job-output-missing-role
+        - job-output-missing-role-include
