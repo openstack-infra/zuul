@@ -886,9 +886,9 @@ Here is an example of two job definitions:
 
    .. attr:: run
 
-      The name of the main playbook for this job.  If it is not
-      supplied, the parent's playbook will be used (and likewise up
-      the inheritance chain).  The full path within the repo is
+      The name of a playbook or list of playbooks for this job.  If it
+      is not supplied, the parent's playbook will be used (and likewise
+      up the inheritance chain).  The full path within the repo is
       required.  Example:
 
       .. code-block:: yaml

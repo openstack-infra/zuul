@@ -566,7 +566,7 @@ class JobParser(object):
                       'attempts': int,
                       'pre-run': to_list(str),
                       'post-run': to_list(str),
-                      'run': str,
+                      'run': to_list(str),
                       '_source_context': model.SourceContext,
                       '_start_mark': ZuulMark,
                       'roles': to_list(role),
@@ -719,10 +719,12 @@ class JobParser(object):
                                              post_run_name, job.roles,
                                              secrets)
             job.post_run = (post_run,) + job.post_run
+
         if 'run' in conf:
-            run = model.PlaybookContext(job.source_context, conf['run'],
-                                        job.roles, secrets)
-            job.run = (run,)
+            for run_name in as_list(conf.get('run')):
+                run = model.PlaybookContext(job.source_context, run_name,
+                                            job.roles, secrets)
+                job.run = job.run + (run,)
 
         for k in self.simple_attributes:
             a = k.replace('-', '_')

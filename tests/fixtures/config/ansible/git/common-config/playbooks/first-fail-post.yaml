@@ -1,0 +1,11 @@
+- hosts: all
+  tasks:
+    - name: Register bar.txt file.
+      stat:
+        path: "{{zuul.executor.log_root}}/bar.txt"
+      register: bar_st
+
+    - name: Assert bar.txt file.
+      assert:
+        that:
+          - not bar_st.stat.exists

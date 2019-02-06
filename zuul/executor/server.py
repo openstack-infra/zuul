@@ -394,7 +394,6 @@ class JobDir(object):
                                             'setup-inventory.yaml')
         self.logging_json = os.path.join(self.ansible_root, 'logging.json')
         self.playbooks = []  # The list of candidate playbooks
-        self.playbook = None  # A pointer to the candidate we have chosen
         self.pre_playbooks = []
         self.post_playbooks = []
         self.job_output_file = os.path.join(self.log_root, 'job-output.txt')
@@ -1133,26 +1132,30 @@ class AnsibleJob(object):
              self.cpu_times['children_system']))
 
         if not pre_failed:
-            ansible_timeout = self.getAnsibleTimeout(time_started, job_timeout)
-            job_status, job_code = self.runAnsiblePlaybook(
-                self.jobdir.playbook, ansible_timeout, phase='run')
-            if job_status == self.RESULT_ABORTED:
-                return 'ABORTED'
-            elif job_status == self.RESULT_TIMED_OUT:
-                # Set the pre-failure flag so this doesn't get
-                # overridden by a post-failure.
-                pre_failed = True
-                result = 'TIMED_OUT'
-            elif job_status == self.RESULT_NORMAL:
-                success = (job_code == 0)
-                if success:
-                    result = 'SUCCESS'
+            for index, playbook in enumerate(self.jobdir.playbooks):
+                ansible_timeout = self.getAnsibleTimeout(
+                    time_started, job_timeout)
+                job_status, job_code = self.runAnsiblePlaybook(
+                    playbook, ansible_timeout, phase='run', index=index)
+                if job_status == self.RESULT_ABORTED:
+                    return 'ABORTED'
+                elif job_status == self.RESULT_TIMED_OUT:
+                    # Set the pre-failure flag so this doesn't get
+                    # overridden by a post-failure.
+                    pre_failed = True
+                    result = 'TIMED_OUT'
+                    break
+                elif job_status == self.RESULT_NORMAL:
+                    success = (job_code == 0)
+                    if success:
+                        result = 'SUCCESS'
+                    else:
+                        result = 'FAILURE'
+                        break
                 else:
-                    result = 'FAILURE'
-            else:
-                # The result of the job is indeterminate.  Zuul will
-                # run it again.
-                return None
+                    # The result of the job is indeterminate.  Zuul will
+                    # run it again.
+                    return None
 
         # check if we need to pause here
         result_data = self.getResultData()
@@ -1350,14 +1353,15 @@ class AnsibleJob(object):
             jobdir_playbook = self.jobdir.addPrePlaybook()
             self.preparePlaybook(jobdir_playbook, playbook, args)
 
+        job_playbook = None
         for playbook in args['playbooks']:
             jobdir_playbook = self.jobdir.addPlaybook()
             self.preparePlaybook(jobdir_playbook, playbook, args)
             if jobdir_playbook.path is not None:
-                self.jobdir.playbook = jobdir_playbook
-                break
+                if job_playbook is None:
+                    job_playbook = jobdir_playbook
 
-        if self.jobdir.playbook is None:
+        if job_playbook is None:
             raise ExecutorError("No playbook specified")
 
         for playbook in args['post_playbooks']:

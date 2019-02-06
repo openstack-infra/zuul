@@ -172,6 +172,70 @@
         name: renamed_secret
 
 - job:
+    name: multiple-parent
+    run: playbooks/multiple-parent.yaml
+    nodeset:
+      nodes:
+        - name: ubuntu-xenial
+          label: ubuntu-xenial
+      groups:
+        - name: foo
+          nodes:
+            - ubuntu-xenial
+        - name: bar
+          nodes:
+            - ubuntu-xenial
+
+- job:
+    name: multiple-child
+    parent: multiple-parent
+    run:
+      - playbooks/foo.yaml
+      - playbooks/bar.yaml
+    post-run: playbooks/foobar-post.yaml
+
+- job:
+    name: multiple-child-no-run
+    parent: multiple-parent
+    post-run: playbooks/multiple-parent-post.yaml
+
+- job:
+    name: multiple-run
+    run:
+      - playbooks/foo.yaml
+      - playbooks/bar.yaml
+    post-run: playbooks/foobar-post.yaml
+    nodeset:
+      nodes:
+        - name: ubuntu-xenial
+          label: ubuntu-xenial
+      groups:
+        - name: foo
+          nodes:
+            - ubuntu-xenial
+        - name: bar
+          nodes:
+            - ubuntu-xenial
+
+- job:
+    name: multiple-run-failure
+    run:
+      - playbooks/first-fail.yaml
+      - playbooks/bar.yaml
+    post-run: playbooks/first-fail-post.yaml
+    nodeset:
+      nodes:
+        - name: ubuntu-xenial
+          label: ubuntu-xenial
+      groups:
+        - name: foo
+          nodes:
+            - ubuntu-xenial
+        - name: bar
+          nodes:
+            - ubuntu-xenial
+
+- job:
     parent: base-urls
     name: hello
     run: playbooks/hello-post.yaml
