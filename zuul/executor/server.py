@@ -76,6 +76,17 @@ class RoleNotFoundError(ExecutorError):
     pass
 
 
+class RepoLocks:
+
+    def __init__(self):
+        self.locks = {}
+
+    def getRepoLock(self, connection_name, project_name):
+        key = '%s:%s' % (connection_name, project_name)
+        self.locks.setdefault(key, threading.Lock())
+        return self.locks[key]
+
+
 class DiskAccountant(object):
     ''' A single thread to periodically run du and monitor a base directory
 
@@ -2121,8 +2132,7 @@ class ExecutorMergeWorker(gear.TextWorker):
         while self.zuul_executor_server.update_queue.qsize():
             time.sleep(1)
 
-        with self.zuul_executor_server.merger_lock:
-            super(ExecutorMergeWorker, self).handleNoop(packet)
+        super(ExecutorMergeWorker, self).handleNoop(packet)
 
 
 class ExecutorExecuteWorker(gear.TextWorker):
@@ -2154,7 +2164,7 @@ class ExecutorServer(object):
         self.hostname = get_default(self.config, 'executor', 'hostname',
                                     socket.getfqdn())
         self.log_streaming_port = log_streaming_port
-        self.merger_lock = threading.Lock()
+        self.repo_locks = RepoLocks()
         self.governor_lock = threading.Lock()
         self.run_lock = threading.Lock()
         self.verbose = False
@@ -2447,7 +2457,9 @@ class ExecutorServer(object):
             # We are asked to stop
             raise StopException()
         try:
-            with self.merger_lock:
+            lock = self.repo_locks.getRepoLock(
+                task.connection_name, task.project_name)
+            with lock:
                 self.log.info("Updating repo %s/%s",
                               task.connection_name, task.project_name)
                 self.merger.updateRepo(task.connection_name, task.project_name)
@@ -2648,7 +2660,9 @@ class ExecutorServer(object):
         args = json.loads(job.arguments)
         task = self.update(args['connection'], args['project'])
         task.wait()
-        with self.merger_lock:
+        lock = self.repo_locks.getRepoLock(
+            task.connection_name, task.project_name)
+        with lock:
             files = self.merger.getFiles(args['connection'], args['project'],
                                          args['branch'], args['files'],
                                          args.get('dirs', []))
@@ -2660,7 +2674,9 @@ class ExecutorServer(object):
         args = json.loads(job.arguments)
         task = self.update(args['connection'], args['project'])
         task.wait()
-        with self.merger_lock:
+        lock = self.repo_locks.getRepoLock(
+            args['connection'], args['project'])
+        with lock:
             files = self.merger.getFilesChanges(
                 args['connection'], args['project'],
                 args['branch'],
@@ -2671,18 +2687,18 @@ class ExecutorServer(object):
 
     def refstate(self, job):
         args = json.loads(job.arguments)
-        with self.merger_lock:
-            success, repo_state = self.merger.getRepoState(args['items'])
+        success, repo_state = self.merger.getRepoState(
+            args['items'], repo_locks=self.repo_locks)
         result = dict(updated=success,
                       repo_state=repo_state)
         job.sendWorkComplete(json.dumps(result))
 
     def merge(self, job):
         args = json.loads(job.arguments)
-        with self.merger_lock:
-            ret = self.merger.mergeChanges(args['items'], args.get('files'),
-                                           args.get('dirs', []),
-                                           args.get('repo_state'))
+        ret = self.merger.mergeChanges(args['items'], args.get('files'),
+                                       args.get('dirs', []),
+                                       args.get('repo_state'),
+                                       repo_locks=self.repo_locks)
         result = dict(merged=(ret is not None))
         if ret is None:
             result['commit'] = result['files'] = result['repo_state'] = None

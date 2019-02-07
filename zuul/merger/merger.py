@@ -67,6 +67,11 @@ def timeout_handler(path):
         raise
 
 
+@contextmanager
+def nullcontext():
+    yield
+
+
 class Repo(object):
     commit_re = re.compile(r'^commit ([0-9a-f]{40})$')
     diff_re = re.compile(r'^@@ -\d+,\d \+(\d+),\d @@$')
@@ -684,7 +689,8 @@ class Merger(object):
         recent[key] = commit
         return orig_commit, commit
 
-    def mergeChanges(self, items, files=None, dirs=None, repo_state=None):
+    def mergeChanges(self, items, files=None, dirs=None, repo_state=None,
+                     repo_locks=None):
         # connection+project+branch -> commit
         recent = {}
         commit = None
@@ -693,19 +699,27 @@ class Merger(object):
         if repo_state is None:
             repo_state = {}
         for item in items:
-            self.log.debug("Merging for change %s,%s" %
-                           (item["number"], item["patchset"]))
-            orig_commit, commit = self._mergeItem(item, recent, repo_state)
-            if not commit:
-                return None
-            if files or dirs:
-                repo = self.getRepo(item['connection'], item['project'])
-                repo_files = repo.getFiles(files, dirs, commit=commit)
-                read_files.append(dict(
-                    connection=item['connection'],
-                    project=item['project'],
-                    branch=item['branch'],
-                    files=repo_files))
+            # If we're in the executor context we have the repo_locks object
+            # and perform per repo locking.
+            if repo_locks is not None:
+                lock = repo_locks.getRepoLock(
+                    item['connection'], item['project'])
+            else:
+                lock = nullcontext()
+            with lock:
+                self.log.debug("Merging for change %s,%s" %
+                               (item["number"], item["patchset"]))
+                orig_commit, commit = self._mergeItem(item, recent, repo_state)
+                if not commit:
+                    return None
+                if files or dirs:
+                    repo = self.getRepo(item['connection'], item['project'])
+                    repo_files = repo.getFiles(files, dirs, commit=commit)
+                    read_files.append(dict(
+                        connection=item['connection'],
+                        project=item['project'],
+                        branch=item['branch'],
+                        files=repo_files))
         ret_recent = {}
         for k, v in recent.items():
             ret_recent[k] = v.hexsha
@@ -725,7 +739,7 @@ class Merger(object):
             self._restoreRepoState(item['connection'], item['project'], repo,
                                    repo_state)
 
-    def getRepoState(self, items):
+    def getRepoState(self, items, repo_locks=None):
         # Gets the repo state for items.  Generally this will be
         # called in any non-change pipeline.  We will return the repo
         # state for each item, but manipulated with any information in
@@ -735,23 +749,32 @@ class Merger(object):
         recent = {}
         repo_state = {}
         for item in items:
-            repo = self.getRepo(item['connection'], item['project'])
-            key = (item['connection'], item['project'], item['branch'])
-            if key not in seen:
-                try:
-                    repo.reset()
-                except Exception:
-                    self.log.exception("Unable to reset repo %s" % repo)
-                    return (False, {})
+            # If we're in the executor context we have the repo_locks object
+            # and perform per repo locking.
+            if repo_locks is not None:
+                lock = repo_locks.getRepoLock(
+                    item['connection'], item['project'])
+            else:
+                lock = nullcontext()
+            with lock:
+                repo = self.getRepo(item['connection'], item['project'])
+                key = (item['connection'], item['project'], item['branch'])
+                if key not in seen:
+                    try:
+                        repo.reset()
+                    except Exception:
+                        self.log.exception("Unable to reset repo %s" % repo)
+                        return (False, {})
 
-                self._saveRepoState(item['connection'], item['project'], repo,
-                                    repo_state, recent)
+                    self._saveRepoState(item['connection'], item['project'],
+                                        repo, repo_state, recent)
 
-            if item.get('newrev'):
-                # This is a ref update rather than a branch tip, so make sure
-                # our returned state includes this change.
-                self._alterRepoState(item['connection'], item['project'],
-                                     repo_state, item['ref'], item['newrev'])
+                if item.get('newrev'):
+                    # This is a ref update rather than a branch tip, so make
+                    # sure our returned state includes this change.
+                    self._alterRepoState(
+                        item['connection'], item['project'], repo_state,
+                        item['ref'], item['newrev'])
         return (True, repo_state)
 
     def getFiles(self, connection_name, project_name, branch, files, dirs=[]):
