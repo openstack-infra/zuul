@@ -845,11 +845,12 @@ sections of ``zuul.conf`` are used by the finger gateway:
       the default value is highly recommended.
 
    .. attr:: user
-      :default: zuul
 
       User ID for the zuul-fingergw process. In normal operation as a
-      daemon, the finger gateway should be started as the ``root`` user, but
-      it will drop privileges to this user during startup.
+      daemon, the finger gateway should be started as the ``root``
+      user, but if this option is set, it will drop privileges to this
+      user during startup.  It is recommended to set this option to an
+      unprivileged user.
 
 Operation
 ~~~~~~~~~
