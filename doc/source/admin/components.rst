@@ -143,10 +143,6 @@ The following sections of ``zuul.conf`` are used by all Zuul components:
       If present, this will be prefixed to all of the keys before
       transmitting to the statsd server.
 
-.. NOTE: this is a white lie at this point, since only the scheduler
-   uses this, however, we expect other components to use it later, so
-   it's reasonable for admins to plan for this now.
-
 .. attr:: zookeeper
 
    Client connection information for ZooKeeper

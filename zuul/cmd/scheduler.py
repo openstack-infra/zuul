@@ -137,8 +137,9 @@ class Scheduler(zuul.cmd.ZuulDaemonApp):
         nodepool = zuul.nodepool.Nodepool(self.sched)
 
         zookeeper = zuul.zk.ZooKeeper()
-        zookeeper_hosts = get_default(self.config, 'zookeeper',
-                                      'hosts', '127.0.0.1:2181')
+        zookeeper_hosts = get_default(self.config, 'zookeeper', 'hosts', None)
+        if not zookeeper_hosts:
+            raise Exception("The zookeeper hosts config value is required")
         zookeeper_timeout = float(get_default(self.config, 'zookeeper',
                                               'session_timeout', 10.0))
 

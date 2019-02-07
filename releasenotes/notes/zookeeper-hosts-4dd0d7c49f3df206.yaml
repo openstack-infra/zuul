@@ -1,0 +1,6 @@
+---
+upgrade:
+  - The ``hosts`` value in the ``[zookeeper]`` configuration section
+    previously defaulted to ``localhost:2181``, but now is unset by
+    default.  This value is required and must be explicitly set (and
+    the documentation has always indicated this).
