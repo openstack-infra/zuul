@@ -138,7 +138,8 @@ The supported options in ``zuul.conf`` connections are:
    .. attr:: sshkey
       :default: ~/.ssh/id_rsa
 
-      Path to SSH key to use when cloning github repositories.
+      Path to SSH key to use when cloning github repositories if Zuul
+      is configured with Webhooks.
 
    .. attr:: server
       :default: github.com
