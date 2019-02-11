@@ -13,6 +13,7 @@
 # under the License.
 
 import datetime
+import json
 import logging
 import time
 import voluptuous as v
@@ -90,6 +91,8 @@ class SQLReporter(BaseReporter):
                 for artifact in get_artifacts_from_result_data(
                     build.result_data,
                     logger=self.log):
+                    if 'metadata' in artifact:
+                        artifact['metadata'] = json.dumps(artifact['metadata'])
                     db_build.createArtifact(**artifact)
 
 

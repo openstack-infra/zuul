@@ -229,7 +229,7 @@ of item.
    under the ``zuul`` key:
 
    .. var:: artifacts
-      :type: list
+      :type: dict
 
       If the job has a :attr:`job.requires` attribute, and Zuul has
       found changes ahead of this change in the pipeline with matching
@@ -262,6 +262,10 @@ of item.
       .. var:: url
 
          The URL of the artifact (as supplied to :ref:`return_artifacts`).
+
+      .. var:: metadata
+
+         The metadata of the artifact (as supplied to :ref:`return_artifacts`).
 
    .. var:: build
 
@@ -779,7 +783,7 @@ Returning artifact URLs
 
 If a build produces artifacts, any number of URLs may be returned to
 Zuul and stored in the SQL database.  These will then be available via
-the web interface.
+the web interface and subsequent jobs.
 
 To provide artifact URLs for a build, use *zuul_return* to set keys
 under the **zuul.artifacts** dictionary.  For example:
@@ -791,13 +795,17 @@ under the **zuul.artifacts** dictionary.  For example:
         data:
           zuul:
             artifacts:
-              - name: tarball
+              tarball:
                 url: http://example.com/path/to/package.tar.gz
-              - name: docs
+                metadata:
+                  version: 3.0
+              docs:
                 url: build/docs/
 
 If the value of **url** is a relative URL, it will be combined with
-the **zuul.log_url** value if set to create an absolute URL.
+the **zuul.log_url** value if set to create an absolute URL.  The
+**metadata** key is optional; if it is provided, it must be a
+dictionary; its keys and values may be anything.
 
 Skipping child jobs
 ~~~~~~~~~~~~~~~~~~~
