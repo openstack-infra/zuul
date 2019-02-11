@@ -223,6 +223,11 @@ class SQLConnection(BaseConnection):
 
             def createArtifact(self, *args, **kw):
                 session = orm.session.Session.object_session(self)
+                # SQLAlchemy reserves the 'metadata' attribute on
+                # object models, so our model and table names use
+                # 'meta', but here we accept data directly from
+                # zuul_return where it's called 'metadata'.  Transform
+                # the attribute name.
                 if 'metadata' in kw:
                     kw['meta'] = kw['metadata']
                     del kw['metadata']
