@@ -1563,8 +1563,9 @@ class TenantParser(object):
             # in-repo configuration apply only to that branch.
             branches = tenant.getProjectBranches(project)
             for branch in branches:
-                if abide.getUnparsedConfig(project.canonical_name,
-                                           branch):
+                unparsed_config = abide.getUnparsedConfig(
+                    project.canonical_name, branch)
+                if unparsed_config and not unparsed_config.load_skipped:
                     # We already have this branch cached.
                     continue
                 if not tpc.load_classes:
@@ -1573,7 +1574,7 @@ class TenantParser(object):
                     # data so we know we've looked at this branch.
                     abide.cacheUnparsedConfig(
                         project.canonical_name,
-                        branch, model.UnparsedConfig())
+                        branch, model.UnparsedConfig(load_skipped=True))
                     continue
                 job = self.merger.getFiles(
                     project.source.connection.connection_name,
