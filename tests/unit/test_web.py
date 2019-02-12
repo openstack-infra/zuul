@@ -716,6 +716,17 @@ class TestBuildInfo(ZuulDBTestCase, BaseTestWeb):
         resp = self.get_url("api/tenant/non-tenant/builds")
         self.assertEqual(404, resp.status_code)
 
+    def test_web_list_buildsets(self):
+        # Generate some build records in the db.
+        self.add_base_changes()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        buildsets = self.get_url("api/tenant/tenant-one/buildsets").json()
+        self.assertEqual(2, len(buildsets))
+        self.assertEqual(3, len(buildsets[0]["builds"]))
+
 
 class TestArtifacts(ZuulDBTestCase, BaseTestWeb, AnsibleZuulTestCase):
     config_file = 'zuul-sql-driver.conf'

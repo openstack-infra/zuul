@@ -406,7 +406,7 @@ class ZuulWebAPI(object):
         resp.headers['Content-Type'] = 'text/plain'
         return job.data[0] + '\n'
 
-    def buildToDict(self, build):
+    def buildToDict(self, build, buildset=None):
         start_time = build.start_time
         if build.start_time:
             start_time = start_time.strftime(
@@ -421,7 +421,6 @@ class ZuulWebAPI(object):
         else:
             duration = None
 
-        buildset = build.buildset
         ret = {
             'uuid': build.uuid,
             'job_name': build.job_name,
@@ -432,37 +431,34 @@ class ZuulWebAPI(object):
             'voting': build.voting,
             'log_url': build.log_url,
             'node_name': build.node_name,
-
-            'project': buildset.project,
-            'branch': buildset.branch,
-            'pipeline': buildset.pipeline,
-            'change': buildset.change,
-            'patchset': buildset.patchset,
-            'ref': buildset.ref,
-            'newrev': buildset.newrev,
-            'ref_url': buildset.ref_url,
-            'artifacts': [],
-            'provides': [],
         }
 
-        for artifact in build.artifacts:
-            ret['artifacts'].append({
-                'name': artifact.name,
-                'url': artifact.url,
+        if buildset:
+            ret.update({
+                'project': buildset.project,
+                'branch': buildset.branch,
+                'pipeline': buildset.pipeline,
+                'change': buildset.change,
+                'patchset': buildset.patchset,
+                'ref': buildset.ref,
+                'newrev': buildset.newrev,
+                'ref_url': buildset.ref_url,
+                'artifacts': [],
+                'provides': [],
             })
-        for provides in build.provides:
-            ret['provides'].append({
-                'name': artifact.name,
-            })
+
+            for artifact in build.artifacts:
+                ret['artifacts'].append({
+                    'name': artifact.name,
+                    'url': artifact.url,
+                })
+            for provides in build.provides:
+                ret['provides'].append({
+                    'name': artifact.name,
+                })
         return ret
 
-    @cherrypy.expose
-    @cherrypy.tools.save_params()
-    @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
-    def builds(self, tenant, project=None, pipeline=None, change=None,
-               branch=None, patchset=None, ref=None, newrev=None,
-               uuid=None, job_name=None, voting=None, node_name=None,
-               result=None, limit=50, skip=0):
+    def _get_connection(self, tenant):
         # Ask the scheduler which sql connection to use for this tenant
         job = self.rpc.submitJob('zuul:tenant_sql_connection',
                                  {'tenant': tenant})
@@ -471,7 +467,16 @@ class ZuulWebAPI(object):
         if not connection_name:
             raise cherrypy.HTTPError(404, 'Tenant %s does not exist.' % tenant)
 
-        connection = self.zuulweb.connections.connections[connection_name]
+        return self.zuulweb.connections.connections[connection_name]
+
+    @cherrypy.expose
+    @cherrypy.tools.save_params()
+    @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
+    def builds(self, tenant, project=None, pipeline=None, change=None,
+               branch=None, patchset=None, ref=None, newrev=None,
+               uuid=None, job_name=None, voting=None, node_name=None,
+               result=None, limit=50, skip=0):
+        connection = self._get_connection(tenant)
 
         builds = connection.getBuilds(
             tenant=tenant, project=project, pipeline=pipeline, change=change,
@@ -481,29 +486,58 @@ class ZuulWebAPI(object):
 
         resp = cherrypy.response
         resp.headers['Access-Control-Allow-Origin'] = '*'
-        return [self.buildToDict(b) for b in builds]
+        return [self.buildToDict(b, b.buildset) for b in builds]
 
     @cherrypy.expose
     @cherrypy.tools.save_params()
     @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
     def build(self, tenant, uuid):
-        # Ask the scheduler which sql connection to use for this tenant
-        job = self.rpc.submitJob('zuul:tenant_sql_connection',
-                                 {'tenant': tenant})
-        connection_name = json.loads(job.data[0])
-
-        if not connection_name:
-            raise cherrypy.HTTPError(404, 'Tenant %s does not exist.' % tenant)
-
-        connection = self.zuulweb.connections.connections[connection_name]
+        connection = self._get_connection(tenant)
 
         data = connection.getBuilds(tenant=tenant, uuid=uuid, limit=1)
         if not data:
             raise cherrypy.HTTPError(404, "Build not found")
-        data = self.buildToDict(data[0])
+        data = self.buildToDict(data[0], data[0].buildset)
         resp = cherrypy.response
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return data
+
+    def buildsetToDict(self, buildset):
+        ret = {
+            'uuid': buildset.uuid,
+            'result': buildset.result,
+            'message': buildset.message,
+            'project': buildset.project,
+            'branch': buildset.branch,
+            'pipeline': buildset.pipeline,
+            'change': buildset.change,
+            'patchset': buildset.patchset,
+            'ref': buildset.ref,
+            'newrev': buildset.newrev,
+            'ref_url': buildset.ref_url,
+            'builds': []
+        }
+        for build in buildset.builds:
+            ret["builds"].append(self.buildToDict(build))
+        return ret
+
+    @cherrypy.expose
+    @cherrypy.tools.save_params()
+    @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
+    def buildsets(self, tenant, project=None, pipeline=None, change=None,
+                  branch=None, patchset=None, ref=None, newrev=None,
+                  uuid=None, job_name=None, result=None, limit=50, skip=0):
+        connection = self._get_connection(tenant)
+
+        buildsets = connection.getBuildsets(
+            tenant=tenant, project=project, pipeline=pipeline, change=change,
+            branch=branch, patchset=patchset, ref=ref, newrev=newrev,
+            uuid=uuid, job_name=job_name, result=result,
+            limit=limit, offset=skip)
+
+        resp = cherrypy.response
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return [self.buildsetToDict(b) for b in buildsets]
 
     @cherrypy.expose
     @cherrypy.tools.save_params()
@@ -661,6 +695,8 @@ class ZuulWeb(object):
                           controller=api, action='builds')
         route_map.connect('api', '/api/tenant/{tenant}/build/{uuid}',
                           controller=api, action='build')
+        route_map.connect('api', '/api/tenant/{tenant}/buildsets',
+                          controller=api, action='buildsets')
         route_map.connect('api', '/api/tenant/{tenant}/config-errors',
                           controller=api, action='config_errors')
 
