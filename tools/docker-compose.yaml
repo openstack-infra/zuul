@@ -1,0 +1,35 @@
+version: "3"
+
+services:
+  mysql:
+    container_name: zuul-test-mysql
+    image: mysql:5.7
+    environment:
+      - MYSQL_ROOT_PASSWORD=insecure_slave
+    ports:
+      - "3306:3306"
+    tmpfs:
+      - /var/lib/mysql
+
+  postgres:
+    container_name: zuul-test-postgres
+    image: postgres
+    environment:
+      - POSTGRES_USER=openstack_citest
+      - POSTGRES_PASSWORD=openstack_citest
+    ports:
+      - "5432:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  zookeeper:
+    container_name: zuul-test-zookeeper
+    image: zookeeper
+    environment:
+      - ZOO_AUTOPURGE_PURGEINTERVAL=1
+      - ZOO_LOG4J_PROP=WARN
+    ports:
+      - "2181:2181"
+    tmpfs:
+      - /data
+      - /datalog
