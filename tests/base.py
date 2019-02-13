@@ -784,6 +784,15 @@ class GithubChangeReference(git.Reference):
     _points_to_commits_only = True
 
 
+class FakeGHReview(object):
+
+    def __init__(self, data):
+        self.data = data
+
+    def as_dict(self):
+        return self.data
+
+
 class FakeGithubPullRequest(object):
 
     def __init__(self, github, number, project, branch,
@@ -1050,14 +1059,14 @@ class FakeGithubPullRequest(object):
             submitted_at = time.strftime(
                 gh_time_format, granted_on.timetuple())
 
-        self.reviews.append({
+        self.reviews.append(FakeGHReview({
             'state': state,
             'user': {
                 'login': user,
                 'email': user + "@derp.com",
             },
             'submitted_at': submitted_at,
-        })
+        }))
 
     def getPRReference(self):
         return '%s/head' % self.number
@@ -1228,10 +1237,6 @@ class FakeGithubConnection(githubconnection.GithubConnection):
         # fake github
         super(FakeGithubConnection, self).addProject(project)
         self.getGithubClient(project).addProject(project)
-
-    def _getPullReviews(self, owner, project, number):
-        pr = self.pull_requests[int(number)]
-        return pr.reviews
 
     def getGitUrl(self, project):
         if self.git_url_with_auth:

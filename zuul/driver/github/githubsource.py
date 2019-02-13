@@ -81,7 +81,7 @@ class GithubSource(BaseSource):
             num = int(m.group(3))
         except ValueError:
             return None
-        pull = self.connection.getPull('%s/%s' % (org, proj), int(num))
+        pull, pr_obj = self.connection.getPull('%s/%s' % (org, proj), int(num))
         if not pull:
             return None
         proj = pull.get('base').get('repo').get('full_name')
