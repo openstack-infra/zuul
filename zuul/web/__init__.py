@@ -515,10 +515,7 @@ class ZuulWebAPI(object):
             'ref': buildset.ref,
             'newrev': buildset.newrev,
             'ref_url': buildset.ref_url,
-            'builds': []
         }
-        for build in buildset.builds:
-            ret["builds"].append(self.buildToDict(build))
         return ret
 
     @cherrypy.expose
@@ -526,13 +523,13 @@ class ZuulWebAPI(object):
     @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
     def buildsets(self, tenant, project=None, pipeline=None, change=None,
                   branch=None, patchset=None, ref=None, newrev=None,
-                  uuid=None, job_name=None, result=None, limit=50, skip=0):
+                  uuid=None, result=None, limit=50, skip=0):
         connection = self._get_connection(tenant)
 
         buildsets = connection.getBuildsets(
             tenant=tenant, project=project, pipeline=pipeline, change=change,
             branch=branch, patchset=patchset, ref=ref, newrev=newrev,
-            uuid=uuid, job_name=job_name, result=result,
+            uuid=uuid, result=result,
             limit=limit, offset=skip)
 
         resp = cherrypy.response

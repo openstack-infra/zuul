@@ -107,15 +107,12 @@ class DatabaseSession(object):
 
     def getBuildsets(self, tenant=None, project=None, pipeline=None,
                      change=None, branch=None, patchset=None, ref=None,
-                     newrev=None, uuid=None, job_name=None, result=None,
+                     newrev=None, uuid=None, result=None,
                      limit=50, offset=0):
 
-        build_table = self.connection.zuul_build_table
         buildset_table = self.connection.zuul_buildset_table
 
         q = self.session().query(self.connection.buildSetModel).\
-            join(self.connection.buildModel).\
-            options(orm.contains_eager(self.connection.buildSetModel.builds)).\
             with_hint(buildset_table, 'USE INDEX (PRIMARY)', 'mysql')
 
         q = self.listFilter(q, buildset_table.c.tenant, tenant)
@@ -128,7 +125,6 @@ class DatabaseSession(object):
         q = self.listFilter(q, buildset_table.c.newrev, newrev)
         q = self.listFilter(q, buildset_table.c.uuid, uuid)
         q = self.listFilter(q, buildset_table.c.result, result)
-        q = self.listFilter(q, build_table.c.job_name, job_name)
 
         q = q.order_by(buildset_table.c.id.desc()).\
             limit(limit).\

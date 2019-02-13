@@ -725,7 +725,6 @@ class TestBuildInfo(ZuulDBTestCase, BaseTestWeb):
 
         buildsets = self.get_url("api/tenant/tenant-one/buildsets").json()
         self.assertEqual(2, len(buildsets))
-        self.assertEqual(3, len(buildsets[0]["builds"]))
 
 
 class TestArtifacts(ZuulDBTestCase, BaseTestWeb, AnsibleZuulTestCase):
