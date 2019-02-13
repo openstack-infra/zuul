@@ -262,21 +262,12 @@ class FakeRepository(object):
         return pulls
 
 
-class FakeLabel(object):
-    def __init__(self, name):
-        self.name = name
-
-
 class FakeIssue(object):
     def __init__(self, fake_pull_request):
         self._fake_pull_request = fake_pull_request
 
     def pull_request(self):
         return FakePull(self._fake_pull_request)
-
-    def labels(self):
-        return [FakeLabel(l)
-                for l in self._fake_pull_request.labels]
 
 
 class FakeFile(object):
@@ -338,6 +329,7 @@ class FakePull(object):
             'merged': pr.is_merged,
             'body': pr.body,
             'changed_files': len(pr.files),
+            'labels': [{'name': l} for l in pr.labels]
         }
         return data
 
