@@ -1134,6 +1134,8 @@ class GithubConnection(BaseConnection):
                              number, owner, proj))
             time.sleep(1)
         # Get the issue obj so we can get the labels (this is silly)
+        # TODO: this may be able to be simplified after
+        # https://github.com/sigmavirus24/github3.py/issues/924
         issueobj = probj.issue()
         pr = probj.as_dict()
         try:
