@@ -29,7 +29,7 @@ import traceback
 import git
 from urllib.parse import urlsplit
 
-from zuul.lib.yamlutil import yaml
+from zuul.lib.yamlutil import yaml, UnsafeTag
 from zuul.lib.config import get_default
 from zuul.lib.statsd import get_statsd
 from zuul.lib import filecomments
@@ -590,6 +590,10 @@ def make_inventory_dict(nodes, args, all_vars):
     hosts = {}
     for node in nodes:
         hosts[node['name']] = node['host_vars']
+
+    zuul_vars = all_vars['zuul']
+    if 'message' in zuul_vars:
+        zuul_vars['message'] = UnsafeTag(zuul_vars['message'])
 
     inventory = {
         'all': {
