@@ -17,7 +17,9 @@ def get_default(config, section, option, default=None, expand_user=False):
     if config.has_option(section, option):
         # Need to be ensured that we get suitable
         # type from config file by default value
-        if isinstance(default, int):
+        if isinstance(default, bool):
+            value = config.getboolean(section, option)
+        elif isinstance(default, int):
             value = config.getint(section, option)
         else:
             value = config.get(section, option)
