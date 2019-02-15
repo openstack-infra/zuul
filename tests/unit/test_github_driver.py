@@ -23,9 +23,10 @@ from unittest import mock, skip
 import git
 import github3.exceptions
 
+from zuul.driver.github.githubconnection import GithubShaCache
 import zuul.rpcclient
 
-from tests.base import ZuulTestCase, simple_layout, random_sha1
+from tests.base import BaseTestCase, ZuulTestCase, simple_layout, random_sha1
 from tests.base import ZuulWebFixture
 
 
@@ -1308,3 +1309,87 @@ class TestGithubWebhook(ZuulTestCase):
         self.waitUntilSettled()
 
         self.assertEqual(2, len(self.history))
+
+
+class TestGithubShaCache(BaseTestCase):
+
+    def testInsert(self):
+        cache = GithubShaCache()
+        pr_dict = {
+            'head': {
+                'sha': '123456',
+            },
+            'number': 1,
+            'state': 'open',
+        }
+        cache.update('foo/bar', pr_dict)
+        self.assertEqual(cache.get('foo/bar', '123456'), set({1}))
+
+    def testRemoval(self):
+        cache = GithubShaCache()
+        pr_dict = {
+            'head': {
+                'sha': '123456',
+            },
+            'number': 1,
+            'state': 'open',
+        }
+        cache.update('foo/bar', pr_dict)
+        self.assertEqual(cache.get('foo/bar', '123456'), set({1}))
+        pr_dict['state'] = 'closed'
+        cache.update('foo/bar', pr_dict)
+        self.assertEqual(cache.get('foo/bar', '123456'), set())
+
+    def testMultiInsert(self):
+        cache = GithubShaCache()
+        pr_dict = {
+            'head': {
+                'sha': '123456',
+            },
+            'number': 1,
+            'state': 'open',
+        }
+        cache.update('foo/bar', pr_dict)
+        self.assertEqual(cache.get('foo/bar', '123456'), set({1}))
+        pr_dict['number'] = 2
+        cache.update('foo/bar', pr_dict)
+        self.assertEqual(cache.get('foo/bar', '123456'), set({1, 2}))
+
+    def testMultiProjectInsert(self):
+        cache = GithubShaCache()
+        pr_dict = {
+            'head': {
+                'sha': '123456',
+            },
+            'number': 1,
+            'state': 'open',
+        }
+        cache.update('foo/bar', pr_dict)
+        self.assertEqual(cache.get('foo/bar', '123456'), set({1}))
+        cache.update('foo/baz', pr_dict)
+        self.assertEqual(cache.get('foo/baz', '123456'), set({1}))
+
+    def testNoMatch(self):
+        cache = GithubShaCache()
+        pr_dict = {
+            'head': {
+                'sha': '123456',
+            },
+            'number': 1,
+            'state': 'open',
+        }
+        cache.update('foo/bar', pr_dict)
+        self.assertEqual(cache.get('bar/foo', '789'), set())
+        self.assertEqual(cache.get('foo/bar', '789'), set())
+
+    def testNoUpdate(self):
+        cache = GithubShaCache()
+        pr_dict = {
+            'head': {
+                'sha': '123456',
+            },
+            'number': 1,
+            'state': 'closed',
+        }
+        cache.update('foo/bar', pr_dict)
+        self.assertEqual(cache.get('bar/foo', '123456'), set())
