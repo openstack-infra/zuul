@@ -147,6 +147,12 @@ class TestActionModules(AnsibleZuulTestCase):
     def test_raw_module(self):
         self._run_job('raw-good', 'SUCCESS')
 
+        # raw-delegate does multiple tests with various delegates. It
+        # asserts by itself within ansible so we
+        # expect SUCCESS here.
+        self._run_job('raw-delegate', 'SUCCESS')
+        self._run_job('raw-localhost', 'SUCCESS')
+
     def test_script_module(self):
         self._run_job('script-good', 'SUCCESS')
 

@@ -1,0 +1,11 @@
+- name: Raw
+  raw: echo 123
+  delegate_to: "{{ item }}"
+  register: result
+  ignore_errors: true
+
+- assert:
+    that:
+      - "result.failed == true"
+      - "'Executing local code is prohibited' in result.msg"
+    msg: Raw must fail due to local code execution restriction

@@ -1,0 +1,11 @@
+- hosts: localhost
+  roles:
+    - raw-test-localhost
+
+- hosts: 127.0.0.1
+  roles:
+    - raw-test-localhost
+
+- hosts: "::1"
+  roles:
+    - raw-test-localhost

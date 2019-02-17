@@ -1,0 +1,5 @@
+- include: script-delegate.yaml
+  with_items:
+    - ::1
+    - 127.0.0.1
+    - localhost

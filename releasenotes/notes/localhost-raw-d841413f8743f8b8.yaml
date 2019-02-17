@@ -1,0 +1,5 @@
+---
+security:
+  - |
+    The raw module had not been blocked for local tasks. This could be used
+    to bypass protection and execute commands on the executor.
