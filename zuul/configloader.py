@@ -570,6 +570,7 @@ class JobParser(object):
                       'pre-run': to_list(str),
                       'post-run': to_list(str),
                       'run': to_list(str),
+                      'ansible-version': vs.Any(str, float),
                       '_source_context': model.SourceContext,
                       '_start_mark': ZuulMark,
                       'roles': to_list(role),
@@ -692,6 +693,14 @@ class JobParser(object):
             else:
                 raise Exception("Once set, the post-review attribute "
                                 "may not be unset")
+
+        # Configure and validate ansible version
+        if 'ansible-version' in conf:
+            # The ansible-version can be treated by yaml as a float so convert
+            # it to a string.
+            ansible_version = str(conf['ansible-version'])
+            self.pcontext.ansible_manager.requestVersion(ansible_version)
+            job.ansible_version = ansible_version
 
         # Roles are part of the playbook context so we must establish
         # them earlier than playbooks.
@@ -1250,10 +1259,11 @@ class SemaphoreParser(object):
 class ParseContext(object):
     """Hold information about a particular run of the parser"""
 
-    def __init__(self, connections, scheduler, tenant):
+    def __init__(self, connections, scheduler, tenant, ansible_manager):
         self.connections = connections
         self.scheduler = scheduler
         self.tenant = tenant
+        self.ansible_manager = ansible_manager
         self.pragma_parser = PragmaParser(self)
         self.pipeline_parser = PipelineParser(self)
         self.nodeset_parser = NodeSetParser(self)
@@ -1346,10 +1356,11 @@ class TenantParser(object):
                   'allowed-reporters': to_list(str),
                   'allowed-labels': to_list(str),
                   'default-parent': str,
+                  'default-ansible-version': vs.Any(str, float),
                   }
         return vs.Schema(tenant)
 
-    def fromYaml(self, abide, conf):
+    def fromYaml(self, abide, conf, ansible_manager):
         self.getSchema()(conf)
         tenant = model.Tenant(conf['name'])
         if conf.get('max-nodes-per-job') is not None:
@@ -1379,6 +1390,17 @@ class TenantParser(object):
         # We prepare a stack to store config loading issues
         loading_errors = model.LoadingErrors()
 
+        # Set default ansible version
+        default_ansible_version = conf.get('default-ansible-version')
+        if default_ansible_version is not None:
+            # The ansible version can be interpreted as float by yaml so make
+            # sure it's a string.
+            default_ansible_version = str(default_ansible_version)
+            ansible_manager.requestVersion(default_ansible_version)
+        else:
+            default_ansible_version = ansible_manager.default_version
+        tenant.default_ansible_version = default_ansible_version
+
         # Start by fetching any YAML needed by this tenant which isn't
         # already cached.  Full reconfigurations start with an empty
         # cache.
@@ -1392,9 +1414,9 @@ class TenantParser(object):
         # Then convert the YAML to configuration objects which we
         # cache on the tenant.
         tenant.config_projects_config = self.parseConfig(
-            tenant, config_projects_config, loading_errors)
+            tenant, config_projects_config, loading_errors, ansible_manager)
         tenant.untrusted_projects_config = self.parseConfig(
-            tenant, untrusted_projects_config, loading_errors)
+            tenant, untrusted_projects_config, loading_errors, ansible_manager)
 
         # Combine the trusted and untrusted config objects
         parsed_config = model.ParsedConfig()
@@ -1693,8 +1715,10 @@ class TenantParser(object):
         tpc = tenant.project_configs[project.canonical_name]
         return tpc.load_classes
 
-    def parseConfig(self, tenant, unparsed_config, loading_errors):
-        pcontext = ParseContext(self.connections, self.scheduler, tenant)
+    def parseConfig(self, tenant, unparsed_config, loading_errors,
+                    ansible_manager):
+        pcontext = ParseContext(self.connections, self.scheduler, tenant,
+                                ansible_manager)
         parsed_config = model.ParsedConfig()
 
         # Handle pragma items first since they modify the source context
@@ -1989,11 +2013,12 @@ class ConfigLoader(object):
         unparsed_abide.extend(data)
         return unparsed_abide
 
-    def loadConfig(self, unparsed_abide):
+    def loadConfig(self, unparsed_abide, ansible_manager):
         abide = model.Abide()
         for conf_tenant in unparsed_abide.tenants:
             # When performing a full reload, do not use cached data.
-            tenant = self.tenant_parser.fromYaml(abide, conf_tenant)
+            tenant = self.tenant_parser.fromYaml(
+                abide, conf_tenant, ansible_manager)
             abide.tenants[tenant.name] = tenant
             if len(tenant.layout.loading_errors):
                 self.log.warning(
@@ -2005,7 +2030,7 @@ class ConfigLoader(object):
                     self.log.warning(err.error)
         return abide
 
-    def reloadTenant(self, abide, tenant):
+    def reloadTenant(self, abide, tenant, ansible_manager):
         new_abide = model.Abide()
         new_abide.tenants = abide.tenants.copy()
         new_abide.unparsed_project_branch_config = \
@@ -2014,7 +2039,7 @@ class ConfigLoader(object):
         # When reloading a tenant only, use cached data if available.
         new_tenant = self.tenant_parser.fromYaml(
             new_abide,
-            tenant.unparsed_config)
+            tenant.unparsed_config, ansible_manager)
         new_abide.tenants[tenant.name] = new_tenant
         if len(new_tenant.layout.loading_errors):
             self.log.warning(
@@ -2027,7 +2052,8 @@ class ConfigLoader(object):
         return new_abide
 
     def _loadDynamicProjectData(self, config, project,
-                                files, trusted, tenant, loading_errors):
+                                files, trusted, tenant, loading_errors,
+                                ansible_manager):
         tpc = tenant.project_configs[project.canonical_name]
         if trusted:
             branches = ['master']
@@ -2085,9 +2111,9 @@ class ConfigLoader(object):
                             filterUntrustedProjectYAML(incdata, loading_errors)
 
                     config.extend(self.tenant_parser.parseConfig(
-                        tenant, incdata, loading_errors))
+                        tenant, incdata, loading_errors, ansible_manager))
 
-    def createDynamicLayout(self, tenant, files,
+    def createDynamicLayout(self, tenant, files, ansible_manager,
                             include_config_projects=False,
                             scheduler=None, connections=None):
         loading_errors = model.LoadingErrors()
@@ -2095,13 +2121,15 @@ class ConfigLoader(object):
             config = model.ParsedConfig()
             for project in tenant.config_projects:
                 self._loadDynamicProjectData(
-                    config, project, files, True, tenant, loading_errors)
+                    config, project, files, True, tenant, loading_errors,
+                    ansible_manager)
         else:
             config = tenant.config_projects_config.copy()
 
         for project in tenant.untrusted_projects:
             self._loadDynamicProjectData(
-                config, project, files, False, tenant, loading_errors)
+                config, project, files, False, tenant, loading_errors,
+                ansible_manager)
 
         layout = model.Layout(tenant)
         layout.loading_errors = loading_errors

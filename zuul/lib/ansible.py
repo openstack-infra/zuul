@@ -123,12 +123,17 @@ class ManagedAnsible:
 class AnsibleManager:
     log = logging.getLogger('zuul.ansible_manager')
 
-    def __init__(self, zuul_ansible_dir=None):
+    def __init__(self, zuul_ansible_dir=None, default_version=None):
         self._supported_versions = {}
         self.default_version = None
         self.zuul_ansible_dir = zuul_ansible_dir
 
         self.load_ansible_config()
+
+        # If configured, override the default version
+        if default_version:
+            self.requestVersion(default_version)
+            self.default_version = default_version
 
     def load_ansible_config(self):
         c = resource_string(__name__, 'ansible-config.conf').decode()
@@ -193,16 +198,29 @@ class AnsibleManager:
             raise Exception('Requested ansible version %s not found' % version)
         return ansible
 
-    def getAnsibleCommand(self, version=None, command='ansible-playbook'):
+    def getAnsibleCommand(self, version, command='ansible-playbook'):
         ansible = self._getAnsible(version)
         return os.path.join(ansible.venv_path, 'bin', command)
 
-    def getAnsibleDir(self, version=None):
+    def getAnsibleDir(self, version):
         ansible = self._getAnsible(version)
         return os.path.join(self.zuul_ansible_dir, ansible.version)
 
-    def getAnsiblePluginDir(self, version=None):
+    def getAnsiblePluginDir(self, version):
         return os.path.join(self.getAnsibleDir(version), 'zuul', 'ansible')
+
+    def requestVersion(self, version):
+        if version not in self._supported_versions:
+            raise Exception(
+                'Requested ansible version \'%s\' is unknown. Supported '
+                'versions are %s' % (
+                    version, ', '.join(self._supported_versions)))
+
+    def getSupportedVersions(self):
+        versions = []
+        for version in self._supported_versions:
+            versions.append((version, version == self.default_version))
+        return versions
 
     def copyAnsibleFiles(self):
         if os.path.exists(self.zuul_ansible_dir):

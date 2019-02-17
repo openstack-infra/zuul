@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    Jobs may now specify which ansible version is used to run them.
+    The ansible version to use can now be specified by
+    :attr:`job.ansible-version`.
+upgrade:
+  - |
+    In order to support several ansible versions installed simultaneously
+    Zuul now handles them itself in virtual environments. By default Zuul
+    installs the needed ansible versions on startup so there is no further
+    user action required. However it is recommended to pre-install the
+    ansible environments during installation by invoking
+    ``zuul-manage-ansible``.

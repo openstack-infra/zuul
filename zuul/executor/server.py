@@ -706,8 +706,8 @@ class AnsibleJob(object):
             self.executor_variables_file = self.executor_server.config.get(
                 'executor', 'variables')
 
-        # TODO(tobiash): choose correct ansible version as specified by the job
-        plugin_dir = self.executor_server.ansible_manager.getAnsiblePluginDir()
+        plugin_dir = self.executor_server.ansible_manager.getAnsiblePluginDir(
+            self.arguments['ansible_version'])
         self.library_dir = os.path.join(plugin_dir, 'library')
         self.action_dir = os.path.join(plugin_dir, 'action')
         self.action_dir_general = os.path.join(plugin_dir, 'actiongeneral')
@@ -1118,6 +1118,7 @@ class AnsibleJob(object):
 
     def runPlaybooks(self, args):
         result = None
+        ansible_version = args['ansible_version']
 
         with open(self.jobdir.job_output_file, 'a') as job_output:
             job_output.write("{now} | Running Ansible setup...\n".format(
@@ -1130,7 +1131,7 @@ class AnsibleJob(object):
         # between here and the hosts in the inventory; return them and
         # reschedule the job.
         setup_status, setup_code = self.runAnsibleSetup(
-            self.jobdir.setup_playbook)
+            self.jobdir.setup_playbook, ansible_version)
         if setup_status != self.RESULT_NORMAL or setup_code != 0:
             return result
 
@@ -1152,7 +1153,8 @@ class AnsibleJob(object):
             # TODOv3(pabelanger): Implement pre-run timeout setting.
             ansible_timeout = self.getAnsibleTimeout(time_started, job_timeout)
             pre_status, pre_code = self.runAnsiblePlaybook(
-                playbook, ansible_timeout, phase='pre', index=index)
+                playbook, ansible_timeout, ansible_version, phase='pre',
+                index=index)
             if pre_status != self.RESULT_NORMAL or pre_code != 0:
                 # These should really never fail, so return None and have
                 # zuul try again
@@ -1171,7 +1173,8 @@ class AnsibleJob(object):
                 ansible_timeout = self.getAnsibleTimeout(
                     time_started, job_timeout)
                 job_status, job_code = self.runAnsiblePlaybook(
-                    playbook, ansible_timeout, phase='run', index=index)
+                    playbook, ansible_timeout, ansible_version, phase='run',
+                    index=index)
                 if job_status == self.RESULT_ABORTED:
                     return 'ABORTED'
                 elif job_status == self.RESULT_TIMED_OUT:
@@ -1207,7 +1210,8 @@ class AnsibleJob(object):
             # which are vital to understanding why timeouts have happened in
             # the first place.
             post_status, post_code = self.runAnsiblePlaybook(
-                playbook, post_timeout, success, phase='post', index=index)
+                playbook, post_timeout, ansible_version, success, phase='post',
+                index=index)
             if post_status == self.RESULT_ABORTED:
                 return 'ABORTED'
             if post_status == self.RESULT_UNREACHABLE:
@@ -1822,7 +1826,8 @@ class AnsibleJob(object):
             except Exception:
                 self.log.exception("Exception while killing ansible process:")
 
-    def runAnsible(self, cmd, timeout, playbook, wrapped=True):
+    def runAnsible(self, cmd, timeout, playbook, ansible_version,
+                   wrapped=True):
         config_file = playbook.ansible_config
         env_copy = os.environ.copy()
         env_copy.update(self.ssh_agent.env)
@@ -1837,8 +1842,8 @@ class AnsibleJob(object):
         else:
             pythonpath = []
 
-        # TODO(tobiash): choose correct ansible version
-        ansible_dir = self.executor_server.ansible_manager.getAnsibleDir()
+        ansible_dir = self.executor_server.ansible_manager.getAnsibleDir(
+            ansible_version)
         pythonpath = [ansible_dir] + pythonpath
         env_copy['PYTHONPATH'] = os.path.pathsep.join(pythonpath)
 
@@ -2022,7 +2027,7 @@ class AnsibleJob(object):
 
         return (self.RESULT_NORMAL, ret)
 
-    def runAnsibleSetup(self, playbook):
+    def runAnsibleSetup(self, playbook, ansible_version):
         if self.executor_server.verbose:
             verbose = '-vvv'
         else:
@@ -2030,6 +2035,7 @@ class AnsibleJob(object):
 
         # TODO: select correct ansible version from job
         ansible = self.executor_server.ansible_manager.getAnsibleCommand(
+            ansible_version,
             command='ansible')
         cmd = [ansible, '*', verbose, '-m', 'setup',
                '-i', self.jobdir.setup_inventory,
@@ -2039,7 +2045,7 @@ class AnsibleJob(object):
 
         result, code = self.runAnsible(
             cmd=cmd, timeout=self.executor_server.setup_timeout,
-            playbook=playbook, wrapped=False)
+            playbook=playbook, ansible_version=ansible_version, wrapped=False)
         self.log.debug("Ansible complete, result %s code %s" % (
             self.RESULT_MAP[result], code))
         if self.executor_server.statsd:
@@ -2103,16 +2109,15 @@ class AnsibleJob(object):
                 now=datetime.datetime.now(),
                 msg=msg))
 
-    def runAnsiblePlaybook(self, playbook, timeout, success=None,
-                           phase=None, index=None):
+    def runAnsiblePlaybook(self, playbook, timeout, ansible_version,
+                           success=None, phase=None, index=None):
         if self.executor_server.verbose:
             verbose = '-vvv'
         else:
             verbose = '-v'
 
-        # TODO: Select ansible version based on job
-        cmd = [self.executor_server.ansible_manager.getAnsibleCommand(),
-               verbose, playbook.path]
+        cmd = [self.executor_server.ansible_manager.getAnsibleCommand(
+            ansible_version), verbose, playbook.path]
         if playbook.secrets_content:
             cmd.extend(['-e', '@' + playbook.secrets])
 
@@ -2139,8 +2144,7 @@ class AnsibleJob(object):
 
         self.emitPlaybookBanner(playbook, 'START', phase)
 
-        result, code = self.runAnsible(
-            cmd=cmd, timeout=timeout, playbook=playbook)
+        result, code = self.runAnsible(cmd, timeout, playbook, ansible_version)
         self.log.debug("Ansible complete, result %s code %s" % (
             self.RESULT_MAP[result], code))
         if self.executor_server.statsd:

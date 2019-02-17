@@ -234,6 +234,11 @@ configuration. Some examples of tenant definitions are:
       implement local policies such as node setup and artifact
       publishing.
 
+   .. attr:: default-ansible-version
+
+      Default ansible version to use for jobs that doesn't specify a version.
+      See :attr:`job.ansible-version` for details.
+
    .. attr:: allowed-triggers
       :default: all connections
 

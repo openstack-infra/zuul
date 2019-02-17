@@ -20,11 +20,12 @@ import textwrap
 from tests.base import AnsibleZuulTestCase
 
 
-class TestZuulJSON(AnsibleZuulTestCase):
+class TestZuulJSON25(AnsibleZuulTestCase):
     tenant_config_file = 'config/remote-zuul-json/main.yaml'
+    ansible_version = '2.5'
 
     def setUp(self):
-        super(TestZuulJSON, self).setUp()
+        super().setUp()
         self.fake_nodepool.remote_ansible = True
 
         ansible_remote = os.environ.get('ZUUL_REMOTE_IPV4')
@@ -43,6 +44,7 @@ class TestZuulJSON(AnsibleZuulTestCase):
             - job:
                 name: {job_name}
                 run: playbooks/{job_name}.yaml
+                ansible-version: {version}
                 roles:
                   - zuul: org/common-config
                 nodeset:
@@ -54,7 +56,7 @@ class TestZuulJSON(AnsibleZuulTestCase):
                 check:
                   jobs:
                     - {job_name}
-            """.format(job_name=job_name))
+            """.format(job_name=job_name, version=self.ansible_version))
 
         file_dict = {'zuul.yaml': conf}
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',

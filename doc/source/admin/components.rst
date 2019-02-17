@@ -259,6 +259,11 @@ The following sections of ``zuul.conf`` are used by the scheduler:
       config from. This attribute is exclusive with
       :attr:`scheduler.tenant_config`.
 
+   .. attr:: default_ansible_version
+
+      Default ansible version to use for jobs that doesn't specify a version.
+      See :attr:`job.ansible-version` for details.
+
    .. attr:: log_config
 
       Path to log config file.

@@ -30,6 +30,8 @@ class ManageAnsible(zuul.cmd.ZuulApp):
                             help='verbose output')
         parser.add_argument('-u', dest='upgrade', action='store_true',
                             help='upgrade ansible versions')
+        parser.add_argument('-l', dest='list_supported', action='store_true',
+                            help='list supported versions')
         return parser
 
     def _setup_logging(self):
@@ -50,6 +52,15 @@ class ManageAnsible(zuul.cmd.ZuulApp):
         self._setup_logging()
 
         manager = AnsibleManager()
+
+        if self.args.list_supported:
+            versions = []
+            for version, default in manager.getSupportedVersions():
+                if default:
+                    version = version + ' (default)'
+                versions.append(version)
+            print('\n'.join(versions))
+            return
 
         manager.install(upgrade=self.args.upgrade)
 

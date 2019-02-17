@@ -1524,7 +1524,8 @@ class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
         self.recordResult(result)
         return result
 
-    def runAnsible(self, cmd, timeout, playbook, wrapped=True):
+    def runAnsible(self, cmd, timeout, playbook, ansible_version,
+                   wrapped=True):
         build = self.executor_server.job_builds[self.job.unique]
 
         if self.executor_server._run_ansible:
@@ -1532,7 +1533,7 @@ class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
             # hold real ansible jobs.
             build.run()
             result = super(RecordingAnsibleJob, self).runAnsible(
-                cmd, timeout, playbook, wrapped)
+                cmd, timeout, playbook, ansible_version, wrapped)
         else:
             if playbook.path:
                 result = build.run()

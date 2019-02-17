@@ -1,0 +1,20 @@
+- tenant:
+    name: tenant-no-default
+    source:
+      gerrit:
+        config-projects:
+          - common-config
+        untrusted-projects:
+          - org/project1
+          - org/project2
+
+- tenant:
+    name: tenant-default-2-5
+    default-ansible-version: "2.5"
+    source:
+      gerrit:
+        config-projects:
+          - common-config
+        untrusted-projects:
+          - org/project1
+          - org/project2
