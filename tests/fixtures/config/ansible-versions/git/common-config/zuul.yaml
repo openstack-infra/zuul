@@ -25,7 +25,7 @@
     parent: ansible-version
     vars:
       test_ansible_version_major: 2
-      test_ansible_version_minor: 5
+      test_ansible_version_minor: 7
 
 - job:
     name: ansible-25
