@@ -27,6 +27,8 @@ except ImportError:
 
 class UnsafeTag(yaml.YAMLObject):
     yaml_tag = u'!unsafe'
+    yaml_dumper = yaml.SafeDumper
+    yaml_loader = yaml.SafeLoader
 
     def __init__(self, unsafe_var):
         self.unsafe_var = unsafe_var
@@ -41,13 +43,6 @@ class UnsafeTag(yaml.YAMLObject):
 
     def __str__(self):
         return self.unsafe_var
-
-
-# Just calling SafeLoader and SafeDumper without yaml module prefix
-# does not work and cyaml is using yaml.SafeConstructor yaml.SafeRepresenter
-# underneath so this just fine for both
-yaml.SafeLoader.add_constructor(UnsafeTag.yaml_tag, UnsafeTag.from_yaml)
-yaml.SafeDumper.add_multi_representer(UnsafeTag, UnsafeTag.to_yaml)
 
 
 def safe_load(stream, *args, **kwargs):
