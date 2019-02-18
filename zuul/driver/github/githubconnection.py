@@ -29,6 +29,7 @@ import cherrypy
 import cachecontrol
 from cachecontrol.cache import DictCache
 from cachecontrol.heuristics import BaseHeuristic
+import cachetools
 import iso8601
 import jwt
 import requests
@@ -75,14 +76,21 @@ class GithubShaCache(object):
         self.projects = {}
 
     def update(self, project_name, pr):
-        project_cache = self.projects.setdefault(project_name, {})
+        project_cache = self.projects.setdefault(
+            project_name,
+            # Cache up to 4k shas for each project
+            # Note we cache the actual sha for a PR and the
+            # merge_commit_sha so we make this fairly large.
+            cachetools.LRUCache(4096)
+        )
         sha = pr['head']['sha']
         number = pr['number']
         cached_prs = project_cache.setdefault(sha, set())
-        if pr['state'] == 'open':
+        cached_prs.add(number)
+        merge_commit_sha = pr.get('merge_commit_sha')
+        if merge_commit_sha:
+            cached_prs = project_cache.setdefault(merge_commit_sha, set())
             cached_prs.add(number)
-        else:
-            cached_prs.discard(number)
 
     def get(self, project_name, sha):
         project_cache = self.projects.get(project_name, {})
@@ -1200,7 +1208,12 @@ class GithubConnection(BaseConnection):
         github = self.getGithubClient(project_name)
         owner, project = project_name.split('/')
         repo = github.repository(owner, project)
-        for pr in repo.pull_requests(state='open'):
+        for pr in repo.pull_requests(state='open',
+                                     # We sort by updated from oldest to newest
+                                     # as that will prefer more recently
+                                     # PRs in our LRU cache.
+                                     sort='updated',
+                                     direction='asc'):
             pr_dict = pr.as_dict()
             self._sha_pr_cache.update(project_name, pr_dict)
             if pr.head.sha != sha:

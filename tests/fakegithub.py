@@ -251,7 +251,9 @@ class FakeRepository(object):
         }
         return FakeResponse(data)
 
-    def pull_requests(self, state=None):
+    def pull_requests(self, state=None, sort=None, direction=None):
+        # sort and direction are unused currently, but present to match
+        # real world call signatures.
         pulls = []
         for pull in self.data.pull_requests.values():
             if pull.project != self.name:

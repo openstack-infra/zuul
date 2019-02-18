@@ -1336,8 +1336,13 @@ class TestGithubShaCache(BaseTestCase):
         }
         cache.update('foo/bar', pr_dict)
         self.assertEqual(cache.get('foo/bar', '123456'), set({1}))
-        pr_dict['state'] = 'closed'
-        cache.update('foo/bar', pr_dict)
+
+        # Create 4096 entries so original falls off.
+        for x in range(0, 4096):
+            pr_dict['head']['sha'] = str(x)
+            cache.update('foo/bar', pr_dict)
+            cache.get('foo/bar', str(x))
+
         self.assertEqual(cache.get('foo/bar', '123456'), set())
 
     def testMultiInsert(self):
@@ -1382,7 +1387,7 @@ class TestGithubShaCache(BaseTestCase):
         self.assertEqual(cache.get('bar/foo', '789'), set())
         self.assertEqual(cache.get('foo/bar', '789'), set())
 
-    def testNoUpdate(self):
+    def testClosedPRRemains(self):
         cache = GithubShaCache()
         pr_dict = {
             'head': {
@@ -1392,4 +1397,4 @@ class TestGithubShaCache(BaseTestCase):
             'state': 'closed',
         }
         cache.update('foo/bar', pr_dict)
-        self.assertEqual(cache.get('bar/foo', '123456'), set())
+        self.assertEqual(cache.get('foo/bar', '123456'), set({1}))
