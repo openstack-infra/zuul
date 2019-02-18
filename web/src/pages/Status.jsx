@@ -84,7 +84,7 @@ class StatusPage extends Refreshable {
   updateData = (force) => {
     if (force || (this.visible && this.state.autoReload)) {
       this.props.dispatch(fetchStatusIfNeeded(this.props.tenant))
-        .then(() => {if (this.state.autoReload) {
+        .then(() => {if (this.state.autoReload && this.visible) {
           this.timer = setTimeout(this.updateData, 5000)
         }})
     }
@@ -106,6 +106,7 @@ class StatusPage extends Refreshable {
       clearTimeout(this.timer)
       this.timer = null
     }
+    this.visible = false
     document.removeEventListener(
       this.visibilityChangeEvent, this.visibilityListener)
   }
