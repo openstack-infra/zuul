@@ -62,8 +62,7 @@ class ConnectionRegistry(object):
 
     def registerScheduler(self, sched, load=True):
         for driver_name, driver in self.drivers.items():
-            if hasattr(driver, 'registerScheduler'):
-                driver.registerScheduler(sched)
+            driver.registerScheduler(sched)
         for connection_name, connection in self.connections.items():
             connection.registerScheduler(sched)
             if load:
