@@ -296,6 +296,9 @@ class FakePull(object):
         return [FakeFile(fn)
                 for fn in sorted(self._fake_pull_request.files)][:300]
 
+    def reviews(self):
+        return self._fake_pull_request.reviews
+
     @property
     def head(self):
         client = FakeGithubClient(self._fake_pull_request.github.github_data)
