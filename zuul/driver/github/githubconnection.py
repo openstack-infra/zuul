@@ -32,7 +32,6 @@ from cachecontrol.heuristics import BaseHeuristic
 import iso8601
 import jwt
 import requests
-import voluptuous as v
 import github3
 import github3.exceptions
 
@@ -1614,8 +1613,3 @@ def _status_as_tuple(status):
     context = status.get('context')
     state = status.get('state')
     return (user, context, state)
-
-
-def getSchema():
-    github_connection = v.Any(str, v.Schema(dict))
-    return github_connection

@@ -15,7 +15,6 @@
 import logging
 import json
 
-import voluptuous as v
 import paho.mqtt.client as mqtt
 
 from zuul.connection import BaseConnection
@@ -82,7 +81,3 @@ class MQTTConnection(BaseConnection):
         except Exception:
             self.log.exception(
                 "Could not publish message to topic '%s' via mqtt", topic)
-
-
-def getSchema():
-    return v.Any(str, v.Schema(dict))

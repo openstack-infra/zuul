@@ -21,7 +21,6 @@ import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import orm
 import sqlalchemy.pool
-import voluptuous
 
 from zuul.connection import BaseConnection
 
@@ -320,8 +319,3 @@ class SQLConnection(BaseConnection):
         """Return a list of BuildSet objects"""
         with self.getSession() as db:
             return db.getBuildsets(*args, **kw)
-
-
-def getSchema():
-    sql_connection = voluptuous.Any(str, voluptuous.Schema(dict))
-    return sql_connection

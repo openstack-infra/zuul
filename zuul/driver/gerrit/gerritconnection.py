@@ -26,7 +26,6 @@ import pprint
 import shlex
 import queue
 import urllib.parse
-import voluptuous as v
 import requests
 
 from typing import Dict, List
@@ -1079,8 +1078,3 @@ class GerritConnection(BaseConnection):
     def _start_event_connector(self):
         self.gerrit_event_connector = GerritEventConnector(self)
         self.gerrit_event_connector.start()
-
-
-def getSchema():
-    gerrit_connection = v.Any(str, v.Schema(dict))
-    return gerrit_connection
