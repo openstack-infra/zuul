@@ -20,8 +20,6 @@ import logging
 import urllib
 import threading
 
-import voluptuous as v
-
 from zuul.connection import BaseConnection
 from zuul.driver.git.gitmodel import GitTriggerEvent, EMPTY_GIT_REF
 from zuul.model import Ref, Branch
@@ -252,8 +250,3 @@ class GitConnection(BaseConnection):
             self.baseurl,
             self.poll_timeout)
         self.watcher_thread.start()
-
-
-def getSchema():
-    git_connection = v.Any(str, v.Schema(dict))
-    return git_connection

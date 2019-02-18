@@ -13,7 +13,6 @@
 # under the License.
 
 import logging
-import voluptuous as v
 import smtplib
 
 from email.mime.text import MIMEText
@@ -66,8 +65,3 @@ class SMTPConnection(BaseConnection):
             s.quit()
         except Exception as e:
             self.log.warning("Error sending mail via SMTP: %s", e)
-
-
-def getSchema():
-    smtp_connection = v.Any(str, v.Schema(dict))
-    return smtp_connection
