@@ -737,7 +737,7 @@ Return Values
 
 A job may return some values to Zuul to affect its behavior and for
 use by child jobs.  To return a value, use the ``zuul_return``
-Ansible module in a job playbook running on the executor 'localhost' node.
+Ansible module in a job playbook.
 For example:
 
 .. code-block:: yaml
