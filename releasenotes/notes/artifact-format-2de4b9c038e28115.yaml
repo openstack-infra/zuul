@@ -2,11 +2,3 @@
 features:
   - Artifacts may now include a metadata field for storing arbitrary
     metadata about the artifacts in the SQL database.
-deprecations:
-  - Artifacts should now be supplied to zuul_return in dictionary form
-    instead of a list.  See :ref:`return_artifacts`.
-
-    This is to aid in multiple playbooks providing information back to
-    Zuul without requiring coordination with each other.
-
-    Support for the list format will be removed in a future version.

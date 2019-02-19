@@ -15,20 +15,16 @@
 import voluptuous as v
 import urllib.parse
 
-old_artifact = {
-    'name': str,
-    'url': str,
-}
-
-new_artifact = {
-    'url': str,
+artifact = {
+    'name': v.Required(str),
+    'url': v.Required(str),
     'metadata': dict,
 }
 
 zuul_data = {
     'zuul': {
         'log_url': str,
-        'artifacts': v.Any([old_artifact], {str: new_artifact}),
+        'artifacts': [artifact],
         v.Extra: object,
     }
 }
@@ -48,18 +44,13 @@ def get_artifacts_from_result_data(result_data, logger=None):
     ret = []
     if validate_artifact_schema(result_data):
         artifacts = result_data.get('zuul', {}).get(
-            'artifacts', {})
-        if isinstance(artifacts, list):
-            new_artifacts = {}
-            for a in artifacts:
-                new_artifacts[a['name']] = {'url': a['url']}
-            artifacts = new_artifacts
+            'artifacts', [])
         default_url = result_data.get('zuul', {}).get(
             'log_url')
         if default_url:
             if default_url[-1] != '/':
                 default_url += '/'
-        for artifact_name, artifact in artifacts.items():
+        for artifact in artifacts:
             url = artifact['url']
             if default_url:
                 # If the artifact url is relative, it will be combined
@@ -72,7 +63,6 @@ def get_artifacts_from_result_data(result_data, logger=None):
                         logger.debug("Error parsing URL:",
                                      exc_info=1)
             d = artifact.copy()
-            d['name'] = artifact_name
             d['url'] = url
             ret.append(d)
     else:
