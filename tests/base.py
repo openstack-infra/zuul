@@ -1096,7 +1096,8 @@ class FakeGithubPullRequest(object):
             },
             'sender': {
                 'login': 'ghuser'
-            }
+            },
+            'labels': [{'name': l} for l in self.labels]
         }
         return (name, data)
 
