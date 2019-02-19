@@ -26,7 +26,8 @@ zuul_data = {
         'log_url': str,
         'artifacts': [artifact],
         v.Extra: object,
-    }
+    },
+    v.Extra: object,
 }
 
 artifact_schema = v.Schema(zuul_data)

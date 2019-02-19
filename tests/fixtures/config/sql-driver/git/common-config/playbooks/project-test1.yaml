@@ -3,6 +3,8 @@
     - name: Return artifact data
       zuul_return:
         data:
+          something_else:
+            foo: bar
           zuul:
             artifacts:
               - name: relative
