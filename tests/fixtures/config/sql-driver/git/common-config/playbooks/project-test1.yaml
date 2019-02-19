@@ -4,6 +4,13 @@
       zuul_return:
         data:
           zuul:
+            artifacts:
+              - name: relative
+                url: relative/docs
+    - name: Return artifact data
+      zuul_return:
+        data:
+          zuul:
             log_url: http://logs.example.com/build
             foo: bar
             artifacts:
@@ -11,5 +18,3 @@
                 url: http://example.com/tarball
               - name: docs
                 url: http://example.com/docs
-              - name: relative
-                url: relative/docs

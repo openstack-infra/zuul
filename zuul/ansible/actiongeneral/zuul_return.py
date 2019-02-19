@@ -40,6 +40,23 @@ def merge_dict(dict_a, dict_b):
     return dict_b
 
 
+def merge_data(dict_a, dict_b):
+    """
+    Merge dict_a into dict_b, handling any special cases for zuul variables
+    """
+    artifacts_a = dict_a.get('zuul', {}).get('artifacts', [])
+    if not isinstance(artifacts_a, list):
+        artifacts_a = []
+    artifacts_b = dict_b.get('zuul', {}).get('artifacts', [])
+    if not isinstance(artifacts_b, list):
+        artifacts_b = []
+    artifacts = artifacts_a + artifacts_b
+    merge_dict(dict_a, dict_b)
+    if artifacts:
+        dict_b.setdefault('zuul', {})['artifacts'] = artifacts
+    return dict_b
+
+
 def set_value(path, new_data, new_file):
     workdir = os.path.dirname(path)
     data = None
@@ -53,9 +70,9 @@ def set_value(path, new_data, new_file):
 
     if new_file:
         with open(new_file, 'r') as f:
-            merge_dict(json.load(f), data)
+            merge_data(json.load(f), data)
     if new_data:
-        merge_dict(new_data, data)
+        merge_data(new_data, data)
 
     (f, tmp_path) = tempfile.mkstemp(dir=workdir)
     try:
