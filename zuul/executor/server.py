@@ -1092,6 +1092,10 @@ class AnsibleJob(object):
     def runPlaybooks(self, args):
         result = None
 
+        with open(self.jobdir.job_output_file, 'a') as job_output:
+            job_output.write("{now} | Running Ansible setup...\n".format(
+                now=datetime.datetime.now()
+            ))
         # Run the Ansible 'setup' module on all hosts in the inventory
         # at the start of the job with a 60 second timeout.  If we
         # aren't able to connect to all the hosts and gather facts
