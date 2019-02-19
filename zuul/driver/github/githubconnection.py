@@ -1206,8 +1206,8 @@ class GithubConnection(BaseConnection):
 
         pulls = []
         github = self.getGithubClient(project_name)
-        owner, project = project_name.split('/')
-        repo = github.repository(owner, project)
+        owner, repository = project_name.split('/')
+        repo = github.repository(owner, repository)
         for pr in repo.pull_requests(state='open',
                                      # We sort by updated from oldest to newest
                                      # as that will prefer more recently
