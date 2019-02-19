@@ -229,7 +229,7 @@ of item.
    under the ``zuul`` key:
 
    .. var:: artifacts
-      :type: dict
+      :type: list
 
       If the job has a :attr:`job.requires` attribute, and Zuul has
       found changes ahead of this change in the pipeline with matching
@@ -795,11 +795,11 @@ under the **zuul.artifacts** dictionary.  For example:
         data:
           zuul:
             artifacts:
-              tarball:
+              - name: tarball
                 url: http://example.com/path/to/package.tar.gz
                 metadata:
                   version: 3.0
-              docs:
+              - name: docs:
                 url: build/docs/
 
 If the value of **url** is a relative URL, it will be combined with
