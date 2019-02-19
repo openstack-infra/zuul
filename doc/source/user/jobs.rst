@@ -807,6 +807,10 @@ the **zuul.log_url** value if set to create an absolute URL.  The
 **metadata** key is optional; if it is provided, it must be a
 dictionary; its keys and values may be anything.
 
+If *zuul_return* is invoked multiple times (e.g., via multiple
+playbooks), then the elements of **zuul.artifacts** from each
+invocation will be appended.
+
 Skipping child jobs
 ~~~~~~~~~~~~~~~~~~~
 
