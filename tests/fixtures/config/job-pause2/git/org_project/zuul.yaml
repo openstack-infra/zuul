@@ -1,0 +1,16 @@
+- job:
+    name: compile
+    run: playbooks/compile.yaml
+    post-run: playbooks/compile-post.yaml
+
+- job:
+    name: test
+    run: playbooks/test.yaml
+
+- project:
+    check:
+      jobs:
+        - compile
+        - test:
+            dependencies:
+              - compile

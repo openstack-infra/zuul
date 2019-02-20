@@ -4592,6 +4592,15 @@ class TestJobPause(AnsibleZuulTestCase):
             return f.read()
 
     def test_job_pause(self):
+        """
+        compile1
+        +--> compile2
+        |    +--> test-after-compile2
+        +--> test1-after-compile1
+        +--> test2-after-compile1
+        test-good
+        test-fail
+        """
 
         self.wait_timeout = 120
 
@@ -4719,6 +4728,34 @@ class TestJobPause(AnsibleZuulTestCase):
         ])
 
         self.assertIn('test : SKIPPED', A.messages[0])
+
+
+class TestJobPausePostFail(AnsibleZuulTestCase):
+    tenant_config_file = 'config/job-pause2/main.yaml'
+
+    def _get_file(self, build, path):
+        p = os.path.join(build.jobdir.root, path)
+        with open(p) as f:
+            return f.read()
+
+    def test_job_pause_post_fail(self):
+        """Tests that a parent job which has a post failure does not
+        retroactively set its child job's result to SKIPPED.
+
+        compile
+        +--> test
+
+        """
+        # Output extra ansible info so we might see errors.
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='test', result='SUCCESS', changes='1,1'),
+            dict(name='compile', result='POST_FAILURE', changes='1,1'),
+        ])
 
 
 class TestContainerJobs(AnsibleZuulTestCase):
