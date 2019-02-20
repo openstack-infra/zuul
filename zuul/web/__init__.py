@@ -448,10 +448,13 @@ class ZuulWebAPI(object):
             })
 
             for artifact in build.artifacts:
-                ret['artifacts'].append({
+                art = {
                     'name': artifact.name,
                     'url': artifact.url,
-                })
+                }
+                if artifact.meta:
+                    art['metadata'] = json.loads(artifact.meta)
+                ret['artifacts'].append(art)
             for provides in build.provides:
                 ret['provides'].append({
                     'name': provides.name,

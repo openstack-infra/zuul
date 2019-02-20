@@ -9,6 +9,8 @@
             artifacts:
               - name: relative
                 url: relative/docs
+                metadata:
+                  foo: bar
     - name: Return artifact data
       zuul_return:
         data:

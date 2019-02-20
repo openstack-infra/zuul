@@ -749,7 +749,8 @@ class TestArtifacts(ZuulDBTestCase, BaseTestWeb, AnsibleZuulTestCase):
             {'url': 'http://example.com/docs',
              'name': 'docs'},
             {'url': 'http://logs.example.com/build/relative/docs',
-             'name': 'relative'},
+             'name': 'relative',
+             'metadata': {'foo': 'bar'}},
             {'url': 'http://example.com/tarball',
              'name': 'tarball'},
         ])
