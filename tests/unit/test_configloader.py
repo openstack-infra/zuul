@@ -312,6 +312,22 @@ class TestTenantUnprotectedBranches(TenantParserTestCase):
         self.assertIsNone(tpc[project_name].exclude_unprotected_branches)
 
 
+class TestTenantExcludeAll(TenantParserTestCase):
+    tenant_config_file = 'config/tenant-parser/exclude-all.yaml'
+
+    def test_tenant_exclude_all(self):
+        """
+        Tests that excluding all configuration of project1 in tenant-one
+        doesn't remove the configuration of project1 in tenant-two.
+        """
+        # The config in org/project5 depends on config in org/project1 so
+        # validate that there are no config errors in that tenant.
+        tenant_two = self.sched.abide.tenants.get('tenant-two')
+        self.assertEquals(
+            len(tenant_two.layout.loading_errors), 0,
+            "No error should have been accumulated")
+
+
 class TestSplitConfig(ZuulTestCase):
     tenant_config_file = 'config/split-config/main.yaml'
 

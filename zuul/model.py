@@ -3218,7 +3218,7 @@ class UnparsedAbideConfig(object):
 class UnparsedConfig(object):
     """A collection of yaml lists that has not yet been parsed into objects."""
 
-    def __init__(self):
+    def __init__(self, load_skipped=False):
         self.pragmas = []
         self.pipelines = []
         self.jobs = []
@@ -3227,6 +3227,10 @@ class UnparsedConfig(object):
         self.nodesets = []
         self.secrets = []
         self.semaphores = []
+
+        # This indicates wether this is empty because we skipped loading
+        # earlier because all config items have been excluded.
+        self.load_skipped = load_skipped
 
     def copy(self, trusted=None):
         # If trusted is not None, update the source context of each
