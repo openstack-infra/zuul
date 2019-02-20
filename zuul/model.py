@@ -2410,9 +2410,11 @@ class QueueItem(object):
                 build.job.name)
 
         for job in skipped:
-            fakebuild = Build(job, None)
-            fakebuild.result = 'SKIPPED'
-            self.addBuild(fakebuild)
+            child_build = self.current_build_set.getBuild(job.name)
+            if not child_build:
+                fakebuild = Build(job, None)
+                fakebuild.result = 'SKIPPED'
+                self.addBuild(fakebuild)
 
     def setNodeRequestFailure(self, job):
         fakebuild = Build(job, None)

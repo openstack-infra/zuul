@@ -1,0 +1,4 @@
+- hosts: all
+  tasks:
+    - fail:
+        msg: Fail in post
