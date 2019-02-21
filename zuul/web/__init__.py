@@ -431,6 +431,8 @@ class ZuulWebAPI(object):
             'voting': build.voting,
             'log_url': build.log_url,
             'node_name': build.node_name,
+            'artifacts': [],
+            'provides': [],
         }
 
         if buildset:
@@ -443,22 +445,20 @@ class ZuulWebAPI(object):
                 'ref': buildset.ref,
                 'newrev': buildset.newrev,
                 'ref_url': buildset.ref_url,
-                'artifacts': [],
-                'provides': [],
             })
 
-            for artifact in build.artifacts:
-                art = {
-                    'name': artifact.name,
-                    'url': artifact.url,
-                }
-                if artifact.meta:
-                    art['metadata'] = json.loads(artifact.meta)
-                ret['artifacts'].append(art)
-            for provides in build.provides:
-                ret['provides'].append({
-                    'name': provides.name,
-                })
+        for artifact in build.artifacts:
+            art = {
+                'name': artifact.name,
+                'url': artifact.url,
+            }
+            if artifact.meta:
+                art['metadata'] = json.loads(artifact.meta)
+            ret['artifacts'].append(art)
+        for provides in build.provides:
+            ret['provides'].append({
+                'name': provides.name,
+            })
         return ret
 
     def _get_connection(self, tenant):
@@ -505,7 +505,7 @@ class ZuulWebAPI(object):
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return data
 
-    def buildsetToDict(self, buildset):
+    def buildsetToDict(self, buildset, builds=[]):
         ret = {
             'uuid': buildset.uuid,
             'result': buildset.result,
@@ -519,6 +519,10 @@ class ZuulWebAPI(object):
             'newrev': buildset.newrev,
             'ref_url': buildset.ref_url,
         }
+        if builds:
+            ret['builds'] = []
+        for build in builds:
+            ret['builds'].append(self.buildToDict(build))
         return ret
 
     @cherrypy.expose
@@ -538,6 +542,20 @@ class ZuulWebAPI(object):
         resp = cherrypy.response
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return [self.buildsetToDict(b) for b in buildsets]
+
+    @cherrypy.expose
+    @cherrypy.tools.save_params()
+    @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
+    def buildset(self, tenant, uuid):
+        connection = self._get_connection(tenant)
+
+        data = connection.getBuildset(tenant, uuid)
+        if not data:
+            raise cherrypy.HTTPError(404, "Buildset not found")
+        data = self.buildsetToDict(data, data.builds)
+        resp = cherrypy.response
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return data
 
     @cherrypy.expose
     @cherrypy.tools.save_params()
@@ -697,6 +715,8 @@ class ZuulWeb(object):
                           controller=api, action='build')
         route_map.connect('api', '/api/tenant/{tenant}/buildsets',
                           controller=api, action='buildsets')
+        route_map.connect('api', '/api/tenant/{tenant}/buildset/{uuid}',
+                          controller=api, action='buildset')
         route_map.connect('api', '/api/tenant/{tenant}/config-errors',
                           controller=api, action='config_errors')
 
