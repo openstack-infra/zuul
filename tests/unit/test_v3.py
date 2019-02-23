@@ -31,6 +31,7 @@ from tests.base import (
     ZuulDBTestCase,
     FIXTURE_DIR,
     simple_layout,
+    iterate_timeout,
 )
 
 
@@ -4637,7 +4638,7 @@ class TestJobPause(AnsibleZuulTestCase):
         self.executor_server.verbose = True
 
         # Second node request should fail
-        fail = {'_oid': '200-0000000001'}
+        fail = {'_oid': '199-0000000001'}
         self.fake_nodepool.addFailRequest(fail)
 
         A = self.fake_gerrit.addFakeChange('org/project2', 'master', 'A')
@@ -5101,3 +5102,38 @@ class TestForceMergeMissingTemplate(ZuulTestCase):
         self.assertHistory([
             dict(name='other-job', result='SUCCESS', changes='2,1'),
         ])
+
+
+class TestJobPausePriority(AnsibleZuulTestCase):
+    tenant_config_file = 'config/job-pause-priority/main.yaml'
+
+    def test_paused_job_priority(self):
+        "Test that nodes for children of paused jobs have a higher priority"
+
+        self.fake_nodepool.pause()
+        self.executor_server.hold_jobs_in_build = True
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        reqs = self.fake_nodepool.getNodeRequests()
+        self.assertEqual(len(reqs), 1)
+        self.assertEqual(reqs[0]['_oid'], '200-0000000000')
+
+        self.fake_nodepool.unpause()
+        self.waitUntilSettled()
+        self.fake_nodepool.pause()
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+
+        for x in iterate_timeout(60, 'paused job'):
+            reqs = self.fake_nodepool.getNodeRequests()
+            if reqs:
+                break
+
+        self.assertEqual(len(reqs), 1)
+        self.assertEqual(reqs[0]['_oid'], '199-0000000001')
+
+        self.fake_nodepool.unpause()
+        self.waitUntilSettled()
