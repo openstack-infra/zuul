@@ -1,0 +1,8 @@
+---
+upgrade:
+  - |
+    Zuul recently added the job variable :var:`zuul.message`. This can contain
+    jinja tags which can cause problems accessing the zuul variable in the job.
+    Because of this the message is now base64 encoded and any job evaluating
+    this variable needs to be changed from ``{{ zuul.message }}`` to
+    ``{{ zuul.message | b64decode }}``.

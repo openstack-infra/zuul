@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import base64
 import os
 
 import yaml
@@ -61,7 +62,7 @@ class TestInventory(TestInventoryBase):
         self.assertIn('src_root', z_vars['executor'])
         self.assertIn('job', z_vars)
         self.assertEqual(z_vars['job'], 'single-inventory')
-        self.assertEqual(str(z_vars['message']), 'A')
+        self.assertEqual(z_vars['message'], 'QQ==')
 
         self.executor_server.release()
         self.waitUntilSettled()
@@ -192,9 +193,9 @@ class TestAnsibleInventory(AnsibleZuulTestCase):
         inv_path = os.path.join(build.jobdir.root, 'ansible', 'inventory.yaml')
         inventory = yaml.safe_load(open(inv_path, 'r'))
 
-        self.assertEqual(
-            inventory['all']['vars']['zuul']['message'].unsafe_var,
-            expected_message)
+        decoded_message = base64.b64decode(
+            inventory['all']['vars']['zuul']['message']).decode('utf-8')
+        self.assertEqual(decoded_message, expected_message)
 
         obtained_message = self._get_file(self.history[0],
                                           'work/logs/commit-message.txt')

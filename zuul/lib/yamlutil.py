@@ -25,26 +25,6 @@ except ImportError:
     Mark = yaml.Mark
 
 
-class UnsafeTag(yaml.YAMLObject):
-    yaml_tag = u'!unsafe'
-    yaml_dumper = yaml.SafeDumper
-    yaml_loader = yaml.SafeLoader
-
-    def __init__(self, unsafe_var):
-        self.unsafe_var = unsafe_var
-
-    @classmethod
-    def from_yaml(cls, loader, node):
-        return UnsafeTag(node.value)
-
-    @classmethod
-    def to_yaml(cls, dumper, data):
-        return dumper.represent_scalar(cls.yaml_tag, data.unsafe_var)
-
-    def __str__(self):
-        return self.unsafe_var
-
-
 def safe_load(stream, *args, **kwargs):
     return yaml.load(stream, *args, Loader=SafeLoader, **kwargs)
 
