@@ -103,6 +103,10 @@ a.refresh {
     background-repeat: 'repeat-y';
 }
 
+.progress-bar-animated {
+    animation: progress-bar-stripes 1s linear infinite;
+}
+
 /* Stream page */
 #zuulstreamoverlay {
     float: right;

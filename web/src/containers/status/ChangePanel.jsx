@@ -182,14 +182,23 @@ class ChangePanel extends React.Component {
   renderJobProgressBar (elapsedTime, remainingTime) {
     let progressPercent = 100 * (elapsedTime / (elapsedTime +
                                                 remainingTime))
+    // Show animation in preparation phase
+    let className
+    let progressWidth = progressPercent
+    if (Number.isNaN(progressPercent)) {
+      progressWidth = 100
+      progressPercent = 0
+      className = 'progress-bar-striped progress-bar-animated'
+    }
+
     return (
       <div className='progress zuul-job-result'>
-        <div className='progress-bar'
+        <div className={'progress-bar ' + className}
           role='progressbar'
           aria-valuenow={progressPercent}
           aria-valuemin={0}
           aria-valuemax={100}
-          style={{'width': progressPercent + '%'}}
+          style={{'width': progressWidth + '%'}}
         />
       </div>
     )
