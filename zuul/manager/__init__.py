@@ -836,7 +836,7 @@ class PipelineManager(object):
         self.log.debug("Item %s status is now:\n %s" %
                        (item, item.formatStatus()))
 
-        if build.retry:
+        if build.retry and build.build_set.getJobNodeSet(build.job.name):
             build.build_set.removeJobNodeSet(build.job.name)
 
         self._resumeBuilds(build.build_set)

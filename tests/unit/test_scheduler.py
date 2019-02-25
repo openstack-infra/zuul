@@ -6584,6 +6584,96 @@ class TestSemaphore(ZuulTestCase):
         self.assertFalse('test-semaphore' in
                          tenant.semaphore_handler.semaphores)
 
+    def test_semaphore_reconfigure_job_removal(self):
+        "Test job removal during reconfiguration with semaphores"
+        self.executor_server.hold_jobs_in_build = True
+        tenant = self.sched.abide.tenants.get('tenant-one')
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.assertFalse('test-semaphore' in
+                         tenant.semaphore_handler.semaphores)
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertTrue('test-semaphore' in
+                        tenant.semaphore_handler.semaphores)
+
+        self.commitConfigUpdate(
+            'common-config',
+            'config/semaphore/git/common-config/zuul-remove-job.yaml')
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        # Release job project-test1 which should be the only job left
+        self.executor_server.release('project-test1')
+        self.waitUntilSettled()
+
+        # The check pipeline should be empty
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        check_pipeline = tenant.layout.pipelines['check']
+        items = check_pipeline.getAllItems()
+        self.assertEqual(len(items), 0)
+
+        # The semaphore should be released
+        self.assertFalse('test-semaphore' in
+                         tenant.semaphore_handler.semaphores)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+    def test_semaphore_reconfigure_job_removal_pending_node_request(self):
+        """
+        Test job removal during reconfiguration with semaphores and pending
+        node request.
+        """
+        self.executor_server.hold_jobs_in_build = True
+
+        # Pause nodepool so we can block the job in node request state during
+        # reconfiguration.
+        self.fake_nodepool.pause()
+
+        tenant = self.sched.abide.tenants.get('tenant-one')
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.assertFalse('test-semaphore' in
+                         tenant.semaphore_handler.semaphores)
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertTrue('test-semaphore' in
+                        tenant.semaphore_handler.semaphores)
+
+        self.commitConfigUpdate(
+            'common-config',
+            'config/semaphore/git/common-config/zuul-remove-job.yaml')
+        self.sched.reconfigure(self.config)
+        self.waitUntilSettled()
+
+        # Now we can unpause nodepool
+        self.fake_nodepool.unpause()
+        self.waitUntilSettled()
+
+        # Release job project-test1 which should be the only job left
+        self.executor_server.release('project-test1')
+        self.waitUntilSettled()
+
+        # The check pipeline should be empty
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        check_pipeline = tenant.layout.pipelines['check']
+        items = check_pipeline.getAllItems()
+        self.assertEqual(len(items), 0)
+
+        # The semaphore should be released
+        self.assertFalse('test-semaphore' in
+                         tenant.semaphore_handler.semaphores)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
 
 class TestSemaphoreMultiTenant(ZuulTestCase):
     tenant_config_file = 'config/multi-tenant-semaphore/main.yaml'

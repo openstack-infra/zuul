@@ -830,6 +830,8 @@ class Scheduler(threading.Thread):
                     item.current_build_set.node_requests.items():
                     requests_to_cancel.append(
                         (item.current_build_set, request))
+
+            semaphores_to_release = []
             for build in builds_to_cancel:
                 self.log.info(
                     "Canceling build %s during reconfiguration" % (build,))
@@ -848,14 +850,16 @@ class Scheduler(threading.Thread):
                     self.log.exception(
                         "Exception while removing nodeset from build %s "
                         "for change %s" % (build, build.build_set.item.change))
-                tenant.semaphore_handler.release(
-                    build.build_set.item, build.job)
+                semaphores_to_release.append((build.build_set.item, build.job))
             for build_set, request in requests_to_cancel:
                 self.log.info(
                     "Canceling node request %s during reconfiguration",
                     request)
                 self.nodepool.cancelRequest(request)
                 build_set.removeJobNodeRequest(request.job.name)
+                semaphores_to_release.append((build_set.item, request.job))
+            for item, job in semaphores_to_release:
+                tenant.semaphore_handler.release(item, job)
 
     def _reconfigureTenant(self, tenant):
         # This is called from _doReconfigureEvent while holding the
