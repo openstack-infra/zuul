@@ -195,3 +195,13 @@
     run: playbooks/project-merge.yaml
     required-projects:
       - org/project
+
+- job:
+    name: complete-job
+    description: A fake job to test attribute
+    abstract: true
+    run: playbooks/run.yaml
+    pre-run: playbooks/pre-run.yaml
+    post-run:
+      - playbooks/post-run-01.yaml
+      - playbooks/post-run-02.yaml

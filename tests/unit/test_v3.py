@@ -3662,8 +3662,8 @@ class TestSecrets(ZuulTestCase):
             dict(name='project1-secret', result='SUCCESS', changes='1,1'),
         ])
         self.assertEqual(
-            self._getSecrets('project1-secret', 'playbooks'),
-            [{'project1_secret': self.secret}])
+            [{'secret_name': self.secret}],
+            self._getSecrets('project1-secret', 'playbooks'))
 
     def test_secret_branch_error_same_branch(self):
         # Test that we are unable to define a secret twice on the same
