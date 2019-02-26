@@ -1320,6 +1320,10 @@ class Job(ConfigObject):
         if changed:
             self.roles = tuple(newroles)
 
+    def getBranches(self):
+        # Return the raw branch list that match this job
+        return self._branches
+
     def setBranchMatcher(self, branches):
         # Set the branch matcher to match any of the supplied branches
         self._branches = branches

@@ -364,12 +364,30 @@ class RPCListener(object):
             job.sendWorkComplete(json.dumps(None))
         for job_name in sorted(tenant.layout.jobs):
             desc = None
-            for tenant_job in tenant.layout.jobs[job_name]:
-                if tenant_job.description:
-                    desc = tenant_job.description.split('\n')[0]
-                    break
-            output.append({"name": job_name,
-                           "description": desc})
+            variants = []
+            for variant in tenant.layout.jobs[job_name]:
+                if not desc and variant.description:
+                    desc = variant.description.split('\n')[0]
+                job_variant = {}
+                if not variant.isBase():
+                    if variant.parent:
+                        job_variant['parent'] = str(variant.parent)
+                    else:
+                        job_variant['parent'] = tenant.default_base_job
+                branches = variant.getBranches()
+                if branches:
+                    job_variant['branches'] = branches
+                if job_variant:
+                    variants.append(job_variant)
+
+            job_output = {
+                "name": job_name,
+            }
+            if desc:
+                job_output["description"] = desc
+            if variants:
+                job_output["variants"] = variants
+            output.append(job_output)
         job.sendWorkComplete(json.dumps(output))
 
     def handle_project_get(self, gear_job):
