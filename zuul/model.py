@@ -1987,7 +1987,7 @@ class QueueItem(object):
         self.layout = None
         self.project_pipeline_config = None
         self.job_graph = None
-        self._cached_sql_results = None
+        self._cached_sql_results = {}
 
     def __repr__(self):
         if self.pipeline:
@@ -2186,7 +2186,8 @@ class QueueItem(object):
 
     def _getRequirementsResultFromSQL(self, requirements):
         # This either returns data or raises an exception
-        if self._cached_sql_results is None:
+        requirements_tuple = tuple(sorted(requirements))
+        if requirements_tuple not in self._cached_sql_results:
             sql_driver = self.pipeline.manager.sched.connections.drivers['sql']
             conn = sql_driver.tenant_connections.get(self.pipeline.tenant.name)
             if conn:
@@ -2197,16 +2198,16 @@ class QueueItem(object):
                     change=self.change.number,
                     branch=self.change.branch,
                     patchset=self.change.patchset,
-                    provides=list(requirements))
+                    provides=requirements_tuple)
             else:
                 builds = []
             # Just look at the most recent buildset.
             # TODO: query for a buildset instead of filtering.
             builds = [b for b in builds
                       if b.buildset.uuid == builds[0].buildset.uuid]
-            self._cached_sql_results = builds
+            self._cached_sql_results[requirements_tuple] = builds
 
-        builds = self._cached_sql_results
+        builds = self._cached_sql_results[requirements_tuple]
         data = []
         if not builds:
             return data
