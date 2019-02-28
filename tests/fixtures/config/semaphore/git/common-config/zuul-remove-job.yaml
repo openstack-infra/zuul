@@ -1,0 +1,110 @@
+- pipeline:
+    name: check
+    manager: independent
+    trigger:
+      gerrit:
+        - event: patchset-created
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+- semaphore:
+    name: test-semaphore-two
+    max: 2
+
+- job:
+    name: base
+    parent: null
+    nodeset:
+      nodes:
+        - name: controller
+          label: label1
+
+- job:
+    name: project-test1
+    run: playbooks/project-test1.yaml
+
+- job:
+    name: semaphore-one-test1
+    semaphore: test-semaphore
+    run: playbooks/semaphore-one-test1.yaml
+
+- job:
+    name: semaphore-one-test2
+    semaphore: test-semaphore
+    run: playbooks/semaphore-one-test2.yaml
+
+- job:
+    name: semaphore-two-test1
+    semaphore: test-semaphore-two
+    run: playbooks/semaphore-two-test1.yaml
+
+- job:
+    name: semaphore-two-test2
+    semaphore: test-semaphore-two
+    run: playbooks/semaphore-two-test2.yaml
+
+- job:
+    name: semaphore-one-test3
+    semaphore: test-semaphore
+    run: playbooks/semaphore-two-test1.yaml
+    nodeset:
+      nodes:
+        - name: controller
+          label: label1
+
+- job:
+    name: semaphore-one-test1-resources-first
+    semaphore:
+      name: test-semaphore
+      resources-first: True
+    run: playbooks/semaphore-one-test1.yaml
+
+- job:
+    name: semaphore-one-test2-resources-first
+    semaphore:
+      name: test-semaphore
+      resources-first: True
+    run: playbooks/semaphore-one-test1.yaml
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - project-test1
+        # This is the difference to zuul.yaml that is used in
+        # test_semaphore_reconfigure_job_removal:
+        # - semaphore-one-test1
+        # - semaphore-one-test2
+
+
+- project:
+    name: org/project1
+    check:
+      jobs:
+        - project-test1
+        - semaphore-two-test1
+        - semaphore-two-test2
+
+- project:
+    name: org/project2
+    check:
+      jobs:
+        - semaphore-one-test3
+
+- project:
+    name: org/project3
+    check:
+      jobs:
+        - project-test1
+        - semaphore-one-test1-resources-first
+        - semaphore-one-test2-resources-first
+
+- project:
+    name: org/project4
+    check:
+      jobs:
+        - semaphore-one-test1-resources-first
