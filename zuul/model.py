@@ -723,11 +723,20 @@ class NodeRequest(object):
 
     @property
     def priority(self):
+        precedence_adjustment = 0
         if self.build_set:
             precedence = self.build_set.item.pipeline.precedence
+            job_graph = self.build_set.item.job_graph
+            if job_graph:
+                for parent in job_graph.getParentJobsRecursively(
+                    self.job.name):
+                    build = self.build_set.getBuild(parent.name)
+                    if build.paused:
+                        precedence_adjustment = -1
         else:
             precedence = PRECEDENCE_NORMAL
-        return PRIORITY_MAP[precedence]
+        initial_precedence = PRIORITY_MAP[precedence]
+        return max(0, initial_precedence + precedence_adjustment)
 
     @property
     def fulfilled(self):

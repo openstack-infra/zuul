@@ -1,0 +1,23 @@
+- job:
+    name: compile
+    run: playbooks/compile.yaml
+    nodeset:
+      nodes:
+        - name: compile_node
+          label: compile_label
+
+- job:
+    name: test
+    run: playbooks/test.yaml
+    nodeset:
+      nodes:
+        - name: test_node
+          label: test_label
+
+- project:
+    check:
+      jobs:
+        - compile
+        - test:
+            dependencies:
+              - compile
