@@ -566,7 +566,18 @@ are available:
 
    .. var:: message
 
-      The commit or pull request message of the change.
+      The commit or pull request message of the change base64 encoded. Use the
+      `b64decode` filter in ansible when working with it.
+
+      .. code-block:: yaml
+
+         - hosts: all
+           tasks:
+             - name: Dump commit message
+               copy:
+                 content: "{{ zuul.message | b64decode }}"
+                 dest: "{{ zuul.executor.log_root }}/commit-message.txt"
+
 
 Branch Items
 ~~~~~~~~~~~~

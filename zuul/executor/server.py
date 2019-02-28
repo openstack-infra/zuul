@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import base64
 import collections
 import datetime
 import json
@@ -29,7 +30,7 @@ import traceback
 import git
 from urllib.parse import urlsplit
 
-from zuul.lib.yamlutil import yaml, UnsafeTag
+from zuul.lib.yamlutil import yaml
 from zuul.lib.config import get_default
 from zuul.lib.statsd import get_statsd
 from zuul.lib import filecomments
@@ -593,7 +594,8 @@ def make_inventory_dict(nodes, args, all_vars):
 
     zuul_vars = all_vars['zuul']
     if 'message' in zuul_vars:
-        zuul_vars['message'] = UnsafeTag(zuul_vars['message'])
+        zuul_vars['message'] = base64.b64encode(
+            zuul_vars['message'].encode("utf-8")).decode('utf-8')
 
     inventory = {
         'all': {
