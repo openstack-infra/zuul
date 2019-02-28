@@ -714,6 +714,7 @@ class NodeRequest(object):
         self.stat = None
         self.uid = uuid4().hex
         self.relative_priority = relative_priority
+        self.provider = self._getPausedParentProvider()
         self.id = None
         self._zk_data = {}  # Data that we read back from ZK
         # Zuul internal flags (not stored in ZK so they are not
@@ -721,18 +722,32 @@ class NodeRequest(object):
         self.failed = False
         self.canceled = False
 
+    def _getPausedParent(self):
+        if self.build_set:
+            job_graph = self.build_set.item.job_graph
+            if job_graph:
+                for parent in job_graph.getParentJobsRecursively(
+                        self.job.name):
+                    build = self.build_set.getBuild(parent.name)
+                    if build.paused:
+                        return build
+        return None
+
+    def _getPausedParentProvider(self):
+        build = self._getPausedParent()
+        if build:
+            nodeset = self.build_set.getJobNodeSet(build.job.name)
+            if nodeset and nodeset.nodes:
+                return list(nodeset.nodes.values())[0].provider
+        return None
+
     @property
     def priority(self):
         precedence_adjustment = 0
         if self.build_set:
             precedence = self.build_set.item.pipeline.precedence
-            job_graph = self.build_set.item.job_graph
-            if job_graph:
-                for parent in job_graph.getParentJobsRecursively(
-                    self.job.name):
-                    build = self.build_set.getBuild(parent.name)
-                    if build.paused:
-                        precedence_adjustment = -1
+            if self._getPausedParent():
+                precedence_adjustment = -1
         else:
             precedence = PRECEDENCE_NORMAL
         initial_precedence = PRIORITY_MAP[precedence]
@@ -764,6 +779,7 @@ class NodeRequest(object):
         d.setdefault('node_types', nodes)
         d.setdefault('requestor', self.requestor)
         d.setdefault('created_time', self.created_time)
+        d.setdefault('provider', self.provider)
         # We might change these
         d['state'] = self.state
         d['state_time'] = self.state_time
