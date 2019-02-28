@@ -49,11 +49,20 @@
     name: image-user
     requires: images
 
+- job:
+    name: library-builder
+    provides: libraries
+
+- job:
+    name: library-user
+    requires: libraries
+
 - project:
     name: org/project1
     check:
       jobs:
         - image-builder
+        - library-builder
     gate:
       queue: integrated
       jobs:
@@ -64,6 +73,7 @@
     check:
       jobs:
         - image-user
+        - library-user
     gate:
       queue: integrated
       jobs:
