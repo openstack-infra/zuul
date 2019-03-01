@@ -8,6 +8,10 @@
       wait_for:
         host: gerrit
         port: 29418
+    - name: Wait for mysql to start
+      wait_for:
+        host: mysql
+        port: 3306
     - name: Wait for zuul user to be created
       uri:
         url: http://gerrit:8080/a/accounts/zuul/sshkeys

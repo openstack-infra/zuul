@@ -50,7 +50,7 @@ services:
       - "sshkey:/var/ssh:z"
       - /var/lib/zuul
   web:
-    command: "zuul-web -d"
+    command: "sh -c 'ansible-playbook /var/playbooks/wait-to-start.yaml; zuul-web -d'"
     depends_on:
       - scheduler
       - mysql
