@@ -420,46 +420,14 @@ class PipelineManager(object):
     def cancelJobs(self, item, prime=True):
         self.log.debug("Cancel jobs for change %s" % item.change)
         canceled = False
-        jobs_to_release = []
-
         old_build_set = item.current_build_set
-        old_jobs = {job.name: job for job in item.getJobs()}
+        jobs_to_cancel = item.getJobs()
 
         if prime and item.current_build_set.ref:
             item.resetAllBuilds()
-        for req in old_build_set.node_requests.values():
-            self.sched.nodepool.cancelRequest(req)
-            jobs_to_release.append(req.job)
-        old_build_set.node_requests = {}
-        canceled_jobs = set()
-        for build in old_build_set.getBuilds():
-            if build.result:
-                canceled_jobs.add(build.job.name)
-                continue
-            was_running = False
-            try:
-                was_running = self.sched.executor.cancel(build)
-            except Exception:
-                self.log.exception("Exception while canceling build %s "
-                                   "for change %s" % (build, item.change))
-            jobs_to_release.append(build.job)
 
-            if not was_running:
-                nodeset = build.build_set.getJobNodeSet(build.job.name)
-                self.sched.nodepool.returnNodeSet(nodeset, build)
-            build.result = 'CANCELED'
-            canceled = True
-            canceled_jobs.add(build.job.name)
-        for jobname, nodeset in list(old_build_set.nodesets.items()):
-            if jobname in canceled_jobs:
-                continue
-            self.sched.nodepool.returnNodeSet(nodeset)
-            jobs_to_release.append(old_jobs[jobname])
-
-        for job in jobs_to_release:
-            tenant = old_build_set.item.pipeline.tenant
-            tenant.semaphore_handler.release(
-                old_build_set.item, job)
+        for job in jobs_to_cancel:
+            self.sched.cancelJob(old_build_set, job)
 
         for item_behind in item.items_behind:
             self.log.debug("Canceling jobs for change %s, behind change %s" %
