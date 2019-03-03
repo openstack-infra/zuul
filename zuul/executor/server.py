@@ -1859,6 +1859,9 @@ class AnsibleJob(object):
         rw_paths = rw_paths.split(":") if rw_paths else []
 
         ro_paths.append(ansible_dir)
+        ro_paths.append(
+            self.executor_server.ansible_manager.getAnsibleInstallDir(
+                ansible_version))
         ro_paths.append(self.jobdir.ansible_root)
         ro_paths.append(self.jobdir.trusted_root)
         ro_paths.append(self.jobdir.untrusted_root)
@@ -2281,14 +2284,23 @@ class ExecutorServer(object):
             StartingBuildsSensor(self, cpu_sensor.max_load_avg)
         ]
 
+        manage_ansible = get_default(
+            self.config, 'executor', 'manage_ansible', True)
         ansible_dir = os.path.join(state_dir, 'ansible')
-        self.ansible_manager = AnsibleManager(ansible_dir)
+        ansible_install_root = get_default(
+            self.config, 'executor', 'ansible_root', None)
+        if not ansible_install_root:
+            ansible_install_root = os.path.join(state_dir, 'ansible-bin')
+        self.ansible_manager = AnsibleManager(
+            ansible_dir, runtime_install_path=ansible_install_root)
         if not self.ansible_manager.validate():
-            # TODO(tobiash): Install ansible here if auto install on startup is
-            #                requested
-            raise Exception('Error while validating ansible installations. '
-                            'Please run zuul-manage-ansible to install all '
-                            'supported ansible versions.')
+            if not manage_ansible:
+                raise Exception('Error while validating ansible '
+                                'installations. Please run '
+                                'zuul-manage-ansible to install all supported '
+                                'ansible versions.')
+            else:
+                self.ansible_manager.install()
         self.ansible_manager.copyAnsibleFiles()
 
     def _getMerger(self, root, cache_root, logger=None):
