@@ -82,3 +82,19 @@
         - failed_in_loop1
         - failed_in_loop2
       ignore_errors: True
+
+- hosts: all
+  tasks:
+    - name: Remote shell task with python exception
+      command: echo foo
+      args:
+        chdir: /remote-shelltask/somewhere/that/does/not/exist
+      failed_when: false
+
+- hosts: localhost
+  tasks:
+    - name: Local shell task with python exception
+      command: echo foo
+      args:
+        chdir: /local-shelltask/somewhere/that/does/not/exist
+      failed_when: false
