@@ -3965,9 +3965,12 @@ class TestScheduler(ZuulTestCase):
         self.executor_server.hold_jobs_in_build = True
         self.commitConfigUpdate('common-config', 'layouts/timer.yaml')
         self.sched.reconfigure(self.config)
-        self.waitUntilSettled()
 
-        time.sleep(5)
+        # We expect that one build for each branch (master and stable) appears.
+        for _ in iterate_timeout(30, 'Wait for two builds that are hold'):
+            if len(self.builds) == 2:
+                break
+        self.waitUntilSettled()
 
         client.dequeue(
             tenant='tenant-one',
