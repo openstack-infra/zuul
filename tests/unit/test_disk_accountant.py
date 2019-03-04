@@ -65,6 +65,18 @@ class TestDiskAccountant(BaseTestCase):
             da.stop()
         self.assertFalse(da.thread.is_alive())
 
+    def test_disk_accountant_no_limit(self):
+        jobs_dir = tempfile.mkdtemp(
+            dir=os.environ.get("ZUUL_TEST_ROOT", None))
+        cache_dir = tempfile.mkdtemp()
+        executor_server = FakeExecutor()
+        da = DiskAccountant(jobs_dir, -1, executor_server.stopJobByJobDir,
+                            cache_dir)
+        da.start()
+        self.assertFalse(da.running)
+        da.stop()
+        self.assertFalse(da.running)
+
     def test_cache_hard_links(self):
         root_dir = tempfile.mkdtemp(
             dir=os.environ.get("ZUUL_TEST_ROOT", None))

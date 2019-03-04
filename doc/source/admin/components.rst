@@ -597,7 +597,7 @@ The following sections of ``zuul.conf`` are used by the executor:
       This integer is the maximum number of megabytes that any one job
       is allowed to consume on disk while it is running. If a job's
       scratch space has more than this much space consumed, it will be
-      aborted.
+      aborted. Set to -1 to disable the limit.
 
    .. attr:: trusted_ro_paths
 
