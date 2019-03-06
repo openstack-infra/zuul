@@ -533,6 +533,9 @@ class JobParser(object):
                    'override-branch': str,
                    'override-checkout': str}
 
+    job_dependency = {vs.Required('name'): str,
+                      'soft': bool}
+
     secret = {vs.Required('name'): str,
               vs.Required('secret'): str,
               'pass-to-parent': bool}
@@ -575,7 +578,7 @@ class JobParser(object):
                       'extra-vars': dict,
                       'host-vars': {str: dict},
                       'group-vars': {str: dict},
-                      'dependencies': to_list(str),
+                      'dependencies': to_list(vs.Any(job_dependency, str)),
                       'allowed-projects': to_list(str),
                       'override-branch': str,
                       'override-checkout': str,
@@ -764,6 +767,20 @@ class JobParser(object):
                 new_projects[project.canonical_name] = job_project
             job.required_projects = new_projects
 
+        if 'dependencies' in conf:
+            new_dependencies = []
+            dependencies = as_list(conf.get('dependencies', []))
+            for dep in dependencies:
+                if isinstance(dep, dict):
+                    dep_name = dep['name']
+                    dep_soft = dep.get('soft', False)
+                else:
+                    dep_name = dep
+                    dep_soft = False
+                job_dependency = model.JobDependency(dep_name, dep_soft)
+                new_dependencies.append(job_dependency)
+            job.dependencies = new_dependencies
+
         if 'semaphore' in conf:
             semaphore = conf.get('semaphore')
             if isinstance(semaphore, str):
@@ -773,7 +790,7 @@ class JobParser(object):
                     semaphore.get('name'),
                     semaphore.get('resources-first', False))
 
-        for k in ('tags', 'requires', 'provides', 'dependencies'):
+        for k in ('tags', 'requires', 'provides'):
             v = frozenset(as_list(conf.get(k)))
             if v:
                 setattr(job, k, v)
