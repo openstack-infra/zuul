@@ -179,9 +179,14 @@ class Watchdog(object):
         self.thread.daemon = True
         self.timed_out = None
 
+        self.end = 0
+
+        self._running = False
+        self._stop_event = threading.Event()
+
     def _run(self):
         while self._running and time.time() < self.end:
-            time.sleep(10)
+            self._stop_event.wait(10)
         if self._running:
             self.timed_out = True
             self.function(*self.args)
@@ -198,6 +203,7 @@ class Watchdog(object):
 
     def stop(self):
         self._running = False
+        self._stop_event.set()
 
 
 class SshAgent(object):
