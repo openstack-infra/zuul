@@ -57,12 +57,16 @@
     name: library-user
     requires: libraries
 
+- job:
+    name: hold
+
 - project:
     name: org/project1
     check:
       jobs:
         - image-builder
         - library-builder
+        - hold
     gate:
       queue: integrated
       jobs:
@@ -74,6 +78,7 @@
       jobs:
         - image-user
         - library-user
+        - hold
     gate:
       queue: integrated
       jobs:

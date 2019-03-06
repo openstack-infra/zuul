@@ -2257,7 +2257,7 @@ class QueueItem(object):
                     data.append(artifact)
         return data
 
-    def providesRequirements(self, requirements, data):
+    def providesRequirements(self, requirements, data, recurse=True):
         # Mutates data and returns true/false if requirements
         # satisfied.
         if not requirements:
@@ -2271,7 +2271,8 @@ class QueueItem(object):
                     found = True
                     break
             if found:
-                if not item.providesRequirements(requirements, data):
+                if not item.providesRequirements(requirements, data,
+                                                 recurse=False):
                     return False
             else:
                 # Look for this item in the SQL DB.
@@ -2299,6 +2300,8 @@ class QueueItem(object):
                     data += artifacts
         if not self.item_ahead:
             return True
+        if not recurse:
+            return True
         return self.item_ahead.providesRequirements(requirements, data)
 
     def jobRequirementsReady(self, job):
@@ -2307,6 +2310,7 @@ class QueueItem(object):
         try:
             data = []
             ret = self.item_ahead.providesRequirements(job.requires, data)
+            data.reverse()
             job.updateArtifactData(data)
         except RequirementsError as e:
             self.warning(str(e))
