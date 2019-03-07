@@ -31,6 +31,9 @@ PROVIDES_TABLE = 'zuul_provides'
 
 
 class DatabaseSession(object):
+
+    log = logging.getLogger("zuul.DatabaseSession")
+
     def __init__(self, connection):
         self.connection = connection
         self.session = connection.session
@@ -133,6 +136,29 @@ class DatabaseSession(object):
             return q.all()
         except sqlalchemy.orm.exc.NoResultFound:
             return []
+
+    def getBuildset(self, tenant, uuid):
+        """Get one buildset with its builds"""
+
+        buildset_table = self.connection.zuul_buildset_table
+
+        q = self.session().query(self.connection.buildSetModel).\
+            options(orm.joinedload(self.connection.buildSetModel.builds).
+                    subqueryload(self.connection.buildModel.artifacts)).\
+            options(orm.joinedload(self.connection.buildSetModel.builds).
+                    subqueryload(self.connection.buildModel.provides)).\
+            with_hint(buildset_table, 'USE INDEX (PRIMARY)', 'mysql')
+
+        q = self.listFilter(q, buildset_table.c.tenant, tenant)
+        q = self.listFilter(q, buildset_table.c.uuid, uuid)
+
+        try:
+            return q.one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            return None
+        except sqlalchemy.orm.exc.MultipleResultsFound:
+            self.log.error("Multiple buildset found with uuid %s", uuid)
+            return None
 
 
 class SQLConnection(BaseConnection):
@@ -319,3 +345,8 @@ class SQLConnection(BaseConnection):
         """Return a list of BuildSet objects"""
         with self.getSession() as db:
             return db.getBuildsets(*args, **kw)
+
+    def getBuildset(self, *args, **kw):
+        """Return a BuildSet objects"""
+        with self.getSession() as db:
+            return db.getBuildset(*args, **kw)
