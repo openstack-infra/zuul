@@ -4977,16 +4977,41 @@ class TestProvidesRequires(ZuulDBTestCase):
         self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
 
-        self.assertEqual(len(self.builds), 2)
+        self.assertEqual(len(self.builds), 3)
 
-        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
         B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
             B.subject, A.data['id'])
+        self.executor_server.returnData(
+            'image-builder', B,
+            {'zuul':
+             {'artifacts': [
+                 {'name': 'image2', 'url': 'http://example.com/image2'},
+             ]}}
+        )
+        self.executor_server.returnData(
+            'library-builder', B,
+            {'zuul':
+             {'artifacts': [
+                 {'name': 'library2', 'url': 'http://example.com/library2'},
+             ]}}
+        )
         self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
 
-        self.assertEqual(len(self.builds), 2)
+        self.assertEqual(len(self.builds), 6)
 
+        C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
+        C.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            C.subject, B.data['id'])
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 7)
+
+        self.executor_server.release('image-*')
+        self.executor_server.release('library-*')
+        self.waitUntilSettled()
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()
         self.waitUntilSettled()
@@ -4994,8 +5019,14 @@ class TestProvidesRequires(ZuulDBTestCase):
         self.assertHistory([
             dict(name='image-builder', result='SUCCESS', changes='1,1'),
             dict(name='library-builder', result='SUCCESS', changes='1,1'),
-            dict(name='image-user', result='SUCCESS', changes='1,1 2,1'),
-            dict(name='library-user', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='hold', result='SUCCESS', changes='1,1'),
+            dict(name='image-builder', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='library-builder', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='hold', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='image-user', result='SUCCESS', changes='1,1 2,1 3,1'),
+            dict(name='library-user', result='SUCCESS',
+                 changes='1,1 2,1 3,1'),
+            dict(name='hold', result='SUCCESS', changes='1,1 2,1 3,1'),
         ], ordered=False)
         image_user = self.getJobFromHistory('image-user')
         self.assertEqual(
@@ -5007,6 +5038,13 @@ class TestProvidesRequires(ZuulDBTestCase):
                 'job': 'image-builder',
                 'url': 'http://example.com/image',
                 'name': 'image',
+            }, {
+                'project': 'org/project1',
+                'change': '2',
+                'patchset': '1',
+                'job': 'image-builder',
+                'url': 'http://example.com/image2',
+                'name': 'image2',
             }])
         library_user = self.getJobFromHistory('library-user')
         self.assertEqual(
@@ -5018,6 +5056,13 @@ class TestProvidesRequires(ZuulDBTestCase):
                 'job': 'library-builder',
                 'url': 'http://example.com/library',
                 'name': 'library',
+            }, {
+                'project': 'org/project1',
+                'change': '2',
+                'patchset': '1',
+                'job': 'library-builder',
+                'url': 'http://example.com/library2',
+                'name': 'library2',
             }])
 
     @simple_layout('layouts/provides-requires.yaml')
@@ -5042,19 +5087,54 @@ class TestProvidesRequires(ZuulDBTestCase):
         self.assertHistory([
             dict(name='image-builder', result='SUCCESS', changes='1,1'),
             dict(name='library-builder', result='SUCCESS', changes='1,1'),
+            dict(name='hold', result='SUCCESS', changes='1,1'),
         ], ordered=False)
 
-        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
         B.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
             B.subject, A.data['id'])
+        self.executor_server.returnData(
+            'image-builder', B,
+            {'zuul':
+             {'artifacts': [
+                 {'name': 'image2', 'url': 'http://example.com/image2'},
+             ]}}
+        )
+        self.executor_server.returnData(
+            'library-builder', B,
+            {'zuul':
+             {'artifacts': [
+                 {'name': 'library2', 'url': 'http://example.com/library2'},
+             ]}}
+        )
         self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='image-builder', result='SUCCESS', changes='1,1'),
+            dict(name='library-builder', result='SUCCESS', changes='1,1'),
+            dict(name='hold', result='SUCCESS', changes='1,1'),
+            dict(name='image-builder', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='library-builder', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='hold', result='SUCCESS', changes='1,1 2,1'),
+        ], ordered=False)
+
+        C = self.fake_gerrit.addFakeChange('org/project2', 'master', 'C')
+        C.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            C.subject, B.data['id'])
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
         self.waitUntilSettled()
 
         self.assertHistory([
             dict(name='image-builder', result='SUCCESS', changes='1,1'),
             dict(name='library-builder', result='SUCCESS', changes='1,1'),
-            dict(name='image-user', result='SUCCESS', changes='1,1 2,1'),
-            dict(name='library-user', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='hold', result='SUCCESS', changes='1,1'),
+            dict(name='image-builder', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='library-builder', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='hold', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='image-user', result='SUCCESS', changes='1,1 2,1 3,1'),
+            dict(name='library-user', result='SUCCESS',
+                 changes='1,1 2,1 3,1'),
+            dict(name='hold', result='SUCCESS', changes='1,1 2,1 3,1'),
         ], ordered=False)
         image_user = self.getJobFromHistory('image-user')
         self.assertEqual(
@@ -5066,6 +5146,13 @@ class TestProvidesRequires(ZuulDBTestCase):
                 'job': 'image-builder',
                 'url': 'http://example.com/image',
                 'name': 'image',
+            }, {
+                'project': 'org/project1',
+                'change': '2',
+                'patchset': '1',
+                'job': 'image-builder',
+                'url': 'http://example.com/image2',
+                'name': 'image2',
             }])
         library_user = self.getJobFromHistory('library-user')
         self.assertEqual(
@@ -5077,6 +5164,13 @@ class TestProvidesRequires(ZuulDBTestCase):
                 'job': 'library-builder',
                 'url': 'http://example.com/library',
                 'name': 'library',
+            }, {
+                'project': 'org/project1',
+                'change': '2',
+                'patchset': '1',
+                'job': 'library-builder',
+                'url': 'http://example.com/library2',
+                'name': 'library2',
             }])
 
     @simple_layout('layouts/provides-requires.yaml')
@@ -5090,6 +5184,7 @@ class TestProvidesRequires(ZuulDBTestCase):
         self.assertHistory([
             dict(name='image-builder', result='FAILURE', changes='1,1'),
             dict(name='library-builder', result='FAILURE', changes='1,1'),
+            dict(name='hold', result='SUCCESS', changes='1,1'),
         ], ordered=False)
 
         B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
@@ -5101,6 +5196,8 @@ class TestProvidesRequires(ZuulDBTestCase):
         self.assertHistory([
             dict(name='image-builder', result='FAILURE', changes='1,1'),
             dict(name='library-builder', result='FAILURE', changes='1,1'),
+            dict(name='hold', result='SUCCESS', changes='1,1'),
+            dict(name='hold', result='SUCCESS', changes='1,1 2,1'),
         ], ordered=False)
         self.assertIn('image-user : SKIPPED', B.messages[0])
         self.assertIn('not met by build', B.messages[0])
