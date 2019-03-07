@@ -61,6 +61,7 @@ class MQTTReporter(BaseReporter):
                     'uuid': build.uuid,
                     'start_time': build.start_time,
                     'end_time': build.end_time,
+                    'execute_time': build.execute_time,
                     'log_url': url,
                     'result': result,
                 })
