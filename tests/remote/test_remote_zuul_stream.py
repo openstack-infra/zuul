@@ -133,6 +133,15 @@ class TestZuulStream(AnsibleZuulTestCase):
             self.assertLogLine(r'compute1 \| failed_in_loop2', text)
             self.assertLogLine(r'compute1 \| ok: Item: failed_in_loop2 '
                                r'Result: 1', text)
+            self.assertLogLine(r'localhost \| .*No such file or directory: .*'
+                               r'\'/local-shelltask/somewhere/'
+                               r'that/does/not/exist\'', text)
+            self.assertLogLine(r'compute1 \| .*No such file or directory: .*'
+                               r'\'/remote-shelltask/somewhere/'
+                               r'that/does/not/exist\'', text)
+            self.assertLogLine(r'controller \| .*No such file or directory: .*'
+                               r'\'/remote-shelltask/somewhere/'
+                               r'that/does/not/exist\'', text)
             self.assertLogLine(
                 r'controller \| ok: Runtime: \d:\d\d:\d\d\.\d\d\d\d\d\d', text)
             self.assertLogLine('PLAY RECAP', text)

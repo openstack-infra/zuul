@@ -182,6 +182,20 @@ class CallbackModule(default.CallbackModule):
             self._log("%s | %s " % (host, ln), ts=ts)
             return False
 
+    def _log_module_failure(self, result, result_dict):
+        if 'module_stdout' in result_dict and result_dict['module_stdout']:
+            self._log_message(
+                result, status='MODULE FAILURE',
+                msg=result_dict['module_stdout'])
+        elif 'exception' in result_dict and result_dict['exception']:
+            self._log_message(
+                result, status='MODULE FAILURE',
+                msg=result_dict['exception'])
+        elif 'module_stderr' in result_dict:
+            self._log_message(
+                result, status='MODULE FAILURE',
+                msg=result_dict['module_stderr'])
+
     def v2_playbook_on_start(self, playbook):
         self._playbook_name = os.path.splitext(playbook._file_name)[0]
 
@@ -311,18 +325,7 @@ class CallbackModule(default.CallbackModule):
             # items have their own events
             pass
         elif (result_dict.get('msg') == 'MODULE FAILURE'):
-            if 'module_stdout' in result_dict:
-                self._log_message(
-                    result, status='MODULE FAILURE',
-                    msg=result_dict['module_stdout'])
-            elif 'exception' in result_dict:
-                self._log_message(
-                    result, status='MODULE FAILURE',
-                    msg=result_dict['exception'])
-            elif 'module_stderr' in result_dict:
-                self._log_message(
-                    result, status='MODULE FAILURE',
-                    msg=result_dict['module_stderr'])
+            self._log_module_failure(result, result_dict)
         else:
             self._log_message(
                 result=result, status='ERROR', result_dict=result_dict)
@@ -388,18 +391,7 @@ class CallbackModule(default.CallbackModule):
             pass
 
         elif (result_dict.get('msg') == 'MODULE FAILURE'):
-            if 'module_stdout' in result_dict:
-                self._log_message(
-                    result, status='MODULE FAILURE',
-                    msg=result_dict['module_stdout'])
-            elif 'exception' in result_dict:
-                self._log_message(
-                    result, status='MODULE FAILURE',
-                    msg=result_dict['exception'])
-            elif 'module_stderr' in result_dict:
-                self._log_message(
-                    result, status='MODULE FAILURE',
-                    msg=result_dict['module_stderr'])
+            self._log_module_failure(result, result_dict)
         elif result._task.action == 'debug':
             # this is a debug statement, handle it special
             for key in [k for k in result_dict
@@ -454,11 +446,8 @@ class CallbackModule(default.CallbackModule):
         else:
             status = 'ok'
 
-        if (result_dict.get('msg') == 'MODULE FAILURE' and
-                'module_stdout' in result_dict):
-            self._log_message(
-                result, status='MODULE FAILURE',
-                msg="Item: {item}\n{module_stdout}".format(**result_dict))
+        if result_dict.get('msg') == 'MODULE FAILURE':
+            self._log_module_failure(result, result_dict)
         elif result._task.action not in ('command', 'shell',
                                          'win_command', 'win_shell'):
             if 'msg' in result_dict:
@@ -493,11 +482,8 @@ class CallbackModule(default.CallbackModule):
         result_dict = dict(result._result)
         self._process_result_for_localhost(result, is_task=False)
 
-        if (result_dict.get('msg') == 'MODULE FAILURE' and
-                'module_stdout' in result_dict):
-            self._log_message(
-                result, status='MODULE FAILURE',
-                msg="Item: {item}\n{module_stdout}".format(**result_dict))
+        if result_dict.get('msg') == 'MODULE FAILURE':
+            self._log_module_failure(result, result_dict)
         elif result._task.action not in ('command', 'shell',
                                          'win_command', 'win_shell'):
             self._log_message(
