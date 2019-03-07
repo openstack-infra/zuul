@@ -450,17 +450,12 @@ class Repo(object):
         head = repo.commit(self.revParse('FETCH_HEAD'))
         files = set()
 
-        merge_bases = []
-        if tosha is not None:
-            merge_bases = repo.merge_base(head, tosha)
-
-        files.update(set(head.stats.files.keys()))
-        if merge_bases:
-            hexsha_list = [b.hexsha for b in merge_bases]
-            for cmt in head.iter_parents():
-                if cmt.hexsha in hexsha_list:
-                    break
-                files.update(set(cmt.stats.files.keys()))
+        if tosha:
+            commit_diff = "{}..{}".format(tosha, head.hexsha)
+            for cmt in repo.iter_commits(commit_diff, no_merges=True):
+                files.update(cmt.stats.files.keys())
+        else:
+            files.update(head.stats.files.keys())
         return list(files)
 
     def deleteRemote(self, remote):

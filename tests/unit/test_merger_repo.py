@@ -13,6 +13,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import datetime
 import logging
 import os
 
@@ -203,6 +204,71 @@ class TestMergerRepo(ZuulTestCase):
 
         # And now reset the repo again. This should not crash
         work_repo.reset()
+
+    def test_files_changes(self):
+        parent_path = os.path.join(self.upstream_root, 'org/project1')
+        self.create_branch('org/project1', 'feature')
+
+        work_repo = Repo(parent_path, self.workspace_root,
+                         'none@example.org', 'User Name', '0', '0')
+        changed_files = work_repo.getFilesChanges('feature', 'master')
+
+        self.assertEqual(['README'], changed_files)
+
+    def test_files_changes_master_fork_merges(self):
+        """Regression test for getFilesChanges()
+
+        Check if correct list of changed files is listed for a messy
+        branch that has a merge of a fork, with the fork including a
+        merge of a new master revision.
+
+        The previously used "git merge-base" approach did not handle this
+        case correctly.
+        """
+        parent_path = os.path.join(self.upstream_root, 'org/project1')
+        repo = git.Repo(parent_path)
+
+        self.create_branch('org/project1', 'messy',
+                           commit_filename='messy1.txt')
+
+        # Let time pass to reproduce the order for this error case
+        commit_date = datetime.datetime.now() + datetime.timedelta(seconds=5)
+        commit_date = commit_date.replace(microsecond=0).isoformat()
+
+        # Create a commit on 'master' so we can merge it into the fork
+        files = {"master.txt": "master"}
+        master_ref = self.create_commit('org/project1', files=files,
+                                        message="Add master.txt",
+                                        commit_date=commit_date)
+        repo.refs.master.commit = master_ref
+
+        # Create a fork of the 'messy' branch and merge
+        # 'master' into the fork (no fast-forward)
+        repo.create_head("messy-fork")
+        repo.heads["messy-fork"].commit = "messy"
+        repo.head.reference = 'messy'
+        repo.head.reset(index=True, working_tree=True)
+        repo.git.checkout('messy-fork')
+        repo.git.merge('master', no_ff=True)
+
+        # Merge fork back into 'messy' branch (no fast-forward)
+        repo.head.reference = 'messy'
+        repo.head.reset(index=True, working_tree=True)
+        repo.git.checkout('messy')
+        repo.git.merge('messy-fork', no_ff=True)
+
+        # Create another commit on top of 'messy'
+        files = {"messy2.txt": "messy2"}
+        messy_ref = self.create_commit('org/project1', files=files,
+                                       head='messy', message="Add messy2.txt")
+        repo.refs.messy.commit = messy_ref
+
+        # Check that we get all changes for the 'messy' but not 'master' branch
+        work_repo = Repo(parent_path, self.workspace_root,
+                         'none@example.org', 'User Name', '0', '0')
+        changed_files = work_repo.getFilesChanges('messy', 'master')
+        self.assertEqual(sorted(['messy1.txt', 'messy2.txt']),
+                         sorted(changed_files))
 
 
 class TestMergerWithAuthUrl(ZuulTestCase):

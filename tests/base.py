@@ -2934,10 +2934,10 @@ class ZuulTestCase(BaseTestCase):
         zuul.merger.merger.reset_repo_to_head(repo)
         repo.git.clean('-x', '-f', '-d')
 
-    def create_branch(self, project, branch):
+    def create_branch(self, project, branch, commit_filename='README'):
         path = os.path.join(self.upstream_root, project)
         repo = git.Repo(path)
-        fn = os.path.join(path, 'README')
+        fn = os.path.join(path, commit_filename)
 
         branch_head = repo.create_head(branch)
         repo.head.reference = branch_head
@@ -2958,15 +2958,20 @@ class ZuulTestCase(BaseTestCase):
         zuul.merger.merger.reset_repo_to_head(repo)
         repo.delete_head(repo.heads[branch], force=True)
 
-    def create_commit(self, project):
+    def create_commit(self, project, files=None, head='master',
+                      message='Creating a fake commit', **kwargs):
         path = os.path.join(self.upstream_root, project)
         repo = git.Repo(path)
-        repo.head.reference = repo.heads['master']
-        file_name = os.path.join(path, 'README')
-        with open(file_name, 'a') as f:
-            f.write('creating fake commit\n')
-        repo.index.add([file_name])
-        commit = repo.index.commit('Creating a fake commit')
+        repo.head.reference = repo.heads[head]
+        repo.head.reset(index=True, working_tree=True)
+
+        files = files or {"README": "creating fake commit\n"}
+        for name, content in files.items():
+            file_name = os.path.join(path, name)
+            with open(file_name, 'a') as f:
+                f.write(content)
+            repo.index.add([file_name])
+        commit = repo.index.commit(message, **kwargs)
         return commit.hexsha
 
     def orderedRelease(self, count=None):
