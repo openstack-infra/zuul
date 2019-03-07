@@ -128,6 +128,13 @@ function fetchBuilds (apiPrefix, queryString) {
   }
   return Axios.get(apiUrl + apiPrefix + path)
 }
+function fetchBuildsets (apiPrefix, queryString) {
+  let path = 'buildsets'
+  if (queryString) {
+    path += '?' + queryString.slice(1)
+  }
+  return Axios.get(apiUrl + apiPrefix + path)
+}
 function fetchProject (apiPrefix, projectName) {
   return Axios.get(apiUrl + apiPrefix + 'project/' + projectName)
 }
@@ -155,6 +162,7 @@ export {
   fetchStatus,
   fetchBuild,
   fetchBuilds,
+  fetchBuildsets,
   fetchProject,
   fetchProjects,
   fetchJob,
