@@ -1070,6 +1070,27 @@ Here is an example of two job definitions:
       completed successfully, and if one or more of them fail, this
       job will not be run.
 
+      The format for this attribute is either a list of strings or
+      dictionaries.  Strings are interpreted as job names,
+      dictionaries, if used, may have the following attributes:
+
+      .. attr:: name
+         :required:
+
+         The name of the required job.
+
+      .. attr:: soft
+         :default: false
+
+         A boolean value which indicates whether this job is a *hard*
+         or *soft* dependency.  A *hard* dependency will cause an
+         error if the specified job is not run.  That is, if job B
+         depends on job A, but job A is not run for any reason (for
+         example, it containes a file matcher which does not match),
+         then Zuul will not run any jobs and report an error.  A
+         *soft* dependency will simply be ignored if the dependent job
+         is not run.
+
    .. attr:: allowed-projects
 
       A list of Zuul projects which may use this job.  By default, a

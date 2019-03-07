@@ -441,7 +441,8 @@ class TestGraph(BaseTestCase):
         prevjob = None
         for j in jobs[:3]:
             if prevjob:
-                j.dependencies = frozenset([prevjob.name])
+                j.dependencies = frozenset([
+                    model.JobDependency(prevjob.name)])
             graph.addJob(j)
             prevjob = j
         # 0 triggers 1 triggers 2 triggers 3...
@@ -451,31 +452,94 @@ class TestGraph(BaseTestCase):
                 Exception,
                 "Dependency cycle detected in job jobX"):
             j = model.Job('jobX')
-            j.dependencies = frozenset([j.name])
+            j.dependencies = frozenset([model.JobDependency(j.name)])
             graph.addJob(j)
 
         # Disallow circular dependencies
         with testtools.ExpectedException(
                 Exception,
                 "Dependency cycle detected in job job3"):
-            jobs[4].dependencies = frozenset([jobs[3].name])
+            jobs[4].dependencies = frozenset([
+                model.JobDependency(jobs[3].name)])
             graph.addJob(jobs[4])
-            jobs[3].dependencies = frozenset([jobs[4].name])
+            jobs[3].dependencies = frozenset([
+                model.JobDependency(jobs[4].name)])
             graph.addJob(jobs[3])
 
-        jobs[5].dependencies = frozenset([jobs[4].name])
+        jobs[5].dependencies = frozenset([model.JobDependency(jobs[4].name)])
         graph.addJob(jobs[5])
 
         with testtools.ExpectedException(
                 Exception,
                 "Dependency cycle detected in job job3"):
-            jobs[3].dependencies = frozenset([jobs[5].name])
+            jobs[3].dependencies = frozenset([
+                model.JobDependency(jobs[5].name)])
             graph.addJob(jobs[3])
 
-        jobs[3].dependencies = frozenset([jobs[2].name])
+        jobs[3].dependencies = frozenset([
+            model.JobDependency(jobs[2].name)])
         graph.addJob(jobs[3])
-        jobs[6].dependencies = frozenset([jobs[2].name])
+        jobs[6].dependencies = frozenset([
+            model.JobDependency(jobs[2].name)])
         graph.addJob(jobs[6])
+
+    def test_job_graph_allows_soft_dependencies(self):
+        parent = model.Job('parent')
+        child = model.Job('child')
+        child.dependencies = frozenset([
+            model.JobDependency(parent.name, True)])
+
+        # With the parent
+        graph = model.JobGraph()
+        graph.addJob(parent)
+        graph.addJob(child)
+        self.assertEqual(graph.getParentJobsRecursively(child.name),
+                         [parent])
+
+        # Skip the parent
+        graph = model.JobGraph()
+        graph.addJob(child)
+        self.assertEqual(graph.getParentJobsRecursively(child.name), [])
+
+    def test_job_graph_allows_soft_dependencies4(self):
+        # A more complex scenario with multiple parents at each level
+        parents = [model.Job('parent%i' % i) for i in range(6)]
+        child = model.Job('child')
+        child.dependencies = frozenset([
+            model.JobDependency(parents[0].name, True),
+            model.JobDependency(parents[1].name)])
+        parents[0].dependencies = frozenset([
+            model.JobDependency(parents[2].name),
+            model.JobDependency(parents[3].name, True)])
+        parents[1].dependencies = frozenset([
+            model.JobDependency(parents[4].name),
+            model.JobDependency(parents[5].name)])
+        # Run them all
+        graph = model.JobGraph()
+        for j in parents:
+            graph.addJob(j)
+        graph.addJob(child)
+        self.assertEqual(set(graph.getParentJobsRecursively(child.name)),
+                         set(parents))
+
+        # Skip first parent, therefore its recursive dependencies don't appear
+        graph = model.JobGraph()
+        for j in parents:
+            if j is not parents[0]:
+                graph.addJob(j)
+        graph.addJob(child)
+        self.assertEqual(set(graph.getParentJobsRecursively(child.name)),
+                         set(parents) -
+                         set([parents[0], parents[2], parents[3]]))
+
+        # Skip a leaf node
+        graph = model.JobGraph()
+        for j in parents:
+            if j is not parents[3]:
+                graph.addJob(j)
+        graph.addJob(child)
+        self.assertEqual(set(graph.getParentJobsRecursively(child.name)),
+                         set(parents) - set([parents[3]]))
 
 
 class TestTenant(BaseTestCase):

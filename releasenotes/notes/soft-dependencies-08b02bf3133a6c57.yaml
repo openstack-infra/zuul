@@ -1,0 +1,8 @@
+---
+features:
+  - The :attr:`job.dependencies` attribute may now be used to express
+    "soft" dependencies -- that is, to indicate a job should run
+    after another completes, but only if it runs at all.  For example,
+    a deployment job which should always run, but depends on a build
+    job which only runs if the source code is changed.
+

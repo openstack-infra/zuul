@@ -5676,6 +5676,25 @@ class TestDependencyGraph(ZuulTestCase):
         self.assertEqual(change.data['status'], 'NEW')
         self.assertEqual(change.reported, 2)
 
+    @simple_layout('layouts/soft-dependencies-error.yaml')
+    def test_soft_dependencies_error(self):
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([])
+        self.assertEqual(len(A.messages), 1)
+        self.assertTrue('Job project-merge not defined' in A.messages[0])
+        print(A.messages)
+
+    @simple_layout('layouts/soft-dependencies.yaml')
+    def test_soft_dependencies(self):
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+        self.assertHistory([
+            dict(name='deploy', result='SUCCESS', changes='1,1'),
+        ], ordered=False)
+
 
 class TestDuplicatePipeline(ZuulTestCase):
     tenant_config_file = 'config/duplicate-pipeline/main.yaml'
