@@ -346,6 +346,7 @@ class Scheduler(threading.Thread):
         self.rpc.join()
         self._command_running = False
         self.command_socket.stop()
+        self.command_thread.join()
 
     def runCommand(self):
         while self._command_running:
