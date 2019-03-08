@@ -17,6 +17,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import {
+  Checkbox,
   Form,
   FormGroup,
   FormControl,
@@ -32,7 +33,8 @@ class JobsList extends React.Component {
   }
 
   state = {
-    filter: null
+    filter: null,
+    flatten: false,
   }
 
   handleKeyPress = (e) => {
@@ -45,7 +47,7 @@ class JobsList extends React.Component {
 
   render () {
     const { jobs } = this.props
-    const { filter } = this.state
+    const { filter, flatten } = this.state
 
     const linkPrefix = this.props.tenant.linkPrefix + '/job/'
 
@@ -84,8 +86,10 @@ class JobsList extends React.Component {
           filtered: filtered,
         }
         // Visit parent recursively
-        for (let parent of parents) {
-          getNode(jobMap[parent], filtered)
+        if (!flatten) {
+          for (let parent of parents) {
+            getNode(jobMap[parent], filtered)
+          }
         }
       }
       return visited[job.name]
@@ -110,19 +114,21 @@ class JobsList extends React.Component {
       const jobNode = getNode(job, filtered)
       if (!jobNode.filtered) {
         let attached = false
-        // add tree node to each parent and expand the parent
-        for (let parent of jobNode.parents) {
-          const parentNode = visited[parent]
-          if (!parentNode) {
-            console.log(
-              'Job ', job.name, ' parent ', parent, ' does not exist!')
-            continue
+        if (!flatten) {
+          // add tree node to each parent and expand the parent
+          for (let parent of jobNode.parents) {
+            const parentNode = visited[parent]
+            if (!parentNode) {
+              console.log(
+                'Job ', job.name, ' parent ', parent, ' does not exist!')
+              continue
+            }
+            if (!parentNode.nodes) {
+              parentNode.nodes = []
+            }
+            parentNode.nodes.push(jobNode)
+            attached = true
           }
-          if (!parentNode.nodes) {
-            parentNode.nodes = []
-          }
-          parentNode.nodes.push(jobNode)
-          attached = true
         }
         // else add node at the tree root
         if (!attached || jobNode.parents.length === 0) {
@@ -152,6 +158,12 @@ class JobsList extends React.Component {
                 </span>
               </FormControl.Feedback>
             )}
+          </FormGroup>
+          <FormGroup controlId='jobs-flatten'>
+            &nbsp; Flatten list &nbsp;
+            <Checkbox
+              defaultChecked={flatten}
+              onChange={(e) => this.setState({flatten: e.target.checked})} />
           </FormGroup>
         </Form>
         <TreeView nodes={nodes} />
