@@ -875,9 +875,6 @@ class TestArtifacts(ZuulDBTestCase, BaseTestWeb, AnsibleZuulTestCase):
         project_bs = [x for x in buildsets if x["project"] == "org/project"][0]
         buildset = self.get_url(
             "api/tenant/tenant-one/buildset/%s" % project_bs['uuid']).json()
-        print("X" * 120)
-        print(buildset)
-        print("Y" * 120)
         self.assertEqual(3, len(buildset["builds"]))
 
         test1_build = [x for x in buildset["builds"]
