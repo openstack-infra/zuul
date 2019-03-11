@@ -2398,6 +2398,9 @@ class TestAnsible(AnsibleZuulTestCase):
         self.waitUntilSettled()
 
     def test_plugins(self):
+        # This test runs a bit long and needs extra time.
+        self.wait_timeout = 120
+
         # Keep the jobdir around so we can inspect contents if an
         # assert fails.
         self.executor_server.keep_jobdir = True
