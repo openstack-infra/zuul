@@ -4773,7 +4773,7 @@ class TestContainerJobs(AnsibleZuulTestCase):
         self.assertHistory([
             dict(name='container-machine', result='SUCCESS', changes='1,1'),
             dict(name='container-native', result='SUCCESS', changes='1,1'),
-        ])
+        ], ordered=False)
 
 
 class TestProvidesRequiresPause(AnsibleZuulTestCase):
