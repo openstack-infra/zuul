@@ -1,0 +1,7 @@
+---
+upgrade:
+  - The ``user`` value in the ``[fingergw]`` configuration section
+    previously defaulted to ``zuul``, but now is unset by default,
+    which will cause fingergw not to drop privileges.  It is
+    recommended that this value be explicitly set to an unprivileged
+    user.

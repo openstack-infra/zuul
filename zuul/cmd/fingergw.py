@@ -63,7 +63,7 @@ class FingerGatewayApp(zuul.cmd.ZuulDaemonApp):
         # Get values from configuration file
         host = get_default(self.config, 'fingergw', 'listen_address', '::')
         port = int(get_default(self.config, 'fingergw', 'port', 79))
-        user = get_default(self.config, 'fingergw', 'user', 'zuul')
+        user = get_default(self.config, 'fingergw', 'user', None)
         cmdsock = get_default(
             self.config, 'fingergw', 'command_socket',
             '/var/lib/zuul/%s.socket' % self.app_name)
