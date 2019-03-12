@@ -65,7 +65,9 @@ class WebServer(zuul.cmd.ZuulDaemonApp):
                 sys.exit(1)
 
         params["zk_hosts"] = get_default(
-            self.config, 'zookeeper', 'hosts', '127.0.0.1:2181')
+            self.config, 'zookeeper', 'hosts', None)
+        if not params["zk_hosts"]:
+            raise Exception("The zookeeper hosts config value is required")
 
         try:
             self.web = zuul.web.ZuulWeb(**params)
