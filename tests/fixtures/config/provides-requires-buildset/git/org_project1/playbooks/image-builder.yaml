@@ -1,0 +1,10 @@
+- hosts: all
+  tasks:
+    - name: Pause and let child run
+      zuul_return:
+        data:
+          zuul:
+            pause: true
+            artifacts:
+              - name: image
+                url: http://example.com/image

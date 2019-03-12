@@ -1,0 +1,15 @@
+- job:
+    name: image-builder
+    run: playbooks/image-builder.yaml
+
+- job:
+    name: image-user
+    run: playbooks/image-user.yaml
+
+- project:
+    check:
+      jobs:
+        - image-builder
+        - image-user:
+            dependencies:
+              - image-builder
