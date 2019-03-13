@@ -82,6 +82,10 @@ An MQTT report uses this schema:
 
             The build uuid (not present in start report).
 
+         .. attr:: execute_time
+
+            The build execute time.
+
          .. attr:: start_time
 
             The build start time (not present in start report).
