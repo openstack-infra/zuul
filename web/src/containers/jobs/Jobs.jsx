@@ -102,11 +102,15 @@ class JobsList extends React.Component {
     let filtered = false
     if (filter) {
       filtered = true
+      let filters = filter.replace(/ +/, ',').split(',')
       for (let job of jobs) {
-        if (job.name.indexOf(filter) !== -1 ||
-            (job.description && job.description.indexOf(filter) !== -1)) {
-          getNode(job, !filtered)
-        }
+        filters.forEach(jobFilter => {
+         if (jobFilter && (
+              (job.name.indexOf(jobFilter) !== -1) ||
+              (job.description && job.description.indexOf(jobFilter) !== -1))) {
+            getNode(job, !filtered)
+         }
+        })
       }
     }
     // process job list

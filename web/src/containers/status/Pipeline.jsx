@@ -90,7 +90,7 @@ class Pipeline extends React.Component {
 
   filterQueue(queue, filter) {
     let found = false
-    let filters = filter.replace(' ', ',').split(',')
+    let filters = filter.replace(/ +/, ',').split(',')
     queue.heads.forEach(changes => {
       changes.forEach(change => {
         filters.forEach(changeFilter => {
