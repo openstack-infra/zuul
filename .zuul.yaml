@@ -174,8 +174,8 @@
             irrelevant-files:
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
+            nodeset: ubuntu-xenial
         - tox-py36:
-            nodeset: ubuntu-bionic
             irrelevant-files:
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
@@ -206,8 +206,8 @@
             irrelevant-files:
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
+            nodeset: ubuntu-xenial
         - tox-py36:
-            nodeset: ubuntu-bionic
             irrelevant-files:
               - zuul/cmd/migrate.py
               - playbooks/zuul-migrate/.*
