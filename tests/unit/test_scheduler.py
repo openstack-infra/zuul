@@ -3843,6 +3843,31 @@ class TestScheduler(ZuulTestCase):
         self.assertEqual(A.reported, 2)
         self.assertEqual(r, True)
 
+    @simple_layout('layouts/three-projects.yaml')
+    def test_client_enqueue_change_wrong_project(self):
+        "Test that an enqueue fails if a change doesn't belong to the project"
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        A.addApproval('Code-Review', 2)
+        A.addApproval('Approved', 1)
+
+        B = self.fake_gerrit.addFakeChange('org/project2', 'master', 'B')
+        B.addApproval('Code-Review', 2)
+        B.addApproval('Approved', 1)
+
+        client = zuul.rpcclient.RPCClient('127.0.0.1',
+                                          self.gearman_server.port)
+        self.addCleanup(client.shutdown)
+        with testtools.ExpectedException(
+            zuul.rpcclient.RPCFailure,
+            'Change 2,1 does not belong to project "org/project1"'):
+            r = client.enqueue(tenant='tenant-one',
+                               pipeline='gate',
+                               project='org/project1',
+                               trigger='gerrit',
+                               change='2,1')
+            self.assertEqual(r, False)
+        self.waitUntilSettled()
+
     def test_client_enqueue_ref(self):
         "Test that the RPC client can enqueue a ref"
         p = "review.example.com/org/project"
@@ -3944,6 +3969,47 @@ class TestScheduler(ZuulTestCase):
         check_pipeline = tenant.layout.pipelines['check']
         self.assertEqual(len(check_pipeline.getAllItems()), 2)
         self.assertEqual(self.countJobResults(self.history, 'ABORTED'), 1)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+    @simple_layout('layouts/three-projects.yaml')
+    def test_client_dequeue_wrong_project(self):
+        "Test that dequeue fails if change and project do not match"
+
+        client = zuul.rpcclient.RPCClient('127.0.0.1',
+                                          self.gearman_server.port)
+        self.addCleanup(client.shutdown)
+
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        B = self.fake_gerrit.addFakeChange('org/project1', 'master', 'B')
+        C = self.fake_gerrit.addFakeChange('org/project1', 'master', 'C')
+        D = self.fake_gerrit.addFakeChange('org/project2', 'master', 'D')
+
+        A.addApproval('Code-Review', 2)
+        B.addApproval('Code-Review', 2)
+        C.addApproval('Code-Review', 2)
+        D.addApproval('Code-Review', 2)
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(B.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(C.getPatchsetCreatedEvent(1))
+        self.fake_gerrit.addEvent(D.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        with testtools.ExpectedException(
+            zuul.rpcclient.RPCFailure,
+            'Change 4,1 does not belong to project "org/project1"'):
+            r = client.dequeue(
+                tenant='tenant-one',
+                pipeline='check',
+                project='org/project1',
+                change='4,1',
+                ref=None)
+            self.waitUntilSettled()
+            self.assertEqual(r, False)
 
         self.executor_server.hold_jobs_in_build = False
         self.executor_server.release()

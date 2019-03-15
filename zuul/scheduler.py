@@ -942,6 +942,13 @@ class Scheduler(threading.Thread):
         pipeline = tenant.layout.pipelines[event.pipeline_name]
         (trusted, project) = tenant.getProject(event.project_name)
         change = project.source.getChange(event, project)
+        if change.project.name != project.name:
+            if event.change:
+                item = 'Change %s' % event.change
+            else:
+                item = 'Ref %s' % event.ref
+            raise Exception('%s does not belong to project "%s"'
+                            % (item, project.name))
         for shared_queue in pipeline.queues:
             for item in shared_queue.queue:
                 if (isinstance(item.change, model.Change) and
