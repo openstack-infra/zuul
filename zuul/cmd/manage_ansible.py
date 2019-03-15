@@ -14,6 +14,7 @@
 # under the License.
 
 import logging
+import textwrap
 import zuul.cmd
 from zuul.lib.ansible import AnsibleManager
 
@@ -21,7 +22,26 @@ from zuul.lib.ansible import AnsibleManager
 class ManageAnsible(zuul.cmd.ZuulApp):
 
     app_name = 'manage-ansible'
-    app_description = 'Zuul ansible maager'
+    app_description = textwrap.dedent('''
+        Zuul ansible manager.
+
+        This command installs or upgrades all supported Ansible installations
+        so zuul can use them.
+
+        You can set the following environnment variables
+        to install additional packages you might need along with ansible.
+        These variables must contain a space separated list of dependencies
+        that can be parsed by pip.
+
+        ANSIBLE_EXTRA_PACKAGES
+            Packages to add to every ansible installation.
+
+        ANSIBLE_<VERSION>_EXTRA_PACKAGES
+            Packages to add to a specific version of Ansible. The version must
+            be the same as listed in 'zuul-manage-ansible -l' but without
+            special characters. e.g. ANSIBLE_27_EXTRA_PACKAGES=myextradep
+        ''')
+
     log = logging.getLogger('zuul.ManageAnsible')
 
     def createParser(self):
