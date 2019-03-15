@@ -5265,7 +5265,7 @@ class TestJobPausePriority(AnsibleZuulTestCase):
 
         reqs = self.fake_nodepool.getNodeRequests()
         self.assertEqual(len(reqs), 1)
-        self.assertEqual(reqs[0]['_oid'], '200-0000000000')
+        self.assertEqual(reqs[0]['_oid'], '100-0000000000')
         self.assertEqual(reqs[0]['provider'], None)
 
         self.fake_nodepool.unpause()
@@ -5280,7 +5280,7 @@ class TestJobPausePriority(AnsibleZuulTestCase):
                 break
 
         self.assertEqual(len(reqs), 1)
-        self.assertEqual(reqs[0]['_oid'], '199-0000000001')
+        self.assertEqual(reqs[0]['_oid'], '099-0000000001')
         self.assertEqual(reqs[0]['provider'], 'test-provider')
 
         self.fake_nodepool.unpause()

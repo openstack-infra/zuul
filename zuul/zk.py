@@ -166,7 +166,7 @@ class ZooKeeper(object):
         node_request.created_time = time.time()
         data = node_request.toDict()
 
-        path = '%s/%s-' % (self.REQUEST_ROOT, node_request.priority)
+        path = '{}/{:0>3}-'.format(self.REQUEST_ROOT, node_request.priority)
         path = self.client.create(path, self._dictToStr(data),
                                   makepath=True,
                                   sequence=True, ephemeral=True)

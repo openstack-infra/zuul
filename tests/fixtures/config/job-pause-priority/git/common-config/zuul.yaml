@@ -2,6 +2,7 @@
     name: check
     manager: independent
     post-review: true
+    precedence: high
     trigger:
       gerrit:
         - event: patchset-created
