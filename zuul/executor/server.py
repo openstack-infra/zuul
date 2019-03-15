@@ -160,9 +160,7 @@ class DiskAccountant(object):
             return
         self._running = False
         self.stop_event.set()
-        # We join here to avoid whitelisting the thread -- if it takes more
-        # than 5s to stop in tests, there's a problem.
-        self.thread.join(timeout=5)
+        self.thread.join()
 
     @property
     def running(self):
