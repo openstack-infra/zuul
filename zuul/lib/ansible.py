@@ -34,7 +34,10 @@ class ManagedAnsible:
         requirements = get_default(config, version, 'requirements')
         self._requirements = requirements.split(' ')
 
-        self.default = get_default(config, version, 'default', False)
+        common_requirements = get_default(config, 'common', 'requirements')
+        if common_requirements:
+            self._requirements.extend(common_requirements.split(' '))
+
         self.deprecated = get_default(config, version, 'deprecated', False)
 
         self._ansible_roots = [os.path.join(
@@ -47,8 +50,9 @@ class ManagedAnsible:
     def ensure_ansible(self, upgrade=False):
         self._ensure_venv()
 
-        self.log.info('Installing ansible %s, extra packages: %s',
-                      self.version, self.extra_packages)
+        self.log.info('Installing ansible %s, requirements: %s, '
+                      'extra packages: %s',
+                      self.version, self._requirements, self.extra_packages)
         self._run_pip(self._requirements + self.extra_packages,
                       upgrade=upgrade)
 
@@ -122,13 +126,18 @@ class ManagedAnsible:
             mapping)
 
         packages = os.environ.get(env_var)
+        result = []
         if packages:
-            return packages.strip().split(' ')
+            result.extend(packages.strip().split(' '))
 
-        return []
+        common_packages = os.environ.get('ANSIBLE_EXTRA_PACKAGES')
+        if common_packages:
+            result.extend(common_packages.strip().split(' '))
+
+        return result
 
     def __repr__(self):
-        return 'Ansible {a.version}, {a.default}, {a.deprecated}'.format(
+        return 'Ansible {a.version}, {a.deprecated}'.format(
             a=self)
 
 
@@ -155,6 +164,9 @@ class AnsibleManager:
         config.read_string(c)
 
         for version in config.sections():
+            # The common section is no ansible version
+            if version == 'common':
+                continue
 
             ansible = ManagedAnsible(
                 config, version,
@@ -166,14 +178,14 @@ class AnsibleManager:
 
             self._supported_versions[ansible.version] = ansible
 
-            if ansible.default:
-                if self.default_version is not None:
-                    raise RuntimeError(
-                        'Default ansible version can only specified once')
-                self.default_version = ansible.version
-
-        if not self.default_version:
+        default_version = get_default(
+            config, 'common', 'default_version', None)
+        if not default_version:
             raise RuntimeError('A default ansible version must be specified')
+
+        # Validate that this version is known
+        self._getAnsible(default_version)
+        self.default_version = default_version
 
     def install(self, upgrade=False):
         with concurrent.futures.ThreadPoolExecutor() as executor:
