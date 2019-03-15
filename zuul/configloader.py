@@ -1129,6 +1129,7 @@ class PipelineParser(object):
         self.schema(conf)
         pipeline = model.Pipeline(conf['name'], self.pcontext.tenant)
         pipeline.source_context = conf['_source_context']
+        pipeline.start_mark = conf['_start_mark']
         pipeline.description = conf.get('description')
 
         precedence = model.PRECEDENCE_MAP[conf.get('precedence')]
