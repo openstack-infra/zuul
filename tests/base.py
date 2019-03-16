@@ -1555,6 +1555,19 @@ class RecordingAnsibleJob(zuul.executor.server.AnsibleJob):
         return hosts
 
 
+class RecordingMergeClient(zuul.merger.client.MergeClient):
+
+    def __init__(self, config, sched):
+        super().__init__(config, sched)
+        self.history = {}
+
+    def submitJob(self, name, data, build_set,
+                  precedence=zuul.model.PRECEDENCE_NORMAL):
+        self.history.setdefault(name, [])
+        self.history[name].append((data, build_set))
+        return super().submitJob(name, data, build_set, precedence)
+
+
 class RecordingExecutorServer(zuul.executor.server.ExecutorServer):
     """An Ansible executor to be used in tests.
 
@@ -2517,8 +2530,7 @@ class ZuulTestCase(BaseTestCase):
 
         self.executor_client = zuul.executor.client.ExecutorClient(
             self.config, self.sched)
-        self.merge_client = zuul.merger.client.MergeClient(
-            self.config, self.sched)
+        self.merge_client = RecordingMergeClient(self.config, self.sched)
         self.merge_server = None
         self.nodepool = zuul.nodepool.Nodepool(self.sched)
         self.zk = zuul.zk.ZooKeeper()

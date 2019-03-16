@@ -708,7 +708,7 @@ class PipelineManager(object):
                 change_queue.moveItem(item, nnfi)
                 changed = True
                 self.cancelJobs(item)
-            if actionable:
+            if actionable and item.live:
                 ready = self.prepareItem(item) and self.prepareJobs(item)
                 # Starting jobs reporting should only be done once if there are
                 # jobs to run for this item.
@@ -720,14 +720,8 @@ class PipelineManager(object):
                     item.reported_start = True
                 if item.current_build_set.unable_to_merge:
                     failing_reasons.append("it has a merge conflict")
-                    if (not item.live) and (not dequeued):
-                        self.dequeueItem(item)
-                        changed = dequeued = True
                 if item.current_build_set.config_errors:
                     failing_reasons.append("it has an invalid configuration")
-                    if (not item.live) and (not dequeued):
-                        self.dequeueItem(item)
-                        changed = dequeued = True
                 if ready and self.provisionNodes(item):
                     changed = True
         if ready and self.executeJobs(item):
@@ -855,6 +849,10 @@ class PipelineManager(object):
         build_set.repo_state = event.repo_state
         if event.merged:
             build_set.commit = event.commit
+            items_ahead = item.getNonLiveItemsAhead()
+            for index, item in enumerate(items_ahead):
+                files = item.current_build_set.files
+                files.setFiles(event.files[:index + 1])
             build_set.files.setFiles(event.files)
         elif event.updated:
             build_set.commit = (item.change.newrev or
