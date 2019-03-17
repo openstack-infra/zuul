@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    The ansible_python_interpreter variable is now whitelisted for the
+    add_host task.

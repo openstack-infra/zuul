@@ -22,6 +22,7 @@ class ActionModule(add_host.ActionModule):
     def run(self, tmp=None, task_vars=None):
         safe_args = set((
             'ansible_connection',
+            'ansible_python_interpreter',
             'ansible_host',
             'ansible_port',
             'ansible_user',
