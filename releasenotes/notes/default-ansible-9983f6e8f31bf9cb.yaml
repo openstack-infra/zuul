@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    The default ansible version is now 2.7. In case this breaks any jobs this
+    can be overridden in :attr:`job.ansible-version`,
+    :attr:`tenant.default-ansible-version` or
+    :attr:`scheduler.default_ansible_version`
