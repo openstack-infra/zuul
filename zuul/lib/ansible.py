@@ -28,7 +28,7 @@ from zuul.lib.config import get_default
 class ManagedAnsible:
     log = logging.getLogger('zuul.managed_ansible')
 
-    def __init__(self, config, version):
+    def __init__(self, config, version, runtime_install_root=None):
         self.version = version
 
         requirements = get_default(config, version, 'requirements')
@@ -37,8 +37,12 @@ class ManagedAnsible:
         self.default = get_default(config, version, 'default', False)
         self.deprecated = get_default(config, version, 'deprecated', False)
 
-        self._ansible_root = os.path.join(
-            sys.exec_prefix, 'lib', 'zuul', 'ansible')
+        self._ansible_roots = [os.path.join(
+            sys.exec_prefix, 'lib', 'zuul', 'ansible')]
+        if runtime_install_root:
+            self._ansible_roots.append(runtime_install_root)
+
+        self.install_root = self._ansible_roots[-1]
 
     def ensure_ansible(self, upgrade=False):
         self._ensure_venv()
@@ -67,12 +71,13 @@ class ManagedAnsible:
         self.log.debug('Successfully installed packages %s', requirements)
 
     def _ensure_venv(self):
-        if os.path.exists(self.python_path):
+        if self.python_path:
             self.log.debug(
                 'Virtual environment %s already existing', self.venv_path)
             return
 
-        self.log.info('Creating venv %s', self.venv_path)
+        venv_path = os.path.join(self.install_root, self.version)
+        self.log.info('Creating venv %s', venv_path)
 
         python_executable = sys.executable
         if hasattr(sys, 'real_prefix'):
@@ -83,7 +88,7 @@ class ManagedAnsible:
 
         # We don't use directly the venv module here because its behavior is
         # broken if we're already in a virtual environment.
-        cmd = ['virtualenv', '-p', python_executable, self.venv_path]
+        cmd = ['virtualenv', '-p', python_executable, venv_path]
         p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         if p.returncode != 0:
@@ -94,11 +99,18 @@ class ManagedAnsible:
 
     @property
     def venv_path(self):
-        return os.path.join(self._ansible_root, self.version)
+        for root in self._ansible_roots:
+            venv_path = os.path.join(root, self.version)
+            if os.path.exists(venv_path):
+                return venv_path
+        return None
 
     @property
     def python_path(self):
-        return os.path.join(self.venv_path, 'bin', 'python')
+        venv_path = self.venv_path
+        if venv_path:
+            return os.path.join(self.venv_path, 'bin', 'python')
+        return None
 
     @property
     def extra_packages(self):
@@ -123,10 +135,12 @@ class ManagedAnsible:
 class AnsibleManager:
     log = logging.getLogger('zuul.ansible_manager')
 
-    def __init__(self, zuul_ansible_dir=None, default_version=None):
+    def __init__(self, zuul_ansible_dir=None, default_version=None,
+                 runtime_install_path=None):
         self._supported_versions = {}
         self.default_version = None
         self.zuul_ansible_dir = zuul_ansible_dir
+        self.runtime_install_root = runtime_install_path
 
         self.load_ansible_config()
 
@@ -142,7 +156,9 @@ class AnsibleManager:
 
         for version in config.sections():
 
-            ansible = ManagedAnsible(config, version)
+            ansible = ManagedAnsible(
+                config, version,
+                runtime_install_root=self.runtime_install_root)
 
             if ansible.version in self._supported_versions:
                 raise RuntimeError(
@@ -169,23 +185,25 @@ class AnsibleManager:
     def validate(self):
         result = True
         for version in self._supported_versions:
-            command = [
-                self.getAnsibleCommand(version, 'ansible'),
-                '--version',
-            ]
             try:
+                command = [
+                    self.getAnsibleCommand(version, 'ansible'),
+                    '--version',
+                ]
+
                 result = subprocess.run(command,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE,
                                         check=True)
                 self.log.info('Ansible version %s information: \n%s',
                               version, result.stdout.decode())
-            except FileNotFoundError:
-                result = False
-                self.log.exception('Ansible version %s not found' % version)
             except subprocess.CalledProcessError:
                 result = False
                 self.log.exception("Ansible version %s not working" % version)
+            except Exception:
+                result = False
+                self.log.exception(
+                    'Ansible version %s not installed' % version)
 
         return result
 
@@ -200,7 +218,19 @@ class AnsibleManager:
 
     def getAnsibleCommand(self, version, command='ansible-playbook'):
         ansible = self._getAnsible(version)
+        venv_path = ansible.venv_path
+        if not venv_path:
+            raise Exception('Requested ansible version \'%s\' is not '
+                            'installed' % version)
         return os.path.join(ansible.venv_path, 'bin', command)
+
+    def getAnsibleInstallDir(self, version):
+        ansible = self._getAnsible(version)
+        venv_path = ansible.venv_path
+        if not venv_path:
+            raise Exception('Requested ansible version \'%s\' is not '
+                            'installed' % version)
+        return venv_path
 
     def getAnsibleDir(self, version):
         ansible = self._getAnsible(version)
