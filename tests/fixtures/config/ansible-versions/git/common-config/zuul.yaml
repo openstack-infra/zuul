@@ -43,6 +43,14 @@
       test_ansible_version_major: 2
       test_ansible_version_minor: 6
 
+- job:
+    name: ansible-27
+    parent: ansible-version
+    ansible-version: 2.7
+    vars:
+      test_ansible_version_major: 2
+      test_ansible_version_minor: 7
+
 
 - project:
     name: common-config
@@ -51,3 +59,4 @@
         - ansible-default
         - ansible-25
         - ansible-26
+        - ansible-27

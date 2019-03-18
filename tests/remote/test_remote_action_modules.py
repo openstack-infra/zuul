@@ -215,3 +215,7 @@ class TestActionModules25(AnsibleZuulTestCase):
 
 class TestActionModules26(TestActionModules25):
     ansible_version = '2.6'
+
+
+class TestActionModules27(TestActionModules25):
+    ansible_version = '2.7'

@@ -1,0 +1,1 @@
+../../base/lookup/passwordstore.pyi

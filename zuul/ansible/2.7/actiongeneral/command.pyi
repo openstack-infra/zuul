@@ -1,0 +1,1 @@
+../../base/actiongeneral/command.pyi

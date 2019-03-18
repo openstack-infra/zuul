@@ -1,0 +1,6 @@
+- hosts: all
+  tasks:
+    - name: Start zuul_console daemon
+      zuul_console:
+    - name: Module failure
+      broken_module_no_result:

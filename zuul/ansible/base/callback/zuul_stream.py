@@ -324,7 +324,7 @@ class CallbackModule(default.CallbackModule):
         if result._task.loop and 'results' in result_dict:
             # items have their own events
             pass
-        elif (result_dict.get('msg') == 'MODULE FAILURE'):
+        elif result_dict.get('msg', '').startswith('MODULE FAILURE'):
             self._log_module_failure(result, result_dict)
         else:
             self._log_message(
@@ -390,7 +390,7 @@ class CallbackModule(default.CallbackModule):
             # items have their own events
             pass
 
-        elif (result_dict.get('msg') == 'MODULE FAILURE'):
+        elif result_dict.get('msg', '').startswith('MODULE FAILURE'):
             self._log_module_failure(result, result_dict)
         elif result._task.action == 'debug':
             # this is a debug statement, handle it special
@@ -446,7 +446,7 @@ class CallbackModule(default.CallbackModule):
         else:
             status = 'ok'
 
-        if result_dict.get('msg') == 'MODULE FAILURE':
+        if result_dict.get('msg', '').startswith('MODULE FAILURE'):
             self._log_module_failure(result, result_dict)
         elif result._task.action not in ('command', 'shell',
                                          'win_command', 'win_shell'):
@@ -482,7 +482,7 @@ class CallbackModule(default.CallbackModule):
         result_dict = dict(result._result)
         self._process_result_for_localhost(result, is_task=False)
 
-        if result_dict.get('msg') == 'MODULE FAILURE':
+        if result_dict.get('msg', '').startswith('MODULE FAILURE'):
             self._log_module_failure(result, result_dict)
         elif result._task.action not in ('command', 'shell',
                                          'win_command', 'win_shell'):
