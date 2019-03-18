@@ -1,5 +1,8 @@
 include AUTHORS
 include ChangeLog
+include zuul/ansible/*/*
+include zuul/ansible/*/*/*
+include zuul/lib/ansible-config.conf
 include zuul/web/static/*
 include zuul/web/static/static/*/*
 
