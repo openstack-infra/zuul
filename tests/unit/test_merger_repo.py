@@ -21,6 +21,7 @@ import git
 import testtools
 
 from zuul.merger.merger import Repo
+from zuul.model import MERGER_MERGE_RESOLVE
 from tests.base import ZuulTestCase, FIXTURE_DIR, simple_layout
 
 
@@ -329,3 +330,116 @@ class TestMergerWithAuthUrl(ZuulTestCase):
 
         # the urls should differ
         self.assertNotEqual(first_url, second_url)
+
+
+class TestMerger(ZuulTestCase):
+
+    tenant_config_file = 'config/single-tenant/main.yaml'
+
+    @staticmethod
+    def _item_from_fake_change(fake_change):
+        return dict(
+            number=fake_change.number,
+            patchset=1,
+            ref=fake_change.patchsets[0]['ref'],
+            connection='gerrit',
+            branch=fake_change.branch,
+            project=fake_change.project,
+            buildset_uuid='fake-uuid',
+            merge_mode=MERGER_MERGE_RESOLVE,
+        )
+
+    def test_merge_multiple_items(self):
+        """
+        Tests that the merger merges and returns the requested file changes per
+        change and in the correct order.
+        """
+
+        merger = self.executor_server.merger
+        files = ['zuul.yaml', '.zuul.yaml']
+        dirs = ['zuul.d', '.zuul.d']
+
+        # Simple change A
+        file_dict_a = {'zuul.d/a.yaml': 'a'}
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
+                                           files=file_dict_a)
+        item_a = self._item_from_fake_change(A)
+
+        # Simple change B
+        file_dict_b = {'zuul.d/b.yaml': 'b'}
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B',
+                                           files=file_dict_b)
+        item_b = self._item_from_fake_change(B)
+
+        # Simple change C on top of A
+        file_dict_c = {'zuul.d/a.yaml': 'a-with-c'}
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C',
+                                           files=file_dict_c,
+                                           parent=A.patchsets[0]['ref'])
+        item_c = self._item_from_fake_change(C)
+
+        # Change in different project
+        file_dict_d = {'zuul.d/a.yaml': 'a-in-project1'}
+        D = self.fake_gerrit.addFakeChange('org/project1', 'master', 'D',
+                                           files=file_dict_d)
+        item_d = self._item_from_fake_change(D)
+
+        # Merge A
+        result = merger.mergeChanges([item_a], files=files, dirs=dirs)
+        self.assertIsNotNone(result)
+        hexsha, read_files, repo_state, ret_recent, orig_commit = result
+        self.assertEqual(len(read_files), 1)
+        self.assertEqual(read_files[0]['project'], 'org/project')
+        self.assertEqual(read_files[0]['branch'], 'master')
+        self.assertEqual(read_files[0]['files']['zuul.d/a.yaml'], 'a')
+
+        # Merge A -> B
+        result = merger.mergeChanges([item_a, item_b], files=files, dirs=dirs)
+        self.assertIsNotNone(result)
+        hexsha, read_files, repo_state, ret_recent, orig_commit = result
+        self.assertEqual(len(read_files), 2)
+        self.assertEqual(read_files[0]['project'], 'org/project')
+        self.assertEqual(read_files[0]['branch'], 'master')
+        self.assertEqual(read_files[0]['files']['zuul.d/a.yaml'], 'a')
+        self.assertEqual(read_files[1]['project'], 'org/project')
+        self.assertEqual(read_files[1]['branch'], 'master')
+        self.assertEqual(read_files[1]['files']['zuul.d/b.yaml'], 'b')
+
+        # Merge A -> B -> C
+        result = merger.mergeChanges([item_a, item_b, item_c], files=files,
+                                     dirs=dirs)
+        self.assertIsNotNone(result)
+        hexsha, read_files, repo_state, ret_recent, orig_commit = result
+        self.assertEqual(len(read_files), 3)
+        self.assertEqual(read_files[0]['project'], 'org/project')
+        self.assertEqual(read_files[0]['branch'], 'master')
+        self.assertEqual(read_files[0]['files']['zuul.d/a.yaml'], 'a')
+        self.assertEqual(read_files[1]['project'], 'org/project')
+        self.assertEqual(read_files[1]['branch'], 'master')
+        self.assertEqual(read_files[1]['files']['zuul.d/b.yaml'], 'b')
+        self.assertEqual(read_files[2]['project'], 'org/project')
+        self.assertEqual(read_files[2]['branch'], 'master')
+        self.assertEqual(read_files[2]['files']['zuul.d/a.yaml'],
+                         'a-with-c')
+
+        # Merge A -> B -> C -> D
+        result = merger.mergeChanges([item_a, item_b, item_c, item_d],
+                                     files=files, dirs=dirs)
+        self.assertIsNotNone(result)
+        hexsha, read_files, repo_state, ret_recent, orig_commit = result
+
+        self.assertEqual(len(read_files), 4)
+        self.assertEqual(read_files[0]['project'], 'org/project')
+        self.assertEqual(read_files[0]['branch'], 'master')
+        self.assertEqual(read_files[0]['files']['zuul.d/a.yaml'], 'a')
+        self.assertEqual(read_files[1]['project'], 'org/project')
+        self.assertEqual(read_files[1]['branch'], 'master')
+        self.assertEqual(read_files[1]['files']['zuul.d/b.yaml'], 'b')
+        self.assertEqual(read_files[2]['project'], 'org/project')
+        self.assertEqual(read_files[2]['branch'], 'master')
+        self.assertEqual(read_files[2]['files']['zuul.d/a.yaml'],
+                         'a-with-c')
+        self.assertEqual(read_files[3]['project'], 'org/project1')
+        self.assertEqual(read_files[3]['branch'], 'master')
+        self.assertEqual(read_files[3]['files']['zuul.d/a.yaml'],
+                         'a-in-project1')

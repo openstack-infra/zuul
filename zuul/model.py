@@ -2116,6 +2116,14 @@ class QueueItem(object):
             return None
         return self.job_graph.jobs.get(name)
 
+    def getNonLiveItemsAhead(self):
+        items = []
+        item_ahead = self.item_ahead
+        while item_ahead and not item_ahead.live:
+            items.append(item_ahead)
+            item_ahead = item_ahead.item_ahead
+        return reversed(items)
+
     def haveAllJobsStarted(self):
         if not self.hasJobGraph():
             return False
