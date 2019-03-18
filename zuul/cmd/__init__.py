@@ -107,7 +107,9 @@ class ZuulApp(object):
         return "Zuul version: %s" % zuul_version_info.release_string()
 
     def createParser(self):
-        parser = argparse.ArgumentParser(description=self.app_description)
+        parser = argparse.ArgumentParser(
+            description=self.app_description,
+            formatter_class=argparse.RawDescriptionHelpFormatter)
         parser.add_argument('-c', dest='config',
                             help='specify the config file')
         parser.add_argument('--version', dest='version', action='version',

@@ -101,11 +101,13 @@ Ansible
 ~~~~~~~
 
 Zuul uses Ansible to run jobs.  Each version of Zuul is designed to
-work with a specific, contemporary version of Ansible.  Zuul specifies
-that version of Ansible in its python package metadata, and normally
-the correct version will be installed automatically with Zuul.
-Because of the close integration of Zuul and Ansible, attempting to
-use other versions of Ansible with Zuul is not recommended.
+work with a specific, contemporary versions of Ansible. Zuul manages
+its Ansible installations using ``zuul-manage-ansible``. It is
+recommended to run ``zuul-manage-ansible`` before starting the zuul-executor
+the first time.
+
+.. program-output:: zuul-manage-ansible -h
+
 
 Zuul Setup
 ----------
