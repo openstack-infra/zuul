@@ -1,0 +1,1 @@
+../../base/lookup/cyberarkpassword.pyi

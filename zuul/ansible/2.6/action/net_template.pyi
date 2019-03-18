@@ -1,0 +1,1 @@
+../../base/action/net_template.pyi

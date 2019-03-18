@@ -166,3 +166,7 @@ class TestZuulStream25(AnsibleZuulTestCase):
             self.assertLogLine(r'TASK \[Module failure\]', text)
             self.assertLogLine(
                 r'controller \| MODULE FAILURE: This module is broken', text)
+
+
+class TestZuulStream26(TestZuulStream25):
+    ansible_version = '2.6'

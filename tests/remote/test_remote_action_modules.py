@@ -211,3 +211,7 @@ class TestActionModules25(AnsibleZuulTestCase):
         self._run_job('known-hosts-localhost', 'SUCCESS')
 
         self._run_job('known-hosts-bad', 'FAILURE', ERROR_ACCESS_OUTSIDE)
+
+
+class TestActionModules26(TestActionModules25):
+    ansible_version = '2.6'
