@@ -43,6 +43,7 @@ required.
 
    # All:
    $ sudo pip3 install .
+   $ sudo zuul-manage-ansible
    $ popd
 
 Service Files

@@ -6,6 +6,10 @@
       setup:
       register: setupvar
 
+    - name: Output ansible version
+      debug:
+        var: ansible_version
+
     - name: Output debug for a var
       debug:
         var: setupvar

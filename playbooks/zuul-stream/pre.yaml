@@ -11,7 +11,11 @@
   post_tasks:
 
     - name: Install software
-      command: python3 -m pip install src/git.openstack.org/openstack-infra/zuul src/git.openstack.org/openstack/ara
+      command: python3 -m pip install src/git.openstack.org/openstack-infra/zuul
+      become: yes
+
+    - name: Install managed ansible versions
+      command: /usr/local/bin/zuul-manage-ansible -v
       become: yes
 
     - name: Copy inventory

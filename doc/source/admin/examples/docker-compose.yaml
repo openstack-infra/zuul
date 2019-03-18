@@ -16,7 +16,7 @@ services:
         git config -f /var/gerrit/etc/gerrit.config noteDb.changes.autoMigrate true && \
         /var/gerrit/bin/gerrit.sh run'
   gerritconfig:
-    image: zuul/zuul
+    image: zuul/zuul-executor
     environment:
       no_proxy: "${no_proxy},gerrit"
     depends_on:
@@ -25,7 +25,7 @@ services:
       - "sshkey:/var/ssh:z"
       - "nodessh:/var/node:z"
       - "./playbooks/:/var/playbooks/:z"
-    command: "ansible-playbook /var/playbooks/setup.yaml"
+    command: "/usr/local/lib/zuul/ansible/2.5/bin/ansible-playbook /var/playbooks/setup.yaml"
   zk:
     image: zookeeper
   mysql:
@@ -42,7 +42,9 @@ services:
       - mysql
     environment:
       no_proxy: "${no_proxy},gerrit"
-    command: "sh -c 'ansible-playbook /var/playbooks/wait-to-start.yaml; zuul-scheduler -d'"
+    command: "sh -c '/var/playbooks/wait-to-start.sh && zuul-scheduler -d'"
+    # FIXME: The scheduler has no ansible anymore so use the executor image.
+    #        This needs to be changes such that ansible is not required for startup.
     image: zuul/zuul-scheduler
     volumes:
       - "./etc_zuul/:/etc/zuul/:z"
@@ -50,7 +52,7 @@ services:
       - "sshkey:/var/ssh:z"
       - /var/lib/zuul
   web:
-    command: "sh -c 'ansible-playbook /var/playbooks/wait-to-start.yaml; zuul-web -d'"
+    command: "sh -c '/var/playbooks/wait-to-start-gearman.sh && zuul-web -d'"
     depends_on:
       - scheduler
       - mysql
@@ -59,6 +61,7 @@ services:
     image: zuul/zuul-web
     volumes:
       - "./etc_zuul/:/etc/zuul/:z"
+      - "./playbooks/:/var/playbooks/:z"
   executor:
     privileged: true
     environment:

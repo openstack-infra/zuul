@@ -24,6 +24,11 @@ COPY . /tmp/src
 RUN /tmp/src/tools/install-js-tools.sh
 RUN assemble
 
+# The wheel install method doesn't run the setup hooks as the source based
+# installations do so we have to call zuul-manage-ansible here.
+RUN /output/install-from-bindep && zuul-manage-ansible
+
+
 FROM opendevorg/python-base as zuul
 
 COPY --from=builder /output/ /output
@@ -40,8 +45,10 @@ CMD ["/usr/local/bin/zuul"]
 
 FROM zuul as zuul-executor
 COPY --from=builder /output/ /output
+COPY --from=builder /usr/local/lib/zuul/ /usr/local/lib/zuul
 RUN pip install --cache-dir=/output/wheels -r /output/zuul_executor/requirements.txt \
   && rm -rf /output
+
 CMD ["/usr/local/bin/zuul-executor"]
 
 FROM zuul as zuul-fingergw

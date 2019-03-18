@@ -12,7 +12,6 @@ gear>=0.13.0,<1.0.0
 apscheduler>=3.0
 PrettyTable>=0.6,<0.8
 babel>=1.0
-ansible>=2.5.1,<2.6
 netaddr
 kazoo
 sqlalchemy
