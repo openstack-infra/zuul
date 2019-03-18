@@ -2264,10 +2264,11 @@ class TestInRepoJoin(ZuulTestCase):
         self.assertHistory([])
 
 
-class TestAnsible(AnsibleZuulTestCase):
+class TestAnsible25(AnsibleZuulTestCase):
     # A temporary class to hold new tests while others are disabled
 
     tenant_config_file = 'config/ansible/main.yaml'
+    ansible_version = '2.5'
 
     def test_playbook(self):
         # This test runs a bit long and needs extra time.
@@ -2381,15 +2382,17 @@ class TestAnsible(AnsibleZuulTestCase):
         conf = textwrap.dedent(
             """
             - job:
-                name: %s
-                run: playbooks/%s.yaml
+                name: {job_name}
+                run: playbooks/{job_name}.yaml
+                ansible-version: {ansible_version}
 
             - project:
                 name: org/plugin-project
                 check:
                   jobs:
-                    - %s
-            """ % (job_name, job_name, job_name))
+                    - {job_name}
+            """.format(job_name=job_name,
+                       ansible_version=self.ansible_version))
 
         file_dict = {'.zuul.yaml': conf}
         A = self.fake_gerrit.addFakeChange('org/plugin-project', 'master', 'A',
@@ -5296,3 +5299,20 @@ class TestJobPausePriority(AnsibleZuulTestCase):
 
         self.fake_nodepool.unpause()
         self.waitUntilSettled()
+
+
+class TestAnsibleVersion(AnsibleZuulTestCase):
+    tenant_config_file = 'config/ansible-versions/main.yaml'
+
+    def test_ansible_versions(self):
+        """
+        Tests that jobs run with the requested ansible version.
+        """
+        A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='ansible-default', result='SUCCESS', changes='1,1'),
+            dict(name='ansible-25', result='SUCCESS', changes='1,1'),
+        ], ordered=False)

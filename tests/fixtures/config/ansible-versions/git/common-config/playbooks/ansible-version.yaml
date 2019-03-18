@@ -1,0 +1,15 @@
+- hosts: localhost
+  tasks:
+    - name: Print ansible version
+      debug:
+        msg: "{{ ansible_version }}"
+
+    - name: Print expected ansible version
+      debug:
+        msg: "{{ test_ansible_version_major }}.{{ test_ansible_version_minor }}"
+
+    - name: Check ansible version
+      assert:
+        that:
+          - test_ansible_version_major == ansible_version.major
+          - test_ansible_version_minor == ansible_version.minor

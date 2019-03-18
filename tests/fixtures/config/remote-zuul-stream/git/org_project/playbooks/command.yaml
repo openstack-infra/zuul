@@ -1,3 +1,8 @@
+- hosts: localhost
+  tasks:
+    - debug:
+        msg: Ansible version={{ ansible_version.major }}.{{ ansible_version.minor }}
+
 - hosts: all
   tasks:
     # Create unwritable /tmp/console-None.log

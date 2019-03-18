@@ -19,11 +19,12 @@ import textwrap
 from tests.base import AnsibleZuulTestCase
 
 
-class TestZuulStream(AnsibleZuulTestCase):
+class TestZuulStream25(AnsibleZuulTestCase):
     tenant_config_file = 'config/remote-zuul-stream/main.yaml'
+    ansible_version = '2.5'
 
     def setUp(self):
-        super(TestZuulStream, self).setUp()
+        super().setUp()
         self.fake_nodepool.remote_ansible = True
 
         ansible_remote = os.environ.get('ZUUL_REMOTE_IPV4')
@@ -45,6 +46,7 @@ class TestZuulStream(AnsibleZuulTestCase):
             - job:
                 name: {job_name}
                 run: playbooks/{job_name}.yaml
+                ansible-version: {version}
                 roles:
                   - zuul: org/common-config
                 nodeset:
@@ -58,7 +60,7 @@ class TestZuulStream(AnsibleZuulTestCase):
                 check:
                   jobs:
                     - {job_name}
-            """.format(job_name=job_name))
+            """.format(job_name=job_name, version=self.ansible_version))
 
         file_dict = {'zuul.yaml': conf}
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',
@@ -94,6 +96,8 @@ class TestZuulStream(AnsibleZuulTestCase):
                 r'RUN START: \[untrusted : review.example.com/org/project/'
                 r'playbooks/command.yaml@master\]', text)
             self.assertLogLine(r'PLAY \[all\]', text)
+            self.assertLogLine(
+                r'Ansible version={}'.format(self.ansible_version), text)
             self.assertLogLine(r'TASK \[Show contents of first file\]', text)
             self.assertLogLine(r'controller \| command test one', text)
             self.assertLogLine(

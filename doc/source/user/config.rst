@@ -895,6 +895,21 @@ Here is an example of two job definitions:
 
          run: playbooks/job-playbook.yaml
 
+   .. attr:: ansible-version
+
+      The ansible version to use for all playbooks of the job. This can be
+      defined at the following layers of configuration where the first match
+      takes precedence:
+
+      * :attr:`job.ansible-version`
+      * :attr:`tenant.default-ansible-version`
+      * :attr:`scheduler.default_ansible_version`
+      * Zuul default version
+
+      The supported ansible versions are:
+
+      .. program-output:: zuul-manage-ansible -l
+
    .. attr:: roles
 
       A list of Ansible roles to prepare for the job.  Because a job

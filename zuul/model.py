@@ -1139,6 +1139,7 @@ class Job(ConfigObject):
             pre_run=(),
             post_run=(),
             run=(),
+            ansible_version=None,
             semaphore=None,
             attempts=3,
             final=False,
@@ -1233,6 +1234,10 @@ class Job(ConfigObject):
             ns = self.nodeset
         if ns:
             d['nodeset'] = ns.toDict()
+        if self.ansible_version:
+            d['ansible_version'] = self.ansible_version
+        else:
+            d['ansible_version'] = None
         return d
 
     def __ne__(self, other):
@@ -3860,6 +3865,12 @@ class Layout(object):
             # (i.e. project+templates) directly into the job vars
             frozen_job.updateProjectVariables(ppc.variables)
 
+            # If the job does not specify an ansible version default to the
+            # tenant default.
+            if not frozen_job.ansible_version:
+                frozen_job.ansible_version = \
+                    item.layout.tenant.default_ansible_version
+
             job_graph.addJob(frozen_job)
 
     def createJobGraph(self, item, ppc):
@@ -4024,6 +4035,9 @@ class Tenant(object):
         # canonical_hostname -> Project.
         self.projects = {}
         self.canonical_hostnames = set()
+
+        # The per tenant default ansible version
+        self.default_ansible_version = None
 
     def _addProject(self, tpc):
         """Add a project to the project index

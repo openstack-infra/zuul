@@ -498,6 +498,7 @@ class PipelineManager(object):
                 layout = loader.createDynamicLayout(
                     item.pipeline.tenant,
                     build_set.files,
+                    self.sched.ansible_manager,
                     include_config_projects=True)
                 if not len(layout.loading_errors):
                     trusted_layout_verified = True
@@ -509,6 +510,7 @@ class PipelineManager(object):
                 layout = loader.createDynamicLayout(
                     item.pipeline.tenant,
                     build_set.files,
+                    self.sched.ansible_manager,
                     include_config_projects=False)
             else:
                 # We're a change to a config repo (with no untrusted

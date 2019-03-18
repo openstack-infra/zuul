@@ -22,11 +22,12 @@ ERROR_SYNC_TO_OUTSIDE = "Syncing files to outside the working dir"
 ERROR_SYNC_FROM_OUTSIDE = "Syncing files from outside the working dir"
 
 
-class TestActionModules(AnsibleZuulTestCase):
+class TestActionModules25(AnsibleZuulTestCase):
     tenant_config_file = 'config/remote-action-modules/main.yaml'
+    ansible_version = '2.5'
 
     def setUp(self):
-        super(TestActionModules, self).setUp()
+        super().setUp()
         self.fake_nodepool.remote_ansible = True
 
         ansible_remote = os.environ.get('ZUUL_REMOTE_IPV4')
@@ -50,6 +51,7 @@ class TestActionModules(AnsibleZuulTestCase):
             - job:
                 name: {job_name}
                 run: playbooks/{job_name}.yaml
+                ansible-version: {version}
                 roles:
                   - zuul: org/common-config
                 nodeset:
@@ -61,7 +63,7 @@ class TestActionModules(AnsibleZuulTestCase):
                 check:
                   jobs:
                     - {job_name}
-            """.format(job_name=job_name))
+            """.format(job_name=job_name, version=self.ansible_version))
 
         file_dict = {'zuul.yaml': conf}
         A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A',

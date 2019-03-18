@@ -33,6 +33,7 @@ from tests.base import (
 
 from zuul.executor.sensors.startingbuilds import StartingBuildsSensor
 from zuul.executor.sensors.ram import RAMSensor
+from zuul.lib.ansible import AnsibleManager
 
 
 class TestExecutorRepos(ZuulTestCase):
@@ -428,7 +429,9 @@ class TestAnsibleJob(ZuulTestCase):
 
     def setUp(self):
         super(TestAnsibleJob, self).setUp()
-        job = gear.TextJob('executor:execute', '{}', unique='test')
+        ansible_version = AnsibleManager().default_version
+        args = '{"ansible_version": "%s"}' % ansible_version
+        job = gear.TextJob('executor:execute', args, unique='test')
         self.test_job = zuul.executor.server.AnsibleJob(self.executor_server,
                                                         job)
 

@@ -32,6 +32,7 @@ from zuul import exceptions
 from zuul import version as zuul_version
 from zuul import rpclistener
 from zuul.lib import commandsocket
+from zuul.lib.ansible import AnsibleManager
 from zuul.lib.config import get_default
 from zuul.lib.gear_utils import getGearmanFunctions
 from zuul.lib.statsd import get_statsd
@@ -322,6 +323,10 @@ class Scheduler(threading.Thread):
         if self.config.has_option('scheduler', 'relative_priority'):
             if self.config.getboolean('scheduler', 'relative_priority'):
                 self.use_relative_priority = True
+
+        default_ansible_version = get_default(
+            self.config, 'scheduler', 'default_ansible_version', None)
+        self.ansible_manager = AnsibleManager(default_ansible_version)
 
     def start(self):
         super(Scheduler, self).start()
@@ -662,6 +667,13 @@ class Scheduler(threading.Thread):
         self.config = event.config
         try:
             self.log.info("Full reconfiguration beginning")
+
+            # Reload the ansible manager in case the default ansible version
+            # changed.
+            default_ansible_version = get_default(
+                self.config, 'scheduler', 'default_ansible_version', None)
+            self.ansible_manager = AnsibleManager(default_ansible_version)
+
             for connection in self.connections.connections.values():
                 self.log.debug("Clear branch cache for: %s" % connection)
                 connection.clearBranchCache()
@@ -672,7 +684,8 @@ class Scheduler(threading.Thread):
             tenant_config, script = self._checkTenantSourceConf(self.config)
             self.unparsed_abide = loader.readConfig(
                 tenant_config, from_script=script)
-            abide = loader.loadConfig(self.unparsed_abide)
+            abide = loader.loadConfig(
+                self.unparsed_abide, self.ansible_manager)
             for tenant in abide.tenants.values():
                 self._reconfigureTenant(tenant)
             self.abide = abide
@@ -700,7 +713,7 @@ class Scheduler(threading.Thread):
                 self.connections, self, self.merger,
                 self._get_key_dir())
             abide = loader.reloadTenant(
-                self.abide, old_tenant)
+                self.abide, old_tenant, self.ansible_manager)
             tenant = abide.tenants[event.tenant_name]
             self._reconfigureTenant(tenant)
             self.abide = abide

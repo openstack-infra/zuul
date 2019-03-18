@@ -28,6 +28,7 @@ from zuul.lib import yamlutil as yaml
 import zuul.lib.connections
 
 from tests.base import BaseTestCase, FIXTURE_DIR
+from zuul.lib.ansible import AnsibleManager
 
 
 class Dummy(object):
@@ -45,6 +46,7 @@ class TestJob(BaseTestCase):
         self.source = Dummy(canonical_hostname='git.example.com',
                             connection=self.connection)
         self.tenant = model.Tenant('tenant')
+        self.tenant.default_ansible_version = AnsibleManager().default_version
         self.layout = model.Layout(self.tenant)
         self.project = model.Project('project', self.source)
         self.context = model.SourceContext(self.project, 'master',
@@ -58,7 +60,7 @@ class TestJob(BaseTestCase):
         self.layout.addPipeline(self.pipeline)
         self.queue = model.ChangeQueue(self.pipeline)
         self.pcontext = configloader.ParseContext(
-            self.connections, None, self.tenant)
+            self.connections, None, self.tenant, AnsibleManager())
 
         private_key_file = os.path.join(FIXTURE_DIR, 'private.pem')
         with open(private_key_file, "rb") as f:
