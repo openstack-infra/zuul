@@ -1,4 +1,5 @@
 pbr>=1.1.0
+virtualenv
 
 github3.py>=1.1.0
 PyYAML>=3.1.0
