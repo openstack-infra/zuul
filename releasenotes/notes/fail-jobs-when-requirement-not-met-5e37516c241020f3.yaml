@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Jobs which use the :attr:`job.requires` attribute and fail to have
+    their requirements met are now recorded as "FAILED" rather than
+    "SKIPPED".  This can happen if an earlier job which is expected to
+    produce artifacts fails to do so due to an error.
