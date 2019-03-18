@@ -707,7 +707,7 @@ class AnsibleJob(object):
                 'executor', 'variables')
 
         plugin_dir = self.executor_server.ansible_manager.getAnsiblePluginDir(
-            self.arguments['ansible_version'])
+            self.arguments.get('ansible_version'))
         self.library_dir = os.path.join(plugin_dir, 'library')
         self.action_dir = os.path.join(plugin_dir, 'action')
         self.action_dir_general = os.path.join(plugin_dir, 'actiongeneral')
@@ -1118,7 +1118,7 @@ class AnsibleJob(object):
 
     def runPlaybooks(self, args):
         result = None
-        ansible_version = args['ansible_version']
+        ansible_version = args.get('ansible_version')
 
         with open(self.jobdir.job_output_file, 'a') as job_output:
             job_output.write("{now} | Running Ansible setup...\n".format(
