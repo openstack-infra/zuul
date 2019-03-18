@@ -2279,6 +2279,12 @@ class ExecutorServer(object):
 
         ansible_dir = os.path.join(state_dir, 'ansible')
         self.ansible_manager = AnsibleManager(ansible_dir)
+        if not self.ansible_manager.validate():
+            # TODO(tobiash): Install ansible here if auto install on startup is
+            #                requested
+            raise Exception('Error while validating ansible installations. '
+                            'Please run zuul-manage-ansible to install all '
+                            'supported ansible versions.')
         self.ansible_manager.copyAnsibleFiles()
 
     def _getMerger(self, root, cache_root, logger=None):
