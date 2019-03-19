@@ -66,6 +66,7 @@ import zuul.driver.sql
 import zuul.scheduler
 import zuul.executor.server
 import zuul.executor.client
+import zuul.lib.ansible
 import zuul.lib.connections
 import zuul.merger.client
 import zuul.merger.merger
@@ -148,6 +149,15 @@ def never_capture():
         test.__never_capture__ = True
         return test
     return decorator
+
+
+class FakeAnsibleManager(zuul.lib.ansible.AnsibleManager):
+
+    def validate(self):
+        return True
+
+    def copyAnsibleFiles(self):
+        pass
 
 
 class GerritChangeReference(git.Reference):
@@ -1586,6 +1596,10 @@ class RecordingExecutorServer(zuul.executor.server.ExecutorServer):
     def __init__(self, *args, **kw):
         self._run_ansible = kw.pop('_run_ansible', False)
         self._test_root = kw.pop('_test_root', False)
+        if self._run_ansible:
+            self._ansible_manager_class = zuul.lib.ansible.AnsibleManager
+        else:
+            self._ansible_manager_class = FakeAnsibleManager
         super(RecordingExecutorServer, self).__init__(*args, **kw)
         self.hold_jobs_in_build = False
         self.lock = threading.Lock()

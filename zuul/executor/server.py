@@ -2192,6 +2192,7 @@ class ExecutorExecuteWorker(gear.TextWorker):
 
 class ExecutorServer(object):
     log = logging.getLogger("zuul.ExecutorServer")
+    _ansible_manager_class = AnsibleManager
     _job_class = AnsibleJob
 
     def __init__(self, config, connections={}, jobdir_root=None,
@@ -2291,7 +2292,7 @@ class ExecutorServer(object):
             self.config, 'executor', 'ansible_root', None)
         if not ansible_install_root:
             ansible_install_root = os.path.join(state_dir, 'ansible-bin')
-        self.ansible_manager = AnsibleManager(
+        self.ansible_manager = self._ansible_manager_class(
             ansible_dir, runtime_install_path=ansible_install_root)
         if not self.ansible_manager.validate():
             if not manage_ansible:
