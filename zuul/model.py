@@ -2327,13 +2327,11 @@ class QueueItem(object):
                     artifacts = get_artifacts_from_result_data(
                         build.result_data,
                         logger=self.log)
-                    artifacts = [{'name': a['name'],
-                                  'url': a['url'],
-                                  'project': self.change.project.name,
+                    for a in artifacts:
+                        a.update({'project': self.change.project.name,
                                   'change': self.change.number,
                                   'patchset': self.change.patchset,
-                                  'job': build.job.name}
-                                 for a in artifacts]
+                                  'job': build.job.name})
                     data += artifacts
         if not self.item_ahead:
             return True
