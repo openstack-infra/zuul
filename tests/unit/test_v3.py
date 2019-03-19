@@ -1469,6 +1469,123 @@ class TestInRepoConfig(ZuulTestCase):
         self.assertIn('not recognized', A.messages[0],
                       "A should have a syntax error reported")
 
+    def test_invalid_job_secret_var_name(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - secret:
+                name: foo-bar
+                data:
+                  dummy: value
+            - job:
+                name: foobar
+                secrets:
+                  - name: foo-bar
+                    secret: foo-bar
+            """)
+
+        file_dict = {".zuul.yaml": in_repo_conf}
+        A = self.fake_gerrit.addFakeChange("org/project", "master", "A",
+                                           files=file_dict)
+        A.addApproval("Code-Review", 2)
+        self.fake_gerrit.addEvent(A.addApproval("Approved", 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data["status"], "NEW")
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn("Ansible variable name 'foo-bar'", A.messages[0],
+                      "A should have a syntax error reported")
+
+    def test_invalid_job_vars(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: foobar
+                vars:
+                  foo-bar: value
+            """)
+
+        file_dict = {".zuul.yaml": in_repo_conf}
+        A = self.fake_gerrit.addFakeChange("org/project", "master", "A",
+                                           files=file_dict)
+        A.addApproval("Code-Review", 2)
+        self.fake_gerrit.addEvent(A.addApproval("Approved", 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data["status"], "NEW")
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn("Ansible variable name 'foo-bar'", A.messages[0],
+                      "A should have a syntax error reported")
+
+    def test_invalid_job_extra_vars(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: foobar
+                extra-vars:
+                  foo-bar: value
+            """)
+
+        file_dict = {".zuul.yaml": in_repo_conf}
+        A = self.fake_gerrit.addFakeChange("org/project", "master", "A",
+                                           files=file_dict)
+        A.addApproval("Code-Review", 2)
+        self.fake_gerrit.addEvent(A.addApproval("Approved", 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data["status"], "NEW")
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn("Ansible variable name 'foo-bar'", A.messages[0],
+                      "A should have a syntax error reported")
+
+    def test_invalid_job_host_vars(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: foobar
+                host-vars:
+                  host-name:
+                    foo-bar: value
+            """)
+
+        file_dict = {".zuul.yaml": in_repo_conf}
+        A = self.fake_gerrit.addFakeChange("org/project", "master", "A",
+                                           files=file_dict)
+        A.addApproval("Code-Review", 2)
+        self.fake_gerrit.addEvent(A.addApproval("Approved", 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data["status"], "NEW")
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn("Ansible variable name 'foo-bar'", A.messages[0],
+                      "A should have a syntax error reported")
+
+    def test_invalid_job_group_vars(self):
+        in_repo_conf = textwrap.dedent(
+            """
+            - job:
+                name: foobar
+                group-vars:
+                  group-name:
+                    foo-bar: value
+            """)
+
+        file_dict = {".zuul.yaml": in_repo_conf}
+        A = self.fake_gerrit.addFakeChange("org/project", "master", "A",
+                                           files=file_dict)
+        A.addApproval("Code-Review", 2)
+        self.fake_gerrit.addEvent(A.addApproval("Approved", 1))
+        self.waitUntilSettled()
+
+        self.assertEqual(A.data["status"], "NEW")
+        self.assertEqual(A.reported, 1,
+                         "A should report failure")
+        self.assertIn("Ansible variable name 'foo-bar'", A.messages[0],
+                      "A should have a syntax error reported")
+
     def test_untrusted_syntax_error(self):
         in_repo_conf = textwrap.dedent(
             """

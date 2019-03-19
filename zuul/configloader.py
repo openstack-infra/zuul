@@ -400,6 +400,18 @@ class EncryptedPKCS1_OAEP(yaml.YAMLObject):
                                                  private_key).decode('utf8')
 
 
+def ansible_var_name(value):
+    vs.Schema(str)(value)
+    if not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_]*", value):
+        raise vs.Invalid("Invalid Ansible variable name '{}'".format(value))
+
+
+def ansible_vars_dict(value):
+    vs.Schema(dict)(value)
+    for key in value:
+        ansible_var_name(key)
+
+
 class PragmaParser(object):
     pragma = {
         'implied-branch-matchers': bool,
@@ -536,7 +548,7 @@ class JobParser(object):
     job_dependency = {vs.Required('name'): str,
                       'soft': bool}
 
-    secret = {vs.Required('name'): str,
+    secret = {vs.Required('name'): ansible_var_name,
               vs.Required('secret'): str,
               'pass-to-parent': bool}
 
@@ -575,10 +587,10 @@ class JobParser(object):
                       '_start_mark': ZuulMark,
                       'roles': to_list(role),
                       'required-projects': to_list(vs.Any(job_project, str)),
-                      'vars': dict,
-                      'extra-vars': dict,
-                      'host-vars': {str: dict},
-                      'group-vars': {str: dict},
+                      'vars': ansible_vars_dict,
+                      'extra-vars': ansible_vars_dict,
+                      'host-vars': {str: ansible_vars_dict},
+                      'group-vars': {str: ansible_vars_dict},
                       'dependencies': to_list(vs.Any(job_dependency, str)),
                       'allowed-projects': to_list(str),
                       'override-branch': str,
@@ -897,7 +909,7 @@ class ProjectTemplateParser(object):
         project = {
             'name': str,
             'description': str,
-            'vars': dict,
+            'vars': ansible_vars_dict,
             str: pipeline_contents,
             '_source_context': model.SourceContext,
             '_start_mark': ZuulMark,
@@ -978,7 +990,7 @@ class ProjectParser(object):
         project = {
             'name': str,
             'description': str,
-            'vars': dict,
+            'vars': ansible_vars_dict,
             'templates': [str],
             'merge-mode': vs.Any('merge', 'merge-resolve',
                                  'cherry-pick'),
