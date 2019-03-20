@@ -30,6 +30,9 @@ class ActionModule(uri.ActionModule):
             return paths._fail_module_dict(self._task.action)
 
         if paths._is_localhost_task(self):
-            paths._fail_if_unsafe(self._task.args['path'])
+            for arg in ('src', 'dest'):
+                dest = self._task.args.get(arg)
+                if dest:
+                    paths._fail_if_unsafe(dest)
 
         return super(ActionModule, self).run(tmp, task_vars)
