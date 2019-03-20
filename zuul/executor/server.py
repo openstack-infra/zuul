@@ -1895,8 +1895,14 @@ class AnsibleJob(object):
         with self.proc_lock:
             if self.aborted:
                 return (self.RESULT_ABORTED, None)
-            self.log.debug("Ansible command: ANSIBLE_CONFIG=%s %s",
-                           config_file, " ".join(shlex.quote(c) for c in cmd))
+            self.log.debug("Ansible command: ANSIBLE_CONFIG=%s ZUUL_JOBDIR=%s "
+                           "ZUUL_JOB_LOG_CONFIG=%s PYTHONPATH=%s TMP=%s %s",
+                           env_copy['ANSIBLE_CONFIG'],
+                           env_copy['ZUUL_JOBDIR'],
+                           env_copy['ZUUL_JOB_LOG_CONFIG'],
+                           env_copy['PYTHONPATH'],
+                           env_copy['TMP'],
+                           " ".join(shlex.quote(c) for c in cmd))
             self.proc = popen(
                 cmd,
                 cwd=self.jobdir.work_root,
