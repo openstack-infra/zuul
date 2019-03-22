@@ -2258,7 +2258,7 @@ class PostgresqlSchemaFixture(fixtures.Fixture):
 
 class BaseTestCase(testtools.TestCase):
     log = logging.getLogger("zuul.test")
-    wait_timeout = 60
+    wait_timeout = 90
 
     def attachLogs(self, *args):
         def reader():
