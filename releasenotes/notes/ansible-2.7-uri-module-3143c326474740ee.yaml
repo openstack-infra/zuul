@@ -1,0 +1,4 @@
+---
+fixes:
+  - |
+    When using Ansible 2.7 the uri module crashed with a module failure.

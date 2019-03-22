@@ -326,7 +326,8 @@ class Scheduler(threading.Thread):
 
         default_ansible_version = get_default(
             self.config, 'scheduler', 'default_ansible_version', None)
-        self.ansible_manager = AnsibleManager(default_ansible_version)
+        self.ansible_manager = AnsibleManager(
+            default_version=default_ansible_version)
 
     def start(self):
         super(Scheduler, self).start()
@@ -673,7 +674,8 @@ class Scheduler(threading.Thread):
             # changed.
             default_ansible_version = get_default(
                 self.config, 'scheduler', 'default_ansible_version', None)
-            self.ansible_manager = AnsibleManager(default_ansible_version)
+            self.ansible_manager = AnsibleManager(
+                default_version=default_ansible_version)
 
             for connection in self.connections.connections.values():
                 self.log.debug("Clear branch cache for: %s" % connection)

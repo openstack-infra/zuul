@@ -27,6 +27,15 @@
       test_ansible_version_major: 2
       test_ansible_version_minor: 7
 
+# This job is used by a test case specifying a different ansible version in
+# zuul.conf
+- job:
+    name: ansible-default-zuul-conf
+    parent: ansible-version
+    vars:
+      test_ansible_version_major: 2
+      test_ansible_version_minor: 6
+
 - job:
     name: ansible-25
     parent: ansible-version
@@ -57,6 +66,15 @@
     check:
       jobs:
         - ansible-default
+        - ansible-25
+        - ansible-26
+        - ansible-27
+
+- project:
+    name: org/project
+    check:
+      jobs:
+        - ansible-default-zuul-conf
         - ansible-25
         - ansible-26
         - ansible-27

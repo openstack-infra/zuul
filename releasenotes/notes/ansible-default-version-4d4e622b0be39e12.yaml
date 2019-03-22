@@ -1,0 +1,4 @@
+---
+fixes:
+  - |
+    The :attr:`scheduler.default_ansible_version` has been ignored.
