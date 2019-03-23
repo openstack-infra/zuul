@@ -531,8 +531,9 @@ class TestGovernor(ZuulTestCase):
         self.executor_server.manageLoad()
         self.assertFalse(self.executor_server.accepting_work)
 
+    @mock.patch('os.getloadavg')
     @mock.patch('os.statvfs')
-    def test_hdd_governor(self, statvfs_mock):
+    def test_hdd_governor(self, statvfs_mock, loadavg_mock):
         class Dummy(object):
             pass
         hdd = Dummy()
@@ -540,6 +541,7 @@ class TestGovernor(ZuulTestCase):
         hdd.f_blocks = 120920708
         hdd.f_bfree = 95716701
         statvfs_mock.return_value = hdd  # 20.84% used
+        loadavg_mock.return_value = (0.0, 0.0, 0.0)
 
         self.executor_server.manageLoad()
         self.assertTrue(self.executor_server.accepting_work)
@@ -558,7 +560,10 @@ class TestGovernor(ZuulTestCase):
             'zuul.executor.test-executor-hostname_example_com.pct_used_hdd',
             value='9527', kind='g')
 
-    def test_pause_governor(self):
+    @mock.patch('os.getloadavg')
+    def test_pause_governor(self, loadavg_mock):
+        loadavg_mock.return_value = (0.0, 0.0, 0.0)
+
         self.executor_server.manageLoad()
         self.assertTrue(self.executor_server.accepting_work)
 
@@ -589,7 +594,9 @@ class TestGovernor(ZuulTestCase):
         self.log.debug("Worker for %s started: %s", jobname, worker.started)
         return build
 
-    def test_slow_start(self):
+    @mock.patch('os.getloadavg')
+    def test_slow_start(self, loadavg_mock):
+        loadavg_mock.return_value = (0.0, 0.0, 0.0)
 
         def _set_starting_builds(min, max):
             for sensor in self.executor_server.sensors:
