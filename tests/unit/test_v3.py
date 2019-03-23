@@ -2439,7 +2439,7 @@ class TestAnsible25(AnsibleZuulTestCase):
 
     def test_playbook(self):
         # This test runs a bit long and needs extra time.
-        self.wait_timeout = 120
+        self.wait_timeout = 180
         # Keep the jobdir around so we can inspect contents if an
         # assert fails.
         self.executor_server.keep_jobdir = True
