@@ -2909,7 +2909,9 @@ class ZuulTestCase(BaseTestCase):
         self.merge_client.stop()
         if self.merge_server:
             self.merge_server.stop()
+            self.merge_server.join()
         self.executor_server.stop()
+        self.executor_server.join()
         self.sched.stop()
         self.sched.join()
         self.statsd.stop()
