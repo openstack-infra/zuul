@@ -30,9 +30,6 @@ class TestZuulStream25(AnsibleZuulTestCase):
         ansible_remote = os.environ.get('ZUUL_REMOTE_IPV4')
         self.assertIsNotNone(ansible_remote)
 
-        # on some systems this test may run longer than 30 seconds
-        self.wait_timeout = 60
-
     def _run_job(self, job_name):
         # Keep the jobdir around so we can inspect contents if an
         # assert fails. It will be cleaned up anyway as it is contained
