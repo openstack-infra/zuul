@@ -192,9 +192,7 @@ class GithubGearmanWorker(object):
     def stop(self):
         self._running = False
         self.gearman.stopWaitingForJobs()
-        # We join here to avoid whitelisting the thread -- if it takes more
-        # than 5s to stop in tests, there's a problem.
-        self.thread.join(timeout=5)
+        self.thread.join()
         self.gearman.shutdown()
 
 
