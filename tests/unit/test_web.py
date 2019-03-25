@@ -710,6 +710,53 @@ class TestWeb(BaseTestWeb):
         job = self.get_url("api/tenant/tenant-one/job/noop").json()
         self.assertEqual("noop", job[0]["name"])
 
+    def test_freeze_jobs(self):
+        # Test can get a list of the jobs for a given project+pipeline+branch.
+        resp = self.get_url(
+            "api/tenant/tenant-one/pipeline/check"
+            "/project/org/project1/branch/master/freeze-jobs")
+
+        freeze_jobs = [{
+            'name': 'project-merge',
+            'dependencies': [],
+        }, {
+            'name': 'project-test1',
+            'dependencies': [{
+                'name': 'project-merge',
+                'soft': False,
+            }],
+        }, {
+            'name': 'project-test2',
+            'dependencies': [{
+                'name': 'project-merge',
+                'soft': False,
+            }],
+        }, {
+            'name': 'project1-project2-integration',
+            'dependencies': [{
+                'name': 'project-merge',
+                'soft': False,
+            }],
+        }]
+        self.assertEqual(freeze_jobs, resp.json())
+
+    def test_freeze_jobs_set_includes_all_jobs(self):
+        # When freezing a job set we want to include all jobs even if they
+        # have certain matcher requirements (such as required files) since we
+        # can't otherwise evaluate them.
+
+        resp = self.get_url(
+            "api/tenant/tenant-one/pipeline/gate"
+            "/project/org/project/branch/master/freeze-jobs")
+        expected = {
+            'name': 'project-testfile',
+            'dependencies': [{
+                'name': 'project-merge',
+                'soft': False,
+            }],
+        }
+        self.assertIn(expected, resp.json())
+
 
 class TestWebSecrets(BaseTestWeb):
     tenant_config_file = 'config/secrets/main.yaml'

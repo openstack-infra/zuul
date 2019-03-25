@@ -75,6 +75,7 @@ class RPCListener(object):
         self.worker.registerFunction("zuul:job_list")
         self.worker.registerFunction("zuul:project_get")
         self.worker.registerFunction("zuul:project_list")
+        self.worker.registerFunction("zuul:project_freeze_jobs")
         self.worker.registerFunction("zuul:pipeline_list")
         self.worker.registerFunction("zuul:key_get")
         self.worker.registerFunction("zuul:config_errors_list")
@@ -447,6 +448,37 @@ class RPCListener(object):
             output.append(pobj)
         job.sendWorkComplete(json.dumps(
             sorted(output, key=lambda project: project["name"])))
+
+    def handle_project_freeze_jobs(self, gear_job):
+        args = json.loads(gear_job.arguments)
+        tenant = self.sched.abide.tenants.get(args.get("tenant"))
+        project = None
+        pipeline = None
+        if tenant:
+            (trusted, project) = tenant.getProject(args.get("project"))
+            pipeline = tenant.layout.pipelines.get(args.get("pipeline"))
+        if not project or not pipeline:
+            gear_job.sendWorkComplete(json.dumps(None))
+            return
+
+        change = model.Branch(project)
+        change.branch = args.get("branch", "master")
+        queue = model.ChangeQueue(pipeline)
+        item = model.QueueItem(queue, change)
+        item.layout = tenant.layout
+        item.freezeJobGraph(skip_file_matcher=True)
+
+        output = []
+
+        for job in item.job_graph.getJobs():
+            job.setBase(tenant.layout)
+            output.append({
+                'name': job.name,
+                'dependencies':
+                    list(map(lambda x: x.toDict(), job.dependencies)),
+            })
+
+        gear_job.sendWorkComplete(json.dumps(output))
 
     def handle_pipeline_list(self, job):
         args = json.loads(job.arguments)
