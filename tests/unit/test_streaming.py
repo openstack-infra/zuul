@@ -499,7 +499,6 @@ class TestStreaming(tests.base.AnsibleZuulTestCase):
         for x in iterate_timeout(30, "jobdir"):
             if build.jobdir is not None:
                 break
-            build = self.builds[0]
 
         # Wait for the job to begin running and create the ansible log file.
         # The job waits to complete until the flag file exists, so we can
