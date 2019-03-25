@@ -15,12 +15,14 @@ which is described below.
       node [shape=box]
       Gearman [shape=ellipse]
       Gerrit [fontcolor=grey]
+      Statsd [shape=ellipse fontcolor=grey]
       Zookeeper [shape=ellipse]
       Nodepool
       GitHub [fontcolor=grey]
 
       Merger -- Gearman
       Executor -- Gearman
+      Executor -- Statsd
       Web -- Gearman
       Web -- Zookeeper
       Finger -- Gearman
@@ -30,6 +32,7 @@ which is described below.
       Scheduler -- Zookeeper;
       Zookeeper -- Nodepool;
       Scheduler -- GitHub;
+      Scheduler -- Statsd;
    }
 
 Each of the Zuul processes may run on the same host, or different
@@ -49,10 +52,10 @@ communicate with the hosts which nodepool provides.  If these are on
 private networks, the Executors will need to be able to route traffic
 to them.
 
-If statsd is enabled, every service needs to be able to emit data to
-statsd.  Statsd can be configured to run on each host and forward
-data, or services may emit to a centralized statsd collector.  Statsd
-listens on UDP port 8125 by default.
+If statsd is enabled, the executors and scheduler needs to be able to
+emit data to statsd.  Statsd can be configured to run on each host
+and forward data, or services may emit to a centralized statsd
+collector.  Statsd listens on UDP port 8125 by default.
 
 All Zuul processes read the ``/etc/zuul/zuul.conf`` file (an alternate
 location may be supplied on the command line) which uses an INI file
