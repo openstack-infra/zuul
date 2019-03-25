@@ -238,6 +238,15 @@ class ZuulWebAPI(object):
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return ret
 
+    @cherrypy.expose
+    @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
+    def connections(self):
+        job = self.rpc.submitJob('zuul:connection_list', {})
+        ret = json.loads(job.data[0])
+        resp = cherrypy.response
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return ret
+
     def _getStatus(self, tenant):
         with self.status_lock:
             if tenant not in self.cache or \
@@ -680,6 +689,8 @@ class ZuulWeb(object):
         api = ZuulWebAPI(self)
         route_map.connect('api', '/api/info',
                           controller=api, action='info')
+        route_map.connect('api', '/api/connections',
+                          controller=api, action='connections')
         route_map.connect('api', '/api/tenants',
                           controller=api, action='tenants')
         route_map.connect('api', '/api/tenant/{tenant}/info',

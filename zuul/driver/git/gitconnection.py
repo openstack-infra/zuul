@@ -155,6 +155,14 @@ class GitConnection(BaseConnection):
         self.projects_refs = {}
         self._change_cache = {}
 
+    def toDict(self):
+        d = super().toDict()
+        d.update({
+            "baseurl": self.baseurl,
+            "canonical_hostname": self.canonical_hostname,
+        })
+        return d
+
     def getProject(self, name):
         return self.projects.get(name)
 
