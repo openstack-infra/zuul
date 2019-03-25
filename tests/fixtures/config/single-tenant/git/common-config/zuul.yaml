@@ -74,6 +74,8 @@
 
 - job:
     name: project-post
+    tags:
+      - post
     nodeset:
       nodes:
         - name: static
