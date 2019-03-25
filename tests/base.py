@@ -2290,7 +2290,10 @@ class BaseTestCase(testtools.TestCase):
             # If timeout value is invalid do not set a timeout.
             test_timeout = 0
         if test_timeout > 0:
-            self.useFixture(fixtures.Timeout(test_timeout, gentle=False))
+            # Try a gentle timeout first and as a safety net a hard timeout
+            # later.
+            self.useFixture(fixtures.Timeout(test_timeout, gentle=True))
+            self.useFixture(fixtures.Timeout(test_timeout + 20, gentle=False))
 
         if not self.shouldNeverCapture():
             if (os.environ.get('OS_STDOUT_CAPTURE') == 'True' or
