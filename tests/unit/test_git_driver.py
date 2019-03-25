@@ -139,7 +139,7 @@ class TestGitDriver(ZuulTestCase):
 
     def waitForEvent(self, initial_count=0):
         delay = 0.1
-        max_delay = 1
+        max_delay = 5
         while self.git_connection.watcher_thread._event_count <= initial_count:
             time.sleep(delay)
             max_delay -= delay
