@@ -272,14 +272,15 @@ class TestExecutorRepos(ZuulTestCase):
         # This tests that we can override the branch in a timer
         # trigger (mostly to ensure backwards compatability for jobs).
         self.executor_server.hold_jobs_in_build = True
-        # Start timer trigger - also org/project
-        self.commitConfigUpdate('common-config',
-                                'layouts/repo-checkout-timer-override.yaml')
-        self.sched.reconfigure(self.config)
 
         p1 = 'review.example.com/org/project1'
         projects = [p1]
         self.create_branch('org/project1', 'stable/havana')
+
+        # Start timer trigger - also org/project
+        self.commitConfigUpdate('common-config',
+                                'layouts/repo-checkout-timer-override.yaml')
+        self.sched.reconfigure(self.config)
 
         # The pipeline triggers every second, so we should have seen
         # several by now.
