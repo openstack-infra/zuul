@@ -106,7 +106,7 @@ def iterate_timeout(max_seconds, purpose):
     while (time.time() < start + max_seconds):
         count += 1
         yield count
-        time.sleep(0)
+        time.sleep(0.01)
     raise Exception("Timeout waiting for %s" % purpose)
 
 
