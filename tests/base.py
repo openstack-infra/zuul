@@ -2552,7 +2552,7 @@ class ZuulTestCase(BaseTestCase):
         self.merge_server = None
         self.nodepool = zuul.nodepool.Nodepool(self.sched)
         self.zk = zuul.zk.ZooKeeper()
-        self.zk.connect(self.zk_config)
+        self.zk.connect(self.zk_config, timeout=30.0)
 
         self.fake_nodepool = FakeNodepool(
             self.zk_chroot_fixture.zookeeper_host,
