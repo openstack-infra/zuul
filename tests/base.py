@@ -728,6 +728,11 @@ class FakeGerritConnection(gerritconnection.GerritConnection):
             change.setReported()
 
     def query(self, number):
+        if type(number) == int:
+            return self.queryChange(number)
+        raise Exception("Could not query %s %s" % (type(number, number)))
+
+    def queryChange(self, number):
         change = self.changes.get(int(number))
         if change:
             return change.query()

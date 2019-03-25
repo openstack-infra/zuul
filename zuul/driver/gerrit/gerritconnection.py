@@ -551,7 +551,7 @@ class GerritConnection(BaseConnection):
             return change
 
         self.log.info("Updating %s" % (change,))
-        data = self.query(change.number)
+        data = self.queryChange(change.number)
         change._data = data
 
         if change.patchset is None:
@@ -683,7 +683,7 @@ class GerritConnection(BaseConnection):
             # means it's merged.
             return True
 
-        data = self.query(change.number)
+        data = self.queryChange(change.number)
         change._data = data
         change.is_merged = self._isMerged(change)
         if change.is_merged:
@@ -904,6 +904,9 @@ class GerritConnection(BaseConnection):
         self.iolog.debug("Received data from Gerrit query: \n%s" %
                          (pprint.pformat(data)))
         return data
+
+    def queryChange(self, number):
+        return self.query('change:%s' % number)
 
     def simpleQuery(self, query):
         def _query_chunk(query):
