@@ -208,6 +208,37 @@ class ZuulWebAPI(object):
 
     @cherrypy.expose
     @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
+    def index(self):
+        return {
+            'info': '/api/info',
+            'connections': '/api/connections',
+            'tenants': '/api/tenants',
+            'tenant_info': '/api/tenant/{tenant}/info',
+            'status': '/api/tenant/{tenant}/status',
+            'status_change': '/api/tenant/{tenant}/status/change/{change}',
+            'jobs': '/api/tenant/{tenant}/jobs',
+            'job': '/api/tenant/{tenant}/job/{job_name}',
+            'projects': '/api/tenant/{tenant}/projects',
+            'project': '/api/tenant/{tenant}/project/{project:.*}',
+            'project_freeze_jobs': '/api/tenant/{tenant}/pipeline/{pipeline}/'
+                                   'project/{project:.*}/branch/{branch:.*}/'
+                                   'freeze-jobs',
+            'pipelines': '/api/tenant/{tenant}/pipelines',
+            'labels': '/api/tenant/{tenant}/labels',
+            'nodes': '/api/tenant/{tenant}/nodes',
+            'key': '/api/tenant/{tenant}/key/{project:.*}.pub',
+            'project_ssh_key': '/api/tenant/{tenant}/project-ssh-key/'
+                               '{project:.*}.pub',
+            'console_stream': '/api/tenant/{tenant}/console-stream',
+            'builds': '/api/tenant/{tenant}/builds',
+            'build': '/api/tenant/{tenant}/build/{uuid}',
+            'buildsets': '/api/tenant/{tenant}/buildsets',
+            'buildset': '/api/tenant/{tenant}/buildset/{uuid}',
+            'config_errors': '/api/tenant/{tenant}/config-errors',
+        }
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
     def info(self):
         return self._handleInfo(self.zuulweb.info)
 
@@ -707,6 +738,8 @@ class ZuulWeb(object):
 
         route_map = cherrypy.dispatch.RoutesDispatcher()
         api = ZuulWebAPI(self)
+        route_map.connect('api', '/api',
+                          controller=api, action='index')
         route_map.connect('api', '/api/info',
                           controller=api, action='info')
         route_map.connect('api', '/api/connections',

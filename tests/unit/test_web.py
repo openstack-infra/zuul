@@ -91,6 +91,14 @@ class BaseTestWeb(ZuulTestCase):
 
 class TestWeb(BaseTestWeb):
 
+    def test_web_index(self):
+        "Test that we can retrieve the index page"
+        resp = self.get_url('api')
+        data = resp.json()
+        # no point checking the whole thing; just make sure _something_ we
+        # expect is here
+        self.assertIn('info', data)
+
     def test_web_status(self):
         "Test that we can retrieve JSON status info"
         self.add_base_changes()
