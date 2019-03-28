@@ -5124,6 +5124,55 @@ class TestProvidesRequiresPause(AnsibleZuulTestCase):
             }])
 
 
+class TestProvidesRequiresBuildset(ZuulTestCase):
+    tenant_config_file = "config/provides-requires-buildset/main.yaml"
+
+    def test_provides_requires_buildset(self):
+        # Changes share a queue, with both running at the same time.
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project1', 'master', 'A')
+        self.executor_server.returnData(
+            'image-builder', A,
+            {'zuul':
+             {'artifacts': [
+                 {'name': 'image',
+                  'url': 'http://example.com/image',
+                  'metadata': {
+                      'type': 'container_image'
+                  }},
+             ]}}
+        )
+
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 1)
+
+        self.executor_server.hold_jobs_in_build = False
+        self.executor_server.release()
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='image-builder', result='SUCCESS', changes='1,1'),
+            dict(name='image-user', result='SUCCESS', changes='1,1'),
+        ])
+
+        build = self.getJobFromHistory('image-user', project='org/project1')
+        self.assertEqual(
+            build.parameters['zuul']['artifacts'],
+            [{
+                'project': 'org/project1',
+                'change': '1',
+                'patchset': '1',
+                'job': 'image-builder',
+                'url': 'http://example.com/image',
+                'name': 'image',
+                'metadata': {
+                    'type': 'container_image',
+                }
+            }])
+
+
 class TestProvidesRequires(ZuulDBTestCase):
     config_file = "zuul-sql-driver.conf"
 
