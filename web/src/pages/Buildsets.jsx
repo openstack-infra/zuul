@@ -109,8 +109,8 @@ class BuildsetsPage extends TableFilters {
     this.filterTypes.push({
       id: 'uuid',
       title: 'Buildset',
-      palceholder: 'Filter by Buildset UUID',
-      fileterType: 'text',
+      placeholder: 'Filter by Buildset UUID',
+      filterType: 'text',
     })
   }
 
