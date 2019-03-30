@@ -107,30 +107,6 @@ a.refresh {
     animation: progress-bar-stripes 1s linear infinite;
 }
 
-/* Stream page */
-#zuulstreamoverlay {
-    float: right;
-    position: fixed;
-    top: 70px;
-    right: 5px;
-    background-color: white;
-    padding: 2px 0px 0px 2px;
-    color: black;
-}
-
-pre#zuulstreamcontent {
-    font-family: monospace;
-    white-space: pre;
-    margin: 0px 10px;
-    background-color: black;
-    color: lightgrey;
-    border: none;
-}
-p.zuulstreamline {
-    margin: 0px 0px;
-    line-height: 1.4;
-}
-
 /* Job Tree View group gap */
 div.tree-view-container ul.list-group {
   margin: 0px 0px;
