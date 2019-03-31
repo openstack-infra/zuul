@@ -170,6 +170,11 @@ variable:
   # Use a custom zuul:
   REACT_APP_ZUUL_API="https://zuul.example.com/api/" yarn start
 
+To run eslint tests locally:
+
+.. code-block:: bash
+
+  yarn lint
 
 Deploying
 ---------
