@@ -17,22 +17,31 @@ import * as React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import Sockette from 'sockette'
+import {Checkbox, Form, FormGroup, FormControl} from 'patternfly-react'
 
 import 'xterm/dist/xterm.css'
 import { Terminal } from 'xterm'
 import * as fit from 'xterm/lib/addons/fit/fit'
 import * as weblinks from 'xterm/lib/addons/webLinks/webLinks'
+import * as search from 'xterm/lib/addons/search/search'
 
 import { getStreamUrl } from '../api'
 
 Terminal.applyAddon(fit)
 Terminal.applyAddon(weblinks)
+Terminal.applyAddon(search)
 
 class StreamPage extends React.Component {
   static propTypes = {
     match: PropTypes.object.isRequired,
     location: PropTypes.object.isRequired,
     tenant: PropTypes.object
+  }
+
+  state = {
+    searchRegex: false,
+    searchCaseSensitive: false,
+    searchWholeWord: false,
   }
 
   constructor() {
@@ -126,9 +135,67 @@ class StreamPage extends React.Component {
     window.addEventListener('resize', this.onResize)
   }
 
+  handleCheckBoxRegex = (e) => {
+    this.setState({searchRegex: e.target.checked})
+  }
+
+  handleCheckBoxCaseSensitive = (e) => {
+    this.setState({searchCaseSensitive: e.target.checked})
+  }
+
+  handleCheckBoxWholeWord = (e) => {
+    this.setState({searchWholeWord: e.target.checked})
+  }
+
+  getSearchOptions = () => {
+    return {
+      regex: this.state.searchRegex,
+      wholeWord: this.state.searchWholeWord,
+      caseSensitive: this.state.searchCaseSensitive,
+    }
+  }
+
+  handleKeyPress = (e) => {
+    const searchOptions = this.getSearchOptions()
+    searchOptions.incremental = e.key !== 'Enter'
+    if (e.key === 'Enter') {
+      // Don't reload the page on enter
+      e.preventDefault()
+    }
+    if (e.key === 'Enter' && e.shiftKey) {
+      this.term.findPrevious(e.target.value, searchOptions)
+    } else {
+      this.term.findNext(e.target.value, searchOptions)
+    }
+  }
+
   render () {
     return (
       <React.Fragment>
+        <Form inline>
+          <FormGroup controlId='stream'>
+            <FormControl
+              type='text'
+              placeholder='search'
+              onKeyPress={this.handleKeyPress}
+            />
+            &nbsp; Use regex:&nbsp;
+            <Checkbox
+              checked={this.state.searchRegex}
+              onChange={this.handleCheckBoxRegex}>
+            </Checkbox>
+            &nbsp; Case sensitive:&nbsp;
+            <Checkbox
+              checked={this.state.searchCaseSensitive}
+              onChange={this.handleCheckBoxCaseSensitive}>
+            </Checkbox>
+            &nbsp; Whole word:&nbsp;
+            <Checkbox
+              checked={this.state.searchWholeWord}
+              onChange={this.handleCheckBoxWholeWord}>
+            </Checkbox>
+          </FormGroup>
+        </Form>
         <div ref={ref => this.terminal = ref}/>
       </React.Fragment>
     )
