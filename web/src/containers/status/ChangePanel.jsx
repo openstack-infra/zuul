@@ -243,12 +243,12 @@ class ChangePanel extends React.Component {
         const to = (
           tenant.linkPrefix + '/stream/' + buildUuid + '?logfile=console.log'
         )
-        name = <Link to={to}>{job.name}</Link>
+        name = <Link className='zuul-job-name' to={to}>{job.name}</Link>
       } else if (job.url.match('stream/')) {
         const to = (
           tenant.linkPrefix + '/' + job.url
         )
-        name = <Link to={to}>{job.name}</Link>
+        name = <Link className='zuul-job-name' to={to}>{job.name}</Link>
       } else {
         name = <a className='zuul-job-name' href={url}>{job.name}</a>
       }
