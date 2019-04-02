@@ -16,21 +16,23 @@
 import * as React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Checkbox, Form, FormGroup } from 'patternfly-react'
 import Sockette from 'sockette'
+
+import 'xterm/dist/xterm.css'
+import { Terminal } from 'xterm'
+import * as fit from 'xterm/lib/addons/fit/fit'
+import * as weblinks from 'xterm/lib/addons/webLinks/webLinks'
 
 import { getStreamUrl } from '../api'
 
+Terminal.applyAddon(fit)
+Terminal.applyAddon(weblinks)
 
 class StreamPage extends React.Component {
   static propTypes = {
     match: PropTypes.object.isRequired,
     location: PropTypes.object.isRequired,
     tenant: PropTypes.object
-  }
-
-  state = {
-    autoscroll: true,
   }
 
   constructor() {
@@ -40,59 +42,33 @@ class StreamPage extends React.Component {
     this.lines = []
   }
 
-  refreshLoop = () => {
-    if (this.displayRef.current) {
-      let newLine = false
-      this.lines.forEach(line => {
-        newLine = true
-        this.displayRef.current.appendChild(line)
-      })
-      this.lines = []
-      if (newLine) {
-        const { autoscroll } = this.state
-        if (autoscroll) {
-          this.messagesEnd.scrollIntoView({ behavior: 'instant' })
-        }
-      }
-    }
-    this.timer = setTimeout(this.refreshLoop, 250)
-  }
-
   componentWillUnmount () {
-    if (this.timer) {
-      clearTimeout(this.timer)
-      this.timer = null
-    }
     if (this.ws) {
       console.log('Remove ws')
       this.ws.close()
     }
   }
 
-  onLine = (line) => {
-    // Create dom elements
-    const lineDom = document.createElement('p')
-    lineDom.className = 'zuulstreamline'
-    lineDom.appendChild(document.createTextNode(line))
-    this.lines.push(lineDom)
+  onMessage = (message) => {
+    this.term.write(message)
   }
 
-  onMessage = (message) => {
-    this.receiveBuffer += message
-    const lines = this.receiveBuffer.split('\n')
-    const lastLine = lines.slice(-1)[0]
-    // Append all completed lines
-    lines.slice(0, -1).forEach(line => {
-      this.onLine(line)
-    })
-    // Check if last chunk is completed
-    if (lastLine && this.receiveBuffer.slice(-1) === '\n') {
-      this.onLine(lastLine)
-      this.receiveBuffer = ''
-    } else {
-      this.receiveBuffer = lastLine
+  onResize = () => {
+    // Note: We call proposeGeometry to get the number of cols and rows that
+    // fit into the parent element. However the number of rows is not detected
+    // correctly so we derive this directly from the window height.
+    const geometry = this.term.proposeGeometry()
+    if (geometry) {
+      const cellHeight = this.term._core.renderer.dimensions.actualCellHeight
+      const height = window.innerHeight - this.term.element.offsetTop - 10
+
+      const rows = Math.max(Math.floor(height / cellHeight), 10)
+      const cols = Math.max(geometry.cols, 10)
+
+      if (this.term.rows !== rows || this.term.cols !== cols) {
+        this.term.resize(cols, rows)
+      }
     }
-    this.refreshLoop()
   }
 
   componentDidMount() {
@@ -105,6 +81,19 @@ class StreamPage extends React.Component {
       params.logfile = logfile
     }
     document.title = 'Zuul Stream | ' + params.uuid.slice(0, 7)
+
+    const term = new Terminal()
+
+    term.webLinksInit()
+    term.setOption('fontSize', 12)
+    term.setOption('scrollback', 1000000)
+    term.setOption('disableStdin', true)
+    term.setOption('convertEol', true)
+
+    term.attachCustomKeyEventHandler(function () {return false})
+
+    term.open(this.terminal)
+
     this.ws = new Sockette(getStreamUrl(this.props.tenant.apiPrefix), {
       timeout: 5e3,
       maxAttempts: 3,
@@ -129,26 +118,18 @@ class StreamPage extends React.Component {
        console.log('onerror:', e)
       }
     })
-  }
 
-  handleCheckBox = (e) => {
-    this.setState({autoscroll: e.target.checked})
+    this.term = term
+
+    term.element.style.padding = '5px'
+    this.onResize()
+    window.addEventListener('resize', this.onResize)
   }
 
   render () {
     return (
       <React.Fragment>
-        <Form inline id='zuulstreamoverlay'>
-          <FormGroup controlId='stream'>
-            <Checkbox
-              checked={this.state.autoscroll}
-              onChange={this.handleCheckBox}>
-              autoscroll
-            </Checkbox>
-          </FormGroup>
-        </Form>
-        <pre id='zuulstreamcontent' ref={this.displayRef} />
-        <div ref={(el) => { this.messagesEnd = el }} />
+        <div ref={ref => this.terminal = ref}/>
       </React.Fragment>
     )
   }
