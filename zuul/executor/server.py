@@ -1857,6 +1857,13 @@ class AnsibleJob(object):
         pythonpath = [ansible_dir] + pythonpath
         env_copy['PYTHONPATH'] = os.path.pathsep.join(pythonpath)
 
+        # Prepend PATH with ansible_dir/bin so tools installed into the venv
+        # can be called in local tasks.
+        env_copy['PATH'] = '{}{}{}'.format(
+            os.path.dirname(cmd[0]),
+            os.path.pathsep,
+            env_copy['PATH'])
+
         if playbook.trusted:
             opt_prefix = 'trusted'
         else:
