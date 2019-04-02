@@ -133,7 +133,7 @@
 
 - job:
     name: zuul-build-image
-    parent: build-docker-image
+    parent: opendev-build-docker-image
     description: Build Docker images.
     allowed-projects: openstack-infra/zuul
     vars: &zuul_image_vars
@@ -159,7 +159,7 @@
 
 - job:
     name: zuul-upload-image
-    parent: upload-docker-image
+    parent: opendev-upload-docker-image
     description: Build Docker images and upload to Docker Hub.
     allowed-projects: openstack-infra/zuul
     secrets:
@@ -170,7 +170,7 @@
 
 - job:
     name: zuul-promote-image
-    parent: promote-docker-image
+    parent: opendev-promote-docker-image
     description: Promote previously uploaded Docker images.
     allowed-projects: openstack-infra/zuul
     secrets:
