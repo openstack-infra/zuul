@@ -5,7 +5,7 @@
   roles:
     - name: install-docker
       use_upstream_docker: false
-    - build-docker-image
+    - use-buildset-registry
   tasks:
     - name: Install docker-compose and git-review
       package:

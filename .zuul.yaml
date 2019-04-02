@@ -74,45 +74,17 @@
     vars:
       zuul_api_url: https://softwarefactory-project.io/zuul
 
+# This job is run on changes to both Zuul and Nodepool; any changes to
+# the other project will be picked up via image builds which appear in
+# the buildset registry.  It includes zuul as a required project
+# because that is where the docker-compose file is located.
 - job:
     name: zuul-quick-start
     description: Run the commands in the Zuul quick-start documentation.
     run: playbooks/quick-start/run.yaml
     post-run: playbooks/quick-start/post.yaml
-    timeout: 2700  # 45 minutes
-    roles:
-      - zuul: openstack-infra/zuul-jobs
-    vars:
-      docker_images:
-        - context: ../zuul
-          repository: zuul/zuul
-          target: zuul
-        - context: ../zuul
-          repository: zuul/zuul-executor
-          target: zuul-executor
-        - context: ../zuul
-          repository: zuul/zuul-fingergw
-          target: zuul-fingergw
-        - context: ../zuul
-          repository: zuul/zuul-merger
-          target: zuul-merger
-        - context: ../zuul
-          repository: zuul/zuul-scheduler
-          target: zuul-scheduler
-        - context: ../zuul
-          repository: zuul/zuul-web
-          target: zuul-web
-        - context: ../nodepool
-          repository: zuul/nodepool
-          target: nodepool
-        - context: ../nodepool
-          repository: zuul/nodepool-launcher
-          target: nodepool-launcher
-        - context: ../nodepool
-          repository: zuul/nodepool-builder
-          target: nodepool-builder
+    requires: docker-image
     required-projects:
-      - openstack-infra/nodepool
       - openstack-infra/zuul
 
 # Image building jobs
@@ -185,6 +157,7 @@
 - project:
     check:
       jobs:
+        - zuul-build-image
         - tox-docs
         - tox-pep8
         - tox-py35:
@@ -215,12 +188,13 @@
         - zuul-stream-functional-2.6
         - zuul-stream-functional-2.7
         - zuul-tox-remote
-        - zuul-quick-start
+        - zuul-quick-start:
+            dependencies: zuul-build-image
         - nodepool-zuul-functional:
             voting: false
-        - zuul-build-image
     gate:
       jobs:
+        - zuul-upload-image
         - tox-docs
         - tox-pep8
         - tox-py35:
@@ -250,8 +224,8 @@
         - zuul-stream-functional-2.6
         - zuul-stream-functional-2.7
         - zuul-tox-remote
-        - zuul-quick-start
-        - zuul-upload-image
+        - zuul-quick-start:
+            dependencies: zuul-upload-image
     post:
       jobs:
         - publish-zuul-docs
