@@ -2365,7 +2365,7 @@ class QueueItem(object):
         except RequirementsError as e:
             self.warning(str(e))
             fakebuild = Build(job, None)
-            fakebuild.result = 'SKIPPED'
+            fakebuild.result = 'FAILED'
             self.addBuild(fakebuild)
             ret = True
         return ret

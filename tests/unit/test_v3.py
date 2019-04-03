@@ -5596,7 +5596,7 @@ class TestProvidesRequires(ZuulDBTestCase):
             dict(name='hold', result='SUCCESS', changes='1,1'),
             dict(name='hold', result='SUCCESS', changes='1,1 2,1'),
         ], ordered=False)
-        self.assertIn('image-user : SKIPPED', B.messages[0])
+        self.assertIn('image-user : FAILED', B.messages[0])
         self.assertIn('not met by build', B.messages[0])
 
 
