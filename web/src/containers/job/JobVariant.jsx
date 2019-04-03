@@ -83,7 +83,7 @@ class JobVariant extends React.Component {
     const rows = []
 
     const jobInfos = [
-      'description', 'context', 'status',
+      'description', 'context', 'builds', 'status',
       'parent', 'attempts', 'timeout', 'semaphore', 'implied_branch',
       'nodeset', 'variables',
     ]
@@ -96,6 +96,13 @@ class JobVariant extends React.Component {
           <SourceContext
             context={variant.source_context}
             showBranch={true}/>
+        )
+      }
+      if (label === 'builds') {
+        value = (
+          <Link to={this.props.tenant.linkPrefix + '/builds?job_name=' + variant.name}>
+            build history
+          </Link>
         )
       }
       if (label === 'status') {
