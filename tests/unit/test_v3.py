@@ -5719,3 +5719,20 @@ class TestDefaultAnsibleVersion(AnsibleZuulTestCase):
             dict(name='ansible-26', result='SUCCESS', changes='1,1'),
             dict(name='ansible-27', result='SUCCESS', changes='1,1'),
         ], ordered=False)
+
+
+class TestAraInPath(AnsibleZuulTestCase):
+    tenant_config_file = 'config/ara-in-path/main.yaml'
+
+    def test_ara_in_path(self):
+        """
+        Tests that executables like ara are in the path of the virtualenv.
+        """
+
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='test-ara', result='SUCCESS', changes='1,1'),
+        ])

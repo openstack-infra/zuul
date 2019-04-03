@@ -1,0 +1,4 @@
+- hosts: localhost
+  tasks:
+    - name: Run ara
+      shell: ara --help
