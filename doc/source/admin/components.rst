@@ -25,7 +25,9 @@ which is described below.
       Executor -- Statsd
       Web -- Gearman
       Web -- Zookeeper
+      Web -- Executor
       Finger -- Gearman
+      Finger -- Executor
 
       Gearman -- Scheduler;
       Scheduler -- Gerrit;
@@ -51,6 +53,10 @@ Both the Nodepool launchers and Zuul executors need to be able to
 communicate with the hosts which nodepool provides.  If these are on
 private networks, the Executors will need to be able to route traffic
 to them.
+
+Only Zuul fingergw and Zuul web need to be publicly accessible;
+executors never do. Executors should be accessible on TCP port 7900
+by fingergw and web.
 
 If statsd is enabled, the executors and scheduler needs to be able to
 emit data to statsd.  Statsd can be configured to run on each host
