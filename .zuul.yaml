@@ -79,6 +79,7 @@
     description: Run the commands in the Zuul quick-start documentation.
     run: playbooks/quick-start/run.yaml
     post-run: playbooks/quick-start/post.yaml
+    timeout: 2700  # 45 minutes
     roles:
       - zuul: openstack-infra/zuul-jobs
     vars:
