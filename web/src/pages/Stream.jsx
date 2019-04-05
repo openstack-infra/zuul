@@ -99,7 +99,11 @@ class StreamPage extends React.Component {
     term.setOption('disableStdin', true)
     term.setOption('convertEol', true)
 
-    term.attachCustomKeyEventHandler(function () {return false})
+    // Block all keys but page up/down. This needs to be done so ctrl+c can
+    // be used to copy text from the terminal.
+    term.attachCustomKeyEventHandler(function (e) {
+      return e.key === 'PageDown' || e.key === 'PageUp'
+    })
 
     term.open(this.terminal)
 
