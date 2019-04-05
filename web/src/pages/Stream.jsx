@@ -106,6 +106,7 @@ class StreamPage extends React.Component {
     })
 
     term.open(this.terminal)
+    term.focus()
 
     this.ws = new Sockette(getStreamUrl(this.props.tenant.apiPrefix), {
       timeout: 5e3,
