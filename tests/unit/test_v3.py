@@ -5521,6 +5521,28 @@ class TestProvidesRequires(ZuulDBTestCase):
                  changes='1,1 2,1 3,1'),
             dict(name='hold', result='SUCCESS', changes='1,1 2,1 3,1'),
         ], ordered=False)
+
+        D = self.fake_gerrit.addFakeChange('org/project3', 'master', 'D')
+        D.data['commitMessage'] = '%s\n\nDepends-On: %s\n' % (
+            D.subject, B.data['id'])
+        self.fake_gerrit.addEvent(D.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='image-builder', result='SUCCESS', changes='1,1'),
+            dict(name='library-builder', result='SUCCESS', changes='1,1'),
+            dict(name='hold', result='SUCCESS', changes='1,1'),
+            dict(name='image-builder', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='library-builder', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='hold', result='SUCCESS', changes='1,1 2,1'),
+            dict(name='image-user', result='SUCCESS', changes='1,1 2,1 3,1'),
+            dict(name='library-user', result='SUCCESS',
+                 changes='1,1 2,1 3,1'),
+            dict(name='hold', result='SUCCESS', changes='1,1 2,1 3,1'),
+            dict(name='both-user', result='SUCCESS', changes='1,1 2,1 4,1'),
+            dict(name='hold', result='SUCCESS', changes='1,1 2,1 4,1'),
+        ], ordered=False)
+
         image_user = self.getJobFromHistory('image-user')
         self.assertEqual(
             image_user.parameters['zuul']['artifacts'],
@@ -5557,6 +5579,50 @@ class TestProvidesRequires(ZuulDBTestCase):
                 'name': 'library',
                 'metadata': {
                     'type': 'library_object',
+                }
+            }, {
+                'project': 'org/project1',
+                'change': '2',
+                'patchset': '1',
+                'job': 'library-builder',
+                'url': 'http://example.com/library2',
+                'name': 'library2',
+                'metadata': {
+                    'type': 'library_object',
+                }
+            }])
+        both_user = self.getJobFromHistory('both-user')
+        self.assertEqual(
+            both_user.parameters['zuul']['artifacts'],
+            [{
+                'project': 'org/project1',
+                'change': '1',
+                'patchset': '1',
+                'job': 'image-builder',
+                'url': 'http://example.com/image',
+                'name': 'image',
+                'metadata': {
+                    'type': 'container_image',
+                }
+            }, {
+                'project': 'org/project1',
+                'change': '1',
+                'patchset': '1',
+                'job': 'library-builder',
+                'url': 'http://example.com/library',
+                'name': 'library',
+                'metadata': {
+                    'type': 'library_object',
+                }
+            }, {
+                'project': 'org/project1',
+                'change': '2',
+                'patchset': '1',
+                'job': 'image-builder',
+                'url': 'http://example.com/image2',
+                'name': 'image2',
+                'metadata': {
+                    'type': 'container_image',
                 }
             }, {
                 'project': 'org/project1',

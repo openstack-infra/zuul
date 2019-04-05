@@ -52,7 +52,7 @@ class DatabaseSession(object):
     def listFilter(self, query, column, value):
         if value is None:
             return query
-        if isinstance(value, list):
+        if isinstance(value, list) or isinstance(value, tuple):
             return query.filter(column.in_(value))
         return query.filter(column == value)
 
