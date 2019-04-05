@@ -81,3 +81,36 @@ class TestSupercedent(ZuulTestCase):
             dict(name='post-job', result='SUCCESS', newrev=arev),
             dict(name='post-job', result='SUCCESS', newrev=brev),
         ], ordered=False)
+
+    @simple_layout('layouts/supercedent-promote.yaml')
+    def test_supercedent_promote(self):
+        self.executor_server.hold_jobs_in_build = True
+        A = self.fake_gerrit.addFakeChange('org/project', 'master', 'A')
+        A.setMerged()
+        self.fake_gerrit.addEvent(A.getChangeMergedEvent())
+        self.waitUntilSettled()
+
+        # We should never run jobs for more than one change at a time
+        self.assertEqual(len(self.builds), 1)
+
+        # This change should be superceded by the next
+        B = self.fake_gerrit.addFakeChange('org/project', 'master', 'B')
+        B.setMerged()
+        self.fake_gerrit.addEvent(B.getChangeMergedEvent())
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 1)
+
+        C = self.fake_gerrit.addFakeChange('org/project', 'master', 'C')
+        C.setMerged()
+        self.fake_gerrit.addEvent(C.getChangeMergedEvent())
+        self.waitUntilSettled()
+
+        self.assertEqual(len(self.builds), 1)
+
+        self.executor_server.hold_jobs_in_build = True
+        self.orderedRelease()
+        self.assertHistory([
+            dict(name='promote-job', result='SUCCESS', changes='1,1'),
+            dict(name='promote-job', result='SUCCESS', changes='3,1'),
+        ], ordered=False)

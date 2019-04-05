@@ -1,0 +1,20 @@
+- pipeline:
+    name: promote
+    manager: supercedent
+    trigger:
+      gerrit:
+        - event: change-merged
+
+- job:
+    name: base
+    parent: null
+    run: playbooks/base.yaml
+
+- job:
+    name: promote-job
+
+- project:
+    name: org/project
+    promote:
+      jobs:
+        - promote-job

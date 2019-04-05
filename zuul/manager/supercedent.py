@@ -26,10 +26,13 @@ class SupercedentPipelineManager(PipelineManager):
             return DynamicChangeQueueContextManager(existing)
 
         # Don't use Pipeline.getQueue to find an existing queue
-        # because we're matching project and ref.
+        # because we're matching project and (branch or ref).
         for queue in self.pipeline.queues:
             if (queue.queue[-1].change.project == change.project and
-                queue.queue[-1].change.ref == change.ref):
+                ((hasattr(change, 'branch') and
+                  hasattr(queue.queue[-1].change, 'branch') and
+                  queue.queue[-1].change.branch == change.branch) or
+                queue.queue[-1].change.ref == change.ref)):
                 self.log.debug("Found existing queue %s", queue)
                 return DynamicChangeQueueContextManager(queue)
         change_queue = model.ChangeQueue(
