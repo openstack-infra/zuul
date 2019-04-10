@@ -13,6 +13,7 @@ which is described below.
 
    graph  {
       node [shape=box]
+      Database [fontcolor=grey]
       Gearman [shape=ellipse]
       Gerrit [fontcolor=grey]
       Statsd [shape=ellipse fontcolor=grey]
@@ -23,6 +24,7 @@ which is described below.
       Merger -- Gearman
       Executor -- Gearman
       Executor -- Statsd
+      Web -- Database
       Web -- Gearman
       Web -- Zookeeper
       Web -- Executor
@@ -30,6 +32,7 @@ which is described below.
       Finger -- Executor
 
       Gearman -- Scheduler;
+      Scheduler -- Database;
       Scheduler -- Gerrit;
       Scheduler -- Zookeeper;
       Zookeeper -- Nodepool;
@@ -57,6 +60,10 @@ to them.
 Only Zuul fingergw and Zuul web need to be publicly accessible;
 executors never do. Executors should be accessible on TCP port 7900
 by fingergw and web.
+
+A database is only required if you create an sql driver in your Zuul
+connections configuration. Both Zuul scheduler and Zuul web will need
+access to it.
 
 If statsd is enabled, the executors and scheduler needs to be able to
 emit data to statsd.  Statsd can be configured to run on each host
