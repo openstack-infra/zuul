@@ -1144,11 +1144,16 @@ class GithubConnection(BaseConnection):
         github = self.getGithubClient(project_name)
         owner, proj = project_name.split('/')
         for retry in range(5):
-            probj = github.pull_request(owner, proj, number)
-            if probj is not None:
-                break
-            self.log.warning("Pull request #%s of %s/%s returned None!" % (
-                             number, owner, proj))
+            try:
+                probj = github.pull_request(owner, proj, number)
+                if probj is not None:
+                    break
+                self.log.warning("Pull request #%s of %s/%s returned None!" % (
+                                 number, owner, proj))
+            except github3.exceptions.GitHubException:
+                self.log.warning(
+                    "Failed to get pull request #%s of %s/%s; retrying" %
+                    (number, owner, proj))
             time.sleep(1)
         pr = probj.as_dict()
         try:
