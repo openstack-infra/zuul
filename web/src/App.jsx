@@ -30,6 +30,7 @@ import {
 } from 'patternfly-react'
 import * as moment from 'moment'
 
+import ErrorBoundary from './containers/ErrorBoundary'
 import logo from './images/logo.png'
 import { routes } from './routes'
 import { fetchConfigErrorsAction } from './actions/configErrors'
@@ -278,7 +279,9 @@ class App extends React.Component {
         </Masthead>
         {errors.length > 0 && this.renderErrors(errors)}
         <div className='container-fluid container-cards-pf'>
-          {this.renderContent()}
+          <ErrorBoundary>
+            {this.renderContent()}
+          </ErrorBoundary>
         </div>
       </React.Fragment>
     )
