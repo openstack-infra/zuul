@@ -88,7 +88,9 @@ class JobsList extends React.Component {
         // Visit parent recursively
         if (!flatten) {
           for (let parent of parents) {
-            getNode(jobMap[parent], filtered)
+            if (jobMap[parent]) {
+              getNode(jobMap[parent], filtered)
+            }
           }
         }
       }
