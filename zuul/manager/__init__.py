@@ -436,6 +436,25 @@ class PipelineManager(object):
                 canceled = True
         return canceled
 
+    def _findRelevantErrors(self, item, layout):
+        parent_layout = None
+        parent = item.item_ahead
+        while not parent_layout and parent:
+            parent_layout = parent.layout
+            parent = parent.item_ahead
+        if not parent_layout:
+            parent_layout = item.pipeline.tenant.layout
+
+        relevant_errors = []
+        for err in layout.loading_errors.errors:
+            econtext = err.key.context
+            if ((err.key not in
+                 parent_layout.loading_errors.error_keys) or
+                (econtext.project == item.change.project.name and
+                 econtext.branch == item.change.branch)):
+                relevant_errors.append(err)
+        return relevant_errors
+
     def _loadDynamicLayout(self, item):
         # Load layout
         # Late import to break an import loop
@@ -445,17 +464,12 @@ class PipelineManager(object):
 
         self.log.debug("Loading dynamic layout")
 
-        parent_layout = None
-        parent = item.item_ahead
-        while not parent_layout and parent:
-            parent_layout = parent.layout
-            parent = parent.item_ahead
-        if not parent_layout:
-            parent_layout = item.pipeline.tenant.layout
-
         (trusted_updates, untrusted_updates) = item.includesConfigUpdates()
         build_set = item.current_build_set
-        trusted_layout_verified = False
+        trusted_layout = None
+        trusted_errors = False
+        untrusted_layout = None
+        untrusted_errors = False
         try:
             # First parse the config as it will land with the
             # full set of config and project repos.  This lets us
@@ -463,71 +477,103 @@ class PipelineManager(object):
             # actually run with that config.
             if trusted_updates:
                 self.log.debug("Loading dynamic layout (phase 1)")
-                layout = loader.createDynamicLayout(
+                trusted_layout = loader.createDynamicLayout(
                     item.pipeline.tenant,
                     build_set.files,
                     self.sched.ansible_manager,
                     include_config_projects=True)
-                if not len(layout.loading_errors):
-                    trusted_layout_verified = True
+                trusted_errors = len(trusted_layout.loading_errors) > 0
 
             # Then create the config a second time but without changes
             # to config repos so that we actually use this config.
             if untrusted_updates:
                 self.log.debug("Loading dynamic layout (phase 2)")
-                layout = loader.createDynamicLayout(
+                untrusted_layout = loader.createDynamicLayout(
                     item.pipeline.tenant,
                     build_set.files,
                     self.sched.ansible_manager,
                     include_config_projects=False)
-            else:
+                untrusted_errors = len(untrusted_layout.loading_errors) > 0
+
+            # Configuration state handling switchboard. Intentionally verbose
+            # and repetetive to be exceptionally clear that we handle all
+            # possible cases correctly. Note we never return trusted_layout
+            # from a dynamic update.
+
+            # No errors found at all use dynamic untrusted layout
+            if (trusted_layout and not trusted_errors and
+                    untrusted_layout and not untrusted_errors):
+                self.log.debug("Loading dynamic layout complete")
+                return untrusted_layout
+            # No errors in untrusted only layout update
+            elif (not trusted_layout and
+                    untrusted_layout and not untrusted_errors):
+                self.log.debug("Loading dynamic layout complete")
+                return untrusted_layout
+            # No errors in trusted only layout update
+            elif (not untrusted_layout and
+                    trusted_layout and not trusted_errors):
                 # We're a change to a config repo (with no untrusted
                 # config items ahead), so just use the current pipeline
                 # layout.
-                if not len(layout.loading_errors):
-                    return item.queue.pipeline.tenant.layout
-            if len(layout.loading_errors):
-                self.log.info("Configuration syntax error in dynamic layout")
-                if trusted_layout_verified:
-                    # The config is good if we include config-projects,
-                    # but is currently invalid if we omit them.  Instead
-                    # of returning the whole error message, just leave a
-                    # note that the config will work once the dependent
-                    # changes land.
-                    msg = "This change depends on a change "\
-                          "to a config project.\n\n"
-                    msg += textwrap.fill(textwrap.dedent("""\
-                    The syntax of the configuration in this change has
-                    been verified to be correct once the config project
-                    change upon which it depends is merged, but it can not
-                    be used until that occurs."""))
-                    item.setConfigError(msg)
-                    return None
-                else:
-                    # Find a layout loading error that match
-                    # the current item.change and only report
-                    # if one is found.
-                    relevant_errors = []
-                    for err in layout.loading_errors.errors:
-                        econtext = err.key.context
-                        if ((err.key not in
-                             parent_layout.loading_errors.error_keys) or
-                            (econtext.project == item.change.project.name and
-                             econtext.branch == item.change.branch)):
-                            relevant_errors.append(err)
-                    if relevant_errors:
-                        item.setConfigErrors(relevant_errors)
-                        return None
-                    self.log.info(
-                        "Configuration syntax error not related to "
-                        "change context. Error won't be reported.")
-            else:
                 self.log.debug("Loading dynamic layout complete")
+                return item.queue.pipeline.tenant.layout
+            # Untrusted layout only works with trusted updates
+            elif (trusted_layout and not trusted_errors and
+                    untrusted_layout and untrusted_errors):
+                self.log.info("Configuration syntax error in dynamic layout")
+                # The config is good if we include config-projects,
+                # but is currently invalid if we omit them.  Instead
+                # of returning the whole error message, just leave a
+                # note that the config will work once the dependent
+                # changes land.
+                msg = "This change depends on a change "\
+                      "to a config project.\n\n"
+                msg += textwrap.fill(textwrap.dedent("""\
+                The syntax of the configuration in this change has
+                been verified to be correct once the config project
+                change upon which it depends is merged, but it can not
+                be used until that occurs."""))
+                item.setConfigError(msg)
+                return None
+            # Untrusted layout is broken and trusted is broken or not set
+            elif untrusted_layout and untrusted_errors:
+                # Find a layout loading error that match
+                # the current item.change and only report
+                # if one is found.
+                relevant_errors = self._findRelevantErrors(item,
+                                                           untrusted_layout)
+                if relevant_errors:
+                    item.setConfigErrors(relevant_errors)
+                    return None
+                self.log.info(
+                    "Configuration syntax error not related to "
+                    "change context. Error won't be reported.")
+                return untrusted_layout
+            # Trusted layout is broken
+            elif trusted_layout and trusted_errors:
+                # Find a layout loading error that match
+                # the current item.change and only report
+                # if one is found.
+                relevant_errors = self._findRelevantErrors(item,
+                                                           trusted_layout)
+                if relevant_errors:
+                    item.setConfigErrors(relevant_errors)
+                    return None
+                self.log.info(
+                    "Configuration syntax error not related to "
+                    "change context. Error won't be reported.")
+                # We're a change to a config repo with errors not relevant
+                # to this repo. We use the pipeline layout.
+                return item.queue.pipeline.tenant.layout
+            else:
+                raise Exception("We have reached a configuration error that is"
+                                "not accounted for.")
+
         except Exception:
             self.log.exception("Error in dynamic layout")
             item.setConfigError("Unknown configuration error")
             return None
-        return layout
 
     def _queueUpdatesConfig(self, item):
         while item:
