@@ -81,6 +81,7 @@ def main():
                          "unencrypted connection. Your secret may get "
                          "compromised.\n")
 
+    ssl_ctx = None
     if url.scheme == 'file':
         req = Request(args.url)
     else:
@@ -88,8 +89,6 @@ def main():
             ssl_ctx = ssl.create_default_context()
             ssl_ctx.check_hostname = False
             ssl_ctx.verify_mode = ssl.CERT_NONE
-        else:
-            ssl_ctx = None
 
         # Check if tenant is white label
         req = Request("%s/api/info" % (args.url.rstrip('/'),))
