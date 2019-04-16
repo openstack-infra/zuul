@@ -2852,6 +2852,65 @@ class TestPostPlaybooks(AnsibleZuulTestCase):
         self.assertFalse(os.path.exists(post_end))
 
 
+class TestBrokenTrustedConfig(ZuulTestCase):
+    # Test we can deal with a broken config only with trusted projects. This
+    # is different then TestBrokenConfig, as it does not have a missing
+    # repo error.
+
+    tenant_config_file = 'config/broken-trusted/main.yaml'
+
+    def test_broken_config_on_startup(self):
+        # verify get the errors at tenant level.
+        tenant = self.sched.abide.tenants.get('tenant-one')
+        loading_errors = tenant.layout.loading_errors
+        self.assertEquals(
+            len(tenant.layout.loading_errors), 1,
+            "An error should have been stored")
+        self.assertIn(
+            "Zuul encountered a syntax error",
+            str(loading_errors[0].error))
+
+    def test_trusted_broken_tenant_config(self):
+        """
+        Tests we cannot modify a config-project speculative by replacing
+        check jobs with noop.
+        """
+        in_repo_conf = textwrap.dedent(
+            """
+            - pipeline:
+                name: check
+                manager: independent
+                trigger:
+                  gerrit:
+                    - event: patchset-created
+                success:
+                  gerrit:
+                    Verified: 1
+                failure:
+                  gerrit:
+                    Verified: -1
+
+            - job:
+                name: base
+                parent: null
+
+            - project:
+                name: common-config
+                check:
+                  jobs:
+                    - noop
+            """)
+
+        file_dict = {'zuul.yaml': in_repo_conf}
+        A = self.fake_gerrit.addFakeChange('common-config', 'master', 'A',
+                                           files=file_dict)
+        self.fake_gerrit.addEvent(A.getPatchsetCreatedEvent(1))
+        self.waitUntilSettled()
+
+        self.assertHistory([
+            dict(name='gate-noop', result='SUCCESS', changes='1,1')])
+
+
 class TestBrokenConfig(ZuulTestCase):
     # Test we can deal with a broken config
 
