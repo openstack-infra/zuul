@@ -1,0 +1,10 @@
+---
+security:
+  - |
+    Fixed a bug where config (trusted) layout updates could be used
+    pre-merge as a dynamically loaded layout. This could happen if Zuul
+    was running with config errors that originated from outside of
+    the config (trusted) repo. A logic error allowed code to fall
+    through and return the trusted layout in this case.
+
+    Users should upgrade.
