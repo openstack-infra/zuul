@@ -1,6 +1,0 @@
-- job:
-    name: parent-job
-    required-projects:
-      - project1
-    pre-run: playbooks/parent-job-pre.yaml
-    run: playbooks/parent-job.yaml

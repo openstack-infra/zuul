@@ -1,1 +1,0 @@
-../../base/lookup/hashi_valut.py

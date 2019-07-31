@@ -1,4 +1,0 @@
-- hosts: all
-  tasks:
-    - name: Some raw command
-      raw: echo 123

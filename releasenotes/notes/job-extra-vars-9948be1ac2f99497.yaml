@@ -1,5 +1,0 @@
----
-features:
-  - |
-    Jobs are now able to use the :attr:`job.extra-vars` which will
-    use the --extra-vars flag when a job runs.

@@ -1,5 +1,0 @@
----
-features:
-  - |
-    The GitHub driver now supports the :attr:`pipeline.require.<github source>.merged`
-    requirement.

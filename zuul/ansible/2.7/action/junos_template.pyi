@@ -1,1 +1,0 @@
-../../base/action/junos_template.pyi

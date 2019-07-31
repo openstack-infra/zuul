@@ -1,6 +1,0 @@
-- pipeline:
-    name: check
-    description: Example check pipeline
-    manager: independent
-    precedence: low
-    trigger: {}

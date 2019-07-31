@@ -1,5 +1,0 @@
-- hosts: all
-  tasks:
-    - file:
-        path: "{{zuul._test.test_root}}/{{zuul.build}}.pre.flag"
-        state: touch

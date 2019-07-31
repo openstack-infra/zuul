@@ -1,1 +1,0 @@
-../../base/lookup/chef_databag.py

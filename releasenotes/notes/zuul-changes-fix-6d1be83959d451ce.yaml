@@ -1,4 +1,0 @@
----
-fixes:
-  - |
-    The zuul-changes.py script has been adapted to the new zuul-web api routes.

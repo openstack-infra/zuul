@@ -1,1 +1,0 @@
-../../base/action/synchronize.py

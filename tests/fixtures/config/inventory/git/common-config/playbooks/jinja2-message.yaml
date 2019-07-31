@@ -1,6 +1,0 @@
-- hosts: all
-  tasks:
-    - name: Dump commit message
-      copy:
-        content: "{{ zuul.message | b64decode }}"
-        dest: "{{ zuul.executor.log_root }}/commit-message.txt"

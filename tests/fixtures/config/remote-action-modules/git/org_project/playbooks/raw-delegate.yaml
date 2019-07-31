@@ -1,3 +1,0 @@
-- hosts: all
-  roles:
-    - raw-test-delegate

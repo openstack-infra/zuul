@@ -1,3 +1,0 @@
-- name: Include vars
-  include_vars:
-    dir: "{{src_file}}"

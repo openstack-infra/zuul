@@ -1,3 +1,0 @@
-- name: Debug message
-  debug:
-    msg: "echo hi"

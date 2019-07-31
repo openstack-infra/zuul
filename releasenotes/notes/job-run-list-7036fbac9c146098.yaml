@@ -1,4 +1,0 @@
----
-features:
-  - |
-    The :attr:`job.run` attribute now supports a single or list of playbooks.

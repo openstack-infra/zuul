@@ -1,1 +1,0 @@
-../../base/action/win_template.py

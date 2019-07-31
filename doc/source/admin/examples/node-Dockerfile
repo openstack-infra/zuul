@@ -1,4 +1,0 @@
-FROM rastasheep/ubuntu-sshd
-
-RUN apt-get update && \
-    apt-get -y install python rsync

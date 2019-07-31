@@ -1,1 +1,0 @@
-../../base/action/eos_template.py

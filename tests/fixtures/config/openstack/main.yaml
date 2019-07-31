@@ -1,9 +1,0 @@
-- tenant:
-    name: openstack
-    source:
-      gerrit:
-        config-projects:
-          - project-config
-        untrusted-projects:
-          - openstack/nova
-          - openstack/keystone

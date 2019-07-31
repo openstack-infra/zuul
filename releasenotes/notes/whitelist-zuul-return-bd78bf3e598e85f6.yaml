@@ -1,5 +1,0 @@
----
-fixes:
-  - |
-    Untrusted playbooks no longer see 'Executing local code is prohibited' when
-    using the zuul_return Ansible task.

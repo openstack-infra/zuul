@@ -1,1 +1,0 @@
-../logconfig.py

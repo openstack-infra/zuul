@@ -1,1 +1,0 @@
-../../base/action/ios_template.pyi

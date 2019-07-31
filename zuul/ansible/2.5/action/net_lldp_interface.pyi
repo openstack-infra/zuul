@@ -1,1 +1,0 @@
-../../base/action/net_lldp_interface.pyi

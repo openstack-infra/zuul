@@ -1,4 +1,0 @@
-- hosts: all
-  roles:
-    - role: template-test
-      src_file: /opt/file

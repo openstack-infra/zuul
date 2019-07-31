@@ -1,4 +1,0 @@
-- project:
-    name: untrusted-config
-    templates:
-      - test-one-and-two

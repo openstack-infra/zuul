@@ -1,3 +1,0 @@
-- hosts: all
-  tasks:
-    - shell: echo "Standard output test {{ zuul.executor.src_root }}"

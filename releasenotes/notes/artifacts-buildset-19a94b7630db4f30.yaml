@@ -1,5 +1,0 @@
----
-features:
-  - |
-    The :ref:`artifacts <return_artifacts>` returned by parent jobs are now
-    also available in child jobs of the same buildset.

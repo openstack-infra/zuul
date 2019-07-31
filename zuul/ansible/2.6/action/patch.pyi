@@ -1,1 +1,0 @@
-../../base/action/patch.pyi

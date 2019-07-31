@@ -1,5 +1,0 @@
-- hosts: foo
-  tasks:
-    - copy:
-        content: "parent"
-        dest: "{{zuul.executor.log_root}}/parent.txt"

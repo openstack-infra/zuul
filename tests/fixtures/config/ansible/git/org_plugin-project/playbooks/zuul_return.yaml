@@ -1,6 +1,0 @@
-- hosts: localhost
-  tasks:
-    - name: Execute zuul_return
-      zuul_return:
-        data:
-          foo: bar

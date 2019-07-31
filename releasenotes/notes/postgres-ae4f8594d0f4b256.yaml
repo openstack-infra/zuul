@@ -1,5 +1,0 @@
----
-features:
-  - |
-    PostgreSQL is now officially supported as database backend.
-    See :attr:`<sql connection>` on how to configure database connections.

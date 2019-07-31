@@ -1,4 +1,0 @@
----
-features:
-  - |
-    The restriction on using ``known_hosts`` in playbooks has been lifted.

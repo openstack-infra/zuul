@@ -1,5 +1,0 @@
----
-features:
-  - |
-    A new tenant option :attr:`tenant.allowed-labels`
-    can be used to restrict what labels a tenant has access to.

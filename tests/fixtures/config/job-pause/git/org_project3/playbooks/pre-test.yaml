@@ -1,4 +1,0 @@
-- hosts: all
-  tasks:
-    - fail:
-        msg: pre-test fails

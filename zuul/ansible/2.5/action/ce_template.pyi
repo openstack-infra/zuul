@@ -1,1 +1,0 @@
-../../base/action/ce_template.pyi

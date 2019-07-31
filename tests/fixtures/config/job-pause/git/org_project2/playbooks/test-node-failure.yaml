@@ -1,4 +1,0 @@
-- hosts: all
-  tasks:
-    - debug:
-        msg: "This should not be executed"

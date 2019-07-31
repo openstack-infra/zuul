@@ -1,3 +1,0 @@
-- name: Print role name in json
-  debug:
-    msg: Test for role name

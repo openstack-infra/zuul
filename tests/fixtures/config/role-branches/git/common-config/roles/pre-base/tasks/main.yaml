@@ -1,3 +1,0 @@
-- name: base pre
-  debug:
-    msg: base pre

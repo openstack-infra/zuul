@@ -1,1 +1,0 @@
-../../base/action/vyos_config.pyi

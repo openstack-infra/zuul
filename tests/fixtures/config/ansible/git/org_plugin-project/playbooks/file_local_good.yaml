@@ -1,6 +1,0 @@
-- hosts: localhost
-  tasks:
-    - name: Try to verify a file in an ok location
-      file:
-        dest: non-existent
-        state: absent

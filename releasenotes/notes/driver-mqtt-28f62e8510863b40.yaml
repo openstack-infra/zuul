@@ -1,3 +1,0 @@
----
-features:
-  - A :attr:`<mqtt connection>` driver is added to feature build report over MQTT message.

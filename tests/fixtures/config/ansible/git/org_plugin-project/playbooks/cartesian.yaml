@@ -1,5 +1,0 @@
-- hosts: all
-  vars:
-    value: "{{ lookup('cartesian', [1, 2], [3, 4]) }}"
-  tasks:
-    - debug: msg="value is {{ value }}"

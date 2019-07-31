@@ -1,1 +1,0 @@
-../../base/action/fortios_config.pyi

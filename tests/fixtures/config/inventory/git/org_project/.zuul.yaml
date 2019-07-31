@@ -1,8 +1,0 @@
-- project:
-    name: org/project
-    check:
-      jobs:
-        - single-inventory
-        - single-inventory-list
-        - group-inventory
-        - hostvars-inventory

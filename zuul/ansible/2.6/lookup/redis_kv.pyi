@@ -1,1 +1,0 @@
-../../base/lookup/redis_kv.pyi

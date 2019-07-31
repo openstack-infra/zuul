@@ -1,1 +1,0 @@
-../../base/action/aruba_config.pyi

@@ -1,2 +1,0 @@
-- name: Script
-  script: "{{src_file}}"

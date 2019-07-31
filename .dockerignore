@@ -1,4 +1,0 @@
-.mypy_cache
-.stestr
-.tox
-web/node_modules

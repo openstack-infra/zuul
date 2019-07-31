@@ -1,3 +1,0 @@
-- hosts: all
-  roles:
-    - copy-test-delegate

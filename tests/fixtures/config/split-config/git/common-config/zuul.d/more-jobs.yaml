@@ -1,3 +1,0 @@
-- job:
-    name: project-test2
-    run: playbooks/project-test1.yaml

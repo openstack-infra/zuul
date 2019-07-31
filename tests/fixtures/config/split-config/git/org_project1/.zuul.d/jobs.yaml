@@ -1,3 +1,0 @@
-- job:
-    name: project1-project2-integration
-    run: playbooks/project1-project2-integration.yaml

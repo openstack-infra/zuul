@@ -1,5 +1,0 @@
----
-features:
-  - |
-    Client certificate locations to be used by winrm connections can be
-    configured now.

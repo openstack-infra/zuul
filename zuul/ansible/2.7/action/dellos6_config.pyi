@@ -1,1 +1,0 @@
-../../base/action/dellos6_config.pyi

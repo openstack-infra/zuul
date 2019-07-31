@@ -1,5 +1,0 @@
-clonemap:
- - name: 'mediawiki/core'
-   dest: '.'
- - name: 'mediawiki/extensions/(.*)'
-   dest: '\1'

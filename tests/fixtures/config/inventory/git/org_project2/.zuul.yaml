@@ -1,6 +1,0 @@
-- project:
-    check:
-      jobs:
-        - jinja2-message
-
-

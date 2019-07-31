@@ -1,1 +1,0 @@
-../../base/lookup/pipe.py
